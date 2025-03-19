@@ -183,45 +183,92 @@
   margin-top: 10px;
 }
 
-.transaction-history {
-  margin-top: 2em;
-  padding: 1em;
-  background-color: #fff;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+.transaction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5em;
 }
 
-.transaction-history h3 {
+.transaction-header h3 {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.clear-history-button {
+  padding: 0.5em 1em;
+  font-size: 0.85em;
+  color: #666;
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clear-history-button:hover {
+  background-color: #e0e0e0;
   color: #333;
-  margin-bottom: 1em;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 0.5em;
 }
 
 .no-transactions {
-  color: #666;
   text-align: center;
-  padding: 1em;
-  font-style: italic;
+  padding: 3em 1em;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px dashed #dee2e6;
+}
+
+.no-transactions p {
+  margin: 0;
+  color: #666;
+}
+
+.no-transactions p:first-child {
+  font-size: 1.1em;
+  margin-bottom: 0.5em;
+  color: #333;
+}
+
+.no-transactions-sub {
+  font-size: 0.9em;
+  color: #888;
+}
+
+.transaction-history {
+  margin-top: 2em;
+  padding: 1.5em;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.transaction-history h3 {
+  color: #1a237e;
+  margin-bottom: 1em;
+  font-size: 1.2em;
+  border-bottom: 2px solid #e8eaf6;
+  padding-bottom: 0.5em;
 }
 
 .transaction-list {
   display: flex;
   flex-direction: column;
-  gap: 1em;
+  gap: 0.75em;
 }
 
 .transaction-item {
   padding: 1em;
-  border-radius: 4px;
-  border: 1px solid #eee;
+  border-radius: 6px;
   background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
   transition: all 0.2s ease;
 }
 
 .transaction-item:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .transaction-main {
@@ -231,18 +278,29 @@
   margin-bottom: 0.5em;
 }
 
+.transaction-info {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+}
+
 .transaction-hash a {
-  color: #1976d2;
+  color: #3949ab;
   text-decoration: none;
-  font-family: monospace;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Mono', 'Droid Sans Mono', 'Source Code Pro', monospace;
 }
 
 .transaction-hash a:hover {
   text-decoration: underline;
 }
 
-.transaction-status {
+.transaction-description {
+  color: #666;
   font-size: 0.9em;
+}
+
+.transaction-status {
+  font-size: 0.85em;
   padding: 0.25em 0.75em;
   border-radius: 12px;
   font-weight: 500;
@@ -280,4 +338,110 @@
   padding: 0.2em 0.5em;
   border-radius: 4px;
   font-size: 0.9em;
+}
+
+.pool-info-container {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pool-info-container h3 {
+  margin: 0 0 20px 0;
+  color: #1a1a1a;
+  font-size: 1.5rem;
+}
+
+.loading {
+  padding: 15px;
+  text-align: center;
+  color: #666;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.message {
+  padding: 15px;
+  border-radius: 8px;
+  margin: 10px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.message.error {
+  background: #fff2f0;
+  color: #cf1322;
+  border: 1px solid #ffccc7;
+}
+
+.message.success {
+  background: #f6ffed;
+  color: #389e0d;
+  border: 1px solid #b7eb8f;
+}
+
+.retry-button {
+  background: #1890ff;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.retry-button:hover {
+  background: #40a9ff;
+}
+
+.pool-details {
+  display: grid;
+  gap: 15px;
+}
+
+.pool-pair {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pool-pair .separator {
+  color: #8c8c8c;
+}
+
+.pool-price,
+.pool-address,
+.pool-fee,
+.pool-liquidity {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 6px;
+}
+
+.label {
+  color: #595959;
+  font-weight: 500;
+}
+
+.value {
+  color: #1a1a1a;
+  font-family: monospace;
+  font-size: 0.95rem;
+}
+
+.pool-address .value {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 } 

@@ -1,141 +1,129 @@
-# Ethereum Wallet Interface
+# HOMOS - Ethereum DeFi Interface
 
-A modern, user-friendly Ethereum wallet interface built with React, TypeScript, and wagmi. This application provides a seamless experience for interacting with Ethereum networks, managing transactions, and accessing test networks.
+## Overview
+HOMOS is a decentralized finance (DeFi) interface that integrates with Uniswap V3 on Ethereum networks. The application provides a user-friendly interface for interacting with Uniswap V3 pools, specifically focusing on the USDC/WETH pair.
 
 ## Features
 
-### 1. Wallet Connection
-- Supports multiple wallet providers (Rabby Wallet, MetaMask, etc.)
-- Displays wallet address and connection status
-- Shows real-time ETH balance
+### Uniswap V3 Pool Integration
+- Real-time pool data display
+- Automatic pool creation if it doesn't exist
+- Price calculations and display for both tokens
+- Liquidity monitoring
+- Technical metrics (tick, sqrt price)
 
-### 2. Network Management
-- Support for multiple networks:
-  - **Mainnet**: Main Ethereum network for real transactions
-  - **Sepolia**: Test network for development
-- Easy network switching with clear visual indicators
-- Network status display with current block number
-- Warning messages for unsupported networks
+### Key Components
 
-### 3. Transaction History
-- Tracks and displays the last 10 transactions
-- Real-time transaction status updates:
-  - 🟡 Pending
-  - 🟢 Confirmed
-  - 🔴 Failed
-- Persistent storage across sessions
-- Links to Etherscan for detailed transaction information
-- Displays transaction timestamps and network information
+#### UniswapPool Component
+The main component that handles Uniswap V3 pool interactions. It displays:
+- Current token pair (USDC/WETH)
+- Real-time price information
+- Pool address
+- Fee tier (0.3%)
+- Current liquidity
+- Technical indicators (current tick, sqrt price)
+- Individual token prices
 
-### 4. Sepolia Testnet Features
-- Integrated faucet access for obtaining test ETH
-- Multiple faucet options:
-  - Alchemy Faucet (0.5 Sepolia ETH daily)
-  - Infura Faucet (0.5 Sepolia ETH daily)
-  - QuickNode Faucet (0.1 Sepolia ETH daily)
-- Clear instructions for obtaining test ETH
+### Technical Details
 
-## Technical Stack
+#### Price Calculation
+The application uses a specialized algorithm to calculate prices from Uniswap V3's square root price:
+```typescript
+const calculatePrice = (pool: Pool): number | null => {
+  try {
+    const sqrtPriceX96 = JSBI.toNumber(pool.sqrtRatioX96);
+    const Q96 = Math.pow(2, 96);
+    return (sqrtPriceX96 / Q96) * (sqrtPriceX96 / Q96);
+  } catch (error) {
+    console.error('Error calculating price:', error);
+    return null;
+  }
+};
+```
 
-- **Frontend Framework**: React with TypeScript
-- **Ethereum Interaction**: wagmi
-- **Styling**: CSS with modern design patterns
-- **State Management**: React Hooks
-- **Network Support**: Mainnet and Sepolia
+#### State Management
+The application manages several states:
+- Pool instance
+- Pool address
+- Current price
+- Loading states
+- Error handling
+- Pool creation status
+
+### Dependencies
+- React
+- wagmi (Ethereum interactions)
+- viem (Ethereum data formatting)
+- @uniswap/v3-sdk (Uniswap V3 integration)
+- JSBI (Big integer handling)
+
+### Network Support
+Currently supports:
+- Sepolia testnet
 
 ## Getting Started
 
 ### Prerequisites
-
 - Node.js (v14 or higher)
-- npm or yarn
-- A web3 wallet (Rabby Wallet, MetaMask, etc.)
+- MetaMask or another Web3 wallet
+- Some testnet ETH on Sepolia
 
 ### Installation
-
 1. Clone the repository:
 ```bash
 git clone [repository-url]
-cd [repository-name]
 ```
 
 2. Install dependencies:
 ```bash
 npm install
-# or
-yarn install
 ```
 
 3. Start the development server:
 ```bash
 npm start
-# or
-yarn start
 ```
 
-## Usage Guide
+### Usage
+1. Connect your Web3 wallet
+2. The application will automatically:
+   - Check for an existing USDC/WETH pool
+   - Create a new pool if none exists
+   - Display real-time pool information
 
-### 1. Connecting Your Wallet
+### Error Handling
+The application includes comprehensive error handling for:
+- Wallet connection issues
+- Pool initialization failures
+- Price calculation errors
+- Network issues
 
-1. Open the application in your browser
-2. Click the "Connect Wallet" button
-3. Select your preferred wallet provider
-4. Approve the connection request in your wallet
+## Development
 
-### 2. Switching Networks
+### Component Structure
+```
+src/
+├── components/
+│   └── UniswapPool.tsx    # Main pool interaction component
+├── utils/
+│   └── uniswap.ts        # Uniswap utilities and constants
+└── styles/
+    └── styles.css        # Component styling
+```
 
-1. Navigate to the "Network Control" section
-2. Click either "Switch to Mainnet" or "Switch to Sepolia"
-3. Approve the network switch in your wallet
-
-### 3. Getting Test ETH (Sepolia)
-
-1. Switch to Sepolia network
-2. Find the "Get Free Sepolia ETH" section
-3. Choose a faucet from the available options
-4. Follow the faucet website instructions to receive test ETH
-
-### 4. Viewing Transaction History
-
-- Transactions are automatically tracked and displayed in the Transaction History section
-- Each transaction shows:
-  - Transaction hash (clickable link to Etherscan)
-  - Current status
-  - Timestamp
-  - Network
-
-## Local Storage
-
-The application uses local storage to persist:
-- Transaction history (last 10 transactions per address)
-- Transaction statuses and updates
-
-## Security Features
-
-- Secure wallet connection handling
-- Network validation
-- Safe transaction tracking
-- No storage of sensitive information
+### Future Enhancements
+- Support for additional token pairs
+- Liquidity provision interface
+- Swap functionality
+- Multiple network support
+- Historical price data
+- Advanced analytics
 
 ## Contributing
-
 Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
+[Your License]
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- [wagmi](https://wagmi.sh/) - React Hooks for Ethereum
-- [Viem](https://viem.sh/) - TypeScript Interface for Ethereum
-- Ethereum Foundation for the Sepolia testnet
-
-## Future Enhancements
-
-Planned features and improvements:
-1. Uniswap V3 pool interactions
-2. Enhanced transaction details (gas used, value transferred)
-3. Transaction filtering by status/network
-4. Additional network support
-5. Advanced wallet features (ENS support, token management) 
+## Security
+This is a testnet application. Do not use on mainnet without proper security audits. 

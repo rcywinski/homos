@@ -4,6 +4,9 @@ import { ConnectKitProvider, ConnectKitButton } from 'connectkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config } from './config/wallet';
 import WalletInfo from './components/WalletInfo';
+import UniswapPool from './components/UniswapPool';
+import TransactionHistory from './components/TransactionHistory';
+import './styles.css';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -20,6 +23,8 @@ const App: FC = () => {
             <div className="wallet-info">
               <WalletInfo />
             </div>
+            <UniswapPool />
+            <TransactionHistory />
           </div>
         </ConnectKitProvider>
       </WagmiConfig>
