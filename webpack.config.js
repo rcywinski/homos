@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 
 module.exports = {
   entry: './src/index.tsx',
@@ -10,8 +11,8 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.(ts|tsx|js|jsx)$/,
-        exclude: /node_modules/,
+        test: /\.(ts|tsx|js|jsx|mjs)$/,
+        exclude: /node_modules\/(?!(framer-motion)\/).*/,
         use: {
           loader: 'babel-loader',
           options: {
@@ -30,8 +31,31 @@ module.exports = {
     ]
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.js', '.jsx']
+    extensions: ['.tsx', '.ts', '.js', '.jsx', '.mjs'],
+    fallback: {
+      "crypto": require.resolve("crypto-browserify"),
+      "stream": require.resolve("stream-browserify"),
+      "path": require.resolve("path-browserify"),
+      "os": require.resolve("os-browserify/browser"),
+      "buffer": require.resolve("buffer/"),
+      "vm": require.resolve("vm-browserify"),
+      "process": false
+    },
+    alias: {
+      'process/browser': require.resolve('process/browser.js')
+    }
   },
+  plugins: [
+    new webpack.ProvidePlugin({
+      process: 'process/browser.js',
+      Buffer: ['buffer', 'Buffer']
+    }),
+    new webpack.DefinePlugin({
+      'process.env.WALLET_CONNECT_PROJECT_ID': JSON.stringify(process.env.WALLET_CONNECT_PROJECT_ID || ''),
+      'process.env.RPC_URL': JSON.stringify(process.env.RPC_URL || ''),
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
+    })
+  ],
   devServer: {
     static: {
       directory: path.resolve(__dirname, 'public'),
