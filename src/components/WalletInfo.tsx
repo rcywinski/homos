@@ -1,106 +1,95 @@
-import React, { FC } from 'react';
+import React from 'react';
 import { useAccount, useBalance, useBlockNumber, useChainId, useSwitchChain } from 'wagmi';
 import { formatEther } from 'viem';
 import { mainnet, sepolia } from 'wagmi/chains';
 
-const FAUCET_LINKS = [
-  {
-    name: "Alchemy Faucet",
-    url: "https://sepoliafaucet.com/",
-    description: "Get 0.5 Sepolia ETH daily (requires sign in)"
-  },
-  {
-    name: "Infura Faucet",
-    url: "https://www.infura.io/faucet/sepolia",
-    description: "Get 0.5 Sepolia ETH daily (requires sign in)"
-  },
-  {
-    name: "QuickNode Faucet",
-    url: "https://faucet.quicknode.com/ethereum/sepolia",
-    description: "Get 0.1 Sepolia ETH daily"
-  }
-];
-
-const WalletInfo: FC = () => {
-  const { address, isConnected } = useAccount();
+export const CompactWalletInfo: React.FC = () => {
+  const { address } = useAccount();
   const chainId = useChainId();
-  const { switchChain } = useSwitchChain();
-  
-  const { data: balance } = useBalance({
-    address,
-  });
-  
+  const { data: balance } = useBalance({ address });
   const { data: blockNumber } = useBlockNumber();
+  const { switchChain } = useSwitchChain();
 
-  if (!isConnected) return null;
+  if (!address) return null;
 
   const isMainnet = chainId === mainnet.id;
   const isSepolia = chainId === sepolia.id;
 
-  const handleFaucetClick = (url: string) => {
-    window.open(url, '_blank', 'noopener,noreferrer');
+  const handleNetworkSwitch = () => {
+    if (isMainnet) {
+      switchChain({ chainId: sepolia.id });
+    } else {
+      switchChain({ chainId: mainnet.id });
+    }
   };
 
   return (
-    <div className="wallet-info-container">
-      <div className="wallet-status">
-        <h3>Network Status</h3>
-        <div className="network-info">
-          <div>Current Network: <strong>{isMainnet ? 'Mainnet' : isSepolia ? 'Sepolia' : 'Unknown'}</strong></div>
-          {blockNumber !== undefined && <div>Block: <strong>{blockNumber.toString()}</strong></div>}
-          <div>Balance: <strong>{balance ? `${formatEther(balance.value)} ${balance.symbol}` : '0.0 ETH'}</strong></div>
-        </div>
-
-        <div className="network-description">
-          {isMainnet ? (
-            <strong>Connected to Ethereum Mainnet - Real transactions with real value.</strong>
-          ) : isSepolia ? (
-            <strong>Connected to Sepolia Testnet - Perfect for testing with free test ETH.</strong>
-          ) : (
-            <div className="warning">Please connect to either Mainnet or Sepolia for Uniswap V3 interactions.</div>
-          )}
-        </div>
+    <div className="compact-wallet-info">
+      <div className="network-switch">
+        <span className="network-badge">{isMainnet ? 'Mainnet' : 'Sepolia'}</span>
+        <button 
+          onClick={handleNetworkSwitch}
+          className="network-switch-button"
+          title={`Switch to ${isMainnet ? 'Sepolia' : 'Mainnet'}`}
+        >
+          ⇄
+        </button>
       </div>
+      <span className="balance-info">
+        {balance ? `${Number(formatEther(balance.value)).toFixed(6)} ${balance.symbol}` : '0 ETH'}
+      </span>
+      <span className="block-info">#{blockNumber?.toString()}</span>
+    </div>
+  );
+};
 
+const WalletInfo: React.FC = () => {
+  const { address } = useAccount();
+  const chainId = useChainId();
+
+  if (!address) return null;
+
+  const isMainnet = chainId === mainnet.id;
+  const isSepolia = chainId === sepolia.id;
+
+  return (
+    <div className="wallet-info-detailed">
       <div className="network-controls">
         <h3>Network Controls</h3>
         <div className="network-buttons">
-          <button
-            onClick={() => switchChain({ chainId: mainnet.id })}
-            disabled={isMainnet}
-            className={isMainnet ? 'active' : ''}
-          >
+          <button className={isMainnet ? 'active' : ''}>
             Switch to Mainnet
           </button>
-          <button
-            onClick={() => switchChain({ chainId: sepolia.id })}
-            disabled={isSepolia}
-            className={isSepolia ? 'active' : ''}
-          >
+          <button className={isSepolia ? 'active' : ''}>
             Switch to Sepolia
           </button>
         </div>
       </div>
 
-      {isSepolia && (
-        <div className="faucet-section">
-          <h4>Get Free Sepolia ETH</h4>
-          <p className="faucet-info">
-            You'll need some test ETH to interact with Uniswap on Sepolia. 
-            Choose a faucet below to get started:
-          </p>
-          <div className="faucet-buttons">
-            {FAUCET_LINKS.map((faucet) => (
-              <div key={faucet.url} className="faucet-item">
-                <button onClick={() => handleFaucetClick(faucet.url)}>
-                  {faucet.name}
-                </button>
-                <span className="faucet-description">{faucet.description}</span>
-              </div>
-            ))}
+      <div className="faucet-section">
+        <h3>Get Free Sepolia ETH</h3>
+        <p>You'll need some test ETH to interact with Uniswap on Sepolia. Choose a faucet below to get started:</p>
+        <div className="faucet-options">
+          <div className="faucet-option">
+            <button onClick={() => window.open('https://sepoliafaucet.com/', '_blank')}>
+              Alchemy Faucet
+            </button>
+            <span>Get 0.5 Sepolia ETH daily (requires sign in)</span>
+          </div>
+          <div className="faucet-option">
+            <button onClick={() => window.open('https://www.infura.io/faucet/sepolia', '_blank')}>
+              Infura Faucet
+            </button>
+            <span>Get 0.5 Sepolia ETH daily (requires sign in)</span>
+          </div>
+          <div className="faucet-option">
+            <button onClick={() => window.open('https://quicknode.com/faucet/eth/sepolia', '_blank')}>
+              QuickNode Faucet
+            </button>
+            <span>Get 0.1 Sepolia ETH daily</span>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

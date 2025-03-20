@@ -11,13 +11,18 @@ import {
 import { Pool } from '@uniswap/v3-sdk';
 import JSBI from 'jsbi';
 
-const UniswapPool: FC = () => {
+interface UniswapPoolProps {
+  initialPool?: Pool;
+  initialAddress?: string;
+}
+
+const UniswapPool: FC<UniswapPoolProps> = ({ initialPool, initialAddress }) => {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
   
-  const [pool, setPool] = useState<Pool | null>(null);
-  const [poolAddress, setPoolAddress] = useState<string>('');
+  const [pool, setPool] = useState<Pool | null>(initialPool || null);
+  const [poolAddress, setPoolAddress] = useState<string>(initialAddress || '');
   const [currentPrice, setCurrentPrice] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -76,10 +81,15 @@ const UniswapPool: FC = () => {
   };
 
   useEffect(() => {
-    if (isConnected && walletClient) {
+    if (initialPool && initialAddress) {
+      setPool(initialPool);
+      setPoolAddress(initialAddress);
+      const price = calculatePrice(initialPool);
+      setCurrentPrice(price !== null ? formatPrice(price) : 'Price calculation error');
+    } else if (isConnected && walletClient) {
       initializePool();
     }
-  }, [isConnected, publicClient, walletClient]);
+  }, [isConnected, publicClient, walletClient, initialPool, initialAddress]);
 
   if (!isConnected) {
     return (
