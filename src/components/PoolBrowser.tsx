@@ -5,6 +5,8 @@ import { FeeAmount } from '@uniswap/v3-sdk';
 import { WETH, USDC, getOrCreatePool } from '../utils/uniswap';
 import { formatPrice } from '../utils/uniswap';
 import JSBI from 'jsbi';
+import ExpandableSection from './ExpandableSection';
+import UniswapPool from './UniswapPool';
 
 interface PoolInfo {
   pool: Pool;
@@ -21,10 +23,11 @@ const FEE_TIERS = [
   { fee: FeeAmount.HIGH, label: '1%' }
 ];
 
-const PoolBrowser: FC<{ onPoolSelect: (pool: Pool, address: string) => void }> = ({ onPoolSelect }) => {
+const PoolBrowser: FC = () => {
   const [pools, setPools] = useState<PoolInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [selectedPool, setSelectedPool] = useState<{ pool: Pool; address: string } | null>(null);
   
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
@@ -39,6 +42,14 @@ const PoolBrowser: FC<{ onPoolSelect: (pool: Pool, address: string) => void }> =
       console.error('Error calculating price:', error);
       return 'Price calculation error';
     }
+  };
+
+  const handlePoolSelect = (pool: Pool, address: string) => {
+    setSelectedPool({ pool, address });
+  };
+
+  const handleBackToList = () => {
+    setSelectedPool(null);
   };
 
   const fetchPools = async () => {
@@ -91,56 +102,72 @@ const PoolBrowser: FC<{ onPoolSelect: (pool: Pool, address: string) => void }> =
   }, [publicClient, walletClient]);
 
   return (
-    <div className="pool-browser">
-      <h3>Available USDC/WETH Pools</h3>
-      
-      {loading ? (
-        <div className="loading">Loading pools...</div>
-      ) : error ? (
-        <div className="error">
-          {error}
-          <button onClick={fetchPools} className="retry-button">
-            Retry
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="pools-grid">
-            {pools.map((poolInfo) => (
-              <div 
-                key={poolInfo.address} 
-                className="pool-card"
-                onClick={() => onPoolSelect(poolInfo.pool, poolInfo.address)}
-              >
-                <div className="pool-card-header">
-                  <span className="token-pair">USDC/WETH</span>
-                  <span className="fee-tier">{FEE_TIERS.find(ft => ft.fee === poolInfo.feeTier)?.label}</span>
-                </div>
-                <div className="pool-card-body">
-                  <div className="pool-info-row">
-                    <span className="label">Price:</span>
-                    <span className="value">{poolInfo.price}</span>
-                  </div>
-                  <div className="pool-info-row">
-                    <span className="label">Liquidity:</span>
-                    <span className="value">{poolInfo.liquidity}</span>
-                  </div>
-                  <div className="pool-info-row">
-                    <span className="label">Address:</span>
-                    <span className="value address">{`${poolInfo.address.slice(0, 6)}...${poolInfo.address.slice(-4)}`}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          {pools.length === 0 && (
-            <div className="no-pools">
-              No pools found. Create one by selecting a fee tier.
+    <ExpandableSection title="Uniswap V3 Pools">
+      <div className="pools-container">
+        <div className="pool-browser">
+          {loading ? (
+            <div className="loading">Loading pools...</div>
+          ) : error ? (
+            <div className="error">
+              {error}
+              <button onClick={fetchPools} className="retry-button">
+                Retry
+              </button>
             </div>
+          ) : (
+            <>
+              {!selectedPool ? (
+                <>
+                  <div className="pools-grid">
+                    {pools.map((poolInfo) => (
+                      <div 
+                        key={poolInfo.address} 
+                        className="pool-card"
+                        onClick={() => handlePoolSelect(poolInfo.pool, poolInfo.address)}
+                      >
+                        <div className="pool-card-header">
+                          <span className="token-pair">USDC/WETH</span>
+                          <span className="fee-tier">{FEE_TIERS.find(ft => ft.fee === poolInfo.feeTier)?.label}</span>
+                        </div>
+                        <div className="pool-card-body">
+                          <div className="pool-info-row">
+                            <span className="label">Price:</span>
+                            <span className="value">{poolInfo.price}</span>
+                          </div>
+                          <div className="pool-info-row">
+                            <span className="label">Liquidity:</span>
+                            <span className="value">{poolInfo.liquidity}</span>
+                          </div>
+                          <div className="pool-info-row">
+                            <span className="label">Address:</span>
+                            <span className="value address">{`${poolInfo.address.slice(0, 6)}...${poolInfo.address.slice(-4)}`}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {pools.length === 0 && (
+                    <div className="no-pools">
+                      No pools found. Create one by selecting a fee tier.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="selected-pool-container">
+                  <button onClick={handleBackToList} className="back-button">
+                    ← Back to Pools
+                  </button>
+                  <UniswapPool 
+                    initialPool={selectedPool.pool}
+                    initialAddress={selectedPool.address}
+                  />
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
-    </div>
+        </div>
+      </div>
+    </ExpandableSection>
   );
 };
 

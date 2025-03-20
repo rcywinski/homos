@@ -1,25 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { WagmiConfig } from 'wagmi';
 import { ConnectKitProvider, ConnectKitButton } from 'connectkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config } from './config/wallet';
-import { Pool } from '@uniswap/v3-sdk';
-import WalletInfo, { CompactWalletInfo } from './components/WalletInfo';
-import UniswapPool from './components/UniswapPool';
-import TransactionHistory from './components/TransactionHistory';
+import { CompactWalletInfo } from './components/WalletInfo';
 import PoolBrowser from './components/PoolBrowser';
+import TransactionHistory from './components/TransactionHistory';
+import FaucetSection from './components/FaucetSection';
 import './styles.css';
 
 // Create a client
 const queryClient = new QueryClient();
 
 function App() {
-  const [selectedPool, setSelectedPool] = useState<{ pool: Pool; address: string } | null>(null);
-
-  const handlePoolSelect = (pool: Pool, address: string) => {
-    setSelectedPool({ pool, address });
-  };
-
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiConfig config={config}>
@@ -37,14 +30,9 @@ function App() {
             </div>
             
             <div className="app-content">
+              <FaucetSection />
               <div className="main-content">
-                <PoolBrowser onPoolSelect={handlePoolSelect} />
-                {selectedPool && (
-                  <UniswapPool 
-                    initialPool={selectedPool.pool}
-                    initialAddress={selectedPool.address}
-                  />
-                )}
+                <PoolBrowser />
                 <div className="transaction-section">
                   <TransactionHistory />
                 </div>

@@ -1,6 +1,7 @@
 import React, { FC, useEffect, useState } from 'react';
 import { useAccount, useTransaction, useWaitForTransactionReceipt } from 'wagmi';
 import { mainnet } from 'wagmi/chains';
+import ExpandableSection from './ExpandableSection';
 
 interface Transaction {
   hash: string;
@@ -97,63 +98,65 @@ const TransactionHistory: FC = () => {
   };
 
   return (
-    <div className="transaction-history">
-      <div className="transaction-header">
-        <h3>Transaction History</h3>
-        {transactions.length > 0 && (
-          <button 
-            onClick={handleClearHistory}
-            className="clear-history-button"
-            title="Clear transaction history"
-          >
-            Clear History
-          </button>
+    <ExpandableSection title="Transaction History">
+      <div className="transaction-history">
+        <div className="transaction-header">
+          <h3>Transaction History</h3>
+          {transactions.length > 0 && (
+            <button 
+              onClick={handleClearHistory}
+              className="clear-history-button"
+              title="Clear transaction history"
+            >
+              Clear History
+            </button>
+          )}
+        </div>
+        
+        {transactions.length === 0 ? (
+          <div className="no-transactions">
+            <p>No transactions yet</p>
+            <p className="no-transactions-sub">Your recent transactions will appear here</p>
+          </div>
+        ) : (
+          <div className="transaction-list">
+            {transactions.map((tx) => (
+              <div key={tx.hash} className={`transaction-item ${tx.status}`}>
+                <div className="transaction-main">
+                  <div className="transaction-info">
+                    <span className="transaction-hash">
+                      <a
+                        href={`${tx.chainId === mainnet.id 
+                          ? 'https://etherscan.io/tx/' 
+                          : 'https://sepolia.etherscan.io/tx/'}${tx.hash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title={tx.hash}
+                      >
+                        {formatTxHash(tx.hash)}
+                      </a>
+                    </span>
+                    {tx.description && (
+                      <span className="transaction-description">
+                        {tx.description}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`transaction-status ${tx.status}`}>
+                    {tx.status.charAt(0).toUpperCase() + tx.status.slice(1)}
+                  </span>
+                </div>
+                <div className="transaction-details">
+                  <span className="transaction-date" title={new Date(tx.timestamp).toLocaleString()}>
+                    {formatDate(tx.timestamp)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
-      
-      {transactions.length === 0 ? (
-        <div className="no-transactions">
-          <p>No transactions yet</p>
-          <p className="no-transactions-sub">Your recent transactions will appear here</p>
-        </div>
-      ) : (
-        <div className="transaction-list">
-          {transactions.map((tx) => (
-            <div key={tx.hash} className={`transaction-item ${tx.status}`}>
-              <div className="transaction-main">
-                <div className="transaction-info">
-                  <span className="transaction-hash">
-                    <a
-                      href={`${tx.chainId === mainnet.id 
-                        ? 'https://etherscan.io/tx/' 
-                        : 'https://sepolia.etherscan.io/tx/'}${tx.hash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title={tx.hash}
-                    >
-                      {formatTxHash(tx.hash)}
-                    </a>
-                  </span>
-                  {tx.description && (
-                    <span className="transaction-description">
-                      {tx.description}
-                    </span>
-                  )}
-                </div>
-                <span className={`transaction-status ${tx.status}`}>
-                  {tx.status.charAt(0).toUpperCase() + tx.status.slice(1)}
-                </span>
-              </div>
-              <div className="transaction-details">
-                <span className="transaction-date" title={new Date(tx.timestamp).toLocaleString()}>
-                  {formatDate(tx.timestamp)}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+    </ExpandableSection>
   );
 };
 
