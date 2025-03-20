@@ -1,9 +1,20 @@
 import React, { FC, useState, useEffect } from 'react';
 import { usePublicClient, useWalletClient } from 'wagmi';
+import { useChainId } from 'wagmi';
 import { Pool } from '@uniswap/v3-sdk';
 import { FeeAmount } from '@uniswap/v3-sdk';
-import { WETH, USDC, getOrCreatePool } from '../utils/uniswap';
+import { 
+  WETH, 
+  USDC, 
+  USDT, 
+  getExistingPool, 
+  NETWORKS, 
+  NetworkConfig, 
+  fetchPoolPriceFromGraph,
+  calculatePoolPrice 
+} from '../utils/uniswap';
 import { formatPrice } from '../utils/uniswap';
+import { Token } from '@uniswap/sdk-core';
 import JSBI from 'jsbi';
 import ExpandableSection from './ExpandableSection';
 import UniswapPool from './UniswapPool';
@@ -14,6 +25,8 @@ interface PoolInfo {
   feeTier: number;
   liquidity: string;
   price: string;
+  token0Symbol: string;
+  token1Symbol: string;
 }
 
 const FEE_TIERS = [
@@ -31,12 +44,51 @@ const PoolBrowser: FC = () => {
   
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
+  const chainId = useChainId();
 
-  const calculatePrice = (pool: Pool): string => {
+  const getNetworkConfig = (): NetworkConfig => {
+    return chainId === 1 ? NETWORKS.MAINNET : NETWORKS.SEPOLIA;
+  };
+
+  const getTokensForNetwork = () => {
+    const config = getNetworkConfig();
+    const networkTokens = {
+      WETH: new Token(
+        config.chainId,
+        config.tokens.WETH.address,
+        config.tokens.WETH.decimals,
+        config.tokens.WETH.symbol
+      ),
+      USDC: new Token(
+        config.chainId,
+        config.tokens.USDC.address,
+        config.tokens.USDC.decimals,
+        config.tokens.USDC.symbol
+      ),
+      USDT: new Token(
+        config.chainId,
+        config.tokens.USDT.address,
+        config.tokens.USDT.decimals,
+        config.tokens.USDT.symbol
+      )
+    };
+
+    return [
+      { token0: networkTokens.USDC, token1: networkTokens.WETH, name: 'USDC/WETH' },
+      { token0: networkTokens.USDT, token1: networkTokens.WETH, name: 'USDT/WETH' }
+    ] as const;
+  };
+
+  const calculatePrice = async (pool: Pool, address: string): Promise<string> => {
     try {
-      const sqrtPriceX96 = JSBI.toNumber(pool.sqrtRatioX96);
-      const Q96 = Math.pow(2, 96);
-      const price = (sqrtPriceX96 / Q96) * (sqrtPriceX96 / Q96);
+      // Calculate price locally
+      const price = calculatePoolPrice(
+        BigInt(pool.sqrtRatioX96.toString()),
+        pool.token0.decimals,
+        pool.token1.decimals,
+        pool.token0.symbol === 'WETH'
+      );
+
       return formatPrice(price);
     } catch (error) {
       console.error('Error calculating price:', error);
@@ -53,36 +105,46 @@ const PoolBrowser: FC = () => {
   };
 
   const fetchPools = async () => {
-    if (!publicClient || !walletClient) {
-      setError('Please connect your wallet to continue');
+    if (!publicClient) {
+      setError('Wallet connection required');
       return;
     }
 
     setLoading(true);
     setError('');
     const foundPools: PoolInfo[] = [];
+    const networkConfig = getNetworkConfig();
+    const tokenPairs = getTokensForNetwork();
 
     try {
-      // Try to fetch pools for each fee tier
-      for (const { fee, label } of FEE_TIERS) {
-        try {
-          const { pool, address } = await getOrCreatePool(
-            publicClient,
-            walletClient,
-            WETH,
-            USDC,
-            fee
-          );
+      for (const { token0, token1, name } of tokenPairs) {
+        for (const { fee, label } of FEE_TIERS) {
+          try {
+            const result = await getExistingPool(
+              publicClient,
+              token0,
+              token1,
+              fee,
+              networkConfig
+            );
 
-          foundPools.push({
-            pool,
-            address,
-            feeTier: fee,
-            liquidity: pool.liquidity.toString(),
-            price: calculatePrice(pool)
-          });
-        } catch (err) {
-          console.log(`No pool found for fee tier ${label}`);
+            if (result) {
+              const { pool, address } = result;
+              const price = await calculatePrice(pool, address);
+              
+              foundPools.push({
+                pool,
+                address,
+                feeTier: fee,
+                liquidity: pool.liquidity.toString(),
+                price,
+                token0Symbol: token0.symbol || 'Unknown',
+                token1Symbol: token1.symbol || 'Unknown'
+              });
+            }
+          } catch (err) {
+            console.error(`Error checking pool for ${name} with fee tier ${label}:`, err);
+          }
         }
       }
 
@@ -95,11 +157,22 @@ const PoolBrowser: FC = () => {
     }
   };
 
+  const groupPoolsByPair = (pools: PoolInfo[]) => {
+    const tokenPairs = getTokensForNetwork();
+    return tokenPairs.map(pair => ({
+      pairName: pair.name,
+      pools: pools.filter(p => 
+        p.token0Symbol === pair.token0.symbol && 
+        p.token1Symbol === pair.token1.symbol
+      ).sort((a, b) => a.feeTier - b.feeTier)
+    }));
+  };
+
   useEffect(() => {
-    if (publicClient && walletClient) {
+    if (publicClient && chainId) {
       fetchPools();
     }
-  }, [publicClient, walletClient]);
+  }, [publicClient, chainId]);
 
   return (
     <ExpandableSection title="Uniswap V3 Pools">
@@ -117,41 +190,47 @@ const PoolBrowser: FC = () => {
           ) : (
             <>
               {!selectedPool ? (
-                <>
-                  <div className="pools-grid">
-                    {pools.map((poolInfo) => (
-                      <div 
-                        key={poolInfo.address} 
-                        className="pool-card"
-                        onClick={() => handlePoolSelect(poolInfo.pool, poolInfo.address)}
-                      >
-                        <div className="pool-card-header">
-                          <span className="token-pair">USDC/WETH</span>
-                          <span className="fee-tier">{FEE_TIERS.find(ft => ft.fee === poolInfo.feeTier)?.label}</span>
-                        </div>
-                        <div className="pool-card-body">
-                          <div className="pool-info-row">
-                            <span className="label">Price:</span>
-                            <span className="value">{poolInfo.price}</span>
-                          </div>
-                          <div className="pool-info-row">
-                            <span className="label">Liquidity:</span>
-                            <span className="value">{poolInfo.liquidity}</span>
-                          </div>
-                          <div className="pool-info-row">
-                            <span className="label">Address:</span>
-                            <span className="value address">{`${poolInfo.address.slice(0, 6)}...${poolInfo.address.slice(-4)}`}</span>
-                          </div>
-                        </div>
+                <div className="pairs-container">
+                  {groupPoolsByPair(pools).map(({ pairName, pools }) => (
+                    <div key={pairName} className="pair-section">
+                      <div className="pair-header">
+                        <h4>{pairName}</h4>
                       </div>
-                    ))}
-                  </div>
+                      <div className="pools-grid">
+                        {pools.map((poolInfo) => (
+                          <div 
+                            key={poolInfo.address} 
+                            className="pool-card"
+                            onClick={() => handlePoolSelect(poolInfo.pool, poolInfo.address)}
+                          >
+                            <div className="pool-card-header">
+                              <span className="fee-tier">{FEE_TIERS.find(ft => ft.fee === poolInfo.feeTier)?.label}</span>
+                            </div>
+                            <div className="pool-card-body">
+                              <div className="pool-info-row">
+                                <span className="label">Price:</span>
+                                <span className="value">{poolInfo.price}</span>
+                              </div>
+                              <div className="pool-info-row">
+                                <span className="label">Liquidity:</span>
+                                <span className="value">{poolInfo.liquidity}</span>
+                              </div>
+                              <div className="pool-info-row">
+                                <span className="label">Address:</span>
+                                <span className="value address">{`${poolInfo.address.slice(0, 6)}...${poolInfo.address.slice(-4)}`}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                   {pools.length === 0 && (
                     <div className="no-pools">
                       No pools found. Create one by selecting a fee tier.
                     </div>
                   )}
-                </>
+                </div>
               ) : (
                 <div className="selected-pool-container">
                   <button onClick={handleBackToList} className="back-button">

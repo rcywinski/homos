@@ -1,21 +1,23 @@
-import { Token } from '@uniswap/sdk-core';
+import { Token, Price } from '@uniswap/sdk-core';
 import { Pool, FeeAmount, TickMath, TICK_SPACINGS } from '@uniswap/v3-sdk';
 import { createPublicClient, http, createWalletClient, custom, PublicClient, WalletClient, Address, encodeFunctionData, decodeFunctionResult } from 'viem';
-import { sepolia } from 'viem/chains';
+import { sepolia, mainnet } from 'wagmi/chains';
 import JSBI from 'jsbi';
+import { ethers } from 'ethers';
 
-// Sepolia addresses
+// Token Addresses
 export const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14'; // Sepolia WETH
 export const USDC_ADDRESS = '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8'; // Sepolia USDC
+export const USDT_ADDRESS = '0x7169D38820dfd117C3FA1f22a697dBA58d90BA06'; // Sepolia USDT
 
 // Uniswap V3 contract addresses
 export const POOL_FACTORY_ADDRESS = '0x0227628f3F023bb0B980b67D528571c95c6DaC1c'; // Sepolia Factory
 export const SWAP_ROUTER_ADDRESS = '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD'; // Sepolia Router
 export const NFT_MANAGER_ADDRESS = '0x1238536071E1c677A632429e3655c799b22cDA52'; // Sepolia NFT Manager
 
-// Token definitions
+// Token Instances
 export const WETH = new Token(
-  11155111, // Sepolia chain ID
+  sepolia.id,
   WETH_ADDRESS,
   18,
   'WETH',
@@ -23,11 +25,19 @@ export const WETH = new Token(
 );
 
 export const USDC = new Token(
-  11155111,
+  sepolia.id,
   USDC_ADDRESS,
   6,
   'USDC',
   'USD Coin'
+);
+
+export const USDT = new Token(
+  sepolia.id,
+  USDT_ADDRESS,
+  6,
+  'USDT',
+  'Tether USD'
 );
 
 // Pool fee tiers
@@ -138,101 +148,86 @@ export const getPoolPrice = async (
 export const getOrCreatePool = async (
   publicClient: PublicClient,
   walletClient: WalletClient,
-  tokenA: Token,
-  tokenB: Token,
-  fee: FeeAmount,
-): Promise<{ pool: Pool; address: Address; isNew: boolean }> => {
+  token0: Token,
+  token1: Token,
+  fee: FeeAmount
+): Promise<{ pool: Pool; address: string; isNew: boolean }> => {
   try {
-    if (!walletClient.account) {
-      throw new Error('No wallet account connected');
+    // Check if pool exists
+    const existingPool = await getExistingPool(publicClient, token0, token1, fee);
+    if (existingPool) {
+      return { ...existingPool, isNew: false };
     }
 
-    // Sort tokens by address to match Uniswap's internal ordering
-    const [token0, token1] = tokenA.address.toLowerCase() < tokenB.address.toLowerCase()
-      ? [tokenA, tokenB]
-      : [tokenB, tokenA];
+    // Pool doesn't exist, create it
+    const factoryAddress = POOL_FACTORY_ADDRESS;
+    const account = walletClient.account;
 
-    // Try to get existing pool
+    // Sort tokens in ascending order
+    let sortedTokens: [Token, Token];
+    if (token0.sortsBefore(token1)) {
+      sortedTokens = [token0, token1];
+    } else {
+      sortedTokens = [token1, token0];
+    }
+
+    // Create pool via Uniswap V3 factory
+    const hash = await walletClient.writeContract({
+      abi: POOL_FACTORY_ABI,
+      address: factoryAddress as `0x${string}`,
+      functionName: 'createPool',
+      args: [
+        sortedTokens[0].address as `0x${string}`,
+        sortedTokens[1].address as `0x${string}`,
+        fee,
+      ],
+    });
+
+    // Wait for transaction
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+
+    // Get the pool address
     const poolAddress = await publicClient.readContract({
-      address: POOL_FACTORY_ADDRESS,
+      address: factoryAddress,
       abi: POOL_FACTORY_ABI,
       functionName: 'getPool',
-      args: [token0.address as Address, token1.address as Address, fee],
+      args: [sortedTokens[0].address as Address, sortedTokens[1].address as Address, fee],
     }) as Address;
 
-    let isNew = false;
+    // Initialize the pool with a price
+    // For simplicity, we'll use a default price here
+    // In a real app, you'd want to use a price oracle or let the user specify
+    const sqrtPriceX96 = JSBI.BigInt('792281625142643375935439503360'); // sqrt(1500) * 2^96
 
-    // If pool doesn't exist, create it
-    if (poolAddress === '0x0000000000000000000000000000000000000000') {
-      console.log('Pool does not exist, creating new pool...');
-      
-      const hash = await walletClient.writeContract({
-        chain: sepolia,
-        account: walletClient.account.address,
-        address: POOL_FACTORY_ADDRESS,
-        abi: POOL_FACTORY_ABI,
-        functionName: 'createPool',
-        args: [token0.address as Address, token1.address as Address, fee],
-      });
+    const initHash = await walletClient.writeContract({
+      chain: sepolia,
+      account: account.address,
+      address: poolAddress,
+      abi: POOL_ABI,
+      functionName: 'initialize',
+      args: [sqrtPriceX96],
+    });
 
-      // Wait for transaction to be mined
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      
-      // Get the new pool address
-      const newPoolAddress = await publicClient.readContract({
-        address: POOL_FACTORY_ADDRESS,
-        abi: POOL_FACTORY_ABI,
-        functionName: 'getPool',
-        args: [token0.address as Address, token1.address as Address, fee],
-      }) as Address;
+    await publicClient.waitForTransactionReceipt({ hash: initHash });
 
-      if (newPoolAddress === '0x0000000000000000000000000000000000000000') {
-        throw new Error('Failed to create pool');
-      }
-
-      // Initialize the pool with a price of ~1500 USDC per ETH
-      const initialPriceX96 = JSBI.BigInt('792281625142643375935439503360'); // sqrt(1500) * 2^96
-      await walletClient.writeContract({
-        chain: sepolia,
-        account: walletClient.account.address,
-        address: newPoolAddress,
-        abi: POOL_ABI,
-        functionName: 'initialize',
-        args: [BigInt(initialPriceX96.toString())],
-      });
-
-      isNew = true;
-      
-      // Get pool data and create Pool instance
-      const { sqrtPriceX96, tick, liquidity } = await getPoolPrice(publicClient, newPoolAddress);
-
-      const pool = new Pool(
-        token0,
-        token1,
-        fee,
-        sqrtPriceX96,
-        liquidity,
-        tick
-      );
-
-      return { pool, address: newPoolAddress, isNew };
+    // Create a new Pool instance
+    const poolState = await getPoolState(publicClient, poolAddress, token0, token1);
+    if (!poolState) {
+      throw new Error('Failed to get pool state after creation');
     }
 
-    // Get pool data for existing pool
-    const { sqrtPriceX96, tick, liquidity } = await getPoolPrice(publicClient, poolAddress);
-
-    const pool = new Pool(
+    const createdPool = new Pool(
       token0,
       token1,
       fee,
-      sqrtPriceX96,
-      liquidity,
-      tick
+      poolState.sqrtPriceX96.toString(),
+      poolState.liquidity.toString(),
+      poolState.tick
     );
 
-    return { pool, address: poolAddress, isNew };
+    return { pool: createdPool, address: poolAddress, isNew: true };
   } catch (error) {
-    console.error('Error getting or creating pool:', error);
+    console.error('Error creating pool:', error);
     throw error;
   }
 };
@@ -253,10 +248,237 @@ export const getNearestValidTick = (
  * Formats a price for display
  */
 export const formatPrice = (price: number): string => {
+  if (!isFinite(price) || isNaN(price) || price === 0) {
+    return '$0.00';
+  }
+
+  // We need to check if the price is very small (like 0.0005)
+  // In this case, we should invert it to show the USD price per ETH
+  if (price < 0.01) {
+    // If price is very small, it's likely the USDC/WETH or USDT/WETH ratio
+    // Convert to WETH/USD by inverting
+    const inverted = 1 / price;
+    
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(inverted);
+  }
+  
+  // Otherwise, format the price directly
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
     minimumFractionDigits: 2,
-    maximumFractionDigits: 6,
+    maximumFractionDigits: 2
   }).format(price);
+};
+
+// Network-specific addresses
+export const NETWORKS = {
+  MAINNET: {
+    chainId: 1,
+    name: 'Mainnet',
+    poolFactoryAddress: '0x1F98431c8aD98523631AE4a59f267346ea31F984' as Address,
+    tokens: {
+      WETH: {
+        address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2' as Address,
+        decimals: 18,
+        symbol: 'WETH'
+      },
+      USDC: {
+        address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' as Address,
+        decimals: 6,
+        symbol: 'USDC'
+      },
+      USDT: {
+        address: '0xdAC17F958D2ee523a2206206994597C13D831ec7' as Address,
+        decimals: 6,
+        symbol: 'USDT'
+      }
+    }
+  },
+  SEPOLIA: {
+    chainId: 11155111,
+    name: 'Sepolia',
+    poolFactoryAddress: POOL_FACTORY_ADDRESS,
+    tokens: {
+      WETH: {
+        address: WETH.address,
+        decimals: WETH.decimals,
+        symbol: WETH.symbol
+      },
+      USDC: {
+        address: USDC.address,
+        decimals: USDC.decimals,
+        symbol: USDC.symbol
+      },
+      USDT: {
+        address: USDT.address,
+        decimals: USDT.decimals,
+        symbol: USDT.symbol
+      }
+    }
+  }
+} as const;
+
+export type NetworkConfig = typeof NETWORKS.MAINNET | typeof NETWORKS.SEPOLIA;
+
+// Update getExistingPool to accept networkConfig
+export const getExistingPool = async (
+  publicClient: PublicClient,
+  token0: Token,
+  token1: Token,
+  fee: FeeAmount,
+  networkConfig: NetworkConfig
+): Promise<{ pool: Pool; address: string } | null> => {
+  try {
+    // Sort tokens by address to match Uniswap's internal ordering
+    const [tokenA, tokenB] = token0.address.toLowerCase() < token1.address.toLowerCase()
+      ? [token0, token1]
+      : [token1, token0];
+
+    // Get pool address from factory using network-specific factory address
+    const poolAddress = await publicClient.readContract({
+      address: networkConfig.poolFactoryAddress,
+      abi: POOL_FACTORY_ABI,
+      functionName: 'getPool',
+      args: [tokenA.address as Address, tokenB.address as Address, fee],
+    }) as Address;
+
+    // If pool doesn't exist, return null
+    if (poolAddress === '0x0000000000000000000000000000000000000000') {
+      return null;
+    }
+
+    // Get pool data
+    const slot0Data = await publicClient.readContract({
+      address: poolAddress,
+      abi: POOL_ABI,
+      functionName: 'slot0',
+    }) as readonly [bigint, number, number, number, number, number, boolean];
+
+    const liquidity = await publicClient.readContract({
+      address: poolAddress,
+      abi: POOL_ABI,
+      functionName: 'liquidity',
+    }) as bigint;
+
+    const pool = new Pool(
+      tokenA,
+      tokenB,
+      fee,
+      slot0Data[0].toString(),
+      liquidity.toString(),
+      slot0Data[1]
+    );
+
+    return { pool, address: poolAddress };
+  } catch (error) {
+    console.error('Error in getExistingPool:', error);
+    return null;
+  }
+};
+
+// The Graph API endpoints
+export const GRAPH_API_ENDPOINTS = {
+  MAINNET: 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3'
+};
+
+export interface PoolPriceData {
+  token0Price: string;
+  token1Price: string;
+  feeTier: string;
+  liquidity: string;
+}
+
+export const calculatePoolPrice = (
+  sqrtPriceX96: bigint,
+  token0Decimals: number,
+  token1Decimals: number,
+  isWethToken0: boolean
+): number => {
+  try {
+    // Get sqrtPriceX96 as a regular number
+    const sqrtPriceFloat = Number(sqrtPriceX96) / Math.pow(2, 96);
+    
+    // Square it to get the actual price ratio between token1/token0
+    const rawPrice = Math.pow(sqrtPriceFloat, 2);
+    
+    // Adjust for decimal differences
+    const decimalAdjustment = Math.pow(10, token0Decimals - token1Decimals);
+    const adjustedPrice = rawPrice * decimalAdjustment;
+    
+    // Handle WETH direction - if WETH is token0, take inverse
+    const finalPrice = isWethToken0 ? 1 / adjustedPrice : adjustedPrice;
+    
+    return finalPrice;
+  } catch (error) {
+    console.error('Error calculating pool price:', error);
+    console.error('Input values:', {
+      sqrtPriceX96: sqrtPriceX96.toString(),
+      token0Decimals,
+      token1Decimals,
+      isWethToken0
+    });
+    return 0;
+  }
+};
+
+export const fetchPoolPriceFromGraph = async (
+  poolAddress: string,
+  chainId: number
+): Promise<PoolPriceData | null> => {
+  // Only try to fetch from Graph if we're on mainnet
+  if (chainId !== 1) {
+    return null;
+  }
+
+  const query = `
+    query getPool($poolAddress: String!) {
+      pool(id: $poolAddress) {
+        token0Price
+        token1Price
+        feeTier
+        liquidity
+      }
+    }
+  `;
+
+  try {
+    const response = await fetch(GRAPH_API_ENDPOINTS.MAINNET, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        variables: {
+          poolAddress: poolAddress.toLowerCase(),
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const { data } = await response.json();
+    
+    if (data?.pool) {
+      return {
+        token0Price: data.pool.token0Price,
+        token1Price: data.pool.token1Price,
+        feeTier: data.pool.feeTier,
+        liquidity: data.pool.liquidity
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching pool price from The Graph:', error);
+    return null;
+  }
 }; 
