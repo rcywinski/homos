@@ -1,0 +1,337 @@
+/* Add these styles at the end of the file */
+
+/* Price Range Sliders */
+.price-sliders {
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  margin: 16px 0;
+}
+
+.price-slider {
+  display: inline-block;
+  vertical-align: top;
+  width: 48% !important;
+  margin: 0 1%;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.slider-with-markers {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  position: relative;
+  margin: 8px 0;
+}
+
+.price-range-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 8px;
+  border-radius: 5px;
+  background: #ddd;
+  outline: none;
+  margin: 0 12px;
+  cursor: pointer;
+}
+
+.price-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #a0d8ef;
+  border: 2px solid #0080ff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.price-range-slider::-webkit-slider-thumb:hover {
+  background: #0080ff;
+  transform: scale(1.1);
+}
+
+.price-range-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #a0d8ef;
+  border: 2px solid #0080ff;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.price-range-slider::-moz-range-thumb:hover {
+  background: #0080ff;
+  transform: scale(1.1);
+}
+
+/* Add dual range slider styles */
+.dual-range-container {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  margin: 20px 0;
+}
+
+.dual-slider-track {
+  position: absolute;
+  width: 100%;
+  height: 8px;
+  background-color: #ddd;
+  border-radius: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.dual-slider-selected {
+  position: absolute;
+  height: 8px;
+  background-color: #0080ff;
+  border-radius: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.dual-slider-thumb {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  background-color: #a0d8ef;
+  border: 2px solid #0080ff;
+  border-radius: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.dual-slider-thumb:hover {
+  transform: translate(-50%, -50%) scale(1.1);
+  background-color: #0080ff;
+}
+
+.dual-slider-thumb.min {
+  left: 0;
+}
+
+.dual-slider-thumb.max {
+  left: 100%;
+}
+
+.dual-price-display {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.dual-price-input {
+  width: 45%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.dual-price-label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 5px;
+  color: #333;
+}
+
+.dual-price-input-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.dual-price-markers {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #666;
+}
+
+.slider-with-markers {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  position: relative;
+  margin: 8px 0;
+}
+
+.slider-marker {
+  font-size: 10px;
+  color: #666;
+  min-width: 36px;
+  width: 36px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slider-marker.left {
+  text-align: right;
+  padding-right: 8px;
+}
+
+.slider-marker.right {
+  text-align: left;
+  padding-left: 8px;
+}
+
+.price-input-field {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-top: 8px;
+  font-size: 14px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  background-color: white;
+  text-align: center;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Price range section improvements */
+.price-range-section {
+  margin-bottom: 24px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 16px;
+  background-color: #f9f9f9;
+}
+
+.price-range-section h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+  color: #333;
+}
+
+.price-range-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.radio-option {
+  flex: 1;
+  min-width: 150px;
+  max-width: 220px;
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background-color: white;
+}
+
+.radio-option.selected {
+  border-color: #0080ff;
+  background-color: rgba(0, 128, 255, 0.08);
+}
+
+.radio-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #ccc;
+  margin-right: 8px;
+  box-sizing: border-box;
+  display: inline-block;
+  position: relative;
+}
+
+.radio-option.selected .radio-dot {
+  border-color: #0080ff;
+}
+
+.radio-option.selected .radio-dot:after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #0080ff;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.price-info {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  background-color: rgba(0, 128, 255, 0.15);
+  border-radius: 4px;
+  font-weight: 600;
+  margin: 12px 0;
+  font-size: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  width: 100%;
+}
+
+.price-range-info {
+  padding: 12px;
+  margin: 12px 0;
+  background-color: rgba(255, 248, 225, 0.7);
+  border-left: 4px solid #ffc107;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Price value display */
+.price-value {
+  font-size: 13px;
+  color: #0066cc;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  background-color: rgba(0, 102, 204, 0.08);
+  padding: 6px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Responsive adjustments for price sliders */
+@media (max-width: 768px) {
+  .price-slider {
+    display: block;
+    width: 98% !important;
+    margin: 10px 1%;
+  }
+  
+  .dual-price-display {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .dual-price-input {
+    width: 100%;
+  }
+}
+
+/* Additional refinements for slider appearance */
+.price-slider label {
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+} 

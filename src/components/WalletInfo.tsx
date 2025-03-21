@@ -6,6 +6,9 @@ import { USDC_ADDRESS } from '../utils/uniswap';
 
 // Mainnet USDC address
 const MAINNET_USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
+// Mainnet and Sepolia WETH addresses
+const MAINNET_WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+const SEPOLIA_WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
 
 export const CompactWalletInfo: React.FC = () => {
   const { address: connectedAddress } = useAccount();
@@ -24,10 +27,17 @@ export const CompactWalletInfo: React.FC = () => {
   
   // Use the appropriate USDC address based on the network
   const usdcAddress = chainId === mainnet.id ? MAINNET_USDC_ADDRESS : USDC_ADDRESS;
+  // Use the appropriate WETH address based on the network
+  const wethAddress = chainId === mainnet.id ? MAINNET_WETH_ADDRESS : SEPOLIA_WETH_ADDRESS;
   
   const { data: usdcBalance } = useBalance({ 
     address,
     token: usdcAddress as `0x${string}`,
+  });
+  
+  const { data: wethBalance } = useBalance({
+    address,
+    token: wethAddress as `0x${string}`,
   });
   
   const { data: blockNumber } = useBlockNumber();
@@ -38,6 +48,11 @@ export const CompactWalletInfo: React.FC = () => {
   // Format USDC balance with 8 decimal places
   const formattedUsdcBalance = usdcBalance ? 
     parseFloat(formatUnits(usdcBalance.value, 6)).toFixed(8) : 
+    '0.00000000';
+    
+  // Format WETH balance with 8 decimal places
+  const formattedWethBalance = wethBalance ? 
+    parseFloat(formatUnits(wethBalance.value, 18)).toFixed(8) : 
     '0.00000000';
   
   // Handle Rabby address input
@@ -87,13 +102,14 @@ export const CompactWalletInfo: React.FC = () => {
 
   // Calculate total USD value
   useEffect(() => {
-    if (balance || usdcBalance) {
+    if (balance || usdcBalance || wethBalance) {
       const ethValue = balance ? Number(formatEther(balance.value)) * ethPrice : 0;
+      const wethValue = wethBalance ? Number(formatUnits(wethBalance.value, 18)) * ethPrice : 0;
       const usdcValue = usdcBalance ? Number(formatUnits(usdcBalance.value, 6)) : 0;
-      const total = ethValue + usdcValue;
+      const total = ethValue + wethValue + usdcValue;
       setTotalUsdValue(total.toFixed(2));
     }
-  }, [balance, usdcBalance, ethPrice, chainId, usdcAddress, address]);
+  }, [balance, usdcBalance, wethBalance, ethPrice, chainId, usdcAddress, wethAddress, address]);
 
   if (!connectedAddress) return null;
 
@@ -162,6 +178,12 @@ export const CompactWalletInfo: React.FC = () => {
           <span className="token-symbol">ETH:</span>
           <span className="balance-info eth-balance">
             {balance ? `${Number(formatEther(balance.value)).toFixed(8)}` : '0.00000000'}
+          </span>
+        </div>
+        <div className="balance-row weth-row">
+          <span className="token-symbol">WETH:</span>
+          <span className="balance-info weth-balance">
+            {formattedWethBalance}
           </span>
         </div>
         <div className="balance-row usdc-row">

@@ -1193,4 +1193,332 @@
 
 .network-switch .network-switch-button {
   display: none;
+}
+
+/* Add or update these styles in your CSS file */
+
+.add-liquidity-form .loading {
+  display: flex;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 10px 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.add-liquidity-form .spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  margin-right: 10px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.add-liquidity-form .error-message {
+  background-color: rgba(248, 113, 113, 0.1);
+  border-left: 4px solid #ef4444;
+  padding: 12px 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  color: #b91c1c;
+}
+
+.add-liquidity-form .error-title {
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.add-liquidity-form .error-content {
+  margin-bottom: 8px;
+}
+
+.add-liquidity-form .error-help {
+  font-size: 0.9em;
+  background-color: rgba(248, 113, 113, 0.05);
+  padding: 8px 10px;
+  border-radius: 4px;
+}
+
+.add-liquidity-form .error-help ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.add-liquidity-form .success-message {
+  background-color: rgba(34, 197, 94, 0.1);
+  border-left: 4px solid #22c55e;
+  padding: 12px 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  color: #166534;
+  font-weight: 500;
+}
+
+.add-liquidity-form .amount-presets {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.add-liquidity-form .amount-presets span {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.add-liquidity-form .amount-presets button {
+  background-color: #f0f4f8;
+  border: 1px solid #d0d7de;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.85rem;
+  color: #24292f;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-liquidity-form .amount-presets button:hover {
+  background-color: #e1e4e8;
+  border-color: #a5a9ad;
+}
+
+.add-liquidity-form .wallet-balances {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 12px 16px;
+  margin: 16px 0;
+}
+
+.add-liquidity-form .balance-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #475569;
+  margin-bottom: 8px;
+}
+
+.add-liquidity-form .balance-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.95rem;
+}
+
+.add-liquidity-form .balance-row span {
+  color: #64748b;
+}
+
+.add-liquidity-form .native-eth-balance {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 2px;
+  text-align: right;
+  padding-right: 2px;
+  font-style: italic;
+}
+
+/* Debug information display */
+.debug-controls {
+  margin-top: 10px;
+}
+
+.toggle-debug-btn {
+  background-color: #555;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.toggle-debug-btn:hover {
+  background-color: #666;
+}
+
+.debug-info {
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  margin: 10px 0;
+  font-family: monospace;
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+.debug-info h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.debug-section {
+  margin-bottom: 15px;
+}
+
+.debug-section h5 {
+  margin-top: 0;
+  margin-bottom: 5px;
+  font-size: 13px;
+  color: #555;
+}
+
+.debug-item {
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.debug-item span {
+  font-weight: bold;
+  color: #555;
+  margin-right: 5px;
+}
+
+.price-range-info {
+  background-color: #fff8e0;
+  border-left: 3px solid #ffcc00;
+  padding: 8px 12px;
+  margin: 10px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  border-radius: 4px;
+}
+
+.price-range-info strong {
+  color: #e6a700;
+}
+
+.radio-group {
+  display: flex;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid #e0e0e0;
+  background-color: #f8f8f8;
+  transition: all 0.2s ease;
+}
+
+.radio-option:hover {
+  background-color: #f0f0f0;
+}
+
+.radio-option.selected {
+  background-color: #e9f3ff;
+  border-color: #3b82f6;
+}
+
+.radio-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #aaa;
+  position: relative;
+}
+
+.radio-option.selected .radio-dot {
+  border-color: #3b82f6;
+}
+
+.radio-option.selected .radio-dot:after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.radio-label {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Price inputs styles */
+.price-inputs {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.price-input {
+  flex: 1;
+}
+
+.price-input label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 4px;
+  color: #666;
+}
+
+.price-input input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.price-info {
+  font-size: 12px;
+  color: #666;
+  margin: 4px 0 12px;
+}
+
+/* Legacy range button styles - keep for compatibility */
+.range-selector {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+  margin-bottom: 10px;
+}
+
+.range-btn {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.range-btn:hover {
+  background-color: #e9e9e9;
+}
+
+.range-btn.active {
+  background-color: #e9f3ff;
+  border-color: #3b82f6;
+  color: #3b82f6;
+}
+
+.price-input .readonly-input {
+  background-color: #f5f5f5;
+  color: #555;
+  cursor: not-allowed;
+  border: 1px solid #ddd;
 } 
