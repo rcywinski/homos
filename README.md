@@ -81,7 +81,7 @@ npm install
 
 3. Start the development server:
 ```bash
-npm start
+npm run start
 ```
 
 ### Usage
@@ -126,4 +126,60 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 [Your License]
 
 ## Security
-This is a testnet application. Do not use on mainnet without proper security audits. 
+This is a testnet application. Do not use on mainnet without proper security audits.
+
+# HOMOS - ETH/ERC20 Liquidity Manager
+
+A modern, user-friendly interface for managing Uniswap V3 liquidity positions.
+
+## Features
+
+- **Add Liquidity**: Create new positions with customizable price ranges
+- **Remove Liquidity**: Withdraw from existing positions
+- **Position Management**: View and manage all your active positions
+- **Real-time Gas Estimates**: See estimated transaction costs before confirming
+- **Token Balance Display**: View your available token balances
+
+## Liquidity Manager
+
+The Liquidity Manager component allows users to add liquidity to Uniswap V3 pools with a simple, intuitive interface.
+
+### Price Range Options
+
+The price range selector provides three options:
+
+- **Full Range (Min/Max)**: Provides liquidity across the entire price range. Earns fees at any price, but with less capital efficiency.
+- **Narrow Range (±5%)**: Concentrated liquidity within 5% of the current price. Higher capital efficiency but requires monitoring.
+- **Custom Range (±30%)**: Set a custom price range that balances risk and capital efficiency.
+
+All options are presented in a single row for easy selection, with the current option highlighted.
+
+### Token Inputs
+
+The token input fields display:
+- Clear labels for each token
+- Token symbols shown within the input field
+- Helpful guidance for minimum amounts
+- Your current wallet balances for reference
+
+### Transaction Process
+
+1. Select your desired price range
+2. Enter token amounts (the app will auto-calculate the paired token amount)
+3. Review the slippage tolerance setting
+4. Approve tokens if needed (one-time process per token)
+5. Click "Add Liquidity" to create your position
+
+### Mobile Responsive
+
+The interface adapts to different screen sizes, with optimized layouts for:
+- Desktop: Full horizontal layout with side-by-side inputs
+- Tablet: Adjusted spacing and element sizes
+- Mobile: Stacked inputs and controls for easier interaction on small screens
+
+## Technical Notes
+
+- Built with React and TypeScript
+- Uses wagmi for Ethereum wallet integration
+- Implements the Uniswap V3 SDK for liquidity position calculations
+- CSS styling optimized for all modern browsers 

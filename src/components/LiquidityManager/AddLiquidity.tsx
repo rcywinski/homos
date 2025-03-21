@@ -12,6 +12,11 @@ import {
   TickMath
 } from '../../utils/liquidityManagement';
 import { NETWORKS } from '../../utils/uniswap';
+import '../../styles/liquidityManager.css';
+import PriceInputs from './components/PriceInputs';
+import GasEstimateDisplay from './components/GasEstimateDisplay';
+import TokenInputs from './components/TokenInputs';
+import { formatBalance, formatTokenAmount } from '../../utils/formatters';
 
 interface AddLiquidityProps {
   pool: Pool;
@@ -983,51 +988,6 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
     }
   }, [amount0, amount1, lowerTick, upperTick, pool, address, walletClient, publicClient, token0NeedsApproval, token1NeedsApproval]);
 
-  // Gas estimate display component
-  const GasEstimateDisplay = () => {
-    // Approximate ETH price in USD - typically would come from an oracle or API
-    const ethPriceInUsd = 1970; // Hardcoded price for demonstration
-    
-    // Get gas price and estimate values, with fallbacks if estimation fails
-    const gwei = gasPriceGwei ? parseFloat(gasPriceGwei).toFixed(2) : '0.44';
-    
-    // Calculate approximate gas cost based on typical Uniswap V3 add liquidity gas usage
-    // if the estimation fails
-    const typicalGasUsed = 200000; // Typical gas used for add liquidity
-    const gweiValue = gasPriceGwei ? parseFloat(gasPriceGwei) : 0.44;
-    
-    // Calculate ETH cost: gas used * gas price (in Gwei) / 10^9
-    const ethCost = gasEstimate 
-      ? parseFloat(gasEstimate).toFixed(6) 
-      : ((typicalGasUsed * gweiValue) / 1000000000).toFixed(6);
-    
-    // Calculate USD equivalent
-    const usdCost = (parseFloat(ethCost) * ethPriceInUsd).toFixed(2);
-    
-    return (
-      <div className="gas-estimate">
-        <h4>Estimated Transaction Costs</h4>
-        <div className="gas-price">
-          <span>Current Gas Price:</span>
-          <strong>{gwei} Gwei</strong>
-        </div>
-        
-        <div className="gas-cost">
-          <span>Estimated Gas Cost:</span>
-          <strong>{ethCost} ETH</strong>
-        </div>
-        
-        <div className="gas-cost-usd">
-          <span>Approximate USD Cost:</span>
-          <strong>${usdCost}</strong>
-          <div className="input-info">
-            Consider gas costs when providing liquidity. Small positions might be affected by gas fees.
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   // Function to calculate price range values for sliders
   const calculatePriceRangeValues = () => {
     if (!pool) return { min: 0, max: 0, current: 0, step: 0 };
@@ -1064,7 +1024,7 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
     };
   };
 
-  // Replace the price range options code
+  // Simplified renderPriceRangeOptions function
   const renderPriceRangeOptions = () => {
     if (!pool) return null;
     
@@ -1075,206 +1035,29 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
     const token0Symbol = pool?.token0?.symbol || 'Token0';
     const token1Symbol = pool?.token1?.symbol || 'Token1';
     
-    // Create reusable component for price inputs to properly handle hooks
-    const PriceInputs = ({ 
-      minValue, 
-      maxValue, 
-      lowerValue, 
-      upperValue, 
-      onChangeLower, 
-      onChangeUpper, 
-      disabled 
-    }: {
-      minValue: number;
-      maxValue: number;
-      lowerValue: number;
-      upperValue: number;
-      onChangeLower: (value: number) => void;
-      onChangeUpper: (value: number) => void;
-      disabled: boolean;
-    }) => {
-      const formatPriceDisplay = (price: number): string => {
-        // Format price to a reasonable number of decimal places
-        if (price > 1000) return price.toFixed(2);
-        if (price > 100) return price.toFixed(3);
-        if (price > 10) return price.toFixed(4);
-        if (price > 1) return price.toFixed(5);
-        return price.toFixed(6);
-      };
-
-      // Add local state for input values
-      const [lowerInputValue, setLowerInputValue] = useState(formatPriceDisplay(lowerValue));
-      const [upperInputValue, setUpperInputValue] = useState(formatPriceDisplay(upperValue));
-      
-      // Update local state when prop values change
-      useEffect(() => {
-        setLowerInputValue(formatPriceDisplay(lowerValue));
-        setUpperInputValue(formatPriceDisplay(upperValue));
-      }, [lowerValue, upperValue]);
-      
-      return (
-        <div style={{ margin: '20px 0' }}>
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            gap: '20px',
-            marginBottom: '15px'
-          }}>
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <label style={{ 
-                display: 'block', 
-                fontWeight: 'bold', 
-                marginBottom: '8px',
-                fontSize: '15px'
-              }}>
-                Min Price
-              </label>
-              <input
-                type="text"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  textAlign: 'center',
-                  borderRadius: '6px',
-                  border: '1px solid #ccc',
-                  fontSize: '16px'
-                }}
-                value={lowerInputValue}
-                onChange={(e) => {
-                  // Just update the displayed value during typing
-                  setLowerInputValue(e.target.value);
-                }}
-                onBlur={(e) => {
-                  // Validate and save the value when focus is lost
-                  const value = parseFloat(e.target.value);
-                  if (!isNaN(value) && value >= minValue && value < upperValue) {
-                    onChangeLower(value);
-                  } else {
-                    // Reset to the previous valid value if invalid
-                    setLowerInputValue(formatPriceDisplay(lowerValue));
-                  }
-                }}
-                disabled={disabled}
-              />
-              <div style={{ 
-                fontSize: '13px', 
-                marginTop: '8px',
-                color: '#555'
-              }}>
-                1 {pool?.token0?.symbol || 'Token0'} = {formatPriceDisplay(lowerValue)} {pool?.token1?.symbol || 'Token1'}
-              </div>
-            </div>
-            
-            <div style={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              justifyContent: 'center', 
-              alignItems: 'center',
-              padding: '0 10px'
-            }}>
-              {/* Add percentage difference display */}
-              <div style={{
-                fontSize: '14px',
-                fontWeight: 'bold',
-                color: '#0080ff',
-                marginBottom: '8px',
-                textAlign: 'center'
-              }}>
-                {(() => {
-                  const currentPoolPrice = pool ? tickToPrice(pool.tickCurrent, pool.token0.decimals, pool.token1.decimals) : 0;
-                  const lowerPctFromCurrent = ((currentPoolPrice - lowerValue) / currentPoolPrice) * 100;
-                  const upperPctFromCurrent = ((upperValue - currentPoolPrice) / currentPoolPrice) * 100;
-                  return `-${lowerPctFromCurrent.toFixed(2)}% / +${upperPctFromCurrent.toFixed(2)}%`;
-                })()}
-              </div>
-              <div style={{ 
-                width: '40px', 
-                height: '2px', 
-                backgroundColor: '#999', 
-                margin: '15px 0' 
-              }}></div>
-              <div style={{ 
-                fontSize: '13px', 
-                color: '#666',
-                textAlign: 'center',
-                marginTop: '5px'
-              }}>
-                Current: {formatPriceDisplay(pool ? tickToPrice(pool.tickCurrent, pool.token0.decimals, pool.token1.decimals) : 0)}
-              </div>
-            </div>
-            
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <label style={{ 
-                display: 'block', 
-                fontWeight: 'bold', 
-                marginBottom: '8px',
-                fontSize: '15px'
-              }}>
-                Max Price
-              </label>
-              <input
-                type="text"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  textAlign: 'center',
-                  borderRadius: '6px',
-                  border: '1px solid #ccc',
-                  fontSize: '16px'
-                }}
-                value={upperInputValue}
-                onChange={(e) => {
-                  // Just update the displayed value during typing
-                  setUpperInputValue(e.target.value);
-                }}
-                onBlur={(e) => {
-                  // Validate and save the value when focus is lost
-                  const value = parseFloat(e.target.value);
-                  if (!isNaN(value) && value > lowerValue && value <= maxValue) {
-                    onChangeUpper(value);
-                  } else {
-                    // Reset to the previous valid value if invalid
-                    setUpperInputValue(formatPriceDisplay(upperValue));
-                  }
-                }}
-                disabled={disabled}
-              />
-              <div style={{ 
-                fontSize: '13px', 
-                marginTop: '8px',
-                color: '#555'
-              }}>
-                1 {pool?.token0?.symbol || 'Token0'} = {formatPriceDisplay(upperValue)} {pool?.token1?.symbol || 'Token1'}
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    };
-    
     return (
       <div className="price-range-section">
-        <div className="price-range-selector">
+        <div className="range-options-wrapper">
           <div 
-            className={`radio-option ${priceRange === 'full' ? 'selected' : ''}`}
+            className={`range-option ${priceRange === 'full' ? 'selected' : ''}`}
             onClick={() => handlePriceRangeChange('full')}
           >
-            <span className="radio-dot"></span>
-            <span className="radio-label">Full Range (Min/Max)</span>
+            <div className="range-option-radio"></div>
+            <div className="range-option-label">Full Range (Min/Max)</div>
           </div>
           <div 
-            className={`radio-option ${priceRange === 'narrow' ? 'selected' : ''}`}
+            className={`range-option ${priceRange === 'narrow' ? 'selected' : ''}`}
             onClick={() => handlePriceRangeChange('narrow')}
           >
-            <span className="radio-dot"></span>
-            <span className="radio-label">Narrow Range (±5%)</span>
+            <div className="range-option-radio"></div>
+            <div className="range-option-label">Narrow Range (±5%)</div>
           </div>
           <div 
-            className={`radio-option ${priceRange === 'custom' ? 'selected' : ''}`}
+            className={`range-option ${priceRange === 'custom' ? 'selected' : ''}`}
             onClick={() => handlePriceRangeChange('custom')}
           >
-            <span className="radio-dot"></span>
-            <span className="radio-label">Custom Range (±30%)</span>
+            <div className="range-option-radio"></div>
+            <div className="range-option-label">Custom Range (±30%)</div>
           </div>
         </div>
         
@@ -1296,6 +1079,7 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
             onChangeLower={(value) => handlePriceChange('lower', value.toString())}
             onChangeUpper={(value) => handlePriceChange('upper', value.toString())}
             disabled={false}
+            pool={pool}
           />
         )}
 
@@ -1309,6 +1093,7 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
             onChangeLower={() => {}} // No-op since this is read-only
             onChangeUpper={() => {}} // No-op since this is read-only
             disabled={true}
+            pool={pool}
           />
         )}
         
@@ -1464,11 +1249,6 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
       {success && <div className="success-message">{success}</div>}
       
       {renderPriceRangeOptions()}
-      
-      <div className="price-display">
-        <span>Current Price: {tickToPrice(pool.tickCurrent, pool.token0.decimals, pool.token1.decimals).toFixed(8)}</span>
-        <span>Current Tick: {pool.tickCurrent}</span>
-      </div>
 
       {/* Display current balances to help users */}
       <div className="wallet-balances">
@@ -1476,68 +1256,34 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
         <div className="balance-row">
           <span>{pool.token0.symbol}: </span>
           <strong>
-            {token0Balance 
-              ? (pool.token0.symbol?.includes('ETH') 
-                ? Number(formatEther(token0Balance.value)).toFixed(8)
-                : formatUnits(token0Balance.value, pool.token0.decimals))
-              : '...'}
+            {formatBalance(token0Balance, pool.token0)}
           </strong>
           {pool.token0.symbol?.includes('ETH') && (
             <div className="native-eth-balance">
-              <span>(Native ETH: {ethBalance ? Number(formatEther(ethBalance.value)).toFixed(8) : '...'})</span>
+              <span>(Native ETH: {ethBalance ? formatTokenAmount(formatEther(ethBalance.value)) : '...'})</span>
             </div>
           )}
         </div>
         <div className="balance-row">
           <span>{pool.token1.symbol}: </span>
           <strong>
-            {token1Balance 
-              ? (pool.token1.symbol?.includes('ETH') 
-                ? Number(formatEther(token1Balance.value)).toFixed(8)
-                : formatUnits(token1Balance.value, pool.token1.decimals))
-              : '...'}
+            {formatBalance(token1Balance, pool.token1)}
           </strong>
           {pool.token1.symbol?.includes('ETH') && (
             <div className="native-eth-balance">
-              <span>(Native ETH: {ethBalance ? Number(formatEther(ethBalance.value)).toFixed(8) : '...'})</span>
+              <span>(Native ETH: {ethBalance ? formatTokenAmount(formatEther(ethBalance.value)) : '...'})</span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="form-group">
-        <label>Amount of {pool.token0.symbol}</label>
-        <input
-          type="text"
-          value={amount0}
-          onChange={(e) => handleAmountChange('token0', e.target.value)}
-          placeholder={pool.token0.symbol?.includes('USD') ? `Min. 50 for narrow ranges` : `Min. 0.025 for narrow ranges`}
-        />
-        <div className="input-info">
-          {pool.token0.symbol?.includes('USD') 
-            ? `For ${pool.token0.symbol}, use at least 50 tokens for narrow ranges (more for very narrow ranges)`
-            : pool.token0.symbol?.includes('ETH')
-              ? `For ${pool.token0.symbol}, use at least 0.025 tokens for narrow ranges (more for very narrow ranges)`
-              : `Minimum amounts depend on price range width - narrower ranges need more tokens`}
-        </div>
-      </div>
-      
-      <div className="form-group">
-        <label>Amount of {pool.token1.symbol}</label>
-        <input
-          type="text"
-          value={amount1}
-          onChange={(e) => handleAmountChange('token1', e.target.value)}
-          placeholder={pool.token1.symbol?.includes('USD') ? `Min. 50 for narrow ranges` : `Min. 0.025 for narrow ranges`}
-        />
-        <div className="input-info">
-          {pool.token1.symbol?.includes('USD') 
-            ? `For ${pool.token1.symbol}, use at least 50 tokens for narrow ranges (more for very narrow ranges)`
-            : pool.token1.symbol?.includes('ETH')
-              ? `For ${pool.token1.symbol}, use at least 0.025 tokens for narrow ranges (more for very narrow ranges)`
-              : `Minimum amounts depend on price range width - narrower ranges need more tokens`}
-        </div>
-      </div>
+      <TokenInputs 
+        pool={pool}
+        amount0={amount0}
+        amount1={amount1}
+        onAmountChange={handleAmountChange}
+        disabled={approving || loading}
+      />
       
       <div className="form-group slippage-group">
         <label>Slippage Tolerance: {slippageTolerance}%</label>
@@ -1589,7 +1335,10 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
         {loading ? 'Adding...' : 'Add Liquidity'}
       </button>
       
-      <GasEstimateDisplay />
+      <GasEstimateDisplay 
+        gasEstimate={gasEstimate}
+        gasPriceGwei={gasPriceGwei}
+      />
     </div>
   );
 };
