@@ -9,6 +9,7 @@ import TransactionHistory from './components/TransactionHistory';
 import FaucetSection from './components/FaucetSection';
 import './styles.css';
 import './styles/marketVolatility.css';
+import './styles/liquidityManager.css';
 
 // Create a client
 const queryClient = new QueryClient();

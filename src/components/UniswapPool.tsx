@@ -15,6 +15,8 @@ import { Token } from '@uniswap/sdk-core';
 import JSBI from 'jsbi';
 import MarketVolatility from './MarketVolatility';
 import '../styles/marketVolatility.css';
+import LiquidityManager from './LiquidityManager';
+import '../styles/liquidityManager.css';
 
 interface UniswapPoolProps {
   initialPool?: Pool;
@@ -256,6 +258,12 @@ const UniswapPool: FC<UniswapPoolProps> = ({ initialPool, initialAddress }) => {
           <MarketVolatility 
             token0Symbol={pool.token0.symbol || 'Unknown'} 
             token1Symbol={pool.token1.symbol || 'Unknown'} 
+            poolAddress={poolAddress}
+          />
+          
+          {/* Add Liquidity Manager Component */}
+          <LiquidityManager
+            pool={pool}
             poolAddress={poolAddress}
           />
         </>

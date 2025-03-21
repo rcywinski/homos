@@ -1,0 +1,318 @@
+/* Liquidity Manager Component */
+.liquidity-manager {
+  background-color: #f5f7fb;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.liquidity-manager h3 {
+  text-align: center;
+  color: #0066ff;
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+/* Tabs */
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #555;
+  transition: color 0.2s ease;
+  position: relative;
+}
+
+.tab.active {
+  color: #0066ff;
+  font-weight: 500;
+  border-bottom: 2px solid #0066ff;
+}
+
+.tab:hover {
+  color: #0066ff;
+}
+
+/* Forms */
+.add-liquidity-form,
+.remove-liquidity-form {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555;
+  font-weight: 500;
+  text-align: center;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"] {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: border-color 0.2s ease;
+}
+
+.form-group input:focus {
+  border-color: #0066ff;
+  outline: none;
+}
+
+/* Range selector */
+.range-selector {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.range-btn {
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  border-radius: 4px;
+}
+
+.range-btn.active {
+  background-color: #e6f0ff;
+  border-color: #0066ff;
+  color: #0066ff;
+}
+
+.range-btn:hover {
+  background-color: #e6f0ff;
+}
+
+/* Buttons */
+.liquidity-manager button:not(.tab):not(.range-btn) {
+  display: block;
+  width: fit-content;
+  margin: 20px auto;
+  padding: 12px 24px;
+  background-color: #0066ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.liquidity-manager button:not(.tab):not(.range-btn):hover {
+  background-color: #0055cc;
+}
+
+.liquidity-manager button:not(.tab):not(.range-btn):disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Messages */
+.loading, .error-message, .success-message, .message {
+  padding: 12px;
+  margin: 15px 0;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.loading {
+  background-color: #f0f7ff;
+  color: #0066ff;
+}
+
+.error-message, .message.error {
+  background-color: #fff0f0;
+  color: #d32f2f;
+}
+
+.success-message {
+  background-color: #f0fff0;
+  color: #388e3c;
+}
+
+/* Positions List */
+.positions-list {
+  margin-top: 20px;
+}
+
+.position-item {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 15px;
+  margin-bottom: 15px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.position-item span {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.position-item button {
+  grid-column: span 2;
+  margin-top: 10px;
+}
+
+/* Gas Estimate Display */
+.gas-estimate {
+  margin-top: 30px;
+  padding: 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background-color: #f8fbff;
+}
+
+.gas-estimate h4 {
+  text-align: center;
+  color: #0066ff;
+  margin-bottom: 15px;
+}
+
+.gas-price, .gas-cost, .gas-cost-usd {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 8px;
+}
+
+.gas-price {
+  background-color: #f0f0f0;
+}
+
+.gas-cost {
+  background-color: #f0f0f0;
+}
+
+.gas-cost-usd {
+  background-color: #e6f0ff;
+}
+
+.input-info {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+  font-style: italic;
+  grid-column: span 2;
+}
+
+/* Price display */
+.price-display {
+  background-color: #f0f0f0;
+  padding: 10px 15px;
+  margin: 15px 0;
+  border-radius: 4px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  color: #555;
+}
+
+.price-tick {
+  font-size: 12px;
+  color: #777;
+  margin-top: 5px;
+  text-align: right;
+}
+
+/* Slippage control */
+.slippage-group input[type="range"] {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  background: #ddd;
+  border-radius: 3px;
+  margin: 10px 0;
+}
+
+.slippage-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #0066ff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.slippage-group input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #0066ff;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Add liquidity button */
+.add-liquidity-btn {
+  width: 100% !important;
+  background-color: #0066ff !important;
+  margin-top: 30px !important;
+  font-weight: 500;
+  font-size: 16px !important;
+  padding: 12px !important;
+}
+
+/* Input placeholders */
+.form-group input::placeholder {
+  color: #aaa;
+  font-size: 14px;
+}
+
+/* Info box for small amounts and slippage */
+.input-info {
+  font-size: 12px;
+  color: #777;
+  margin-top: 5px;
+  text-align: center;
+}
+
+/* Price inputs side by side */
+.price-inputs-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.price-inputs-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.price-inputs-row .form-group label {
+  text-align: left;
+}
+
+/* Adjust for mobile */
+@media (max-width: 640px) {
+  .price-inputs-row {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .price-inputs-row .form-group {
+    margin-bottom: 0;
+  }
+} 
