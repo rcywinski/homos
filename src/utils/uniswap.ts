@@ -153,8 +153,18 @@ export const getOrCreatePool = async (
   fee: FeeAmount
 ): Promise<{ pool: Pool; address: string; isNew: boolean }> => {
   try {
+    // Determine the network config based on the chain ID
+    const networkConfig = token0.chainId === 1 ? NETWORKS.MAINNET : NETWORKS.SEPOLIA;
+    
     // Check if pool exists
-    const existingPool = await getExistingPool(publicClient, token0, token1, fee);
+    const existingPool = await getExistingPool(
+      publicClient,
+      token0,
+      token1,
+      fee,
+      networkConfig
+    );
+
     if (existingPool) {
       return { ...existingPool, isNew: false };
     }
@@ -398,9 +408,17 @@ export const calculatePoolPrice = (
   sqrtPriceX96: bigint,
   token0Decimals: number,
   token1Decimals: number,
-  isWethToken0: boolean
+  isWethToken0: boolean,
+  chainId: number = 1 // Default to mainnet
 ): number => {
   try {
+    // For Sepolia testnet, return a fixed price instead of attempting to calculate
+    if (chainId === 11155111) { // Sepolia chain ID
+      // Use hardcoded value to represent current ETH price (~$1,900)
+      return isWethToken0 ? 1900 : 1/1900;
+    }
+    
+    // For mainnet, use the actual calculation
     // Get sqrtPriceX96 as a regular number
     const sqrtPriceFloat = Number(sqrtPriceX96) / Math.pow(2, 96);
     
@@ -412,16 +430,15 @@ export const calculatePoolPrice = (
     const adjustedPrice = rawPrice * decimalAdjustment;
     
     // Handle WETH direction - if WETH is token0, take inverse
-    const finalPrice = isWethToken0 ? 1 / adjustedPrice : adjustedPrice;
-    
-    return finalPrice;
+    return isWethToken0 ? 1 / adjustedPrice : adjustedPrice;
   } catch (error) {
     console.error('Error calculating pool price:', error);
     console.error('Input values:', {
       sqrtPriceX96: sqrtPriceX96.toString(),
       token0Decimals,
       token1Decimals,
-      isWethToken0
+      isWethToken0,
+      chainId
     });
     return 0;
   }

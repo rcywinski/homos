@@ -7,9 +7,11 @@ import {
   FEE_TIERS,
   getOrCreatePool,
   formatPrice,
-  calculatePoolPrice
+  calculatePoolPrice,
+  NETWORKS
 } from '../utils/uniswap';
 import { Pool } from '@uniswap/v3-sdk';
+import { Token } from '@uniswap/sdk-core';
 import JSBI from 'jsbi';
 
 interface UniswapPoolProps {
@@ -31,11 +33,13 @@ const UniswapPool: FC<UniswapPoolProps> = ({ initialPool, initialAddress }) => {
 
   const calculatePrice = (pool: Pool): number | null => {
     try {
+      const chainId = publicClient?.chain?.id || 11155111; // Default to Sepolia if undefined
       return calculatePoolPrice(
         BigInt(pool.sqrtRatioX96.toString()),
         pool.token0.decimals,
         pool.token1.decimals,
-        pool.token0.symbol === 'WETH'
+        pool.token0.symbol === 'WETH',
+        chainId
       );
     } catch (error) {
       console.error('Error calculating price:', error);
@@ -53,11 +57,30 @@ const UniswapPool: FC<UniswapPoolProps> = ({ initialPool, initialAddress }) => {
     setError('');
 
     try {
+      // Get network config based on chain ID
+      const chainId = publicClient.chain?.id || 11155111; // Default to Sepolia if undefined
+      const networkConfig = chainId === 1 ? NETWORKS.MAINNET : NETWORKS.SEPOLIA;
+      
+      // Get appropriate tokens for the current network
+      const networkWETH = new Token(
+        networkConfig.chainId,
+        networkConfig.tokens.WETH.address,
+        networkConfig.tokens.WETH.decimals,
+        networkConfig.tokens.WETH.symbol
+      );
+      
+      const networkUSDC = new Token(
+        networkConfig.chainId,
+        networkConfig.tokens.USDC.address,
+        networkConfig.tokens.USDC.decimals,
+        networkConfig.tokens.USDC.symbol
+      );
+      
       const { pool: poolInstance, address: addr, isNew } = await getOrCreatePool(
         publicClient,
         walletClient,
-        WETH,
-        USDC,
+        networkWETH,
+        networkUSDC,
         FEE_TIERS.MEDIUM
       );
 
@@ -94,6 +117,21 @@ const UniswapPool: FC<UniswapPoolProps> = ({ initialPool, initialAddress }) => {
       initializePool();
     }
   }, [isConnected, publicClient, walletClient, initialPool, initialAddress]);
+
+  // Add specific effect to handle network changes
+  useEffect(() => {
+    // Re-initialize when the chain changes
+    if (isConnected && publicClient?.chain?.id) {
+      if (initialPool && initialAddress) {
+        // Recalculate price with new chainId for initialPool
+        const price = calculatePrice(initialPool);
+        setCurrentPrice(price !== null ? formatPrice(price) : 'Price calculation error');
+      } else {
+        // Reload the pool data for the new network
+        initializePool();
+      }
+    }
+  }, [publicClient?.chain?.id]);
 
   if (!isConnected) {
     return (

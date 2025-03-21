@@ -86,7 +86,8 @@ const PoolBrowser: FC = () => {
         BigInt(pool.sqrtRatioX96.toString()),
         pool.token0.decimals,
         pool.token1.decimals,
-        pool.token0.symbol === 'WETH'
+        pool.token0.symbol === 'WETH',
+        chainId
       );
 
       return formatPrice(price);
@@ -173,6 +174,15 @@ const PoolBrowser: FC = () => {
       fetchPools();
     }
   }, [publicClient, chainId]);
+
+  // Add a specific effect to handle network changes
+  useEffect(() => {
+    // This will ensure prices are recalculated when the chainId changes
+    if (pools.length > 0 && chainId) {
+      // Force refresh pool data when network changes
+      fetchPools();
+    }
+  }, [chainId]);
 
   return (
     <ExpandableSection title="Uniswap V3 Pools">
