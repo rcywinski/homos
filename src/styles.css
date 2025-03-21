@@ -674,10 +674,87 @@
 
 .compact-wallet-info {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
   font-size: 0.9rem;
   color: #6c757d;
+  background: #f8f9fa;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.wallet-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 4px;
+  padding: 4px 0;
+  border-bottom: 1px solid #eaecef;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  overflow-x: auto;
+  min-height: 36px;
+}
+
+.network-badge {
+  background: #e9ecef;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: #495057;
+}
+
+.network-switch-button, 
+.wallet-toggle-button {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 2px;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.network-switch-button:hover,
+.wallet-toggle-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #1a1a1a;
+}
+
+.wallet-address {
+  font-family: monospace;
+  background: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #555;
+  white-space: nowrap;
+  margin-left: 8px;
+  flex-grow: 0;
+}
+
+.block-info {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  color: #888;
+  margin-left: auto;
+  white-space: nowrap;
+  padding: 4px 0;
+}
+
+.network-switch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .network-badge {
@@ -687,14 +764,111 @@
   font-weight: 500;
 }
 
-.balance-info {
-  font-weight: 500;
+.network-switch-button {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 2px;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.network-switch-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
   color: #1a1a1a;
 }
 
-.block-info {
+.balances-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.balance-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.eth-row {
+  background-color: rgba(98, 126, 234, 0.1);
+}
+
+.usdc-row {
+  background-color: rgba(39, 117, 202, 0.1);
+}
+
+.token-symbol {
+  font-weight: 600;
+  color: #333;
+}
+
+.balance-info {
+  font-family: monospace;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.eth-balance {
+  color: #627eea;
+}
+
+.usdc-balance {
+  color: #2775ca;
+}
+
+.rabby-input-container {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 4px;
+  padding: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.rabby-address-input {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 4px 8px;
   font-size: 0.8rem;
-  opacity: 0.7;
+  font-family: monospace;
+}
+
+.submit-rabby-button, 
+.cancel-rabby-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-left: 4px;
+}
+
+.submit-rabby-button {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.cancel-rabby-button {
+  color: #999;
+}
+
+.submit-rabby-button:hover {
+  background: #bae7ff;
+}
+
+.cancel-rabby-button:hover {
+  background: #f0f0f0;
 }
 
 .expandable-section {
@@ -972,4 +1146,51 @@
   .pools-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.network-switch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.network-badge {
+  background: #e9ecef;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.network-switch-button {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 2px;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.network-switch-button:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #1a1a1a;
+}
+
+/* Remove these duplicate styles at the end of the file */
+.network-switch {
+  display: none;
+}
+
+.network-switch .network-badge {
+  display: none;
+}
+
+.network-switch .network-switch-button {
+  display: none;
 } 

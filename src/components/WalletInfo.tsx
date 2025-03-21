@@ -1,16 +1,101 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAccount, useBalance, useBlockNumber, useChainId, useSwitchChain } from 'wagmi';
-import { formatEther } from 'viem';
+import { formatEther, formatUnits, isAddress } from 'viem';
 import { mainnet, sepolia } from 'wagmi/chains';
+import { USDC_ADDRESS } from '../utils/uniswap';
+
+// Mainnet USDC address
+const MAINNET_USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
 
 export const CompactWalletInfo: React.FC = () => {
-  const { address } = useAccount();
+  const { address: connectedAddress } = useAccount();
   const chainId = useChainId();
-  const { data: balance } = useBalance({ address });
+  const [isRabbyMode, setIsRabbyMode] = useState(false);
+  const [rabbyAddress, setRabbyAddress] = useState<`0x${string}` | ''>('');
+  const [showRabbyInput, setShowRabbyInput] = useState(false);
+  
+  // Determine which address to use
+  const address = isRabbyMode && rabbyAddress ? rabbyAddress : connectedAddress;
+  
+  // Use the determined address for balance checks
+  const { data: balance } = useBalance({ 
+    address,
+  });
+  
+  // Use the appropriate USDC address based on the network
+  const usdcAddress = chainId === mainnet.id ? MAINNET_USDC_ADDRESS : USDC_ADDRESS;
+  
+  const { data: usdcBalance } = useBalance({ 
+    address,
+    token: usdcAddress as `0x${string}`,
+  });
+  
   const { data: blockNumber } = useBlockNumber();
   const { switchChain } = useSwitchChain();
+  const [totalUsdValue, setTotalUsdValue] = useState<string>('0.00');
+  const [ethPrice, setEthPrice] = useState<number>(1972); // Default price
+  
+  // Format USDC balance with 8 decimal places
+  const formattedUsdcBalance = usdcBalance ? 
+    parseFloat(formatUnits(usdcBalance.value, 6)).toFixed(8) : 
+    '0.00000000';
+  
+  // Handle Rabby address input
+  const handleRabbyInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '' || (isAddress(value) && value.startsWith('0x'))) {
+      setRabbyAddress(value as `0x${string}` | '');
+    }
+  };
+  
+  const toggleRabbyMode = () => {
+    if (!isRabbyMode && !rabbyAddress) {
+      setShowRabbyInput(true);
+    } else {
+      setIsRabbyMode(!isRabbyMode);
+    }
+  };
+  
+  const submitRabbyAddress = () => {
+    if (rabbyAddress) {
+      setIsRabbyMode(true);
+      setShowRabbyInput(false);
+    }
+  };
+  
+  // Fetch ETH price
+  useEffect(() => {
+    const fetchEthPrice = async () => {
+      try {
+        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
+        const data = await response.json();
+        if (data && data.ethereum && data.ethereum.usd) {
+          setEthPrice(data.ethereum.usd);
+        }
+      } catch (error) {
+        console.error('Failed to fetch ETH price:', error);
+        // Keep using the default price
+      }
+    };
+    
+    fetchEthPrice();
+    // Refresh price every 5 minutes
+    const interval = setInterval(fetchEthPrice, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
-  if (!address) return null;
+  // Calculate total USD value
+  useEffect(() => {
+    if (balance || usdcBalance) {
+      const ethValue = balance ? Number(formatEther(balance.value)) * ethPrice : 0;
+      const usdcValue = usdcBalance ? Number(formatUnits(usdcBalance.value, 6)) : 0;
+      const total = ethValue + usdcValue;
+      setTotalUsdValue(total.toFixed(2));
+    }
+  }, [balance, usdcBalance, ethPrice, chainId, usdcAddress, address]);
+
+  if (!connectedAddress) return null;
 
   const isMainnet = chainId === mainnet.id;
   const isSepolia = chainId === sepolia.id;
@@ -23,9 +108,14 @@ export const CompactWalletInfo: React.FC = () => {
     }
   };
 
+  // Format the address for display
+  const displayAddress = address ? 
+    `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : 
+    '';
+
   return (
     <div className="compact-wallet-info">
-      <div className="network-switch">
+      <div className="wallet-header">
         <span className="network-badge">{isMainnet ? 'Mainnet' : 'Sepolia'}</span>
         <button 
           onClick={handleNetworkSwitch}
@@ -34,11 +124,53 @@ export const CompactWalletInfo: React.FC = () => {
         >
           ⇄
         </button>
+        
+        <span className="wallet-address" title={address}>
+          {displayAddress}
+        </span>
+        <button 
+          onClick={toggleRabbyMode} 
+          className="wallet-toggle-button"
+          title={isRabbyMode ? "Switch to connected wallet" : "Check another wallet"}
+        >
+          {isRabbyMode ? "👝" : "🔍"}
+        </button>
+        
+        <span className="block-info">#{blockNumber?.toString()}</span>
       </div>
-      <span className="balance-info">
-        {balance ? `${Number(formatEther(balance.value)).toFixed(6)} ${balance.symbol}` : '0 ETH'}
-      </span>
-      <span className="block-info">#{blockNumber?.toString()}</span>
+      
+      {showRabbyInput && (
+        <div className="rabby-input-container">
+          <input 
+            type="text" 
+            placeholder="Enter wallet address" 
+            value={rabbyAddress} 
+            onChange={handleRabbyInputChange}
+            className="rabby-address-input"
+          />
+          <button onClick={submitRabbyAddress} className="submit-rabby-button">
+            Check
+          </button>
+          <button onClick={() => setShowRabbyInput(false)} className="cancel-rabby-button">
+            ×
+          </button>
+        </div>
+      )}
+      
+      <div className="balances-section">
+        <div className="balance-row eth-row">
+          <span className="token-symbol">ETH:</span>
+          <span className="balance-info eth-balance">
+            {balance ? `${Number(formatEther(balance.value)).toFixed(8)}` : '0.00000000'}
+          </span>
+        </div>
+        <div className="balance-row usdc-row">
+          <span className="token-symbol">USDC:</span>
+          <span className="balance-info usdc-balance">
+            {formattedUsdcBalance}
+          </span>
+        </div>
+      </div>
     </div>
   );
 };
