@@ -8,6 +8,7 @@ import PoolBrowser from './components/PoolBrowser';
 import TransactionHistory from './components/TransactionHistory';
 import FaucetSection from './components/FaucetSection';
 import './styles.css';
+import './styles/marketVolatility.css';
 
 // Create a client
 const queryClient = new QueryClient();

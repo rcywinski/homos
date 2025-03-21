@@ -13,6 +13,8 @@ import {
 import { Pool } from '@uniswap/v3-sdk';
 import { Token } from '@uniswap/sdk-core';
 import JSBI from 'jsbi';
+import MarketVolatility from './MarketVolatility';
+import '../styles/marketVolatility.css';
 
 interface UniswapPoolProps {
   initialPool?: Pool;
@@ -165,89 +167,98 @@ const UniswapPool: FC<UniswapPoolProps> = ({ initialPool, initialAddress }) => {
           )}
         </div>
       ) : pool ? (
-        <div className="pool-details">
-          <div className="pool-pair">
-            <span className="token">{pool.token0.symbol}</span>
-            <span className="separator">/</span>
-            <span className="token">{pool.token1.symbol}</span>
+        <>
+          <div className="pool-details">
+            <div className="pool-pair">
+              <span className="token">{pool.token0.symbol}</span>
+              <span className="separator">/</span>
+              <span className="token">{pool.token1.symbol}</span>
+            </div>
+            
+            <div className="pool-price">
+              <span className="label">Current Price:</span>
+              <span className="value">{currentPrice}</span>
+            </div>
+
+            <div className="pool-address">
+              <span className="label">Pool Address:</span>
+              <span className="value">{poolAddress}</span>
+            </div>
+
+            <div className="pool-fee">
+              <span className="label">Fee Tier:</span>
+              <span className="value">{pool.fee / 10000}%</span>
+            </div>
+
+            <div className="pool-liquidity">
+              <span className="label">Liquidity:</span>
+              <span className="value">
+                {formatEther(BigInt(pool.liquidity.toString()))} ETH
+              </span>
+            </div>
+
+            <div className="pool-tick">
+              <span className="label">Current Tick:</span>
+              <span className="value">{pool.tickCurrent}</span>
+            </div>
+
+            <div className="pool-sqrt-price">
+              <span className="label">Sqrt Price:</span>
+              <span className="value">{pool.sqrtRatioX96.toString()}</span>
+            </div>
+
+            <div className="pool-token0-price">
+              <span className="label">
+                {pool.token0.symbol === 'WETH' 
+                  ? `1 ${pool.token0.symbol} =` 
+                  : `1 ${pool.token1.symbol} =`}
+              </span>
+              <span className="value">
+                {(() => {
+                  const price = calculatePrice(pool);
+                  if (price === null) return 'Price calculation error';
+                  
+                  if (pool.token0.symbol === 'WETH') {
+                    // If WETH is token0, show "1 WETH = X USDC/USDT"
+                    return formatPrice(1 / price) + ` ${pool.token1.symbol}`;
+                  } else {
+                    // If WETH is token1, show "1 WETH = X USDC/USDT"
+                    return formatPrice(price) + ` ${pool.token0.symbol}`;
+                  }
+                })()}
+              </span>
+            </div>
+
+            <div className="pool-token1-price">
+              <span className="label">
+                {pool.token0.symbol !== 'WETH' 
+                  ? `1 ${pool.token0.symbol} =` 
+                  : `1 ${pool.token1.symbol} =`}
+              </span>
+              <span className="value">
+                {(() => {
+                  const price = calculatePrice(pool);
+                  if (price === null) return 'Price calculation error';
+                  
+                  if (pool.token1.symbol === 'WETH') {
+                    // If WETH is token1, show "1 USDC/USDT = X WETH"
+                    return (1 / price).toFixed(8) + ` ${pool.token1.symbol}`;
+                  } else {
+                    // If WETH is token0, show "1 USDC/USDT = X WETH"
+                    return price.toFixed(8) + ` ${pool.token0.symbol}`;
+                  }
+                })()}
+              </span>
+            </div>
           </div>
           
-          <div className="pool-price">
-            <span className="label">Current Price:</span>
-            <span className="value">{currentPrice}</span>
-          </div>
-
-          <div className="pool-address">
-            <span className="label">Pool Address:</span>
-            <span className="value">{poolAddress}</span>
-          </div>
-
-          <div className="pool-fee">
-            <span className="label">Fee Tier:</span>
-            <span className="value">{pool.fee / 10000}%</span>
-          </div>
-
-          <div className="pool-liquidity">
-            <span className="label">Liquidity:</span>
-            <span className="value">
-              {formatEther(BigInt(pool.liquidity.toString()))} ETH
-            </span>
-          </div>
-
-          <div className="pool-tick">
-            <span className="label">Current Tick:</span>
-            <span className="value">{pool.tickCurrent}</span>
-          </div>
-
-          <div className="pool-sqrt-price">
-            <span className="label">Sqrt Price:</span>
-            <span className="value">{pool.sqrtRatioX96.toString()}</span>
-          </div>
-
-          <div className="pool-token0-price">
-            <span className="label">
-              {pool.token0.symbol === 'WETH' 
-                ? `1 ${pool.token0.symbol} =` 
-                : `1 ${pool.token1.symbol} =`}
-            </span>
-            <span className="value">
-              {(() => {
-                const price = calculatePrice(pool);
-                if (price === null) return 'Price calculation error';
-                
-                if (pool.token0.symbol === 'WETH') {
-                  // If WETH is token0, show "1 WETH = X USDC/USDT"
-                  return formatPrice(1 / price) + ` ${pool.token1.symbol}`;
-                } else {
-                  // If WETH is token1, show "1 WETH = X USDC/USDT"
-                  return formatPrice(price) + ` ${pool.token0.symbol}`;
-                }
-              })()}
-            </span>
-          </div>
-
-          <div className="pool-token1-price">
-            <span className="label">
-              {pool.token0.symbol !== 'WETH' 
-                ? `1 ${pool.token0.symbol} =` 
-                : `1 ${pool.token1.symbol} =`}
-            </span>
-            <span className="value">
-              {(() => {
-                const price = calculatePrice(pool);
-                if (price === null) return 'Price calculation error';
-                
-                if (pool.token1.symbol === 'WETH') {
-                  // If WETH is token1, show "1 USDC/USDT = X WETH"
-                  return (1 / price).toFixed(8) + ` ${pool.token1.symbol}`;
-                } else {
-                  // If WETH is token0, show "1 USDC/USDT = X WETH"
-                  return price.toFixed(8) + ` ${pool.token0.symbol}`;
-                }
-              })()}
-            </span>
-          </div>
-        </div>
+          {/* Add Market Volatility Component */}
+          <MarketVolatility 
+            token0Symbol={pool.token0.symbol || 'Unknown'} 
+            token1Symbol={pool.token1.symbol || 'Unknown'} 
+            poolAddress={poolAddress}
+          />
+        </>
       ) : null}
     </div>
   );
