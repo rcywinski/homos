@@ -96,6 +96,12 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
         // Full range: use min and max possible ticks
         lowerTickVal = getValidTick(TickMath.MIN_TICK, tickSpacing);
         upperTickVal = getValidTick(TickMath.MAX_TICK, tickSpacing);
+        
+        // For full range, use simple display values instead of actual prices
+        // which can be extremely small or large
+        setLowerPrice("0");
+        setUpperPrice("∞"); // Infinity symbol for max price
+        
       } else if (range === 'narrow') {
         // Narrow range: ±5% around current price
         const currentPrice = tickToPrice(
@@ -125,8 +131,21 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
           tickSpacing
         );
         
-        setLowerPrice(lowerPriceVal.toFixed(6));
-        setUpperPrice(upperPriceVal.toFixed(6));
+        // Get the actual prices after tick adjustments
+        const adjustedLowerPrice = tickToPrice(
+          lowerTickVal,
+          pool.token0.decimals,
+          pool.token1.decimals
+        );
+        
+        const adjustedUpperPrice = tickToPrice(
+          upperTickVal,
+          pool.token0.decimals,
+          pool.token1.decimals
+        );
+        
+        setLowerPrice(adjustedLowerPrice.toFixed(6));
+        setUpperPrice(adjustedUpperPrice.toFixed(6));
       } else {
         // Keep current custom values
         return;
