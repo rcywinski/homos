@@ -25,9 +25,13 @@ function App() {
                 <h1>HOMO$</h1>
                 <h3>get rich or die tryin'</h3>
               </div>
-              <div className="wallet-section">
-                <CompactWalletInfo />
-                <ConnectKitButton />
+              <div className="header-right">
+                <div className="wallet-section">
+                  <CompactWalletInfo />
+                </div>
+                <div className="connect-button-container">
+                  <ConnectKitButton />
+                </div>
               </div>
             </div>
             

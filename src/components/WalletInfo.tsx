@@ -42,80 +42,24 @@ export const CompactWalletInfo: React.FC = () => {
   
   const { data: blockNumber } = useBlockNumber();
   const { switchChain } = useSwitchChain();
-  const [totalUsdValue, setTotalUsdValue] = useState<string>('0.00');
-  const [ethPrice, setEthPrice] = useState<number>(1972); // Default price
   
-  // Format USDC balance with 8 decimal places
-  const formattedUsdcBalance = usdcBalance ? 
-    parseFloat(formatUnits(usdcBalance.value, 6)).toFixed(8) : 
+  // Format balances
+  const ethFormattedBalance = balance ? 
+    parseFloat(formatEther(balance.value)).toFixed(8) : 
     '0.00000000';
     
-  // Format WETH balance with 8 decimal places
-  const formattedWethBalance = wethBalance ? 
+  const wethFormattedBalance = wethBalance ? 
     parseFloat(formatUnits(wethBalance.value, 18)).toFixed(8) : 
     '0.00000000';
-  
-  // Handle Rabby address input
-  const handleRabbyInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === '' || (isAddress(value) && value.startsWith('0x'))) {
-      setRabbyAddress(value as `0x${string}` | '');
-    }
-  };
-  
-  const toggleRabbyMode = () => {
-    if (!isRabbyMode && !rabbyAddress) {
-      setShowRabbyInput(true);
-    } else {
-      setIsRabbyMode(!isRabbyMode);
-    }
-  };
-  
-  const submitRabbyAddress = () => {
-    if (rabbyAddress) {
-      setIsRabbyMode(true);
-      setShowRabbyInput(false);
-    }
-  };
-  
-  // Fetch ETH price
-  useEffect(() => {
-    const fetchEthPrice = async () => {
-      try {
-        const response = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd');
-        const data = await response.json();
-        if (data && data.ethereum && data.ethereum.usd) {
-          setEthPrice(data.ethereum.usd);
-        }
-      } catch (error) {
-        console.error('Failed to fetch ETH price:', error);
-        // Keep using the default price
-      }
-    };
     
-    fetchEthPrice();
-    // Refresh price every 5 minutes
-    const interval = setInterval(fetchEthPrice, 5 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  // Calculate total USD value
-  useEffect(() => {
-    if (balance || usdcBalance || wethBalance) {
-      const ethValue = balance ? Number(formatEther(balance.value)) * ethPrice : 0;
-      const wethValue = wethBalance ? Number(formatUnits(wethBalance.value, 18)) * ethPrice : 0;
-      const usdcValue = usdcBalance ? Number(formatUnits(usdcBalance.value, 6)) : 0;
-      const total = ethValue + wethValue + usdcValue;
-      setTotalUsdValue(total.toFixed(2));
-    }
-  }, [balance, usdcBalance, wethBalance, ethPrice, chainId, usdcAddress, wethAddress, address]);
+  const usdcFormattedBalance = usdcBalance ? 
+    parseFloat(formatUnits(usdcBalance.value, 6)).toFixed(8) : 
+    '0.00000000';
 
   if (!connectedAddress) return null;
 
   const isMainnet = chainId === mainnet.id;
-  const isSepolia = chainId === sepolia.id;
-
+  
   const handleNetworkSwitch = () => {
     if (isMainnet) {
       switchChain({ chainId: sepolia.id });
@@ -124,73 +68,18 @@ export const CompactWalletInfo: React.FC = () => {
     }
   };
 
-  // Format the address for display
-  const displayAddress = address ? 
-    `${address.substring(0, 6)}...${address.substring(address.length - 4)}` : 
-    '';
-
   return (
-    <div className="compact-wallet-info">
-      <div className="wallet-header">
-        <span className="network-badge">{isMainnet ? 'Mainnet' : 'Sepolia'}</span>
-        <button 
-          onClick={handleNetworkSwitch}
-          className="network-switch-button"
-          title={`Switch to ${isMainnet ? 'Sepolia' : 'Mainnet'}`}
-        >
-          ⇄
-        </button>
+    <div className="wallet-container">
+      <div className="wallet-content">
+        <div className="network-info">
+          <span>{isMainnet ? 'Mainnet' : 'Sepolia'}</span>
+          <button onClick={handleNetworkSwitch}>⇄</button>
+        </div>
         
-        <span className="wallet-address" title={address}>
-          {displayAddress}
-        </span>
-        <button 
-          onClick={toggleRabbyMode} 
-          className="wallet-toggle-button"
-          title={isRabbyMode ? "Switch to connected wallet" : "Check another wallet"}
-        >
-          {isRabbyMode ? "👝" : "🔍"}
-        </button>
-        
-        <span className="block-info">#{blockNumber?.toString()}</span>
-      </div>
-      
-      {showRabbyInput && (
-        <div className="rabby-input-container">
-          <input 
-            type="text" 
-            placeholder="Enter wallet address" 
-            value={rabbyAddress} 
-            onChange={handleRabbyInputChange}
-            className="rabby-address-input"
-          />
-          <button onClick={submitRabbyAddress} className="submit-rabby-button">
-            Check
-          </button>
-          <button onClick={() => setShowRabbyInput(false)} className="cancel-rabby-button">
-            ×
-          </button>
-        </div>
-      )}
-      
-      <div className="balances-section">
-        <div className="balance-row eth-row">
-          <span className="token-symbol">ETH:</span>
-          <span className="balance-info eth-balance">
-            {balance ? `${Number(formatEther(balance.value)).toFixed(8)}` : '0.00000000'}
-          </span>
-        </div>
-        <div className="balance-row weth-row">
-          <span className="token-symbol">WETH:</span>
-          <span className="balance-info weth-balance">
-            {formattedWethBalance}
-          </span>
-        </div>
-        <div className="balance-row usdc-row">
-          <span className="token-symbol">USDC:</span>
-          <span className="balance-info usdc-balance">
-            {formattedUsdcBalance}
-          </span>
+        <div className="wallet-balances">
+          <div className="balance-item">ETH: {ethFormattedBalance}</div>
+          <div className="balance-item">WETH: {wethFormattedBalance}</div>
+          <div className="balance-item">USDC: {usdcFormattedBalance}</div>
         </div>
       </div>
     </div>

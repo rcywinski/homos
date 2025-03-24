@@ -1,0 +1,115 @@
+/* Wallet styles - clean implementation with increased specificity */
+.wallet-container {
+  background-color: #f8f9fa !important;
+  border-radius: 10px !important;
+  padding: 12px !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+  width: 100% !important;
+  max-width: 420px !important;
+  transition: all 0.2s ease !important;
+  margin: 0 auto !important;
+}
+
+.wallet-container:hover {
+  box-shadow: 0 3px 8px rgba(0,0,0,0.15) !important;
+}
+
+.wallet-content {
+  display: flex !important;
+  gap: 15px !important;
+  align-items: center !important;
+}
+
+.network-info {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  min-width: 90px !important;
+  padding-right: 12px !important;
+  border-right: 1px solid #e9ecef !important;
+  justify-content: center !important;
+}
+
+.network-info span:first-child {
+  background-color: #e9ecef !important;
+  padding: 3px 6px !important;
+  border-radius: 4px !important;
+  font-size: 0.85rem !important;
+  text-align: center !important;
+}
+
+.network-info button {
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-size: 0.9rem !important;
+  padding: 2px !important;
+  align-self: center !important;
+}
+
+.wallet-balances {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+  flex: 1 !important;
+  width: 100% !important;
+}
+
+.balance-item {
+  padding: 6px 10px !important;
+  background-color: rgba(247, 250, 255, 0.8) !important;
+  border-radius: 8px !important;
+  font-family: monospace !important;
+  font-size: 0.85rem !important;
+  color: #333 !important;
+  white-space: nowrap !important;
+  width: 100% !important;
+  border: 1px solid rgba(232, 240, 254, 0.8) !important;
+  text-align: center !important;
+  font-weight: 500 !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.balance-item:hover {
+  background-color: rgba(247, 250, 255, 1) !important;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Responsive styles for wallet */
+@media (max-width: 480px) {
+  .wallet-content {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+  
+  .network-info {
+    flex-direction: row !important;
+    border-right: none !important;
+    border-bottom: 1px solid #e9ecef !important;
+    padding-right: 0 !important;
+    padding-bottom: 8px !important;
+    width: 100% !important;
+    justify-content: center !important;
+    min-width: 0 !important;
+  }
+  
+  .wallet-balances {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+  }
+  
+  .balance-item {
+    width: 100% !important;
+    font-size: 0.8rem !important;
+    padding: 5px 8px !important;
+  }
+} 
