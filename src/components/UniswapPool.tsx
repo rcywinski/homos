@@ -17,6 +17,7 @@ import MarketVolatility from './MarketVolatility';
 import '../styles/marketVolatility.css';
 import LiquidityManager from './LiquidityManager';
 import '../styles/liquidityManager.css';
+import '../styles/uniswapPool.css';
 
 interface UniswapPoolProps {
   initialPool?: Pool;
@@ -244,10 +245,10 @@ const UniswapPool: FC<UniswapPoolProps> = ({ initialPool, initialAddress }) => {
                   
                   if (pool.token1.symbol === 'WETH') {
                     // If WETH is token1, show "1 USDC/USDT = X WETH"
-                    return (1 / price).toFixed(8) + ` ${pool.token1.symbol}`;
+                    return price.toFixed(8) + ` ${pool.token1.symbol}`;
                   } else {
                     // If WETH is token0, show "1 USDC/USDT = X WETH"
-                    return price.toFixed(8) + ` ${pool.token0.symbol}`;
+                    return (1 / price).toFixed(8) + ` ${pool.token0.symbol}`;
                   }
                 })()}
               </span>
