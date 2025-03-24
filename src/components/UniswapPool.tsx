@@ -213,8 +213,8 @@ const UniswapPool: FC<UniswapPoolProps> = ({ initialPool, initialAddress }) => {
             <div className="pool-token0-price">
               <span className="label">
                 {pool.token0.symbol === 'WETH' 
-                  ? `1 ${pool.token0.symbol} =` 
-                  : `1 ${pool.token1.symbol} =`}
+                  ? `1 ${pool.token0.symbol}:` 
+                  : `1 ${pool.token1.symbol}:`}
               </span>
               <span className="value">
                 {(() => {

@@ -2,14 +2,15 @@ import React, { FC, useState, useEffect, useRef } from 'react';
 import { useAccount, usePublicClient, useWalletClient, useChainId, useBalance } from 'wagmi';
 import { erc20Abi } from 'abitype/abis';
 import { Pool } from '@uniswap/v3-sdk';
-import { formatEther, Address, formatUnits, parseUnits } from 'viem';
+import { formatEther, Address, formatUnits, parseUnits, getContract, encodeFunctionData } from 'viem';
 import { 
   tickToPrice, 
   priceToTick, 
   getValidTick, 
   createPosition,
   prepareAddLiquidityTransaction,
-  TickMath
+  TickMath,
+  POSITION_MANAGER_ADDRESSES
 } from '../../utils/liquidityManagement';
 import { NETWORKS } from '../../utils/uniswap';
 import '../../styles/liquidityManager.css';
@@ -52,7 +53,6 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
   const [upperTick, setUpperTick] = useState<number | null>(null);
   const [lowerPrice, setLowerPrice] = useState<string>('');
   const [upperPrice, setUpperPrice] = useState<string>('');
-  const [slippageTolerance, setSlippageTolerance] = useState<number>(0.5);
   const [priceRange, setPriceRange] = useState<string>('custom'); // 'full', 'narrow', 'custom'
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -244,6 +244,14 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
     if (!pool) return;
     
     try {
+      // Set flag that we're changing inputs to pause gas estimation
+      setIsChangingInput(true);
+      
+      // Clear any existing debounce timer
+      if (inputDebounceRef.current) {
+        clearTimeout(inputDebounceRef.current);
+      }
+      
       // Convert value to string if it's a number (from slider)
       const valueStr = typeof value === 'number' ? value.toString() : value;
       
@@ -269,20 +277,16 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
           );
         } catch (err) {
           console.error('Error converting price to tick:', err);
-          // Don't update the tick if conversion fails
           return;
         }
         
         // Ensure the tick is within valid Uniswap V3 range
-        // Tick values must be between TickMath.MIN_TICK (-887272) and TickMath.MAX_TICK (887272)
         if (rawTick < TickMath.MIN_TICK) {
-          // Price is too low
           setError('Price is too low for Uniswap V3. Please increase your price.');
           return;
         }
         
         if (rawTick > TickMath.MAX_TICK) {
-          // Price is too high
           setError('Price is too high for Uniswap V3. Please decrease your price.');
           return;
         }
@@ -290,7 +294,6 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
         // Round the tick to the nearest valid tick based on spacing
         let validTick;
         try {
-          // Use Math.floor for lower ticks and Math.ceil for upper ticks
           const roundedTick = field === 'lower' ? Math.floor(rawTick) : Math.ceil(rawTick);
           validTick = getValidTick(roundedTick, pool.tickSpacing);
         } catch (err) {
@@ -305,6 +308,104 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
         } else {
           setUpperTick(validTick);
         }
+
+        // Calculate new token amounts based on price range only if needed
+        if (amount0 && amount1) {
+          const currentPrice = tickToPrice(pool.tickCurrent, pool.token0.decimals, pool.token1.decimals);
+          let lowerPriceVal = field === 'lower' ? parsedPrice : (lowerTick ? tickToPrice(lowerTick, pool.token0.decimals, pool.token1.decimals) : parseFloat(lowerPrice));
+          let upperPriceVal = field === 'upper' ? parsedPrice : (upperTick ? tickToPrice(upperTick, pool.token0.decimals, pool.token1.decimals) : parseFloat(upperPrice));
+          
+          // Safety check - ensure we have valid prices
+          if (isNaN(lowerPriceVal) || lowerPriceVal <= 0) return;
+          if (isNaN(upperPriceVal) || upperPriceVal <= 0) return;
+          if (lowerPriceVal >= upperPriceVal) return;
+          
+          // Detect which token is likely ETH/WETH and which is stable
+          const token0IsEth = pool.token0.symbol?.includes('ETH') || false;
+          const token1IsEth = pool.token1.symbol?.includes('ETH') || false;
+          const token0IsStable = pool.token0.symbol?.includes('USD') || false;
+          const token1IsStable = pool.token1.symbol?.includes('USD') || false;
+          
+          // Only recalculate amounts if the price range changes significantly
+          if (Math.abs((field === 'lower' ? parsedPrice : parseFloat(lowerPrice)) - currentPrice) / currentPrice > 0.5 ||
+              Math.abs((field === 'upper' ? parsedPrice : parseFloat(upperPrice)) - currentPrice) / currentPrice > 0.5) {
+            
+            // When price range changes significantly, limit the recalculation impact
+            if (token0IsStable || token1IsStable) {
+              // Preserve the stable token amount and recalculate the non-stable amount
+              const stableAmount = token0IsStable ? parseFloat(amount0) : parseFloat(amount1);
+              
+              try {
+                // Calculate liquidity and new amount
+                const sqrtLowerPrice = Math.sqrt(lowerPriceVal);
+                const sqrtUpperPrice = Math.sqrt(upperPriceVal);
+                const sqrtCurrentPrice = Math.sqrt(currentPrice);
+                
+                // Determine if we're in, above, or below the range
+                const inRange = currentPrice >= lowerPriceVal && currentPrice <= upperPriceVal;
+                const belowRange = currentPrice < lowerPriceVal;
+                const aboveRange = currentPrice > upperPriceVal;
+                
+                let newAmount;
+                
+                if (token0IsStable) {
+                  // If token0 is stable (USDC), calculate token1 (WETH)
+                  if (inRange) {
+                    // In range: both tokens needed
+                    const liquidity = stableAmount / (sqrtUpperPrice - sqrtCurrentPrice);
+                    newAmount = liquidity * (1/sqrtLowerPrice - 1/sqrtCurrentPrice);
+                  } else if (belowRange) {
+                    // Below range: only token0 needed
+                    const liquidity = stableAmount / (sqrtUpperPrice - sqrtLowerPrice);
+                    newAmount = 0; // Simplified
+                  } else {
+                    // Above range: only token1 needed
+                    const liquidity = stableAmount / (sqrtLowerPrice - sqrtCurrentPrice);
+                    newAmount = liquidity * (1/sqrtLowerPrice - 1/sqrtUpperPrice);
+                  }
+                  
+                  // Apply maximum cap to prevent absurd values
+                  const maxAmountScaling = 2.0; // Max 2x the equivalent current value
+                  const equivalentAmount = stableAmount / currentPrice;
+                  const cappedAmount = Math.min(newAmount, equivalentAmount * maxAmountScaling);
+                  
+                  // Update amount1 (WETH)
+                  if (!isNaN(cappedAmount) && isFinite(cappedAmount) && cappedAmount > 0) {
+                    setAmount1(cappedAmount.toFixed(6));
+                  }
+                } else {
+                  // If token1 is stable (USDC), calculate token0 (WETH)
+                  if (inRange) {
+                    // In range: both tokens needed
+                    const liquidity = stableAmount / (sqrtCurrentPrice - sqrtLowerPrice);
+                    newAmount = liquidity * (sqrtUpperPrice - sqrtCurrentPrice);
+                  } else if (belowRange) {
+                    // Below range: only token0 needed
+                    const liquidity = stableAmount / (sqrtUpperPrice - sqrtLowerPrice);
+                    newAmount = liquidity * (sqrtUpperPrice - sqrtLowerPrice);
+                  } else {
+                    // Above range: only token1 needed
+                    const liquidity = stableAmount / (sqrtUpperPrice - sqrtCurrentPrice);
+                    newAmount = 0; // Simplified
+                  }
+                  
+                  // Apply maximum cap to prevent absurd values
+                  const maxAmountScaling = 2.0; // Max 2x the equivalent current value
+                  const equivalentAmount = stableAmount * currentPrice;
+                  const cappedAmount = Math.min(newAmount, equivalentAmount * maxAmountScaling);
+                  
+                  // Update amount0 (WETH)
+                  if (!isNaN(cappedAmount) && isFinite(cappedAmount) && cappedAmount > 0) {
+                    setAmount0(cappedAmount.toFixed(6));
+                  }
+                }
+              } catch (err) {
+                console.error('Error recalculating amounts:', err);
+                // Keep existing amounts on calculation error
+              }
+            }
+          }
+        }
         
         // Clear any error
         setError(null);
@@ -314,9 +415,18 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
       if (priceRange !== 'custom') {
         setPriceRange('custom');
       }
+      
+      // Set a longer debounce timer for gas estimation after price changes
+      // This gives time for all state updates to complete
+      inputDebounceRef.current = setTimeout(() => {
+        setIsChangingInput(false);
+      }, 1200); // 1.2s debounce - longer than regular input changes
+      
     } catch (error) {
       console.error('Error handling price change:', error);
       setError('Error updating price range. Please try a different value.');
+      // Ensure we clear the changing flag even on error
+      setTimeout(() => setIsChangingInput(false), 500);
     }
   };
 
@@ -526,6 +636,24 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
   // Add constant for Uniswap position manager
   const POSITION_MANAGER_ADDRESS = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 
+  // Add a new function to check transaction status after a timeout
+  const checkTransactionStatus = async (txHash: `0x${string}`) => {
+    if (!publicClient) return null;
+    
+    try {
+      console.log(`Checking status for transaction: ${txHash}`);
+      // Try to get transaction receipt
+      const receipt = await publicClient.getTransactionReceipt({
+        hash: txHash,
+      });
+      
+      return receipt;
+    } catch (error) {
+      console.error('Error checking transaction status:', error);
+      return null;
+    }
+  };
+
   // Handle adding liquidity
   const handleAddLiquidity = async () => {
     if (!pool || !walletClient || !address || !lowerTick || !upperTick || !publicClient) {
@@ -537,6 +665,66 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
     // Check if the values are greater than 0, even if very small
     const amount0Value = parseFloat(amount0);
     const amount1Value = parseFloat(amount1);
+    
+    // Calculate appropriate slippage tolerance based on price range
+    const tickDistance = upperTick - lowerTick;
+    let adjustedSlippageTolerance = 0.5; // Default base slippage of 0.5%
+
+    // Check if this is a USDC/WETH pair which needs special handling
+    const isUsdcWethPair = 
+      (pool.token0.symbol?.includes('USDC') && pool.token1.symbol?.includes('ETH')) ||
+      (pool.token1.symbol?.includes('USDC') && pool.token0.symbol?.includes('ETH'));
+
+    if (isUsdcWethPair) {
+      // Get the current price from the pool
+      const currentPrice = tickToPrice(pool.tickCurrent, pool.token0.decimals, pool.token1.decimals);
+      const lowerPrice = tickToPrice(lowerTick, pool.token0.decimals, pool.token1.decimals);
+      const upperPrice = tickToPrice(upperTick, pool.token0.decimals, pool.token1.decimals);
+      
+      // Calculate position in range
+      if (currentPrice < lowerPrice || currentPrice > upperPrice) {
+        // Price is out of range, use higher slippage
+        adjustedSlippageTolerance = 10.0; // 10% slippage if out of range for component
+        console.log('USDC/WETH: Price out of range, using high slippage in component (10%)');
+      } else {
+        // Price is in range, calculate proportional slippage
+        const positionInRange = (currentPrice - lowerPrice) / (upperPrice - lowerPrice);
+        
+        // If near edge, use higher slippage
+        if (positionInRange < 0.1 || positionInRange > 0.9) {
+          adjustedSlippageTolerance = 5.0; // 5% near edges
+          console.log('USDC/WETH: Near range edge, using moderate slippage in component (5%)');
+        } else {
+          // More centered in range, use moderate slippage
+          adjustedSlippageTolerance = 2.0; // 2% for in-range positions
+          console.log('USDC/WETH: Well within range, using standard slippage in component (2%)');
+        }
+      }
+    } else {
+      // For other pairs, use the standard slippage calculations
+      // For narrow ranges, use higher slippage tolerance
+      if (tickDistance < 2000) {
+        adjustedSlippageTolerance = 2.0; // At least 2% for narrow ranges
+      }
+      
+      // For very narrow ranges, use even higher slippage
+      if (tickDistance < 1000) {
+        adjustedSlippageTolerance = 3.0; // At least 3% for very narrow ranges
+      }
+
+      // For extremely narrow ranges, use even higher slippage
+      if (tickDistance < 500) {
+        adjustedSlippageTolerance = 4.0; // At least 4% for extremely narrow ranges
+      }
+    }
+  
+    // Log the slippage adjustment for debugging
+    console.log('Slippage tolerance adjustment:', {
+      originalSlippage: 0.5, // Base slippage
+      adjustedSlippage: adjustedSlippageTolerance,
+      tickDistance,
+      priceRange
+    });
     
     // Create detailed debug info
     const debugData = {
@@ -562,7 +750,7 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
         lowerTick: lowerTick,
         upperTick: upperTick,
         priceRange: priceRange,
-        slippageTolerance: slippageTolerance
+        slippageTolerance: adjustedSlippageTolerance
       },
       tickCalculations: {
         lowerPrice: lowerPrice,
@@ -664,192 +852,256 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
       return;
     }
     
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    
     try {
-      // Log values for debugging
-      console.log('Creating position with params:', {
-        pool: pool,
-        lowerTick: lowerTick,
-        upperTick: upperTick,
-        amount0: amount0,
-        amount1: amount1,
-        priceRange: priceRange
-      });
+      setLoading(true);
+      setError(null);
+      setSuccess(null);
       
-      // Create position with try-catch to provide more specific error messages
-      let position;
-      try {
-        position = createPosition(
-          pool,
-          lowerTick,
-          upperTick,
-          amount0,
-          amount1
-        );
-      } catch (posError) {
-        console.error('Error creating position:', posError);
-        
-        // Check if this is the specific JSBI conversion error
-        const errorStr = String(posError);
-        if (errorStr.includes('JSBI') || errorStr.includes('toNumber') || errorStr.includes('number conversion')) {
-          // Handle specific JSBI conversion error with more detailed guidance
-          const token0IsStable = pool.token0.symbol?.includes('USD') || false;
-          const token1IsStable = pool.token1.symbol?.includes('USD') || false;
-          const token0IsEth = pool.token0.symbol?.includes('ETH') || false;
-          const token1IsEth = pool.token1.symbol?.includes('ETH') || false;
-          
-          // Provide specific guidance based on token types
-          if ((token0IsEth && token1IsStable) || (token1IsEth && token0IsStable)) {
-            // ETH/USDC pair
-            throw new Error(`Position creation failed due to number conversion. For narrow ranges in ETH/USDC, try using at least 50-100 USDC and 0.025-0.05 ETH. The narrower your range, the more tokens are needed.`);
-          } else if (token0IsStable || token1IsStable) {
-            // USDC and other pairs
-            throw new Error(`Position creation failed due to number conversion. For stablecoin pairs in narrow ranges, try using at least 50-100 USDC.`);
-          } else {
-            // Other token pairs
-            throw new Error(`Position creation failed due to number conversion. Try increasing both token amounts to avoid extremely small liquidity values.`);
-          }
-        } else {
-          throw posError;
-        }
-      }
-      
-      // Additional validation to ensure position is valid
-      if (!position || typeof position.amount0 === 'undefined' || typeof position.amount1 === 'undefined') {
-        throw new Error('Failed to create position - invalid position data');
-      }
-      
-      // Log position data for debugging
+      // Create position
+      const position = createPosition(
+        pool,
+        lowerTick,
+        upperTick,
+        amount0,
+        amount1
+      );
+
       console.log('Position created:', {
         tickLower: position.tickLower,
         tickUpper: position.tickUpper,
         amount0: position.amount0.toString(),
         amount1: position.amount1.toString()
       });
-      
-      // Convert to basis points (multiplied by 100)
-      const slippageBasisPoints = Math.floor(slippageTolerance * 100);
-      
-      // Check for token approvals before proceeding
-      const positionManagerAddress = POSITION_MANAGER_ADDRESS;
-      
-      // Get parsed token amounts with small buffer for calculation variances
-      const amount0Big = parseUnits(amount0, pool.token0.decimals) * BigInt(101) / BigInt(100); // +1% buffer
-      const amount1Big = parseUnits(amount1, pool.token1.decimals) * BigInt(101) / BigInt(100); // +1% buffer
 
-      // Check token0 allowance
-      const token0Allowance = await publicClient.readContract({
-        address: pool.token0.address as Address,
-        abi: erc20Abi,
-        functionName: 'allowance',
-        args: [address as Address, positionManagerAddress as Address]
-      });
-      
-      // Check token1 allowance
-      const token1Allowance = await publicClient.readContract({
-        address: pool.token1.address as Address,
-        abi: erc20Abi,
-        functionName: 'allowance',
-        args: [address as Address, positionManagerAddress as Address]
-      });
-      
-      // Log approvals for debugging
+      // Check token approvals
+      const [token0Allowance, token1Allowance] = await Promise.all([
+        publicClient.readContract({
+          address: pool.token0.address as Address,
+          abi: erc20Abi,
+          functionName: 'allowance',
+          args: [address as Address, POSITION_MANAGER_ADDRESSES[chainId as 1 | 11155111] as Address]
+        }),
+        publicClient.readContract({
+          address: pool.token1.address as Address,
+          abi: erc20Abi,
+          functionName: 'allowance',
+          args: [address as Address, POSITION_MANAGER_ADDRESSES[chainId as 1 | 11155111] as Address]
+        })
+      ]);
+
+      const token0Required = position.amount0.quotient.toString();
+      const token1Required = position.amount1.quotient.toString();
+
       console.log('Token approvals for transaction:', {
         token0: pool.token0.symbol,
-        token0Approved: token0Allowance >= amount0Big,
+        token0Approved: BigInt(token0Allowance) >= BigInt(token0Required),
         token0Allowance: token0Allowance.toString(),
-        token0Required: amount0Big.toString(),
+        token0Required,
         token1: pool.token1.symbol,
-        token1Approved: token1Allowance >= amount1Big,
+        token1Approved: BigInt(token1Allowance) >= BigInt(token1Required),
         token1Allowance: token1Allowance.toString(),
-        token1Required: amount1Big.toString()
+        token1Required
       });
-      
-      // If either token needs approval, show warning and stop transaction
-      if (token0Allowance < amount0Big || token1Allowance < amount1Big) {
-        setError('Token approval required before adding liquidity. Please approve tokens first.');
-        
-        // Return approval info so UI can handle it
-        return {
-          needsApproval: true,
-          token0NeedsApproval: token0Allowance < amount0Big,
-          token1NeedsApproval: token1Allowance < amount1Big,
-          token0Symbol: pool.token0.symbol || 'Token0',
-          token1Symbol: pool.token1.symbol || 'Token1'
-        };
+
+      // If either token needs approval, show approval modal
+      if (BigInt(token0Allowance) < BigInt(token0Required) || BigInt(token1Allowance) < BigInt(token1Required)) {
+        setNeedsApproval(true);
+        setToken0NeedsApproval(BigInt(token0Allowance) < BigInt(token0Required));
+        setToken1NeedsApproval(BigInt(token1Allowance) < BigInt(token1Required));
+        setLoading(false);
+        return;
       }
-      
-      // Prepare transaction with improved error handling
-      // @ts-ignore - We're prioritizing functionality over type safety
-      const txData = prepareAddLiquidityTransaction(
+
+      // Ensure address is properly typed as Address
+      const recipientAddress = address as Address;
+      console.log('DEBUG - Using recipient address:', recipientAddress);
+
+      // Convert slippage tolerance to basis points (1% = 100 basis points)
+      const slippageBasisPoints = Math.floor(adjustedSlippageTolerance * 100);
+      console.log('DEBUG - Final slippage settings:', {
+        slippageTolerance: adjustedSlippageTolerance,
+        slippageBasisPoints,
+        tickDistance,
+        priceRange
+      });
+
+      // Prepare transaction data with adjusted slippage
+      const transactionData = prepareAddLiquidityTransaction(
         position,
         slippageBasisPoints,
         1800, // 30 minutes deadline
-        chainId
+        chainId,
+        recipientAddress
       );
       
-      if (!txData || !txData.to || !txData.data) {
+      if (!transactionData || !transactionData.to || !transactionData.data) {
         throw new Error('Invalid transaction data generated');
       }
       
-      // Send transaction
-      const hash = await walletClient.sendTransaction({
-        to: txData.to,
-        data: txData.data,
-        account: address,
-        value: BigInt(txData.value || '0')
+      // Show feedback immediately
+      setSuccess("Transaction is being submitted to the network...");
+      
+      // Start transaction process
+      console.log("Sending transaction with data:", {
+        to: POSITION_MANAGER_ADDRESSES[chainId as 1 | 11155111] as Address,
+        data: transactionData.data.substring(0, 100) + "...", // Just log a snippet of the data
+        value: BigInt(transactionData.value || '0'),
       });
+      
+      let hash: `0x${string}`;
+      
+      try {
+        hash = await walletClient.sendTransaction({
+          to: POSITION_MANAGER_ADDRESSES[chainId as 1 | 11155111] as Address,
+          data: transactionData.data,
+          value: BigInt(transactionData.value || '0'),
+        });
+        
+        // Update UI immediately after we get the hash
+        console.log(`Transaction submitted with hash: ${hash}`);
+        setSuccess(`Transaction submitted! View on Etherscan: ${hash}`);
+        
+        // Update UI with link instead of JSX
+        const networkPrefix = chainId === 1 ? '' : 
+          (NETWORKS.MAINNET.chainId === chainId ? '' : 
+           NETWORKS.SEPOLIA.chainId === chainId ? 'sepolia.' : '');
+        const etherscanLink = `https://${networkPrefix}etherscan.io/tx/${hash}`;
+        
+        // Update UI with link as a string template
+        setSuccess(`Transaction submitted! View on Etherscan: ${etherscanLink} (Hash: ${hash})`);
+        
+        // Separate try/catch for waiting, so we always get the hash even if waiting fails
+        try {
+          // Increase timeout to 3 minutes (180000ms)
+          const receipt = await publicClient.waitForTransactionReceipt({
+            hash,
+            timeout: 180000, // 3 minutes
+          });
+          
+          if (receipt.status === 'success') {
+            setSuccess(`Transaction confirmed! Successfully added liquidity. View on Etherscan: ${etherscanLink} (Hash: ${hash})`);
+            setAmount0('');
+            setAmount1('');
+            // Notify the parent component about success
+            onSuccess();
+          } else {
+            setError(`Transaction failed! View on Etherscan: ${etherscanLink} (Hash: ${hash})`);
+          }
+        } catch (waitErrorObj) {
+          console.error('Transaction wait error:', waitErrorObj);
+          
+          // Type assertion for the error object
+          const waitError = waitErrorObj as { message?: string, name?: string };
+          
+          // Handle timeout errors
+          if (waitError.name === 'WaitForTransactionReceiptTimeoutError' || 
+              (typeof waitError.message === 'string' && waitError.message.includes('timeout'))) {
+            
+            setSuccess(`Transaction submitted but confirmation timed out. Your transaction may still be processed. View on Etherscan: ${etherscanLink} (Hash: ${hash}). Try refreshing Etherscan in a few minutes to see if your transaction was confirmed.`);
+            
+            // Schedule a single check after 2 minutes instead of polling
+            setTimeout(async () => {
+              try {
+                const latestReceipt = await checkTransactionStatus(hash);
+                
+                if (latestReceipt) {
+                  if (latestReceipt.status === 'success') {
+                    setSuccess(`Transaction confirmed! Successfully added liquidity. View on Etherscan: ${etherscanLink} (Hash: ${hash})`);
+                    setAmount0('');
+                    setAmount1('');
+                    // Notify the parent component about success
+                    onSuccess();
+                  } else {
+                    setError(`Transaction failed after timeout. View on Etherscan: ${etherscanLink} (Hash: ${hash})`);
+                  }
+                }
+              } catch (checkError) {
+                console.error('Failed to check transaction status:', checkError);
+              }
+            }, 120000); // Check after 2 minutes
+          } else {
+            // For other errors, still provide the hash
+            setError(`Error monitoring transaction: ${waitError.message || 'Unknown error'}. View on Etherscan: ${etherscanLink} (Hash: ${hash})`);
+          }
+        }
+      } catch (txError) {
+        // Handle error during transaction submission
+        console.error('Error sending transaction:', txError);
+        setError(`Error submitting transaction: ${(txError as any)?.message || 'Unknown error'}`);
+      }
+    } catch (errorObj) {
+      console.error('Error in add liquidity process:', errorObj);
+      // Type assertion for the error object
+      const error = errorObj as { message?: string };
+      setError(`Error adding liquidity: ${error.message || JSON.stringify(errorObj)}`);
+    } finally {
+      // We keep loading state true until we get definitive confirmation
+      // This ensures the UI indicates that something is still processing
+      // But we allow the user to see the transaction hash and status
+      setTimeout(() => {
+        setLoading(false);
+        setApproving(false);
+      }, 2000); // Short delay to ensure UI updates
+    }
+  };
+
+  // Function to handle token approvals
+  const handleApproveToken = async (tokenIndex: number) => {
+    if (!pool || !walletClient || !address || !publicClient) {
+      setError('Missing required parameters for approval');
+      return;
+    }
+    
+    try {
+      setApproving(true);
+      setError(null);
+      
+      // Get token details
+      const token = tokenIndex === 0 ? pool.token0 : pool.token1;
+      const amount = tokenIndex === 0 ? amount0 : amount1;
+      
+      // Calculate the amount to approve (with some buffer to avoid frequent approvals)
+      const parsedAmount = parseUnits(amount, token.decimals);
+      const approvalAmount = parsedAmount * BigInt(2); // Approve 2x the amount needed
+      
+      // Position manager address
+      const positionManagerAddress = POSITION_MANAGER_ADDRESSES[chainId as 1 | 11155111] as Address;
+      
+      // Create approval transaction
+      const hash = await walletClient.writeContract({
+        address: token.address as Address,
+        abi: erc20Abi,
+        functionName: 'approve',
+        args: [positionManagerAddress, approvalAmount]
+      });
+      
+      console.log(`Approval transaction sent: ${hash}`);
       
       // Wait for confirmation
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       
       if (receipt.status === 'success') {
-        setSuccess('Liquidity added successfully!');
-        // Reset form
-        setAmount0('');
-        setAmount1('');
-        // Notify the parent component about success
-        onSuccess();
-      } else {
-        setError('Transaction failed');
-      }
-    } catch (err) {
-      console.error('Error adding liquidity:', err);
-      
-      // More specific error handling based on error type
-      let errorMessage = 'Failed to add liquidity';
-      
-      if (err instanceof Error) {
-        if (err.message.includes('JSBI') || err.message.includes('toNumber') || err.message.includes('number conversion')) {
-          // This is a JSBI conversion error - likely due to very small values
-          const tickRange = upperTick - lowerTick;
-          const isNarrowRange = tickRange < 2000;
-          const token0IsStable = pool.token0.symbol?.includes('USD') || false;
-          const token1IsStable = pool.token1.symbol?.includes('USD') || false;
-          
-          // Add specific guidance based on token types and range
-          if (isNarrowRange) {
-            if (token0IsStable || token1IsStable) {
-              errorMessage = 'Failed to add liquidity: Position creation failed due to number conversion. For narrow ranges with stablecoins, try using at least 50-100 USDC. The narrower your range, the more tokens are needed.';
-            } else {
-              errorMessage = 'Failed to add liquidity: Position creation failed due to number conversion. For narrow ranges, try using larger amounts of both tokens (at least 0.025-0.05 ETH).';
-            }
-          } else {
-            errorMessage = 'Failed to add liquidity: Position creation failed due to number conversion. Try increasing both token amounts.';
-          }
+        console.log(`Approval successful for ${token.symbol}`);
+        
+        // Update approval state
+        if (tokenIndex === 0) {
+          setToken0NeedsApproval(false);
         } else {
-          errorMessage += ': ' + err.message;
+          setToken1NeedsApproval(false);
+        }
+        
+        // Check if both tokens are approved
+        if ((tokenIndex === 0 && !token1NeedsApproval) || (tokenIndex === 1 && !token0NeedsApproval)) {
+          setNeedsApproval(false);
         }
       } else {
-        errorMessage += ': ' + String(err);
+        setError(`Approval failed for ${token.symbol}`);
       }
-      
-      setError(errorMessage);
+    } catch (error) {
+      console.error('Error approving token:', error);
+      setError(error instanceof Error ? error.message : 'Failed to approve token');
     } finally {
-      setLoading(false);
+      setApproving(false);
     }
   };
 
@@ -857,17 +1109,47 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
   useEffect(() => {
     const estimateGas = async () => {
       try {
-        // Skip estimation if we're currently typing to avoid JSBI errors
-        if (isChangingInput) return;
+        // Skip estimation if we're currently typing or changing prices
+        if (isChangingInput) {
+          console.log('Skipping gas estimation while inputs are changing');
+          return;
+        }
         
-        if (!walletClient || !address || !publicClient || !pool || !lowerTick || !upperTick || !amount0 || !amount1) return;
+        if (!walletClient || !address || !publicClient || !pool || !lowerTick || !upperTick || !amount0 || !amount1) {
+          return;
+        }
+        
+        // Make sure lower tick is actually lower than upper tick
+        if (lowerTick >= upperTick) {
+          console.log('Invalid tick range for gas estimation', { lowerTick, upperTick });
+          return;
+        }
         
         // Parse amounts for validation
         const amount0Value = parseFloat(amount0);
         const amount1Value = parseFloat(amount1);
         
+        // Skip if amounts are too small or zero
+        if (amount0Value <= 0 || amount1Value <= 0) {
+          return;
+        }
+        
         const gasPrice = await publicClient.getGasPrice();
         setGasPriceGwei(formatEther(gasPrice * BigInt(1000000000)));
+        
+        // Skip estimation for USDC/WETH pair entirely as it's known to be problematic
+        const isUsdcWethPair = 
+          (pool.token0.symbol?.includes('USDC') && pool.token1.symbol?.includes('ETH')) ||
+          (pool.token1.symbol?.includes('USDC') && pool.token0.symbol?.includes('ETH'));
+
+        if (isUsdcWethPair) {
+          console.log('USDC/WETH pair detected - using fixed gas estimate to avoid slippage errors');
+          // Use a conservative fixed gas estimate based on historical data
+          const typicalGasUsed = 450000; // Higher value for USDC/WETH
+          const approximateGasCost = typicalGasUsed * Number(formatEther(gasPrice));
+          setGasEstimate(approximateGasCost.toFixed(8));
+          return;
+        }
         
         // Skip estimation for very small amounts that might cause JSBI errors
         const token0IsStable = pool.token0.symbol?.includes('USD') || false;
@@ -892,14 +1174,14 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
         // For valid amounts, proceed with actual estimation
         try {
           // Check for token allowances first
-          const positionManagerAddress = POSITION_MANAGER_ADDRESS;
+          const positionManagerAddress = POSITION_MANAGER_ADDRESSES[chainId as 1 | 11155111] as Address;
           
           // Check token0 allowance
           const token0Allowance = await publicClient.readContract({
             address: pool.token0.address as Address,
             abi: erc20Abi,
             functionName: 'allowance',
-            args: [address as Address, positionManagerAddress as Address]
+            args: [address as Address, positionManagerAddress]
           });
           
           // Check token1 allowance
@@ -907,26 +1189,14 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
             address: pool.token1.address as Address,
             abi: erc20Abi,
             functionName: 'allowance',
-            args: [address as Address, positionManagerAddress as Address]
+            args: [address as Address, positionManagerAddress]
           });
           
           // Get parsed token amounts
           const amount0Big = parseUnits(amount0, pool.token0.decimals);
           const amount1Big = parseUnits(amount1, pool.token1.decimals);
 
-          // Log allowances
-          console.log('Token allowances:', {
-            token0Symbol: pool.token0.symbol,
-            token0Allowance: token0Allowance.toString(),
-            token0Required: amount0Big.toString(),
-            token1Symbol: pool.token1.symbol,
-            token1Allowance: token1Allowance.toString(),
-            token1Required: amount1Big.toString(),
-            hasEnoughAllowance0: token0Allowance >= amount0Big,
-            hasEnoughAllowance1: token1Allowance >= amount1Big
-          });
-          
-          // Update approval states
+          // Update approval states - but don't log every time
           const token0NeedsApproval = token0Allowance < amount0Big;
           const token1NeedsApproval = token1Allowance < amount1Big;
           setToken0NeedsApproval(token0NeedsApproval);
@@ -935,45 +1205,125 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
           
           // Check if allowances are sufficient
           if (token0NeedsApproval || token1NeedsApproval) {
-            console.log('Insufficient token allowance - gas estimation would fail with STF error');
             // Use an approximate gas value instead of actual estimation
             const typicalGasUsed = 300000; // Typical gas for add liquidity
             const approximateGasCost = typicalGasUsed * Number(formatEther(gasPrice));
             setGasEstimate(approximateGasCost.toFixed(8));
-            
             return;
           }
           
-          // Create position for estimation
-          const position = createPosition(pool, lowerTick, upperTick, amount0, amount1);
-          const slippageBasisPoints = Math.floor(slippageTolerance * 100);
-          
-          // @ts-ignore - We're prioritizing functionality over type safety
-          const txData = prepareAddLiquidityTransaction(position, slippageBasisPoints, 1800, chainId);
-          
-          // Estimate gas
-          const estimate = await publicClient.estimateGas({
-            account: address,
-            to: txData.to as Address,
-            data: txData.data,
-            value: BigInt(txData.value || '0'),
-          });
-          
-          // Calculate total gas cost in ETH
-          const gasCost = estimate * gasPrice;
-          setGasEstimate(formatEther(gasCost));
-        } catch (estimationErr) {
-          console.error('Error during gas estimation:', estimationErr);
-          
-          // Check for STF error specifically
-          const errorString = String(estimationErr);
-          if (errorString.includes('STF') || errorString.includes('transfer')) {
-            console.error('STF error detected - likely insufficient token approval');
-            // Set approval warning message or state here if needed
+          // Skip gas estimation if we've had a recent slippage error
+          // to avoid overwhelming the user with errors
+          if (error && error.includes('slippage')) {
+            console.log('Skipping gas estimation due to recent slippage error');
+            const typicalGasUsed = 300000; // Typical gas for add liquidity
+            const approximateGasCost = typicalGasUsed * Number(formatEther(gasPrice));
+            setGasEstimate(approximateGasCost.toFixed(8));
+            return;
           }
           
-          // Fall back to approximation if actual estimation fails
-          const typicalGasUsed = 300000; // Typical gas for add liquidity
+          // For gas estimation, use extremely high slippage to ensure it passes
+          // This is just for estimation, not the actual transaction
+          const estimationOnlySlippage = 1500; // 15% slippage just for estimation
+          
+          // Create position with a try/catch to handle potential errors
+          let position;
+          try {
+            position = createPosition(pool, lowerTick, upperTick, amount0, amount1);
+          } catch (positionError) {
+            console.error('Error creating position for gas estimation:', positionError);
+            // Use default gas estimate
+            const typicalGasUsed = 300000;
+            const approximateGasCost = typicalGasUsed * Number(formatEther(gasPrice));
+            setGasEstimate(approximateGasCost.toFixed(8));
+            return;
+          }
+          
+          // Ensure address is properly typed as Address for gas estimation
+          const recipientAddress = address as Address;
+          
+          // Create special position for gas estimation with higher slippage
+          let estimationTxData;
+          try {
+            estimationTxData = prepareAddLiquidityTransaction(
+              position, 
+              estimationOnlySlippage, // Use much higher slippage for estimation only
+              1800, // 30 minutes deadline
+              chainId,
+              recipientAddress
+            );
+          } catch (prepError) {
+            console.warn('Using fallback gas estimates due to tx preparation error:', prepError);
+            setGasEstimate(formatEther(gasPrice * BigInt(300000))); // Use default 300k gas
+            return;
+          }
+          
+          // Use a longer timeout and better error handling
+          try {
+            console.log('Attempting gas estimation with higher slippage tolerance');
+            
+            // First try estimation with a 10-second timeout
+            const gasEstimate = await Promise.race([
+              publicClient.estimateGas({
+                account: address,
+                to: estimationTxData.to as Address,
+                data: estimationTxData.data,
+                value: BigInt(estimationTxData.value || '0'),
+              }),
+              new Promise<never>((_, reject) => {
+                setTimeout(() => reject(new Error('Gas estimation timeout')), 10000); // 10s timeout
+              })
+            ]);
+            
+            // If we get here, estimation succeeded
+            // Calculate total gas cost in ETH
+            const gasCostEth = (gasEstimate as bigint) * gasPrice;
+            setGasEstimate(formatEther(gasCostEth));
+            console.log('Gas estimation successful:', formatEther(gasCostEth));
+            
+          } catch (estimationErr) {
+            // If estimation fails, use default values but don't show error to user
+            console.warn('Gas estimation failed, using approximate value:', estimationErr);
+            
+            if (String(estimationErr).includes('slippage') || 
+                String(estimationErr).includes('exceed')) {
+              console.log('Slippage error during gas estimation - using default gas estimate');
+            }
+            
+            // Try estimating only the approval transaction since it's simpler
+            try {
+              // Use a simple approval transaction as a baseline
+              const approvalGas = await publicClient.estimateGas({
+                account: address,
+                to: pool.token0.address as Address,
+                data: encodeFunctionData({
+                  abi: erc20Abi,
+                  functionName: 'approve',
+                  args: [POSITION_MANAGER_ADDRESSES[chainId as 1 | 11155111] as Address, BigInt('1000000000000000000')]
+                }),
+                value: BigInt(0),
+              });
+              
+              // Use approval gas × 8 as a conservative approximation for liquidity addition
+              // We use a higher multiplier to ensure we don't underestimate gas costs
+              const approximateGas = approvalGas * BigInt(8);
+              const approximateGasCost = approximateGas * gasPrice;
+              setGasEstimate(formatEther(approximateGasCost));
+              console.log('Using approval-based gas estimate:', formatEther(approximateGasCost));
+              
+            } catch (approvalErr) {
+              // If even approval estimation fails, use a highly conservative default
+              console.warn('Approval gas estimation failed, using fixed default:', approvalErr);
+              // Increase the default estimation to be more conservative
+              const typicalGasUsed = 400000; // More conservative gas estimate for add liquidity
+              const approximateGasCost = typicalGasUsed * Number(formatEther(gasPrice));
+              setGasEstimate(approximateGasCost.toFixed(8));
+            }
+          }
+        } catch (err) {
+          // Final fallback
+          console.error('Error in entire gas estimation process:', err);
+          const typicalGasUsed = 400000; // Very conservative estimate
           const approximateGasCost = typicalGasUsed * Number(formatEther(gasPrice));
           setGasEstimate(approximateGasCost.toFixed(8));
         }
@@ -986,7 +1336,7 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
     if (amount0 && amount1 && lowerTick !== null && upperTick !== null) {
       void estimateGas();
     }
-  }, [amount0, amount1, lowerTick, upperTick, pool, address, walletClient, publicClient, token0NeedsApproval, token1NeedsApproval]);
+  }, [amount0, amount1, lowerTick, upperTick, pool, address, walletClient, publicClient, isChangingInput, error]);
 
   // Function to calculate price range values for sliders
   const calculatePriceRangeValues = () => {
@@ -1057,104 +1407,11 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
             onClick={() => handlePriceRangeChange('custom')}
           >
             <div className="range-option-radio"></div>
-            <div className="range-option-label">Custom Range (±30%)</div>
+            <div className="range-option-label">Custom Range</div>
           </div>
         </div>
-        
-        {/* Current price display */}
-        <div className="price-info">
-          <strong>Current Price:</strong> 1 {token0Symbol} = {tickToPrice(pool.tickCurrent, pool.token0.decimals, pool.token1.decimals).toFixed(6)} {token1Symbol}
-          {priceRange === 'narrow' && (
-            <p className="range-note">±5% range requires sufficient token amounts. For USDC, use at least 50-100 USDC. For ETH, use at least 0.025-0.05 ETH.</p>
-          )}
-        </div>
-        
-        {/* Custom Range Price Inputs */}
-        {priceRange === 'custom' && (
-          <PriceInputs
-            minValue={tickToPrice(getValidTick(TickMath.MIN_TICK, pool.tickSpacing), pool.token0.decimals, pool.token1.decimals)}
-            maxValue={tickToPrice(getValidTick(TickMath.MAX_TICK, pool.tickSpacing), pool.token0.decimals, pool.token1.decimals)}
-            lowerValue={parseFloat(lowerPrice)}
-            upperValue={parseFloat(upperPrice)}
-            onChangeLower={(value) => handlePriceChange('lower', value.toString())}
-            onChangeUpper={(value) => handlePriceChange('upper', value.toString())}
-            disabled={false}
-            pool={pool}
-          />
-        )}
-
-        {/* Narrow Range Price Inputs */}
-        {priceRange === 'narrow' && (
-          <PriceInputs
-            minValue={currentPrice * 0.9}
-            maxValue={currentPrice * 1.1}
-            lowerValue={parseFloat(lowerPrice)}
-            upperValue={parseFloat(upperPrice)}
-            onChangeLower={() => {}} // No-op since this is read-only
-            onChangeUpper={() => {}} // No-op since this is read-only
-            disabled={true}
-            pool={pool}
-          />
-        )}
-        
-        {priceRange === 'full' && (
-          <div className="price-range-info">
-            <strong>Note:</strong> Full range positions earn fees across all price points, but earn fewer fees per deposited token.
-            Recommended for very stable pairs or when unsure about price direction.
-          </div>
-        )}
       </div>
     );
-  };
-
-  // Add approval function
-  const handleApproveToken = async (tokenIndex: 0 | 1) => {
-    try {
-      if (!walletClient || !address || !pool || !publicClient) return;
-      
-      setApproving(true);
-      
-      const token = tokenIndex === 0 ? pool.token0 : pool.token1;
-      const amount = tokenIndex === 0 ? amount0 : amount1;
-      const maxApproval = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
-      
-      console.log(`Approving ${token.symbol} for Uniswap Position Manager`);
-      
-      // Prepare approval transaction
-      const { request } = await publicClient.simulateContract({
-        account: address,
-        address: token.address as Address,
-        abi: erc20Abi,
-        functionName: 'approve',
-        args: [POSITION_MANAGER_ADDRESS as Address, maxApproval]
-      });
-      
-      // Send approval transaction
-      const txHash = await walletClient.writeContract(request);
-      console.log(`Transaction sent: ${txHash}`);
-      
-      // Wait for transaction to be mined
-      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-      console.log(`Transaction confirmed: ${receipt.transactionHash}`);
-      
-      // Update approval state
-      setToken0NeedsApproval(tokenIndex === 0 ? false : token0NeedsApproval);
-      setToken1NeedsApproval(tokenIndex === 1 ? false : token1NeedsApproval);
-      
-      // Check if both tokens are now approved
-      if ((tokenIndex === 0 && !token1NeedsApproval) || (tokenIndex === 1 && !token0NeedsApproval)) {
-        setNeedsApproval(false);
-      }
-      
-      setApproving(false);
-      
-      // The useEffect for estimateGas will run automatically when we update the approval states
-      
-    } catch (err) {
-      console.error('Error approving token:', err);
-      setApproving(false);
-      setError(`Error approving token: ${err instanceof Error ? err.message : String(err)}`);
-    }
   };
 
   return (
@@ -1184,7 +1441,7 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
             ) : error.includes('price') ? (
               <div>Ensure your lower price is less than your upper price, and both are valid numbers.</div>
             ) : error.includes('slippage') ? (
-              <div>Try increasing your slippage tolerance if prices are volatile.</div>
+              <div>The price has moved significantly since you started the transaction. Try again.</div>
             ) : null}
           </div>
           <div className="debug-controls">
@@ -1249,27 +1506,70 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
       {success && <div className="success-message">{success}</div>}
       
       {renderPriceRangeOptions()}
+      
+      {/* Current price display */}
+      <div className="price-info">
+        <strong>Current Price:</strong> 1 {pool?.token0.symbol} = {tickToPrice(pool?.tickCurrent || 0, pool?.token0.decimals || 0, pool?.token1.decimals || 0).toFixed(6)} {pool?.token1.symbol}
+        {priceRange === 'narrow' && (
+          <p className="range-note">±5% range requires sufficient token amounts. For USDC, use at least 50-100 USDC. For ETH, use at least 0.025-0.05 ETH.</p>
+        )}
+      </div>
+      
+      {/* Custom Range Price Inputs */}
+      {priceRange === 'custom' && (
+        <PriceInputs
+          minValue={tickToPrice(getValidTick(TickMath.MIN_TICK, pool?.tickSpacing || 60), pool?.token0.decimals || 0, pool?.token1.decimals || 0)}
+          maxValue={tickToPrice(getValidTick(TickMath.MAX_TICK, pool?.tickSpacing || 60), pool?.token0.decimals || 0, pool?.token1.decimals || 0)}
+          lowerValue={parseFloat(lowerPrice)}
+          upperValue={parseFloat(upperPrice)}
+          onChangeLower={(value) => handlePriceChange('lower', value.toString())}
+          onChangeUpper={(value) => handlePriceChange('upper', value.toString())}
+          disabled={false}
+          pool={pool}
+        />
+      )}
+
+      {/* Narrow Range Price Inputs */}
+      {priceRange === 'narrow' && (
+        <PriceInputs
+          minValue={tickToPrice(pool?.tickCurrent || 0, pool?.token0.decimals || 0, pool?.token1.decimals || 0) * 0.9}
+          maxValue={tickToPrice(pool?.tickCurrent || 0, pool?.token0.decimals || 0, pool?.token1.decimals || 0) * 1.1}
+          lowerValue={parseFloat(lowerPrice)}
+          upperValue={parseFloat(upperPrice)}
+          onChangeLower={() => {}} // No-op since this is read-only
+          onChangeUpper={() => {}} // No-op since this is read-only
+          disabled={true}
+          pool={pool}
+        />
+      )}
+      
+      {priceRange === 'full' && (
+        <div className="price-range-info">
+          <strong>Note:</strong> Full range positions earn fees across all price points, but earn fewer fees per deposited token.
+          Recommended for very stable pairs or when unsure about price direction.
+        </div>
+      )}
 
       {/* Display current balances to help users */}
       <div className="wallet-balances">
         <div className="balance-title">Your Wallet Balances</div>
         <div className="balance-row">
-          <span>{pool.token0.symbol}: </span>
+          <span>{pool?.token0.symbol}: </span>
           <strong>
-            {formatBalance(token0Balance, pool.token0)}
+            {formatBalance(token0Balance, pool?.token0)}
           </strong>
-          {pool.token0.symbol?.includes('ETH') && (
+          {pool?.token0.symbol?.includes('ETH') && (
             <div className="native-eth-balance">
               <span>(Native ETH: {ethBalance ? formatTokenAmount(formatEther(ethBalance.value)) : '...'})</span>
             </div>
           )}
         </div>
         <div className="balance-row">
-          <span>{pool.token1.symbol}: </span>
+          <span>{pool?.token1.symbol}: </span>
           <strong>
-            {formatBalance(token1Balance, pool.token1)}
+            {formatBalance(token1Balance, pool?.token1)}
           </strong>
-          {pool.token1.symbol?.includes('ETH') && (
+          {pool?.token1.symbol?.includes('ETH') && (
             <div className="native-eth-balance">
               <span>(Native ETH: {ethBalance ? formatTokenAmount(formatEther(ethBalance.value)) : '...'})</span>
             </div>
@@ -1285,16 +1585,28 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
         disabled={approving || loading}
       />
       
-      <div className="form-group slippage-group">
-        <label>Slippage Tolerance: {slippageTolerance}%</label>
-        <input
-          type="range"
-          min="0.1"
-          max="5"
-          step="0.1"
-          value={slippageTolerance}
-          onChange={(e) => setSlippageTolerance(parseFloat(e.target.value))}
-        />
+      <div className="slippage-info">
+        <p>Slippage tolerance is automatically adjusted based on your price range and market conditions.</p>
+      </div>
+
+      {/* Display Token Approval Status */}
+      <div className="approval-status-section">
+        <h4>Token Approval Status</h4>
+        <div className="approval-status-row">
+          <span>{pool?.token0.symbol}: </span>
+          <strong className={token0NeedsApproval ? "status-needed" : "status-approved"}>
+            {token0NeedsApproval ? "Approval Needed" : "Already Approved"}
+          </strong>
+        </div>
+        <div className="approval-status-row">
+          <span>{pool?.token1.symbol}: </span>
+          <strong className={token1NeedsApproval ? "status-needed" : "status-approved"}>
+            {token1NeedsApproval ? "Approval Needed" : "Already Approved"}
+          </strong>
+        </div>
+        <p className="approval-info">
+          Token approvals allow the Uniswap V3 contract to use your tokens. This is a one-time approval per token that persists until you revoke it.
+        </p>
       </div>
 
       {/* Add the approval section */}
@@ -1309,7 +1621,7 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
               disabled={approving}
               className="approve-button"
             >
-              {approving ? 'Approving...' : `Approve ${pool.token0.symbol}`}
+              {approving ? 'Approving...' : `Approve ${pool?.token0.symbol}`}
             </button>
           )}
           
@@ -1319,7 +1631,7 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
               disabled={approving}
               className="approve-button"
             >
-              {approving ? 'Approving...' : `Approve ${pool.token1.symbol}`}
+              {approving ? 'Approving...' : `Approve ${pool?.token1.symbol}`}
             </button>
           )}
           
@@ -1343,4 +1655,4 @@ const AddLiquidity: FC<AddLiquidityProps> = ({ pool, onSuccess }) => {
   );
 };
 
-export default AddLiquidity; 
+export default AddLiquidity;
