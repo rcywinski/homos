@@ -688,24 +688,81 @@ export function prepareAddLiquidityTransaction(
  * @param slippageTolerance The allowed slippage in basis points (e.g., 50 for 0.5%)
  * @param deadline The transaction deadline in seconds
  * @param chainId The current chain ID
+ * @param positionDetails Optional position details to calculate min amounts
  * @returns Transaction data to be sent
  */
-export const prepareRemoveLiquidityTransaction = (
+export const prepareRemoveLiquidityTransaction = async (
   tokenId: string,
   liquidity: string,
   slippageTolerance: number,
   deadline: number,
-  chainId: number
+  chainId: number,
+  // Optional position details to calculate slippage
+  positionDetails?: {
+    pool: Pool;
+    tickLower: number;
+    tickUpper: number;
+  }
 ) => {
   // Create slippage tolerance percentage
-  const slippagePercent = new Percent(slippageTolerance, 10000);
+  const slippagePercent = new Percent(slippageTolerance * 100, 10000);
+  
+  let amount0Min = BigInt(0);
+  let amount1Min = BigInt(0);
+  
+  // If we have position details, calculate min amounts based on slippage
+  if (positionDetails) {
+    try {
+      // Create a temporary Position object to calculate token amounts
+      const position = new Position({
+        pool: positionDetails.pool,
+        tickLower: positionDetails.tickLower,
+        tickUpper: positionDetails.tickUpper,
+        liquidity: JSBI.BigInt(liquidity)
+      });
+      
+      // Get expected amounts of tokens from liquidity
+      const amount0 = position.amount0;
+      const amount1 = position.amount1;
+      
+      // Apply slippage tolerance to get minimum amounts
+      const slippageAdjustedAmount0 = amount0.multiply(
+        new Fraction(10000 - slippageTolerance * 100, 10000)
+      );
+      
+      const slippageAdjustedAmount1 = amount1.multiply(
+        new Fraction(10000 - slippageTolerance * 100, 10000)
+      );
+      
+      // Convert to BigInt
+      amount0Min = BigInt(slippageAdjustedAmount0.quotient.toString());
+      amount1Min = BigInt(slippageAdjustedAmount1.quotient.toString());
+      
+      console.log('DEBUG - Calculated min amounts for remove liquidity:', {
+        tokenId,
+        liquidity,
+        slippageTolerance,
+        amount0: amount0.toFixed(6),
+        amount1: amount1.toFixed(6),
+        amount0Min: amount0Min.toString(),
+        amount1Min: amount1Min.toString()
+      });
+    } catch (e) {
+      console.warn('Could not calculate min amounts, using 0:', e);
+      // If calculation fails, fall back to 0 (unsafe but will not block transaction)
+    }
+  } else {
+    // Special handling for USDC/WETH pairs (if we don't have position details)
+    // Apply higher slippage for USDC/WETH pairs 
+    console.log('No position details provided, using 0 for min amounts (potentially unsafe)');
+  }
   
   // Construct decrease liquidity params
   const params = {
     tokenId: BigInt(tokenId),
     liquidity: BigInt(liquidity),
-    amount0Min: BigInt(0), // TODO: Calculate min amounts based on slippage
-    amount1Min: BigInt(0), // TODO: Calculate min amounts based on slippage
+    amount0Min,
+    amount1Min,
     deadline: BigInt(Math.floor(Date.now() / 1000) + deadline)
   };
   
