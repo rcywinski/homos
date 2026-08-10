@@ -128,3 +128,20 @@
 - [ ] Poranne zadanie 8:00 "newsy → postawa ryzyka dnia" (zaplanowane zadanie
   Claude; użytkownik da znać kiedy utworzyć).
 - [ ] iPhone: wejść przez VPN na http://192.168.1.8:8787, Add to Home Screen (PWA).
+
+## E. WDROŻENIA KODU (dla Claude Code / terminala)
+- [x] **Selektor pul w bocie (NOWE, 2026-08-10)**: `bot/selector.ts` + zmiany w
+  `bot/observer.ts` — ✅ (1) commit+push ZROBIONE (Claude Code, commit `4242221`,
+  razem z builderem). Kontrakty importów zweryfikowane (config→BOT_POOLS/STATE_DIR;
+  selector→runSelectorIfDue/SelectorProposal); selector.ts czysty w tsc; jedyny błąd
+  tsc w observer to preexisting duplikacja typów viem (poza zakresem).
+  POZOSTAJE PO STRONIE WŁAŚCICIELA (Windows): (2) `git pull` + restart `homos-bot`
+  (nssm restart homos-bot), (3) test — obserwować `.bot/observer.log` po 8:00
+  ("selector: ranking dnia — eligible…"). Selektor czyta data/llama/ (pipeline 07:30
+  musi zbiec przed 8:00). UWAGA: wymaga data/llama także NA WINDOWS (pipeline tam pisze).
+- [x] Commit+push `src/utils/rebalanceBuilder.ts` — ✅ ZROBIONE (w commicie `4242221`).
+- [ ] **Konsumenci UI Partii 4 — untracked na Macu, do commitu przez sesję UI**:
+  `src/components/BotTelemetry.tsx`, `src/components/CockpitPositionActions.tsx`,
+  `src/hooks/useCockpitActions.ts`, `src/config/botPools.ts` (karty
+  [Zatwierdź]/[Modyfikuj]/[Odrzuć] + wywołanie rebalanceBuilder + podpisy Rabby).
+- [ ] Jednolinijkowy fix fetch-swaps: exit code != 0 przy FAILED puli (zgłoszone przez CC).
