@@ -221,6 +221,25 @@ repo w `C:\Projects\homos`. Szczegóły w TASKS-WINDOWS.md, skrót tutaj:
   (b) "Restore on AC Power" w BIOS, (c) test `http://192.168.1.8:8787/health`
   z Maca/iPhone'a przez VPN.
 
+### 2026-08-10 — Sesja 3h: TICK-LEVEL NA 4 PULACH (pełne 90 dni) + pipeline bulletproof
+Wyniki vs HODL 50/50 (kapitał $10k, okres spadkowy):
+
+| Pula | Najlepsza strategia | Adaptacyjna k=2 h=24 | Uwagi |
+|---|---|---|---|
+| base-weth-usdc-030 (581k swapów) | **adapt k2h24 +3.77** | +3.77 | aktywność się opłaca |
+| base-weth-usdc-005 (1.86M swapów) | pasywny±50 +2.91 | +1.94 (1 reb) | k2h12: −6.36 (2 reb, jeden zły!) |
+| base-cbbtc-weth-005 (323k) | sztywny±15 +2.71 | +2.59 (0 reb) | **jedyny DODATNI absolutny APR (+2.8%), maxDD 6%** — teza par skorelowanych potwierdzona |
+| mainnet-usdc-weth-005 (464k) | pasywny±50 +1.69 | **−1.94** | gas $8 zabija aktywność: ±5% naiwny −21 p.p., $272 gazu |
+
+WNIOSKI KLUCZOWE:
+1. LP w umiarkowanej szerokości bije HODL na KAŻDEJ puli (bramka F1: zaliczona kierunkowo).
+2. **Aktywne zarządzanie opłaca się TYLKO na tanim gazie (Base)**; mainnet przy $10k = pasywnie szeroko albo wcale.
+3. **KRUCHOŚĆ: wynik 90 dni zdominowany przez 1-3 dyskretne decyzje rebalansu** (k2h12 vs k2h24 na base-005: różnica −8 p.p. przez JEDEN zły rebalans). Wymagane: dłuższe okna/walk-forward + mądrzejszy timing rebalansu (nie sama histereza; kandydat: rebalans warunkowany odwrotem EWMA momentum).
+4. Portfel wg PAIRS.md broni się w danych: rdzeń Base 0.3% (aktywnie) + cbBTC/WETH (pasywnie ±15%) + mainnet tylko pasywnie.
+- **`scripts/pipeline.ts`** (npm run pipeline; w whitelist mostka): lokalny orkiestrator BEZ AI — fetch swaps+llama (wznawialne, retry 3× z przerwami, walidacja świeżości) → backtesty+selection+sweep (retry 2×), logi data/pipeline-logs/, exit code = liczba porażek. Do podpięcia w Harmonogram zadań Windows po 8:00 (raz dziennie, przed porannym briefem).
+- mainnet-usdc-weth-030 jeszcze się pobiera (ostatnia pula; publicnode-owe warningi w logu to działający fallback providerów, nie błąd).
+- Commity kodu tej sesji przez operatora gita (Claude Code): `scripts/pipeline.ts` + package.json + agent-runner whitelist + strategie sweepu.
+
 ### 2026-08-10 — Sesja planistyczna
 - Przeanalizowano legacy (`src/utils/liquidityManagement.ts`, `uniswap.ts`, README, docs) — zdiagnozowano przyczyny rozjazdu wyliczeń z Uniswap (float zamiast bigint, złe wzory, hardkody, brak testów).
 - Ustalono parametry projektu z właścicielem (kapitał, sieć TBD, hedging etapami, pół-auto).
