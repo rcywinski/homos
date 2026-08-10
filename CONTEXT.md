@@ -31,6 +31,204 @@
 
 ## 4. Dziennik sesji
 
+### 2026-08-10 — Sesja UI (Sonnet) — Partia 4b (częściowo): [Zatwierdź] dla REBALANCE
+Wykonana Partia 4b dla REBALANCE (punkt 1 checklisty); ROTATE świadomie
+zostawiony jako TODO (punkt 2) — builder tego nie obsługuje, patrz niżej.
+
+1. **[Zatwierdź] dla REBALANCE**: nowy `src/hooks/useRebalanceExecution.ts`
+   wykonuje `RebalancePlan` z `src/utils/rebalanceBuilder.ts` (sesja
+   analityczna, tylko import — plik nietknięty). Sekwencja: approvals z planu
+   (approve tylko gdy allowance nie starcza) → krok 1 decrease+collect
+   (dokładny) → krok 2 swap (jeśli nie `swapSkipped`) → krok 3 mint —
+   PRZEBUDOWANY tuż przed wysłaniem z faktycznych sald (`buildMintStep`), bo
+   krok w planie to tylko estymata z podglądu. Jeśli realne saldo po swapie
+   przekracza wcześniej zaaprobowaną (estymowaną) kwotę, przed mintem
+   dociągany jest dodatkowy approve — inaczej mint mógłby zrewertować mimo
+   udanych kroków 1–2. Postęp (`saveProgress`/`loadProgress`, localStorage per
+   chainId+tokenId) przeżywa odświeżenie strony — ponowne [Zatwierdź] pomija
+   kroki już potwierdzone (resume). Failure w środku = komunikat "środki
+   bezpieczne, dokończ pozostałe kroki", stan zapisany.
+2. **Nowy modal** `src/components/RebalanceSequenceModal.tsx` — lista kroków
+   planu (label+detail z buildera), status wykonania, przycisk zmienia się na
+   "Dokończ (krok N/M)" gdy wykryje niedokończony progress w localStorage.
+3. **`usePortfolio.ts` rozszerzony** (w zakresie edycji tej sesji, nie bot/**):
+   `PortfolioPosition.feesOwed0Raw`/`feesOwed1Raw` (bigint jako string, z tej
+   samej symulacji static-collect co dotychczasowe `feeAmount0/1`) —
+   `planRebalance()` chce dokładnych nieodebranych fee, nie zaokrąglonych
+   przez `Number()`.
+4. **ROTATE — świadome TODO**: `planRebalance()` bierze jeden `Pool` na
+   wejściu (zakłada, że stara i nowa pozycja są w TEJ SAMEJ puli) — przy
+   ROTATE zawsze są w różnych pulach (inny kandydat z rankingu selektora).
+   Karta ROTATE w `MorningCockpit.tsx` ma notatkę wprost tłumaczącą, że
+   automatyczne [Zatwierdź] tu nie działa, i zostaje na krokach 1/2 ręcznych z
+   Partii 4 ([1. Zamknij starą →] / [2. Otwórz nową →], już działających).
+   Żeby to domknąć, kolejna sesja potrzebuje: budowy dwóch `Pool` (stara+nowa,
+   jak `resolveBotPool` w useCockpitActions.ts) i rozszerzenia
+   rebalanceBuilder.ts (poza zakresem tej sesji UI — bot/**/utils poza
+   edycją poza już-gotowym rebalanceBuilder.ts) o wariant cross-pool.
+
+Typecheck (`npx tsc --noEmit -p tsconfig.json`, maszyna użytkownika): 0
+błędów w `src/`. Pozostałe błędy (bot/observer.ts, node_modules/ox)
+preexisting, poza zakresem tej sesji.
+
+### 2026-08-10 — Sesja UI (Sonnet) — Partia 4: karty propozycji wg kind + 2 fixy z odbioru P3
+Wykonana cała Partia 4 z TASKS-UI.md (4 pozycje, wszystkie odhaczone). Przed
+implementacją przeczytane na świeżo (nie na podstawie streszczenia w tym pliku):
+`bot/observer.ts` (rozszerzony `interface Proposal`: `kind?`, `poolId`, `symbol?`,
+`chain?`, `apy7d?`, `heldApy7d?`, `breakEvenDays?`, `note?`;
+`suggestedRange`/`costUsd`/`paybackDays` opcjonalne) i `bot/selector.ts`
+(`SelectorProposal`, polityka OPEN/ROTATE — tylko do czytania, zero zmian).
+
+1. **Karty propozycji wg kind** (`MorningCockpit.tsx`): REBALANCE →
+   [Modyfikuj →], OPEN → [Otwórz →] (ukryty gdy `poolId === ''`, wtedy tylko
+   żółty `note`), ROTATE → dwie linie + [1. Zamknij starą →] / [2. Otwórz nową →].
+   [Odrzuć] wszędzie (bez zmian, już działało). [Zatwierdź] świadomie NIE
+   zbudowany (zostawione dla nowo dopisanej Partii 4b — rebalanceBuilder.ts).
+2. **Architektura reużycia modali** (główna decyzja tej sesji): modal "Rebalans
+   ręczny / nowa pozycja" (`RebalanceModal`, teraz eksportowany z
+   `CockpitPositionActions.tsx`) i `openPositionAtRange`/`readBalanceAndAllowance`/
+   `approveToken` (`useCockpitActions.ts`) przetypowane z `PortfolioPosition` na
+   nowy, węższy interfejs `RebalanceTarget` (tokenId, chainId, poolLabel, fee,
+   token0/1, pool, suggestion). `PortfolioPosition` spełnia go strukturalnie —
+   karta pozycji działa bez zmian. Drugi producent: `resolveBotPool(poolId)`
+   (nowe w useCockpitActions.ts) — wylicza `RebalanceTarget` dla puli bota, w
+   której user NIE ma jeszcze pozycji (OPEN / ROTATE krok 2), 2 odczyty RPC
+   on-demand (slot0+liquidity), tokeny z `OBSERVED_PAIRS` (te same pary
+   USDC/WETH, zero nowych metadanych tokenów). Nowy plik
+   `src/config/botPools.ts` — metadane 3 pul bota (id/chainId/address/feeBps/
+   symbole) zduplikowane z `bot/config.ts` (bot/** poza zakresem edycji, ta sama
+   konwencja co GAS_USD).
+3. **Fix z odbioru P3 — fallback sugestii bota**: `RebalanceModal` mapuje
+   `position.poolAddress` → botPoolId (`findBotPoolByAddress`) i gdy frontendowy
+   `p.suggestion == null`, a `bot.state.pools[]` ma świeżą sugestię dla tej
+   samej puli, opcja "Doradca" pokazuje się jako "Doradca (z bota)" zamiast
+   wyszarzonej. Wymagało przekazania `bot: UseBotApi` w dół (MorningCockpit →
+   CockpitPositionActions → RebalanceModal) — zero nowych zapytań, dane już w
+   `bot.state`.
+4. **Fix kosmetyczny**: `text-align: left` dla `.telemetry-json-pre` w
+   styles.css (przyczyna: globalne `.app { text-align: center }` kaskadowało).
+5. **Typy**: `BotProposal` w `useBotApi.ts` rozszerzony o pola selektora
+   (zob. wyżej) + `suggestedRange.tickLower?/tickUpper?`.
+
+Typecheck (`npx tsc --noEmit -p tsconfig.json`, maszyna użytkownika): 0 błędów
+w `src/`. Pozostałe błędy (bot/observer.ts — niezgodność typów viem w
+`getBlock`, node_modules/ox) preexisting, poza zakresem tej sesji.
+
+Nietknięte (świadomie, zgodnie z ZAKRES TWARDY): `bot/**` tylko czytane
+(observer.ts, selector.ts, config.ts), `src/utils/{v3math,liquidityManagement,
+advisor}.ts` nietknięte. Partia 4b (dopisana przez inną sesję w międzyczasie —
+wpięcie `src/utils/rebalanceBuilder.ts` pod przycisk [Zatwierdź]) zostawiona
+nietknięta na następną sesję UI — builder istnieje, ale wpięcie modalu sekwencji
+tx to osobne zadanie.
+
+### 2026-08-10 — Sesja UI (Sonnet) — poprawka po Partii 3: progi/dostępność akcji kokpitu
+Użytkownik zgłosił na żywo (po Partii 3): "przyciski zbierz fees sa nieaktywne
+pomimo nieodebrane fee" i "rebalans reczny tez". Dwie osobne przyczyny, obie
+naprawione w `src/hooks/useCockpitActions.ts` / `CockpitPositionActions.tsx`:
+
+1. **Zbierz fees** — próg "opłacalności" był dosłowną interpretacją
+   UX-COCKPIT.md §1.A.3 ("50× gaz"): ~$400 na mainnecie, ~$4 na Base. W
+   praktyce prawie żadna pozycja hobbystyczna nie osiąga takiej kwoty
+   nieodebranych fee, więc przycisk wyglądał na trwale zepsuty. Zapytałem
+   użytkownika (AskUserQuestion) o preferowane rozwiązanie — wybrał obniżenie
+   progu. Zmieniono `COLLECT_THRESHOLD_MULT` z 50 na 8 (mainnet ~$64, Base
+   ~$0.64) — nadal chroni przed płaceniem więcej za gas niż warte jest fee,
+   ale nie blokuje realistycznych kwot.
+2. **Rebalans ręczny** — przycisk wymagał `p.suggestion` (statystyk doradcy:
+   min. 10 swapów w ostatnich 24h + pula musi pasować do wpisu w
+   `config/pools.ts` OBSERVED_PAIRS), które nierzadko są niedostępne (niski
+   wolumen, chwilowy błąd RPC — patrz sekcja 3 tego pliku o limitach
+   publicznych RPC). Zamiast blokować przycisk brakiem danych, modal ma teraz
+   dwa tryby: "Doradca" (gdy `p.suggestion` dostępne) i "Własny zakres" (ceny
+   USD wpisywane ręcznie, domyślnie ±15% wokół aktualnej ceny puli — ten sam
+   wzorzec co tryb "Własny" w AddLiquidity.tsx). `openSuggestedPosition`
+   przemianowane na `openPositionAtRange(tickLower, tickUpper, ...)` — bierze
+   ticki jawnie, nie czyta ich z `p.suggestion` wewnątrz. Przycisk w
+   `CockpitPositionActions.tsx` wymaga teraz tylko `p.pool` (nie `p.suggestion`).
+
+Typecheck (na maszynie użytkownika): 0 błędów w `src/`, jak poprzednio.
+TASKS-UI.md Partia 3 zaktualizowana o tę poprawkę (pod istniejącym punktem
+"Akcje na kartach pozycji", nie jako osobna partia — to fix, nie nowa funkcja).
+
+**Do zweryfikowania na żywo:** czy próg 8× gaz jest teraz sensowny w
+praktyce, czy dalej za wysoki/za niski — łatwo zmienić jedną stałą
+(`COLLECT_THRESHOLD_MULT`) jeśli user da znać.
+
+### 2026-08-10 — Sesja UI (Sonnet) — Partia 3: akcje na kartach kokpitu + telemetria bota ✅
+Wykonane wszystkie zadania z TASKS-UI.md Partia 3 (rozszerzona o UX-COCKPIT.md,
+przeczytane przed pracą). Zakres: wyłącznie UI, nie dotknięto v3math/
+liquidityManagement/advisor/backtest/bot (poza odczytem, jak wcześniej).
+Uwaga proceduralna: użytkownik napisał "doszła nowa partia 3 UI" zanim treść
+faktycznie pojawiła się na dysku — dwukrotnie sprawdziłem TASKS-UI.md/repo root
+i była niezmieniona od mojej Partii 2; po jego odpowiedzi ("wszystko zapisane
+w repo") ponowny listing pokazał świeże `TASKS-UI.md` i nowy `UX-COCKPIT.md` —
+najwyraźniej user właśnie kończył zapisywać plik w tym samym momencie. Nauka
+dla innych sesji: jeśli TASKS-UI.md wygląda na nieaktualne względem tego, co
+user mówi, warto zapytać / sprawdzić ponownie za chwilę, zamiast zakładać błąd.
+
+- **`src/hooks/usePortfolio.ts`** (rozszerzony, nie przepisany): `PortfolioPosition`
+  ma teraz surowe dane potrzebne do akcji zapisu — ticki, `liquidity` (bigint
+  jako string), `token0`/`token1` (adres+symbol+decimals), `positionManager`,
+  `poolAddress`, i SDK `Pool` zbudowany RAZ w tej samej pętli z danych już
+  odczytanych (dodatkowo doczytywana tylko `liquidity()` całej puli — reszta
+  była już fetchowana). Zero dodatkowych zapytań RPC względem Partii 2. Doliczona
+  też `suggestion` (RangeSuggestion z advisor.ts) liczona zawsze gdy są staty,
+  niezależnie od tego czy pozycja ma wycenę USD (rebalans ręczny ma sens nawet
+  dla par bez stable/ETH nogi, po prostu bez oceny opłacalności).
+- **`src/hooks/useCockpitActions.ts`** (nowy): logika zapisu dla trzech akcji
+  na kartach kokpitu. WAŻNE odkrycie przy budowie "Zamknij": `decreaseLiquidity`
+  na NonfungiblePositionManager NIE przekazuje środków — tylko przenosi je do
+  `tokensOwed` na pozycji; trzeba osobno wywołać `collect()`. Istniejący kod w
+  MyPositions.tsx/RemoveLiquidity.tsx tego nie robił (tylko decreaseLiquidity) —
+  to preexisting luka, nie ruszona (poza moim zakresem), ale w NOWEJ akcji
+  "Zamknij" na kokpicie zaimplementowałem to poprawnie: 2 kroki sekwencyjne
+  (decrease → collect, oba przez Rabby), z komunikatem "krok 1/2"/"krok 2/2".
+  Przy błędzie między krokami środki są bezpieczne (siedzą jako tokensOwed,
+  odzyskiwalne przez "Zbierz fees"). Cross-chain: każda akcja najpierw przełącza
+  sieć portfela (jeśli trzeba) i bierze ŚWIEŻY walletClient przez
+  `getWalletClient` z `wagmi/actions` zamiast polegać na wartości z hooka
+  `useWalletClient()` z chwili kliknięcia (ta odświeża się dopiero przy
+  kolejnym renderze — ryzyko podpisania w złej sieci tuż po switchu).
+  Próg opłacalności zbierania fee (50× gaz) duplikuje wewnętrzną stałą GAS_USD
+  z advisor.ts (ten plik poza zakresem edycji tej sesji — nie da się wyeksportować).
+- **`src/components/CockpitPositionActions.tsx`** (nowy): przyciski [💰 Zbierz
+  fees] (szary+tooltip poniżej progu) / [⏹ Zamknij] (modal: suwak+presety
+  25/50/100%, slippage, podgląd kwot z min-po-slippage — `previewClose()`
+  liczy dokładnie tę samą formułę co `prepareRemoveLiquidityTransaction`) /
+  [🔄 Rebalans ręczny] (modal: otwiera NOWĄ pozycję w sugerowanym zakresie
+  doradcy, reużywa `createPosition`/`prepareAddLiquidityTransaction` jak
+  AddLiquidity.tsx, z approve flow). Pełny builder "zamknij+swap+mint w jednej
+  sekwencji" (UX-COCKPIT.md §3) zostaje dla sesji analitycznej — do tego czasu
+  to dwie osobne operacje, zgodnie z §5 kolejności wdrożenia.
+- **`src/components/BotTelemetry.tsx`** (nowy): zwijana sekcja (domyślnie
+  zwinięta) w kokpicie z tabelą `state.pools` (pula/ETH-USD/tick/zmienność/
+  fee-yield/sugerowany zakres $/wiek danych) i listą `state.positions`. Nic
+  nowego nie fetchuje — czyta ten sam `bot.state` co reszta kokpitu (jeden
+  `useBotApi()` w App.tsx, bez drugiego timera). Orientacja sugerowanego
+  zakresu (USD vs surowa cena) wyliczona heurystyką odległości logarytmicznej
+  od `ethUsd` — `state.pools` (bot/observer.ts) nie zapisuje sym0/ethIsToken0,
+  więc nie da się tego odwrócić wprost jak w kokpicie (tam mam symbole tokenów).
+  Poprawka z 401: przycisk "Surowy JSON" pokazuje `bot.state` już w pamięci
+  w modalu, zamiast linku do `{base}/api/state` (link nie mógłby nieść nagłówka
+  Authorization → 401 na chronionym API).
+- **`src/hooks/useBotApi.ts`**: dodane typy `BotPoolLive`/`BotWatchedPosition`
+  (powielone z `PoolLive`/`WatchedPosition` w bot/observer.ts — ten plik poza
+  zakresem edycji tej sesji, ale wolno z niego czytać i kopiować kształt).
+- **`src/App.tsx`**: PoolBrowser + TransactionHistory zgrupowane pod
+  `<ExpandableSection title="Zarządzaj (zaawansowane)" defaultExpanded={false}>`
+  — nic skasowane, tylko zwinięte pod jednym nagłówkiem (kokpit jest teraz górą).
+- **`src/styles.css`**: dopisana sekcja "UI session (Partia 3)" —
+  `.cockpit-position-card*`, `.telemetry-*`.
+- Typecheck (`npx tsc --noEmit -p tsconfig.json`, na maszynie użytkownika):
+  0 błędów w `src/`. Pozostałe błędy (bot/observer.ts, node_modules/ox)
+  preexisting, poza zakresem — jak w Partii 1/2.
+
+**Następny krok:** przetestować akcje kokpitu na żywo (zwłaszcza "Zamknij" —
+2 podpisy w Rabby, i cross-chain switch przy pozycji na innym łańcuchu niż
+aktualnie podłączony portfel) — najlepiej na małej pozycji testowej najpierw.
+Builder pełnego rebalansu (zamknij+swap+mint w jednej sekwencji, UX-COCKPIT.md
+§3) czeka na sesję analityczną (Fable) — patrz UX-COCKPIT.md §5 pkt 2.
+
 ### 2026-08-10 — Sesja UI (Sonnet) — Partia 2: poranny kokpit + połączenie z botem ✅
 Wykonane wszystkie 4 zadania z TASKS-UI.md Partia 2 (plus dokończone/zweryfikowane
 zaległości z Partii 1 — patrz TASKS-UI.md, były już zaimplementowane w kodzie,
@@ -332,3 +530,92 @@ Wykonano TASKS-WINDOWS-ADDENDUM.md (boty niewidoczne, bez okien konsoli):
 - **WERDYKT dla pytania użytkownika**: selekcja pul — dane WYSTARCZAJĄ (4.4y, wiele reżimów); odbiór fees — czysty rachunek progowy (zbieraj gdy fees > ~50× gaz; Base ~$2–5, mainnet ~$50+; zysk z compoundingu ~1–2 p.p./rok); **algorytm zakresu/rebalansu — dane NIE wystarczają** (jeden reżim, 25% win-rate na oknach) → wymagane 365d + okna 45–60d + badanie timingu.
 - Fetch config: dodano `base-weth-usdc-030-365d` (świeży id = czysty stan, 365 dni; ~30–60 min pobierania na Base). TODO terminal: `npx tsx scripts/fetch-swaps.ts base-weth-usdc-030-365d` (albo pełny pipeline).
 - Plan analizy po 365d: walk-forward okna 45/60d + podział na reżimy (trend up/down/flat po EWMA) + warianty triggera rebalansu (histereza vs bufor cenowy vs odwrót momentum) + amortyzacja kosztu wejścia. Dopiero po tym: zamrożenie parametrów algorytmu w ALGORITHM.md i porównywanie z sygnałami bota z okresu OBSERWUJ.
+
+### 2026-08-10 — Sesja Fable: ODBIÓR Partii 3 UI (weryfikacja na żywo w Chrome)
+- Kokpit zweryfikowany end-to-end na localhost:3000 (Mainnet, 2 pozycje):
+  karty pozycji z akcjami [Zbierz fees]/[Zamknij]/[Rebalans ręczny], sekcja
+  "Zarządzaj (zaawansowane)" (zwinięta, w środku Uniswap V3 Pools + Transaction
+  History), Telemetria bota (3 pule, dane <1 min, vol/fee-yield/sugerowane
+  zakresy), modal "Surowy JSON" (dane z useBotApi — fix 401 działa), zero
+  błędów w konsoli.
+- Modal [Zamknij #953465] policzony POPRAWNIE: 26.385 USDC + 0.032 WETH
+  = $86.55 (zgadza się z wartością karty co do centa), min-po-slippage,
+  fees w kroku collect, "2 podpisy w Rabby".
+- [Zbierz fees] szare — POPRAWNE przy progu 8× gaz (mainnet ~$64; fees $0.61
+  i $3.74 poniżej). Na Base próg ~$0.64 — tam przycisk będzie się aktywował.
+- [Rebalans ręczny]: tryb "Doradca (brak danych)" wyszarzony — frontendowy
+  doradca nie miał statystyk (RPC/getLogs na mainnecie), fallback "Własny
+  zakres" działa (prefill ±15%). SUGESTIA do Partii 4: gdy frontendowy doradca
+  nie ma danych, a bot ma świeżą `suggestion` dla tej puli w state.json —
+  użyć zakresu bota jako prefillu trybu "Doradca (z bota)". Dane już są
+  w useBotApi, zero nowych zapytań.
+- Kosmetyka (niekrytyczne): tekst w modalu "Surowy JSON" renderuje się
+  wyśrodkowany — dodać `text-align: left` do <pre> w BotTelemetry.
+- Odnotowany postęp danych: mainnet-030 90d DONE (49210 swapów) → B6 gotowe
+  do puszczenia; base-030-365d dalej się pobiera (wolne darmowe RPC).
+
+### 2026-08-10 — Sesja Fable: WARSTWA SELEKCJI w bocie (propozycje OTWÓRZ/ROTUJ) + spec Partii 4
+Decyzja użytkownika (AskUserQuestion): budujemy warstwę propozycji JUŻ TERAZ na
+roboczych parametrach (każdą propozycję i tak zatwierdza człowiek w Rabby);
+parametry podmienimy po zamrożeniu ALGORITHM.md (365d walk-forward).
+- **`bot/selector.ts` (nowy)**: raz dziennie po 8:00 (gdy dane pipeline'u <26h)
+  ranking pul z data/llama wg polityki z meta-backtestu (Top5, śr. 7d apyBase,
+  persystencja 3d w strefie 2N, majors-only, TVL≥$3M, tylko uniswap-v3,
+  chain mainnet/Base) → propozycje: OPEN (max 2/d, cooldown odrzuconych 7d;
+  zakres z sugestii doradcy gdy pula w BOT_POOLS, inaczej note "dopisz do
+  konfiguracji") i ROTATE (najsłabsza nasza pozycja → najlepszy kandydat, tylko
+  gdy edge pokrywa koszt przejścia 0.3% w ≤10 dni; max 1/d). Stan streaka/dat:
+  .bot/selector-state.json. Telegram+log jak przy REBALANCE.
+- **`bot/observer.ts`**: schemat Proposal rozszerzony (kind REBALANCE/OPEN/ROTATE,
+  symbol/chain/apy7d/heldApy7d/breakEvenDays/note; suggestedRange/costUsd/
+  paybackDays teraz OPCJONALNE). Selektor wpięty: run po starcie + co godzinę
+  (sam pilnuje "raz dziennie po 8:00"). Typecheck: czysto (poza preexisting
+  viem-owym TS2719 na linii createPublicClient, znany).
+- **TASKS-UI.md Partia 4** dopisana dla Sonneta: karty propozycji wg kind
+  (OPEN/[Otwórz→], ROTATE/[1. Zamknij→][2. Otwórz→] interim, REBALANCE/[Modyfikuj→]),
+  fallback sugestii bota w modalu rebalansu, text-align fix modalu JSON, typy
+  BotProposal. Docelowy [Zatwierdź] z sekwencją tx czeka na rebalanceBuilder
+  (moje następne zadanie, UX-COCKPIT §3).
+- RESEARCH-QUEUE: nowa sekcja E (wdrożenia dla CC: commit+push, pull+restart
+  homos-bot na Windows, obserwacja observer.log po 8:00).
+- Tabela 5 pul (B6, CC) ODEBRANA — interpretacja: bramka F1 zaliczona na 5/5 pul;
+  reżim spadkowy potwierdza plan portfela (Base aktywnie k2h24, mainnet pasywnie
+  szeroko/wcale, cbBTC jedyny dodatni absolutnie — sleeve pasywny ±15%). Zapis
+  zgodny z PAIRS.md — bez zmian decyzji.
+
+### 2026-08-10 — Sesja Fable: rebalanceBuilder (UX-COCKPIT §3) GOTOWY
+- **`src/utils/rebalanceBuilder.ts` (nowy, czysty moduł bez Reacta/RPC)**:
+  planRebalance → sekwencja: (1) multicall decrease(100%)+collect(MAX) na NFT
+  managerze — jedna tx zamiast dwóch z Partii 3; (2) swap wyrównujący
+  exactInputSingle na SwapRouter02 W TEJ SAMEJ PULI (mainnet
+  0x68b3…Fc45 [poprawny checksum, zweryfikowany viem getAddress], Base
+  0x2626…e481), pomijany gdy odchylenie proporcji <2% wartości; (3) mint —
+  w planie ESTYMATA do podglądu, wykonawczo buildMintStep z faktycznych sald
+  (uczciwe wobec poślizgu swapa). Approvals jako lista z calldata (UI filtruje
+  po allowance). Postęp sekwencji w localStorage (saveProgress/loadProgress) —
+  "dokończ krok 2/3" po odświeżeniu. Failure-safety: po kroku 1 środki w cash.
+- Test numeryczny (tsx, mock Pool USDC/WETH @1880): pozycja 50/50 → swap
+  POMINIĘTY, withdraw z fees $103.43 ✓; pozycja 100% USDC → swap 0to1 ~połowy
+  (23.0069 USDC → min 0.012140 WETH = spot minus 0.3% fee minus 0.5% slippage) ✓.
+  Typecheck czysty (jedyny błąd repo to preexisting viem TS2719 w bot/observer).
+- TASKS-UI.md: dopisana Partia 4b (wpięcie buildera pod [Zatwierdź] po P4);
+  Sonnet robi P4 RÓWNOLEGLE — bez konfliktu (builder w src/utils, poza jego
+  zakresem zapisu; koordynacja przez appendy do plików md).
+- Do RESEARCH-QUEUE E: commit obu porcji kodu (selector+observer, builder) — CC.
+
+### 2026-08-10 — Sesja Fable: weryfikacja przed jutrem + selector v1.1 (zimny start)
+- Odbiór P4/4b Sonneta w dziennikach ✓ (typecheck 0 w src/). ROTATE cross-pool
+  słusznie zostawione jako TODO — planRebalance zakłada jedną pulę; wariant
+  cross-pool = moje zadanie (razem z orientacją cen nie-USD par, patrz kolejka).
+- **BUG złapany przed jutrem: zimny start persystencji** — selektor wymagał 3 dni
+  streaka liczonego od dziś, więc pierwsze propozycje wyszłyby dopiero 13.08.
+  Fix v1.1: przy braku selector-state.json streaki zasiewane trzema przebiegami
+  historycznymi rankingu (te same pliki historii, okna przesunięte o 3/2/1 dni).
+- **DRY-RUN na realnych danych** (kontener, prawdziwe data/llama + realne pozycje
+  użytkownika): eligible top5 = WETH-CBBTC@Base 35.1%, WETH-USDC@Base 25.8%,
+  USDC-WETH@ETH 19.7%, WETH-USDT@ETH 14.3%, USDC-WETH@ETH 12.7%. Propozycje:
+  2× OPEN (cbBTC z notą "spoza konfiguracji", base-030 z zakresem doradcy)
+  + ROTATE #953427 ($2 dust, mainnet 4.7% → cbBTC 35.1%, zwrot kosztu ~3.6d).
+  W 100% zgodne z PAIRS.md i tabelą 5 pul — selektor mówi to, co nasza analiza.
+- Wdrożenie na Windows (pull + del selector-state + restart) → kolejka sekcja E.
+- Nieskomitowane prace UI Sonneta (13 plików) → kolejka (nie blokuje jutra).

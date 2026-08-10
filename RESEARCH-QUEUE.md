@@ -145,3 +145,22 @@
   `src/hooks/useCockpitActions.ts`, `src/config/botPools.ts` (karty
   [Zatwierdź]/[Modyfikuj]/[Odrzuć] + wywołanie rebalanceBuilder + podpisy Rabby).
 - [ ] Jednolinijkowy fix fetch-swaps: exit code != 0 przy FAILED puli (zgłoszone przez CC).
+- [ ] **Wdrożenie selector v1.1 (fix zimnego startu) na Windows**: commit+push
+  `bot/selector.ts`, na Windows: `git pull`, USUNĄĆ `.bot\selector-state.json`
+  (żeby zasiew streaków i dzisiejszy przebieg wykonały się od nowa),
+  `nssm restart homos-bot`; w `.bot\observer.log` powinno pojawić się
+  "zimny start — streaki zasiane" + "ranking dnia — eligible top5" + propozycje.
+- [ ] **Commit prac UI Sonneta (P3/P4/4b)** — na dysku Maca jest ~13 nieskomitowanych
+  plików src/** (git status); dla porządku i backupu (UI działa z working tree,
+  więc nie blokuje jutra).
+- [ ] **cbBTC/WETH 0.05% Base do BOT_POOLS — ŚWIADOMIE ODŁOŻONE**: adres puli
+  zweryfikowany z cache fetchera: `0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1`
+  (feeBps 500, token0=cbBTC d8, token1=WETH d18, ethIsToken0=false). BLOKER
+  projektowy: observer/telemetria/propozycje zakładają pary kwotowane w USD
+  (pole ethUsd, konwersje toUsd) — dla cbBTC/WETH cena to WETH-za-cbBTC i
+  wyświetlanie byłoby błędne. Wymaga: pola orientacji ceny per pula (np.
+  quote: 'USD'|'WETH') w BotPool + poprawek w observer.ts (ethUsd/valueUsd),
+  selector.ts (toUsd w getSuggestion), UI (BotTelemetry nagłówek, karty).
+  Sesja analityczna (Fable) — nie hotfix. Do tego czasu propozycje OPEN na
+  cbBTC pokazują się z notą "spoza konfiguracji" (uczciwe) a otwarcie ręcznie
+  przez Zarządzaj → PoolBrowser (cbBTC/WETH tam JEST).
