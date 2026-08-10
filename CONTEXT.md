@@ -200,6 +200,18 @@ Zrobione (potwierdzone w kodzie): pasek zakresu na kartach pozycji, skeletony/sp
 - `backtest/sweep.ts` (npx tsx backtest/sweep.ts <pool-id>) dodany.
 - **TASKS-INFRA.md** utworzony dla sesji Sonnet: .gitignore pod GitHub, deploy/ (ecosystem pm2, deploy.ps1, setup-windows.md), token dostępu w bot/server.ts, .env.example, README, backup.ps1.
 
+### 2026-08-10 — Sesja terminalowa (Claude Code): przejęcie gita + pierwszy pełny commit + audyt sekretów
+Rola: od teraz ta sesja prowadzi operacje git w repo (logiczne commity zmian od innych sesji; NIE commituje `data/`, `.agent/`, `.bot/`, `backtest/results/` — wykluczone w .gitignore).
+- **Git naprawiony**: usunięty stale `.git/index.lock` (0 B, brak działających procesów git). `.env` potwierdzony jako NIE-śledzony i nieobecny w historii (tylko `.env.example`). `git add -A` → dry-run pokazał wyłącznie kod/docs/backtest/bot/deploy/scripts (50 plików, zero `data/`/`.agent/`/`.bot/`).
+- **Commit `be26591`** "HOMOS v2: math core, backtest, bot observer, deploy" → **push na origin/main** (fast-forward `f9a41f0..be26591`, remote nie wyprzedzał).
+- **Audyt historii pod kątem sekretów (24 commity, wszystkie branche) — CZYSTO**:
+  - `.env` / `.env.*` (poza `.env.example`) nigdy w historii.
+  - Klucz prywatny zawsze z `process.env.PRIVATE_KEY` w `scripts/wallet.ts` i `src/config/wallet.ts` — nigdy zahardkodowany.
+  - Wszystkie trafienia `0x`+64hex to nie-sekrety: `MAX_UINT256` (maxApproval), publiczny Swap event topic, stałe krzywych BLS12-381/secp256k1 z `@noble`.
+  - **DO POSPRZĄTANIA (nie sekret, higiena — NIE ruszam bez zgody właściciela)**: `public/bundle.js` jest śledzony (commit `eb1c772`) mimo że `.gitignore` ma `public/bundle.js*` — gitignore nie działa wstecz na już-śledzone pliki. Rekomendacja: `git rm --cached public/bundle.js`. Sprawdzone: bundle NIE zawiera wstrzykniętych env/sekretów (tylko stałe kryptograficzne @noble).
+- **Środowisko (nie ruszane)**: webpack dev server :3000 (PID 51944), `npm run agent` (PID 59593) żyją; :8787 wolny.
+- **Następny krok tej sesji**: `npm run fetch:llama` (dociąganie historii DefiLlama, backoff 429 + resume) — pilnowany do końca.
+
 ### 2026-08-10 — Sesja planistyczna
 - Przeanalizowano legacy (`src/utils/liquidityManagement.ts`, `uniswap.ts`, README, docs) — zdiagnozowano przyczyny rozjazdu wyliczeń z Uniswap (float zamiast bigint, złe wzory, hardkody, brak testów).
 - Ustalono parametry projektu z właścicielem (kapitał, sieć TBD, hedging etapami, pół-auto).
