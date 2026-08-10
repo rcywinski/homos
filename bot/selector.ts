@@ -73,11 +73,14 @@ const saveSelState = (s: SelectorState) => {
 
 const isMajorsPair = (sym: string) => sym.split('-').every((t) => MAJORS.test(t));
 
-/** średnia apyBase z ostatnich `days` wpisów historii (wymaga ≥70% pokrycia) */
-function trailingApy(uuid: string, days: number): number | null {
+/** średnia apyBase z okna `days` wpisów kończącego się `offsetDays` dni wstecz
+ *  (offsetDays=0 → najnowsze; >0 → historyczne, do zasiewania streaków) */
+function trailingApy(uuid: string, days: number, offsetDays = 0): number | null {
   try {
     const j = JSON.parse(fs.readFileSync(path.join(LLAMA, 'history', `${uuid}.json`), 'utf8'));
-    const series: Array<{ apyBase: number | null }> = (j.series || []).slice(-days);
+    const all: Array<{ apyBase: number | null }> = j.series || [];
+    const sliced = offsetDays > 0 ? all.slice(0, Math.max(0, all.length - offsetDays)) : all;
+    const series = sliced.slice(-days);
     const vals = series.map((r) => r.apyBase).filter((v): v is number => v !== null && v !== undefined);
     return vals.length >= days * 0.7 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   } catch {
@@ -101,8 +104,9 @@ function matchBotPool(m: LlamaPoolMeta): BotPool | null {
   );
 }
 
-/** ranking dnia: filtr (v3, chain, TVL, majors) → apy7d → strefa topu → persystencja */
-function buildRanking(state: SelectorState): RankedPool[] {
+/** ranking dnia: filtr (v3, chain, TVL, majors) → apy7d → strefa topu → persystencja.
+ *  offsetDays>0 = przebieg historyczny (tylko aktualizacja streaków — zimny start). */
+function buildRanking(state: SelectorState, offsetDays = 0): RankedPool[] {
   const universe: LlamaPoolMeta[] = JSON.parse(fs.readFileSync(path.join(LLAMA, 'universe.json'), 'utf8'));
   const candidates = universe
     .filter(
@@ -112,7 +116,7 @@ function buildRanking(state: SelectorState): RankedPool[] {
         p.tvlUsd >= MIN_TVL &&
         isMajorsPair(p.symbol)
     )
-    .map((p) => ({ ...p, apy7d: trailingApy(p.pool, RANK_WINDOW_D) }))
+    .map((p) => ({ ...p, apy7d: trailingApy(p.pool, RANK_WINDOW_D, offsetDays) }))
     .filter((p): p is LlamaPoolMeta & { apy7d: number } => p.apy7d !== null)
     .sort((a, b) => b.apy7d - a.apy7d);
 
@@ -192,6 +196,14 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
 
   let ranking: RankedPool[];
   try {
+    // ZIMNY START: bez zapisanego stanu persystencja 3d blokowałaby propozycje
+    // przez pierwsze 3 dni — zasiewamy streaki przebiegami historycznymi
+    // (ranking sprzed 3, 2, 1 dni z tych samych plików historii DefiLlamy).
+    const coldStart = !state.lastRunDate && Object.keys(state.streaks).length === 0;
+    if (coldStart) {
+      for (let k = PERSIST_DAYS; k >= 1; k--) buildRanking(state, k);
+      ctx.log(`selector: zimny start — streaki zasiane z historii (${PERSIST_DAYS} dni wstecz)`);
+    }
     ranking = buildRanking(state);
   } catch (e) {
     ctx.log(`selector: błąd rankingu: ${String(e).slice(0, 160)}`);
