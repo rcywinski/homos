@@ -27,7 +27,7 @@
   id `base-cbbtc-weth-005-365d`). Fetch ZAKOLEJKOWANY po base-030-365d (obie Base —
   unikam kontencji publicznych RPC Base przy dwóch rocznych fetchach naraz).
   ⚠️ Ten sam problem głębokiego archiwum co A2 — bez `RPC_BASE` też potrwa godziny.
-- [~] **Egzotyki tick-level (werdykt majors vs egzotyki)** — CZĘŚCIOWO:
+- [x] **Egzotyki tick-level (werdykt majors vs egzotyki)** — DANE POBRANE (A4):
   - **DORY-USDC (Arbitrum 1%) to uniswap-V4** (universe.json: project=uniswap-v4,
     pool ae3c1ac2…, tokeny DORY 0x33b49f22…436ae / USDC natywny 0xaf88…5831).
     v4 = singleton PoolManager, inny Swap event, BRAK adresu przez v3 factory getPool
@@ -35,13 +35,33 @@
   - **Substytut v3 wybrany: WTAO-WETH mainnet 1%** (najwyższy v3 apyBase w universe:
     79.2%, TVL $2M). Zweryfikowane on-chain: pula 0x433a0081…1bbc, WTAO decimals=9,
     WETH=18, ethIsToken0=false. ✅ wpis w POOLS DOPISANY (`mainnet-wtao-weth-100`).
-    Fetch ZAKOLEJKOWANY po resume mainnet-030 (obie mainnet — unikam kontencji
-    archiwalnych RPC). Alternatywa gdyby analityk wolał Arbitrum: WETH-ARB 0.05% (31%).
+    ✅ **FETCH DONE** (100%, 10753 swapów, 90.3 dni). Alternatywa gdyby analityk
+    wolał Arbitrum: WETH-ARB 0.05% (31%) — infra Arbitrum gotowa.
   - **Infra Arbitrum DODANA** do fetch-swaps.ts (RPC list + RPC_ARBITRUM env,
     BLOCK_TIME=0.25s, FACTORY = ten sam v3 0x1F98…F984, chain union) — gotowe pod
     przyszłe v3 pule Arbitrum.
   - il7d z DefiLlamy pusty — tylko nasze tick-level rozstrzygnie, czy 60%+ fee-APR
     egzotyków przeżywa własny IL.
+  - **BACKTEST WTAO-WETH (10750 swapów, 90.3 dni) — dane dla B5. Reżim WZROSTOWY
+    (jedyny w zestawie, HODL +74.9% APR!):**
+
+    | strategia | APR% | vsHODL% | maxDD% | fees$ | gas$ | reb |
+    |---|---|---|---|---|---|---|
+    | HODL 50/50 | +74.9 | 0.00 | 16.9 | 0 | 0 | 0 |
+    | Pasywny full-range | +77.5 | **+0.37** | 16.8 | 124 | 0 | 0 |
+    | Pasywny ±50% | +75.1 | +0.01 | 16.8 | 486 | 0 | 0 |
+    | Sztywny ±5% (naiwny) | −67.0 | −33.84 | 33.6 | 1,316 | 248 | 31 |
+    | Sztywny ±15% (naiwny) | −10.7 | −15.35 | 22.9 | 857 | 48 | 6 |
+    | Adapt k2 h24 pb7 | +8.1 | −11.24 | 17.4 | 889 | 48 | 6 |
+    | Adapt k2 h12 pb7 | +26.7 | −7.69 | 17.4 | 917 | 48 | 6 |
+    | Adapt k3 h24 pb7 | +62.8 | −1.77 | 17.0 | 826 | 8 | 1 |
+
+    Fakty liczbowe (interpretacja → B5/sesja analityczna): w silnym trendzie WZROSTOWYM
+    HODL bije KAŻDĄ aktywną strategię LP; nawet pasywny full-range tylko +0.37 vs HODL.
+    **Headline 79% fee-APR egzotyka NIE przekłada się na przewagę LP — kierunkowość/IL
+    dominuje** (im węższy/aktywniejszy zakres, tym gorzej: ±5% −33.8). Wstępny sygnał
+    przeciw sleeve'owi egzotycznemu przy aktywnym LP — ale to JEDEN reżim (wzrost);
+    pełny werdykt = B5 (potrzeba egzotyka też w reżimie spadkowym/flat).
 - [x] Historie DefiLlama 240 pul (4.4y dziennych apyBase/TVL) — pobrane.
 - [x] Fix odświeżania: fetch-llama teraz odświeża pliki starsze niż 24h
   (wcześniej resume pomijał je na zawsze — codzienny pipeline byłby ślepy).
@@ -164,3 +184,9 @@
   Sesja analityczna (Fable) — nie hotfix. Do tego czasu propozycje OPEN na
   cbBTC pokazują się z notą "spoza konfiguracji" (uczciwe) a otwarcie ręcznie
   przez Zarządzaj → PoolBrowser (cbBTC/WETH tam JEST).
+- [x] **Windows nie miał data/llama (zgłoszone przez sesję Windows)** — data/ jest
+  w .gitignore, dane NIE wędrują przez git; każda maszyna buduje własny cache.
+  Rozwiązanie: `npm run fetch:llama` (lekki, same API — NIE pełny pipeline, żeby
+  nie bić w darmowe RPC równolegle z nocnym grindem 365d na Macu) + del
+  .bot\selector-state.json + nssm restart homos-bot. Od jutra pipeline 07:30
+  odświeża llamę na Windows codziennie — problem jednorazowy (zimny serwer).
