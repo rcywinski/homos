@@ -240,6 +240,17 @@ WNIOSKI KLUCZOWE:
 - mainnet-usdc-weth-030 jeszcze się pobiera (ostatnia pula; publicnode-owe warningi w logu to działający fallback providerów, nie błąd).
 - Commity kodu tej sesji przez operatora gita (Claude Code): `scripts/pipeline.ts` + package.json + agent-runner whitelist + strategie sweepu.
 
+### 2026-08-10 — Sesja: usługi Windows (NSSM) zamiast pm2-windows-startup
+Wykonano TASKS-WINDOWS-ADDENDUM.md (boty niewidoczne, bez okien konsoli):
+- Usunięto autostart `pm2-windows-startup` (`pm2-startup uninstall`, wpis w `HKCU\...\Run` zniknął).
+- Zainstalowano NSSM (`winget install nssm`) — na tę sesję pod pełną ścieżką w `AppData\Local\Microsoft\WinGet\Packages\...\win64\nssm.exe` (PATH doda się po restarcie terminala).
+- Dodano `import 'dotenv/config'` na górze `bot/observer.ts` i `bot/server.ts` — wcześniej **nie ładowały `.env`** przy starcie przez `tsx` (działało tylko przypadkiem, jeśli zmienne były już w środowisku).
+- Zarejestrowano dwie usługi Windows: `homos-bot` (bot/observer.ts) i `homos-server` (bot/server.ts), `AppDirectory=C:\Projects\homos`, logi w `.bot\pm2\*.log`, `AppRestartDelay=5000`.
+- Uruchomione i zweryfikowane: `Get-Service` → Running, procesy w Session 0 (Services, brak okien), `curl localhost:8787/health` → 200, `.bot/state.json` świeży.
+- Stare procesy pm2 (`homos-bot`/`homos-server`, id 0/1) zatrzymane (`pm2 stop`), nie usunięte — do ewentualnego `pm2 delete` później, na razie nieużywane.
+- Zarejestrowano `schtasks /Create /TN HomosPipeline` — codziennie 07:30 jako SYSTEM, `npm run pipeline >> data\pipeline-task.log`.
+- **NIE wykonano (wymaga decyzji/potwierdzenia użytkownika):** test pełnego restartu komputera (krok 6 addendum) — usługi *powinny* wstać same (Automatic startup type domyślny w NSSM), ale nie zweryfikowano fizycznym rebootem.
+
 ### 2026-08-10 — Sesja planistyczna
 - Przeanalizowano legacy (`src/utils/liquidityManagement.ts`, `uniswap.ts`, README, docs) — zdiagnozowano przyczyny rozjazdu wyliczeń z Uniswap (float zamiast bigint, złe wzory, hardkody, brak testów).
 - Ustalono parametry projektu z właścicielem (kapitał, sieć TBD, hedging etapami, pół-auto).

@@ -13,6 +13,7 @@
  * to nie granica zaufania (goście na Wi-Fi). UI trzyma token w localStorage pod
  * kluczem `homos_api_token` i dokłada go do fetchy przeciwko temu API.
  */
+import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import express from 'express';
