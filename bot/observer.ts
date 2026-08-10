@@ -17,6 +17,7 @@ import { mainnet, base } from 'viem/chains';
 import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR } from './config';
 import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, PoolStats } from '../src/utils/advisor';
 import { getAmountsForLiquidity, sqrtPriceX96ToHumanPrice } from '../src/utils/v3math';
+import { runSelectorIfDue, SelectorProposal } from './selector';
 
 const ROOT = path.join(__dirname, '..');
 const DIR = path.join(ROOT, STATE_DIR);
@@ -92,12 +93,22 @@ interface WatchedPosition {
 interface Proposal {
   id: string;
   createdAt: string;
-  tokenId: string;
-  poolId: string;
+  tokenId: string; // '' dla propozycji OPEN z selektora
+  poolId: string; // '' gdy pula spoza BOT_POOLS (selektor → note)
+  /** REBALANCE (doradca pozycji) | OPEN / ROTATE (selektor — warstwa selekcji pul) */
+  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE';
   action: string;
-  suggestedRange: { tickLower: number; tickUpper: number; usdLo: number; usdHi: number };
-  costUsd: number;
-  paybackDays: number | null;
+  suggestedRange?: { tickLower: number; tickUpper: number; usdLo: number; usdHi: number };
+  costUsd?: number;
+  paybackDays?: number | null;
+  // pola selektora (OPEN/ROTATE):
+  llamaPool?: string;
+  symbol?: string;
+  chain?: string;
+  apy7d?: number;
+  heldApy7d?: number;
+  breakEvenDays?: number;
+  note?: string;
   status: 'open' | 'dismissed';
 }
 
@@ -235,7 +246,7 @@ function maybePropose(tokenId: string, pool: BotPool, a: ReturnType<typeof asses
   const [usdLo, usdHi] = [toUsd(a.suggestion.tickLower), toUsd(a.suggestion.tickUpper)].sort((x, y) => x - y);
   const prop: Proposal = {
     id: key, createdAt: new Date().toISOString(), tokenId, poolId: pool.id,
-    action: 'REBALANCE',
+    kind: 'REBALANCE', action: 'REBALANCE',
     suggestedRange: { tickLower: a.suggestion.tickLower, tickUpper: a.suggestion.tickUpper, usdLo, usdHi },
     costUsd: a.costUsd, paybackDays: a.paybackDays, status: 'open',
   };
@@ -246,14 +257,46 @@ function maybePropose(tokenId: string, pool: BotPool, a: ReturnType<typeof asses
   telegram(msg);
 }
 
+// --- selektor pul (raz dziennie po 8:00, po pipeline 07:30) ---
+function runSelector() {
+  try {
+    runSelectorIfDue({
+      log,
+      telegram,
+      getProposals: () => proposals,
+      addProposal: (p: SelectorProposal) => {
+        proposals.push(p as Proposal);
+        saveProposals();
+        saveState();
+      },
+      getPositions: () => positions.map((p) => ({ tokenId: p.tokenId, poolId: p.poolId, valueUsd: p.valueUsd })),
+      getSuggestion: (poolId: string) => {
+        const lv = live[poolId];
+        const pool = BOT_POOLS.find((b) => b.id === poolId);
+        if (!lv?.suggestion || !pool) return null;
+        const toUsd = (t: number) => {
+          const raw = Math.pow(1.0001, t) * Math.pow(10, pool.d0 - pool.d1);
+          return pool.ethIsToken0 ? raw : 1 / raw;
+        };
+        const [usdLo, usdHi] = [toUsd(lv.suggestion.tickLower), toUsd(lv.suggestion.tickUpper)].sort((x, y) => x - y);
+        return { tickLower: lv.suggestion.tickLower, tickUpper: lv.suggestion.tickUpper, usdLo, usdHi };
+      },
+    });
+  } catch (e) {
+    log(`selector crashed: ${String(e).slice(0, 160)}`);
+  }
+}
+
 // --- start ---
 (async () => {
   log(`observer start — watch=${WATCH_ADDRESS}, pools=${BOT_POOLS.map((p) => p.id).join(', ')}, tryb=OBSERWUJ`);
   await refreshPrices();
   await refreshStats();
   await refreshPositions();
+  runSelector();
   setInterval(refreshPrices, INTERVALS.priceSec * 1000);
   setInterval(refreshStats, INTERVALS.statsSec * 1000);
   setInterval(refreshPositions, INTERVALS.positionsSec * 1000);
-  log('pętle uruchomione (60s ceny / 15min statystyki / 5min pozycje)');
+  setInterval(runSelector, 60 * 60 * 1000); // co godzinę sprawdza, czy dziś już był
+  log('pętle uruchomione (60s ceny / 15min statystyki / 5min pozycje / selektor 1×dziennie po 8:00)');
 })();
