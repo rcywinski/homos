@@ -31,52 +31,6 @@
 
 ## 4. Dziennik sesji
 
-### 2026-08-10 — Sesja UI/Infra (Sonnet): TASKS-INFRA.md wykonane (6/6)
-Zakres: pliki wdrożeniowe, bez ruszania src/utils/**, backtest/**, bot/observer.ts
-(logika) — zgodnie z nagłówkiem TASKS-INFRA.md.
-- **`.gitignore`**: dopisane wpisy z zadania (data/cache/, data/llama/, .agent/,
-  .bot/, backtest/results/, public/bundle.js*, legacy-*.bak). Przy okazji
-  naprawiony bug: `.env.example` był w starym `.gitignore` razem z `.env` —
-  to znaczyło, że SZABLON zmiennych nigdy nie mógł trafić do repo (`git ls-files`
-  potwierdza: nie jest i nigdy nie był trackowany). Odblokowany — `.env` sam
-  zostaje zignorowany. Potwierdzone: `.env` nie ma w historii gita (`git log
-  --oneline -- .env` puste) i nie jest trackowany teraz.
-- **`deploy/`** (nowy katalog): `ecosystem.config.js` (pm2, 2 procesy homos-bot/
-  homos-server, max_memory_restart 300M, logi do `.bot/pm2/`), `deploy.ps1`
-  (git pull → npm ci → npm run build → pm2 startOrReload → pm2 save, z
-  komunikatami PL i $ErrorActionPreference='Stop'), `setup-windows.md` (Node 22,
-  pm2 + pm2-windows-startup, klon repo, .env, firewall LAN+VPN z placeholderami
-  podsieci, powercfg/BIOS/NTP, test końcowy z iPhone'a, rejestracja backupu w
-  Harmonogramie zadań), `backup.ps1` (kopiuje `.bot/*.json` + defensywnie szuka
-  `*.sqlite`/`*.db` w repo — księga jeszcze nie istnieje — do
-  `%USERPROFILE%\HomosBackup\<data>\`, czyści backupy starsze niż 30 dni).
-- **`bot/server.ts`**: middleware na `/api/*` — jeśli `BOT_API_TOKEN` ustawiony,
-  wymaga `Authorization: Bearer <token>` (401 bez/z błędnym), `/health` zostaje
-  otwarty do monitoringu/pm2. Bez `BOT_API_TOKEN` w env autoryzacja wyłączona
-  (dev na Macu). CORS nagłówek rozszerzony o `Authorization`. Panel propozycji w
-  UI (miał czytać token z `localStorage.homos_api_token`) **jeszcze nie istnieje**
-  w `src/` — udokumentowane w server.ts i setup-windows.md, do podłączenia gdy
-  UI-session doda ten panel (TASKS-UI.md #0/kolejne).
-- **`.env.example`**: uzupełniony o `BOT_WATCH_ADDRESS`, `RPC_MAINNET`, `RPC_BASE`,
-  `TG_TOKEN`, `TG_CHAT`, `BOT_API_PORT`, `BOT_API_TOKEN` — z komentarzami PL;
-  zachowane legacy `WALLET_CONNECT_PROJECT_ID`/`PRIVATE_KEY`/`RPC_URL` (używane
-  przez `src/config/wallet.ts` i `scripts/wallet.ts`), z dopiskiem że
-  `PRIVATE_KEY` to NIE jest klucz operacyjny bota.
-- **`README.md`**: nowa sekcja "Architektura i uruchamianie" na górze (UI dev /
-  bot dev / serwer Windows / koordynacja sesji AI / skróty npm), stary opis
-  (Sepolia-only) zachowany niżej jako "Legacy notes".
-- **Typecheck**: `npx tsc --noEmit -p tsconfig.json` na maszynie użytkownika —
-  `bot/server.ts` bez błędów. Pozostałe błędy w wyjściu (`bot/observer.ts` —
-  niezgodność typów viem `getBlock`, oraz `node_modules/ox/**`) są preexisting
-  i poza zakresem tej sesji (observer.ts jawnie zakazany do edycji).
-- **Koordynacja**: sesja UI wcześniej zgłosiła kolizję plików z Fable — tu nie
-  dotknięto żadnego pliku z `src/` poza odczytem (`src/config/wallet.ts` tylko
-  do sprawdzenia użycia zmiennych env).
-- **Następny krok**: właściciel zakłada prywatne repo GitHub i robi pierwszy
-  push (jeśli jeszcze nie zrobił — remote `origin` już skonfigurowany lokalnie:
-  `github.com/rcywinski/homos.git`); potem pierwsza instalacja wg
-  `deploy/setup-windows.md` na docelowym Windowsie.
-
 ### 2026-08-10 — Sesja 2: Faza 0 — naprawa obliczeń
 - **Nowy moduł `src/utils/v3math.ts`**: dokładny port TickMath + LiquidityAmounts na natywnym `bigint` (getSqrtRatioAtTick, getAmountsForLiquidity, getLiquidityForAmounts, ceny display z dokładnością 1 ulp).
 - **Testy referencyjne `test/v3math.test.ts`**: **2925/2925 zgodnych bit-w-bit z @uniswap/v3-sdk** (2018 ticków + 600 pozycji + liquidity + ceny). Uruchamianie: `npx tsx test/v3math.test.ts`.
@@ -200,17 +154,32 @@ Zrobione (potwierdzone w kodzie): pasek zakresu na kartach pozycji, skeletony/sp
 - `backtest/sweep.ts` (npx tsx backtest/sweep.ts <pool-id>) dodany.
 - **TASKS-INFRA.md** utworzony dla sesji Sonnet: .gitignore pod GitHub, deploy/ (ecosystem pm2, deploy.ps1, setup-windows.md), token dostępu w bot/server.ts, .env.example, README, backup.ps1.
 
-### 2026-08-10 — Sesja terminalowa (Claude Code): przejęcie gita + pierwszy pełny commit + audyt sekretów
-Rola: od teraz ta sesja prowadzi operacje git w repo (logiczne commity zmian od innych sesji; NIE commituje `data/`, `.agent/`, `.bot/`, `backtest/results/` — wykluczone w .gitignore).
-- **Git naprawiony**: usunięty stale `.git/index.lock` (0 B, brak działających procesów git). `.env` potwierdzony jako NIE-śledzony i nieobecny w historii (tylko `.env.example`). `git add -A` → dry-run pokazał wyłącznie kod/docs/backtest/bot/deploy/scripts (50 plików, zero `data/`/`.agent/`/`.bot/`).
-- **Commit `be26591`** "HOMOS v2: math core, backtest, bot observer, deploy" → **push na origin/main** (fast-forward `f9a41f0..be26591`, remote nie wyprzedzał).
-- **Audyt historii pod kątem sekretów (24 commity, wszystkie branche) — CZYSTO**:
-  - `.env` / `.env.*` (poza `.env.example`) nigdy w historii.
-  - Klucz prywatny zawsze z `process.env.PRIVATE_KEY` w `scripts/wallet.ts` i `src/config/wallet.ts` — nigdy zahardkodowany.
-  - Wszystkie trafienia `0x`+64hex to nie-sekrety: `MAX_UINT256` (maxApproval), publiczny Swap event topic, stałe krzywych BLS12-381/secp256k1 z `@noble`.
-  - **DO POSPRZĄTANIA (nie sekret, higiena — NIE ruszam bez zgody właściciela)**: `public/bundle.js` jest śledzony (commit `eb1c772`) mimo że `.gitignore` ma `public/bundle.js*` — gitignore nie działa wstecz na już-śledzone pliki. Rekomendacja: `git rm --cached public/bundle.js`. Sprawdzone: bundle NIE zawiera wstrzykniętych env/sekretów (tylko stałe kryptograficzne @noble).
-- **Środowisko (nie ruszane)**: webpack dev server :3000 (PID 51944), `npm run agent` (PID 59593) żyją; :8787 wolny.
-- **Następny krok tej sesji**: `npm run fetch:llama` (dociąganie historii DefiLlama, backoff 429 + resume) — pilnowany do końca.
+### 2026-08-10 — Sesja 3g: META-BACKTEST WARSTWY SELEKCJI — 231 pul, 4.4 ROKU danych (2022-02→2026-08)
+Dane: DefiLlama historie dzienne apyBase/TVL (240 pul pobrane przez fetch:llama). Polityka rankingowana każdego dnia D WYŁĄCZNIE z danych ≤D, wynik = forward apyBase D+1, koszt rotacji 0.3% (wyjście+wejście).
+
+| Polityka | fee-APR% | rotacje/4.4y |
+|---|---|---|
+| Naiwny pościg: top5 wg WCZORAJSZEGO APR | 43.0 | 2476 |
+| **Top5 wg średniej 7d** | **74.8** | 820 |
+| Top5 7d + persystencja 3d | 68.3 | 761 |
+| Top5 7d + persyst. + TYLKO majors | 50.7 | 561 |
+| Top3 14d + persyst. 5d + majors | 60.8 | 256 |
+| BENCHMARK: stały ETH/USDC | 32.9 | 0 |
+
+WNIOSKI:
+1. **Selekcja pul DZIAŁA i jest największą dźwignią**: top5-7d = 74.8% fee-APR vs 32.9% stały core (2.3×). Fee-APR ma persystencję w horyzoncie tygodniowym.
+2. **Intuicja użytkownika potwierdzona**: średnia 7d MIAŻDŻY pościg za wczorajszym topem (74.8 vs 43.0, przy 3× mniej rotacji) — "gonienie DORY po jednym dniu" to najgorsza z aktywnych polityk.
+3. Persystencja 3d: −6.5 p.p. fee, ale mniej rotacji — po doliczeniu IL może wygrywać.
+4. **KLUCZOWE ZASTRZEŻENIE**: to fee-APR BEZ IL. Egzotyki (74.8%) vs majors-only (50.7%): przewaga egzotyków może zniknąć po IL (memcoiny −80% = LP zostaje z workiem). Następny krok: skorygować o il7d z DefiLlamy lub testować sleeve'y wg UI-VISION (majors rdzeń + mały sleeve egzotyczny).
+5. Rekomendacja robocza dla bota (do potwierdzenia po korekcie IL): ranking 7d, persystencja ≥3d, rotacja max 1/dzień, sleeve egzotyczny ≤20% kapitału.
+Wyniki: backtest/results/selection.json. Git przejęty przez sesję Claude Code (commit be26591 + c117ca3, historia repo CZYSTA — .env nigdy nie commitowany).
+
+### 2026-08-10 — Sesja terminalowa (Claude Code): operator gita + fetch:llama + uszczelnienie .gitignore
+Ta sesja prowadzi odtąd operacje git w repo (logiczne commity zmian od innych sesji; NIE commituje `data/`, `.agent/`, `.bot/`, `backtest/results/`).
+- **Git**: usunięty stale `.git/index.lock`; `.env` nie-śledzony i nieobecny w historii. Pierwszy pełny commit `be26591` "HOMOS v2: math core, backtest, bot observer, deploy" → push na `origin/main` (`f9a41f0..be26591`). Wpis dziennika + `c117ca3`.
+- **Audyt sekretów (24 commity, wszystkie branche) — CZYSTO**: `.env` nigdy w historii; klucz zawsze z `process.env.PRIVATE_KEY`; wszystkie `0x`+64hex to nie-sekrety (MAX_UINT256, Swap topic, stałe @noble). REKOMENDACJA (higiena, czeka na zgodę właściciela): `public/bundle.js` jest śledzony mimo .gitignore → `git rm --cached public/bundle.js` (sprawdzone: bundle bez wstrzykniętych env).
+- **`npm run fetch:llama` — WYKONANE (exit 0, zero 429)**: uniwersum 240 pul, wszystkie historie już na dysku → resume pominął całość, `Gotowe → data/llama/`. Pokrycie 240/240.
+- **Uszczelnienie `.gitignore`**: pod `data/` leżał NIE-ignorowany `data/llama-bundle.tgz` (ignorowane były tylko `data/cache/` i `data/llama/`) — reguła zmieniona na całe `data/`. Zweryfikowane: `git add -A` nie łapie już nic z `data/`.
 
 ### 2026-08-10 — Sesja planistyczna
 - Przeanalizowano legacy (`src/utils/liquidityManagement.ts`, `uniswap.ts`, README, docs) — zdiagnozowano przyczyny rozjazdu wyliczeń z Uniswap (float zamiast bigint, złe wzory, hardkody, brak testów).
