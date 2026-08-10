@@ -1317,3 +1317,202 @@
   .morning-settings { flex-direction: column; align-items: stretch; }
   .morning-proposal-card { flex-direction: column; align-items: flex-start; }
 }
+
+/* --- UI session (Partia 3): akcje na kartach kokpitu, telemetria bota --- */
+
+.cockpit-position-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cockpit-position-card {
+  background: #f8f9fb;
+  border: 1px solid #eef1f5;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.cockpit-position-card-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.cockpit-range-bar {
+  margin-bottom: 6px;
+}
+
+.cockpit-position-fees {
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.cockpit-position-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cockpit-position-actions .action-button {
+  flex: 1 1 auto;
+  min-width: 120px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.cockpit-action-message {
+  flex-basis: 100%;
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+/* Telemetria bota — zwijana sekcja wewnątrz kokpitu (domyślnie zwinięta) */
+.telemetry-section {
+  margin-top: 16px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 8px;
+}
+
+.telemetry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+}
+
+.telemetry-title {
+  margin: 0;
+}
+
+.telemetry-body {
+  padding-top: 6px;
+}
+
+.telemetry-table-wrap {
+  overflow-x: auto;
+}
+
+.telemetry-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.telemetry-table th {
+  text-align: left;
+  color: #888;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+}
+
+.telemetry-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid #f5f5f5;
+  white-space: nowrap;
+}
+
+.telemetry-pool-id {
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.telemetry-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.telemetry-observe-badge {
+  font-size: 11px;
+  color: #777;
+  background: #f5f5f5;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.telemetry-footer .action-button {
+  flex: none;
+  width: auto;
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.telemetry-json-modal {
+  max-width: 700px;
+  width: 90%;
+}
+
+.telemetry-json-pre {
+  max-height: 60vh;
+  overflow: auto;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  /* Fix z odbioru P3 (Partia 4): .app { text-align: center } kaskaduje w dół
+     do <pre> tutaj, więc bez tej reguły JSON renderuje się wyśrodkowany. */
+  text-align: left;
+}
+
+@media (max-width: 480px) {
+  .cockpit-position-actions .action-button { min-width: 100%; }
+  .telemetry-footer { flex-direction: column; align-items: flex-start; }
+}
+
+/* --- UI session (Partia 4): karty propozycji wg kind (OPEN/ROTATE/REBALANCE) --- */
+.morning-proposal-card--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+.morning-proposal-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.morning-proposal-note {
+  background: #fff8e1;
+  color: #8a6d1a;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin: 0;
+}
+.morning-proposal-line { font-size: 13px; }
+
+@media (max-width: 480px) {
+  .morning-proposal-actions .action-button { min-width: 100%; }
+}
+
+/* --- UI session (Partia 4b): modal sekwencji [Zatwierdź] --- */
+.sequence-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0;
+}
+.sequence-step {
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.sequence-step-label { font-size: 13px; font-weight: 600; }
+.sequence-step-detail { font-size: 12px; margin-top: 2px; }
+.sequence-step-done { border-color: #34a853; background: #f2faf4; }
+.sequence-step-active { border-color: #1a6ae0; background: #f2f7fe; }
+
+.range-option.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

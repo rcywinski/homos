@@ -19,21 +19,61 @@ const STALE_MS = 5 * 60_000;
 export interface BotProposal {
   id: string;
   createdAt: string;
-  tokenId: string;
+  tokenId: string; // '' dla propozycji OPEN z selektora (brak istniejącej pozycji)
+  poolId?: string; // BOT_POOLS id, '' gdy pula spoza konfiguracji bota
+  /** REBALANCE (doradca pozycji, jak dotychczas) | OPEN/ROTATE (warstwa
+   *  selekcji pul — bot/selector.ts, Partia 4). Brak pola = traktuj jak REBALANCE
+   *  (kompatybilność wstecz ze starszymi wpisami w proposals.json). */
+  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE';
   action: string;
-  suggestedRange?: { usdLo: number; usdHi: number };
+  suggestedRange?: { tickLower?: number; tickUpper?: number; usdLo: number; usdHi: number };
   costUsd?: number;
   paybackDays?: number | null;
+  // Pola selektora (OPEN/ROTATE) — bot/selector.ts SelectorProposal:
+  llamaPool?: string;
+  symbol?: string;
+  chain?: string; // etykieta z DefiLlama ("Ethereum"/"Base"), nie chainId
+  apy7d?: number;
+  heldApy7d?: number; // przy ROTATE: 7d APY puli, którą rotujemy
+  breakEvenDays?: number; // przy ROTATE: dni do pokrycia kosztu przejścia
+  note?: string;
   // bot/observer.ts uses 'open'/'dismissed'; state.json only ever contains
   // 'open' ones (server-side filtered) but we check defensively anyway.
   status: 'open' | 'dismissed' | string;
 }
 
+// Kształt state.pools / state.positions — powielony z bot/observer.ts (PoolLive /
+// WatchedPosition), ten plik jest poza zakresem edycji tej sesji UI. Używane w
+// MorningCockpit.tsx / BotTelemetry.tsx (TASKS-UI.md Partia 3, sekcja "Telemetria bota").
+export interface BotPoolLive {
+  id: string;
+  ethUsd: number;
+  tick: number;
+  sqrtPriceX96: string;
+  stats: { volDaily: number; feeYieldDaily: number; swapsAnalyzed: number; hoursCovered: number } | null;
+  suggestion: { tickLower: number; tickUpper: number; widthPct: number; priceLower: number; priceUpper: number } | null;
+  updatedAt: string;
+}
+
+export interface BotWatchedPosition {
+  tokenId: string;
+  poolId: string;
+  tickLower: number;
+  tickUpper: number;
+  amount0: number;
+  amount1: number;
+  valueUsd: number;
+  inRange: boolean;
+  advice: string;
+  paybackDays: number | null;
+}
+
 export interface BotStateShape {
   updatedAt: string;
   mode?: string;
-  pools?: unknown[];
-  positions?: unknown[];
+  watch?: string;
+  pools?: BotPoolLive[];
+  positions?: BotWatchedPosition[];
   proposals?: BotProposal[];
 }
 

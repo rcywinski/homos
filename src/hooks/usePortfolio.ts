@@ -23,11 +23,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAccount, useBalance, usePublicClient } from 'wagmi';
 import { Address } from 'viem';
+import { Pool } from '@uniswap/v3-sdk';
+import { Token } from '@uniswap/sdk-core';
 import { NETWORKS, POOL_FACTORY_ABI, POOL_ABI } from '../utils/uniswap';
 import { POSITION_MANAGER_ADDRESSES } from '../utils/liquidityManagement';
 import { OBSERVED_PAIRS } from '../config/pools';
 import { getAmountsForLiquidity, humanPriceQuotePerBase, MAX_UINT128 } from '../utils/v3math';
-import { fetchRecentSwaps, computeStats, assessPosition, RebalanceAssessment } from '../utils/advisor';
+import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, RebalanceAssessment, RangeSuggestion } from '../utils/advisor';
 
 const CHAIN_IDS = [1, 8453] as const;
 const CHAIN_LABEL: Record<number, string> = { 1: 'Ethereum', 8453: 'Base' };
@@ -106,6 +108,33 @@ export interface PortfolioPosition {
   inRange: boolean;
   advice: RebalanceAssessment['action'] | null;
   paybackDays: number | null;
+  // --- Partia 3 (TASKS-UI.md): dane surowe potrzebne dla akcji na kartach
+  // kokpitu (Zbierz fees / Zamknij / Rebalans ręczny — zob. useCockpitActions.ts).
+  // Wszystko poniżej pochodzi z odczytów już wykonanych powyżej w tej pętli —
+  // żadnych dodatkowych zapytań RPC.
+  positionManager: Address;
+  poolAddress: Address;
+  fee: number;
+  tickLower: number;
+  tickUpper: number;
+  liquidity: string; // bigint (płynność TEJ pozycji, nie całej puli) jako string
+  token0: { address: Address; symbol: string; decimals: number };
+  token1: { address: Address; symbol: string; decimals: number };
+  /** SDK Pool zbudowany raz tutaj — używany przez prepareRemoveLiquidityTransaction
+   *  / createPosition w useCockpitActions.ts. null gdy budowa się nie powiodła
+   *  (np. brakujące metadane tokenu) — akcje wymagające Pool są wtedy wyłączone. */
+  pool: Pool | null;
+  amount0: number; // aktualne kwoty w pozycji (human units)
+  amount1: number;
+  feeAmount0: number; // nieodebrane fee (human units, nie USD)
+  feeAmount1: number;
+  /** Te same nieodebrane fee co feeAmount0/1, ale jako bigint (string) w
+   *  jednostkach raw — Partia 4b: rebalanceBuilder.ts's planRebalance()
+   *  chce feesOwed0/1 dokładnie (bigint), nie zaokrąglone Number(). '0' gdy
+   *  odczyt fee się nie powiódł (patrz catch niżej — feeAmount0/1 też wtedy 0). */
+  feesOwed0Raw: string;
+  feesOwed1Raw: string;
+  suggestion: RangeSuggestion | null; // sugerowany zakres doradcy — do rebalansu ręcznego
 }
 
 export interface PortfolioSummary {
@@ -206,7 +235,7 @@ export function usePortfolio(): PortfolioSummary {
           );
 
           const known = knownTokenMap(chainId);
-          const poolCache = new Map<string, { sqrtPriceX96: bigint; tick: number }>();
+          const poolCache = new Map<string, { address: Address; sqrtPriceX96: bigint; tick: number; liquidity: bigint }>();
           const statsCache = new Map<string, ReturnType<typeof computeStats>>();
 
           for (let i = 0; i < raws.length; i++) {
@@ -222,20 +251,22 @@ export function usePortfolio(): PortfolioSummary {
 
             const poolKey = `${token0.toLowerCase()}-${token1.toLowerCase()}-${fee}`;
             let poolInfo = poolCache.get(poolKey);
-            let poolAddress: Address | null = null;
             if (!poolInfo) {
               try {
-                poolAddress = (await client.readContract({
+                const poolAddr = (await client.readContract({
                   address: FACTORY[chainId],
                   abi: POOL_FACTORY_ABI,
                   functionName: 'getPool',
                   args: [token0, token1, fee],
                 })) as Address;
-                if (poolAddress === '0x0000000000000000000000000000000000000000') continue;
-                const slot0 = (await client.readContract({ address: poolAddress, abi: POOL_ABI, functionName: 'slot0' })) as readonly [
-                  bigint, number, number, number, number, number, boolean
-                ];
-                poolInfo = { sqrtPriceX96: slot0[0], tick: slot0[1] };
+                if (poolAddr === '0x0000000000000000000000000000000000000000') continue;
+                const [slot0, poolLiquidity] = await Promise.all([
+                  client.readContract({ address: poolAddr, abi: POOL_ABI, functionName: 'slot0' }) as Promise<
+                    readonly [bigint, number, number, number, number, number, boolean]
+                  >,
+                  client.readContract({ address: poolAddr, abi: POOL_ABI, functionName: 'liquidity' }) as Promise<bigint>,
+                ]);
+                poolInfo = { address: poolAddr, sqrtPriceX96: slot0[0], tick: slot0[1], liquidity: poolLiquidity };
                 poolCache.set(poolKey, poolInfo);
               } catch (e) {
                 console.warn('usePortfolio: pool lookup failed', poolKey, e);
@@ -269,6 +300,10 @@ export function usePortfolio(): PortfolioSummary {
 
             // Unclaimed fees — same static-collect trick as MyPositions.tsx.
             let feesUsd = 0;
+            let feeAmount0 = 0;
+            let feeAmount1 = 0;
+            let feesOwed0Raw = 0n;
+            let feesOwed1Raw = 0n;
             try {
               const { result } = await client.simulateContract({
                 address: manager,
@@ -278,9 +313,11 @@ export function usePortfolio(): PortfolioSummary {
                 account: address,
               });
               const [owed0, owed1] = result as unknown as [bigint, bigint];
-              const fee0 = Number(owed0) / 10 ** d0;
-              const fee1 = Number(owed1) / 10 ** d1;
-              feesUsd = tok0 && tok1 ? usdValueOf(fee0, fee1, sym0, sym1, derivedEthUsd) ?? 0 : 0;
+              feesOwed0Raw = owed0;
+              feesOwed1Raw = owed1;
+              feeAmount0 = Number(owed0) / 10 ** d0;
+              feeAmount1 = Number(owed1) / 10 ** d1;
+              feesUsd = tok0 && tok1 ? usdValueOf(feeAmount0, feeAmount1, sym0, sym1, derivedEthUsd) ?? 0 : 0;
             } catch {
               // best-effort — leave feesUsd at 0 rather than fail the whole position
             }
@@ -294,8 +331,8 @@ export function usePortfolio(): PortfolioSummary {
                     ((p.token0.address.toLowerCase() === token0.toLowerCase() && p.token1.address.toLowerCase() === token1.toLowerCase()) ||
                       (p.token0.address.toLowerCase() === token1.toLowerCase() && p.token1.address.toLowerCase() === token0.toLowerCase()))
                 );
-                if (pair && poolAddress) {
-                  const swaps = await fetchRecentSwaps(client, poolAddress, chainId, 24);
+                if (pair) {
+                  const swaps = await fetchRecentSwaps(client, poolInfo.address, chainId, 24);
                   const spacing = { 100: 1, 500: 10, 3000: 60, 10000: 200 }[fee] ?? 60;
                   stats = computeStats(swaps, chainId, d0, d1, fee / 1_000_000, spacing);
                 } else {
@@ -310,14 +347,38 @@ export function usePortfolio(): PortfolioSummary {
 
             let advice: RebalanceAssessment['action'] | null = null;
             let paybackDays: number | null = null;
-            if (stats && valueUsd !== null) {
+            // Sugerowany zakres doradcy — liczony gdy mamy statystyki, niezależnie
+            // od tego, czy dało się wycenić pozycję w USD (rebalans ręczny nadal
+            // ma sens, tylko bez oceny opłacalności/payback).
+            let suggestion: RangeSuggestion | null = null;
+            if (stats) {
               try {
-                const assessment = assessPosition({ tickLower, tickUpper, valueUsd }, stats, chainId, fee, fee / 1_000_000, d0, d1);
-                advice = assessment.action;
-                paybackDays = assessment.paybackDays;
+                suggestion = suggestRange(stats, fee, d0, d1);
               } catch {
-                advice = null;
+                suggestion = null;
               }
+              if (valueUsd !== null) {
+                try {
+                  const assessment = assessPosition({ tickLower, tickUpper, valueUsd }, stats, chainId, fee, fee / 1_000_000, d0, d1);
+                  advice = assessment.action;
+                  paybackDays = assessment.paybackDays;
+                  suggestion = assessment.suggestion;
+                } catch {
+                  advice = null;
+                }
+              }
+            }
+
+            // SDK Pool — zbudowany raz tutaj z danych już odczytanych powyżej,
+            // reużywany przez useCockpitActions.ts (Zamknij/Rebalans) bez
+            // dodatkowych zapytań RPC ani duplikowania konstrukcji Pool.
+            let sdkPool: Pool | null = null;
+            try {
+              const t0Token = new Token(chainId, token0, d0, sym0 || undefined);
+              const t1Token = new Token(chainId, token1, d1, sym1 || undefined);
+              sdkPool = new Pool(t0Token, t1Token, fee, poolInfo.sqrtPriceX96.toString(), poolInfo.liquidity.toString(), poolInfo.tick);
+            } catch (e) {
+              console.warn('usePortfolio: building SDK Pool failed', poolKey, e);
             }
 
             allPositions.push({
@@ -329,6 +390,22 @@ export function usePortfolio(): PortfolioSummary {
               inRange,
               advice,
               paybackDays,
+              positionManager: manager,
+              poolAddress: poolInfo.address,
+              fee,
+              tickLower,
+              tickUpper,
+              liquidity: liquidity.toString(),
+              token0: { address: token0, symbol: sym0, decimals: d0 },
+              token1: { address: token1, symbol: sym1, decimals: d1 },
+              pool: sdkPool,
+              amount0: amt0,
+              amount1: amt1,
+              feeAmount0,
+              feeAmount1,
+              feesOwed0Raw: feesOwed0Raw.toString(),
+              feesOwed1Raw: feesOwed1Raw.toString(),
+              suggestion,
             });
           }
         }

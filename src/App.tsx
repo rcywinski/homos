@@ -9,6 +9,7 @@ import TransactionHistory from './components/TransactionHistory';
 import FaucetSection from './components/FaucetSection';
 import MorningCockpit from './components/MorningCockpit';
 import BotStatusDot from './components/BotStatusDot';
+import ExpandableSection from './components/ExpandableSection';
 import { useBotApi } from './hooks/useBotApi';
 import './styles.css';
 import './styles/marketVolatility.css';
@@ -44,10 +45,16 @@ function AppShell() {
         <FaucetSection />
         <div className="main-content">
           <MorningCockpit bot={bot} />
-          <PoolBrowser />
-          <div className="transaction-section">
-            <TransactionHistory />
-          </div>
+          {/* Partia 3 (TASKS-UI.md / UX-COCKPIT.md §1.B): dawne sekcje
+              zdegradowane pod jeden zwijalny nagłówek, domyślnie zwinięty —
+              kokpit powyżej jest teraz głównym ekranem. Nic tu nie skasowane,
+              tylko schowane za jednym kliknięciem. */}
+          <ExpandableSection title="Zarządzaj (zaawansowane)" defaultExpanded={false}>
+            <PoolBrowser />
+            <div className="transaction-section">
+              <TransactionHistory />
+            </div>
+          </ExpandableSection>
         </div>
       </div>
     </div>
