@@ -250,6 +250,7 @@ Wykonano TASKS-WINDOWS-ADDENDUM.md (boty niewidoczne, bez okien konsoli):
 - Stare procesy pm2 (`homos-bot`/`homos-server`, id 0/1) zatrzymane (`pm2 stop`), nie usunięte — do ewentualnego `pm2 delete` później, na razie nieużywane.
 - Zarejestrowano `schtasks /Create /TN HomosPipeline` — codziennie 07:30 jako SYSTEM, `npm run pipeline >> data\pipeline-task.log`.
 - **NIE wykonano (wymaga decyzji/potwierdzenia użytkownika):** test pełnego restartu komputera (krok 6 addendum) — usługi *powinny* wstać same (Automatic startup type domyślny w NSSM), ale nie zweryfikowano fizycznym rebootem.
+- **Firewall DOKOŃCZONY** (był zawieszony z poprzedniej sesji, brak uprawnień admina): `New-NetFirewallRule -DisplayName "HOMOS API (LAN+VPN only)" -Direction Inbound -Protocol TCP -LocalPort 8787 -RemoteAddress 192.168.1.0/24,10.8.0.0/24 -Action Allow` — wykonane i zweryfikowane (`Get-NetFirewallRule` → RemoteAddress poprawny). TASKS-WINDOWS.md krok 7 zaktualizowany. Pozostaje do zrobienia przez użytkownika: test `http://192.168.1.8:8787/health` z Maca/iPhone'a przez LAN/VPN.
 
 ### 2026-08-10 — Sesja planistyczna
 - Przeanalizowano legacy (`src/utils/liquidityManagement.ts`, `uniswap.ts`, README, docs) — zdiagnozowano przyczyny rozjazdu wyliczeń z Uniswap (float zamiast bigint, złe wzory, hardkody, brak testów).
