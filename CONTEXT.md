@@ -31,6 +31,66 @@
 
 ## 4. Dziennik sesji
 
+### 2026-08-10 — Sesja UI (Sonnet) — Partia 2: poranny kokpit + połączenie z botem ✅
+Wykonane wszystkie 4 zadania z TASKS-UI.md Partia 2 (plus dokończone/zweryfikowane
+zaległości z Partii 1 — patrz TASKS-UI.md, były już zaimplementowane w kodzie,
+tylko nieodhaczone). Zakres: wyłącznie UI, nie dotknięto v3math/liquidityManagement/
+advisor/backtest/bot (poza odczytem).
+- **`src/hooks/usePortfolio.ts`** (nowy): jedyne miejsce, które liczy portfel
+  PRZEKROJOWO przez wszystkie pule/sieci (mainnet+Base) — nie tylko aktualnie
+  otwartą pulę jak `MyPositions.tsx`. Idzie po NFT position managerze każdego
+  chaina, dociąga `getPool`+`slot0` per unikalna pula (cache w obrębie
+  odświeżenia), liczy kwoty przez `getAmountsForLiquidity` (v3math), fees przez
+  static `collect()` (ta sama sztuczka co MyPositions), doradcę przez
+  `assessPosition`/`computeStats` z advisor.ts — **tylko dla pul, w których
+  użytkownik faktycznie ma pozycję** (nie dla całego `OBSERVED_PAIRS` — inaczej
+  mnożyłoby to obciążenie RPC bez potrzeby na tym ekranie). Wycena USD wymaga
+  nogi stable lub ETH+stable-referencja — pary czysto skorelowane (cbBTC/WETH)
+  są liczone w statystykach in/out-range, ale POMIJANE w sumie USD (brak
+  wiarygodnego feeda); `hasUnknownValue` sygnalizuje to w UI gwiazdką.
+- **`src/hooks/useBotApi.ts`** (nowy): `localStorage.homos_api_base` (domyślnie
+  `http://localhost:8787`) + `homos_api_token` (Bearer), poll `GET /api/state`
+  co 60s, `POST /api/proposals/:id/dismiss`. Status online/stale(>5min)/offline.
+  Zweryfikowany wobec REALNEGO kształtu `bot/observer.ts`/`bot/server.ts`
+  (nie szkicu z TASKS-UI.md) — `Proposal.status` to `'open'`/`'dismissed'`, NIE
+  `'pending'` jak sugerował opis zadania; `state.json` i tak już filtruje do
+  samych `'open'` po stronie bota, UI filtruje defensywnie tak samo.
+- **`src/components/MorningCockpit.tsx`** (nowy): nagłówek finansowy (wartość
+  łączna/in-range/fees), panel ustawień API (ikonka ⚙), lista propozycji bota
+  z przyciskiem "Odrzuć", skrót doradcy per pozycja. Zwijalny, klasy `morning-*`.
+  Wpięty w `App.tsx` nad `PoolBrowser`. Renderuje się tylko gdy wallet connected.
+- **`src/components/BotStatusDot.tsx`** (nowy, reużywalny): kropka zielona/żółta/
+  szara. Użyta W DWÓCH miejscach (nagłówek App.tsx obok CompactWalletInfo + w
+  nagłówku kokpitu) na WSPÓLNYM stanie `useBotApi()` wywołanym raz w `App.tsx`
+  — jeden poll 60s, nie dwa niezależne.
+- **PWA**: `public/manifest.json` + ikony `icon-192.png`/`icon-512.png`
+  (wygenerowane w kontenerze Pillow — proste "$" na niebieskim tle #1a6ae0, bez
+  zewnętrznych zależności w repo), `<link rel="manifest">` + `apple-touch-icon` +
+  `apple-mobile-web-app-*` w `index.html`. Bez service workera (zgodnie z zadaniem).
+- **Weryfikacja Partii 1** (TASKS-UI.md miało 3 pozycje odznaczone jako niezrobione):
+  sprawdzone bezpośrednio w kodzie na dysku — `feePercentages()` w MyPositions.tsx,
+  media query <480px w styles.css i tytuł/favicon/Faucet-hide w index.html/
+  FaucetSection.tsx JUŻ tam były (z wcześniejszej sesji w tej samej rozmowie) —
+  tylko odhaczone, bez ponownej pracy.
+- **Typecheck**: `npx tsc --noEmit -p tsconfig.json` na maszynie użytkownika —
+  0 nowych błędów; jedyne błędy w wyjściu to preexisting `bot/observer.ts`
+  (niezgodność typów viem, plik poza zakresem tej sesji) i `node_modules/ox/**`.
+  Po drodze złapane i naprawione dwa błędy TS specyficzne dla tej sesji: literalny
+  `/* ... */` wewnątrz komentarza blokowego w MorningCockpit.tsx (przedwcześnie
+  zamykał komentarz) i typ `fee` (uint24 → `number`, nie `bigint`, w argumentach
+  wywołania `getPool`, mimo że `positions()` dekoduje te same pola jako `bigint`
+  — niespójność w typach viem między ABI zapisu a odczytu, obejście: osobne
+  zmienne `feeRaw`/`fee`).
+- **Nie zrobione / poza zakresem tej sesji**: `git pull` nie mógł się wykonać
+  (piaskownica device_bash bez dostępu do sieci — 403 z proxy) — lokalne pliki
+  i tak są aktualne, bo poprzednie sesje piszą bezpośrednio na dysk, nie przez
+  git; jeśli inna sesja terminalowa (Claude Code) wypchnęła coś na GitHub czego
+  nie ma lokalnie, wymaga to `git pull` uruchomionego ręcznie przez właściciela.
+- **Następny krok**: obejrzeć kokpit na żywo (localhost:3000) z realnym portfelem;
+  jeśli `homos-server` już działa na Windows (patrz sesja Windows w dzienniku
+  niżej), wpisać `http://192.168.1.8:8787` + token w ⚙ i sprawdzić panel
+  propozycji end-to-end.
+
 ### 2026-08-10 — Sesja 2: Faza 0 — naprawa obliczeń
 - **Nowy moduł `src/utils/v3math.ts`**: dokładny port TickMath + LiquidityAmounts na natywnym `bigint` (getSqrtRatioAtTick, getAmountsForLiquidity, getLiquidityForAmounts, ceny display z dokładnością 1 ulp).
 - **Testy referencyjne `test/v3math.test.ts`**: **2925/2925 zgodnych bit-w-bit z @uniswap/v3-sdk** (2018 ticków + 600 pozycji + liquidity + ceny). Uruchamianie: `npx tsx test/v3math.test.ts`.
@@ -251,9 +311,24 @@ Wykonano TASKS-WINDOWS-ADDENDUM.md (boty niewidoczne, bez okien konsoli):
 - Zarejestrowano `schtasks /Create /TN HomosPipeline` — codziennie 07:30 jako SYSTEM, `npm run pipeline >> data\pipeline-task.log`.
 - **NIE wykonano (wymaga decyzji/potwierdzenia użytkownika):** test pełnego restartu komputera (krok 6 addendum) — usługi *powinny* wstać same (Automatic startup type domyślny w NSSM), ale nie zweryfikowano fizycznym rebootem.
 - **Firewall DOKOŃCZONY** (był zawieszony z poprzedniej sesji, brak uprawnień admina): `New-NetFirewallRule -DisplayName "HOMOS API (LAN+VPN only)" -Direction Inbound -Protocol TCP -LocalPort 8787 -RemoteAddress 192.168.1.0/24,10.8.0.0/24 -Action Allow` — wykonane i zweryfikowane (`Get-NetFirewallRule` → RemoteAddress poprawny). TASKS-WINDOWS.md krok 7 zaktualizowany. Pozostaje do zrobienia przez użytkownika: test `http://192.168.1.8:8787/health` z Maca/iPhone'a przez LAN/VPN.
+- **TEST Z MACA ZALICZONY** (Fable, przez Chrome użytkownika): http://192.168.1.8:8787/health → {"fresh":true} — serwer osiągalny po LAN, stan bota świeży. Pozostał wyłącznie test fizycznego rebootu (przy okazji najbliższego restartu komputera). EKOSYSTEM KOMPLETNY: bot-usługi niewidoczne 24/7 + API po LAN/VPN + pipeline codziennie 7:30 + aplikacja na Macu + repo GitHub jako oś koordynacji.
 
 ### 2026-08-10 — Sesja planistyczna
 - Przeanalizowano legacy (`src/utils/liquidityManagement.ts`, `uniswap.ts`, README, docs) — zdiagnozowano przyczyny rozjazdu wyliczeń z Uniswap (float zamiast bigint, złe wzory, hardkody, brak testów).
 - Ustalono parametry projektu z właścicielem (kapitał, sieć TBD, hedging etapami, pół-auto).
 - Utworzono PLAN.md (analiza braków, funkcja celu, architektura, fazy 0–4, podział na agentów) i niniejszy CONTEXT.md.
 - **Następny krok:** Faza 0 — setup monorepo, `core/math` na bigint, test referencyjny na realnej pozycji mainnet.
+
+### 2026-08-10 — Sesja 3i: domknięcie danych + weryfikacja IL w warstwie selekcji
+- **mainnet-usdc-weth-030 (pula użytkownika): pobrane tylko 11 dni** (resztka stanu po porannej awarii providerów — state.json wskazał zły punkt startu). Nawet w 11 dniach werdykt jasny: pula MARTWA (3608 swapów, fees $5–76 przy $10k, wszystko przegrywa z HODL) — potwierdza rotację z tej puli. TODO (terminal/Claude Code): usunąć data/cache/mainnet-usdc-weth-030.{ndjson,state.json} i przefetchować pulę w całości (`npx tsx scripts/fetch-swaps.ts mainnet-usdc-weth-030`).
+- **Werdykt IL z DefiLlamy: pole il7d BEZUŻYTECZNE dla pul uniswap-v3** (null/0 w ~100% wierszy; wariant [minus IL] identyczny z bazowym przy il-cov ~50% liczonym z zer). Wniosek metodologiczny: rozstrzygnięcie majors-vs-egzotyki wymaga NASZEGO tick-level na egzotycznych pulach — TODO: dodać 1-2 top egzotyki (np. DORY-USDC Arbitrum) do POOLS w fetch-swaps i porównać pełny PnL z majors. selection.ts rozszerzony o mechanizm [minus IL] (zostaje — zadziała, gdyby źródło danych IL się pojawiło).
+- **Kolejka badawcza (pipeline, bez AI):** (1) refetch mainnet-030 pełne 90d, (2) egzotyki tick-level, (3) dłuższa historia Base 0.3% (180–365d) pod walk-forward i badanie timingu rebalansu (kruchość 1–3 decyzji — główny front), (4) codzienny pipeline 7:30 już zaplanowany na Windows.
+- Sesja UI (Sonnet) partia 2 ODEBRANA: poranny kokpit + panel propozycji + PWA + kropka zdrowia — zweryfikowane na żywo (Mainnet, token, zielony status, "Brak aktywnych propozycji" = poprawne przy 2/2 in-range).
+
+### 2026-08-10 — Sesja 3j: WALK-FORWARD — kluczowa lekcja pokory (odpowiedź na "czy dane już wystarczą")
+- **`backtest/walkforward.ts`** (npx tsx backtest/walkforward.ts <pool> [okno] [krok]): rozkład vsHODL na przesuwanych oknach; kryterium algorytmu: %wygranych ≥65 i najgorsze okno > −3.
+- **WYNIK (base-030, okna 30d co 15d, 4 okna): WSZYSTKIE strategie wygrywają z HODL tylko w 25% okien** (śr. −2 do −3.7 vsHODL/okno). Pełny przebieg 90d (+3.77) był efektem konkretnego układu okresów, NIE stabilnej przewagi miesięcznej.
+- Interpretacja (ważne niuanse): (a) krótkie okna systematycznie karzą LP — koszt wejścia (~0.15–0.3%) i niezamortyzowany IL nie mają czasu się zwrócić w 30 dni; (b) mimo to rozrzut −10…+3 na oknach pokazuje, że przewaga jest reżimowo-zależna i statystycznie nieugruntowana przy 90 dniach.
+- **WERDYKT dla pytania użytkownika**: selekcja pul — dane WYSTARCZAJĄ (4.4y, wiele reżimów); odbiór fees — czysty rachunek progowy (zbieraj gdy fees > ~50× gaz; Base ~$2–5, mainnet ~$50+; zysk z compoundingu ~1–2 p.p./rok); **algorytm zakresu/rebalansu — dane NIE wystarczają** (jeden reżim, 25% win-rate na oknach) → wymagane 365d + okna 45–60d + badanie timingu.
+- Fetch config: dodano `base-weth-usdc-030-365d` (świeży id = czysty stan, 365 dni; ~30–60 min pobierania na Base). TODO terminal: `npx tsx scripts/fetch-swaps.ts base-weth-usdc-030-365d` (albo pełny pipeline).
+- Plan analizy po 365d: walk-forward okna 45/60d + podział na reżimy (trend up/down/flat po EWMA) + warianty triggera rebalansu (histereza vs bufor cenowy vs odwrót momentum) + amortyzacja kosztu wejścia. Dopiero po tym: zamrożenie parametrów algorytmu w ALGORITHM.md i porównywanie z sygnałami bota z okresu OBSERWUJ.
