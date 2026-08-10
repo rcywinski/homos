@@ -619,3 +619,39 @@ parametry podmienimy po zamrożeniu ALGORITHM.md (365d walk-forward).
   W 100% zgodne z PAIRS.md i tabelą 5 pul — selektor mówi to, co nasza analiza.
 - Wdrożenie na Windows (pull + del selector-state + restart) → kolejka sekcja E.
 - Nieskomitowane prace UI Sonneta (13 plików) → kolejka (nie blokuje jutra).
+
+### 2026-08-10 — Sesja Fable: B5 DOMKNIĘTE — werdykt egzotyki (WTAO-WETH tick-level)
+Dane od CC (90.3d, 10 750 swapów — pula niskoaktywna), backtest odpalony w moim
+kontenerze na zsynchronizowanym cache. Liczby w RESEARCH-QUEUE B5. Interpretacja:
+- Reklamowane 60–80% fee-APR egzotyków NIE przeżywa zderzenia z tick-level:
+  realny fee-yield pasywnej pozycji ~5–20%/r, a wynik puli zdominowany betą
+  tokena (HODL +74.9% APR — WTAO akurat rosło; równie dobrze mogło −70%).
+- Wąskie zakresy na trendującym egzotyku = maszynka do realizowania IL
+  (±5%: fees $1,316 ale −33.8 p.p. vs HODL przy $248 gazu).
+- DECYZJA (rekomendacja): sleeve egzotyczny **0%** — zostajemy przy PAIRS.md
+  (rdzeń Base 0.3% aktywnie + cbBTC/WETH pasywnie ±15% + mainnet pasywnie).
+  Ekspozycja na egzotyki to zakład o token, nie strategia LP — poza mandatem.
+- Filtr majors-only w selektorze potwierdzony trzecim niezależnym testem
+  (meta-backtest selekcji, tabela 5 pul, teraz tick-level egzotyka).
+
+### 2026-08-10 — Sesja Fable: protokół kooperacji agentów (HANDOFF.md)
+Pytanie użytkownika o "rozmawiające agenty": sprawdzono empirycznie (ListAgents)
+— sesje Sonnet/CC/Windows NIE są osiągalne przez bezpośredni messaging z tej
+sesji (osobne aplikacje). Decyzja: zostajemy przy plikach repo jako szynie
+komunikacji (dziś: 4 sesje równolegle, zero kolizji), dodając HANDOFF.md jako
+lekką skrzynkę per agent ("zrobione, odbierz") — redukuje rolę Rafała jako
+routera. Sesje czytają swoją sekcję NA STARCIE i usuwają odebrane wpisy.
+Do promptów startowych sesji dopisać jedną linijkę: "przeczytaj swoją sekcję
+w HANDOFF.md". Moje pobudki (send_later) sprawdzają HANDOFF + git log same.
+
+### 2026-08-10 — Sesja Fable: zdalny wykonawca przez git (dostęp z iPhone'a)
+Problem: Rafał często ma tylko iPhone'a (ta sesja chmurowa) — nie może nic
+uruchomić w CC na Macu/Windows. Rozwiązanie: `scripts/agent-runner-git.ts` —
+trzecia usługa NSSM na Windows, poll brancha `agent-queue` co 3 min, wykonuje
+zadania z .agent-queue/pending/ (TYLKO whitelist, lustro agent-runner.ts
++ nowy wpis "scan"), wyniki commituje do .agent-queue/done/. Pętla:
+iPhone → Fable (chmura) → commit zadania → Windows wykonuje → wynik gitem →
+Fable raportuje. Main czysty (osobny branch). BRAKUJĄCY ELEMENT po stronie
+chmury: fine-grained PAT GitHub (tylko repo HOMOS, contents RW) — Rafał
+utworzy i wklei w sesji chmurowej, wtedy mogę klonować/commitować z kontenera.
+Wdrożenie: HANDOFF @CC (branch+package.json) i @Windows (usługa NSSM).

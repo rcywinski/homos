@@ -83,7 +83,7 @@
   T dniach poza). Sweep na 365d.
 - [ ] **Compounding w silniku**: akcja collect+reinwestycja przy fees > próg
   (50× gaz), zmierzyć wpływ na APR (oczekiwane +1–2 p.p.).
-- [ ] **Egzotyki: pełny PnL tick-level** (po A4) vs cbBTC/majors — decyzja
+- [x] **Egzotyki: pełny PnL tick-level** (po A4) vs cbBTC/majors — decyzja
   o sleeve egzotycznym (≤20% kapitału albo wcale).
 - [x] **Refetch mainnet-030 90d → run.ts** — ✅ DONE (Claude Code). 49210 swapów,
   90.3 dni. Okres SPADKOWY (HODL 50/50: −31.5% APR). Tabela (kapitał $10k):
@@ -190,3 +190,52 @@
   nie bić w darmowe RPC równolegle z nocnym grindem 365d na Macu) + del
   .bot\selector-state.json + nssm restart homos-bot. Od jutra pipeline 07:30
   odświeża llamę na Windows codziennie — problem jednorazowy (zimny serwer).
+- [x] **B5 WYNIK (WTAO-WETH mainnet 1%, 90.3 dni, 10 750 swapów — sesja Fable,
+  backtest w kontenerze na zsynchronizowanym cache)**: HODL 50/50 **+74.9% APR**
+  (reżim silnie wzrostowy WTAO). Pasywny full-range +77.5 (vsHODL +0.37, fees
+  $124); pasywny ±50% +75.1 (vsHODL +0.01, fees $486 ≈ 19.7%/r fee-yield).
+  WSZYSTKIE aktywne PRZEGRYWAJĄ z HODL: ±5% naiwny −33.8 p.p. (trend+gas $248),
+  ±15% −15.4, adapt k2h24 −11.2, k3h24 −1.8. WNIOSKI: (1) nagłówkowe 79% apyBase
+  NIE jest osiągalne dla LP — realny fee-yield szerokiej pozycji ~5–20%/r,
+  wąska zbiera więcej fees ($1,316) ale umiera na IL od trendu (klasyczny LVR);
+  (2) cały zysk puli to beta tokena (HODL +75%), nie fees — to zakład o WTAO,
+  nie strategia LP; (3) filtr majors-only w selektorze POTWIERDZONY empirycznie.
+- [ ] **HyperSync fetcher — TEST + ewentualne przejęcie grindu (dla CC, jutro)**:
+  `scripts/fetch-swaps-hypersync.ts` NA DYSKU (sesja Fable; API klienta z pamięci
+  — patrz nagłówek, może wymagać drobnych poprawek nazw pól, jest --debug).
+  Kroki: (1) `npm i @envio-dev/hypersync-client`; (2) darmowy token z envio.dev
+  → `HYPERSYNC_BEARER_TOKEN=` do .env (Rafał wkleja sam, NIE commitować);
+  (3) w fetch-swaps.ts: `export const POOLS` + `export interface PoolCfg`
+  (jednolinijkowe); (4) TEST POPRAWNOŚCI: pobrać base-weth-usdc-030 (90d, już
+  mamy z RPC) pod świeżym id-testowym i porównać liczbę linii + skrajne wiersze;
+  (5) jeśli zgodne: STOP nocnego grindu A2 i dokończenie HyperSyncem (state.json
+  kompatybilny — wznowi od nextBlock!), potem A3 i od razu WIĘCEJ (pełne 365d
+  mainnet-005? decyzja analityka po sukcesie). NIE blokować się, jeśli API
+  wymaga poprawek — nocny grind i tak mieli w tle jako plan B.
+
+## F. SLEEVE PAR SPIĘTYCH (pomysł z interfejsu bota znajomego — 2026-08-10)
+> Kontekst: screen "Earned $6,912 / 5.6d / $281k" = 3.1%/tydz. — realne dla
+> ultra-wąskiego LP na parach spiętych (LST-ETH, stable-stable): brak IL w
+> normalnych warunkach, koncentracja ×dziesiątki. Ukryte ryzyko: depeg (wąska
+> pozycja skupuje spadający token). Testujemy WŁASNYM silnikiem tick-level.
+- [ ] **A: dane** — dopisać do POOLS w fetch-swaps.ts i pobrać (HyperSync jeśli
+  przejdzie test, inaczej RPC): (1) wstETH-WETH mainnet 0.01% (największa pula
+  LST), (2) USDC-USDT mainnet 0.01%; po 180–365d żeby złapać różne reżimy.
+  Adresy przez factory lookup (skrypt umie sam).
+- [ ] **B: backtest** — strategie ultra-wąskie (±1–5 ticków, rebalans przy
+  wyjściu) vs pasywne; KONIECZNIE sprawdzić zachowanie w dniach stresu
+  (odchylenia pegu w danych!); policzyć próg kapitału, przy którym gaz mainnet
+  nie zjada przewagi (u znajomego $281k — u nas $5–25k, to może być deal-breaker
+  → sprawdzić odpowiedniki na Base, jeśli istnieją pule v3 z wolumenem).
+- [ ] **C: decyzja** — sleeve spięty w PAIRS.md (obok cbBTC) albo świadome NIE
+  z liczbami. Uwaga metodologiczna: fees liczone NETTO po gazie/rebalansach,
+  osobno wynik w tygodniach spokojnych vs tygodnie stresu pegu.
+- [ ] **Pool Scanner 2.0 — globalny skan koszyków (NOWE, na dysku)**:
+  `npx tsx backtest/scan-universe.ts` (1 call do /pools, sekundy — może iść od
+  ręki, nie koliduje z niczym). Klasyfikuje CAŁY rynek ≥$1M na koszyki
+  (stable-stable / eth-lst / btc-btc / major-volatile / exotic), top-10 per
+  koszyk w widoku "wykonywalne u nas" i "cały rynek" + dominujące projekty
+  (czy np. aerodrome-slipstream zjada Base). Wyniki → sesja analityczna:
+  (1) zasilenie sekcji F (które pule spięte fetchować tick-level),
+  (2) decyzja, czy poszerzyć universe fetch-llama (MAX_POOLS/projekty),
+  (3) docelowo: koszyki do selektora (ranking per koszyk zamiast globalnego).
