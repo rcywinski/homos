@@ -17,9 +17,9 @@ node_modules/
 .cache/
 public/bundle.js*
 
-# HOMOS: dane robocze / cache / stan bota — regenerowalne, nie do repo
-data/cache/
-data/llama/
+# HOMOS: dane robocze / cache / stan bota — regenerowalne, nie do repo.
+# Cały katalog data/ (cache, historie llama, bundle transferowe) trzymamy poza repo.
+data/
 .agent/
 .bot/
 backtest/results/
