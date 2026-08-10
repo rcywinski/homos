@@ -994,3 +994,176 @@
   cursor: pointer;
   font-size: 12px;
 }
+
+/* --- Top Pools ranking + multichain browser (Faza 0+) --- */
+.top-pools { background: #fff; border-radius: 10px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+.top-pools-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; cursor: pointer; }
+.top-pools-header h4 { margin: 0; font-size: 15px; }
+.top-pools-src { font-weight: normal; font-size: 11px; color: #888; }
+.top-pools-body { padding: 0 16px 12px; }
+.top-pools-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.top-pools-table th { text-align: left; color: #888; font-weight: 500; padding: 4px 8px; border-bottom: 1px solid #eee; }
+.top-pools-table td { padding: 4px 8px; border-bottom: 1px solid #f5f5f5; }
+.tp-symbol { font-weight: 600; }
+.tp-apr { color: #0a7d33; font-weight: 600; }
+.top-pools-note { font-size: 11px; color: #999; margin-top: 8px; }
+.chain-header { margin: 18px 0 6px; font-size: 16px; color: #333; border-bottom: 2px solid #eee; padding-bottom: 4px; }
+.role-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; margin-left: 8px; vertical-align: middle; }
+.role-core { background: #e3f0ff; color: #1a6ae0; }
+.role-correlated { background: #fff3e0; color: #c77700; }
+.role-stable { background: #e8f5e9; color: #2e7d32; }
+.role-legacy { background: #f5f5f5; color: #888; }
+
+/* --- Advisor / AddLiquidity v2 --- */
+.advisor-box { background:#f0f6ff; border:1px solid #d5e5ff; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px; }
+.advisor-line { border-radius:8px; padding:8px 12px; font-size:13px; margin:10px 0; }
+.advisor-in_range_hold { background:#e8f5e9; }
+.advisor-rebalance { background:#fff3e0; }
+.advisor-wait_not_profitable { background:#f5f5f5; color:#666; }
+.advisor-detail { font-size:11px; color:#555; margin-top:2px; }
+.range-preview { margin:10px 0; font-size:14px; }
+.muted { color:#999; font-size:11px; }
+.custom-range-inputs { display:flex; gap:10px; margin:8px 0; }
+.custom-range-inputs input { flex:1; padding:8px; border:1px solid #ddd; border-radius:6px; }
+.token-inputs { display:flex; gap:14px; margin:12px 0; }
+.token-input { flex:1; }
+.token-input label { display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px; }
+.token-input input { width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:15px; box-sizing:border-box; }
+.slippage-row { display:flex; gap:8px; align-items:center; font-size:13px; margin:10px 0; }
+.slippage-row button.chip { padding:4px 12px; border-radius:14px; border:1px solid #ddd; background:#fff !important; color:#333 !important; cursor:pointer; font-size:12px; width:auto; flex:none; }
+.slippage-row button.chip.selected { background:#1a6ae0 !important; color:#fff !important; border-color:#1a6ae0; }
+.action-row { display:flex; gap:10px; margin-top:14px; }
+.action-button { flex:1; padding:12px; border-radius:8px; border:1px solid #1a6ae0; background:#fff; color:#1a6ae0; cursor:pointer; font-size:14px; }
+.action-button.primary { background:#1a6ae0; color:#fff; }
+.action-button:disabled { opacity:0.45; cursor:not-allowed; }
+
+/* --- UI session --- */
+
+/* Generic spinner + inline loading row, used anywhere a fetch is in flight
+   (PoolBrowser pool list, AddLiquidity advisor box, etc.) */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0, 0, 0, 0.12);
+  border-top-color: #1a6ae0;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: -2px;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.loading-inline {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Skeleton placeholders (pool cards while PoolBrowser fetches) */
+.skeleton {
+  background: linear-gradient(90deg, #eee 25%, #f5f5f5 37%, #eee 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+  border: 1px solid #e9ecef;
+}
+
+@keyframes skeleton-loading {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+.pool-card-skeleton {
+  height: 92px;
+  cursor: default;
+}
+
+.pool-browser-loading {
+  width: 100%;
+}
+
+/* Visual range bar on position cards: min–max bar with a marker at the
+   current pool price. Green while in range, red once price has moved past
+   either edge (marker clamps to 0%/100%). */
+.range-bar-wrap {
+  margin: 6px 0 12px;
+}
+
+.range-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: #e9ecef;
+}
+
+.range-bar.in-range {
+  background: linear-gradient(90deg, #c8f0d4, #7fd99a);
+}
+
+.range-bar.out-of-range {
+  background: linear-gradient(90deg, #ffd6d6, #ff9e9e);
+}
+
+.range-bar-marker {
+  position: absolute;
+  top: -3px;
+  width: 3px;
+  height: 14px;
+  border-radius: 2px;
+  background: #1a1a1a;
+  transform: translateX(-50%);
+}
+
+.range-bar.in-range .range-bar-marker {
+  background: #1b7a3d;
+}
+
+.range-bar.out-of-range .range-bar-marker {
+  background: #c62828;
+}
+
+.range-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+}
+
+/* Responsiveness for the newer AddLiquidity sections below ~480px:
+   wrap/stack instead of squeezing everything into one row. */
+@media (max-width: 480px) {
+  .advisor-box {
+    font-size: 12px;
+    padding: 8px 10px;
+    line-height: 1.5;
+  }
+
+  .range-options-wrapper {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .range-options-wrapper .range-option {
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .custom-range-inputs {
+    flex-direction: column;
+  }
+
+  .token-inputs {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .slippage-row {
+    flex-wrap: wrap;
+  }
+
+  .pools-grid {
+    grid-template-columns: 1fr;
+  }
+}

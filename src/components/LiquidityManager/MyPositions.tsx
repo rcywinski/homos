@@ -3,7 +3,11 @@ import { useAccount, usePublicClient, useWalletClient, useChainId } from 'wagmi'
 import { Pool, Position as UniswapPosition } from '@uniswap/v3-sdk';
 import JSBI from 'jsbi';
 import { formatUnits, Address, encodeFunctionData } from 'viem';
-import { tickToPrice } from '../../utils/liquidityManagement';
+import { tickToPrice, POSITION_MANAGER_ADDRESSES } from '../../utils/liquidityManagement';
+import { getAmountsForLiquidity, humanPriceQuotePerBase, MAX_UINT128 } from '../../utils/v3math';
+import { fetchRecentSwaps, computeStats, assessPosition, PoolStats } from '../../utils/advisor';
+import { TICK_SPACINGS } from '@uniswap/v3-sdk';
+import { addTransaction } from '../TransactionHistory';
 
 // Interface for position data
 interface Position {
@@ -82,205 +86,28 @@ const getTokenDecimals = (token: any): number => {
   return 18;
 };
 
-// Add utility functions for accurate position calculation based on Uniswap V3 math
-
-// Convert a tick to a price (local version)
-const tickToPriceLocal = (tick: number): number => {
-  return Math.pow(1.0001, tick);
-};
-
-// Calculate the real token amounts in a position using Uniswap V3 math
-const calculateRealTokenAmounts = (
+// Exact position math — bigint, identical to the Uniswap interface (see utils/v3math.ts)
+const positionTokenAmounts = (
   liquidity: string,
   tickLower: number,
-  tickUpper: number, 
+  tickUpper: number,
+  sqrtPriceX96: bigint,
   currentTick: number,
   token0Decimals: number,
   token1Decimals: number
 ) => {
-  console.log('Calculating real amounts for position with liquidity:', liquidity);
-  
-  try {
-    // Convert liquidity to a number for calculations
-    const liquidityNumber = Number(liquidity);
-    
-    if (token0Decimals === 6 && token1Decimals === 18) {
-      // This is likely USDC/WETH pair
-      // Use empirical scaling based on observed Uniswap values
-      const amount0 = liquidityNumber / 2.11e11; // Scaling for USDC
-      const amount1 = liquidityNumber / 5.11e14; // Scaling for WETH
-      
-      console.log('Using calibrated values for USDC/WETH position:', { amount0, amount1 });
-      
-      return {
-        amount0,
-        amount1,
-        inRange: currentTick >= tickLower && currentTick <= tickUpper
-      };
-    }
-    
-    // For other pairs, implement calculation similar to screenshot
-    // Convert ticks to sqrt prices as per Uniswap V3 formula
-    const sqrtPriceLower = Math.pow(1.0001, tickLower / 2);
-    const sqrtPriceUpper = Math.pow(1.0001, tickUpper / 2);
-    const sqrtPriceCurrent = Math.pow(1.0001, currentTick / 2);
-    
-    // Calculate token amounts based on current price position
-    let amount0 = 0;
-    let amount1 = 0;
-    
-    if (currentTick < tickLower) {
-      // All liquidity in token0 (like in screenshot)
-      amount0 = liquidityNumber * (1/sqrtPriceLower - 1/sqrtPriceUpper);
-      amount1 = 0;
-      console.log('Position below range - all in token0');
-    } else if (currentTick >= tickUpper) {
-      // All liquidity in token1
-      amount0 = 0;
-      amount1 = liquidityNumber * (sqrtPriceUpper - sqrtPriceLower);
-      console.log('Position above range - all in token1');
-    } else {
-      // Split between tokens (in range)
-      amount0 = liquidityNumber * (1/sqrtPriceCurrent - 1/sqrtPriceUpper);
-      amount1 = liquidityNumber * (sqrtPriceCurrent - sqrtPriceLower);
-      console.log('Position in range - split between tokens');
-    }
-    
-    // Apply the necessary scaling based on decimals
-    // This is similar to the price adjustment in the screenshot
-    const decimalAdjustment = Math.pow(10, token1Decimals - token0Decimals);
-    
-    // Apply scaling similar to current price calculation
-    amount0 = amount0 / decimalAdjustment;
-    
-    console.log('Calculated amounts with sqrt price approach:', { amount0, amount1 });
-    
-    // Apply sanity checks to prevent extreme values
-    if (amount0 > 1000000 || amount1 > 1000000 || isNaN(amount0) || isNaN(amount1) || amount0 < 0 || amount1 < 0) {
-      console.warn('Calculated amounts look unreasonable, using fallback');
-      return {
-        amount0: liquidityNumber / 2.11e11,
-        amount1: liquidityNumber / 5.11e14,
-        inRange: currentTick >= tickLower && currentTick <= tickUpper
-      };
-    }
-    
-    return {
-      amount0,
-      amount1,
-      inRange: currentTick >= tickLower && currentTick <= tickUpper
-    };
-  } catch (error) {
-    console.error('Error calculating token amounts:', error);
-    
-    // Use reasonable estimates based on liquidity size
-    console.log('Using fallback calculation based on liquidity size');
-    
-    if (token0Decimals === 6 && token1Decimals === 18) {
-      // For USDC/WETH pairs, use empirical scaling
-      return {
-        amount0: Number(liquidity) / 2.11e11, // Calibrated scaling for USDC
-        amount1: Number(liquidity) / 5.11e14, // Calibrated scaling for WETH
-        inRange: currentTick >= tickLower && currentTick <= tickUpper
-      };
-    } else {
-      // Generic fallback for other pairs
-      return {
-        amount0: Number(liquidity) / 1e13,
-        amount1: Number(liquidity) / 1e13,
-        inRange: currentTick >= tickLower && currentTick <= tickUpper
-      };
-    }
-  }
+  const { amount0, amount1 } = getAmountsForLiquidity(
+    sqrtPriceX96,
+    tickLower,
+    tickUpper,
+    BigInt(liquidity)
+  );
+  return {
+    amount0: parseFloat(formatUnits(amount0, token0Decimals)),
+    amount1: parseFloat(formatUnits(amount1, token1Decimals)),
+    inRange: currentTick >= tickLower && currentTick < tickUpper,
+  };
 };
-
-// Constant for Q96 using a pre-calculated value instead of exponentiation
-const Q96 = BigInt('79228162514264337593543950336'); // 2^96
-
-// Convert tick to sqrtPriceX96
-function getSqrtRatioAtTick(tick: number): bigint {
-  // Use pre-calculated Q96 value
-  
-  // 1.0001^(tick/2) as per the Uniswap V3 whitepaper
-  let sqrtRatio = Math.pow(1.0001, tick / 2);
-  
-  // Convert to Q64.96 format
-  return BigInt(Math.floor(sqrtRatio * Number(Q96)));
-}
-
-// Calculate amount0 when position is below range
-function calculateAmount0BelowRange(
-  liquidity: bigint, 
-  sqrtRatioLower: bigint, 
-  sqrtRatioUpper: bigint
-): number {
-  // Based on Uniswap V3 whitepaper formula for Δx when price is below range
-  
-  // Calculate amount0 = L * (1/sqrt(pLower) - 1/sqrt(pUpper))
-  // Using integer math: amount0 = L * (sqrtUpper - sqrtLower) / (sqrtLower * sqrtUpper)
-  try {
-    const numerator = liquidity * (sqrtRatioUpper - sqrtRatioLower) * Q96;
-    const denominator = sqrtRatioLower * sqrtRatioUpper;
-    
-    return Number(numerator / denominator) / Number(Q96);
-  } catch (error) {
-    console.error('Error in calculateAmount0BelowRange:', error);
-    return 0;
-  }
-}
-
-// Calculate amount1 when position is above range
-function calculateAmount1AboveRange(
-  liquidity: bigint,
-  sqrtRatioLower: bigint,
-  sqrtRatioUpper: bigint
-): number {
-  // Based on Uniswap V3 whitepaper formula for Δy when price is above range
-  // amount1 = L * (sqrt(pUpper) - sqrt(pLower))
-  try {
-    const amount = liquidity * (sqrtRatioUpper - sqrtRatioLower) / Q96;
-    
-    return Number(amount);
-  } catch (error) {
-    console.error('Error in calculateAmount1AboveRange:', error);
-    return 0;
-  }
-}
-
-// Calculate amount0 when position is in range
-function calculateAmount0InRange(
-  liquidity: bigint,
-  sqrtRatioCurrent: bigint,
-  sqrtRatioUpper: bigint
-): number {
-  // Based on Uniswap V3 whitepaper formula for Δx when price is in range
-  try {
-    const numerator = liquidity * (sqrtRatioUpper - sqrtRatioCurrent) * Q96;
-    const denominator = sqrtRatioCurrent * sqrtRatioUpper;
-    
-    return Number(numerator / denominator) / Number(Q96);
-  } catch (error) {
-    console.error('Error in calculateAmount0InRange:', error);
-    return 0;
-  }
-}
-
-// Calculate amount1 when position is in range
-function calculateAmount1InRange(
-  liquidity: bigint,
-  sqrtRatioLower: bigint,
-  sqrtRatioCurrent: bigint
-): number {
-  // Based on Uniswap V3 whitepaper formula for Δy when price is in range
-  try {
-    const amount = liquidity * (sqrtRatioCurrent - sqrtRatioLower) / Q96;
-    
-    return Number(amount);
-  } catch (error) {
-    console.error('Error in calculateAmount1InRange:', error);
-    return 0;
-  }
-}
 
 // IMPORTANT: Move all hooks inside the component function
 
@@ -302,6 +129,37 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
   const [collectingFees, setCollectingFees] = useState<boolean>(false);
   // Add the ethPrice state here
   const [ethPrice, setEthPrice] = useState<number>(2070); // Default fallback price
+  const [advStats, setAdvStats] = useState<PoolStats | null>(null);
+
+  // Doradca: statystyki puli z ostatnich 24h (te same wzory co strategia backtestu)
+  useEffect(() => {
+    if (!publicClient || !poolAddress) return;
+    const spacing = TICK_SPACINGS[pool.fee as keyof typeof TICK_SPACINGS];
+    fetchRecentSwaps(publicClient, poolAddress as Address, chainId, 24)
+      .then((s) => setAdvStats(computeStats(s, chainId, pool.token0.decimals, pool.token1.decimals, pool.fee / 1_000_000, spacing)))
+      .catch(() => setAdvStats(null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [publicClient, poolAddress, chainId]);
+
+  // Rekomendacja doradcy dla pozycji
+  const adviseFor = (position: Position) => {
+    if (!advStats) return null;
+    return assessPosition(
+      { tickLower: position.tickLower, tickUpper: position.tickUpper, valueUsd: parseFloat(position.usdValue) || 0 },
+      advStats,
+      chainId,
+      pool.fee,
+      pool.fee / 1_000_000,
+      pool.token0.decimals,
+      pool.token1.decimals
+    );
+  };
+
+  const adviceLabel: Record<string, string> = {
+    IN_RANGE_HOLD: '✅ W zakresie — trzymaj i zbieraj fee',
+    REBALANCE: '🔄 Poza zakresem — rebalans OPŁACALNY',
+    WAIT_NOT_PROFITABLE: '⏳ Poza zakresem — rebalans się nie zwróci, czekaj',
+  };
 
   // Fetch real-time ETH price
   const fetchEthPrice = useCallback(async () => {
@@ -400,13 +258,6 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
       usdValue = (amount0Value + amount1Value) * 10; // Just a placeholder estimate
     }
     
-    // For specific positions, use the exact values from Uniswap UI
-    if (position.id === '953465') {
-      return '91.75'; // Value from Uniswap UI
-    } else if (position.id === '953427') {
-      return '2.77'; // Value from Uniswap UI
-    }
-    
     // Sanity check for unreasonable values
     if (usdValue > 1000000 || isNaN(usdValue) || usdValue < 0) {
       console.warn('Calculated value looks unreasonable, using fallback:', usdValue);
@@ -429,78 +280,114 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
     return usdValue.toFixed(2);
   };
 
-  // Update the formatPriceRange function to correctly calculate prices from ticks
+  // Price range from ticks — exact math, oriented as USD-per-ETH for stable/ETH pairs
   const formatPriceRange = (tickLower: number, tickUpper: number, poolData: Pool) => {
     try {
-      // Convert ticks to prices according to Uniswap V3 formula: price = 1.0001^tick
-      const priceLower = Math.pow(1.0001, tickLower);
-      const priceUpper = Math.pow(1.0001, tickUpper);
-      
-      // Hardcoded known price ranges (matching Uniswap UI)
-      if (tickLower === 198060 && tickUpper === 202140) {
-        return '$1,665.75 - $2,504.92'; // Position #953465
-      } else if (tickLower === 198180 && tickUpper === 201360) {
-        return '$1,740.43 - $2,203.37'; // Position #953427
+      const dec0 = poolData.token0.decimals;
+      const dec1 = poolData.token1.decimals;
+      const sym0 = poolData.token0.symbol || 'Token0';
+      const sym1 = poolData.token1.symbol || 'Token1';
+      const isToken0Stable = sym0.includes('USD') || sym0.includes('DAI');
+      const isToken1Stable = sym1.includes('USD') || sym1.includes('DAI');
+
+      // token1 per token0, decimal-adjusted
+      const lowerP = tickToPrice(tickLower, dec0, dec1);
+      const upperP = tickToPrice(tickUpper, dec0, dec1);
+
+      const fmtUsd = (v: number) =>
+        '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      if (isToken0Stable && !isToken1Stable) {
+        // price is e.g. WETH per USDC -> invert for USD per ETH (bounds swap)
+        return `${fmtUsd(1 / upperP)} - ${fmtUsd(1 / lowerP)}`;
       }
-      
-      // Get token decimals to adjust the display
-      const token0Decimals = poolData.token0.decimals;
-      const token1Decimals = poolData.token1.decimals;
-      
-      // Check if our token is USDC/WETH or similar
-      const isToken0Stable = poolData.token0.symbol?.includes('USD') || poolData.token0.symbol?.includes('DAI');
-      const isToken1ETH = poolData.token1.symbol?.includes('ETH') || poolData.token1.symbol?.includes('WETH');
-      const isToken0ETH = poolData.token0.symbol?.includes('ETH') || poolData.token0.symbol?.includes('WETH');
-      const isToken1Stable = poolData.token1.symbol?.includes('USD') || poolData.token1.symbol?.includes('DAI');
-      
-      // USDC/WETH special case
-      if ((isToken0Stable && isToken1ETH) || (isToken0ETH && isToken1Stable)) {
-        // For USDC/WETH, we need to calculate USD price per ETH
-        let lowerUsdPerEth, upperUsdPerEth;
-        
-        if (isToken0Stable) {
-          // If token0 is USDC, price in the pool is USDC per WETH
-          // We need to scale based on decimals (USDC is 6, WETH is 18)
-          const decimalAdjustment = Math.pow(10, token1Decimals - token0Decimals);
-          lowerUsdPerEth = priceLower * decimalAdjustment;
-          upperUsdPerEth = priceUpper * decimalAdjustment;
-        } else {
-          // If token1 is USDC, price in the pool is WETH per USDC
-          // We need to invert and scale
-          const decimalAdjustment = Math.pow(10, token0Decimals - token1Decimals);
-          lowerUsdPerEth = (1 / priceUpper) * decimalAdjustment; // Note: lower/upper swapped when inverting
-          upperUsdPerEth = (1 / priceLower) * decimalAdjustment;
-        }
-        
-        // Format with USD currency symbol and commas
-        return `$${lowerUsdPerEth.toLocaleString('en-US', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        })} - $${upperUsdPerEth.toLocaleString('en-US', {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        })}`;
+      if (isToken1Stable && !isToken0Stable) {
+        // price is already USD per token0
+        return `${fmtUsd(lowerP)} - ${fmtUsd(upperP)}`;
       }
-      
-      // For other pairs, use standard number format with token symbols
-      const formattedLower = priceLower.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 6
-      });
-      
-      const formattedUpper = priceUpper.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 6
-      });
-      
-      // Add token symbols
-      return `${formattedLower} - ${formattedUpper} ${poolData.token1.symbol} per ${poolData.token0.symbol}`;
+
+      const fmt = (v: number) =>
+        v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+      return `${fmt(lowerP)} - ${fmt(upperP)} ${sym1} per ${sym0}`;
     } catch (error) {
       console.error('Error formatting price range:', error);
-      
-      // Fallback to a basic format if the calculation fails
       return `Ticks: [${tickLower}, ${tickUpper}]`;
     }
+  };
+
+  // Visual range bar data: min/max/current price in the same orientation as
+  // formatPriceRange (USD-per-ETH for stable/ETH pairs), plus marker position
+  // 0-100% clamped (values outside the range sit flush against the edge).
+  const getRangeBarData = (position: Position, poolData: Pool) => {
+    try {
+      const dec0 = poolData.token0.decimals;
+      const dec1 = poolData.token1.decimals;
+      const sym0 = poolData.token0.symbol || '';
+      const sym1 = poolData.token1.symbol || '';
+      const isToken0Stable = sym0.includes('USD') || sym0.includes('DAI');
+      const isToken1Stable = sym1.includes('USD') || sym1.includes('DAI');
+
+      const lowerP = tickToPrice(position.tickLower, dec0, dec1);
+      const upperP = tickToPrice(position.tickUpper, dec0, dec1);
+      const curP = tickToPrice(poolData.tickCurrent, dec0, dec1);
+
+      let lo: number, hi: number, cur: number;
+      if (isToken0Stable && !isToken1Stable) {
+        // inverting flips ordering: bounds swap
+        lo = 1 / upperP;
+        hi = 1 / lowerP;
+        cur = 1 / curP;
+      } else {
+        lo = lowerP;
+        hi = upperP;
+        cur = curP;
+      }
+
+      const span = hi - lo;
+      const rawPct = span > 0 ? ((cur - lo) / span) * 100 : 50;
+      const pct = Math.min(100, Math.max(0, rawPct));
+
+      return { lo, hi, cur, pct };
+    } catch (error) {
+      console.error('Error computing range bar data:', error);
+      return null;
+    }
+  };
+
+  const fmtRangeBarValue = (v: number): string =>
+    v >= 1000
+      ? v.toLocaleString('en-US', { maximumFractionDigits: 0 })
+      : v >= 1
+      ? v.toLocaleString('en-US', { maximumFractionDigits: 2 })
+      : v.toPrecision(4);
+
+  // Fee percentages, USDC/WETH: both derived from the same ethPrice so they
+  // always sum to 100% after rounding (round only the final displayed value).
+  const feePercentages = (position: Position): { pct0: number; pct1: number } => {
+    const fee0 = parseFloat(position.unclaimedFees0);
+    const fee1 = parseFloat(position.unclaimedFees1);
+    const isToken0Stable = position.token0.includes('USD') || position.token0.includes('DAI');
+    const isToken1Stable = position.token1.includes('USD') || position.token1.includes('DAI');
+
+    let usd0: number;
+    let usd1: number;
+    if (isToken0Stable) {
+      usd0 = fee0;
+      usd1 = fee1 * ethPrice;
+    } else if (isToken1Stable) {
+      usd1 = fee1;
+      usd0 = fee0 * ethPrice;
+    } else {
+      usd0 = fee0 * ethPrice;
+      usd1 = fee1;
+    }
+
+    const total = usd0 + usd1;
+    if (!isFinite(total) || total <= 0) return { pct0: 0, pct1: 0 };
+
+    const pct0 = Number(((usd0 / total) * 100).toFixed(1));
+    const pct1 = Number((100 - pct0).toFixed(1));
+    return { pct0, pct1 };
   };
 
   // Load positions when component mounts or pool changes
@@ -518,8 +405,34 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
     setError(null);
     
     try {
-      // Address of the Uniswap V3 NonfungiblePositionManager
-      const positionManagerAddress = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
+      // Derive USD/ETH from the pool's own sqrtPrice when this is a stable/ETH
+      // pair — exact and consistent with what Uniswap shows for this pool.
+      // IMPORTANT: use the local value everywhere below (setEthPrice is async,
+      // reading the state in the same pass would use a stale price).
+      let poolEthUsd = ethPrice;
+      {
+        const sym0 = pool.token0.symbol || '';
+        const sym1 = pool.token1.symbol || '';
+        const t0Stable = sym0.includes('USD') || sym0.includes('DAI');
+        const t1Stable = sym1.includes('USD') || sym1.includes('DAI');
+        const t0Eth = sym0.includes('ETH');
+        const t1Eth = sym1.includes('ETH');
+        if ((t0Stable && t1Eth) || (t1Stable && t0Eth)) {
+          const derived = humanPriceQuotePerBase(
+            BigInt(pool.sqrtRatioX96.toString()),
+            pool.token0.decimals,
+            pool.token1.decimals,
+            t0Eth
+          );
+          if (isFinite(derived) && derived > 0) {
+            poolEthUsd = derived;
+            setEthPrice(derived);
+          }
+        }
+      }
+      // Address of the Uniswap V3 NonfungiblePositionManager (chain-aware)
+      const positionManagerAddress = (POSITION_MANAGER_ADDRESSES[chainId] ||
+        POSITION_MANAGER_ADDRESSES[1]) as Address;
       
       // Get the total number of positions owned by the user
       const balanceOf = await publicClient.readContract({
@@ -678,10 +591,11 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
               amount0: calculatedAmount0,
               amount1: calculatedAmount1,
               inRange
-            } = calculateRealTokenAmounts(
+            } = positionTokenAmounts(
               rawLiquidity,
               tickLowerRaw,
               tickUpperRaw,
+              BigInt(pool.sqrtRatioX96.toString()),
               currentTickRaw,
               token0Decimals,
               token1Decimals
@@ -692,7 +606,7 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
             const token1IsStable = token1Symbol.includes('USD') || token1Symbol.includes('DAI');
             
             // Calculate USD value of the position
-            const wethPriceUSD = ethPrice; // Use the dynamic ethPrice as default
+            const wethPriceUSD = poolEthUsd; // one consistent pool-derived price
             const usdValue = calculatePositionUSDValue(
               calculatedAmount0,
               calculatedAmount1,
@@ -759,7 +673,8 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
           unclaimedFees.token0,
           unclaimedFees.token1,
           isToken0Stable,
-          isToken1Stable
+          isToken1Stable,
+          poolEthUsd
         );
         
         return {
@@ -896,6 +811,7 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
       
       if (receipt.status === 'success') {
         setSuccess(`Successfully removed ${removePercentage}% liquidity from position ${selectedPosition.id}`);
+        addTransaction(address, hash, chainId, `Remove ${removePercentage}% liquidity #${selectedPosition.id}`);
         // Refresh positions list
         fetchPositions();
         // Notify parent of success
@@ -919,115 +835,66 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
     return currentTick >= tickLower && currentTick <= tickUpper;
   };
 
-  // Add function to fetch uncollected fees for a position
+  // Real-time uncollected fees: static call to collect() with max amounts —
+  // the same method the Uniswap interface uses. tokensOwed in the struct is
+  // stale (only updated on interactions), so a static collect is required.
   const fetchUnclaimedFees = async (tokenId: string) => {
-    if (!publicClient) return { token0: '0', token1: '0' };
-    
+    if (!publicClient || !address) return { token0: '0', token1: '0' };
+
+    const positionManagerAddress = (POSITION_MANAGER_ADDRESSES[chainId] ||
+      POSITION_MANAGER_ADDRESSES[1]) as Address;
+
     try {
-      // Address of the Uniswap V3 NonfungiblePositionManager
-      const positionManagerAddress = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
-      
-      // Get position details first
-      const positionDetails = await publicClient.readContract({
-        address: positionManagerAddress as Address,
+      const { result } = await publicClient.simulateContract({
+        address: positionManagerAddress,
         abi: [
           {
-            name: 'positions',
+            name: 'collect',
             type: 'function',
-            stateMutability: 'view',
-            inputs: [{ name: 'tokenId', type: 'uint256' }],
+            stateMutability: 'payable',
+            inputs: [
+              {
+                name: 'params',
+                type: 'tuple',
+                components: [
+                  { name: 'tokenId', type: 'uint256' },
+                  { name: 'recipient', type: 'address' },
+                  { name: 'amount0Max', type: 'uint128' },
+                  { name: 'amount1Max', type: 'uint128' },
+                ],
+              },
+            ],
             outputs: [
-              { name: 'nonce', type: 'uint96' },
-              { name: 'operator', type: 'address' },
-              { name: 'token0', type: 'address' },
-              { name: 'token1', type: 'address' },
-              { name: 'fee', type: 'uint24' },
-              { name: 'tickLower', type: 'int24' },
-              { name: 'tickUpper', type: 'int24' },
-              { name: 'liquidity', type: 'uint128' },
-              { name: 'feeGrowthInside0LastX128', type: 'uint256' },
-              { name: 'feeGrowthInside1LastX128', type: 'uint256' },
-              { name: 'tokensOwed0', type: 'uint128' },
-              { name: 'tokensOwed1', type: 'uint128' }
-            ]
-          }
+              { name: 'amount0', type: 'uint256' },
+              { name: 'amount1', type: 'uint256' },
+            ],
+          },
+        ] as const,
+        functionName: 'collect',
+        args: [
+          {
+            tokenId: BigInt(tokenId),
+            recipient: address,
+            amount0Max: MAX_UINT128,
+            amount1Max: MAX_UINT128,
+          },
         ],
-        functionName: 'positions',
-        args: [BigInt(tokenId)]
-      }) as unknown as [
-        bigint, string, string, string, bigint, bigint, bigint, bigint, bigint, bigint, bigint, bigint
-      ];
-      
-      // Extract tokens owed from position details
-      const [,,,,,,,, , , tokensOwed0, tokensOwed1] = positionDetails;
-      
-      // Get the token decimals for formatting
-      const token0Decimals = pool.token0.decimals;
-      const token1Decimals = pool.token1.decimals;
-      
-      // Convert tokensOwed to strings with proper decimals
-      const fees0 = formatUnits(tokensOwed0, token0Decimals);
-      const fees1 = formatUnits(tokensOwed1, token1Decimals);
-      
-      // SPECIAL HANDLING FOR TESTING: Simulate realistic fee values if the real ones are too small
-      // This is for UI demonstration only - should be removed in production
-      let simulatedFees0 = fees0;
-      let simulatedFees1 = fees1;
-      
-      // Check for specific positions and assign realistic demo values
-      if (tokenId === '953465') {
-        // For position 953465, simulate the uncollected fees shown in the screenshot
-        simulatedFees0 = '0.004'; // ~0.004 USDC
-        simulatedFees1 = '0.0002'; // ~0.0002 WETH
-        
-        console.log(`Using simulated fee values for position ${tokenId}: ${simulatedFees0} USDC, ${simulatedFees1} WETH`);
-      } else if (tokenId === '953427') {
-        // For position 953427, simulate a smaller amount of fees
-        simulatedFees0 = '0.0015'; // ~0.0015 USDC
-        simulatedFees1 = '0.000008'; // ~0.000008 WETH
-        
-        console.log(`Using simulated fee values for position ${tokenId}: ${simulatedFees0} USDC, ${simulatedFees1} WETH`);
-      } else if (parseFloat(fees0) < 0.0001 && parseFloat(fees1) < 0.0001) {
-        // For other positions with very low fees, simulate some realistic but small values
-        // Scale fees based on position liquidity for more realism
-        const liquidityFactor = parseFloat(positions.find(p => p.id === tokenId)?.liquidity || '0') / 1e12;
-        const liquidityScale = Math.max(0.1, Math.min(10, liquidityFactor));
-        
-        simulatedFees0 = (0.001 * liquidityScale).toFixed(6);
-        simulatedFees1 = (0.000005 * liquidityScale).toFixed(9);
-        
-        console.log(`Using scaled simulated fee values for position ${tokenId} based on liquidity: ${simulatedFees0}, ${simulatedFees1}`);
-      }
-      
-      console.log('Unclaimed fees for position', tokenId, {
-        actualFees: { token0: fees0, token1: fees1 },
-        simulatedFees: { token0: simulatedFees0, token1: simulatedFees1 }
+        account: address,
       });
-      
-      // USE SIMULATED VALUES FOR DEMONSTRATION IF ENABLED
-      const useSimulatedFees = true; // Set to true for demonstration, false for production
-      
+
+      const [owed0, owed1] = result as unknown as [bigint, bigint];
       return {
-        token0: useSimulatedFees ? simulatedFees0 : fees0,
-        token1: useSimulatedFees ? simulatedFees1 : fees1
+        token0: formatUnits(owed0, pool.token0.decimals),
+        token1: formatUnits(owed1, pool.token1.decimals),
       };
     } catch (error) {
-      console.error('Error fetching unclaimed fees:', error);
-      
-      // If there's an error, still return simulated data for demonstration
-      if (tokenId === '953465') {
-        return { 
-          token0: '0.004', // ~0.004 USDC
-          token1: '0.0002'  // ~0.0002 WETH
-        };
-      }
-      
+      console.error('Error fetching unclaimed fees (static collect):', error);
       return { token0: '0', token1: '0' };
     }
   };
 
   // Calculate USD value of the position's uncollected fees
-  const calculateFeesUSDValue = (fees0: string, fees1: string, isToken0Stable: boolean, isToken1Stable: boolean): string => {
+  const calculateFeesUSDValue = (fees0: string, fees1: string, isToken0Stable: boolean, isToken1Stable: boolean, ethUsd: number = ethPrice): string => {
     const fee0 = parseFloat(fees0);
     const fee1 = parseFloat(fees1);
     
@@ -1035,13 +902,13 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
     
     if (isToken0Stable) {
       // Token0 is a stablecoin (e.g., USDC)
-      feesUSDValue = fee0 + (fee1 * ethPrice);
+      feesUSDValue = fee0 + (fee1 * ethUsd);
     } else if (isToken1Stable) {
       // Token1 is a stablecoin
-      feesUSDValue = fee1 + (fee0 * ethPrice);
+      feesUSDValue = fee1 + (fee0 * ethUsd);
     } else {
       // If neither token is a stablecoin, make a reasonable estimate
-      feesUSDValue = (fee0 * ethPrice) + fee1;
+      feesUSDValue = (fee0 * ethUsd) + fee1;
     }
     
     // Format to display with 5 decimal places but convert to a fixed string with 2 for larger values
@@ -1060,8 +927,9 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
     setSuccess(null);
     
     try {
-      // Address of the Uniswap V3 NonfungiblePositionManager
-      const positionManagerAddress = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
+      // Address of the Uniswap V3 NonfungiblePositionManager (chain-aware)
+      const positionManagerAddress = (POSITION_MANAGER_ADDRESSES[chainId] ||
+        POSITION_MANAGER_ADDRESSES[1]) as Address;
       
       // Create collect params
       const params = {
@@ -1110,6 +978,7 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
       
       if (receipt.status === 'success') {
         setSuccess(`Successfully collected fees from position ${position.id}`);
+        addTransaction(address, hash, chainId, `Collect fees #${position.id}`);
         // Refresh positions list to update the UI
         fetchPositions();
         // Notify parent of success
@@ -1123,13 +992,6 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
     } finally {
       setCollectingFees(false);
     }
-  };
-
-  // Calculate percentage for fee display
-  const calculatePercentage = (tokenValue: number, totalValue: number): string => {
-    if (totalValue === 0) return '0.00';
-    const percentage = (tokenValue / totalValue) * 100;
-    return percentage.toFixed(2);
   };
 
   return (
@@ -1168,7 +1030,27 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
                       <span className="label">Price Range:</span>
                       <span className="value">{formatPriceRange(position.tickLower, position.tickUpper, pool)}</span>
                     </div>
-                    
+
+                    {(() => {
+                      const bar = getRangeBarData(position, pool);
+                      if (!bar) return null;
+                      return (
+                        <div className="range-bar-wrap">
+                          <div className={`range-bar ${position.inRange ? 'in-range' : 'out-of-range'}`}>
+                            <div
+                              className="range-bar-marker"
+                              style={{ left: `${bar.pct}%` }}
+                              title={`Aktualna cena: ${fmtRangeBarValue(bar.cur)}`}
+                            />
+                          </div>
+                          <div className="range-bar-labels">
+                            <span>{fmtRangeBarValue(bar.lo)}</span>
+                            <span>{fmtRangeBarValue(bar.hi)}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <div className="position-value">
                       <span className="label">Total Value:</span>
                       <span className="value">${calculatePositionValue(position, pool)}</span>
@@ -1212,40 +1094,59 @@ const MyPositions: FC<MyPositionsProps> = ({ pool, poolAddress, onSuccess }) => 
                         <span>${position.unclaimedFeesUSD}</span>
                       </div>
                       
-                      <div className="fees-tokens">
-                        <div className="token-amount">
-                          <div className="token-with-value">
-                            <span className="label">{position.token0}:</span>
-                            <span className="value">
-                              {parseFloat(position.unclaimedFees0) > 0.001 
-                                ? parseFloat(position.unclaimedFees0).toFixed(3) 
-                                : parseFloat(position.unclaimedFees0).toFixed(6)}
-                            </span>
-                          </div>
-                          {position.token0.includes('USD') && (
-                            <div className="token-percentage">
-                              {calculatePercentage(parseFloat(position.unclaimedFees0), parseFloat(position.unclaimedFeesUSD))}%
+                      {(() => {
+                        const { pct0, pct1 } = feePercentages(position);
+                        return (
+                          <div className="fees-tokens">
+                            <div className="token-amount">
+                              <div className="token-with-value">
+                                <span className="label">{position.token0}:</span>
+                                <span className="value">
+                                  {parseFloat(position.unclaimedFees0) > 0.001
+                                    ? parseFloat(position.unclaimedFees0).toFixed(3)
+                                    : parseFloat(position.unclaimedFees0).toFixed(6)}
+                                </span>
+                              </div>
+                              <div className="token-percentage">{pct0}%</div>
                             </div>
-                          )}
-                        </div>
-                        <div className="token-amount">
-                          <div className="token-with-value">
-                            <span className="label">{position.token1}:</span>
-                            <span className="value">
-                              {parseFloat(position.unclaimedFees1) > 0.001
-                                ? parseFloat(position.unclaimedFees1).toFixed(3)
-                                : parseFloat(position.unclaimedFees1).toFixed(6)}
-                            </span>
-                          </div>
-                          {position.token1.includes('ETH') && (
-                            <div className="token-percentage">
-                              {calculatePercentage(parseFloat(position.unclaimedFees1) * ethPrice, parseFloat(position.unclaimedFeesUSD))}%
+                            <div className="token-amount">
+                              <div className="token-with-value">
+                                <span className="label">{position.token1}:</span>
+                                <span className="value">
+                                  {parseFloat(position.unclaimedFees1) > 0.001
+                                    ? parseFloat(position.unclaimedFees1).toFixed(3)
+                                    : parseFloat(position.unclaimedFees1).toFixed(6)}
+                                </span>
+                              </div>
+                              <div className="token-percentage">{pct1}%</div>
                             </div>
-                          )}
-                        </div>
-                      </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                     
+                    {(() => {
+                      const adv = adviseFor(position);
+                      if (!adv) return null;
+                      const ethT0 = (pool.token0.symbol || '').includes('ETH');
+                      const usdAt = (t: number) => {
+                        const raw = Math.pow(1.0001, t) * Math.pow(10, pool.token0.decimals - pool.token1.decimals);
+                        return (ethT0 ? raw : 1 / raw).toLocaleString('en-US', { maximumFractionDigits: 0 });
+                      };
+                      const lo = ethT0 ? adv.suggestion.tickLower : adv.suggestion.tickUpper;
+                      const hi = ethT0 ? adv.suggestion.tickUpper : adv.suggestion.tickLower;
+                      return (
+                        <div className={`advisor-line advisor-${adv.action.toLowerCase()}`}>
+                          <div>{adviceLabel[adv.action]}</div>
+                          <div className="advisor-detail">
+                            sugerowany zakres: ${usdAt(lo)}–${usdAt(hi)} (±{adv.suggestion.widthPct.toFixed(1)}%)
+                            {adv.paybackDays !== null && isFinite(adv.paybackDays) && (
+                              <> · koszt ${adv.costUsd.toFixed(2)} zwróci się z fee w ~{adv.paybackDays.toFixed(1)} dnia</>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <div className="position-actions">
                       <button 
                         className="primary-button"

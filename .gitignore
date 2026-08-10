@@ -3,18 +3,29 @@ node_modules/
 /.pnp
 .pnp.js
 
-# Environment Variables
+# Environment Variables — sekrety NIE trafiają do repo; .env.example (szablon
+# bez wartości) MUSI zostać w repo, więc nie jest tu wykluczony.
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
-.env.example
 
 # Build files
 /build
 /dist
 .cache/
+public/bundle.js*
+
+# HOMOS: dane robocze / cache / stan bota — regenerowalne, nie do repo
+data/cache/
+data/llama/
+.agent/
+.bot/
+backtest/results/
+
+# Legacy backupy tworzone w trakcie sesji AI (np. legacy-AddLiquidity.tsx.bak)
+legacy-*.bak
 
 # IDE and Editor files
 .idea/

@@ -2,6 +2,7 @@ import React, { FC, useState } from 'react';
 import { useAccount, usePublicClient, useWalletClient, useChainId } from 'wagmi';
 import { Pool } from '@uniswap/v3-sdk';
 import { Address } from 'viem';
+import { addTransaction } from '../TransactionHistory';
 
 interface RemoveLiquidityProps {
   pool: Pool;
@@ -89,8 +90,7 @@ const RemoveLiquidity: FC<RemoveLiquidityProps> = ({ pool, onSuccess }) => {
         const liquidityToRemove = BigInt(liquidity.toString()) * BigInt(removePercentage) / BigInt(100);
         
         // Prepare transaction
-        // @ts-ignore - We're prioritizing functionality over type safety
-        const txData = prepareRemoveLiquidityTransaction(
+        const txData = await prepareRemoveLiquidityTransaction(
           positionId,
           liquidityToRemove.toString(),
           slippageTolerance,
@@ -111,6 +111,7 @@ const RemoveLiquidity: FC<RemoveLiquidityProps> = ({ pool, onSuccess }) => {
         
         if (receipt.status === 'success') {
           setSuccess('Liquidity removed successfully!');
+          addTransaction(address, hash, chainId, `Remove ${removePercentage}% liquidity #${positionId}`);
           // Reset form
           setPositionId('');
           setRemovePercentage(100);

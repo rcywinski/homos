@@ -1,6 +1,5 @@
 import React, { FC, useEffect, useState } from 'react';
 import { useAccount, usePublicClient, useWalletClient } from 'wagmi';
-import { formatEther } from 'viem';
 import {
   WETH,
   USDC,
@@ -35,6 +34,18 @@ const UniswapPool: FC<UniswapPoolProps> = ({ initialPool, initialAddress }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>('');
   const [isCreatingPool, setIsCreatingPool] = useState(false);
+
+  // Raw pool liquidity (L) is not a token amount — it isn't denominated in
+  // ETH, USD, or anything a user recognizes, so show it as a plain scientific
+  // number instead of the misleading "X ETH" the legacy code printed.
+  const formatLiquidityScientific = (value: bigint): string => {
+    const negative = value < 0n;
+    const digits = (negative ? -value : value).toString();
+    if (digits === '0') return '0';
+    const exponent = digits.length - 1;
+    const mantissa = digits.length > 1 ? `${digits[0]}.${digits.slice(1, 3)}` : digits;
+    return `${negative ? '-' : ''}${mantissa}e${exponent}`;
+  };
 
   const calculatePrice = (pool: Pool): number | null => {
     try {
@@ -194,9 +205,9 @@ const UniswapPool: FC<UniswapPoolProps> = ({ initialPool, initialAddress }) => {
             </div>
 
             <div className="pool-liquidity">
-              <span className="label">Liquidity:</span>
+              <span className="label">Active liquidity (L):</span>
               <span className="value">
-                {formatEther(BigInt(pool.liquidity.toString()))} ETH
+                {formatLiquidityScientific(BigInt(pool.liquidity.toString()))}
               </span>
             </div>
 

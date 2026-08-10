@@ -3,6 +3,7 @@ import { Pool, FeeAmount, TickMath, TICK_SPACINGS } from '@uniswap/v3-sdk';
 import { createPublicClient, http, createWalletClient, custom, PublicClient, WalletClient, Address, encodeFunctionData, decodeFunctionResult } from 'viem';
 import { sepolia, mainnet } from 'wagmi/chains';
 import JSBI from 'jsbi';
+import { sqrtPriceX96ToHumanPrice } from './v3math';
 import { ethers } from 'ethers';
 
 // Token Addresses
@@ -172,6 +173,7 @@ export const getOrCreatePool = async (
     // Pool doesn't exist, create it
     const factoryAddress = POOL_FACTORY_ADDRESS;
     const account = walletClient.account;
+    if (!account) throw new Error('Wallet account not available');
 
     // Sort tokens in ascending order
     let sortedTokens: [Token, Token];
@@ -183,6 +185,8 @@ export const getOrCreatePool = async (
 
     // Create pool via Uniswap V3 factory
     const hash = await walletClient.writeContract({
+      chain: sepolia,
+      account,
       abi: POOL_FACTORY_ABI,
       address: factoryAddress as `0x${string}`,
       functionName: 'createPool',
@@ -207,7 +211,7 @@ export const getOrCreatePool = async (
     // Initialize the pool with a price
     // For simplicity, we'll use a default price here
     // In a real app, you'd want to use a price oracle or let the user specify
-    const sqrtPriceX96 = JSBI.BigInt('792281625142643375935439503360'); // sqrt(1500) * 2^96
+    const sqrtPriceX96 = 792281625142643375935439503360n; // placeholder init price (test pool only)
 
     const initHash = await walletClient.writeContract({
       chain: sepolia,
@@ -221,10 +225,7 @@ export const getOrCreatePool = async (
     await publicClient.waitForTransactionReceipt({ hash: initHash });
 
     // Create a new Pool instance
-    const poolState = await getPoolState(publicClient, poolAddress, token0, token1);
-    if (!poolState) {
-      throw new Error('Failed to get pool state after creation');
-    }
+    const poolState = await getPoolPrice(publicClient, poolAddress);
 
     const createdPool = new Pool(
       token0,
@@ -310,31 +311,53 @@ export const NETWORKS = {
       }
     }
   },
+  BASE: {
+    chainId: 8453,
+    name: 'Base',
+    poolFactoryAddress: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD' as Address,
+    tokens: {
+      WETH: {
+        address: '0x4200000000000000000000000000000000000006' as Address,
+        decimals: 18,
+        symbol: 'WETH'
+      },
+      USDC: {
+        address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as Address,
+        decimals: 6,
+        symbol: 'USDC'
+      },
+      cbBTC: {
+        address: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf' as Address,
+        decimals: 8,
+        symbol: 'cbBTC'
+      }
+    }
+  },
   SEPOLIA: {
     chainId: 11155111,
     name: 'Sepolia',
-    poolFactoryAddress: POOL_FACTORY_ADDRESS,
+    poolFactoryAddress: POOL_FACTORY_ADDRESS as Address,
     tokens: {
       WETH: {
-        address: WETH.address,
-        decimals: WETH.decimals,
-        symbol: WETH.symbol
+        address: WETH_ADDRESS as Address,
+        decimals: 18,
+        symbol: 'WETH'
       },
       USDC: {
-        address: USDC.address,
-        decimals: USDC.decimals,
-        symbol: USDC.symbol
+        address: USDC_ADDRESS as Address,
+        decimals: 6,
+        symbol: 'USDC'
       },
       USDT: {
-        address: USDT.address,
-        decimals: USDT.decimals,
-        symbol: USDT.symbol
+        address: USDT_ADDRESS as Address,
+        decimals: 6,
+        symbol: 'USDT'
       }
     }
   }
-} as const;
+};
 
-export type NetworkConfig = typeof NETWORKS.MAINNET | typeof NETWORKS.SEPOLIA;
+export type NetworkConfig = { chainId: number; name: string; poolFactoryAddress: Address; tokens: Record<string, { address: Address; decimals: number; symbol: string }> };
 
 // Update getExistingPool to accept networkConfig
 export const getExistingPool = async (
@@ -409,37 +432,20 @@ export const calculatePoolPrice = (
   token0Decimals: number,
   token1Decimals: number,
   isWethToken0: boolean,
-  chainId: number = 1 // Default to mainnet
+  chainId: number = 1
 ): number => {
   try {
-    // For Sepolia testnet, return a fixed price instead of attempting to calculate
-    if (chainId === 11155111) { // Sepolia chain ID
-      // Use hardcoded value to represent current ETH price (~$1,900)
-      return isWethToken0 ? 1900 : 1/1900;
-    }
-    
-    // For mainnet, use the actual calculation
-    // Get sqrtPriceX96 as a regular number
-    const sqrtPriceFloat = Number(sqrtPriceX96) / Math.pow(2, 96);
-    
-    // Square it to get the actual price ratio between token1/token0
-    const rawPrice = Math.pow(sqrtPriceFloat, 2);
-    
-    // Adjust for decimal differences
-    const decimalAdjustment = Math.pow(10, token0Decimals - token1Decimals);
-    const adjustedPrice = rawPrice * decimalAdjustment;
-    
-    // Handle WETH direction - if WETH is token0, take inverse
-    return isWethToken0 ? 1 / adjustedPrice : adjustedPrice;
+    // Exact-at-display-precision conversion (see v3math.ts).
+    // No hardcoded prices, no chain special-casing: Sepolia pools now show
+    // their REAL (test) price instead of a fake $1,900.
+    const price = sqrtPriceX96ToHumanPrice(sqrtPriceX96, token0Decimals, token1Decimals);
+    // Preserve the legacy return orientation (callers depend on it):
+    // the function returns "WETH per quote token" (a small number, e.g.
+    // 0.0003 WETH per USDC) regardless of token order.
+    // price = token1 per token0 (human units).
+    return isWethToken0 ? 1 / price : price;
   } catch (error) {
     console.error('Error calculating pool price:', error);
-    console.error('Input values:', {
-      sqrtPriceX96: sqrtPriceX96.toString(),
-      token0Decimals,
-      token1Decimals,
-      isWethToken0,
-      chainId
-    });
     return 0;
   }
 };

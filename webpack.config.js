@@ -42,7 +42,9 @@ module.exports = {
       "process": false
     },
     alias: {
-      'process/browser': require.resolve('process/browser.js')
+      'process/browser': require.resolve('process/browser.js'),
+      // Optional react-native dependency of @metamask/sdk — not needed in browser
+      '@react-native-async-storage/async-storage': false
     }
   },
   plugins: [

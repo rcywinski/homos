@@ -62,7 +62,7 @@ const LiquidityManager: FC<LiquidityManagerProps> = ({ pool, poolAddress }) => {
       </div>
       
       {/* Render the appropriate component based on the active tab */}
-      {activeTab === 'add' && <AddLiquidity pool={pool} onSuccess={handleSuccess} />}
+      {activeTab === 'add' && <AddLiquidity pool={pool} poolAddress={poolAddress} onSuccess={handleSuccess} />}
       
       {activeTab === 'remove' && <RemoveLiquidity pool={pool} onSuccess={handleSuccess} />}
       

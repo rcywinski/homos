@@ -1,5 +1,5 @@
-import { createConfig } from 'wagmi';
-import { mainnet, sepolia } from 'wagmi/chains';
+import { createConfig, http } from 'wagmi';
+import { mainnet, sepolia, base } from 'wagmi/chains';
 import { getDefaultConfig } from 'connectkit';
 import { createPublicClient, http as viem_http, createWalletClient } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -23,7 +23,12 @@ export const config = createConfig(
     appDescription: "Market Making Bot for Uniswap V3",
     appUrl: "https://homos.finance", // your app's url
     appIcon: "https://homos.finance/logo.png", // your app's icon, no bigger than 1024x1024px (max. 1MB)
-    chains: [mainnet, sepolia]
+    chains: [mainnet, base, sepolia],
+    transports: {
+      [mainnet.id]: http('https://ethereum-rpc.publicnode.com'),
+      [base.id]: http('https://base-rpc.publicnode.com'),
+      [sepolia.id]: http()
+    }
   }),
 );
 
