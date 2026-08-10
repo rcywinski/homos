@@ -35,6 +35,7 @@ const WHITELIST: Record<string, string> = {
   'test:math': 'test:math',
   'fetch:llama': 'fetch:llama',
   'backtest:selection': 'backtest:selection',
+  'pipeline': 'pipeline',
 };
 
 for (const d of [AGENT, QUEUE, DONE, LOGS]) fs.mkdirSync(d, { recursive: true });

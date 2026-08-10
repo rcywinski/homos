@@ -16,7 +16,8 @@
     "bot:server": "tsx bot/server.ts",
     "build": "webpack --mode production --config webpack.config.js",
     "fetch:llama": "tsx scripts/fetch-llama-history.ts",
-    "backtest:selection": "tsx backtest/selection.ts"
+    "backtest:selection": "tsx backtest/selection.ts",
+    "pipeline": "tsx scripts/pipeline.ts"
   },
   "author": "HOMO$",
   "license": "ISC",

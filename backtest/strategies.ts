@@ -126,7 +126,7 @@ export const ALL_STRATEGIES: Strategy[] = [
   passiveWide,
   fixedNaive(0.05),
   fixedNaive(0.15),
-  volAdaptive({ k: 2, horizonDays: 7, hysteresisSec: 6 * 3600, maxPaybackDays: 7 }),
-  volAdaptive({ k: 3, horizonDays: 7, hysteresisSec: 12 * 3600, maxPaybackDays: 5 }),
-  volAdaptive({ k: 1.5, horizonDays: 3, hysteresisSec: 2 * 3600, maxPaybackDays: 10 }),
+  volAdaptive({ k: 2, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }), // zwycięzca sweepu base-030
+  volAdaptive({ k: 2, horizonDays: 7, hysteresisSec: 12 * 3600, maxPaybackDays: 7 }),
+  volAdaptive({ k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
 ];
