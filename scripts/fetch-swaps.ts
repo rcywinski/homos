@@ -17,7 +17,7 @@ import * as path from 'path';
 // ---------------------------------------------------------------------------
 interface PoolCfg {
   id: string;
-  chain: 'mainnet' | 'base';
+  chain: 'mainnet' | 'base' | 'arbitrum';
   address: string;
   feeBps: number; // 500 = 0.05%
   /** czy WETH/ETH-podobny token jest token0 (orientacja ceny) */
@@ -41,10 +41,10 @@ const POOLS: PoolCfg[] = [
     feeBps: 3000, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 90,
   },
   {
-    id: 'base-weth-usdc-030',
+    id: 'base-weth-usdc-030-365d',
     chain: 'base',
     address: '0x6c561B446416E1A00E8E93E221854d6eA4171372',
-    feeBps: 3000, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 90,
+    feeBps: 3000, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365,
   },
   {
     id: 'base-weth-usdc-005',
@@ -57,6 +57,23 @@ const POOLS: PoolCfg[] = [
     chain: 'base',
     address: '', // uzupełniane automatycznie przez lookup factory przy pierwszym uruchomieniu
     feeBps: 500, ethIsToken0: false, token0Decimals: 8, token1Decimals: 18, days: 90,
+  },
+  {
+    // A3: rok danych drugiej najlepszej puli (skorelowana). Kopia base-cbbtc-weth-005, days: 365.
+    id: 'base-cbbtc-weth-005-365d',
+    chain: 'base',
+    address: '', // ten sam lookup cbBTC/WETH przez factory
+    feeBps: 500, ethIsToken0: false, token0Decimals: 8, token1Decimals: 18, days: 365,
+  },
+  {
+    // A4: egzotyk v3 do werdyktu majors-vs-egzotyki. DORY-USDC (Arbitrum 1%) z rankingu
+    // to uniswap-V4 (singleton PoolManager, inny Swap event, brak adresu przez v3 factory)
+    // — NIE do pobrania tym v3-skryptem. Substytut: WTAO-WETH mainnet 1% (79% apyBase,
+    // najwyższy v3 egzotyk w universe.json). Decimals i adres zweryfikowane on-chain.
+    id: 'mainnet-wtao-weth-100',
+    chain: 'mainnet',
+    address: '0x433a00819c771b33fa7223a5b3499b24fbcd1bbc',
+    feeBps: 10000, ethIsToken0: false, token0Decimals: 9, token1Decimals: 18, days: 90,
   },
 ];
 
@@ -80,11 +97,21 @@ const RPC: Record<string, string[]> = {
     'https://base-mainnet.public.blastapi.io',
     'https://base-rpc.publicnode.com',
   ],
+  arbitrum: [
+    ...(process.env.RPC_ARBITRUM ? [process.env.RPC_ARBITRUM] : []),
+    'https://arbitrum.drpc.org',
+    'https://arbitrum.llamarpc.com',
+    'https://1rpc.io/arb',
+    'https://arbitrum-one.public.blastapi.io',
+    'https://arbitrum-one-rpc.publicnode.com',
+  ],
 };
-const BLOCK_TIME: Record<string, number> = { mainnet: 12, base: 2 };
+// Arbitrum ~0.25s/blok (dla interpolacji block→ts i okna dni-wstecz).
+const BLOCK_TIME: Record<string, number> = { mainnet: 12, base: 2, arbitrum: 0.25 };
 const FACTORY: Record<string, string> = {
   mainnet: '0x1F98431c8aD98523631AE4a59f267346ea31F984',
   base: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD',
+  arbitrum: '0x1F98431c8aD98523631AE4a59f267346ea31F984', // ten sam v3 factory co mainnet
 };
 // cbBTC/WETH Base — tokeny do lookupu adresu puli
 const BASE_CBBTC = '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf';
