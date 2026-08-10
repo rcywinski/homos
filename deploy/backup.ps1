@@ -1,4 +1,4 @@
-# deploy/backup.ps1 — codzienny backup stanu HOMOS (Windows serwer, 24/7).
+﻿# deploy/backup.ps1 — codzienny backup stanu HOMOS (Windows serwer, 24/7).
 # Kopiuje .bot/*.json (stan bota, propozycje) i przyszłą bazę SQLite (księga
 # transakcji/podatkowa — patrz PLAN.md) do %USERPROFILE%\HomosBackup\<data>\.
 # Rejestracja w Harmonogramie zadań Windows: patrz deploy/setup-windows.md §11.

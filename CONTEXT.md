@@ -181,6 +181,46 @@ Ta sesja prowadzi odtąd operacje git w repo (logiczne commity zmian od innych s
 - **`npm run fetch:llama` — WYKONANE (exit 0, zero 429)**: uniwersum 240 pul, wszystkie historie już na dysku → resume pominął całość, `Gotowe → data/llama/`. Pokrycie 240/240.
 - **Uszczelnienie `.gitignore`**: pod `data/` leżał NIE-ignorowany `data/llama-bundle.tgz` (ignorowane były tylko `data/cache/` i `data/llama/`) — reguła zmieniona na całe `data/`. Zweryfikowane: `git add -A` nie łapie już nic z `data/`.
 
+### 2026-08-10 — Sesja Windows: serwer 24/7 uruchomiony (tryb OBSERWUJ)
+Wykonano `TASKS-WINDOWS.md` (kroki 1–10) na stacjonarnym Windows użytkownika,
+repo w `C:\Projects\homos`. Szczegóły w TASKS-WINDOWS.md, skrót tutaj:
+
+- **Środowisko**: Node v24.18.0 (nowszy niż wymagane v22.x — działa poprawnie,
+  nie downgradowano), `npm ci`, `.env` utworzony (BOT_WATCH_ADDRESS z sekcji
+  wyżej, BOT_API_PORT=8787, BOT_API_TOKEN losowy 32-znak, TG_TOKEN/PRIVATE_KEY
+  puste — zero kluczy portfela na serwerze, zgodnie z trybem OBSERWUJ).
+- **Test ręczny**: `.bot/state.json` — ceny 3 pul w normie (ETH ~$1905–1910),
+  wykryte znane pozycje #953427/#953465 (in range, zgodne z Sesją 2b/2c).
+- **3 bugi znalezione i naprawione podczas testu na żywym Windows** (nie
+  wychodziły na Macu/kontenerze):
+  1. `bot/observer.ts` `saveState()` crashował na pierwszym cyklu statystyk —
+     `JSON.stringify` nie serializuje `BigInt` (`PoolStats.lastSqrtP`). Fix:
+     replacer bigint→string.
+  2. `deploy/ecosystem.config.js` (`script: 'npx'`) crashuje pod pm2 na
+     Windows — `npx.cmd` uruchamiany przez interpreter node zamiast shell.
+     Fix: script wskazuje bezpośrednio `node_modules/tsx/dist/cli.mjs`.
+  3. `deploy/backup.ps1` i `deploy/deploy.ps1` zapisane UTF-8 bez BOM — Windows
+     PowerShell 5.1 (nie pwsh) łamie się na polskich znakach bez BOM
+     (`Missing string terminator`). Fix: przezapisane UTF-8 z BOM.
+- **pm2**: `homos-bot` + `homos-server` online (0 restartów), `pm2 save` +
+  `pm2-startup install` (autostart po reboocie).
+- **Zasilanie**: powercfg standby/hibernate = 0 na AC. BIOS "Restore on AC
+  Power" — POZA zasięgiem automatyzacji, do ustawienia ręcznie przez
+  użytkownika przy najbliższym boocie.
+- **Firewall — NIEDOKOŃCZONE, wymaga akcji użytkownika**: reguła
+  (port 8787, LAN 192.168.1.0/24 + VPN 10.8.0.0/24) skonsultowana i
+  zatwierdzona, ale sesja nie ma uprawnień administratora (New-NetFirewallRule
+  → Odmowa dostępu). Do wykonania ręcznie jako Administrator — komenda w
+  TASKS-WINDOWS.md krok 7. Dopóki reguła nie powstanie, dostęp spoza
+  localhost może być zablokowany domyślną polityką Windows Firewall.
+- **Backup**: zadanie Harmonogramu "HOMOS Daily Backup" (3:00 codziennie),
+  przetestowane ręcznie i przez harmonogram — działa (`LastTaskResult 0`).
+- **IP serwera w LAN**: `192.168.1.8`, port `8787` — test z Maca
+  (`http://192.168.1.8:8787/health`) możliwy po ręcznym dokończeniu firewalla.
+- **NASTĘPNY KROK**: użytkownik — (a) reguła firewalla jako Administrator,
+  (b) "Restore on AC Power" w BIOS, (c) test `http://192.168.1.8:8787/health`
+  z Maca/iPhone'a przez VPN.
+
 ### 2026-08-10 — Sesja planistyczna
 - Przeanalizowano legacy (`src/utils/liquidityManagement.ts`, `uniswap.ts`, README, docs) — zdiagnozowano przyczyny rozjazdu wyliczeń z Uniswap (float zamiast bigint, złe wzory, hardkody, brak testów).
 - Ustalono parametry projektu z właścicielem (kapitał, sieć TBD, hedging etapami, pół-auto).

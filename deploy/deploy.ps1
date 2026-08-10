@@ -1,4 +1,4 @@
-# deploy/deploy.ps1 — wdrożenie/aktualizacja HOMOS na serwerze Windows.
+﻿# deploy/deploy.ps1 — wdrożenie/aktualizacja HOMOS na serwerze Windows.
 # Uruchamiaj z katalogu głównego repo (tam gdzie jest package.json):
 #   cd C:\Sciezka\Do\homos
 #   .\deploy\deploy.ps1

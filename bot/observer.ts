@@ -104,16 +104,18 @@ const live: Record<string, PoolLive> = {};
 let positions: WatchedPosition[] = [];
 let proposals: Proposal[] = fs.existsSync(PROPOSALS_PATH) ? JSON.parse(fs.readFileSync(PROPOSALS_PATH, 'utf8')) : [];
 
+const bigintReplacer = (_key: string, value: unknown) => (typeof value === 'bigint' ? value.toString() : value);
+
 const saveState = () => {
   fs.writeFileSync(
     STATE_PATH,
     JSON.stringify(
       { updatedAt: new Date().toISOString(), mode: 'OBSERVE', watch: WATCH_ADDRESS, pools: Object.values(live), positions, proposals: proposals.filter((p) => p.status === 'open') },
-      null, 2
+      bigintReplacer, 2
     )
   );
 };
-const saveProposals = () => fs.writeFileSync(PROPOSALS_PATH, JSON.stringify(proposals, null, 2));
+const saveProposals = () => fs.writeFileSync(PROPOSALS_PATH, JSON.stringify(proposals, bigintReplacer, 2));
 
 async function telegram(text: string) {
   const t = process.env.TG_TOKEN, c = process.env.TG_CHAT;
