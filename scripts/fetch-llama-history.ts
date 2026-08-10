@@ -53,9 +53,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   let done = 0;
   for (const p of universe) {
     const f = path.join(HIST, `${p.pool}.json`);
-    if (fs.existsSync(f)) {
+    // resume: pomijaj tylko pliki świeże (<24h) — codzienny pipeline ODŚWIEŻA starsze
+    const st = fs.statSync(f, { throwIfNoEntry: false });
+    if (st && Date.now() - st.mtimeMs < 24 * 3600 * 1000) {
       done++;
-      continue; // resume
+      continue;
     }
     let ok = false;
     for (let attempt = 0; attempt < 6 && !ok; attempt++) {

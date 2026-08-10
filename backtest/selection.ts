@@ -21,6 +21,7 @@ const OUT = path.join(__dirname, 'results');
 interface DayRow {
   date: string;
   apyBase: number | null;
+  il7d: number | null; // IL za trailing 7 dni, % (DefiLlama)
   tvlUsd: number;
 }
 interface PoolHist {
@@ -42,7 +43,7 @@ function load(): { pools: PoolHist[]; allDates: string[] } {
       const byDate = new Map<string, DayRow>();
       for (const r of j.series || []) {
         const date = String(r.timestamp).slice(0, 10);
-        byDate.set(date, { date, apyBase: r.apyBase ?? null, tvlUsd: r.tvlUsd ?? 0 });
+        byDate.set(date, { date, apyBase: r.apyBase ?? null, il7d: r.il7d ?? null, tvlUsd: r.tvlUsd ?? 0 });
         dateSet.add(date);
       }
       if (byDate.size >= 30) pools.push({ meta: j.meta, byDate, dates: [...byDate.keys()].sort() });
@@ -80,7 +81,8 @@ const isExotic = (sym: string) => {
   return !parts.every((t) => MAJORS.test(t));
 };
 
-function simulate(pools: PoolHist[], allDates: string[], pol: Policy) {
+function simulate(pools: PoolHist[], allDates: string[], pol: Policy, ilAdjusted = false) {
+  let ilCovered = 0, ilTotal = 0;
   const start = 30; // rozbieg na trailing
   let capital = 1.0;
   let held: string[] = [];
@@ -122,19 +124,26 @@ function simulate(pools: PoolHist[], allDates: string[], pol: Policy) {
     }
     held = target;
 
-    // wynik: forward apyBase z dnia D+1 (equal weight)
+    // wynik: forward apyBase z dnia D+1 (equal weight), opcjonalnie minus IL
     if (held.length) {
-      let dayApy = 0, n = 0;
+      let dayRet = 0, n = 0;
       for (const id of held) {
         const p = pools.find((x) => x.meta.pool === id)!;
         const row = p.byDate.get(dNext);
         if (row?.apyBase !== null && row?.apyBase !== undefined) {
-          dayApy += row.apyBase!;
+          let r = row.apyBase! / 100 / 365;
+          if (ilAdjusted) {
+            const il = row.il7d;
+            if (il !== null && il > 0) r -= il / 100 / 7; // dzienna rata IL z trailing 7d
+            ilCovered += il !== null ? 1 : 0;
+            ilTotal += 1;
+          }
+          dayRet += r;
           n++;
         }
       }
       if (n) {
-        const r = dayApy / n / 100 / 365;
+        const r = dayRet / n;
         capital *= 1 + r;
         daily.push(r);
       }
@@ -143,7 +152,9 @@ function simulate(pools: PoolHist[], allDates: string[], pol: Policy) {
 
   const days = daily.length;
   const feeAprPct = days ? (Math.pow(capital, 365 / days) - 1) * 100 : 0;
-  return { name: pol.name, feeAprPct, switches, days, finalCapital: capital };
+  const name = ilAdjusted ? pol.name + ' [minus IL]' : pol.name;
+  const ilCov = ilTotal ? ` il-cov ${((ilCovered / ilTotal) * 100).toFixed(0)}%` : '';
+  return { name: name + ilCov, feeAprPct, switches, days, finalCapital: capital };
 }
 
 (async () => {
@@ -167,6 +178,7 @@ function simulate(pools: PoolHist[], allDates: string[], pol: Policy) {
   const corePools = pools.filter((p) => CORE.includes(p.meta.symbol) && !isExotic(p.meta.symbol)).slice(0, 3);
 
   const results = policies.map((pol) => simulate(pools, allDates, pol));
+  for (const pol of policies) results.push(simulate(pools, allDates, pol, true));
 
   if (corePools.length) {
     const ids = corePools.map((p) => p.meta.pool);
