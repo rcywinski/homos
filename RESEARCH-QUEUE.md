@@ -13,12 +13,20 @@
   błędu puli. Wznowienie (resumable ze state.json) grzeje dalej — mija 40%+.
   Prawdziwa naprawa: `RPC_MAINNET=<klucz Alchemy/Infura>` w .env (skrypt to obsługuje).
 - [~] **base-weth-usdc-030-365d** — PEŁNY ROK tick-level najlepszej puli. W TOKU
-  (Claude Code, w tle; ~30–60 min, Base). Wpis w POOLS już był.
-  To fundament pod finalną kalibrację algorytmu zakresu → zaraz potem B1 (walk-forward).
+  (Claude Code, w tle). Wpis w POOLS był. Fundament pod B1 (walk-forward).
+  ⚠️ **WOLNO na darmowych RPC**: rok Base = ~15.77M bloków; głębokie archiwum
+  dławione (publicnode wymaga tokena, drpc limit 10000 bl.) → ~150 bloków/s ⇒
+  szacunkowo GODZINY, nie 30–60 min (to tempo zakłada porządny RPC). Leci dalej
+  (wznawialne ze state.json), ale **prawdziwa naprawa: `RPC_BASE=<klucz Alchemy/Infura>`
+  w .env** (skrypt to obsługuje — restart = natychmiastowy resume od nextBlock).
+  RPC_URL w .env jest pusty, więc nie ma czego użyć. Interim dla B1: można puścić
+  walk-forward na istniejących 90d (`base-weth-usdc-030`, ~2 okna przy 45/60d) —
+  decyzja analityka.
 - [ ] **base-cbbtc-weth-005-365d** — rok danych drugiej najlepszej puli
   (skorelowana). ✅ wpis w POOLS DOPISANY (kopia base-cbbtc-weth-005, days: 365,
   id `base-cbbtc-weth-005-365d`). Fetch ZAKOLEJKOWANY po base-030-365d (obie Base —
   unikam kontencji publicznych RPC Base przy dwóch rocznych fetchach naraz).
+  ⚠️ Ten sam problem głębokiego archiwum co A2 — bez `RPC_BASE` też potrwa godziny.
 - [~] **Egzotyki tick-level (werdykt majors vs egzotyki)** — CZĘŚCIOWO:
   - **DORY-USDC (Arbitrum 1%) to uniswap-V4** (universe.json: project=uniswap-v4,
     pool ae3c1ac2…, tokeny DORY 0x33b49f22…436ae / USDC natywny 0xaf88…5831).
