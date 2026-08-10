@@ -84,6 +84,31 @@
   szerokie pasywne biją HODL (±50% +1.72). Spójne z wcześniejszym "werdyktem martwej puli".
   Raport SVG: backtest/results/report.html (gitignored).
 
+  **DOMKNIĘTA TABELA 5 PUL (90d, kapitał $10k) — vs HODL % (dodatnie = bije HODL).**
+  Wszystkie pule ~90.1–90.3 dni. Swapy: mn-005 464k · mn-030 49k · base-005 1.86M ·
+  base-030 582k · cbbtc-005 323k. (run.ts per-pula, bo równolegle leciały fetche 365d/WTAO.)
+
+  | Strategia (vs HODL %) | mn-usdc-005 | mn-usdc-030 | base-usdc-005 | base-usdc-030 | base-cbbtc-005 |
+  |---|---|---|---|---|---|
+  | _HODL APR % (reżim)_ | _−30.4_ | _−31.5_ | _−29.8_ | _−29.5_ | _−7.2_ |
+  | Pasywny full-range | +0.33 | +0.35 | +0.51 | +0.40 | +0.19 |
+  | **Pasywny ±50%** | **+1.69** | **+1.72** | **+2.75** | +2.20 | +1.01 |
+  | Sztywny ±5% (naiwny) | −21.01 | −14.57 | −13.34 | −0.56 | −0.57 |
+  | Sztywny ±15% (naiwny) | −8.25 | −8.90 | +1.60 | +2.44 | **+2.76** |
+  | **Adapt k2 h24 pb7** | −1.94 | −5.86 | +1.94 | **+4.00** | +2.63 |
+  | Adapt k2 h12 pb7 | −3.44 | +0.17 | −6.17 | −2.42 | +2.63 |
+  | Adapt k3 h24 pb7 | −4.21 | −2.61 | −2.56 | +1.22 | +1.84 |
+
+  Fakty liczbowe (interpretacja → sesja analityczna):
+  - Najlepsza per pula: mn-005 → pasywny±50 (+1.69) · mn-030 → pasywny±50 (+1.72) ·
+    base-005 → pasywny±50 (+2.75) · base-030 → **adapt k2h24 (+4.00)** · cbbtc → sztywny±15 (+2.76).
+  - **cbBTC/WETH to jedyny łagodny reżim** (HODL −7.2% vs ~−30% reszta) i jedyne
+    DODATNIE bezwzględne APR (sztywny±15 +3.7%, adapt k2 +3.2%; maxDD ~6% vs ~26%).
+  - Gaz decyduje: aktywne wąskie działają na Base (gas$≈0), na mainnecie giną
+    (mn-005 ±5% naiwny −21.0 vs HODL, 34 reb / $272 gazu).
+  - Adapt k2 **h24 > h12** wszędzie poza mn-030 — spójne z wcześniejszym wnioskiem o histerezie.
+  Bramka F1 (bić HODL 50/50): przechodzi ≥1 strategia na KAŻDEJ z 5 pul.
+
 ## C. PO ANALIZACH (sesja Fable — interpretacja)
 
 - [ ] **ALGORITHM.md v1**: zamrożenie parametrów (selekcja: 7d+persyst.3d+majors;
