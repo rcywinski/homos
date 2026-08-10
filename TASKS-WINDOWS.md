@@ -39,15 +39,14 @@
 - [x] **6. Zasilanie**: `powercfg standby-timeout-ac`/`hibernate-timeout-ac` = 0
   (AC). Wznawianie po zaniku prądu (BIOS "Restore on AC Power") — POZA zasięgiem
   automatyzacji, użytkownik musi ustawić ręcznie w BIOS/UEFI.
-- [x] **7. Firewall**: reguła przygotowana i **skonsultowana z użytkownikiem**
-  (LAN 192.168.1.0/24 + VPN 10.8.0.0/24) — **NIE wykonana automatycznie**: sesja
-  nie ma uprawnień administratora (Odmowa dostępu), tworzenie reguł firewalla
-  wymaga elevacji/UAC. Użytkownik musi uruchomić ręcznie jako Administrator:
-  `New-NetFirewallRule -DisplayName "HOMOS API (LAN+VPN only)" -Direction Inbound -Protocol TCP -LocalPort 8787 -RemoteAddress 192.168.1.0/24,10.8.0.0/24 -Action Allow`
+- [x] **7. Firewall**: reguła **WYKONANA** (2026-08-10, sesja z uprawnieniami
+  administratora): `New-NetFirewallRule -DisplayName "HOMOS API (LAN+VPN only)"
+  -Direction Inbound -Protocol TCP -LocalPort 8787 -RemoteAddress
+  192.168.1.0/24,10.8.0.0/24 -Action Allow`. Zweryfikowano `Get-NetFirewallRule`
+  → RemoteAddress = {192.168.1.0/255.255.255.0, 10.8.0.0/255.255.255.0}.
 - [x] **8. Test z zewnątrz**: IP serwera w sieci LAN: **192.168.1.8**, port 8787.
-  Test z Maca (`http://192.168.1.8:8787/health`) możliwy dopiero po ręcznym
-  wykonaniu kroku 7 (firewall) przez użytkownika — obecnie ruch spoza localhost
-  może być blokowany domyślną polityką Windows Firewall.
+  Firewall gotowy (krok 7) — test `http://192.168.1.8:8787/health` z Maca/iPhone'a
+  przez LAN/VPN pozostaje do zrobienia przez użytkownika (poza zasięgiem tej sesji).
 - [x] **9. Backup**: zadanie Harmonogramu "HOMOS Daily Backup" (codziennie 3:00)
   zarejestrowane. **Trzeci napotkany i naprawiony bug**: `deploy/backup.ps1` i
   `deploy/deploy.ps1` były zapisane jako UTF-8 bez BOM — Windows PowerShell 5.1

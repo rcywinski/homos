@@ -9,6 +9,7 @@
  *  → stan do .bot/state.json (czyta go UI przez bot/server.ts),
  *  → nowe propozycje do .bot/proposals.json + log + (opcjonalnie) Telegram.
  */
+import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createPublicClient, http, fallback, PublicClient, formatUnits } from 'viem';
