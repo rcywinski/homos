@@ -6,12 +6,12 @@
 
 ## A. DANE DO POBRANIA (terminal Mac/Windows albo pipeline)
 
-- [~] **Refetch mainnet-usdc-weth-030 (pełne 90d)** — W TOKU (Claude Code, w tle;
-  stary stan skasowany, świeży start od bloku 25079057; warningi o archiwalnych
-  RPC to działający fallback). UWAGA: przebieg 1 padł na ~30.9% (FAILED — publiczne
-  RPC dławią archiwalne eth_getLogs na mainnecie), skrypt WYCHODZI Z KODEM 0 mimo
-  błędu puli. Wznowienie (resumable ze state.json) grzeje dalej — mija 40%+.
-  Prawdziwa naprawa: `RPC_MAINNET=<klucz Alchemy/Infura>` w .env (skrypt to obsługuje).
+- [x] **Refetch mainnet-usdc-weth-030 (pełne 90d)** — ✅ DONE (Claude Code):
+  100.0%, **49210 swapów, 90.3 dni**. Wymagało kilku wznowień (skrypt wychodzi 0
+  mimo FAILED przy dławieniu archiwalnym publicznych RPC; resume ze state.json
+  dograł resztę partiami). Uwaga na przyszłość: darmowe RPC dławią archiwum;
+  keyed Alchemy dodany do .env, ale to **free tier = limit 10 bloków/getLogs** —
+  do dużych zakresów potrzeba płatnego planu (patrz A2/A3).
 - [~] **base-weth-usdc-030-365d** — PEŁNY ROK tick-level najlepszej puli. W TOKU
   (Claude Code, w tle). Wpis w POOLS był. Fundament pod B1 (walk-forward).
   ⚠️ **WOLNO na darmowych RPC**: rok Base = ~15.77M bloków; głębokie archiwum
@@ -65,8 +65,24 @@
   (50× gaz), zmierzyć wpływ na APR (oczekiwane +1–2 p.p.).
 - [ ] **Egzotyki: pełny PnL tick-level** (po A4) vs cbBTC/majors — decyzja
   o sleeve egzotycznym (≤20% kapitału albo wcale).
-- [ ] **Refetch mainnet-030 90d → run.ts** — domknięcie tabeli 5 pul (kosmetyka;
-  werdykt "pula martwa" już pewny z 11 dni).
+- [x] **Refetch mainnet-030 90d → run.ts** — ✅ DONE (Claude Code). 49210 swapów,
+  90.3 dni. Okres SPADKOWY (HODL 50/50: −31.5% APR). Tabela (kapitał $10k):
+
+  | strategia | końcowa$ | APR% | vsHODL% | maxDD% | fees$ | gas$ | reb | inRng% |
+  |---|---|---|---|---|---|---|---|---|
+  | HODL 50/50 | 9,107 | −31.5 | 0.00 | 18.8 | 0 | 0 | 0 | 0 |
+  | Pasywny full-range | 9,139 | −30.5 | +0.35 | 20.8 | 73 | 0 | 0 | 100 |
+  | **Pasywny ±50%** | 9,264 | −26.6 | **+1.72** | 29.4 | 382 | 0 | 0 | 99 |
+  | Sztywny ±5% (naiwny) | 7,780 | −63.7 | **−14.57** | 30.7 | 2,698 | 240 | 30 | 100 |
+  | Sztywny ±15% (naiwny) | 8,297 | −53.0 | −8.90 | 28.3 | 979 | 40 | 5 | 100 |
+  | Adaptacyjna k=2 h=24 pb7 | 8,573 | −46.3 | −5.86 | 30.6 | 1,185 | 32 | 4 | 86 |
+  | Adaptacyjna k=2 h=12 pb7 | 9,122 | −31.0 | +0.17 | 27.5 | 694 | 16 | 2 | 98 |
+  | Adaptacyjna k=3 h=24 pb7 | 8,870 | −38.4 | −2.61 | 28.0 | 502 | 8 | 1 | 98 |
+
+  Fakt liczbowy (interpretacja → sesja analityczna): na mainnecie gaz $8/cykl masakruje
+  aktywne wąskie (±5% naiwny −14.6 vs HODL przy $240 gazu / 30 rebalansów); tylko
+  szerokie pasywne biją HODL (±50% +1.72). Spójne z wcześniejszym "werdyktem martwej puli".
+  Raport SVG: backtest/results/report.html (gitignored).
 
 ## C. PO ANALIZACH (sesja Fable — interpretacja)
 
