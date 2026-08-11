@@ -1,0 +1,6 @@
+{
+  "id": "fable-20260811-testmath2",
+  "task": "test:math",
+  "args": [],
+  "note": "Retest pętli kolejki po diagnozie odrzutu testmath: runner czyta pole 'task', nie 'script' (Fable-desktop, 2026-08-11 13:30)"
+}

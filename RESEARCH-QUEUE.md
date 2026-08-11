@@ -12,16 +12,11 @@
   dograł resztę partiami). Uwaga na przyszłość: darmowe RPC dławią archiwum;
   keyed Alchemy dodany do .env, ale to **free tier = limit 10 bloków/getLogs** —
   do dużych zakresów potrzeba płatnego planu (patrz A2/A3).
-- [~] **base-weth-usdc-030-365d** — PEŁNY ROK tick-level najlepszej puli. W TOKU
-  (Claude Code, w tle). Wpis w POOLS był. Fundament pod B1 (walk-forward).
-  ⚠️ **WOLNO na darmowych RPC**: rok Base = ~15.77M bloków; głębokie archiwum
-  dławione (publicnode wymaga tokena, drpc limit 10000 bl.) → ~150 bloków/s ⇒
-  szacunkowo GODZINY, nie 30–60 min (to tempo zakłada porządny RPC). Leci dalej
-  (wznawialne ze state.json), ale **prawdziwa naprawa: `RPC_BASE=<klucz Alchemy/Infura>`
-  w .env** (skrypt to obsługuje — restart = natychmiastowy resume od nextBlock).
-  RPC_URL w .env jest pusty, więc nie ma czego użyć. Interim dla B1: można puścić
-  walk-forward na istniejących 90d (`base-weth-usdc-030`, ~2 okna przy 45/60d) —
-  decyzja analityka.
+- [x] **base-weth-usdc-030-365d** — ✅ DONE (HyperSync, 11.08 ~09:45):
+  state nextBlock 49 791 594 > latest 49 791 593, pełny rok (1.88M swapów).
+  Grind RPC (150 bl/s, godziny) zastąpiony HyperSynciem (~17k bl/s, minuty) —
+  lekcja: darmowe RPC nie nadają się do rocznych fetchy. Fundament B1 wykorzystany
+  (walk-forwardy 45/60d zrobione i zinterpretowane, sekcja B + CONTEXT 11.08).
 - [x] **base-cbbtc-weth-005-365d** — ✅ DONE (Claude Code, **HyperSync ~20k bl/s,
   ~12 min**): **1 462 579 swapów**, pełny rok. ⚠️ **ORIENTACJA TOKENÓW POPRAWIONA**
   przed jakimkolwiek backtestem: cfg (POOLS + oba meta.json) miało odwrotnie
@@ -332,25 +327,26 @@
 > ultra-wąskiego LP na parach spiętych (LST-ETH, stable-stable): brak IL w
 > normalnych warunkach, koncentracja ×dziesiątki. Ukryte ryzyko: depeg (wąska
 > pozycja skupuje spadający token). Testujemy WŁASNYM silnikiem tick-level.
-- [ ] **A: dane — LISTA ZAKTUALIZOWANA po pełnym skanie (Fable, 11.08)**.
-  5 pul × 365d przez HyperSync (minuty). UWAGA: HyperSync-skrypt wymaga
-  jawnego adresu — adresy przez factory lookup RPC-skryptem albo eth_call;
-  KONIECZNIE zweryfikować token0/token1 przez `token0()` on-chain (lekcja cbBTC —
-  nie zgadywać orientacji z nazwy pary!):
-  1. **mainnet-dai-usdt-001** — top stable z rankingu (mean30d 7.4%,
-     v/tvl7d 16.3, TVL $1.3M; DAI d18/USDT d6). Mała pula — nasze $10k ≈ 0.8%
-     TVL, silnik i tak modeluje dodanie L.
-  2. **arbitrum-usdc-usdt-001** — tani gaz + v/tvl 9.7, mean30d 4.3%, TVL $1.4M
-     (pierwsza pula Arbitrum — infra w fetch-swaps gotowa; sprawdzić czy USDC
-     natywny 0xaf88… czy USDC.e!).
-  3. **mainnet-usdc-usdt-001** — KONTROLA (pierwotny plan): duża ($33M), ale
-     słaba w rankingu (mean30d 1.0%, v/tvl 2.7) — baza porównawcza dużej vs
-     małej puli stable.
-  4. **mainnet-wsteth-weth-001** — jedyna żywa LST na v3 (mean30d 1.75%,
-     v/tvl 3.5, TVL $5.3M); reszta koszyka eth-lst na v3 MARTWA (weETH/mETH
-     ~0%) — teza LST do potwierdzenia/odrzucenia tą jedną pulą.
-  5. **mainnet-tbtc-wbtc-001** — niespodzianka skanu: v/tvl7d 10.52 (rekord
-     koszyka BTC), mean30d 3.0%, TVL $2.5M; TBTC d18/WBTC d8.
+- [~] **A: dane — ADRESY SPIĘTE I ZWERYFIKOWANE ON-CHAIN (CC-Mac, 11.08 ~13:00;
+  token0()/token1() eth_call, lekcja cbBTC)**. POOLS +7 pul wypchnięte (commit
+  6a834cf), fetch HyperSynciem 365d W TOKU (sekwencyjnie). Po fetchu → F.B.
+  1. **mainnet-dai-usdt-001** = `0x48da0965ab2d2cbf1c17c09cfb5cbe67ad5b1406`
+     (t0 DAI d18, t1 USDT d6) — top stable z rankingu (mean30d 7.4%,
+     v/tvl7d 16.3, TVL $1.3M). Mała pula — nasze $10k ≈ 0.8% TVL, silnik
+     i tak modeluje dodanie L.
+  2. **arbitrum-usdc-usdt-001** = `0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6`
+     (t0 USDC **natywny** 0xaf88… d6, t1 USDT d6 — pula natywna istnieje,
+     nie USDC.e) — tani gaz + v/tvl 9.7, mean30d 4.3%, TVL $1.4M (pierwsza
+     pula Arbitrum).
+  3. **mainnet-usdc-usdt-001** = `0x3416cf6c708da44db2624d63ea0aaef7113527c6`
+     (t0 USDC d6, t1 USDT d6) — KONTROLA: duża ($33M), słaba w rankingu
+     (mean30d 1.0%, v/tvl 2.7) — baza porównawcza dużej vs małej puli stable.
+  4. **mainnet-wsteth-weth-001** = `0x109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa`
+     (t0 wstETH d18, t1 WETH d18) — jedyna żywa LST na v3 (mean30d 1.75%,
+     v/tvl 3.5, TVL $5.3M); teza LST do potwierdzenia/odrzucenia tą jedną pulą.
+  5. **mainnet-tbtc-wbtc-001** = `0x73a38006d23517a1d383c88929b2014f8835b38b`
+     (t0 TBTC d18, t1 WBTC d8) — niespodzianka skanu: v/tvl7d 10.52 (rekord
+     koszyka BTC), mean30d 3.0%, TVL $2.5M.
 - [ ] **B: backtest** — strategie ultra-wąskie (±1–5 ticków, rebalans przy
   wyjściu) vs pasywne; KONIECZNIE sprawdzić zachowanie w dniach stresu
   (odchylenia pegu w danych!); policzyć próg kapitału, przy którym gaz mainnet

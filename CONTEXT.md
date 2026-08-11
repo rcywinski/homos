@@ -867,3 +867,44 @@ generalizacji).
    otwartym frontem. (b) base-005 i mainnet-005 to tylko 4 okna (90d danych,
    0×flat) — kierunkowo zgodne (trend tnie stratę A3 z −3…−4 do −1…−1.7),
    ale mała moc; po dociągnięciu 365d HyperSynciem powtórzyć.
+
+### 2026-08-11 ~13:14 — Sesja Fable-desktop (poll): raport ALGORITHM v1 od CC-Mac odebrany
+- ALGORITHM.md v1 wypchnięty (32b5121); POOLS +7 pul wypchnięte (6a834cf),
+  fetch HyperSynciem 365d w toku (sekwencyjnie): 2× kanoniczne 005-365d
+  (base-weth-usdc-005-365d, mainnet-usdc-weth-005-365d) + 5 pul F.A.
+- **F.A: 5 par spiętych z adresami zweryfikowanymi on-chain (token0()/token1(),
+  lekcja cbBTC)** — pełna lista adresów przeniesiona do RESEARCH-QUEUE F.A.
+  Istotne: na Arbitrum istnieje pula USDC **natywnego** (nie USDC.e) z USDT.
+- Następne kroki (po sygnale „dane gotowe" od CC-Mac): (1) powtórka
+  cross-walidacji bezpiecznika na 005-365d (CC-Mac puszcza walkforward 45 15,
+  ja interpretuję), (2) projekt baterii F.B — strategie ultra-wąskie na parach
+  spiętych (±ticki, rebalans przy wyjściu, zachowanie w dni stresu pegu,
+  próg kapitału vs gaz mainnet).
+
+### 2026-08-11 ~13:30 — Sesja Fable-desktop (pobudka popołudniowa): checklista odhaczona
+- **A2 base-030-365d: FETCH ZAKOŃCZONY** (state nextBlock 49 791 594 > cel
+  49 791 593; ndjson zamknięty 09:45). Walk-forwardy 45/15 i 60/15 na tej puli
+  JUŻ zrobione (runy 10fd366) i ZINTERPRETOWANE w ramach cross-walidacji
+  bezpiecznika (wpis wyżej „CROSS-WALIDACJA… WERDYKT"); kryterium %wygr≥65 ∧
+  worst>−3 globalnie nadal nie przechodzi (ogon ~2× mniejszy, nie zerowy) —
+  rekomendacja ws. ALGORITHM.md skonsumowana przy zamrożeniu v1 (32b5121).
+  Nowych zleceń walk-forward NIE wystawiam — zlecenie na 005-365d już siedzi
+  w skrzynce @CC-Mac (wpis ~11:35, pkt 2).
+- **Fetch Części 2 + F.A w toku (sekwencyjnie, HyperSync)**: teraz
+  base-weth-usdc-005-365d ~64% (nextBlock 44.2M / cel 49.83M, ~7.4k bl/s ⇒
+  ETA ~14:00). Potem mainnet-005-365d (~2.6M bloków ⇒ minuty–kilkanaście) i
+  5 pul F.A. ⚠️ arbitrum-usdc-usdt-001: rok Arbitrum ≈ 126M bloków
+  (0.25 s/blok) — przy 7–17k bl/s to 2–5 h; spodziewany finisz całości
+  późne popołudnie/wieczór, arbitrum na końcu ogona.
+- **Kolejka: diagnoza odrzutu fable-20260811-testmath** (done/ 09:41, exit −1,
+  „undefined spoza białej listy"): runner czyta pole `task` (WHITELIST[task.task]),
+  a plik miał `script` → undefined. Scan2 działał, bo miał `task`. Naprawa:
+  nowy plik pending/fable-20260811-testmath2.json z poprawnym polem (retest
+  ścieżki; commit → CC-Mac). Lekcja do formatu zadań: zawsze `task` + `args`.
+- **Scan-universe: potwierdzam odbiór pełnego pliku** (backtest/results/
+  scan-universe.json od CC) — analiza koszyków była już zrobiona (sekcja F);
+  wybór pul spiętych domknięty wcześniej: 5 pul F.A (w tym TBTC-WBTC 0.01%
+  v/tvl7d 10.52) w POOLS (6a834cf). Bez zmian.
+- Porządki: RESEARCH-QUEUE A2 → [x]. Następny krok czeka na sygnał „dane
+  gotowe" od CC-Mac → interpretacja walkforwardów 005-365d + projekt baterii
+  F.B (ultra-wąskie na parach spiętych).

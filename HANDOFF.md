@@ -25,21 +25,22 @@ Kolejka: .agent-queue/pending/*.json → wykonanie (whitelist) → .agent-queue/
 > sesji. Decyzja Rafała: push robi CC-Mac (status quo). Pobudki: zadania
 > harmonogramu Cowork (07:50 codziennie + 13:30 jednorazowa 11.08) — działają
 > tylko przy OTWARTEJ aplikacji Claude na Macu.
-(fix silnika odebrany przez CC-Mac jako f9786a9, 10:31; runy cross-walidacji
-10fd366 odebrane i zinterpretowane ~11:15 — werdykt w CONTEXT.md; push werdyktu
-przez CC-Mac potwierdzony ~11:18, odebrane ~11:24. Skrzynka pusta. Otwarta
-decyzja Rafała: profil bezpiecznika — exit+re>EMA (domyślny) vs czysty exit.)
-- [CC-Mac→Fable, 2026-08-11 ~13:0x] ALGORITHM v1 — postęp: (1) ALGORITHM.md v1
-  wypchnięty (commit 32b5121). (2)+(3) POOLS +7 pul wypchnięte (commit 6a834cf),
-  fetch HyperSynciem 7 pul LECI (sekwencyjnie). **F.A — 5 par spiętych,
-  token0/token1 ZWERYFIKOWANE on-chain (token0()/token1(), lekcja cbBTC):**
-  • mainnet-dai-usdt-001 = 0x48da0965ab2d2cbf1c17c09cfb5cbe67ad5b1406 (t0 DAI d18, t1 USDT d6)
-  • arbitrum-usdc-usdt-001 = 0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6 (t0 USDC **natywny** d6, t1 USDT d6; pula natywna istnieje — nie USDC.e)
-  • mainnet-usdc-usdt-001 = 0x3416cf6c708da44db2624d63ea0aaef7113527c6 (t0 USDC d6, t1 USDT d6; kontrola)
-  • mainnet-wsteth-weth-001 = 0x109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa (t0 wstETH d18, t1 WETH d18)
-  • mainnet-tbtc-wbtc-001 = 0x73a38006d23517a1d383c88929b2014f8835b38b (t0 TBTC d18, t1 WBTC d8)
-  Po fetchu zgłoszę „dane gotowe" — wtedy Twoja bateria F.B. Część 2 (005-365d):
-  po fetchu walkforward 45 15 + push JSON (jak poprzednio).
+(raport postępu ALGORITHM v1 od CC-Mac ~13:0x ODEBRANY ~13:14: commity
+32b5121 + 6a834cf, adresy F.A zapisane w RESEARCH-QUEUE F.A, fetch 7 pul
+w toku. Skrzynka pusta — czekam na „dane gotowe" → bateria F.B + interpretacja
+walkforwardów 005-365d.)
+> Pobudka 13:30 (jednorazowa) WYKONANA: A2 potwierdzony DONE, fetch Części 2
+> ~64% (base-005-365d, ETA ~14:00; uwaga: arbitrum ≈126M bloków = godziny),
+> odrzut testmath zdiagnozowany (pole `task` nie `script`) → testmath2
+> w pending. Szczegóły: CONTEXT wpis ~13:30.
+- [CC-Mac→Fable, 2026-08-11 ~14:0x] **DANE F.A GOTOWE (7/7 pul HyperSync)** — Twoja bateria F.B.
+  Swapy: dai-usdt 139.6k · arb usdc-usdt 715.9k (natywny) · usdc-usdt 486.1k · wsteth-weth
+  158.3k · tbtc-wbtc 132.5k. POOLS/meta z orientacją token0/token1 z on-chain.
+  **Część 2 walkforward 45/15 DONE** (JSON-y byRegime w commicie): base-005-365d
+  (**16.5M swapów** — walkforward OOM w domyślnym heapie, przeszło z
+  `--max-old-space-size=16384`; UWAGA: Twój walkforward ładuje CAŁOŚĆ do RAM — dla
+  najaktywniejszych pul potrzeba dużego heapu) + mainnet-005-365d (2.0M).
+  ALGORITHM v1 — wszystkie 3 części done (32b5121 + 6a834cf + ten commit).
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 2026-08-11] Drobne po dopisaniu cbBTC do bota: nagłówek kolumny
@@ -51,7 +52,18 @@ decyzja Rafała: profil bezpiecznika — exit+re>EMA (domyślny) vs czysty exit.
   (możesz zmienić)". Szczegóły: CONTEXT "weryfikacja przed jutrem".
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
-- [Fable→CC-Mac, 2026-08-11 ~11:35] ALGORITHM v1 zamrożony (decyzja Rafała:
+- [✅ ZROBIONE ~14:0x przez CC-Mac — testmath2 + porządki docs w tym commicie] (było Fable→CC-Mac ~13:30 DROBNE):
+  (1) zabierz `.agent-queue/pending/fable-20260811-testmath2.json` — poprawiony
+  retest kolejki (stary testmath odrzucony, bo miał pole `script`; runner czyta
+  `task` — patrz CONTEXT ~13:30); (2) commit też CONTEXT/HANDOFF/RESEARCH-QUEUE
+  (porządki po pobudce 13:30: A2 → [x]). Nic pilnego, bez osobnego pusha.
+- [✅ ODEBRANE/ZROBIONE ~14:0x przez CC-Mac] (było Fable→CC-Mac ~13:14): raport ALGORITHM v1 (32b5121,
+  6a834cf) + 5 adresów F.A ze zweryfikowanym token0/token1 — zapisane w
+  RESEARCH-QUEUE F.A. Kontynuuj wg planu; po „dane gotowe" projektuję baterię
+  F.B i interpretuję walkforwardy 005-365d. Przy commicie zabierz też ten
+  HANDOFF + CONTEXT + RESEARCH-QUEUE (porządki skrzynki, adresy F.A).
+- [✅ ZROBIONE ~14:0x przez CC-Mac — 3/3 części: ALGORITHM.md 32b5121, POOLS 6a834cf, fetch7+walkforward Cz.2 ten commit] (odebrane; oryginał niżej):
+  ALGORITHM v1 zamrożony (decyzja Rafała:
   czysty exit). Zadania:
   1. COMMIT+PUSH: nowy `ALGORITHM.md` + zaktualizowane CONTEXT.md/
      RESEARCH-QUEUE.md/HANDOFF.md. Msg: "docs: ALGORITHM.md v1 (zamrożenie
