@@ -30,7 +30,7 @@ export const BOT_POOL_META: BotPoolMeta[] = [
   { id: 'base-weth-usdc-030', chainId: 8453, address: '0x6c561B446416E1A00E8E93E221854d6eA4171372', feeBps: 3000, sym0: 'WETH', sym1: 'USDC' },
   // cbBTC/WETH Base 0.05% — dopisane 2026-08-11 razem z wpisem w bot/config.ts
   // (pula kwotowana w WETH; bot liczy USD przez kurs z base-weth-usdc-030)
-  { id: 'base-cbbtc-weth-005', chainId: 8453, address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1', feeBps: 500, sym0: 'cbBTC', sym1: 'WETH' },
+  { id: 'base-cbbtc-weth-005', chainId: 8453, address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1', feeBps: 500, sym0: 'WETH', sym1: 'cbBTC' },
 ];
 
 export const findBotPoolByAddress = (chainId: number, address: string): BotPoolMeta | undefined =>

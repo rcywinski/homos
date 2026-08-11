@@ -239,3 +239,16 @@
   (1) zasilenie sekcji F (które pule spięte fetchować tick-level),
   (2) decyzja, czy poszerzyć universe fetch-llama (MAX_POOLS/projekty),
   (3) docelowo: koszyki do selektora (ranking per koszyk zamiast globalnego).
+- [ ] **BŁĄD KOLEJNOŚCI TOKENÓW cbBTC/WETH (wykryty 2026-08-11 przez telemetrię
+  bota — cena $0)**: w puli 0x7AeA2E8A…6dabD1 token0=WETH (0x4200… < 0xcbB7…),
+  a `scripts/fetch-swaps.ts` POOLS ma odwrotnie (token0Decimals: 8,
+  ethIsToken0: false) — dotyczy `base-cbbtc-weth-005` ORAZ kopii `-365d`.
+  Dane ndjson są SUROWE (poprawne!), błędna jest tylko interpretacja w cfg.
+  Zadania CC: (1) poprawić oba wpisy POOLS (ethIsToken0: true, token0Decimals: 18,
+  token1Decimals: 8), (2) poprawić pole cfg w data/cache/base-cbbtc-weth-005.meta.json
+  (bez refetchu!), (3) przeliczyć `npx tsx backtest/run.ts base-cbbtc-weth-005`
+  → kolumna cbBTC w tabeli 5 pul (B6) DO WYMIANY; wcześniejsze wnioski o cbBTC
+  ("jedyny dodatni") do ponownej weryfikacji na poprawionej orientacji.
+  Bot i UI już poprawione (bot/config.ts, src/config/botPools.ts) — po push+pull
+  runnera wymagany restart homos-bot; weryfikacja: telemetria pokaże cbBTC
+  ~$60–70k zamiast $0.

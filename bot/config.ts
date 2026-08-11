@@ -51,13 +51,16 @@ export const BOT_POOLS: BotPool[] = [
   },
   {
     // para skorelowana (PAIRS.md: sleeve pasywny ±15%); cena kwotowana w WETH,
-    // USD przez kurs ETH z base-weth-usdc-030. Adres zweryfikowany 90d danych
-    // tick-level (data/cache/base-cbbtc-weth-005.meta.json).
+    // USD przez kurs ETH z base-weth-usdc-030.
+    // UWAGA kolejność tokenów ZWERYFIKOWANA on-chain przez tick na żywo
+    // (-265575 ⇒ token0=WETH: 0x4200… < 0xcbB7… w sortowaniu adresów Uniswapa).
+    // Konfiguracja w scripts/fetch-swaps.ts ma ją ODWROTNIE (token0Decimals: 8)
+    // — błąd zgłoszony do kolejki, dane cbBTC z 90d wymagają refetch/reinterpretacji.
     id: 'base-cbbtc-weth-005',
     chainId: 8453, chain: 'base',
     address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1',
-    feeBps: 500, ethIsToken0: false, d0: 8, d1: 18, sym0: 'cbBTC', sym1: 'WETH',
-    t0: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf', t1: '0x4200000000000000000000000000000000000006',
+    feeBps: 500, ethIsToken0: true, d0: 18, d1: 8, sym0: 'WETH', sym1: 'cbBTC',
+    t0: '0x4200000000000000000000000000000000000006', t1: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',
     quote: 'WETH', usdRefPoolId: 'base-weth-usdc-030',
   },
 ];
