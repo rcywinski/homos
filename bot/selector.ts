@@ -37,7 +37,10 @@ const REPROPOSE_COOLDOWN_D = 7; // odrzucona propozycja nie wraca przez tydzień
 const MAX_OPEN_PROPOSALS_PER_DAY = 2;
 
 const FEE_META: Record<number, string> = { 100: '0.01%', 500: '0.05%', 3000: '0.3%', 10000: '1%' };
-const CHAIN_MAP: Record<string, string> = { Ethereum: 'mainnet', Base: 'base' };
+// Arbitrum dopisany 2026-08-11 po zaliczonym walk-forwardzie 365d (re>EMA 73% wygr,
+// worst −3.49 — najlepszy wynik w projekcie; decyzja Rafała). OP świadomie NIE
+// (cienka pula $4.3M, bramka odległa, profil niestabilny).
+const CHAIN_MAP: Record<string, string> = { Ethereum: 'mainnet', Base: 'base', Arbitrum: 'arbitrum' };
 
 interface LlamaPoolMeta {
   pool: string; // uuid DefiLlama

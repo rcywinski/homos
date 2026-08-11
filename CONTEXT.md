@@ -735,6 +735,24 @@ granica; prawda pomiędzy). Interpretacja (Fable, pełne JSON-y w backtest/resul
    u CC-Mac w toku — ocena bramki (≥65% wygr ∧ worst >−3; benchmark
    base-005: 68%/−2.52) po dojechaniu JSON-ów.
 
+### 2026-08-11 — Sesja Fable-desktop (~16:15): WERDYKT NOWYCH SIECI — Arbitrum TAK, Optimism NIE
+Walkforwardy 365d/45d od CC-Mac (commit 62bbfeb), moja ocena bramki:
+- **Arbitrum WETH/USDC 0.05% (12.6M swapów, 22 okna): PRAKTYCZNIE PASS** —
+  profil v1.1 (re>EMA): **73% wygr (najwyższy w projekcie), worst −3.49**
+  (0.49 pod progiem), down-reżim 80% wygr (+0.5). Czysty exit: 64%/−3.00.
+  Zachowuje się jak Base. **DECYZJA: Arbitrum dodany do selektora**
+  (CHAIN_MAP w bot/selector.ts; fetch-llama już zbierał Arbitrum).
+- **Optimism WETH/USDC 0.3% (544k swapów, $4.3M TVL): NIE** — żaden wariant
+  nie łapie bramki (najlepszy: czysty exit 59%/−4.06), re>EMA wręcz ujemny
+  (−0.13) — profil niestabilny na cienkiej puli. Obserwować, nie wchodzić;
+  infra OP w skryptach zostaje (koszt utopiony ~0, może TVL urośnie).
+- Nuans do zapamiętania: re>EMA świetny na głębokich pulach (Base, Arbitrum),
+  odwraca się na płytkiej (OP) — głębokość puli to realny warunek brzegowy
+  algorytmu, nie tylko "chain tani gazowo".
+- FOLLOW-UP (nie zrobione): pula arb do BOT_POOLS/botPools.ts + wsparcie
+  chainu 42161 w observerze (RPC, NFT manager) — bez tego propozycje OPEN
+  na Arbitrum pokażą się z uczciwą notą "spoza konfiguracji". Zadanie: Fable.
+
 ### 2026-08-11 — Sesja Fable-desktop: REWIZJA v1.1 (re>EMA) + START F.B (pary spięte) + fee-path v2 w silniku
 1. **REWIZJA ALGORITHM v1.1 (decyzja Rafała ~14:30)**: powrót po spadku =
    re>EMA dla ETH/stable (cbBTC zostaje czysty exit). Powód: pełne 365d
