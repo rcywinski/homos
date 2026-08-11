@@ -22,11 +22,13 @@
   RPC_URL w .env jest pusty, więc nie ma czego użyć. Interim dla B1: można puścić
   walk-forward na istniejących 90d (`base-weth-usdc-030`, ~2 okna przy 45/60d) —
   decyzja analityka.
-- [ ] **base-cbbtc-weth-005-365d** — rok danych drugiej najlepszej puli
-  (skorelowana). ✅ wpis w POOLS DOPISANY (kopia base-cbbtc-weth-005, days: 365,
-  id `base-cbbtc-weth-005-365d`). Fetch ZAKOLEJKOWANY po base-030-365d (obie Base —
-  unikam kontencji publicznych RPC Base przy dwóch rocznych fetchach naraz).
-  ⚠️ Ten sam problem głębokiego archiwum co A2 — bez `RPC_BASE` też potrwa godziny.
+- [x] **base-cbbtc-weth-005-365d** — ✅ DONE (Claude Code, **HyperSync ~20k bl/s,
+  ~12 min**): **1 462 579 swapów**, pełny rok. ⚠️ **ORIENTACJA TOKENÓW POPRAWIONA**
+  przed jakimkolwiek backtestem: cfg (POOLS + oba meta.json) miało odwrotnie
+  (token0=cbBTC d8/ethIsToken0=false); on-chain token0=WETH d18, token1=cbBTC d8 →
+  poprawione na token0Decimals:18, token1Decimals:8, ethIsToken0:true. Surowe dane
+  ndjson były OK (event Swap jest w terminach token0/1 niezależnie od etykiet);
+  błędna była tylko interpretacja skali/orientacji. Gotowe do backtestu.
 - [x] **Egzotyki tick-level (werdykt majors vs egzotyki)** — DANE POBRANE (A4):
   - **DORY-USDC (Arbitrum 1%) to uniswap-V4** (universe.json: project=uniswap-v4,
     pool ae3c1ac2…, tokeny DORY 0x33b49f22…436ae / USDC natywny 0xaf88…5831).
@@ -145,12 +147,22 @@
   Fakty liczbowe (interpretacja → sesja analityczna):
   - Najlepsza per pula: mn-005 → pasywny±50 (+1.69) · mn-030 → pasywny±50 (+1.72) ·
     base-005 → pasywny±50 (+2.75) · base-030 → **adapt k2h24 (+4.00)** · cbbtc → sztywny±15 (+2.76).
-  - **cbBTC/WETH to jedyny łagodny reżim** (HODL −7.2% vs ~−30% reszta) i jedyne
-    DODATNIE bezwzględne APR (sztywny±15 +3.7%, adapt k2 +3.2%; maxDD ~6% vs ~26%).
+  - ⚠️ **KOLUMNA base-cbbtc-005 W TABELI WYŻEJ JEST BŁĘDNA** — była liczona na
+    ODWRÓCONEJ orientacji tokenów (znany błąd sekcji F: cfg miało token0=cbBTC d8/
+    ethIsToken0=false; on-chain token0=WETH d18, token1=cbBTC d8). Fix (POOLS +
+    oba meta.json) zrobiony przez Claude Code; **poprawione cbBTC 90d (vsHODL%)**:
+    | HODL APR | full-range | ±50% | ±5% naiwny | ±15% naiwny | adapt k2h24 | adapt k2h12 | adapt k3h24 |
+    |---|---|---|---|---|---|---|---|
+    | **+7.9** | +0.02 | −0.05 | −8.56 | −0.21 | −0.20 | −0.20 | −0.13 |
+    Wnioski PO korekcie: cbBTC/WETH 0.05% to łagodny reżim WZROSTOWY (HODL +7.9%),
+    ale **fees znikome** ($3-4/90d na $10k ≈ 0.16% APR z fee) → **LP ≈ HODL**
+    (najlepszy full-range +0.02). Teza "para skorelowana = dobra do LP" NIE broni
+    się tu — za mały wolumen/fee. (Stare fees $291-836 były artefaktem złej skali.)
   - Gaz decyduje: aktywne wąskie działają na Base (gas$≈0), na mainnecie giną
     (mn-005 ±5% naiwny −21.0 vs HODL, 34 reb / $272 gazu).
   - Adapt k2 **h24 > h12** wszędzie poza mn-030 — spójne z wcześniejszym wnioskiem o histerezie.
-  Bramka F1 (bić HODL 50/50): przechodzi ≥1 strategia na KAŻDEJ z 5 pul.
+  Bramka F1 (bić HODL 50/50): przechodzi ≥1 strategia na KAŻDEJ z 5 pul (na cbBTC
+  już tylko marginalnie: full-range +0.02 po korekcie orientacji).
 
 ## C. PO ANALIZACH (sesja Fable — interpretacja)
 
@@ -254,10 +266,25 @@
 > ultra-wąskiego LP na parach spiętych (LST-ETH, stable-stable): brak IL w
 > normalnych warunkach, koncentracja ×dziesiątki. Ukryte ryzyko: depeg (wąska
 > pozycja skupuje spadający token). Testujemy WŁASNYM silnikiem tick-level.
-- [ ] **A: dane** — dopisać do POOLS w fetch-swaps.ts i pobrać (HyperSync jeśli
-  przejdzie test, inaczej RPC): (1) wstETH-WETH mainnet 0.01% (największa pula
-  LST), (2) USDC-USDT mainnet 0.01%; po 180–365d żeby złapać różne reżimy.
-  Adresy przez factory lookup (skrypt umie sam).
+- [ ] **A: dane — LISTA ZAKTUALIZOWANA po pełnym skanie (Fable, 11.08)**.
+  5 pul × 365d przez HyperSync (minuty). UWAGA: HyperSync-skrypt wymaga
+  jawnego adresu — adresy przez factory lookup RPC-skryptem albo eth_call;
+  KONIECZNIE zweryfikować token0/token1 przez `token0()` on-chain (lekcja cbBTC —
+  nie zgadywać orientacji z nazwy pary!):
+  1. **mainnet-dai-usdt-001** — top stable z rankingu (mean30d 7.4%,
+     v/tvl7d 16.3, TVL $1.3M; DAI d18/USDT d6). Mała pula — nasze $10k ≈ 0.8%
+     TVL, silnik i tak modeluje dodanie L.
+  2. **arbitrum-usdc-usdt-001** — tani gaz + v/tvl 9.7, mean30d 4.3%, TVL $1.4M
+     (pierwsza pula Arbitrum — infra w fetch-swaps gotowa; sprawdzić czy USDC
+     natywny 0xaf88… czy USDC.e!).
+  3. **mainnet-usdc-usdt-001** — KONTROLA (pierwotny plan): duża ($33M), ale
+     słaba w rankingu (mean30d 1.0%, v/tvl 2.7) — baza porównawcza dużej vs
+     małej puli stable.
+  4. **mainnet-wsteth-weth-001** — jedyna żywa LST na v3 (mean30d 1.75%,
+     v/tvl 3.5, TVL $5.3M); reszta koszyka eth-lst na v3 MARTWA (weETH/mETH
+     ~0%) — teza LST do potwierdzenia/odrzucenia tą jedną pulą.
+  5. **mainnet-tbtc-wbtc-001** — niespodzianka skanu: v/tvl7d 10.52 (rekord
+     koszyka BTC), mean30d 3.0%, TVL $2.5M; TBTC d18/WBTC d8.
 - [ ] **B: backtest** — strategie ultra-wąskie (±1–5 ticków, rebalans przy
   wyjściu) vs pasywne; KONIECZNIE sprawdzić zachowanie w dniach stresu
   (odchylenia pegu w danych!); policzyć próg kapitału, przy którym gaz mainnet
@@ -275,6 +302,22 @@
   (1) zasilenie sekcji F (które pule spięte fetchować tick-level),
   (2) decyzja, czy poszerzyć universe fetch-llama (MAX_POOLS/projekty),
   (3) docelowo: koszyki do selektora (ranking per koszyk zamiast globalnego).
+  ✅ **ANALIZA ZROBIONA (Fable, 11.08, pełny scan-universe.json od CC)**:
+  - stable-stable (55 pul): na v3 żyją DAI-USDT 0.01% (7.4%, v/tvl 16.3),
+    USDC-USDT 0.01% Arb (4.3%), DAI-USDC/USDE-USDC (~3%, v/tvl 7-8); wielka
+    USDC-USDT mainnet $33M tylko 1.0%. → lista F.A wyżej.
+  - eth-lst (36 pul): v3 niemal MARTWE poza wstETH-WETH 0.01% (1.75%);
+    curve dominuje TVL ($188M), akcja pegged na Base żyje na
+    aerodrome-slipstream (CBETH-WETH CL1 4.1%) — poza mandatem v3.
+  - Wniosek strategiczny: „3.1%/tydz jak u znajomego" NIE istnieje na
+    uniswap-v3 w koszykach spiętych — topowe APR pegged są na
+    aerodrome/curve/CEX-chainach. Na v3 sleeve spięty to realistycznie
+    ~3-7% headline + dźwignia koncentracji (v/tvl 10-16 = jest z czego
+    zbierać) — werdykt da dopiero tick-level (F.B), zwłaszcza netto po
+    gazie mainnet przy $5-25k.
+  - Do rozważenia później (nie teraz): czy selektor/backtest powinny
+    objąć uniswap-v4 (USDE-USDC 0.00% $1.1M, WBTC-CBBTC 0.01%) — v4 wciąż
+    świadomie odłożony (CONTEXT 2e).
 - [ ] **BŁĄD KOLEJNOŚCI TOKENÓW cbBTC/WETH (wykryty 2026-08-11 przez telemetrię
   bota — cena $0)**: w puli 0x7AeA2E8A…6dabD1 token0=WETH (0x4200… < 0xcbB7…),
   a `scripts/fetch-swaps.ts` POOLS ma odwrotnie (token0Decimals: 8,

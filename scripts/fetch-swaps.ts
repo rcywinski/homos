@@ -65,14 +65,14 @@ export const POOLS: PoolCfg[] = [
     id: 'base-cbbtc-weth-005',
     chain: 'base',
     address: '', // uzupełniane automatycznie przez lookup factory przy pierwszym uruchomieniu
-    feeBps: 500, ethIsToken0: false, token0Decimals: 8, token1Decimals: 18, days: 90,
+    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 8, days: 90, // token0=WETH(d18), token1=cbBTC(d8) — zweryfikowane on-chain (fix odwróconej orientacji, sekcja F)
   },
   {
     // A3: rok danych drugiej najlepszej puli (skorelowana). Kopia base-cbbtc-weth-005, days: 365.
     id: 'base-cbbtc-weth-005-365d',
     chain: 'base',
     address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1', // cbBTC/WETH Base 0.05% (z lookupu RPC; HyperSync nie robi factory-lookup)
-    feeBps: 500, ethIsToken0: false, token0Decimals: 8, token1Decimals: 18, days: 365,
+    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 8, days: 365, // token0=WETH(d18), token1=cbBTC(d8) — zweryfikowane on-chain (fix odwróconej orientacji, sekcja F)
   },
   {
     // A4: egzotyk v3 do werdyktu majors-vs-egzotyki. DORY-USDC (Arbitrum 1%) z rankingu
