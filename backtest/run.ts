@@ -6,71 +6,14 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import * as readline from 'readline';
-import { SwapEv, PoolSpec, runStrategy, RunResult } from './engine';
+import { runStrategy, RunResult } from './engine';
 import { ALL_STRATEGIES } from './strategies';
+import { loadPool } from './load'; // wspólny loader (obsługuje też pary quote:'WETH')
 
 const CACHE = path.join(__dirname, '..', 'data', 'cache');
 const OUT = path.join(__dirname, 'results');
 
-const TICK_SPACING: Record<number, number> = { 100: 1, 500: 10, 3000: 60, 10000: 200 };
-const GAS_USD: Record<string, number> = { mainnet: 8, base: 0.08 };
-
 const START_CAPITAL_USD = 10_000;
-
-async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: PoolSpec } | null> {
-  const metaPath = path.join(CACHE, `${id}.meta.json`);
-  const dataPath = path.join(CACHE, `${id}.ndjson`);
-  if (!fs.existsSync(metaPath) || !fs.existsSync(dataPath)) return null;
-  const meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
-  const cfg = meta.cfg;
-  const anchors: Array<{ block: number; ts: number }> = meta.anchors;
-
-  const tsForBlock = (b: number): number => {
-    let i = 0;
-    while (i < anchors.length - 2 && anchors[i + 1].block < b) i++;
-    const a = anchors[i];
-    const c = anchors[i + 1];
-    return a.ts + ((b - a.block) / (c.block - a.block)) * (c.ts - a.ts);
-  };
-
-  const spec: PoolSpec = {
-    id,
-    feeRate: cfg.feeBps / 1_000_000,
-    ethIsToken0: cfg.ethIsToken0,
-    d0: cfg.token0Decimals,
-    d1: cfg.token1Decimals,
-    tickSpacing: TICK_SPACING[cfg.feeBps],
-    gasUsdPerRebalance: GAS_USD[cfg.chain],
-    slippageBps: 5,
-  };
-
-  const swaps: SwapEv[] = [];
-  const rl = readline.createInterface({ input: fs.createReadStream(dataPath) });
-  for await (const line of rl) {
-    if (!line.trim()) continue;
-    const j = JSON.parse(line);
-    swaps.push({
-      b: j.b,
-      ts: tsForBlock(j.b),
-      a0: Number(BigInt(j.a0)) / 10 ** spec.d0,
-      a1: Number(BigInt(j.a1)) / 10 ** spec.d1,
-      sqrtP: Number(BigInt(j.sp)) / 2 ** 96,
-      L: Number(BigInt(j.L)),
-      t: j.t,
-    });
-  }
-  swaps.sort((a, b) => a.b - b.b);
-  // dedup (resume może zdublować ostatni chunk)
-  const seen = new Set<string>();
-  const dedup = swaps.filter((s) => {
-    const k = `${s.b}-${s.a0}-${s.a1}-${s.t}`;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
-  return { swaps: dedup, spec };
-}
 
 const fmt = (v: number, d = 2) => v.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 

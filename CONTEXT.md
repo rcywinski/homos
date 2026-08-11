@@ -673,3 +673,117 @@ Wdrożenie: HANDOFF @CC (branch+package.json) i @Windows (usługa NSSM).
   telemetrii "ETH/USD" → "cena USD" (dla cbBTC pokaże ~$115k za cbBTC).
 - Kolejka: pierwsze zadanie `scan` czeka w .agent-queue/pending/ (commit+push
   uruchomi test pętli, gdy usługa homos-runner wstanie na koncie użytkownika).
+
+### 2026-08-11 — Sesja Fable-DESKTOP: bootstrap sukcesji wykonany (z odchyleniami od planu)
+Nowa sesja analityczna wstała jako **Cowork DESKTOP na Macu** (folder HOMOS
+zamontowany), NIE jako sesja chmurowa z repo w źródłach. Konsekwencje:
+- **Git push/pull z tej sesji NIEMOŻLIWY** — sandbox bez poświadczeń GitHub
+  (fetch: "could not read Username"). Decyzja Rafała (AskUserQuestion):
+  push zostaje przy CC-Mac; Fable pisze pliki na dysk Maca bezpośrednio.
+- **Test pętli kolejki przygotowany, nie domknięty**: plik
+  `.agent-queue/pending/fable-20260811-testmath.json` (test:math) na dysku,
+  commit+push zlecone CC-Mac przez HANDOFF. Pętla była już potwierdzona
+  rano (scan2 wykonany przez runnera 08:41, wynik wrócił commitem).
+- **Pobudki odtworzone jako zadania harmonogramu Cowork** (nie send_later):
+  „homos-poranny-brief" 07:50 codziennie + „homos-checklista-1330"
+  jednorazowa 11.08 13:30 (A2/walk-forward/scan). UWAGA: działają tylko przy
+  otwartej aplikacji Claude na Macu — jeśli Rafał potrzebuje niezawodności
+  24/7/iPhone, i tak trzeba sesji chmurowej.
+- **Postęp A2 sprawdzony (09:10)**: base-030-365d nextBlock 39 634 570 z
+  zakresu 34 023 593→49 791 593 ≈ **36%**, ndjson 59 MB, żywy. Przy tym
+  tempie ETA późne popołudnie/wieczór — walk-forward 45/60d dopiero po tym
+  (albo po przejęciu przez HyperSync, test u CC-Mac w kolejce).
+- **Scan2 odebrany CZĘŚCIOWO**: ogon ucięty — brak stable-stable i większości
+  eth-lst; wyłuskane ustalenia (TBTC-WBTC 0.01% v/tvl 10.52 jako kandydat F)
+  w RESEARCH-QUEUE F. Pełny skan: CC-Mac `npm run scan` (nie da się z sandboksa
+  Fable — proxy blokuje yields.llama.fi; sprawdzone empirycznie, 403).
+- Nauka dla przyszłych sesji: sandbox desktop-Cowork ma proxy z allowlistą
+  (RPC/DefiLlama/GitHub poza nią) — analizy na lokalnych danych działają
+  (tsx zainstalowany w /tmp obchodzi darwin-owy esbuild z node_modules),
+  sieć praktycznie nie.
+
+### 2026-08-11 — Sesja Fable-desktop: FIX WYCENY PAR WETH-owych W SILNIKU + B2 (reżimy) — PRZEŁOMOWA SESJA ANALITYCZNA
+**1. BUG KRYTYCZNY silnika backtestu naprawiony**: `unitPrices` zakładał parę
+ETH/stable (nie-ETH-owa noga = $1). Dla par kwotowanych w WETH (cbBTC/WETH,
+WTAO/WETH) WSZYSTKIE dotychczasowe wyniki absolutne (APR/fees$/maxDD) były
+w bezsensownych jednostkach — dotyczy B5 (WTAO), B6 kolumny cbBTC, "teza
+obalona" CC z 11.08 rano. Naprawa: `PoolSpec.quote:'USD'|'WETH'` +
+`usdPerEth(block)` — cena USD-za-WETH po blokach z równoległego cache
+USDC/WETH tej samej sieci (join po numerze bloku, step-function co 100 swapów).
+Nowy WSPÓLNY loader `backtest/load.ts` (deduplikacja loadPool z run/
+walkforward/sweep; mapa QUOTE_WETH_REF). Weryfikacja: validate 14/14,
+regresja zero-diff na puli USD (mainnet-030 identyczne co do centa).
+**2. cbBTC/WETH-365d POPRAWNIE (1.46M swapów, pełny rok, USD)**: HODL 50/50
+−51.5% APR (maxDD 61.5%!) — para spadła z całym kryptem (obie nogi crypto =
+pełna beta, ŻADNEJ poduszki stable). Ale LP vs HODL: **adapt k2h24 +11.42**
+(fees $2126 ≈ 21%/r), sztywny±15 +6.26, pasywny±50 +5.95 — NAJWIĘKSZA alfa
+LP-vs-HODL ze wszystkich naszych pul. Werdykt dwustronny: (a) teza par
+skorelowanych DZIAŁA w wymiarze alfa (niska zmienność względna → fees >
+IL względny); (b) "łagodny reżim/jedyny dodatni" z B6 był artefaktem —
+absolutnie to podwójna beta krypto. Miejsce w portfelu zależy od decyzji
+o ekspozycji/hedge (F4), nie od jakości LP. Uwaga: na tej parze k2 > k3
+(węższa zmienność względna).
+**3. WTAO-WETH POPRAWNIE**: HODL −70.5% APR w USD (stary "+74.9% reżim
+wzrostowy" mierzył w jednostkach WTAO — było DOKŁADNIE ODWROTNIE, WTAO
+runęło). vsHODL też się odwraca: k3h24 +7.31, k2h12 +5.64. Wniosek B5
+zrewidowany: egzotyk NIE dlatego zły, że "LP przegrywa z HODL w trendzie",
+tylko dlatego, że beta tokena (−70%/r) miażdży każdą alfę LP (+7 p.p.).
+Filtr majors-only zostaje — uzasadnienie skorygowane.
+**4. B2 — WALK-FORWARD Z REŻIMAMI (±10% zmiany ceny w oknie), 365d base-030:**
+- 45d/15d: 22 okna (4 up / 10 down / 8 flat) · 60d/15d: 21 okien (3/12/6) —
+  rok był głównie spadkowy.
+- **HIPOTEZA Z B1 POTWIERDZONA W 100%: wszystkie najgorsze okna (−7…−12) to
+  okna DOWN.** We FLAT wszystko wygrywa: adapt k3h24 100%wygr/najgorsze +2.66
+  (45d) — przechodzi pełne kryterium WEWNĄTRZ reżimu; pasywny±50 100%wygr
+  w obu oknach. W UP (60d): k3h24 i k2h24 100%wygr. W DOWN: 20-42%wygr,
+  wszystkie średnie ujemne.
+- **Bramka PLAN.md (wygrana w ≥2 reżimach): adapt k3h24 i pasywny±50
+  PRZECHODZĄ (up+flat), przegrywają tylko down.**
+- WNIOSEK STRATEGICZNY: strojenie k/h wyczerpane — brakujący element to
+  BEZPIECZNIK TRENDU SPADKOWEGO (detekcja trendu → poszerz/wyjdź do stable/
+  hedge). To jest nowy główny front (przed wariantami triggera z B3, które
+  stają się drugorzędne). Format wyników: walkforward-<id>-<okno>d.json
+  (fix nadpisywania), w json pełne windowMeta + byRegime.
+Pliki zmienione (commit → CC): backtest/{engine,load,run,walkforward,sweep}.ts.
+
+### 2026-08-11 — Sesja Fable-desktop: HyperSync PRZEJĄŁ dane (rok w 13 min) + INTERPRETACJA B1 (walk-forward 365d)
+- **HyperSync zweryfikowany i wdrożony**: compare 1:1 z RPC zgodny, pełny rok
+  base-030 pobrany w ~13 min (~17k bl/s vs 150 bl/s RPC; 1 880 449 swapów).
+  A2 DONE; A3 (cbBTC 365d) w toku. ⚠️ Wpisy cbBTC w POOLS nadal mają odwróconą
+  orientację (ethIsToken0: false, a token0=WETH) — przed backtestem A3 poprawić
+  cfg w POOLS + obu meta.json (zadanie CC z sekcji F; ndjson surowy = OK).
+- **B1 (walk-forward 365d, okna 45/15 i 60/15) — INTERPRETACJA**
+  (liczby: RESEARCH-QUEUE B):
+  1. **Bramka (%wygr ≥65 ∧ najgorsze >−3) NIE przechodzi dla ŻADNEJ strategii**
+     — ale nie przez średnie (Adapt k3h24: +0.55/+1.02 śr., 55/62% wygr.),
+     tylko przez ogon: najgorsze okno −7…−12 U KAŻDEJ, także pasywnych.
+  2. **Hipoteza (do testu w B2): najgorsze okna = reżimy silnego trendu**, gdzie
+     KAŻDY LP w zakresie strukturalnie przegrywa z HODL (LVR) — dokładnie to
+     pokazał niezależnie WTAO (w trendzie nawet full-range ledwo remisuje).
+     Jeśli B2 to potwierdzi, to poprawa NIE leży w strojeniu k/h (klasa
+     "zawsze-w-LP" ma ten ogon wbudowany), tylko w komponencie strukturalnym:
+     bezpiecznik trendowy (poszerz/wyjdź przy wykrytym trendzie) i/lub hedge
+     (F4 — plan przewidywał to od początku).
+  3. **Baza robocza: Adapt k=3 h=24** — jedyna z dodatnią śr.+med. w obu
+     oknach. k=2 gorsze wszędzie na roku → kandydat na podmianę w
+     ADVISOR_PARAMS (k 2→3), decyzja przy zamrażaniu ALGORITHM.md, nie hotfix.
+  4. Sztywny ±15% ma najłagodniejszy ogon (−7.0/−7.8) przy słabym %wygr —
+     wskazówka dla B3: szerzej = płytszy ogon; sprawdzić hybrydę "adaptacyjny
+     k3 z podłogą szerokości ±15%".
+  5. **Kolejność prac: B2 (tagowanie reżimów w walkforward.ts) PRZED B3** —
+     B2 rozstrzyga, czy trigger w ogóle może naprawić ogon; potem B3 sweep
+     wariantów triggera na 365d; bramka ponownie, per reżim (jak w PLAN.md).
+- Scan-universe: pełna analiza koszyków spiętych → RESEARCH-QUEUE F
+  (lista 5 pul do fetch 365d HyperSynciem; wniosek: yieldy "3%/tydz" na
+  pegged NIE istnieją na v3 — top pegged żyje na aerodrome/curve).
+
+### 2026-08-11 — Sesja Fable: fix cbBTC potwierdzony ($63k w telemetrii) + przygotowanie sukcesji
+- Pętla kolejki POTWIERDZONA end-to-end: scan2 exit 0 (Windows wykonał zadanie
+  zlecone plikiem z chmury), wynik wrócił commitem. Selektor dzienny zagrał
+  (2 nowe OPEN: USDC-WETH 0.01% mainnet 20.0%, WETH-USDT 0.05% 15.1%).
+- Orientacja cbBTC naprawiona i zweryfikowana na żywo (~$63k; wcześniej $0).
+  Przeliczenie kolumny cbBTC w tabeli 5 pul → kolejka (dane surowe OK).
+- Przygotowanie do przesiadki na nową sesję chmurową z repo w źródłach GitHub:
+  bootstrap w HANDOFF @Fable (test pusha, pobudki, zasady); backlog ulepszeń
+  runnera w RESEARCH-QUEUE G. Ta sesja ma jeszcze pobudkę ~13:30 (walk-forward
+  po A2) — wyniki zapisze do plików, nie tylko do czatu.

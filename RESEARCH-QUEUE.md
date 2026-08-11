@@ -29,25 +29,30 @@
   poprawione na token0Decimals:18, token1Decimals:8, ethIsToken0:true. Surowe dane
   ndjson były OK (event Swap jest w terminach token0/1 niezależnie od etykiet);
   błędna była tylko interpretacja skali/orientacji. Gotowe do backtestu.
-  **BACKTEST cbBTC-365d (1 461 600 swapów, 365 dni, poprawiona orientacja, $10k):**
+  ~~BACKTEST cbBTC-365d (wersja poranna CC)~~ **UNIEWAŻNIONE (Fable, 11.08
+  ~10:00)**: liczone silnikiem sprzed fixu wyceny — engine traktował nogę
+  nie-ETH jako stable $1, więc dla pary WETH-owej equity było w jednostkach
+  "cbBTC-dolarów", nie USD (stąd absurdalne fees $11-13). Werdykt "teza
+  obalona" COFNIĘTY. POPRAWNY backtest (silnik z quote:'WETH', USD po blokach
+  z base-030-365d; 1 461 600 swapów, 365 dni, $10k):
   | strategia | APR% | vsHODL% | maxDD% | fees$ | reb |
   |---|---|---|---|---|---|
-  | HODL 50/50 | −8.3 | 0.00 | 23.0 | 0 | 0 |
-  | Pasywny full-range | −8.5 | −0.29 | 23.6 | 11 | 0 |
-  | Pasywny ±50% | −10.2 | −2.07 | 26.4 | 13 | 0 |
-  | Sztywny ±5% (naiwny) | −48.1 | −43.41 | 51.9 | 13 | 43 |
-  | Sztywny ±15% (naiwny) | −21.8 | −14.81 | 30.9 | 13 | 4 |
-  | Adapt k2 h24 pb7 | −21.7 | −14.65 | 33.0 | 13 | 5 |
-  | Adapt k2 h12 pb7 | −23.9 | −17.04 | 34.9 | 13 | 6 |
-  | Adapt k3 h24 pb7 | −18.3 | −10.98 | 26.8 | 13 | 3 |
+  | HODL 50/50 | −51.5 | 0.00 | 61.5 | 0 | 0 |
+  | Pasywny full-range | −50.9 | +1.09 | 61.4 | 108 | 0 |
+  | Pasywny ±50% | −48.6 | +5.95 | 61.1 | 589 | 0 |
+  | Sztywny ±5% (naiwny) | −49.4 | +4.32 | 59.8 | 4379 | 43 |
+  | Sztywny ±15% (naiwny) | −48.4 | +6.26 | 59.2 | 1595 | 4 |
+  | **Adapt k2 h24 pb7** | −45.9 | **+11.42** | 57.9 | 2126 | 5 |
+  | Adapt k2 h12 pb7 | −48.6 | +6.00 | 59.8 | 1825 | 6 |
+  | Adapt k3 h24 pb7 | −48.8 | +5.51 | 60.1 | 1198 | 3 |
 
-  Fakty (interpretacja → analityk): pełny rok POTWIERDZA — **cbBTC/WETH 0.05% to
-  słabe venue LP**: fees znikome ($11-13/rok ≈ 0.13% APR), więc ŻADNA strategia nie
-  bije HODL (full-range tylko −0.29; aktywne −11…−43, ±5% naiwny masakra −43.4 przy
-  43 rebalansach). **Teza "para skorelowana = sleeve LP 25%" (PAIRS.md) OBALONA na
-  roku** — za mały wolumen/fee, aktywne zarządzanie realizuje IL bez rekompensaty;
-  maxDD też wyższy (HODL 23%, aktywne do 52%). Sensowne tylko czyste HODL/pasywne.
-  (90d dawało HODL +7.9% — inne okno; rok −8.3% bardziej reprezentatywny.)
+  WERDYKT DWUSTRONNY (Fable): (a) **alfa LP-vs-HODL na parze skorelowanej
+  DZIAŁA — najlepsza ze wszystkich pul** (+11.4 adapt k2h24, fees $2.1k ≈
+  21%/r, gas Base pomijalny; uwaga: tu k2 > k3 — węższa zmienność względna);
+  (b) ABSOLUTNIE rok fatalny (−46…−51%, maxDD ~60%) — obie nogi crypto =
+  pełna beta, zero poduszki stable. Sleeve cbBTC 25% z PAIRS.md NIE jest
+  "łagodnym reżimem" (to był artefakt) — jego sens zależy od decyzji
+  o ekspozycji krypto i hedge (F4), nie od jakości LP.
 - [x] **Egzotyki tick-level (werdykt majors vs egzotyki)** — DANE POBRANE (A4):
   - **DORY-USDC (Arbitrum 1%) to uniswap-V4** (universe.json: project=uniswap-v4,
     pool ae3c1ac2…, tokeny DORY 0x33b49f22…436ae / USDC natywny 0xaf88…5831).
@@ -77,12 +82,14 @@
     | Adapt k2 h12 pb7 | +26.7 | −7.69 | 17.4 | 917 | 48 | 6 |
     | Adapt k3 h24 pb7 | +62.8 | −1.77 | 17.0 | 826 | 8 | 1 |
 
-    Fakty liczbowe (interpretacja → B5/sesja analityczna): w silnym trendzie WZROSTOWYM
-    HODL bije KAŻDĄ aktywną strategię LP; nawet pasywny full-range tylko +0.37 vs HODL.
-    **Headline 79% fee-APR egzotyka NIE przekłada się na przewagę LP — kierunkowość/IL
-    dominuje** (im węższy/aktywniejszy zakres, tym gorzej: ±5% −33.8). Wstępny sygnał
-    przeciw sleeve'owi egzotycznemu przy aktywnym LP — ale to JEDEN reżim (wzrost);
-    pełny werdykt = B5 (potrzeba egzotyka też w reżimie spadkowym/flat).
+    ⚠️ **TABELA UNIEWAŻNIONA (Fable, 11.08): jednostki błędne** — silnik
+    traktował WTAO jako stable $1, equity było w WTAO-jednostkach; "reżim
+    wzrostowy +74.9%" znaczył w rzeczywistości SPADEK WTAO (odwrotnie!).
+    POPRAWNIE (silnik quote:'WETH', USD): HODL −70.5% APR, maxDD 38;
+    vsHODL: k3h24 **+7.31**, k2h12 +5.64, pasywny±50 +2.65, ±15 −5.91.
+    Zrewidowany wniosek: egzotyk zły nie przez "LP przegrywa w trendzie",
+    tylko przez betę tokena (−70%/r) miażdżącą alfę LP (+7 p.p.). Filtr
+    majors-only ZOSTAJE, uzasadnienie skorygowane. Szczegóły: CONTEXT 11.08.
 - [x] Historie DefiLlama 240 pul (4.4y dziennych apyBase/TVL) — pobrane.
 - [x] Fix odświeżania: fetch-llama teraz odświeża pliki starsze niż 24h
   (wcześniej resume pomijał je na zawsze — codzienny pipeline byłby ślepy).
@@ -117,10 +124,28 @@
   kruchość 1-3 decyzji rebalansu (→ B3 warianty triggera = główny front);
   (3) sztywny ±15% ma najłagodniejsze najgorsze-okno (−7.0/−7.8), ale %wygr tylko
   50/48. Pliki: backtest/results/walkforward-base-weth-usdc-030-365d.json (gitignored).
-- [ ] **Podział na reżimy**: rozszerzyć walkforward.ts o tagowanie okien
-  (trend up/down/flat wg zmiany ceny w oknie) i raport per reżim — strategia
-  musi wygrywać w ≥2 reżimach (bramka z PLAN.md).
-- [ ] **Warianty triggera rebalansu** (główny front — kruchość 1–3 decyzji):
+- [x] **Podział na reżimy (B2)** — ✅ DONE (Fable-desktop, 11.08, w kontenerze):
+  walkforward.ts taguje okna zmianą ceny względnej (±10% → up/down/flat),
+  raport per reżim, wynik w walkforward-<id>-<okno>d.json (fix nadpisywania).
+  **WYNIK (base-030-365d): hipoteza z B1 potwierdzona w 100% — wszystkie
+  najgorsze okna (−7…−12) to okna DOWN.** FLAT: adapt k3h24 100%wygr,
+  najgorsze +2.66 (45d) — pełne kryterium spełnione wewnątrz reżimu;
+  pasywny±50 100%wygr w obu oknach. UP (60d): k3h24/k2h24 100%wygr.
+  DOWN: 20–42%wygr, średnie ujemne wszędzie. **Bramka PLAN.md (≥2 reżimy):
+  adapt k3h24 i pasywny±50 PRZECHODZĄ (up+flat).** Pełne liczby: CONTEXT
+  wpis 11.08 "PRZEŁOMOWA" + backtest/results/walkforward-*-45d/60d.json.
+- [ ] **BEZPIECZNIK TRENDU SPADKOWEGO — NOWY GŁÓWNY FRONT (wniosek z B2)**:
+  strojenie k/h wyczerpane; brakuje komponentu reżimowego. Do strategies.ts:
+  detektor trendu (np. EWMA-trend / zmiana ceny X% w T dni / cena poniżej
+  średniej kroczącej N-dniowej) + akcja obronna (wariant A: poszerz zakres
+  ×2-3; wariant B: wyjdź do 100% stable do odwołania; wariant C: nie wchodź
+  ponownie po rebalansie dopóki trend trwa). Test walk-forwardem z reżimami
+  na 365d: cel = DOWN z 20-42% → ≥50%wygr i najgorsze okno > −5 przy
+  zachowaniu wygranych up/flat. UWAGA: wariant B to de facto market-timing —
+  porównać uczciwie z benchmarkiem "HODL z tym samym sygnałem".
+- [ ] **Warianty triggera rebalansu** (po B2 ZDEGRADOWANE do drugorzędnych —
+  ogon robią okna DOWN, nie timing triggera; nadal warte sprawdzenia PO
+  bezpieczniku trendu):
   do strategies.ts dodać (a) bufor cenowy (rebalans po wyjściu o X% poza zakres,
   nie od razu), (b) odwrót momentum (rebalans dopiero gdy EWMA-trend wraca ku
   zakresowi), (c) powrót-do-zakresu (czekaj aż cena wróci; rebalans tylko po
@@ -244,7 +269,10 @@
   nie bić w darmowe RPC równolegle z nocnym grindem 365d na Macu) + del
   .bot\selector-state.json + nssm restart homos-bot. Od jutra pipeline 07:30
   odświeża llamę na Windows codziennie — problem jednorazowy (zimny serwer).
-- [x] **B5 WYNIK (WTAO-WETH mainnet 1%, 90.3 dni, 10 750 swapów — sesja Fable,
+- [x] ⚠️ B5: liczby i interpretacja PONIŻEJ UNIEWAŻNIONE 11.08 (bug jednostek
+  par WETH-owych w silniku; poprawiona wersja: sekcja A4 wyżej + CONTEXT 11.08
+  "PRZEŁOMOWA"). Zostawione dla historii:
+  **B5 WYNIK (WTAO-WETH mainnet 1%, 90.3 dni, 10 750 swapów — sesja Fable,
   backtest w kontenerze na zsynchronizowanym cache)**: HODL 50/50 **+74.9% APR**
   (reżim silnie wzrostowy WTAO). Pasywny full-range +77.5 (vsHODL +0.37, fees
   $124); pasywny ±50% +75.1 (vsHODL +0.01, fees $486 ≈ 19.7%/r fee-yield).

@@ -34,6 +34,12 @@ export interface PoolSpec {
   tickSpacing: number;
   gasUsdPerRebalance: number; // pełny cykl: burn+collect+swap+mint
   slippageBps: number; // dodatkowy koszt obrotu przy rebalansie
+  /** kwotowanie pary: 'USD' (domyślne, noga stable=$1) albo 'WETH' (np. cbBTC/WETH) */
+  quote?: 'USD' | 'WETH';
+  /** dla quote:'WETH': USD za 1 WETH po bloku (step-function z cache referencyjnego) */
+  usdPerEth?: (block: number) => number;
+  /** wewnętrzne: aktualna wartość usdPerEth, aktualizowana per event przez runStrategy */
+  usdPerEthNow?: number;
 }
 
 /** sqrt(raw) dla ticku — z dokładnego v3math */
@@ -48,8 +54,19 @@ export const ethUsd = (sqrtP: number, spec: PoolSpec) => {
   return spec.ethIsToken0 ? p : 1 / p;
 };
 
-/** ceny jednostkowe token0/token1 w USD (dla par ETH/stable) */
+/** ceny jednostkowe token0/token1 w USD.
+ *  - quote 'USD' (domyślne): para ETH/stable, noga stable = $1;
+ *  - quote 'WETH' (np. cbBTC/WETH): USD-za-WETH z zewnętrznej referencji
+ *    (spec.usdPerEthNow, aktualizowane per event przez runStrategy). */
 export const unitPrices = (sqrtP: number, spec: PoolSpec): { px0: number; px1: number } => {
+  if (spec.quote === 'WETH') {
+    const E = spec.usdPerEthNow;
+    if (E === undefined) throw new Error(`${spec.id}: quote WETH bez usdPerEthNow — brak referencji USD`);
+    const p = humanP(sqrtP, spec); // token1 per token0
+    // WETH jest token0 → px1 = USD/token1 = (USD/WETH)/(token1/WETH) = E/p
+    // WETH jest token1 → px0 = USD/token0 = (WETH/token0)×(USD/WETH) = p×E
+    return spec.ethIsToken0 ? { px0: E, px1: E / p } : { px0: p * E, px1: E };
+  }
   const E = ethUsd(sqrtP, spec);
   return spec.ethIsToken0 ? { px0: E, px1: 1 } : { px0: 1, px1: E };
 };
@@ -156,6 +173,14 @@ export function runStrategy(
   startCapitalUsd: number
 ): RunResult {
   const s0 = swaps[0];
+  // referencja USD dla par WETH-owych: ustaw PRZED pierwszym unitPrices
+  const updateUsdRef = (b: number) => {
+    if (spec.quote === 'WETH') {
+      if (!spec.usdPerEth) throw new Error(`${spec.id}: quote WETH wymaga spec.usdPerEth`);
+      spec.usdPerEthNow = spec.usdPerEth(b);
+    }
+  };
+  updateUsdRef(s0.b);
   const px = unitPrices(s0.sqrtP, spec);
   const state: PortfolioState = {
     // start: 50/50 USD w obu tokenach
@@ -253,7 +278,10 @@ export function runStrategy(
   let lastSampleTs = 0;
 
   for (const ev of swaps) {
+    updateUsdRef(ev.b);
     // 1. aktualizacja zmienności (EWMA na log-returnach, half-life ~12h)
+    // Uwaga quote:'WETH': P to cena WZGLĘDNA pary (nie USD) — właściwa dla
+    // vol/zakresów/IL; wycena USD idzie wyłącznie przez unitPrices.
     const P = ethUsd(ev.sqrtP, spec);
     const dt = Math.max(ev.ts - lastTs, 1);
     if (P > 0 && lastP > 0 && dt > 0) {
