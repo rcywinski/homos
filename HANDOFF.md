@@ -54,6 +54,13 @@ v1.1 [re>EMA, decyzja Rafała] i częściowymi wynikami F.B; skrzynka pusta)
   (możesz zmienić)". Szczegóły: CONTEXT "weryfikacja przed jutrem".
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [✅ ODEBRANE ~15:3x — zgodne z praktyką, fetch Arbitrum/OP już leci przez hypersync]:
+  PILNE przypomnienie: do pobierania swapów
+  używaj ZAWSZE `npx tsx scripts/fetch-swaps-hypersync.ts <id>` (minuty),
+  NIE `fetch-swaps.ts` (RPC = godziny). Stary skrypt tylko gdy trzeba
+  factory-lookupu pustego adresu (przerwij go zaraz po wpisaniu adresu do
+  meta/POOLS). Jeśli teraz mieli coś przez RPC: Ctrl+C → wpisz adres do POOLS
+  → odpal wariant hypersync (state.json kompatybilny, wznowi od nextBlock).
 > Od 2026-08-11 ~15:20 CC-Mac chodzi na TAŃSZYM modelu (decyzja Rafała).
 > Zasada dla CC-Mac: wykonuj zadania DOKŁADNIE wg wpisów; gdy coś jest
 > niejednoznaczne, nie improwizuj — opisz problem w @Fable i przejdź do
