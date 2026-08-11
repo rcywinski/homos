@@ -136,6 +136,19 @@ export const POOLS: PoolCfg[] = [
     address: '0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35',
     feeBps: 3000, ethIsToken0: false, token0Decimals: 8, token1Decimals: 6, days: 365, // token0=WBTC, token1=USDC — zweryfikowane on-chain
   },
+  // --- Nowe sieci: Arbitrum + Optimism (decyzja Rafała, 2026-08-11) ---
+  {
+    id: 'arbitrum-weth-usdc-005-365d',
+    chain: 'arbitrum',
+    address: '0xC6962004f452bE9203591991D15f6b388e09E8D0',
+    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=WETH, token1=USDC natywny (0xaf88…5831) — zweryfikowane on-chain
+  },
+  {
+    id: 'optimism-weth-usdc-030-365d',
+    chain: 'optimism',
+    address: '0xc1738d90e2e26c35784a0d3e3d8a9f795074bca4',
+    feeBps: 3000, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365, // token0=USDC natywny (0x0b2C…7Ff85), token1=WETH — zweryfikowane on-chain (getPool z factory)
+  },
 ];
 
 // Kolejność ma znaczenie: najpierw endpointy z dostępem do pełnej historii.
