@@ -8,52 +8,52 @@
 | @CC-Win | Claude Code od botów windowsowych | Windows (24/7) | usługi NSSM, wdrożenia serwerowe, .env |
 | @Sonnet | sesja UI (Claude Desktop, Cowork) | Mac (musi być otwarty) | warstwa wizualna src/components+hooks+styles |
 
-Tylko @Fable jest zawsze osiągalna; dlatego zdalny wykonawca (agent-runner-git,
-usługa na Windows 24/7) domyka pętlę iPhone→chmura→Windows bez Maca.
+> Zasada: KRÓTKIE przekazania ("zrobione X, odbierz Y") — pełny kontekst w
+> CONTEXT.md/TASKS-*/RESEARCH-QUEUE. Sesja NA STARCIE czyta swoją sekcję
+> i USUWA odebrane wpisy. Format: `- [od→do, data] treść`.
 
-> Zasada: KRÓTKIE przekazania ("zrobione X, odbierz Y"), nie raporty — pełny
-> kontekst i tak żyje w CONTEXT.md/TASKS-*/RESEARCH-QUEUE. Każda sesja NA
-> STARCIE czyta swoją sekcję i USUWA odebrane wpisy (skrzynka, nie archiwum).
-> Format wpisu: `- [od→do, data] treść`. Rafał nie musi już być routerem —
-> zostawiasz wpis tutaj + commit (jeśli masz gita) i piszesz dalej swoje.
+## STAN KOLEJKI ZADAŃ (agent-runner-git) — AKTUALNY, PO CLEANUPIE
+Wszystko działa na MAIN. Żadnych dodatkowych branchy, patchy ani tokenów —
+NIE twórz brancha agent-queue, NIE proś o żadne tokeny GitHub. Runner używa
+tych samych poświadczeń gita, którymi Windows robi zwykły `git pull`.
+Kolejka: .agent-queue/pending/*.json → wykonanie (whitelist) → .agent-queue/done/.
 
 ## @Fable (sesja analityczna, cloud)
 - (pusto)
 
 ## @Sonnet (sesja UI, Cowork)
-- [Fable→Sonnet, 2026-08-10] Kosmetyka do Partii 5 przy okazji: modal [Otwórz→]
-  z propozycji bota mówi "Doradca (brak danych) — wpisz zakres ręcznie", choć
-  pola SĄ prefillowane zakresem z propozycji — zmień komunikat na "zakres
-  z propozycji bota (możesz zmienić)". Szczegóły: CONTEXT wpis "weryfikacja
-  przed jutrem".
+- [Fable→Sonnet, 2026-08-10] Kosmetyka do Partii 5: modal [Otwórz→] z propozycji
+  bota mówi "Doradca (brak danych) — wpisz zakres ręcznie", choć pola SĄ
+  prefillowane zakresem z propozycji — zmień na "zakres z propozycji bota
+  (możesz zmienić)". Szczegóły: CONTEXT "weryfikacja przed jutrem".
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
-- [Fable→CC-Mac, 2026-08-10, UPROSZCZONE] ZDALNY WYKONAWCA: gotowy commit
-  brancha leży w repo jako `agent-queue-skeleton.patch` (szkielet .agent-queue/
-  + scripts/agent-runner-git.ts + package.json scan/runner:git). Wykonaj:
-  `git checkout -b agent-queue && git am agent-queue-skeleton.patch &&
-  git push -u origin agent-queue && git checkout main && rm agent-queue-skeleton.patch`.
-  Potem na main: commit+push scripts/agent-runner-git.ts + backtest/scan-universe.ts
-  + scripts/fetch-swaps-hypersync.ts + HANDOFF.md + docs (są na dysku).
-  Uzasadnienie patcha: sesja chmurowa może czytać repo, ale proxy blokuje jej
-  push dopóki repo nie będzie w źródłach sesji (Rafał doda przy starcie
-  następnej sesji chmurowej).
-- [Fable→CC, 2026-08-10] Trzy skrypty czekają w kolejce (sekcje E/F RESEARCH-QUEUE):
-  (1) scan-universe.ts — odpal od ręki, sekundy; (2) test HyperSync → może
-  skrócić grind A2/A3 z ~40h do minut; (3) commit+push nowych plików
-  (selector v1.1, rebalanceBuilder, hypersync, scan-universe, HANDOFF.md).
-
-- [Fable→CC-Mac, 2026-08-10] PRZYCISK iPHONE: docs/enqueue-workflow.yml.txt →
-  przenieś do .github/workflows/enqueue.yml (zdalne narzędzia nie mogą pisać
-  do workflows — ochrona) i commit+push na main. Po tym Rafał zleca zadania
-  z aplikacji GitHub na telefonie: Actions → "Zleć zadanie serwerowi" → Run.
+- [Fable→CC-Mac, 2026-08-11] Porządki + 3 szybkie zadania:
+  (1) jeśli branch agent-queue trafił na origin: `git push origin --delete
+  agent-queue` (lokalny: `git branch -D agent-queue`); skasuj też
+  agent-queue-skeleton.patch jeśli gdzieś leży;
+  (2) `mkdir -p .github/workflows && git mv docs/enqueue-workflow.yml.txt
+  .github/workflows/enqueue.yml && git commit -m "przycisk enqueue" && git push`
+  — aktywuje przycisk "Zleć zadanie serwerowi" w aplikacji GitHub na iPhone;
+  (3) `npm run scan` (sekundy, 1 call API) → wynik backtest/results/
+  scan-universe.json commit+push — czeka na to analiza par spiętych (sekcja F).
+  Nadal w kolejce: test HyperSync (sekcja E) — może skrócić grind A2 z ~15h do minut.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→Windows, 2026-08-10] Po tym jak CC wypchnie branch `agent-queue`:
-  git fetch && git checkout agent-queue, potem trzecia usługa NSSM
-  `homos-runner` (analogicznie do homos-bot: ten sam node+tsx cli.mjs,
-  argument scripts/agent-runner-git.ts, AppDirectory=C:\Projects\homos,
-  AppRestartDelay=5000). Test: w .bot\runner.log wpis "runner-git start",
-  w .agent-queue/runner-status.json świeży heartbeat po pushu z chmury.
-  UWAGA: git na Windows musi umieć push bez pytania o hasło (credential
-  manager już skonfigurowany przy pierwszym pull — zweryfikować push).
+- [Fable→CC-Win, 2026-08-11] URUCHOM RUNNERA — instrukcja kompletna, niczego
+  więcej nie potrzeba (ŻADNYCH tokenów — git pull już działa, runner używa
+  tych samych poświadczeń):
+  1. `cd C:\Projects\homos && git pull`
+  2. test ręczny (ma wypisać "runner-git start" i zostać w pętli; Ctrl+C):
+     `npx tsx scripts\agent-runner-git.ts`
+  3. usługa (nssm jak przy homos-bot, te same ścieżki node+tsx):
+     `nssm install homos-runner "<ta sama ścieżka node co homos-bot>"
+     "<ta sama ścieżka tsx cli.mjs>" scripts\agent-runner-git.ts`
+     `nssm set homos-runner AppDirectory C:\Projects\homos`
+     `nssm set homos-runner AppRestartDelay 5000`
+     `nssm start homos-runner`
+  4. weryfikacja: `.bot\runner.log` → "runner-git start — poll co 180s";
+     po zleceniu testowego zadania commit "runner: wynik ..." wypchnięty na main.
+  Zasady: nie trzymać na Windows niezacommitowanych zmian w plikach śledzonych
+  (runner robi reset --hard origin/main co 3 min; .env/data/.bot poza gitem =
+  bezpieczne); ciężkie zadania kolejki nie w okolicy 07:30 (pipeline).

@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent-queue
+          ref: main
       - name: Dodaj zadanie do kolejki
         env:
           TASK: ${{ inputs.task }}
@@ -48,5 +48,5 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add .agent-queue/pending
           git commit -m "queue: $id ${TASK} ${ARGS}"
-          git push origin agent-queue
+          git push origin main
           echo "Zakolejkowano: $id → ${TASK} ${ARGS}" >> "$GITHUB_STEP_SUMMARY"

@@ -36,7 +36,7 @@ const DONE = path.join(QUEUE, 'done');
 const STATUS = path.join(QUEUE, 'runner-status.json');
 const LOG = path.join(ROOT, '.bot', 'runner.log');
 const POLL_SEC = 180;
-const BRANCH = 'agent-queue';
+const BRANCH = 'main';
 
 // lustro WHITELIST z scripts/agent-runner.ts — trzymać w zgodzie ręcznie
 const WHITELIST: Record<string, string> = {
