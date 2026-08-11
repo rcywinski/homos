@@ -25,6 +25,7 @@
   "license": "ISC",
   "dependencies": {
     "@babel/preset-react": "^7.26.3",
+    "@envio-dev/hypersync-client": "^1.4.0",
     "@tanstack/react-query": "^5.69.0",
     "@types/dotenv": "^8.2.3",
     "@uniswap/sdk-core": "^7.7.2",

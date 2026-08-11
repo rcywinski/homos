@@ -15,7 +15,7 @@ import * as path from 'path';
 // ---------------------------------------------------------------------------
 // Konfiguracja pul do pobrania (PAIRS.md §5 — start: rdzeń porównania)
 // ---------------------------------------------------------------------------
-interface PoolCfg {
+export interface PoolCfg {
   id: string;
   chain: 'mainnet' | 'base' | 'arbitrum';
   address: string;
@@ -27,7 +27,16 @@ interface PoolCfg {
   days: number; // ile dni wstecz
 }
 
-const POOLS: PoolCfg[] = [
+export const POOLS: PoolCfg[] = [
+  {
+    // TEST HyperSync (sekcja E RESEARCH-QUEUE): ta sama pula co istniejący
+    // cache base-weth-usdc-030 (90d z RPC) pod świeżym id — po pobraniu
+    // porównać: npx tsx scripts/compare-caches.ts base-weth-usdc-030 base-weth-usdc-030-hstest
+    id: 'base-weth-usdc-030-hstest',
+    chain: 'base',
+    address: '0x6c561B446416E1A00E8E93E221854d6eA4171372',
+    feeBps: 3000, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 90,
+  },
   {
     id: 'mainnet-usdc-weth-005',
     chain: 'mainnet',
@@ -62,7 +71,7 @@ const POOLS: PoolCfg[] = [
     // A3: rok danych drugiej najlepszej puli (skorelowana). Kopia base-cbbtc-weth-005, days: 365.
     id: 'base-cbbtc-weth-005-365d',
     chain: 'base',
-    address: '', // ten sam lookup cbBTC/WETH przez factory
+    address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1', // cbBTC/WETH Base 0.05% (z lookupu RPC; HyperSync nie robi factory-lookup)
     feeBps: 500, ethIsToken0: false, token0Decimals: 8, token1Decimals: 18, days: 365,
   },
   {
@@ -264,14 +273,19 @@ async function fetchPool(cfg: PoolCfg) {
   console.log(`\n[${cfg.id}] DONE — ${total} nowych swapów -> ${outPath}`);
 }
 
-(async () => {
-  const only = process.argv[2];
-  for (const cfg of POOLS) {
-    if (only && cfg.id !== only) continue;
-    try {
-      await fetchPool(cfg);
-    } catch (e) {
-      console.error(`\n[${cfg.id}] FAILED:`, e);
+// Guard: uruchamiaj fetch tylko gdy ten plik jest punktem wejścia —
+// fetch-swaps-hypersync.ts importuje stąd POOLS/PoolCfg i bez guarda
+// sam import odpalałby równolegle fetch RPC wszystkich pul.
+if (require.main === module) {
+  (async () => {
+    const only = process.argv[2];
+    for (const cfg of POOLS) {
+      if (only && cfg.id !== only) continue;
+      try {
+        await fetchPool(cfg);
+      } catch (e) {
+        console.error(`\n[${cfg.id}] FAILED:`, e);
+      }
     }
-  }
-})();
+  })();
+}

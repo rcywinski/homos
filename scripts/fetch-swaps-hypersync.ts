@@ -80,9 +80,9 @@ function decodeSwap(dataHex: string) {
     console.error(`${id}: chain ${cfg.chain} nieobsługiwany przez ten skrypt`);
     process.exit(1);
   }
-  const token = process.env.HYPERSYNC_BEARER_TOKEN;
+  const token = process.env.HYPERSYNC_BEARER_TOKEN || process.env.ENVIO_API_TOKEN;
   if (!token) {
-    console.error('Brak HYPERSYNC_BEARER_TOKEN w .env — darmowy token: https://envio.dev (API Tokens).');
+    console.error('Brak HYPERSYNC_BEARER_TOKEN (albo ENVIO_API_TOKEN) w .env — darmowy token: https://envio.dev/app → API Tokens (docs: docs.envio.dev/docs/HyperSync/api-tokens).');
     process.exit(1);
   }
 
@@ -94,16 +94,36 @@ function decodeSwap(dataHex: string) {
     console.error('Brak pakietu @envio-dev/hypersync-client — zainstaluj: npm i @envio-dev/hypersync-client');
     process.exit(1);
   }
-  const client = HypersyncClient.new({ url, bearerToken: token });
+  // docs 2026: `new HypersyncClient({ url, apiToken })`; starsze wersje pakietu
+  // miały fabrykę `HypersyncClient.new(...)` — obsługujemy obie.
+  const clientCfg = { url, apiToken: token, bearerToken: token };
+  const client = typeof HypersyncClient?.new === 'function'
+    ? HypersyncClient.new(clientCfg)
+    : new HypersyncClient(clientCfg);
 
   const statePath = path.join(CACHE_DIR, `${cfg.id}.state.json`);
   const outPath = path.join(CACHE_DIR, `${cfg.id}.ndjson`);
   const metaPath = path.join(CACHE_DIR, `${cfg.id}.meta.json`);
 
-  // wysokość łańcucha z HyperSync (bez RPC)
-  const latest: number = Number(await client.getHeight());
-  const blocksBack = Math.floor((cfg.days * 86400) / BLOCK_TIME[cfg.chain]);
-  const startBlock = latest - blocksBack;
+  // Okno blokowe: jeśli meta.json JUŻ istnieje (np. przejmujemy fetch zaczęty
+  // przez fetch-swaps.ts — przypadek A2), REUŻYWAMY jego startBlock/latest,
+  // żeby nie przesuwać okna i nie psuć anchorów/interpolacji czasu.
+  // Świeży fetch: wysokość łańcucha z HyperSync (bez RPC) i natychmiastowy
+  // zapis meta (fetch-swaps też pisze meta na starcie — przerwanie nie gubi cfg).
+  const metaPathEarly = path.join(CACHE_DIR, `${cfg.id}.meta.json`);
+  let latest: number;
+  let startBlock: number;
+  let blocksBack: number;
+  if (fs.existsSync(metaPathEarly)) {
+    const m = JSON.parse(fs.readFileSync(metaPathEarly, 'utf8'));
+    latest = m.latest; startBlock = m.startBlock; blocksBack = latest - startBlock;
+    console.log(`[${cfg.id}] meta istnieje — okno z meta: ${startBlock}→${latest}`);
+  } else {
+    latest = Number(await client.getHeight());
+    blocksBack = Math.floor((cfg.days * 86400) / BLOCK_TIME[cfg.chain]);
+    startBlock = latest - blocksBack;
+    fs.writeFileSync(metaPathEarly, JSON.stringify({ cfg, startBlock, latest, anchors: [] }, null, 2));
+  }
 
   let from = startBlock;
   if (fs.existsSync(statePath)) {
@@ -125,8 +145,9 @@ function decodeSwap(dataHex: string) {
     toBlock: latest + 1, // wg docs toBlock jest EXCLUSIVE — zweryfikować
     logs: [{ address: [cfg.address], topics: [[SWAP_TOPIC]] }],
     fieldSelection: {
-      log: ['block_number', 'data'],
-      block: ['number', 'timestamp'],
+      // wg docs (2026): nazwy pól PascalCase; odpowiedź ma klucze camelCase
+      log: ['BlockNumber', 'Data'],
+      block: ['Number', 'Timestamp'],
     },
   };
 
