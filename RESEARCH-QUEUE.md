@@ -70,9 +70,32 @@
 
 ## B. ANALIZY DO PUSZCZENIA (po danych z A; wszystko lokalne skrypty)
 
-- [ ] **Walk-forward na 365d** (po A2): okna 45 i 60 dni co 15:
-  `npx tsx backtest/walkforward.ts base-weth-usdc-030-365d 45 15` oraz `60 15`.
-  Kryterium algorytmu: %wygranych ≥65 i najgorsze okno > −3.
+- [x] **Walk-forward na 365d** — ✅ DONE (Claude Code, dane 365d przez HyperSync:
+  1 852 872 swapy). Kryterium: %wygr ≥65 i najgorsze okno > −3.
+  **WERDYKT: ŻADNA strategia nie przechodzi bramki** (najgorsze okno wszędzie −7…−12).
+
+  Okna **45d co 15d (22 okna)** — vsHODL% na okno:
+  | strategia | śr. | med. | %wygr | najgorsze | najlepsze |
+  |---|---|---|---|---|---|
+  | Pasywny ±50% | −0.71 | +1.67 | **64%** | −11.63 | +3.53 |
+  | Sztywny ±15% (naiwny) | +0.38 | +0.19 | 50% | **−7.01** | +10.15 |
+  | Adapt k2 h24 pb7 | −1.05 | −0.09 | 45% | −10.18 | +7.58 |
+  | Adapt k3 h24 pb7 | +0.55 | +2.66 | 55% | −12.33 | +6.41 |
+
+  Okna **60d co 15d (21 okien)**:
+  | strategia | śr. | med. | %wygr | najgorsze | najlepsze |
+  |---|---|---|---|---|---|
+  | Pasywny ±50% | −0.51 | +0.56 | 57% | −12.74 | +4.81 |
+  | Sztywny ±15% (naiwny) | −0.24 | −0.33 | 48% | −7.78 | +10.98 |
+  | Adapt k2 h24 pb7 | −1.02 | −2.38 | 48% | −10.95 | +9.50 |
+  | Adapt k3 h24 pb7 | **+1.02** | +1.63 | **62%** | −11.16 | +8.60 |
+
+  Fakty liczbowe (interpretacja → sesja analityczna): (1) najbliżej bramki
+  **Adapt k=3 h=24** (55%/62% wygr, dodatnie śr+med w obu oknach); (2) wspólny
+  zabójca to **najgorsze okno −7…−12** u KAŻDEJ strategii — twardo potwierdza
+  kruchość 1-3 decyzji rebalansu (→ B3 warianty triggera = główny front);
+  (3) sztywny ±15% ma najłagodniejsze najgorsze-okno (−7.0/−7.8), ale %wygr tylko
+  50/48. Pliki: backtest/results/walkforward-base-weth-usdc-030-365d.json (gitignored).
 - [ ] **Podział na reżimy**: rozszerzyć walkforward.ts o tagowanie okien
   (trend up/down/flat wg zmiany ceny w oknie) i raport per reżim — strategia
   musi wygrywać w ≥2 reżimach (bramka z PLAN.md).
@@ -200,18 +223,31 @@
   wąska zbiera więcej fees ($1,316) ale umiera na IL od trendu (klasyczny LVR);
   (2) cały zysk puli to beta tokena (HODL +75%), nie fees — to zakład o WTAO,
   nie strategia LP; (3) filtr majors-only w selektorze POTWIERDZONY empirycznie.
-- [ ] **HyperSync fetcher — TEST + ewentualne przejęcie grindu (dla CC, jutro)**:
-  `scripts/fetch-swaps-hypersync.ts` NA DYSKU (sesja Fable; API klienta z pamięci
-  — patrz nagłówek, może wymagać drobnych poprawek nazw pól, jest --debug).
-  Kroki: (1) `npm i @envio-dev/hypersync-client`; (2) darmowy token z envio.dev
-  → `HYPERSYNC_BEARER_TOKEN=` do .env (Rafał wkleja sam, NIE commitować);
-  (3) w fetch-swaps.ts: `export const POOLS` + `export interface PoolCfg`
-  (jednolinijkowe); (4) TEST POPRAWNOŚCI: pobrać base-weth-usdc-030 (90d, już
-  mamy z RPC) pod świeżym id-testowym i porównać liczbę linii + skrajne wiersze;
-  (5) jeśli zgodne: STOP nocnego grindu A2 i dokończenie HyperSyncem (state.json
-  kompatybilny — wznowi od nextBlock!), potem A3 i od razu WIĘCEJ (pełne 365d
-  mainnet-005? decyzja analityka po sukcesie). NIE blokować się, jeśli API
-  wymaga poprawek — nocny grind i tak mieli w tle jako plan B.
+- [~] **HyperSync fetcher — PRZYGOTOWANE przez Fable-desktop 11.08, zostaje
+  wykonanie (CC-Mac + token od Rafała)**. Zrobione: (a) API zweryfikowane
+  z docs.envio.dev (2026): `new HypersyncClient({url, apiToken})`, fieldSelection
+  PascalCase — skrypt poprawiony (obsługuje też starą fabrykę .new/bearerToken);
+  (b) `export const POOLS`/`export interface PoolCfg` w fetch-swaps.ts + GUARD
+  `require.main === module` (bez niego import POOLS odpalał fetch RPC wszystkich
+  pul!); (c) wpis testowy `base-weth-usdc-030-hstest` (90d, ta sama pula co
+  cache referencyjny z RPC) w POOLS; (d) `scripts/compare-caches.ts` — porównanie
+  1:1 w części wspólnej zakresów (per blok, multizbiór linii; self-test na
+  base-weth-usdc-030: 583 493 linii, 303 555 bloków, exit 0); (e) fix wznowienia:
+  hypersync-skrypt REUŻYWA startBlock/latest z istniejącego meta.json (przejęcie
+  A2 nie przesuwa okna) i pisze meta na starcie świeżego fetchu.
+  KROKI WYKONAWCZE:
+  (1) Rafał: konto https://envio.dev/app → API Tokens → do .env na Macu:
+      `HYPERSYNC_BEARER_TOKEN=...` (skrypt akceptuje też ENVIO_API_TOKEN);
+  (2) CC-Mac: `npm i @envio-dev/hypersync-client`;
+  (3) CC-Mac: `npx tsx scripts/fetch-swaps-hypersync.ts base-weth-usdc-030-hstest`
+      (przy problemach z kształtem odpowiedzi: --debug);
+  (4) CC-Mac: `npx tsx scripts/compare-caches.ts base-weth-usdc-030
+      base-weth-usdc-030-hstest` → werdykt w konsoli (exit 0 = zgodne);
+  (5) jeśli ✅: STOP grindu RPC A2 → `npx tsx scripts/fetch-swaps-hypersync.ts
+      base-weth-usdc-030-365d` (state.json kompatybilny, wznowi od nextBlock;
+      rano 09:10 było 39 634 570 ≈ 36%) → potem A3 (cbBTC 365d) i ewentualnie
+      pule sekcji F; sprzątnąć pliki -hstest z data/cache;
+  (6) jeśli ❌: wkleić raport rozjazdów do HANDOFF @Fable, grind RPC mieli dalej.
 
 ## F. SLEEVE PAR SPIĘTYCH (pomysł z interfejsu bota znajomego — 2026-08-10)
 > Kontekst: screen "Earned $6,912 / 5.6d / $281k" = 3.1%/tydz. — realne dla
@@ -252,3 +288,27 @@
   Bot i UI już poprawione (bot/config.ts, src/config/botPools.ts) — po push+pull
   runnera wymagany restart homos-bot; weryfikacja: telemetria pokaże cbBTC
   ~$60–70k zamiast $0.
+
+## G. ULEPSZENIA INFRASTRUKTURY KOLEJKI (backlog, niepilne)
+- [ ] Runner: opcjonalne załączanie wskazanych plików wyników do commita
+  (backtest/results/ jest gitignored — dziś wraca tylko ogon konsoli w done/;
+  pole "attach": ["backtest/results/scan-universe.json"] w zadaniu → runner
+  kopiuje do .agent-queue/artifacts/<id>/ i commituje razem z done).
+- [ ] Runner: auto-restart homos-bot gdy pull zmienił bot/** (wymaga nadania
+  kontu usługi prawa do zarządzania usługą, np. sc sdset — inaczej ręcznie).
+- [ ] Zadanie 8:00 "newsy → postawa ryzyka dnia" (sekcja D) — do utworzenia
+  w NOWEJ sesji chmurowej (create_trigger), gdy przejmie koordynację.
+- [x] Pool Scanner 2.0 przez kolejkę: manual-20260811-scan2 exit 0 — ogon
+  z tabelami w .agent-queue/done/ (ANALIZA WYNIKÓW: sesja Fable, zasila F).
+  ODBIÓR CZĘŚCIOWY (Fable-desktop 11.08): outputTail UCIĘTY — brakuje CAŁEGO
+  koszyka stable-stable i większości eth-lst (dokładnie tych, których F
+  potrzebuje). Pełne tabele: czeka na `npm run scan` u CC-Mac (w jego HANDOFF;
+  sandbox Fable nie sięgnie do DefiLlamy — proxy 403). Z dostępnej części:
+  (a) BTC-BTC: **TBTC-WBTC 0.01% mainnet — v/tvl7d 10.52** (rekordowa
+  koncentracja wolumenu w koszyku, APR 3.0%, TVL $2.5M) — mocny kandydat
+  do fetch tick-level w F.A obok wstETH-WETH i USDC-USDT; reszta koszyka
+  martwa (v/tvl ≤1.85). (b) major-volatile potwierdza selektor: WETH-USDC
+  0.3% Base 42.7% APR (v3, $113M) top wykonywalnych; USDC-WETH 0.01% mainnet
+  v/tvl7d 37.27 — ciekawostka zbieżna z propozycją OPEN selektora z 11.08.
+  (c) eth-lst (ogon): dominacja curve-dex $189M TVL — pule v3 do potwierdzenia
+  w pełnym wyniku.
