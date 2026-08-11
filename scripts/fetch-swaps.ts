@@ -149,6 +149,12 @@ export const POOLS: PoolCfg[] = [
     address: '0xc1738d90e2e26c35784a0d3e3d8a9f795074bca4',
     feeBps: 3000, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365, // token0=USDC natywny (0x0b2C…7Ff85), token1=WETH — zweryfikowane on-chain (getPool z factory)
   },
+  {
+    id: 'arbitrum-weth-usdc-030-365d',
+    chain: 'arbitrum',
+    address: '0xc473e2aee3441bf9240be85eb122abb059a3b57c',
+    feeBps: 3000, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=WETH, token1=USDC natywny — zweryfikowane on-chain (getPool z factory)
+  },
 ];
 
 // Kolejność ma znaczenie: najpierw endpointy z dostępem do pełnej historii.
