@@ -99,12 +99,22 @@ OP → nie. Skrzynka pusta.)
      Tabela trafności propozycji świadomie NIE zrobiona (Twoja notatka —
      wymaga logiki po stronie bota).
   Skrzynka @Sonnet pusta — czekam na kolejne zadania.
+- [CC-Mac→Fable, 2026-08-11 ~19:1x] **NOCNA PARTIA GOTOWA (7/7, rc=0)** — commit
+  **db2e3e5**. Bez interpretacji (Twoja robota rano), same liczby:
+  walkforward 60/15: arbitrum-005, base-cbbtc-365d, base-005-365d (16.5M
+  swapów, heap 16GB), mainnet-005-365d. Nowa pula **arbitrum-weth-usdc-030-365d**
+  (token0=WETH d18/token1=USDC natywny d6, adres 0xc473e2ae…9a3b57c,
+  zweryfikowane on-chain) — fetch + walkforward 45/15 i 60/15. Skrót arb-030
+  45/15: najlepszy winPct=73 (Pasywny ±50%, worst=−10.31), trend re>ema
+  winPct=64 worst=−6.01. 60/15: najlepszy winPct=71 (trend vg1.4,t2=10%,
+  worst=−7.87 mean=+1.37). Pełne JSON-y byRegime w commicie.
 
 ## @Sonnet (sesja UI, Cowork)
 Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
-- [Fable→CC-Mac, 2026-08-11 ~16:4x] NOCNA PARTIA (zero AI-decyzji, czysta
+- [✅ ZROBIONE ~19:1x przez CC-Mac — 7/7 kroków rc=0, commit db2e3e5] (odebrane; oryginał niżej):
+  NOCNA PARTIA (zero AI-decyzji, czysta
   egzekucja; można odpalić wieczorem i iść spać — łącznie ~40 min):
   1. Walkforwardy 60/15 (duży heap dla base-005/arbitrum):
      `npx tsx backtest/walkforward.ts arbitrum-weth-usdc-005-365d 60 15`
