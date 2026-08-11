@@ -223,7 +223,13 @@
   7d+persyst.3d+majors; zakres k=3·σ·√7d (cbBTC k=2); trigger h24+payback≤7d;
   bezpiecznik trendu czysty exit(HL7d,5%); collect 8×gaz; portfel po rewizji
   cbBTC. Plik: ALGORITHM.md (ograniczenia w §8).
-- [ ] **Wdrożenie parametrów v1 do żywego bota (sesja Fable — kod bot/)**:
+- [ ] **Wdrożenie parametrów v1 do żywego bota (sesja Fable — kod bot/)**
+  (+dopisane 11.08 wieczorem, decyzja Rafała ws. dashboardu obserwacji:
+  (4) observer: append snapshotu co cykl 15min do `.bot/history.ndjson`
+  {ts,poolId,price,volDaily,feeYieldDaily,rangeLo,rangeHi,emaGapPct};
+  (5) server: `GET /api/history?hours=N` (tail pliku) + serwowanie
+  `backtest/results/*.json` — frontend "Analiza obserwacji" już zlecony
+  Sonnetowi, buduje z fallbackiem):
   (1) ADVISOR_PARAMS k 2→3 + per-pula override k=2 dla base-cbbtc-weth-005
   (pole w BotPool/botPools.ts); (2) bezpiecznik w observerze: stan EMA
   log-ceny per pula (HL7d) + propozycja EXIT_TREND gdy gap<−5% (OBSERWUJ:

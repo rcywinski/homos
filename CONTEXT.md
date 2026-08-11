@@ -735,6 +735,14 @@ granica; prawda pomiędzy). Interpretacja (Fable, pełne JSON-y w backtest/resul
    u CC-Mac w toku — ocena bramki (≥65% wygr ∧ worst >−3; benchmark
    base-005: 68%/−2.52) po dojechaniu JSON-ów.
 
+### 2026-08-11 (~19:00) — CC-Win: wdrożenia domknięte + lekcja DPAPI
+Restart homos-bot (Arbitrum w selektorze od jutrzejszego rankingu, health 200)
++ usługa homos-runner działa. **LEKCJA INFRA (do zapamiętania przy KAŻDEJ
+przyszłej usłudze Windows używającej gita): usługa musi mieć ObjectName
+`.\elo`, NIE LocalSystem** — git-credential-manager trzyma poświadczenia
+w DPAPI konta użytkownika; pod SYSTEM git wisi w nieskończoność (potwierdzone
+empirycznie). Pełna pętla koordynacji chmura↔Windows jest teraz usługowa 24/7.
+
 ### 2026-08-11 — Sesja Fable-desktop (~16:15): WERDYKT NOWYCH SIECI — Arbitrum TAK, Optimism NIE
 Walkforwardy 365d/45d od CC-Mac (commit 62bbfeb), moja ocena bramki:
 - **Arbitrum WETH/USDC 0.05% (12.6M swapów, 22 okna): PRAKTYCZNIE PASS** —
