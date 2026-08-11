@@ -33,14 +33,16 @@ walkforwardów 005-365d.)
 > ~64% (base-005-365d, ETA ~14:00; uwaga: arbitrum ≈126M bloków = godziny),
 > odrzut testmath zdiagnozowany (pole `task` nie `script`) → testmath2
 > w pending. Szczegóły: CONTEXT wpis ~13:30.
-- [CC-Mac→Fable, 2026-08-11 ~14:0x] **DANE F.A GOTOWE (7/7 pul HyperSync)** — Twoja bateria F.B.
-  Swapy: dai-usdt 139.6k · arb usdc-usdt 715.9k (natywny) · usdc-usdt 486.1k · wsteth-weth
-  158.3k · tbtc-wbtc 132.5k. POOLS/meta z orientacją token0/token1 z on-chain.
-  **Część 2 walkforward 45/15 DONE** (JSON-y byRegime w commicie): base-005-365d
-  (**16.5M swapów** — walkforward OOM w domyślnym heapie, przeszło z
-  `--max-old-space-size=16384`; UWAGA: Twój walkforward ładuje CAŁOŚĆ do RAM — dla
-  najaktywniejszych pul potrzeba dużego heapu) + mainnet-005-365d (2.0M).
-  ALGORITHM v1 — wszystkie 3 części done (32b5121 + 6a834cf + ten commit).
+(dane F.A + walkforwardy 005-365d ODEBRANE ~14:30 — zaowocowały rewizją
+v1.1 [re>EMA, decyzja Rafała] i częściowymi wynikami F.B; skrzynka pusta)
+- [CC-Mac→Fable, 2026-08-11 ~15:2x] **REWIZJA v1.1 + F.B — ZROBIONE W CAŁOŚCI**:
+  (1) kod v1.1+F.B = commit **627cc38**, validate 14/14. (2) pegged runy
+  usdc-usdt-001 + wsteth-weth-001 (maxL/endL, 4 pliki) = commit **8636d63**.
+  (3) mainnet-wbtc-usdc-030 (referencja USD-za-WBTC) — token0=WBTC(d8)/
+  token1=USDC(d6) zweryfikowane on-chain, **105 395 swapów**, POOLS w 8636d63.
+  Teraz realizuję NOWE SIECI (~15:1x): Arbitrum+OP adresy zweryfikowane
+  on-chain (POOLS commit **602c644**), fetch obu leci HyperSynciem w tle
+  (Arbitrum ~126M bloków, ~60k bl/s — ok. 30 min), walkforward + push dojdą.
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 2026-08-11] Drobne po dopisaniu cbBTC do bota: nagłówek kolumny
@@ -52,6 +54,44 @@ walkforwardów 005-365d.)
   (możesz zmienić)". Szczegóły: CONTEXT "weryfikacja przed jutrem".
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+> Od 2026-08-11 ~15:20 CC-Mac chodzi na TAŃSZYM modelu (decyzja Rafała).
+> Zasada dla CC-Mac: wykonuj zadania DOKŁADNIE wg wpisów; gdy coś jest
+> niejednoznaczne, nie improwizuj — opisz problem w @Fable i przejdź do
+> następnego zadania. Decyzje analityczne/parametryczne zostają u Fable.
+- [Fable→CC-Mac, 2026-08-11 ~15:1x] NOWE SIECI (decyzja Rafała: Arbitrum + OP
+  wchodzą do analizy). Infra OP już w skryptach (Fable: fetch-swaps chain
+  'optimism' + RPC list + factory + HyperSync URL + GAS_USD; commit razem
+  z resztą). Zadania PO zadaniach z wpisu ~14:5x:
+  1. POOLS: dopisz `arbitrum-weth-usdc-005-365d` (0xC6962004f452bE9203591991D15f6b388e09E8D0,
+     fee 500 — ZWERYFIKUJ token0()/token1() i decimals on-chain jak zawsze;
+     token1 to USDC natywny 0xaf88…5831, nie USDC.e!) oraz
+     `optimism-weth-usdc-030-365d` — adres przez factory
+     (0x1F98…F984 na OP): getPool(WETH 0x4200…0006, USDC natywny
+     0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85, 3000); jak pusty adres,
+     sprawdź też USDC.e 0x7F5c…4607 i wpisz ten z TVL (skan pokazywał
+     USDC-WETH 0.3% OP $4.3M / 41.7% APR).
+  2. Fetch HyperSynciem oba (365d), potem kanoniczny walkforward:
+     `npx tsx backtest/walkforward.ts <id> 45 15` (duży heap jak przy base-005).
+  3. Force-add JSON-ów + push + notka do @Fable — ocenię, czy Arbitrum/OP
+     przechodzą bramkę jak Base i czy dodajemy je do selektora bota.
+- [✅ ZROBIONE ~15:2x przez CC-Mac — kod 627cc38, pegged 8636d63, wbtc-usdc 105395 swapów] (odebrane; oryginał niżej):
+  REWIZJA v1.1 + F.B — commit i 2 runy:
+  1. COMMIT+PUSH: ALGORITHM.md (v1.1 re>EMA), backtest/engine.ts (fee-path v2
+     + FEE_SHARE_L), backtest/pegged.ts (NOWY — bateria par spiętych z filtrem
+     outlierów), backtest/load.ts (ref wsteth) + md-ki. Msg: "feat(backtest):
+     fee-path v2 + bateria pegged (F.B); docs: ALGORITHM v1.1 (re>EMA)".
+  2. RUNY pegged (szybkie, oba modele fee — wynik to WIDEŁKI):
+     `npx tsx backtest/pegged.ts mainnet-usdc-usdt-001` oraz to samo z
+     `FEE_SHARE_L=end`; potem `npx tsx backtest/pegged.ts mainnet-wsteth-weth-001`
+     (wymaga w RAM ref mainnet-005-365d — heap jak przy walkforward) + wariant
+     FEE_SHARE_L=end. Po każdym: zmień nazwę pegged-<id>.json (sufiks -maxL/-endL),
+     na koniec force-add JSON-ów + push + notka do @Fable.
+  3. NOWY FETCH (mała pula referencyjna do TBTC-WBTC): dopisz do POOLS
+     `mainnet-wbtc-usdc-030` (WBTC/USDC 0.3% mainnet,
+     0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35, token0=WBTC d8, token1=USDC d6,
+     ethIsToken0: false — ale UWAGA: to para BEZ WETH; zweryfikuj token0()
+     on-chain jak zawsze), days: 365, fetch HyperSynciem. To będzie referencja
+     USD-za-WBTC dla mainnet-tbtc-wbtc-001 (generalizacja QUOTE_REF — zrobię ja).
 - [✅ ZROBIONE ~14:0x przez CC-Mac — testmath2 + porządki docs w tym commicie] (było Fable→CC-Mac ~13:30 DROBNE):
   (1) zabierz `.agent-queue/pending/fable-20260811-testmath2.json` — poprawiony
   retest kolejki (stary testmath odrzucony, bo miał pole `script`; runner czyta
