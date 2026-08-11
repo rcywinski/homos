@@ -655,3 +655,21 @@ Fable raportuje. Main czysty (osobny branch). BRAKUJĄCY ELEMENT po stronie
 chmury: fine-grained PAT GitHub (tylko repo HOMOS, contents RW) — Rafał
 utworzy i wklei w sesji chmurowej, wtedy mogę klonować/commitować z kontenera.
 Wdrożenie: HANDOFF @CC (branch+package.json) i @Windows (usługa NSSM).
+
+### 2026-08-11 — Sesja Fable: cbBTC/WETH w bocie (orientacja cen per pula) + start kolejki
+- **bot/config.ts**: BotPool rozszerzony o t0/t1 (adresy tokenów), quote
+  ('USD'|'WETH') i usdRefPoolId; DOPISANA pula `base-cbbtc-weth-005`
+  (0x7AeA2E8A…6dabD1, quote WETH, referencja base-weth-usdc-030).
+- **bot/observer.ts**: (1) refreshPrices liczy pule USD najpierw, dla quote:'WETH'
+  ethUsd = USD za token bazowy (cena w WETH × kurs referencyjny) — pole ethUsd
+  znaczy teraz "USD za token bazowy puli"; (2) dopasowanie pozycji NFT po
+  ADRESACH tokenów (t0/t1) z fallbackiem chain+fee — koniec ryzyka pomyłki
+  przy 2 parach na tym samym tierze; (3) wspólny helper tickToUsd (propozycje
+  doradcy i selektora dają poprawne USD też dla par WETH-owych).
+- **src/config/botPools.ts**: wpis cbBTC (lustro konfiguracji dla UI) —
+  karta OPEN "WETH-CBBTC" dostanie działający [Otwórz →] po restarcie bota.
+- Typecheck czysty (poza preexisting TS2719). WYMAGA: restart homos-bot na
+  Windows po pull. UWAGA dla Sonneta (nie-blokujące): nagłówek kolumny
+  telemetrii "ETH/USD" → "cena USD" (dla cbBTC pokaże ~$115k za cbBTC).
+- Kolejka: pierwsze zadanie `scan` czeka w .agent-queue/pending/ (commit+push
+  uruchomi test pętli, gdy usługa homos-runner wstanie na koncie użytkownika).

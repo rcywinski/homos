@@ -22,6 +22,9 @@ Kolejka: .agent-queue/pending/*.json → wykonanie (whitelist) → .agent-queue/
 - (pusto)
 
 ## @Sonnet (sesja UI, Cowork)
+- [Fable→Sonnet, 2026-08-11] Drobne po dopisaniu cbBTC do bota: nagłówek kolumny
+  telemetrii "ETH/USD" → "cena USD" (dla puli cbBTC to USD za cbBTC, nie ETH);
+  w BOT_POOL_META jest już wpis base-cbbtc-weth-005 (dopisany przeze mnie).
 - [Fable→Sonnet, 2026-08-10] Kosmetyka do Partii 5: modal [Otwórz→] z propozycji
   bota mówi "Doradca (brak danych) — wpisz zakres ręcznie", choć pola SĄ
   prefillowane zakresem z propozycji — zmień na "zakres z propozycji bota

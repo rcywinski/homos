@@ -142,16 +142,41 @@ async function telegram(text: string) {
   }
 }
 
+// --- orientacja cen per pula ---
+// Dla pul quote:'USD' pole ethUsd = USD za ETH (jak dotąd). Dla quote:'WETH'
+// (np. cbBTC/WETH) ethUsd = USD za TOKEN BAZOWY (nie-WETH), liczony jako
+// (cena bazowego w WETH) × (ETH/USD z puli referencyjnej usdRefPoolId).
+/** USD za WETH dla danej puli (1 dla samej referencji nie ma sensu — to kurs) */
+const refEthUsd = (p: BotPool): number | null => {
+  if ((p.quote ?? 'USD') === 'USD') return null; // nie dotyczy
+  const ref = p.usdRefPoolId ? live[p.usdRefPoolId] : undefined;
+  return ref && (BOT_POOLS.find((b) => b.id === p.usdRefPoolId)?.quote ?? 'USD') === 'USD' ? ref.ethUsd : null;
+};
+/** surowa cena human (token1/token0) → USD za token bazowy puli */
+const humanToBaseUsd = (p: BotPool, human: number): number | null => {
+  if ((p.quote ?? 'USD') === 'USD') return p.ethIsToken0 ? human : 1 / human;
+  const inWeth = p.ethIsToken0 ? 1 / human : human; // WETH za token bazowy
+  const ref = refEthUsd(p);
+  return ref ? inWeth * ref : null;
+};
+
 // --- pętla cen (60s) ---
 async function refreshPrices() {
-  for (const p of BOT_POOLS) {
+  // pule USD najpierw — pule kwotowane w WETH potrzebują ich kursu jako referencji
+  const ordered = [...BOT_POOLS].sort((a, b) => ((a.quote ?? 'USD') === 'USD' ? 0 : 1) - ((b.quote ?? 'USD') === 'USD' ? 0 : 1));
+  for (const p of ordered) {
     try {
       const s = (await clients[p.chain].readContract({ address: p.address, abi: SLOT0_ABI, functionName: 'slot0' })) as readonly [bigint, number, ...unknown[]];
       const human = sqrtPriceX96ToHumanPrice(s[0], p.d0, p.d1);
       const prev = live[p.id];
+      const baseUsd = humanToBaseUsd(p, human);
+      if (baseUsd === null) {
+        log(`price ${p.id}: brak kursu referencyjnego ${p.usdRefPoolId} — pomijam tick`);
+        continue;
+      }
       live[p.id] = {
         id: p.id,
-        ethUsd: p.ethIsToken0 ? human : 1 / human,
+        ethUsd: baseUsd,
         tick: s[1],
         sqrtPriceX96: s[0].toString(),
         stats: prev?.stats ?? null,
@@ -197,17 +222,29 @@ async function refreshPositions() {
         const pos = (await client.readContract({ address: pm, abi: PM_ABI, functionName: 'positions', args: [tokenId] })) as readonly [bigint, string, string, string, number, number, number, bigint, bigint, bigint, bigint, bigint];
         const [, , t0, t1, fee, lo, hi, L] = pos;
         if (L === 0n) continue;
-        // dopasowanie puli po chain+fee (nasza lista ma po jednej parze na tier);
-        // t0/t1 zachowane do przyszłej walidacji wielu par na tym samym tierze
-        void t0; void t1;
-        const match = BOT_POOLS.find((p) => p.chainId === chainId && p.feeBps === Number(fee));
+        // dopasowanie po ADRESACH tokenów gdy pula ma t0/t1 w konfiguracji
+        // (jednoznaczne przy wielu parach na tym samym tierze — np. cbBTC/WETH
+        // 0.05% i USDC/WETH 0.05% na Base); fallback: chain+fee jak dotąd.
+        const eq = (a: string, b?: string) => !!b && a.toLowerCase() === b.toLowerCase();
+        const match =
+          BOT_POOLS.find((p) => p.chainId === chainId && p.feeBps === Number(fee) && eq(t0, p.t0) && eq(t1, p.t1)) ??
+          BOT_POOLS.find((p) => p.chainId === chainId && p.feeBps === Number(fee) && !p.t0);
         if (!match || !live[match.id]) continue;
         const lv = live[match.id];
         const { amount0, amount1 } = getAmountsForLiquidity(BigInt(lv.sqrtPriceX96), Number(lo), Number(hi), L);
         const a0 = parseFloat(formatUnits(amount0, match.d0));
         const a1 = parseFloat(formatUnits(amount1, match.d1));
-        const px0 = match.ethIsToken0 ? lv.ethUsd : 1;
-        const px1 = match.ethIsToken0 ? 1 : lv.ethUsd;
+        // wycena USD: ethUsd = USD za token bazowy (dla quote:'WETH' to np. cbBTC);
+        // druga noga: USD-stable = 1, WETH = kurs z puli referencyjnej.
+        let px0: number, px1: number;
+        if ((match.quote ?? 'USD') === 'USD') {
+          px0 = match.ethIsToken0 ? lv.ethUsd : 1;
+          px1 = match.ethIsToken0 ? 1 : lv.ethUsd;
+        } else {
+          const ref = refEthUsd(match) ?? 0;
+          px0 = match.ethIsToken0 ? ref : lv.ethUsd;
+          px1 = match.ethIsToken0 ? lv.ethUsd : ref;
+        }
         const valueUsd = a0 * px0 + a1 * px1;
         let advice = 'BRAK_DANYCH';
         let payback: number | null = null;
@@ -236,13 +273,18 @@ async function refreshPositions() {
   saveState();
 }
 
+/** tick → cena USD tokena bazowego puli (respektuje quote:'WETH' przez kurs referencyjny) */
+function tickToUsd(pool: BotPool, t: number): number {
+  const raw = Math.pow(1.0001, t) * Math.pow(10, pool.d0 - pool.d1);
+  if ((pool.quote ?? 'USD') === 'USD') return pool.ethIsToken0 ? raw : 1 / raw;
+  const inWeth = pool.ethIsToken0 ? 1 / raw : raw;
+  return inWeth * (refEthUsd(pool) ?? 0);
+}
+
 function maybePropose(tokenId: string, pool: BotPool, a: ReturnType<typeof assessPosition>, valueUsd: number) {
   const key = `${tokenId}-${a.suggestion.tickLower}-${a.suggestion.tickUpper}`;
   if (proposals.some((p) => p.id === key && p.status === 'open')) return;
-  const toUsd = (t: number) => {
-    const raw = Math.pow(1.0001, t) * Math.pow(10, pool.d0 - pool.d1);
-    return pool.ethIsToken0 ? raw : 1 / raw;
-  };
+  const toUsd = (t: number) => tickToUsd(pool, t);
   const [usdLo, usdHi] = [toUsd(a.suggestion.tickLower), toUsd(a.suggestion.tickUpper)].sort((x, y) => x - y);
   const prop: Proposal = {
     id: key, createdAt: new Date().toISOString(), tokenId, poolId: pool.id,
@@ -274,10 +316,7 @@ function runSelector() {
         const lv = live[poolId];
         const pool = BOT_POOLS.find((b) => b.id === poolId);
         if (!lv?.suggestion || !pool) return null;
-        const toUsd = (t: number) => {
-          const raw = Math.pow(1.0001, t) * Math.pow(10, pool.d0 - pool.d1);
-          return pool.ethIsToken0 ? raw : 1 / raw;
-        };
+        const toUsd = (t: number) => tickToUsd(pool, t);
         const [usdLo, usdHi] = [toUsd(lv.suggestion.tickLower), toUsd(lv.suggestion.tickUpper)].sort((x, y) => x - y);
         return { tickLower: lv.suggestion.tickLower, tickUpper: lv.suggestion.tickUpper, usdLo, usdHi };
       },

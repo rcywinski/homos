@@ -16,6 +16,15 @@ export interface BotPool {
   d1: number;
   sym0: string;
   sym1: string;
+  /** adresy tokenów puli — do JEDNOZNACZNEGO dopasowania pozycji NFT
+   *  (dopasowanie po chain+fee przestało wystarczać przy >1 parze na tier) */
+  t0?: `0x${string}`;
+  t1?: `0x${string}`;
+  /** waluta kwotowania ceny puli: 'USD' (domyślnie; ethUsd = USD za ETH)
+   *  albo 'WETH' (pary typu cbBTC/WETH; ethUsd = USD za token bazowy,
+   *  liczony przez kurs z puli referencyjnej usdRefPoolId) */
+  quote?: 'USD' | 'WETH';
+  usdRefPoolId?: string;
 }
 
 export const BOT_POOLS: BotPool[] = [
@@ -24,18 +33,32 @@ export const BOT_POOLS: BotPool[] = [
     chainId: 1, chain: 'mainnet',
     address: '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8',
     feeBps: 3000, ethIsToken0: false, d0: 6, d1: 18, sym0: 'USDC', sym1: 'WETH',
+    t0: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', t1: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
   },
   {
     id: 'mainnet-usdc-weth-005',
     chainId: 1, chain: 'mainnet',
     address: '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640',
     feeBps: 500, ethIsToken0: false, d0: 6, d1: 18, sym0: 'USDC', sym1: 'WETH',
+    t0: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', t1: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
   },
   {
     id: 'base-weth-usdc-030',
     chainId: 8453, chain: 'base',
     address: '0x6c561B446416E1A00E8E93E221854d6eA4171372',
     feeBps: 3000, ethIsToken0: true, d0: 18, d1: 6, sym0: 'WETH', sym1: 'USDC',
+    t0: '0x4200000000000000000000000000000000000006', t1: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  },
+  {
+    // para skorelowana (PAIRS.md: sleeve pasywny ±15%); cena kwotowana w WETH,
+    // USD przez kurs ETH z base-weth-usdc-030. Adres zweryfikowany 90d danych
+    // tick-level (data/cache/base-cbbtc-weth-005.meta.json).
+    id: 'base-cbbtc-weth-005',
+    chainId: 8453, chain: 'base',
+    address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1',
+    feeBps: 500, ethIsToken0: false, d0: 8, d1: 18, sym0: 'cbBTC', sym1: 'WETH',
+    t0: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf', t1: '0x4200000000000000000000000000000000000006',
+    quote: 'WETH', usdRefPoolId: 'base-weth-usdc-030',
   },
 ];
 
