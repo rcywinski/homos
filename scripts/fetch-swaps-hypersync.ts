@@ -34,11 +34,12 @@ const CACHE_DIR = path.join(__dirname, '..', 'data', 'cache');
 fs.mkdirSync(CACHE_DIR, { recursive: true });
 
 const SWAP_TOPIC = '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67';
-const BLOCK_TIME: Record<string, number> = { mainnet: 12, base: 2, arbitrum: 0.25 };
+const BLOCK_TIME: Record<string, number> = { mainnet: 12, base: 2, arbitrum: 0.25, optimism: 2 };
 const HYPERSYNC_URL: Record<string, string> = {
   mainnet: 'https://eth.hypersync.xyz',
   base: 'https://base.hypersync.xyz',
   arbitrum: 'https://arbitrum.hypersync.xyz',
+  optimism: 'https://optimism.hypersync.xyz',
 };
 
 // --- identyczna konfiguracja pul co fetch-swaps.ts (import, nie kopia) ---

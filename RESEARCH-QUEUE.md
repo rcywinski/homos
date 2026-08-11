@@ -347,14 +347,20 @@
   5. **mainnet-tbtc-wbtc-001** = `0x73a38006d23517a1d383c88929b2014f8835b38b`
      (t0 TBTC d18, t1 WBTC d8) — niespodzianka skanu: v/tvl7d 10.52 (rekord
      koszyka BTC), mean30d 3.0%, TVL $2.5M.
-- [ ] **B: backtest** — strategie ultra-wąskie (±1–5 ticków, rebalans przy
-  wyjściu) vs pasywne; KONIECZNIE sprawdzić zachowanie w dniach stresu
-  (odchylenia pegu w danych!); policzyć próg kapitału, przy którym gaz mainnet
-  nie zjada przewagi (u znajomego $281k — u nas $5–25k, to może być deal-breaker
-  → sprawdzić odpowiedniki na Base, jeśli istnieją pule v3 z wolumenem).
-- [ ] **C: decyzja** — sleeve spięty w PAIRS.md (obok cbBTC) albo świadome NIE
-  z liczbami. Uwaga metodologiczna: fees liczone NETTO po gazie/rebalansach,
-  osobno wynik w tygodniach spokojnych vs tygodnie stresu pegu.
+- [x] **B: backtest — ZROBIONE 11.08 (pegged.ts, oba modele fee maxL/endL,
+  wyniki w backtest/results/pegged-*.json; interpretacja: CONTEXT dziennik
+  11.08 ~15:40)**. Skrót netto/rok przy $10k: arb-usdc-usdt ±0.10% h24
+  **+1.5–2.2%** (najczystszy, modele zbieżne); mainnet-dai-usdt +2.6…+46%
+  (rozrzut = niepewność silnika); mainnet-usdc-usdt +1.4…+12 (kontrola OK);
+  wsteth-weth **−2…+11 vsHODL** (konserwatywnie ujemne + pełna beta ETH).
+  Rebalanse natychmiastowe wszędzie ujemne (chasing); histereza obowiązkowa.
+  ZOSTAŁO: tbtc-wbtc (czeka na QUOTE_REF USD/BTC — kod Fable; referencja
+  wbtc-usdc-030 pobrana).
+- [ ] **C: decyzja (→ Rafał)** — rekomendacja Fable po F.B: **świadome NIE
+  dla sleeve'u pegged na v3** ("3%/tydz nie istnieje"; konserwatywnie 1–3%/r).
+  Jedyny sensowny kandydat: mała pozycja arb-usdc-usdt jako parking kapitału.
+  Werdykt tbtc-wbtc może jeszcze zmienić obraz (v/tvl 10.5 — jedyna pula
+  z prawdziwą dźwignią koncentracji w koszyku).
 - [ ] **Pool Scanner 2.0 — globalny skan koszyków (NOWE, na dysku)**:
   `npx tsx backtest/scan-universe.ts` (1 call do /pools, sekundy — może iść od
   ręki, nie koliduje z niczym). Klasyfikuje CAŁY rynek ≥$1M na koszyki

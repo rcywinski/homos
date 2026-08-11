@@ -704,6 +704,37 @@ zamontowany), NIE jako sesja chmurowa z repo w źródłach. Konsekwencje:
   (tsx zainstalowany w /tmp obchodzi darwin-owy esbuild z node_modules),
   sieć praktycznie nie.
 
+### 2026-08-11 ~15:40 — Sesja Fable-desktop: F.B FINAŁ (interpretacja pegged mainnet) — teza "3%/tydz" OSTATECZNIE obalona na v3
+Odbiór od CC-Mac (commity 627cc38/8636d63/602c644): pegged usdc-usdt +
+wsteth-weth policzone w OBU modelach fee (maxL=konserwatywny / endL=górna
+granica; prawda pomiędzy). Interpretacja (Fable, pełne JSON-y w backtest/results/):
+1. **mainnet-usdc-usdt-001** (485k swapów, kontrola $33M): najlepsze warianty
+   z histerezą — ±0.10% h6: **+1.4% (maxL) … +12.4% (endL)**; ±0.20% h24:
+   +1.1% … +14.1%. Model konserwatywny ≈ zgodny z rankingiem (mean30d 1.0%) —
+   duża pula rozcieńcza fees dokładnie tak, jak przewidywał skan. Wszystkie
+   rebalanse natychmiastowe głęboko ujemne (gaz mainnet + chasing pegu:
+   ±0.05% → −99%). Wniosek: kontrola potwierdza metodę i tezę.
+2. **mainnet-wsteth-weth-001** (158k swapów, jedyna żywa LST na v3): metryka
+   = vsHODL (USD zdominowane betą ETH: HODL −54%/r w tym oknie danych!).
+   Najlepszy wariant ±0.20% h24: **−1.8% (maxL) … +10.9% (endL)** vsHODL.
+   Konserwatywnie CAŁA drabinka ujemna vs HODL; wąskie natychmiastowe
+   = zagłada (±0.05–0.10%: −100%, gaz $5–9k/rok, 630–1168 rebalansów).
+   **Teza LST-sleeve na v3 mainnet: ODRZUCONA konserwatywnie** — a pozycja
+   i tak niesie pełną betę ETH (to nie jest "stabilny" sleeve w USD).
+3. **WERDYKT F.B (4 pule, oba modele)**: "3.1%/tydz jak u znajomego" nie
+   istnieje na uniswap-v3 pegged przy $10–25k. Najczystszy wynik: Arbitrum
+   USDC-USDT ±0.10% h24 **+1.5–2.2%/r netto** (modele zbieżne, gaz ~0).
+   Mainnet: gaz zabija wszystko poza histerezą, a histereza daje 1–3%/r
+   konserwatywnie. Rekomendacja do C: **świadome NIE dla sleeve'u pegged
+   na v3** (ew. mała pozycja arb-usdc-usdt jako parking, decyzja Rafała).
+4. Zostaje TBTC-WBTC (rekord v/tvl 10.5) — wymaga generalizacji QUOTE_REF
+   na USD/BTC; referencja mainnet-wbtc-usdc-030 POBRANA (105k swapów).
+   Zadanie Fable (kod), potem run pegged.
+5. Status NOWYCH SIECI: fetch DOJECHAŁ (arbitrum-weth-usdc-005-365d 1.67GB
+   ~15:23, optimism-weth-usdc-030-365d 75MB ~15:26); walkforwardy 45/15
+   u CC-Mac w toku — ocena bramki (≥65% wygr ∧ worst >−3; benchmark
+   base-005: 68%/−2.52) po dojechaniu JSON-ów.
+
 ### 2026-08-11 — Sesja Fable-desktop: REWIZJA v1.1 (re>EMA) + START F.B (pary spięte) + fee-path v2 w silniku
 1. **REWIZJA ALGORITHM v1.1 (decyzja Rafała ~14:30)**: powrót po spadku =
    re>EMA dla ETH/stable (cbBTC zostaje czysty exit). Powód: pełne 365d
