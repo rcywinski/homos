@@ -17,7 +17,9 @@
     "build": "webpack --mode production --config webpack.config.js",
     "fetch:llama": "tsx scripts/fetch-llama-history.ts",
     "backtest:selection": "tsx backtest/selection.ts",
-    "pipeline": "tsx scripts/pipeline.ts"
+    "pipeline": "tsx scripts/pipeline.ts",
+    "scan": "tsx backtest/scan-universe.ts",
+    "runner:git": "tsx scripts/agent-runner-git.ts"
   },
   "author": "HOMO$",
   "license": "ISC",
