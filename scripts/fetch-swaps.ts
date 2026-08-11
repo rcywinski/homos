@@ -84,6 +84,51 @@ export const POOLS: PoolCfg[] = [
     address: '0x433a00819c771b33fa7223a5b3499b24fbcd1bbc',
     feeBps: 10000, ethIsToken0: false, token0Decimals: 9, token1Decimals: 18, days: 90,
   },
+  // --- Część 2 (ALGORITHM v1): powtórka walidacji 005-pul na 365d (orientacja jak w 90d) ---
+  {
+    id: 'base-weth-usdc-005-365d',
+    chain: 'base',
+    address: '0xd0b53D9277642d899DF5C87A3966A349A798F224',
+    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365,
+  },
+  {
+    id: 'mainnet-usdc-weth-005-365d',
+    chain: 'mainnet',
+    address: '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640',
+    feeBps: 500, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365,
+  },
+  // --- Sekcja F.A: sleeve par spiętych. Adresy przez factory + token0/token1 ZWERYFIKOWANE
+  //     on-chain (token0()/token1(), lekcja cbBTC — orientacja NIE z nazwy pary). Fee 0.01% = 100. ---
+  {
+    id: 'mainnet-dai-usdt-001',
+    chain: 'mainnet',
+    address: '0x48da0965ab2d2cbf1c17c09cfb5cbe67ad5b1406',
+    feeBps: 100, ethIsToken0: false, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=DAI, token1=USDT
+  },
+  {
+    id: 'arbitrum-usdc-usdt-001',
+    chain: 'arbitrum',
+    address: '0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6',
+    feeBps: 100, ethIsToken0: false, token0Decimals: 6, token1Decimals: 6, days: 365, // token0=USDC natywny, token1=USDT
+  },
+  {
+    id: 'mainnet-usdc-usdt-001',
+    chain: 'mainnet',
+    address: '0x3416cf6c708da44db2624d63ea0aaef7113527c6',
+    feeBps: 100, ethIsToken0: false, token0Decimals: 6, token1Decimals: 6, days: 365, // token0=USDC, token1=USDT (kontrola: duża pula)
+  },
+  {
+    id: 'mainnet-wsteth-weth-001',
+    chain: 'mainnet',
+    address: '0x109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa',
+    feeBps: 100, ethIsToken0: false, token0Decimals: 18, token1Decimals: 18, days: 365, // token0=wstETH, token1=WETH
+  },
+  {
+    id: 'mainnet-tbtc-wbtc-001',
+    chain: 'mainnet',
+    address: '0x73a38006d23517a1d383c88929b2014f8835b38b',
+    feeBps: 100, ethIsToken0: false, token0Decimals: 18, token1Decimals: 8, days: 365, // token0=TBTC, token1=WBTC
+  },
 ];
 
 // Kolejność ma znaczenie: najpierw endpointy z dostępem do pełnej historii.
