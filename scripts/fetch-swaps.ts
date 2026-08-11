@@ -17,7 +17,7 @@ import * as path from 'path';
 // ---------------------------------------------------------------------------
 export interface PoolCfg {
   id: string;
-  chain: 'mainnet' | 'base' | 'arbitrum';
+  chain: 'mainnet' | 'base' | 'arbitrum' | 'optimism';
   address: string;
   feeBps: number; // 500 = 0.05%
   /** czy WETH/ETH-podobny token jest token0 (orientacja ceny) */
@@ -129,6 +129,13 @@ export const POOLS: PoolCfg[] = [
     address: '0x73a38006d23517a1d383c88929b2014f8835b38b',
     feeBps: 100, ethIsToken0: false, token0Decimals: 18, token1Decimals: 8, days: 365, // token0=TBTC, token1=WBTC
   },
+  {
+    // Referencja USD-za-WBTC dla mainnet-tbtc-wbtc-001 (para bez WETH).
+    id: 'mainnet-wbtc-usdc-030',
+    chain: 'mainnet',
+    address: '0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35',
+    feeBps: 3000, ethIsToken0: false, token0Decimals: 8, token1Decimals: 6, days: 365, // token0=WBTC, token1=USDC — zweryfikowane on-chain
+  },
 ];
 
 // Kolejność ma znaczenie: najpierw endpointy z dostępem do pełnej historii.
@@ -159,13 +166,22 @@ const RPC: Record<string, string[]> = {
     'https://arbitrum-one.public.blastapi.io',
     'https://arbitrum-one-rpc.publicnode.com',
   ],
+  optimism: [
+    ...(process.env.RPC_OPTIMISM ? [process.env.RPC_OPTIMISM] : []),
+    'https://optimism.drpc.org',
+    'https://1rpc.io/op',
+    'https://optimism-mainnet.public.blastapi.io',
+    'https://optimism-rpc.publicnode.com',
+    'https://mainnet.optimism.io',
+  ],
 };
 // Arbitrum ~0.25s/blok (dla interpolacji block→ts i okna dni-wstecz).
-const BLOCK_TIME: Record<string, number> = { mainnet: 12, base: 2, arbitrum: 0.25 };
+const BLOCK_TIME: Record<string, number> = { mainnet: 12, base: 2, arbitrum: 0.25, optimism: 2 };
 const FACTORY: Record<string, string> = {
   mainnet: '0x1F98431c8aD98523631AE4a59f267346ea31F984',
   base: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD',
   arbitrum: '0x1F98431c8aD98523631AE4a59f267346ea31F984', // ten sam v3 factory co mainnet
+  optimism: '0x1F98431c8aD98523631AE4a59f267346ea31F984', // ten sam v3 factory co mainnet
 };
 // cbBTC/WETH Base — tokeny do lookupu adresu puli
 const BASE_CBBTC = '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf';
