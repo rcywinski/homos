@@ -816,3 +816,41 @@ Pliki zmienione (commit → CC): backtest/{engine,load,run,walkforward,sweep}.ts
   bootstrap w HANDOFF @Fable (test pusha, pobudki, zasady); backlog ulepszeń
   runnera w RESEARCH-QUEUE G. Ta sesja ma jeszcze pobudkę ~13:30 (walk-forward
   po A2) — wyniki zapisze do plików, nie tylko do czatu.
+
+### 2026-08-11 — Sesja Fable-desktop: CROSS-WALIDACJA BEZPIECZNIKA TRENDU (5 runów out-of-sample) — WERDYKT
+Dane: kod c64f8ba, runy 10fd366 (CC-Mac), pełne JSON-y z byRegime w
+backtest/results/walkforward-*.json. Porównanie: A3 czysta (k=3 h=24) vs 3
+profile bezpiecznika: T-exit (exit,HL7d,5%), T-vg (dwupoziomowy vg1.4+t2=10%),
+T-re (exit + re-entry >EMA). Parametry NIEZMIENIONE między pulami (test
+generalizacji).
+1. **BEZPIECZNIK GENERALIZUJE JAKO REDUKTOR OGONA — 5/5 runów.** W każdym
+   runie każdy profil trendowy ma lepszy down-mean i lepszy worst niż A3.
+   Średnio po 5 runach (mean okien / down-mean / najgorszy worst):
+   A3 −0.91 / −3.41 / −12.33 · T-exit **−0.28 / −0.39 / −7.93** ·
+   T-re **−0.22** / −1.01 / −8.13 · T-vg −0.51 / −1.89 / −8.24 ·
+   pasywny±50 −0.75 / −2.52 / −12.74.
+2. **T-vg (dwupoziomowy) — zwycięzca sweepa in-sample — NIE GENERALIZUJE:**
+   najsłabszy z trzech profili cross-pool, a na mainnet-005 wyraźnie najgorszy
+   (−3.02 vs −1.6/−1.7 pozostałych). Klasyczny overfit do base-030. ODRZUCIĆ.
+3. **Najlepiej generalizują T-re i T-exit** (praktycznie remis):
+   T-re najlepsza średnia cross-pool i najlepszy profil na obu runach
+   base-030 (45d +0.46, 60d +0.47; up 100%wygr na 45d); T-exit najlepszy
+   down (jedyny dodatni down-mean na base-030-45d: +0.08, i na cbbtc: +0.25)
+   i najpłytszy ogon (min worst −4.95 na base-030-45d). Na cbbtc (płytkie
+   reżimy, 15×flat) T-exit +0.88 bije nawet czystą A3 (+0.81) — bezpiecznik
+   tam prawie darmowy.
+4. **Koszt ubezpieczenia widoczny tylko na base-030:** czysta A3 ma tam wyższą
+   mean (45d +0.55 vs +0.46 T-re; 60d +1.02 vs +0.47) — bezpiecznik płaci
+   ~0.1–0.55 pp/okno za cięcie worst z −12 do −5…−8 i down z −2.8 do −0.8.
+   Cross-pool trend jednak WYGRYWA z A3, bo w słabych okresach chroni więcej
+   niż kosztuje. Na oknach 60d redukcja ogona słabsza niż na 45d (długi trend
+   „mieści się" w oknie mimo wyjść).
+5. **REKOMENDACJA (do decyzji Rafała przy zamrażaniu ALGORITHM.md):**
+   profil **exit(HL7d,5%) + re-entry >EMA** jako domyślny; prosty exit jako
+   wariant konserwatywny (lepszy down/worst, minimalnie gorsza średnia).
+   Dwupoziomowy odrzucony.
+6. Zastrzeżenia: (a) bramka PLAN.md (%wygr≥65 ∧ worst>−3) nadal globalnie NIE
+   przechodzi — ogon zmniejszony ~2×, nie usunięty; hedge (F4) pozostaje
+   otwartym frontem. (b) base-005 i mainnet-005 to tylko 4 okna (90d danych,
+   0×flat) — kierunkowo zgodne (trend tnie stratę A3 z −3…−4 do −1…−1.7),
+   ale mała moc; po dociągnięciu 365d HyperSynciem powtórzyć.

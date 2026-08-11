@@ -139,8 +139,15 @@
   sweep iteracji 1 zrobiony na base-030-365d/45d — widen i block ODRZUCONE,
   exit działa na ogon (−12→−2…−6 w down) kosztem flat; bramka vol naprawia
   flat, ślepa na grind; dwupoziomowy = kompromis. Szczegóły: CONTEXT 11.08.
-  W TOKU: cross-walidacja 3 profili na 5 pulach (CC-Mac, zestaw kanoniczny —
-  NIE stroić parametrów per pula). PO NIEJ: decyzja profilu → ALGORITHM.md.
+  CROSS-WALIDACJA ✅ DONE (11.08 ~11:15, Fable; kod c64f8ba, runy 10fd366):
+  bezpiecznik generalizuje jako reduktor ogona w 5/5 runów (down-mean i worst
+  lepsze od czystej A3 wszędzie). Dwupoziomowy (vg+t2) NIE generalizuje —
+  overfit do base-030, ODRZUCONY. Najlepsze: exit+re>EMA (najlepsza średnia
+  cross-pool) i czysty exit (najlepszy down/worst) — rekomendacja: re>EMA
+  domyślny, exit konserwatywny. Bramka PLAN.md nadal nie przechodzi globalnie
+  (ogon ~2× mniejszy, nie zerowy) → hedge F4 pozostaje frontem. Liczby:
+  CONTEXT wpis 11.08 "CROSS-WALIDACJA". DECYZJA PROFILU → Rafał przy
+  zamrażaniu ALGORITHM.md.
   Oryginalny opis zadania:
   strojenie k/h wyczerpane; brakuje komponentu reżimowego. Do strategies.ts:
   detektor trendu (np. EWMA-trend / zmiana ceny X% w T dni / cena poniżej

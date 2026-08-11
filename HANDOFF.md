@@ -25,12 +25,10 @@ Kolejka: .agent-queue/pending/*.json → wykonanie (whitelist) → .agent-queue/
 > sesji. Decyzja Rafała: push robi CC-Mac (status quo). Pobudki: zadania
 > harmonogramu Cowork (07:50 codziennie + 13:30 jednorazowa 11.08) — działają
 > tylko przy OTWARTEJ aplikacji Claude na Macu.
-(fix silnika odebrany przez CC-Mac jako f9786a9, 10:31)
-- [CC-Mac→Fable, 2026-08-11 ~11:0x] RUNY DONE — cross-walidacja bezpiecznika trendu:
-  kod (strategies volAdaptiveTrend + walkforward WF_SET) = commit **c64f8ba**;
-  5 runów zestawu kanonicznego (bez zmiany parametrów, out-of-sample) = commit
-  **10fd366** — pełne JSON-y z byRegime w `backtest/results/`: base-030-365d-45d/
-  -60d, cbbtc-365d-45d, base-005-45d, mainnet-005-45d. Odbieraj do interpretacji.
+(fix silnika odebrany przez CC-Mac jako f9786a9, 10:31; runy cross-walidacji
+10fd366 odebrane i zinterpretowane ~11:15 — werdykt w CONTEXT.md)
+- [CC-Mac→Fable, 2026-08-11 ~11:18] werdykt cross-walidacji WYPCHNIĘTY (CONTEXT +
+  RESEARCH-QUEUE + HANDOFF). Rekomendacja exit+re>EMA / czysty exit — decyzja Rafała.
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 2026-08-11] Drobne po dopisaniu cbBTC do bota: nagłówek kolumny
@@ -42,6 +40,14 @@ Kolejka: .agent-queue/pending/*.json → wykonanie (whitelist) → .agent-queue/
   (możesz zmienić)". Szczegóły: CONTEXT "weryfikacja przed jutrem".
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [✅ ZROBIONE ~11:18 przez CC-Mac — commit+push werdyktu (CONTEXT+RESEARCH-QUEUE+HANDOFF)] (odebrane; poniżej oryginał):
+  bezpiecznik generalizuje (reduktor ogona 5/5 runów); dwupoziomowy (vg+t2)
+  ODRZUCONY (overfit); rekomendacja exit+re>EMA (domyślny) / czysty exit
+  (konserwatywny), decyzja → Rafał. Wpisy dodane: CONTEXT.md (dziennik
+  "CROSS-WALIDACJA... WERDYKT") + RESEARCH-QUEUE.md (sekcja bezpiecznika).
+  COMMIT+PUSH: CONTEXT.md, RESEARCH-QUEUE.md, HANDOFF.md; sugerowany msg:
+  "docs: werdykt cross-walidacji bezpiecznika trendu (re>EMA rekomendowany)".
+  Nowych runów na razie nie zlecam — 005-pule powtórzymy po fetchu 365d.
 - [✅ ZROBIONE ~11:04 przez CC-Mac — kod commit c64f8ba, 5 runów z byRegime commit 10fd366, wyniki→@Fable] (odebrane; poniżej oryginalne zlecenie BEZPIECZNIK TRENDU jako historia):
   (ja mam limit ~3 min/wywołanie, Ty nie masz — dlatego Ty):
   1. COMMIT+PUSH: `backtest/strategies.ts` (nowa volAdaptiveTrend: detektor
