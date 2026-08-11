@@ -75,7 +75,7 @@ const BotTelemetry: FC<Props> = ({ bot }) => {
                 <thead>
                   <tr>
                     <th>Pula</th>
-                    <th>ETH/USD</th>
+                    <th>cena USD</th>
                     <th>Tick</th>
                     <th>Zmienność %/d</th>
                     <th>Fee-yield %/d</th>

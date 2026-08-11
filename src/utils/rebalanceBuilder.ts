@@ -32,6 +32,11 @@ import { POSITION_MANAGER_ADDRESSES } from './liquidityManagement';
 export const SWAP_ROUTER_02: Record<number, Address> = {
   1: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
   8453: '0x2626664c2603336E57B271c5C0b26F421741e481',
+  // Arbitrum: kanoniczny deploy SwapRouter02 pod TYM SAMYM adresem co mainnet
+  // (Base jest wyjątkiem). Dodane 2026-08-11 (Fable) po wejściu Arbitrum do UI;
+  // przed pierwszą realną sekwencją [Zatwierdź] na Arbitrum: sanity-check
+  // symulacją eth_call (builder i tak ją robi przed mintem).
+  42161: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
 };
 
 /** poniżej tego odchylenia proporcji (jako % wartości pozycji) krok swap pomijamy */

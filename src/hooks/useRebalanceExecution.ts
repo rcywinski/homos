@@ -48,7 +48,8 @@ export function useRebalanceExecution() {
   const { switchChainAsync } = useSwitchChain();
   const clientMainnet = usePublicClient({ chainId: 1 });
   const clientBase = usePublicClient({ chainId: 8453 });
-  const clients: Record<number, ReturnType<typeof usePublicClient>> = { 1: clientMainnet, 8453: clientBase };
+  const clientArbitrum = usePublicClient({ chainId: 42161 });
+  const clients: Record<number, ReturnType<typeof usePublicClient>> = { 1: clientMainnet, 8453: clientBase, 42161: clientArbitrum };
 
   const [status, setStatus] = useState<ExecStatus>(IDLE);
   const [error, setError] = useState<string | null>(null);

@@ -22,9 +22,13 @@ export interface BotProposal {
   tokenId: string; // '' dla propozycji OPEN z selektora (brak istniejącej pozycji)
   poolId?: string; // BOT_POOLS id, '' gdy pula spoza konfiguracji bota
   /** REBALANCE (doradca pozycji, jak dotychczas) | OPEN/ROTATE (warstwa
-   *  selekcji pul — bot/selector.ts, Partia 4). Brak pola = traktuj jak REBALANCE
-   *  (kompatybilność wstecz ze starszymi wpisami w proposals.json). */
-  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE';
+   *  selekcji pul — bot/selector.ts, Partia 4) | EXIT_TREND (bezpiecznik trendu
+   *  ALGORITHM.md §4 — "wyjdź z LP do cash 50/50" gdy cena < EMA7d o 5%;
+   *  HANDOFF Fable→Sonnet 2026-08-11). Brak pola = traktuj jak REBALANCE
+   *  (kompatybilność wstecz ze starszymi wpisami w proposals.json). Karty w
+   *  MorningCockpit.tsx renderują nieznane wartości `kind` jako szarą notę,
+   *  zamiast crashować, na wypadek kolejnych rozszerzeń schematu. */
+  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND';
   action: string;
   suggestedRange?: { tickLower?: number; tickUpper?: number; usdLo: number; usdHi: number };
   costUsd?: number;

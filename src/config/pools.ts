@@ -26,6 +26,7 @@ const t = (chainId: number, cfg: { address: string; decimals: number; symbol: st
 
 const M = NETWORKS.MAINNET;
 const B = NETWORKS.BASE;
+const A = NETWORKS.ARBITRUM;
 
 // Mainnet tokens
 const mWETH = t(1, M.tokens.WETH);
@@ -37,6 +38,11 @@ const mWBTC = new Token(1, '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', 8, 'WBT
 const bWETH = t(8453, B.tokens.WETH);
 const bUSDC = t(8453, B.tokens.USDC);
 const bCBBTC = t(8453, (B.tokens as any).cbBTC);
+
+// Arbitrum tokens (dodane 2026-08-11, Fable→Sonnet HANDOFF — walk-forward pass,
+// decyzja Rafała: sieć dodana do analizy; wzorzec dokładnie jak Base w sesji 2e)
+const aWETH = t(42161, A.tokens.WETH);
+const aUSDC = t(42161, A.tokens.USDC);
 
 export const OBSERVED_PAIRS: ObservedPair[] = [
   // --- Base: current best venues (PAIRS.md) ---
@@ -75,6 +81,12 @@ export const OBSERVED_PAIRS: ObservedPair[] = [
     chainId: 1, chainName: 'Ethereum', networkConfig: M,
     token0: mUSDC, token1: mUSDT, name: 'USDC/USDT',
     feeTiers: [FeeAmount.LOWEST], role: 'stable',
+  },
+  // --- Arbitrum (walk-forward pass, HANDOFF 2026-08-11) ---
+  {
+    chainId: 42161, chainName: 'Arbitrum', networkConfig: A,
+    token0: aUSDC, token1: aWETH, name: 'USDC/WETH',
+    feeTiers: [FeeAmount.LOW, FeeAmount.MEDIUM], role: 'core',
   },
 ];
 

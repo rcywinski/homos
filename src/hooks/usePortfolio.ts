@@ -31,11 +31,12 @@ import { OBSERVED_PAIRS } from '../config/pools';
 import { getAmountsForLiquidity, humanPriceQuotePerBase, MAX_UINT128 } from '../utils/v3math';
 import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, RebalanceAssessment, RangeSuggestion } from '../utils/advisor';
 
-const CHAIN_IDS = [1, 8453] as const;
-const CHAIN_LABEL: Record<number, string> = { 1: 'Ethereum', 8453: 'Base' };
+const CHAIN_IDS = [1, 8453, 42161] as const;
+const CHAIN_LABEL: Record<number, string> = { 1: 'Ethereum', 8453: 'Base', 42161: 'Arbitrum' };
 const FACTORY: Record<number, Address> = {
   1: NETWORKS.MAINNET.poolFactoryAddress,
   8453: NETWORKS.BASE.poolFactoryAddress,
+  42161: NETWORKS.ARBITRUM.poolFactoryAddress,
 };
 
 const POSITIONS_ABI = [
@@ -179,7 +180,8 @@ export function usePortfolio(): PortfolioSummary {
   const { address, isConnected } = useAccount();
   const clientMainnet = usePublicClient({ chainId: 1 });
   const clientBase = usePublicClient({ chainId: 8453 });
-  const clients: Record<number, ReturnType<typeof usePublicClient>> = { 1: clientMainnet, 8453: clientBase };
+  const clientArbitrum = usePublicClient({ chainId: 42161 });
+  const clients: Record<number, ReturnType<typeof usePublicClient>> = { 1: clientMainnet, 8453: clientBase, 42161: clientArbitrum };
 
   // Mirrors CompactWalletInfo's balance fetch (mainnet ETH/WETH/USDC) — kept
   // separate from that component since it's presentational, this is data.

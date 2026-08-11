@@ -69,13 +69,18 @@ export interface RebalanceTarget {
   suggestion: RangeSuggestion | null;
 }
 
-const CHAIN_LABEL: Record<number, string> = { 1: 'Ethereum', 8453: 'Base' };
+const CHAIN_LABEL: Record<number, string> = { 1: 'Ethereum', 8453: 'Base', 42161: 'Arbitrum' };
 
 // Przybliżony koszt gazu w USD per sieć — powielone z prywatnej (nieeksportowanej)
 // stałej GAS_USD w utils/advisor.ts. Ten plik jest poza twardym zakresem tej
 // sesji UI (nie wolno go edytować, nawet żeby dodać export), więc liczby są
 // zduplikowane świadomie — trzymać w zgodzie ręcznie, jeśli szacunek się zmieni.
-const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08 };
+// Arbitrum (42161): 0.10 — skalibrowane przez sesję analityczną (Fable,
+// HANDOFF 2026-08-11) na podstawie backtest/load.ts (GAS_USD arbitrum: 0.1),
+// żeby zachować "jedną prawdę" z backtestami. Poprzednio 0.15 (zgrubny
+// szacunek L2, advisor.ts nadal nie ma osobnej wartości dla tego chainId —
+// fallback tam to `?? 5`).
+const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08, 42161: 0.1 };
 // UX-COCKPIT.md §1.A.3 mówił o progu "50x gaz" (~$400 na mainnecie, ~$4 na
 // Base) — w praktyce prawie nigdy nieosiągalne dla zwykłych pozycji, więc
 // przycisk wyglądał na zepsuty. Obniżone do ~8x (mainnet: $64, Base: $0.64)
@@ -165,7 +170,8 @@ export function useCockpitActions() {
   const { switchChainAsync } = useSwitchChain();
   const clientMainnet = usePublicClient({ chainId: 1 });
   const clientBase = usePublicClient({ chainId: 8453 });
-  const clients: Record<number, ReturnType<typeof usePublicClient>> = { 1: clientMainnet, 8453: clientBase };
+  const clientArbitrum = usePublicClient({ chainId: 42161 });
+  const clients: Record<number, ReturnType<typeof usePublicClient>> = { 1: clientMainnet, 8453: clientBase, 42161: clientArbitrum };
 
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [message, setMessage] = useState<CockpitMessage | null>(null);

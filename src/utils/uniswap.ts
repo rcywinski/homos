@@ -333,6 +333,23 @@ export const NETWORKS = {
       }
     }
   },
+  ARBITRUM: {
+    chainId: 42161,
+    name: 'Arbitrum',
+    poolFactoryAddress: '0x1F98431c8aD98523631AE4a59f267346ea31F984' as Address,
+    tokens: {
+      WETH: {
+        address: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1' as Address,
+        decimals: 18,
+        symbol: 'WETH'
+      },
+      USDC: {
+        address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' as Address,
+        decimals: 6,
+        symbol: 'USDC'
+      }
+    }
+  },
   SEPOLIA: {
     chainId: 11155111,
     name: 'Sepolia',

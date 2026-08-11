@@ -1516,3 +1516,78 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+/* --- UI session: "Analiza obserwacji" (ObservationAnalysis.tsx), wzorzec
+   telemetry-* z BotTelemetry.tsx — HANDOFF Fable→Sonnet 2026-08-11 --- */
+.observation-pool-block {
+  margin-top: 14px;
+}
+.observation-pool-title {
+  margin-bottom: 4px;
+}
+.observation-section-title {
+  margin-top: 20px;
+}
+.observation-chart-wrap {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 8px;
+  background: #fafafa;
+}
+.observation-chart,
+.observation-ema-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.observation-ema-chart {
+  margin-top: 4px;
+  border-top: 1px dashed #ddd;
+}
+.observation-price-line {
+  stroke: #1a6ae0;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+.observation-range-band {
+  fill: #1a6ae0;
+  fill-opacity: 0.08;
+  stroke: none;
+}
+.observation-ema-line {
+  stroke: #333;
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+}
+.observation-ema-danger-zone {
+  fill: #e0433433;
+}
+.observation-ema-threshold {
+  stroke: #e04334;
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+}
+.observation-proposal-marker {
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.75;
+}
+.observation-marker-rebalance { stroke: #1a6ae0; }
+.observation-marker-open { stroke: #34a853; }
+.observation-marker-rotate { stroke: #f9a825; }
+.observation-marker-exit_trend { stroke: #e04334; }
+.observation-chart-legend {
+  font-size: 11px;
+  margin-top: 4px;
+}
+.observation-walkforward-wrap {
+  margin-top: 4px;
+}
+.observation-walkforward-date {
+  font-size: 11px;
+  margin-top: 2px;
+}
+.observation-footer-note {
+  margin-top: 16px;
+}

@@ -18,6 +18,7 @@ import { useRebalanceExecution } from '../hooks/useRebalanceExecution';
 import { planRebalance, RebalancePlan } from '../utils/rebalanceBuilder';
 import BotStatusDot from './BotStatusDot';
 import BotTelemetry from './BotTelemetry';
+import ObservationAnalysis from './ObservationAnalysis';
 import CockpitPositionActions, { CloseModal, RebalanceModal } from './CockpitPositionActions';
 import RebalanceSequenceModal from './RebalanceSequenceModal';
 
@@ -148,9 +149,10 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
     setProposalModal({ type: 'open', target: resolved, title, initialUsdRange: p.suggestedRange });
   };
 
-  // ROTATE krok 1 "Zamknij starą →": pozycja do zamknięcia jest zawsze
-  // trzymana przez usera (to properties bota wybrał do rotacji).
-  const openCloseForRotate = (p: BotProposal) => {
+  // ROTATE krok 1 "Zamknij starą →" / EXIT_TREND "Zamknij →": pozycja do
+  // zamknięcia jest zawsze trzymana przez usera (bot proponuje rotację albo
+  // bezpiecznik trendu tylko dla pozycji, które faktycznie widzi na walletcie).
+  const openCloseForProposal = (p: BotProposal) => {
     const pos = findHeldPosition(p.tokenId);
     if (!pos) {
       setProposalError(`Pozycja #${p.tokenId} nie znaleziona w portfelu (może już zamknięta) — odśwież.`);
@@ -306,7 +308,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                             punkt 2). Zostaje na krokach 1/2 ręcznych z Partii 4. */}
                         <div className="morning-note">Automatyczne [Zatwierdź] dla ROTATE: TODO (różne pule stara/nowa) — wykonaj kroki 1/2 poniżej ręcznie.</div>
                         <div className="morning-proposal-actions">
-                          <button className="action-button" onClick={() => openCloseForRotate(p)}>
+                          <button className="action-button" onClick={() => openCloseForProposal(p)}>
                             1. Zamknij starą →
                           </button>
                           {p.poolId && (
@@ -314,6 +316,36 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                               {resolvingId === p.id ? 'Wczytywanie…' : '2. Otwórz nową →'}
                             </button>
                           )}
+                          <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                            Odrzuć
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {kind === 'EXIT_TREND' && (
+                      <>
+                        <div className="morning-proposal-line">
+                          ⛔ Bezpiecznik trendu: {p.symbol ?? p.poolId ?? `#${p.tokenId}`}
+                        </div>
+                        {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
+                        <div className="morning-proposal-actions">
+                          <button className="action-button primary" onClick={() => openCloseForProposal(p)}>
+                            Zamknij →
+                          </button>
+                          <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                            Odrzuć
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {!['REBALANCE', 'OPEN', 'ROTATE', 'EXIT_TREND'].includes(kind) && (
+                      <>
+                        {/* Nieznany kind (np. przyszłe rozszerzenie schematu bota) — pokaż
+                            jako szarą notę zamiast crashować albo renderować pustą kartę. */}
+                        <div className="morning-note">Nieznany typ propozycji ({kind}): {p.action}</div>
+                        <div className="morning-proposal-actions">
                           <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
                             Odrzuć
                           </button>
@@ -363,6 +395,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           )}
 
           <BotTelemetry bot={bot} />
+          <ObservationAnalysis bot={bot} />
         </div>
       )}
 

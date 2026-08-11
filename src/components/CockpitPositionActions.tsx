@@ -366,7 +366,9 @@ export const RebalanceModal: FC<{
 
           {!advisorTicks && (
             <div className="morning-note">
-              Doradca nie ma statystyk dla tej puli (za mało swapów w ostatnich 24h, albo pula spoza obserwowanej listy) — wpisz zakres ręcznie.
+              {initialUsdRange
+                ? 'Doradca nie ma własnych statystyk dla tej puli — pola niżej wypełnione zakresem z propozycji bota (możesz zmienić).'
+                : 'Doradca nie ma statystyk dla tej puli (za mało swapów w ostatnich 24h, albo pula spoza obserwowanej listy) — wpisz zakres ręcznie.'}
             </div>
           )}
 
