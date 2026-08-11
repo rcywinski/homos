@@ -20,6 +20,7 @@
 | 2026-08-10 | Backtesting przed jakimkolwiek wdrożeniem | Bramka: strategia musi bić HODL 50/50 na ≥2 reżimach rynku |
 | 2026-08-10 | Monorepo TS: core / data / backtest / bot / ui | Jeden moduł matematyczny współdzielony przez wszystkie warstwy |
 | 2026-08-10 | SQLite + CSV od pierwszej transakcji | Podatki PL + audytowalność |
+| 2026-08-11 | ALGORITHM.md v1 ZAMROŻONE: k=3 (ETH/stable; cbBTC k=2), h=24, payback≤7d, bezpiecznik trendu = czysty exit(HL7d,5%) | Walk-forward 365d + cross-walidacja 5 runów out-of-sample; decyzja Rafała (profil exit — najlepszy poza pulą strojenia, najmniej parametrów) |
 
 ## 3. Rzeczy do zweryfikowania na aktualnych danych (nie z pamięci AI)
 
@@ -701,6 +702,18 @@ zamontowany), NIE jako sesja chmurowa z repo w źródłach. Konsekwencje:
   (RPC/DefiLlama/GitHub poza nią) — analizy na lokalnych danych działają
   (tsx zainstalowany w /tmp obchodzi darwin-owy esbuild z node_modules),
   sieć praktycznie nie.
+
+### 2026-08-11 — Sesja Fable-desktop: DECYZJA PROFILU + ALGORITHM.md v1 ZAMROŻONE
+- Spot-check werdyktu pętli 10-min na JSON-ach: liczby się zgadzają. KOREKTA
+  rekomendacji: pętla wskazała exit+re>EMA, ale na pulach SPOZA strojenia
+  (cbBTC/base-005/mainnet-005) czysty exit ≥ re>EMA (cbBTC +0.88 vs +0.61,
+  down +0.25; reszta remis) — re>EMA wygrywa tylko na puli strojenia (base-030).
+- **Decyzja Rafała (AskUserQuestion): czysty exit(HL7d,5%) domyślnym profilem.**
+- **ALGORITHM.md v1 utworzone i zamrożone** — selekcja (7d+persyst.3d+majors),
+  zakres k=3 (cbBTC k=2), trigger h24+payback7d, bezpiecznik exit, collect 8×gaz,
+  portfel po rewizji. Znane ograniczenia w §8 (ogon ~2× mniejszy, nie zero →
+  F4; base/mainnet-005 tylko 4 okna). Wdrożenie parametrów do advisor/bot =
+  osobne zadanie (E) — advisor wymaga per-pula k i stanu EMA w observerze.
 
 ### 2026-08-11 — Sesja Fable-desktop: BEZPIECZNIK TRENDU — iteracja 1 (sweep na base-030-365d, okna 45/15)
 Implementacja `volAdaptiveTrend` w strategies.ts: detektor = EMA log-ceny

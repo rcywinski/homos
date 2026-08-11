@@ -224,11 +224,16 @@
 
 ## C. PO ANALIZACH (sesja Fable — interpretacja)
 
-- [ ] **ALGORITHM.md v1**: zamrożenie parametrów (selekcja: 7d+persyst.3d+majors;
-  zakres: k·σ·√7d z wartością k z walk-forwardu; trigger: zwycięzca z B3;
-  collect: próg 50× gazu; rotacja: przewaga pokrywa koszt przejścia ≤10 dni,
-  utrzymana ≥3 dni, max 1/dzień) + wpisanie tych parametrów do ADVISOR_PARAMS
-  i bot/config.ts (jedna prawda wszędzie).
+- [x] **ALGORITHM.md v1 — ZAMROŻONE 11.08** (Fable + decyzja Rafała): selekcja
+  7d+persyst.3d+majors; zakres k=3·σ·√7d (cbBTC k=2); trigger h24+payback≤7d;
+  bezpiecznik trendu czysty exit(HL7d,5%); collect 8×gaz; portfel po rewizji
+  cbBTC. Plik: ALGORITHM.md (ograniczenia w §8).
+- [ ] **Wdrożenie parametrów v1 do żywego bota (sesja Fable — kod bot/)**:
+  (1) ADVISOR_PARAMS k 2→3 + per-pula override k=2 dla base-cbbtc-weth-005
+  (pole w BotPool/botPools.ts); (2) bezpiecznik w observerze: stan EMA
+  log-ceny per pula (HL7d) + propozycja EXIT_TREND gdy gap<−5% (OBSERWUJ:
+  tylko propozycja+Telegram, człowiek zatwierdza w Rabby); (3) UI: karta
+  propozycji EXIT_TREND u Sonneta (TASKS-UI).
 - [ ] **Przegląd sygnałów bota z okresu OBSERWUJ** (po ~2 tyg. logów): trafność
   propozycji vs kryterium z ALGORITHM.md → decyzja o trybie PROPONUJ.
 - [ ] Backfill: dzienne snapshoty rankingu Pool Scannera do SQLite (żeby za rok
