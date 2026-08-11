@@ -29,6 +29,25 @@
   poprawione na token0Decimals:18, token1Decimals:8, ethIsToken0:true. Surowe dane
   ndjson były OK (event Swap jest w terminach token0/1 niezależnie od etykiet);
   błędna była tylko interpretacja skali/orientacji. Gotowe do backtestu.
+  **BACKTEST cbBTC-365d (1 461 600 swapów, 365 dni, poprawiona orientacja, $10k):**
+  | strategia | APR% | vsHODL% | maxDD% | fees$ | reb |
+  |---|---|---|---|---|---|
+  | HODL 50/50 | −8.3 | 0.00 | 23.0 | 0 | 0 |
+  | Pasywny full-range | −8.5 | −0.29 | 23.6 | 11 | 0 |
+  | Pasywny ±50% | −10.2 | −2.07 | 26.4 | 13 | 0 |
+  | Sztywny ±5% (naiwny) | −48.1 | −43.41 | 51.9 | 13 | 43 |
+  | Sztywny ±15% (naiwny) | −21.8 | −14.81 | 30.9 | 13 | 4 |
+  | Adapt k2 h24 pb7 | −21.7 | −14.65 | 33.0 | 13 | 5 |
+  | Adapt k2 h12 pb7 | −23.9 | −17.04 | 34.9 | 13 | 6 |
+  | Adapt k3 h24 pb7 | −18.3 | −10.98 | 26.8 | 13 | 3 |
+
+  Fakty (interpretacja → analityk): pełny rok POTWIERDZA — **cbBTC/WETH 0.05% to
+  słabe venue LP**: fees znikome ($11-13/rok ≈ 0.13% APR), więc ŻADNA strategia nie
+  bije HODL (full-range tylko −0.29; aktywne −11…−43, ±5% naiwny masakra −43.4 przy
+  43 rebalansach). **Teza "para skorelowana = sleeve LP 25%" (PAIRS.md) OBALONA na
+  roku** — za mały wolumen/fee, aktywne zarządzanie realizuje IL bez rekompensaty;
+  maxDD też wyższy (HODL 23%, aktywne do 52%). Sensowne tylko czyste HODL/pasywne.
+  (90d dawało HODL +7.9% — inne okno; rok −8.3% bardziej reprezentatywny.)
 - [x] **Egzotyki tick-level (werdykt majors vs egzotyki)** — DANE POBRANE (A4):
   - **DORY-USDC (Arbitrum 1%) to uniswap-V4** (universe.json: project=uniswap-v4,
     pool ae3c1ac2…, tokeny DORY 0x33b49f22…436ae / USDC natywny 0xaf88…5831).
