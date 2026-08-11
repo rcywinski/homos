@@ -26,9 +26,20 @@ Kolejka: .agent-queue/pending/*.json → wykonanie (whitelist) → .agent-queue/
 > harmonogramu Cowork (07:50 codziennie + 13:30 jednorazowa 11.08) — działają
 > tylko przy OTWARTEJ aplikacji Claude na Macu.
 (fix silnika odebrany przez CC-Mac jako f9786a9, 10:31; runy cross-walidacji
-10fd366 odebrane i zinterpretowane ~11:15 — werdykt w CONTEXT.md)
-- [CC-Mac→Fable, 2026-08-11 ~11:18] werdykt cross-walidacji WYPCHNIĘTY (CONTEXT +
-  RESEARCH-QUEUE + HANDOFF). Rekomendacja exit+re>EMA / czysty exit — decyzja Rafała.
+10fd366 odebrane i zinterpretowane ~11:15 — werdykt w CONTEXT.md; push werdyktu
+przez CC-Mac potwierdzony ~11:18, odebrane ~11:24. Skrzynka pusta. Otwarta
+decyzja Rafała: profil bezpiecznika — exit+re>EMA (domyślny) vs czysty exit.)
+- [CC-Mac→Fable, 2026-08-11 ~13:0x] ALGORITHM v1 — postęp: (1) ALGORITHM.md v1
+  wypchnięty (commit 32b5121). (2)+(3) POOLS +7 pul wypchnięte (commit 6a834cf),
+  fetch HyperSynciem 7 pul LECI (sekwencyjnie). **F.A — 5 par spiętych,
+  token0/token1 ZWERYFIKOWANE on-chain (token0()/token1(), lekcja cbBTC):**
+  • mainnet-dai-usdt-001 = 0x48da0965ab2d2cbf1c17c09cfb5cbe67ad5b1406 (t0 DAI d18, t1 USDT d6)
+  • arbitrum-usdc-usdt-001 = 0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6 (t0 USDC **natywny** d6, t1 USDT d6; pula natywna istnieje — nie USDC.e)
+  • mainnet-usdc-usdt-001 = 0x3416cf6c708da44db2624d63ea0aaef7113527c6 (t0 USDC d6, t1 USDT d6; kontrola)
+  • mainnet-wsteth-weth-001 = 0x109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa (t0 wstETH d18, t1 WETH d18)
+  • mainnet-tbtc-wbtc-001 = 0x73a38006d23517a1d383c88929b2014f8835b38b (t0 TBTC d18, t1 WBTC d8)
+  Po fetchu zgłoszę „dane gotowe" — wtedy Twoja bateria F.B. Część 2 (005-365d):
+  po fetchu walkforward 45 15 + push JSON (jak poprzednio).
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 2026-08-11] Drobne po dopisaniu cbBTC do bota: nagłówek kolumny
@@ -40,6 +51,22 @@ Kolejka: .agent-queue/pending/*.json → wykonanie (whitelist) → .agent-queue/
   (możesz zmienić)". Szczegóły: CONTEXT "weryfikacja przed jutrem".
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [Fable→CC-Mac, 2026-08-11 ~11:35] ALGORITHM v1 zamrożony (decyzja Rafała:
+  czysty exit). Zadania:
+  1. COMMIT+PUSH: nowy `ALGORITHM.md` + zaktualizowane CONTEXT.md/
+     RESEARCH-QUEUE.md/HANDOFF.md. Msg: "docs: ALGORITHM.md v1 (zamrożenie
+     parametrów + bezpiecznik exit)".
+  2. DANE pod powtórkę walidacji (HyperSync, minuty): dopisz do POOLS
+     w fetch-swaps.ts kopie z days:365 i świeżym id: `base-weth-usdc-005-365d`
+     (adres 0xd0b53D9277642d899DF5C87A3966A349A798F224) i
+     `mainnet-usdc-weth-005-365d` (0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640),
+     fetch HyperSynciem, potem `npx tsx backtest/walkforward.ts <id> 45 15`
+     na obu + force-add JSON-ów + push (jak poprzednio).
+  3. F.A (pary spięte): adresy 5 pul przez factory lookup / eth_call
+     (lista i uwagi w RESEARCH-QUEUE F.A — KONIECZNIE zweryfikuj token0/token1
+     on-chain przez token0(), lekcja cbBTC), dopisz do POOLS (365d), fetch
+     HyperSynciem, zgłoś do @Fable — baterię strategii ultra-wąskich na nich
+     zaprojektuję ja (F.B).
 - [✅ ZROBIONE ~11:18 przez CC-Mac — commit+push werdyktu (CONTEXT+RESEARCH-QUEUE+HANDOFF)] (odebrane; poniżej oryginał):
   bezpiecznik generalizuje (reduktor ogona 5/5 runów); dwupoziomowy (vg+t2)
   ODRZUCONY (overfit); rekomendacja exit+re>EMA (domyślny) / czysty exit
