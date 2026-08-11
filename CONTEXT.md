@@ -702,6 +702,35 @@ zamontowany), NIE jako sesja chmurowa z repo w źródłach. Konsekwencje:
   (tsx zainstalowany w /tmp obchodzi darwin-owy esbuild z node_modules),
   sieć praktycznie nie.
 
+### 2026-08-11 — Sesja Fable-desktop: BEZPIECZNIK TRENDU — iteracja 1 (sweep na base-030-365d, okna 45/15)
+Implementacja `volAdaptiveTrend` w strategies.ts: detektor = EMA log-ceny
+względnej (HL 7d), sygnał DOWN przy gap < −5% (histereza: gaśnie przy −2.5%);
+opcje: bramka vol (fast>1.4×slow-EMA-10d), drugi próg bezwarunkowy t2 (grind),
+powrót dopiero nad EMA; tryby obrony: widen ×2 / exit-do-cash-50/50 (uczciwie:
+½ gazu na stronę + swap wyrównujący) / block. Wyniki (vsHODL na oknach; pełne
+liczby w walkforward-*-45d.json po runach CC):
+- **widen ×2: BEZ EFEKTU** (down −3.23 vs baseline −2.76) — w chwili rebalansu
+  IL już zrealizowany, szerzej = mniej fees. ODRZUCONY.
+- **block: SZKODZI** (down −6.68, najgorsze −16.6) — trzymanie pozycji poza
+  zakresem = worek spadającego tokena. ODRZUCONY.
+- **exit: MECHANIZM DZIAŁA na ogon** — down: śr. −2.76→+0.08, najgorsze
+  −12.33→−2.25, %wygr 20→50. Ale detektor odpala też we flat: +4.03→+0.24.
+- **bramka vol (vg1.4): naprawia flat w 100%** (najgorsze okno +0.69!), ale
+  ślepa na GRIND spadkowy (tegoroczne downy to osuwanie bez vol-spike'a) —
+  down wraca do −4.22. Dwupoziomowy (vg1.4 + t2=10%): kompromis — down
+  najgorsze −6.02, flat 75%, up 75%, śr. +0.32.
+- **WNIOSEK STRUKTURALNY**: detektor przyczynowy nie odróżni okna down −13%
+  od flat −9% (granica reżimu ±10% jest arbitralna, zjawisko ciągłe). Exit
+  to wymiana kilku p.p. średniej we flat na obcięcie ogona z −12 do −2…−6 —
+  poprawa risk-adjusted, nie darmowy lunch (LP = short gamma).
+- 3 PROFILE-KANDYDACI do cross-walidacji (zestaw kanoniczny w walkforward.ts):
+  (1) exit HL7/5% czysty [max ochrona ogona], (2) +vg1.4+t2=10% [balans],
+  (3) +re>ema [ostrzejszy powrót]. Runy na 5 pulach (365d×2 okna + cbBTC-365d
+  + base-005 + mainnet-005) delegowane do CC-Mac (HANDOFF ~11:00) — te same
+  configi wszędzie, out-of-sample. Kierunek od Rafała: maksymalizacja zysku
+  Z generalizacją; następnie rozszerzenie na nowe pary (F.A: 5 pul spiętych
+  przez HyperSync, potem koszyki skanera).
+
 ### 2026-08-11 — Sesja Fable-desktop: FIX WYCENY PAR WETH-owych W SILNIKU + B2 (reżimy) — PRZEŁOMOWA SESJA ANALITYCZNA
 **1. BUG KRYTYCZNY silnika backtestu naprawiony**: `unitPrices` zakładał parę
 ETH/stable (nie-ETH-owa noga = $1). Dla par kwotowanych w WETH (cbBTC/WETH,

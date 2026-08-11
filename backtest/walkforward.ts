@@ -21,7 +21,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { runStrategy, Strategy, ethUsd } from './engine';
-import { hodl5050, passiveWide, fixedNaive, volAdaptive } from './strategies';
+import { hodl5050, passiveWide, fixedNaive, volAdaptive, volAdaptiveTrend } from './strategies';
 import { loadPool } from './load'; // wspólny loader (obsługuje też pary quote:'WETH')
 
 const OUT = path.join(__dirname, 'results');
@@ -45,11 +45,29 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
   const totalDays = (t1 - t0) / 86400;
   console.log(`${id}: ${swaps.length} swapów, ${totalDays.toFixed(1)} dni · okna ${windowDays}d co ${stepDays}d · reżim: ±${REGIME_THRESHOLD * 100}%\n`);
 
-  const mkStrategies = (): Strategy[] => [
-    hodl5050, passiveWide, fixedNaive(0.15),
-    volAdaptive({ k: 2, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
-    volAdaptive({ k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
-  ];
+  const trendBase = { k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, trendHLDays: 7, trendThresh: 0.05 } as const;
+  // zestaw sterowany env WF_SET: 'trend-sweep' = tylko nowe warianty exit
+  // (baseline'y znane z poprzednich runów; limit czasu wywołań w sesji Fable),
+  // domyślnie pełny zestaw.
+  const mkStrategies = (): Strategy[] =>
+    process.env.WF_SET === 'trend-sweep'
+      ? [
+          hodl5050,
+          volAdaptiveTrend({ ...trendBase, mode: 'exit', volGateRatio: 1.4, trendThresh2: 0.10 }),
+          volAdaptiveTrend({ ...trendBase, mode: 'exit', volGateRatio: 1.4, trendThresh2: 0.12 }),
+          volAdaptiveTrend({ ...trendBase, mode: 'exit', volGateRatio: 1.4, trendThresh2: 0.15 }),
+        ]
+      : [
+          // zestaw KANONICZNY do cross-walidacji (11.08): baseline'y + 3 profile
+          // bezpiecznika z sweepu na base-030-365d (max ochrona ogona / balans /
+          // ostrzejszy powrót) — te same configi na KAŻDEJ puli (test generalizacji)
+          hodl5050, passiveWide,
+          volAdaptive({ k: 2, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
+          volAdaptive({ k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
+          volAdaptiveTrend({ ...trendBase, mode: 'exit' }),
+          volAdaptiveTrend({ ...trendBase, mode: 'exit', volGateRatio: 1.4, trendThresh2: 0.10 }),
+          volAdaptiveTrend({ ...trendBase, mode: 'exit', reentryAboveEma: true }),
+        ];
 
   // per strategia: lista {vsHodl, regime, start} z każdego okna
   const dist: Record<string, Array<{ v: number; regime: Regime; start: number; pchg: number }>> = {};

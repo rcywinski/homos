@@ -134,7 +134,14 @@
   DOWN: 20–42%wygr, średnie ujemne wszędzie. **Bramka PLAN.md (≥2 reżimy):
   adapt k3h24 i pasywny±50 PRZECHODZĄ (up+flat).** Pełne liczby: CONTEXT
   wpis 11.08 "PRZEŁOMOWA" + backtest/results/walkforward-*-45d/60d.json.
-- [ ] **BEZPIECZNIK TRENDU SPADKOWEGO — NOWY GŁÓWNY FRONT (wniosek z B2)**:
+- [~] **BEZPIECZNIK TRENDU SPADKOWEGO — NOWY GŁÓWNY FRONT (wniosek z B2)**.
+  STAN 11.08 ~11:00 (Fable): zaimplementowane (volAdaptiveTrend w strategies.ts),
+  sweep iteracji 1 zrobiony na base-030-365d/45d — widen i block ODRZUCONE,
+  exit działa na ogon (−12→−2…−6 w down) kosztem flat; bramka vol naprawia
+  flat, ślepa na grind; dwupoziomowy = kompromis. Szczegóły: CONTEXT 11.08.
+  W TOKU: cross-walidacja 3 profili na 5 pulach (CC-Mac, zestaw kanoniczny —
+  NIE stroić parametrów per pula). PO NIEJ: decyzja profilu → ALGORITHM.md.
+  Oryginalny opis zadania:
   strojenie k/h wyczerpane; brakuje komponentu reżimowego. Do strategies.ts:
   detektor trendu (np. EWMA-trend / zmiana ceny X% w T dni / cena poniżej
   średniej kroczącej N-dniowej) + akcja obronna (wariant A: poszerz zakres
