@@ -1,4 +1,4 @@
-# ALGORITHM.md — v1 (zamrożone 2026-08-11)
+# ALGORITHM.md — v1.1 (zamrożone 2026-08-11; rewizja §4 tego samego dnia)
 
 > Jedna prawda o parametrach strategii. Zmiany TYLKO przez wpis w CONTEXT.md
 > (sekcja 2, decyzje) z uzasadnieniem na danych. Źródła empiryczne: meta-backtest
@@ -35,18 +35,23 @@
 
 ## 4. Bezpiecznik trendu spadkowego (NOWE w v1 — decyzja Rafała 2026-08-11)
 
-- Profil: **czysty exit(HL7d, 5%)**. Detektor: EMA log-ceny względnej pary,
-  half-life 7d; sygnał DOWN gdy log(P/EMA) < −5%; gaśnie przy > −2.5%.
-- Akcja: **zamknij pozycję do cash 50/50** (bez zakładu kierunkowego ponad
-  HODL); powrót do LP po zgaśnięciu sygnału.
-- Uzasadnienie wyboru (cross-walidacja 5 runów, parametry stałe): generalizuje
-  jako reduktor ogona 5/5 (worst −12→−5…−8, down-mean −3.4→−0.4); czysty exit
-  najlepszy na pulach SPOZA strojenia (cbBTC +0.88, down +0.25) i ma najmniej
-  parametrów. Odrzucone: widen (bez efektu), block (szkodzi), dwupoziomowy
-  vg+t2 (overfit do base-030), re>EMA (wygrywa tylko na puli strojenia —
-  wariant rezerwowy).
-- Świadomy koszt: ~0.1–0.55 p.p./okno średniej we flat za cięcie ogona ~2×.
-  Ogon NIE jest usunięty — hedge (F4) pozostaje otwartym frontem.
+- Profil (v1.1, ETH/stable): **exit(HL7d, 5%) + powrót nad EMA (re>EMA)**.
+  Detektor: EMA log-ceny względnej pary, half-life 7d; sygnał DOWN gdy
+  log(P/EMA) < −5%. Akcja: **zamknij pozycję do cash 50/50**; powrót do LP
+  dopiero gdy cena WRÓCI PONAD EMA (potwierdzone odbicie).
+- Wyjątek cbBTC/WETH: czysty exit (gaśnięcie przy −2.5%, bez warunku nad-EMA)
+  — na parze skorelowanej szybszy powrót wygrywał (+0.88 vs +0.61).
+- Historia decyzji: rano 11.08 wybrano czysty exit na podstawie 90d-owych
+  runów (4 okna — za mała moc); po dociągnięciu 365d dla base-005 i
+  mainnet-005 (po 22 okna) re>EMA wygrywa 4/5 pul średnią I ogonem
+  (base-005: +1.20 / 68% wygr / worst −2.52 — **pierwsze pełne przejście
+  bramki %wygr≥65 ∧ worst>−3 w projekcie**; mainnet-005: +0.73/59%/−1.74).
+  Rewizja zatwierdzona przez Rafała ~14:30.
+- Odrzucone: widen (bez efektu), block (szkodzi), dwupoziomowy vg+t2
+  (overfit do base-030).
+- Świadomy koszt: późniejszy powrót omija początek odbicia (kilka dziesiątych
+  p.p. na niektórych pulach). Ogon NIE jest w pełni usunięty — hedge (F4)
+  pozostaje otwartym frontem.
 
 ## 5. Odbiór fees (collect)
 

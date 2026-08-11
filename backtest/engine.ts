@@ -196,6 +196,8 @@ export function runStrategy(
   let volDaily = 0.03; // start prior 3%/dzień
   let lastTs = s0.ts;
   let lastP = ethUsd(s0.sqrtP, spec);
+  let prevTick = s0.t; // tick sprzed bieżącego swapu (do ścieżki fee)
+  let prevL = s0.L; // L puli sprzed bieżącego swapu (konserwatywny share)
   // trailing yield puli (fee/aktywna płynność) — EWMA dzienna
   let poolFeeYieldDaily = 0;
   let inRangeEvents = 0;
@@ -306,22 +308,49 @@ export function runStrategy(
       }
     }
 
-    // 3. naliczenie fee dla naszej pozycji
-    if (state.pos && ev.t >= state.pos.lo && ev.t < state.pos.hi && ev.L > 0) {
-      const share = state.pos.L / (ev.L + state.pos.L);
-      const { px0, px1 } = unitPrices(ev.sqrtP, spec);
-      if (ev.a0 > 0) {
-        const f = ev.a0 * spec.feeRate * share;
-        state.pos.fees0 += f;
-        state.feesUsd += f * px0;
-      } else if (ev.a1 > 0) {
-        const f = ev.a1 * spec.feeRate * share;
-        state.pos.fees1 += f;
-        state.feesUsd += f * px1;
+    // 3. naliczenie fee dla naszej pozycji.
+    // v2 (2026-08-11): kredyt proporcjonalny do NAKŁADANIA SIĘ ścieżki swapu
+    // [prevTick, ev.t] z naszym zakresem — poprzednio swap liczył się w całości
+    // albo wcale wg ticku PO swapie. Na parach ETH/stable różnica kosmetyczna
+    // (ścieżki krótkie vs zakres), na parach spiętych stara wersja kredytowała
+    // całe wycieczki przez puste ticki pozycjom szerokim (fees zawyżone ×10+).
+    if (state.pos && ev.L > 0) {
+      const lo = Math.min(prevTick, ev.t);
+      const hi = Math.max(prevTick, ev.t);
+      const pathLen = hi - lo;
+      let frac = 0;
+      if (pathLen === 0) {
+        frac = ev.t >= state.pos.lo && ev.t < state.pos.hi ? 1 : 0;
+      } else {
+        const ovLo = Math.max(lo, state.pos.lo);
+        const ovHi = Math.min(hi, state.pos.hi);
+        frac = ovHi > ovLo ? (ovHi - ovLo) / pathLen : 0;
       }
-      inRangeEvents++;
+      if (frac > 0) {
+        // Lpool: 'max' (domyślnie, konserwatywnie) = max(L przed, L po) —
+        // wycieczka przez puste ticki nie dostaje share≈1 za wolumen wykonany
+        // przy pegu (gdzie L duże); 'end' (optymistycznie) = L po swapie.
+        // Prawda leży między — env FEE_SHARE_L=end daje górną granicę.
+        // Na parach ETH/stable oba modele dają identyczne wyniki (L zmienia
+        // się wolno); różnica dotyczy pul spiętych z wycieczkami (sekcja F).
+        const Lpool = process.env.FEE_SHARE_L === 'end' ? ev.L : Math.max(ev.L, prevL);
+        const share = (state.pos.L / (Lpool + state.pos.L)) * frac;
+        const { px0, px1 } = unitPrices(ev.sqrtP, spec);
+        if (ev.a0 > 0) {
+          const f = ev.a0 * spec.feeRate * share;
+          state.pos.fees0 += f;
+          state.feesUsd += f * px0;
+        } else if (ev.a1 > 0) {
+          const f = ev.a1 * spec.feeRate * share;
+          state.pos.fees1 += f;
+          state.feesUsd += f * px1;
+        }
+        inRangeEvents++;
+      }
     }
     if (state.pos) posEvents++;
+    prevTick = ev.t;
+    prevL = ev.L;
 
     // 4. strategia
     const ctx = mkCtx(ev);

@@ -21,6 +21,7 @@
 | 2026-08-10 | Monorepo TS: core / data / backtest / bot / ui | Jeden moduł matematyczny współdzielony przez wszystkie warstwy |
 | 2026-08-10 | SQLite + CSV od pierwszej transakcji | Podatki PL + audytowalność |
 | 2026-08-11 | ALGORITHM.md v1 ZAMROŻONE: k=3 (ETH/stable; cbBTC k=2), h=24, payback≤7d, bezpiecznik trendu = czysty exit(HL7d,5%) | Walk-forward 365d + cross-walidacja 5 runów out-of-sample; decyzja Rafała (profil exit — najlepszy poza pulą strojenia, najmniej parametrów) |
+| 2026-08-11 | REWIZJA v1.1 (§4): powrót po spadku = re>EMA (ETH/stable); cbBTC zostaje przy czystym exit | Pełne 365d base-005/mainnet-005 (po 22 okna) odwróciły ranking: re>EMA wygrywa 4/5 pul, na base-005 PIERWSZE pełne przejście bramki (68% wygr, worst −2.52); poranny wybór opierał się na 4-oknowych runach 90d |
 
 ## 3. Rzeczy do zweryfikowania na aktualnych danych (nie z pamięci AI)
 
@@ -702,6 +703,37 @@ zamontowany), NIE jako sesja chmurowa z repo w źródłach. Konsekwencje:
   (RPC/DefiLlama/GitHub poza nią) — analizy na lokalnych danych działają
   (tsx zainstalowany w /tmp obchodzi darwin-owy esbuild z node_modules),
   sieć praktycznie nie.
+
+### 2026-08-11 — Sesja Fable-desktop: REWIZJA v1.1 (re>EMA) + START F.B (pary spięte) + fee-path v2 w silniku
+1. **REWIZJA ALGORITHM v1.1 (decyzja Rafała ~14:30)**: powrót po spadku =
+   re>EMA dla ETH/stable (cbBTC zostaje czysty exit). Powód: pełne 365d
+   base-005/mainnet-005 (po 22 okna) odwróciły poranny werdykt — re>EMA
+   wygrywa 4/5 pul, na base-005 **PIERWSZE pełne przejście bramki projektu**
+   (mean +1.20, 68% wygr, worst −2.52). Lekcja: nie decydować na 4 oknach.
+2. **Silnik: naliczanie fee v2 (ścieżkowe)**: kredyt proporcjonalny do
+   nakładania się ścieżki swapu [prevTick→tick] z zakresem pozycji × share
+   po Lpool = max(L przed, L po) [konserwatywnie; env FEE_SHARE_L=end daje
+   górną granicę]. Na ETH/stable wyniki IDENTYCZNE co do centa (zweryfikowane
+   mainnet-030); na pulach spiętych stary model kredytował całe wycieczki
+   przez puste ticki (fees zawyżone ×10+). validate 14/14.
+3. **pegged.ts (bateria F.B)** + filtr outlierów (rolling-mediana 201 swapów,
+   próg 300 ticków; DAI-USDT miał 52 probe-swapy do +643% od pega ważące
+   absurdalnie na wycenie — HODL stabli "miał" 69% maxDD przed filtrem).
+4. **Wyniki F.B (częściowe)**:
+   - **arbitrum-usdc-usdt-001** (716k swapów, czysta pula, modele zbieżne):
+     najlepszy **±0.10% h=24h: +1.5…+2.2%/r netto** ($10k; fees $177-247,
+     gas ~0, 4 rebalanse, w7d 0.1%). Natychmiastowe rebalanse ujemne nawet
+     przy gazie ~0 (chasing). ±0.05% ujemne zawsze.
+   - **mainnet-dai-usdt-001**: gaz $8 wyklucza wszystko poza histerezą;
+     ±0.1% h24: **+2.6% (model konserw.) … +46% (optymist.)** — rozrzut =
+     niepewność silnika na puli, gdzie ekonomię robią wycieczki przez puste
+     ticki (95% wolumenu przy pegu z ogromnym L, ale fee-nośne są ekskursje).
+     Ground truth wymagałby feeGrowth on-chain (pomysł na przyszłość).
+   - WNIOSEK kierunkowy: **"3.1%/tydz jak u znajomego" NIE istnieje na
+     uniswap-v3 pegged przy $10k** — realnie ~1.5–4%/r netto (Arbitrum
+     najczyściej), spójne ze skanem (yieldy pegged żyją na aerodrome/curve).
+5. TBTC-WBTC odroczony: para kwotowana w WBTC — silnik potrzebuje referencji
+   USD/BTC (fetch WBTC/USDC → zadanie CC).
 
 ### 2026-08-11 — Sesja Fable-desktop: DECYZJA PROFILU + ALGORITHM.md v1 ZAMROŻONE
 - Spot-check werdyktu pętli 10-min na JSON-ach: liczby się zgadzają. KOREKTA

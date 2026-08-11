@@ -16,13 +16,16 @@ import { SwapEv, PoolSpec } from './engine';
 
 const CACHE = path.join(__dirname, '..', 'data', 'cache');
 export const TICK_SPACING: Record<number, number> = { 100: 1, 500: 10, 3000: 60, 10000: 200 };
-export const GAS_USD: Record<string, number> = { mainnet: 8, base: 0.08, arbitrum: 0.1 };
+export const GAS_USD: Record<string, number> = { mainnet: 8, base: 0.08, arbitrum: 0.1, optimism: 0.05 };
 
 /** pule kwotowane w WETH → id referencyjnego cache USDC/WETH na tej samej sieci */
 export const QUOTE_WETH_REF: Record<string, string> = {
   'base-cbbtc-weth-005': 'base-weth-usdc-030',
   'base-cbbtc-weth-005-365d': 'base-weth-usdc-030-365d',
   'mainnet-wtao-weth-100': 'mainnet-usdc-weth-005',
+  'mainnet-wsteth-weth-001': 'mainnet-usdc-weth-005-365d', // F.B: LST, token1=WETH
+  // UWAGA: mainnet-tbtc-wbtc-001 kwotowany w WBTC — wymaga referencji USD/BTC
+  // (brak cache WBTC/USDC; zadanie w RESEARCH-QUEUE F) — NIE liczyć silnikiem do tego czasu.
 };
 
 const SAMPLE_EVERY = 100; // próbkowanie serii referencyjnej (co N-ty swap)
