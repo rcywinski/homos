@@ -735,6 +735,32 @@ granica; prawda pomiędzy). Interpretacja (Fable, pełne JSON-y w backtest/resul
    u CC-Mac w toku — ocena bramki (≥65% wygr ∧ worst >−3; benchmark
    base-005: 68%/−2.52) po dojechaniu JSON-ów.
 
+### 2026-08-12 — Sesja Fable-desktop: ALGORITHM v1.1 WDROŻONY DO ŻYWEGO BOTA
+Zaplanowana sesja botowa wykonana w całości (typecheck: tylko znane
+preexisting; smoke-test serwera lokalnie OK, traversal zablokowany):
+1. **Bezpiecznik EXIT_TREND w observerze**: EMA log-ceny WZGLĘDNEJ pary
+   (HL 7d, konfig TREND w bot/config.ts), aktualizacja w pętli cen 60s,
+   stan persystowany w `.bot/trend-state.json` (restart nie zeruje EMA;
+   zimny start seeduje EMA bieżącą ceną — brak fałszywego sygnału).
+   Sygnał DOWN (gap<−5%) → propozycja kind='EXIT_TREND' per posiadana
+   pozycja w puli (dedup: 1 otwarta per pozycja; dosyłana też gdy pozycja
+   pojawi się w trakcie sygnału) + Telegram. Powrót per pula:
+   trendReentry 'aboveEma' (domyślny) / 'half' (cbBTC — czysty exit).
+   PoolLive ma trendGapPct/trendDown (dla UI).
+2. **Historia obserwacji**: snapshot per pula co cykl statystyk 15 min →
+   `.bot/history.ndjson` {ts,poolId,price,volDaily,feeYieldDaily,rangeLo,
+   rangeHi,emaGapPct,trendDown}; server: `GET /api/history?hours=N` +
+   `GET /api/results/:name` (whitelist regex, Last-Modified; konwencja nazw
+   Sonneta uhonorowana) — dashboard "Analiza obserwacji" ożyje po deployu.
+3. **Arbitrum w BOT_POOLS**: arbitrum-weth-usdc-005 (WETH t0 zweryfikowane
+   sortowaniem adresów + zgodne z meta fetcha), klient viem arbitrum, NFT
+   manager 42161 (kanoniczny adres mainnetowy), RPC list; lustro w
+   src/config/botPools.ts. advisor.ts: BLOCK_TIME/GAS_USD 42161 + chunk
+   getLogs per chain (Arbitrum 10k bloków — inaczej ~350 wywołań/cykl).
+4. **k per klasa (v1.1)**: ADVISOR_PARAMS.k 2→3; BotPool.advisorK=2 dla
+   cbBTC; observer przekazuje override do suggestRange.
+Deploy: commit CC-Mac + restart OBU usług na Windows (wpisy w HANDOFF).
+
 ### 2026-08-11 (~19:00) — CC-Win: wdrożenia domknięte + lekcja DPAPI
 Restart homos-bot (Arbitrum w selektorze od jutrzejszego rankingu, health 200)
 + usługa homos-runner działa. **LEKCJA INFRA (do zapamiętania przy KAŻDEJ
@@ -997,3 +1023,45 @@ generalizacji).
 - Porządki: RESEARCH-QUEUE A2 → [x]. Następny krok czeka na sygnał „dane
   gotowe" od CC-Mac → interpretacja walkforwardów 005-365d + projekt baterii
   F.B (ultra-wąskie na parach spiętych).
+
+### 2026-08-12 07:50 — Sesja Fable-desktop (poranny brief): INTERPRETACJA NOCNEJ PARTII db2e3e5 (walkforwardy 60/15 + arbitrum-030)
+Rutyna: health 192.168.1.8:8787 nieosiągalny z sandboksa (brak trasy do LAN —
+to NIE jest diagnoza serwera); brak nowych commitów runnera i plików w done/
+po 11.08 wieczór; weryfikacja pipeline'u 07:30 z tej sesji NIEMOŻLIWA (data/
+żyje na Windows, nie w repo) → sprawdzi CC-Win/Rafał przez /health lub
+data\pipeline.log. Fetch base-030-365d potwierdzone DONE (walkforwardy 45/60
+zrobione wcześniej — zlecenie z checklisty bezprzedmiotowe).
+
+**1. WALKFORWARDY 60/15 (4 pule) — WZMACNIAJĄ REWIZJĘ v1.1.** Liczby per
+reżim w walkforward-*-60d.json; skrót (mean / %wygr / worst, vsHODL):
+- **mainnet-005-365d: PEŁNE PRZEJŚCIE BRAMKI (%wygr≥65 ∧ worst>−3) przez OBA
+  profile trendowe** — re>EMA **+1.07 / 71% / −2.16**, czysty exit +0.74 /
+  71% / −2.39. Po base-005-45d (68%/−2.52) to DRUGA pula z pełnym pass —
+  i pierwsza na mainnecie (gas $8 nie zabija: exit rzadko strzela).
+- **base-005: re>EMA najlepszy** (+1.70 / 62% / **−1.94**) — worst przechodzi
+  z zapasem, %wygr o 3 p.p. pod progiem. Kierunkowo potwierdza 45d.
+- **cbBTC: czysty exit PRZECHODZI bramkę** (+1.11 / **81% / −1.36**) —
+  potwierdza zamrożony profil cbBTC (exit). ⚠️ Napięcie: w walk-forwardzie
+  k3 > k2 (adapt k3h24 +1.14/76%/−3.41 vs k2h24 +0.76/57%/−4.97), a v1 zamroził
+  k=2 dla cbBTC na podstawie pełnorocznego pojedynczego runu (+11.42 — pojedynczy
+  przebieg, nie rozkład okien). NIE zmieniam v1.1 hotfixem; kandydat do rewizji
+  v1.2 przy następnym przeglądzie (walk-forward > single-run, lekcja z 11.08).
+- **arbitrum-005: 60d NIE potwierdza 45d** (exit +0.58/62%/−4.15; re>EMA
+  +0.19/52%/−6.42 vs 73%/−3.49 na 45d). Decyzja "Arbitrum w selektorze" zostaje
+  (45d była podstawą i nadal jest najlepszym oknem projektu), ale status
+  Arbitrum spada z "praktycznie pass" do "kierunkowo OK, niestabilny w oknie".
+
+**2. arbitrum-030 (nowa pula, 45d+60d): bramka NIE PRZECHODZI.** Najlepsze:
+45d pasywny±50 73% wygr ale worst −10.31; profile trendowe worst −5…−8.
+Wniosek operacyjny: na Arbitrum gramy 005, nie 030 (spójne z lekcją OP:
+głębokość/aktywność puli to warunek brzegowy). Ciekawostka do obserwacji,
+NIE do decyzji: odrzucony jako overfit profil vg1.4+t2 wygrywa na arb-030
+oba okna (45d +1.25, 60d +1.37/71%) — na chainach z płytszymi pulami bramka
+vol może mieć wartość; wrócić przy większej próbce, nie otwieram ponownie.
+
+**3. Wniosek przekrojowy**: profile trendowe (exit / re>EMA) tną worst-okno
+do −1.4…−4.2 na WSZYSTKICH czterech pulach 60d (czyste adaptacyjne: −5.7…−18).
+Podział ról z v1.1 (re>EMA dla ETH/stable, czysty exit dla cbBTC) trzyma się
+też na 60d — każdy profil wygrywa dokładnie tam, gdzie go przypisaliśmy.
+Bramka globalna: 2 pule pass (base-005-45d, mainnet-005-60d) + cbBTC pass
+(60d) — hedge F4 wciąż otwarty front, ale ogon systematycznie maleje.

@@ -152,6 +152,13 @@
   na 365d: cel = DOWN z 20-42% → ≥50%wygr i najgorsze okno > −5 przy
   zachowaniu wygranych up/flat. UWAGA: wariant B to de facto market-timing —
   porównać uczciwie z benchmarkiem "HODL z tym samym sygnałem".
+- [x] **Walkforwardy 60/15 (4 pule) + arbitrum-030 45/60 (nocna partia
+  db2e3e5)** — ✅ ZINTERPRETOWANE (Fable, 12.08 brief): mainnet-005-60d
+  **PEŁNY PASS bramki** oboma profilami trendowymi (re>EMA +1.07/71%/−2.16);
+  cbBTC-60d czysty exit pass (81%/−1.36); base-005-60d re>EMA +1.70/62%/−1.94
+  (o włos); arb-005-60d NIE potwierdza 45d (exit 62%/−4.15); **arb-030 FAIL**
+  → na Arbitrum tylko 005. Napięcie do v1.2: na cbBTC walk-forward mówi k3>k2
+  (zamrożone k=2 z single-runu). Szczegóły: CONTEXT wpis 12.08.
 - [ ] **Warianty triggera rebalansu** (po B2 ZDEGRADOWANE do drugorzędnych —
   ogon robią okna DOWN, nie timing triggera; nadal warte sprawdzenia PO
   bezpieczniku trendu):

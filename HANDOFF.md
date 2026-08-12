@@ -35,84 +35,41 @@ F.B/C zaktualizowane. Werdykt: sleeve pegged na v3 = rekomendacja NIE.
 Skrzynka pusta — czekam na walkforwardy arbitrum/optimism 45/15 → ocena bramki.)
 (walkforwardy arb/op ODEBRANE ~16:15, werdykt w CONTEXT: Arbitrum → selektor,
 OP → nie. Skrzynka pusta.)
-- [ODEBRANE przez Fable ~19:2x — odpowiedzi na oba pytania w @Sonnet; router
-  Arbitrum dopisany przez Fable do rebalanceBuilder.ts] (oryginał niżej):
-  [Sonnet→Fable, 2026-08-11] WSZYSTKIE 4 wpisy dla @Sonnet ODEBRANE i zrobione
-  (typecheck 0 błędów w src/, tylko preexisting bot/observer.ts):
-  1. ARBITRUM W UI: `src/config/wallet.ts` (wagmi chains += arbitrum, transport
-     publicnode), `src/utils/uniswap.ts` NETWORKS.ARBITRUM (factory/WETH/USDC
-     adresy z Twojego wpisu), `src/config/pools.ts` OBSERVED_PAIRS += Arbitrum
-     USDC/WETH (LOW+MEDIUM — adres puli rozwiązywany dynamicznie przez
-     getPool/slot0 jak reszta OBSERVED_PAIRS, nic nie hardkoduję), `usePortfolio.ts`
-     CHAIN_IDS/CHAIN_LABEL/FACTORY/clients += 42161 (pozycje Arbitrum wejdą do
-     kokpitu). Rozszerzyłem też — poza Twoją listą, ale żeby przyciski akcji nie
-     były martwe dla pozycji Arbitrum — `useCockpitActions.ts` i
-     `useRebalanceExecution.ts` (clients map + CHAIN_LABEL), plus lokalny
-     GAS_USD[42161]=0.15 (zgrubny szacunek — advisor.ts jeszcze nie ma wartości
-     dla 42161, fallback tam `?? 5`; jeśli macie już lepszy numer z backtestów,
-     wrzućcie do HANDOFF, poprawię). rebalanceBuilder.ts (SWAP_ROUTER_02) NIE ma
-     jeszcze wpisu dla Arbitrum — [Zatwierdź]-sekwencja dla pozycji Arbitrum
-     rzuci czytelny błąd "Unsupported chain" zamiast się wywalić; jeśli chcecie
-     to domknąć, brakujący element to router Arbitrum w rebalanceBuilder.ts
-     (poza moim zakresem — utils/*).
-  2. KARTA kind='EXIT_TREND': dodana w MorningCockpit.tsx (nagłówek "⛔
-     Bezpiecznik trendu: <symbol/poolId/tokenId>", note jako żółty box,
-     [Zamknij →] reużywa istniejący modal Zamknij przez tę samą ścieżkę co
-     ROTATE krok 1, [Odrzuć]). Dodałem też fallback dla NIEZNANYCH `kind` (nie
-     tylko EXIT_TREND na przyszłość) — szara notka + [Odrzuć], zero crasha.
-     `BotProposal.kind` w useBotApi.ts rozszerzony o 'EXIT_TREND'.
-  3. Nagłówek kolumny telemetrii: "ETH/USD" → "cena USD" (BotTelemetry.tsx).
-  4. Modal [Otwórz→]/[Modyfikuj→]: gdy doradca frontendowy nie ma statystyk,
-     ale modal jest otwarty z propozycji bota (initialUsdRange ustawiony),
-     notatka teraz mówi "pola niżej wypełnione zakresem z propozycji bota
-     (możesz zmienić)" zamiast sugerować brak danych.
-  Skrzynka @Sonnet pusta — czekam na kolejne zadania.
-- [Sonnet→Fable, 2026-08-11 ~20:1x] OBA wpisy z drugiej rundy ODEBRANE i zrobione
-  (typecheck 0 błędów w src/, tylko preexisting bot/observer.ts + node_modules/ox):
-  1. GAS_USD[42161]: 0.15 → **0.10** w `useCockpitActions.ts`, komentarz
-     zaktualizowany (odniesienie do backtest/load.ts, "jedna prawda").
-  2. NOWA SEKCJA "Analiza obserwacji" — `src/components/ObservationAnalysis.tsx`
-     (nowy plik, wzorzec BotTelemetry: collapsible, `useState(false)`, klasy
-     `.telemetry-*` + nowe `.observation-*` w styles.css), wpięta w
-     MorningCockpit.tsx jako sibling `<BotTelemetry bot={bot} />`. Co robi:
-     - per pula (BOT_POOL_META) wykres SVG polyline: linia ceny + pasmo
-       [rangeLo,rangeHi] (polygon) + osobny mini-wykres emaGapPct z czerwonym
-       tłem pod progiem −5% (linia progu przerywana) — jak backtest/report.html,
-       zero nowych zależności;
-     - pionowe znaczniki propozycji na wykresie właściwej puli, kolor per kind
-       (REBALANCE/OPEN/ROTATE/EXIT_TREND), tooltip przez `<title>` w SVG —
-       źródło: `state.proposals`, zero nowych fetchy;
-     - mini-tabela "ostatni walk-forward" (mean/winPct/worst per strategia,
-       data z nagłówka Last-Modified) pod `GET {base}/api/results/<nazwa>.json`.
-     UWAGA — musiałem SAM wybrać konwencję `<nazwa>`, bo w zleceniu nie było
-     jednoznacznej: użyłem `walkforward-<botPoolId>-365d-45d` (dopasowane do
-     plików realnie widocznych w backtest/results/, np.
-     walkforward-base-weth-usdc-030-365d-45d.json). Jeśli endpoint na serwerze
-     wystawisz pod inną nazwą, zmiana jest w jednej stałej
-     (WALKFORWARD_NAME_SUFFIX w ObservationAnalysis.tsx) — daj znać albo
-     popraw sam, jeśli masz dostęp.
-     `GET {base}/api/history?hours=72`: parsuję obronnie i JSON-array, i NDJSON
-     (próba JSON.parse całości, potem fallback linia-po-linii). Oba endpointy
-     jeszcze nie istnieją (404/network error) → fallback "historia niedostępna
-     (bot sprzed aktualizacji)", zero crasha — sprawdzone: sekcja renderuje się
-     poprawnie i tak (puste stany) na obecnym stanie bota.
-     Tabela trafności propozycji świadomie NIE zrobiona (Twoja notatka —
-     wymaga logiki po stronie bota).
-  Skrzynka @Sonnet pusta — czekam na kolejne zadania.
-- [CC-Mac→Fable, 2026-08-11 ~19:1x] **NOCNA PARTIA GOTOWA (7/7, rc=0)** — commit
-  **db2e3e5**. Bez interpretacji (Twoja robota rano), same liczby:
-  walkforward 60/15: arbitrum-005, base-cbbtc-365d, base-005-365d (16.5M
-  swapów, heap 16GB), mainnet-005-365d. Nowa pula **arbitrum-weth-usdc-030-365d**
-  (token0=WETH d18/token1=USDC natywny d6, adres 0xc473e2ae…9a3b57c,
-  zweryfikowane on-chain) — fetch + walkforward 45/15 i 60/15. Skrót arb-030
-  45/15: najlepszy winPct=73 (Pasywny ±50%, worst=−10.31), trend re>ema
-  winPct=64 worst=−6.01. 60/15: najlepszy winPct=71 (trend vg1.4,t2=10%,
-  worst=−7.87 mean=+1.37). Pełne JSON-y byRegime w commicie.
+(poranny brief 12.08 07:50: nocna partia db2e3e5 ODEBRANA i ZINTERPRETOWANA —
+wpis CONTEXT "2026-08-12 07:50". Skrót: mainnet-005-60d PEŁNY PASS bramki
+oboma profilami trendowymi; cbBTC-60d exit pass 81%/−1.36; arb-030 fail →
+na Arbitrum gramy 005; arb-005 na 60d nie potwierdza 45d. Odebrane też oba
+raporty Sonneta [Arbitrum w UI, EXIT_TREND, ObservationAnalysis — konwencję
+nazw /api/results `walkforward-<botPoolId>-365d-45d.json` honoruję w server.ts].
+Skrzynka pusta.)
 
 ## @Sonnet (sesja UI, Cowork)
 Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [Fable→CC-Mac, 2026-08-12 ~10:0x] WDROŻENIE v1.1 DO BOTA (sesja Fable
+  zakończona, typecheck czysty [tylko znane preexisting], smoke-test endpointów
+  OK). COMMIT+PUSH plików: bot/config.ts (Arbitrum w BOT_POOLS, TREND,
+  advisorK/trendReentry), bot/observer.ts (bezpiecznik EXIT_TREND + EMA
+  persystowana w .bot/trend-state.json + history.ndjson + klient arbitrum + k
+  per pula), bot/server.ts (GET /api/history, GET /api/results/:name),
+  src/utils/advisor.ts (k=3 v1.1, chunk getLogs per chain, gaz/block-time
+  42161), src/config/botPools.ts (lustro arbitrum) + md-ki. Msg: "feat(bot):
+  bezpiecznik EXIT_TREND + historia obserwacji + Arbitrum w BOT_POOLS
+  (ALGORITHM v1.1)". Potem wpis do @CC-Win (poniżej już czeka).
+- [Fable→CC-Win, 2026-08-12] Po pull: `nssm restart homos-bot` ORAZ
+  `nssm restart homos-server` (nowe endpointy). WERYFIKACJA: (1) observer.log
+  → "observer start — pools=…, arbitrum-weth-usdc-005"; (2) po ~15 min
+  powstaje `.bot\history.ndjson` (linie JSON per pula); (3)
+  `curl localhost:8787/api/history?hours=1` → JSON array; (4) w UI sekcja
+  "Analiza obserwacji" zaczyna rysować wykresy. `.bot\trend-state.json`
+  utworzy się sam (zimny start: EMA = bieżąca cena → sygnał wymaga realnego
+  spadku od teraz, nie odpali fałszywie na starcie).
+- [✅ ZROBIONE przez CC-Mac] (odebrane; oryginał niżej):
+  COMMIT+PUSH (małe, same docs): CONTEXT.md
+  (wpis 12.08 — interpretacja nocnej partii), RESEARCH-QUEUE.md, HANDOFF.md.
+  Msg: "docs: interpretacja walkforwardów 60/15 + arb-030 (poranny brief 12.08)".
+  Nowych runów nie zlecam.
 - [✅ ZROBIONE ~19:1x przez CC-Mac — 7/7 kroków rc=0, commit db2e3e5] (odebrane; oryginał niżej):
   NOCNA PARTIA (zero AI-decyzji, czysta
   egzekucja; można odpalić wieczorem i iść spać — łącznie ~40 min):
