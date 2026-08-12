@@ -63,6 +63,35 @@ app.post('/api/proposals/:id/dismiss', (req, res) => {
   res.json({ ok: true });
 });
 
+// Historia snapshotów bota (dashboard "Analiza obserwacji" w UI).
+// Plik: .bot/history.ndjson — linie JSON co 15 min per pula (pisze observer).
+app.get('/api/history', (req, res) => {
+  const HISTORY_PATH = path.join(DIR, 'history.ndjson');
+  if (!fs.existsSync(HISTORY_PATH)) return res.json([]);
+  const hours = Math.min(Math.max(Number(req.query.hours) || 72, 1), 24 * 30);
+  const cutoff = Date.now() - hours * 3600 * 1000;
+  const out: unknown[] = [];
+  for (const line of fs.readFileSync(HISTORY_PATH, 'utf8').split('\n')) {
+    if (!line.trim()) continue;
+    try {
+      const j = JSON.parse(line);
+      if (new Date(j.ts).getTime() >= cutoff) out.push(j);
+    } catch { /* niepełna linia w trakcie zapisu — pomiń */ }
+  }
+  res.json(out);
+});
+
+// Wyniki backtestów/walk-forwardów liczone przez pipeline (backtest/results/*.json).
+// UI (ObservationAnalysis) pyta o walkforward-<poolId>-365d-45d.json.
+app.get('/api/results/:name', (req, res) => {
+  const name = req.params.name;
+  if (!/^[\w.-]+\.json$/.test(name) || name.includes('..')) return res.status(400).json({ error: 'bad name' });
+  const p = path.join(__dirname, '..', 'backtest', 'results', name);
+  if (!fs.existsSync(p)) return res.status(404).json({ error: 'not found' });
+  res.setHeader('Last-Modified', fs.statSync(p).mtime.toUTCString());
+  res.json(JSON.parse(fs.readFileSync(p, 'utf8')));
+});
+
 app.get('/health', (_req, res) => {
   const s = readJson(STATE_PATH);
   const fresh = s && Date.now() - new Date(s.updatedAt).getTime() < 5 * 60 * 1000;

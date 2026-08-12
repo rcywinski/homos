@@ -13,8 +13,9 @@ import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
 import { createPublicClient, http, fallback, PublicClient, formatUnits } from 'viem';
-import { mainnet, base } from 'viem/chains';
-import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR } from './config';
+import { mainnet, base, arbitrum } from 'viem/chains';
+import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR, TREND } from './config';
+import { ADVISOR_PARAMS } from '../src/utils/advisor';
 import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, PoolStats } from '../src/utils/advisor';
 import { getAmountsForLiquidity, sqrtPriceX96ToHumanPrice } from '../src/utils/v3math';
 import { runSelectorIfDue, SelectorProposal } from './selector';
@@ -38,6 +39,7 @@ const TICK_SPACING: Record<number, number> = { 100: 1, 500: 10, 3000: 60, 10000:
 const clients: Record<string, PublicClient> = {
   mainnet: createPublicClient({ chain: mainnet, transport: fallback(RPC.mainnet.map((u) => http(u))) }),
   base: createPublicClient({ chain: base, transport: fallback(RPC.base.map((u) => http(u))) }),
+  arbitrum: createPublicClient({ chain: arbitrum, transport: fallback(RPC.arbitrum.map((u) => http(u))) }),
 };
 
 const SLOT0_ABI = [
@@ -77,6 +79,9 @@ interface PoolLive {
   stats: PoolStats | null;
   suggestion: ReturnType<typeof suggestRange> | null;
   updatedAt: string;
+  /** bezpiecznik trendu (v1.1): odchylenie log-ceny od EMA7d w % i stan sygnału */
+  trendGapPct?: number;
+  trendDown?: boolean;
 }
 interface WatchedPosition {
   tokenId: string;
@@ -95,8 +100,8 @@ interface Proposal {
   createdAt: string;
   tokenId: string; // '' dla propozycji OPEN z selektora
   poolId: string; // '' gdy pula spoza BOT_POOLS (selektor → note)
-  /** REBALANCE (doradca pozycji) | OPEN / ROTATE (selektor — warstwa selekcji pul) */
-  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE';
+  /** REBALANCE (doradca pozycji) | OPEN / ROTATE (selektor) | EXIT_TREND (bezpiecznik v1.1) */
+  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND';
   action: string;
   suggestedRange?: { tickLower: number; tickUpper: number; usdLo: number; usdHi: number };
   costUsd?: number;
@@ -160,6 +165,74 @@ const humanToBaseUsd = (p: BotPool, human: number): number | null => {
   return ref ? inWeth * ref : null;
 };
 
+// --- bezpiecznik trendu (ALGORITHM.md v1.1 §4) ---
+// EMA log-ceny WZGLĘDNEJ pary (HL 7d), sygnał DOWN gdy gap < −5%.
+// Powrót: 'aboveEma' (domyślny) — gap > 0; 'half' (cbBTC) — gap > −2.5%.
+// Stan persystowany (.bot/trend-state.json) — restart usługi nie zeruje EMA.
+const TREND_STATE_PATH = path.join(DIR, 'trend-state.json');
+interface TrendState { ema: number; lastTs: number; down: boolean }
+const trend: Record<string, TrendState> = fs.existsSync(TREND_STATE_PATH)
+  ? JSON.parse(fs.readFileSync(TREND_STATE_PATH, 'utf8'))
+  : {};
+const saveTrend = () => fs.writeFileSync(TREND_STATE_PATH, JSON.stringify(trend, null, 2));
+const TREND_TAU_MS = (TREND.hlDays * 86400 * 1000) / Math.LN2;
+
+/** cena względna pary do detekcji trendu: dla quote USD = USD za bazowy;
+ *  dla quote WETH = cena bazowego W WETH (bez szumu kursu ETH/USD) */
+const trendPrice = (p: BotPool, human: number): number =>
+  (p.quote ?? 'USD') === 'USD' ? (p.ethIsToken0 ? human : 1 / human) : (p.ethIsToken0 ? 1 / human : human);
+
+/** aktualizacja EMA + detekcja sygnału; zwraca gap w % (log) */
+function updateTrend(p: BotPool, price: number, nowMs: number): number {
+  const logP = Math.log(price);
+  const st = trend[p.id];
+  if (!st) {
+    trend[p.id] = { ema: logP, lastTs: nowMs, down: false };
+    saveTrend();
+    return 0;
+  }
+  const dt = Math.max(nowMs - st.lastTs, 1);
+  const a = 1 - Math.exp(-dt / TREND_TAU_MS);
+  st.ema = (1 - a) * st.ema + a * logP;
+  st.lastTs = nowMs;
+  const gap = logP - st.ema;
+  const wasDown = st.down;
+  if (!st.down && gap < -TREND.thresh) st.down = true;
+  else if (st.down) {
+    const backAt = (p.trendReentry ?? 'aboveEma') === 'aboveEma' ? 0 : -TREND.thresh / 2;
+    if (gap > backAt) st.down = false;
+  }
+  if (st.down !== wasDown) {
+    log(`trend ${p.id}: ${st.down ? '⛔ DOWN (gap ' + (gap * 100).toFixed(1) + '%)' : '✅ koniec sygnału (gap ' + (gap * 100).toFixed(1) + '%)'}`);
+    saveTrend();
+    if (st.down) proposeExitTrend(p, gap);
+  }
+  return gap * 100;
+}
+
+/** propozycja EXIT_TREND dla każdej naszej pozycji w puli z sygnałem DOWN */
+function proposeExitTrend(pool: BotPool, gap: number) {
+  const held = positions.filter((x) => x.poolId === pool.id);
+  if (!held.length) return;
+  for (const pos of held) {
+    const key = `trend-${pool.id}-${pos.tokenId}-${new Date().toISOString().slice(0, 10)}`;
+    // dedup: jedna OTWARTA propozycja EXIT_TREND per pozycja (niezależnie od dnia)
+    if (proposals.some((x) => x.kind === 'EXIT_TREND' && x.tokenId === pos.tokenId && x.status === 'open')) continue;
+    const prop: Proposal = {
+      id: key, createdAt: new Date().toISOString(), tokenId: pos.tokenId, poolId: pool.id,
+      kind: 'EXIT_TREND', action: 'EXIT_TREND',
+      symbol: `${pool.sym0}-${pool.sym1}`,
+      note: `Bezpiecznik trendu (ALGORITHM v1.1 §4): cena ${(gap * 100).toFixed(1)}% pod EMA${TREND.hlDays}d (próg −${TREND.thresh * 100}%). Sugestia: zamknij pozycję do cash 50/50; powrót po ${(pool.trendReentry ?? 'aboveEma') === 'aboveEma' ? 'powrocie ceny NAD EMA' : 'gap > −' + (TREND.thresh * 50) + '%'}.`,
+      status: 'open',
+    };
+    proposals.push(prop);
+    saveProposals();
+    const msg = `⛔ HOMOS: BEZPIECZNIK TRENDU — ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): cena ${(gap * 100).toFixed(1)}% pod EMA7d. Propozycja: wyjdź do cash 50/50. [tryb OBSERWUJ — nic nie wykonano]`;
+    log(msg);
+    telegram(msg);
+  }
+}
+
 // --- pętla cen (60s) ---
 async function refreshPrices() {
   // pule USD najpierw — pule kwotowane w WETH potrzebują ich kursu jako referencji
@@ -183,6 +256,8 @@ async function refreshPrices() {
         suggestion: prev?.suggestion ?? null,
         updatedAt: new Date().toISOString(),
       };
+      live[p.id].trendGapPct = updateTrend(p, trendPrice(p, human), Date.now());
+      live[p.id].trendDown = trend[p.id]?.down ?? false;
     } catch (e) {
       log(`price ${p.id} failed: ${String(e).slice(0, 120)}`);
     }
@@ -191,6 +266,8 @@ async function refreshPrices() {
 }
 
 // --- pętla statystyk (15min) ---
+const HISTORY_PATH = path.join(DIR, 'history.ndjson');
+
 async function refreshStats() {
   for (const p of BOT_POOLS) {
     try {
@@ -198,8 +275,27 @@ async function refreshStats() {
       const stats = computeStats(swaps, p.chainId, p.d0, p.d1, p.feeBps / 1_000_000, TICK_SPACING[p.feeBps]);
       if (live[p.id] && stats) {
         live[p.id].stats = stats;
-        live[p.id].suggestion = suggestRange(stats, p.feeBps as any, p.d0, p.d1);
+        // k per pula (ALGORITHM v1.1: ETH/stable k=3 domyślne, cbBTC k=2)
+        live[p.id].suggestion = suggestRange(stats, p.feeBps as any, p.d0, p.d1, {
+          ...ADVISOR_PARAMS, k: p.advisorK ?? ADVISOR_PARAMS.k,
+        });
         log(`stats ${p.id}: vol=${(stats.volDaily * 100).toFixed(2)}%/d feeYield=${(stats.feeYieldDaily * 100).toFixed(3)}%/d swaps=${stats.swapsAnalyzed}`);
+      }
+      // snapshot do historii (dashboard "Analiza obserwacji" w UI) — co cykl 15min
+      const lv = live[p.id];
+      if (lv) {
+        const toUsd = (t: number) => tickToUsd(p, t);
+        const [rangeLo, rangeHi] = lv.suggestion
+          ? [toUsd(lv.suggestion.tickLower), toUsd(lv.suggestion.tickUpper)].sort((a, b) => a - b)
+          : [null, null];
+        fs.appendFileSync(
+          HISTORY_PATH,
+          JSON.stringify({
+            ts: new Date().toISOString(), poolId: p.id, price: lv.ethUsd,
+            volDaily: lv.stats?.volDaily ?? null, feeYieldDaily: lv.stats?.feeYieldDaily ?? null,
+            rangeLo, rangeHi, emaGapPct: lv.trendGapPct ?? null, trendDown: lv.trendDown ?? false,
+          }) + '\n'
+        );
       }
     } catch (e) {
       log(`stats ${p.id} failed: ${String(e).slice(0, 120)}`);
@@ -270,6 +366,14 @@ async function refreshPositions() {
     }
   }
   positions = found;
+  // pozycja otwarta/wykryta w TRAKCIE trwającego sygnału DOWN też dostaje
+  // propozycję (transition-only by ją ominął; dedup w proposeExitTrend)
+  for (const p of BOT_POOLS) {
+    if (trend[p.id]?.down && positions.some((x) => x.poolId === p.id)) {
+      const gap = (live[p.id]?.trendGapPct ?? 0) / 100;
+      proposeExitTrend(p, gap);
+    }
+  }
   saveState();
 }
 

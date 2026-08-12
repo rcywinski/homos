@@ -8,7 +8,7 @@
 export interface BotPool {
   id: string;
   chainId: number;
-  chain: 'mainnet' | 'base';
+  chain: 'mainnet' | 'base' | 'arbitrum';
   address: `0x${string}`;
   feeBps: number;
   ethIsToken0: boolean;
@@ -25,7 +25,20 @@ export interface BotPool {
    *  liczony przez kurs z puli referencyjnej usdRefPoolId) */
   quote?: 'USD' | 'WETH';
   usdRefPoolId?: string;
+  /** override mnożnika k doradcy dla tej puli (ALGORITHM v1.1: ETH/stable k=3
+   *  [domyślne z ADVISOR_PARAMS], pary skorelowane k=2) */
+  advisorK?: number;
+  /** tryb powrotu bezpiecznika trendu (ALGORITHM v1.1 §4): 'aboveEma'
+   *  [domyślny, ETH/stable] — sygnał gaśnie dopiero gdy cena NAD EMA;
+   *  'half' [cbBTC] — gaśnie przy gap > −thresh/2 (czysty exit) */
+  trendReentry?: 'aboveEma' | 'half';
 }
+
+/** Bezpiecznik trendu spadkowego (ALGORITHM.md v1.1 §4) — jedna prawda. */
+export const TREND = {
+  hlDays: 7, // half-life EMA log-ceny względnej pary
+  thresh: 0.05, // sygnał DOWN gdy log(P/EMA) < −5%
+};
 
 export const BOT_POOLS: BotPool[] = [
   {
@@ -62,6 +75,17 @@ export const BOT_POOLS: BotPool[] = [
     feeBps: 500, ethIsToken0: true, d0: 18, d1: 8, sym0: 'WETH', sym1: 'cbBTC',
     t0: '0x4200000000000000000000000000000000000006', t1: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',
     quote: 'WETH', usdRefPoolId: 'base-weth-usdc-030',
+    advisorK: 2, trendReentry: 'half',
+  },
+  {
+    // Arbitrum — dodane 2026-08-11 po zaliczonym walk-forwardzie 365d
+    // (re>EMA 73% wygr — rekord projektu; CONTEXT ~16:15). Kolejność tokenów:
+    // WETH 0x82aF… < USDC 0xaf88… ⇒ token0=WETH (zgodne z meta fetcha 365d).
+    id: 'arbitrum-weth-usdc-005',
+    chainId: 42161, chain: 'arbitrum',
+    address: '0xC6962004f452bE9203591991D15f6b388e09E8D0',
+    feeBps: 500, ethIsToken0: true, d0: 18, d1: 6, sym0: 'WETH', sym1: 'USDC',
+    t0: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1', t1: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
   },
 ];
 
@@ -78,11 +102,18 @@ export const RPC: Record<string, string[]> = {
     'https://base-rpc.publicnode.com',
     'https://base.llamarpc.com',
   ],
+  arbitrum: [
+    ...(process.env.RPC_ARBITRUM ? [process.env.RPC_ARBITRUM] : []),
+    'https://arbitrum.drpc.org',
+    'https://arbitrum-one-rpc.publicnode.com',
+    'https://1rpc.io/arb',
+  ],
 };
 
 export const NFT_MANAGER: Record<number, `0x${string}`> = {
   1: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
   8453: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1',
+  42161: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', // kanoniczny deploy = adres mainnetowy
 };
 
 export const WATCH_ADDRESS = (process.env.BOT_WATCH_ADDRESS ||

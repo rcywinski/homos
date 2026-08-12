@@ -51,7 +51,10 @@ export interface RebalanceAssessment {
 }
 
 export const ADVISOR_PARAMS = {
-  k: 2, // mnożnik zmienności (kalibracja: backtest F1)
+  // k=3 od ALGORITHM.md v1.1 (walk-forward 365d: k3 h24 jedyna dodatnia śr.+med.
+  // w obu oknach; wcześniej 2). Pary skorelowane (cbBTC/WETH): k=2 — override
+  // per pula przez BotPool.advisorK (bot/config.ts), nie tutaj.
+  k: 3,
   horizonDays: 7,
   maxPaybackDays: 7,
   minWidth: 0.01,
@@ -59,8 +62,11 @@ export const ADVISOR_PARAMS = {
   slippageBps: 5,
 };
 
-const BLOCK_TIME: Record<number, number> = { 1: 12, 8453: 2, 11155111: 12 };
-const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08, 11155111: 0 };
+const BLOCK_TIME: Record<number, number> = { 1: 12, 8453: 2, 42161: 0.25, 11155111: 12 };
+const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08, 42161: 0.1, 11155111: 0 };
+// chunk getLogs per chain: Arbitrum ma 4 bloki/s — przy 1000 bl./chunk 24h
+// wymagałoby ~350 wywołań co cykl; publiczne RPC Arbitrum znoszą 10k.
+const LOG_CHUNK: Record<number, bigint> = { 42161: 10_000n };
 
 /** Pobiera eventy Swap z ostatnich `hours` godzin (chunkowane getLogs). */
 export async function fetchRecentSwaps(
@@ -72,7 +78,7 @@ export async function fetchRecentSwaps(
   const latest = await client.getBlockNumber();
   const blocksBack = BigInt(Math.floor((hours * 3600) / (BLOCK_TIME[chainId] || 12)));
   const start = latest - blocksBack;
-  const CHUNK = 1000n; // publiczne RPC często limitują getLogs do ~1-2k bloków
+  const CHUNK = LOG_CHUNK[chainId] ?? 1000n; // publiczne RPC często limitują getLogs do ~1-2k bloków
   const out: RecentSwap[] = [];
   for (let from = start; from <= latest; from += CHUNK) {
     const to = from + CHUNK - 1n > latest ? latest : from + CHUNK - 1n;
