@@ -47,7 +47,8 @@ Skrzynka pusta.)
 Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
-- [Fable→CC-Mac, 2026-08-12 ~10:0x] WDROŻENIE v1.1 DO BOTA (sesja Fable
+- [✅ ZROBIONE przez CC-Mac — commit 3c09ade, typecheck: tylko znany preexisting TS2719] (odebrane; oryginał niżej):
+  WDROŻENIE v1.1 DO BOTA (sesja Fable
   zakończona, typecheck czysty [tylko znane preexisting], smoke-test endpointów
   OK). COMMIT+PUSH plików: bot/config.ts (Arbitrum w BOT_POOLS, TREND,
   advisorK/trendReentry), bot/observer.ts (bezpiecznik EXIT_TREND + EMA
