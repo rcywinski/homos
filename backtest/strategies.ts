@@ -3,7 +3,7 @@
  * Ceny zakresów liczone w przestrzeni ticków: width jako ułamek ceny
  * przekłada się na ±log(1+w)/log(1.0001) ticków wokół ceny bieżącej.
  */
-import { Strategy, Ctx, ethUsd, unitPrices } from './engine';
+import { Strategy, Ctx, ethUsd, unitPrices, amountsForL } from './engine';
 import { MIN_TICK as VMIN, MAX_TICK as VMAX } from '../src/utils/v3math';
 
 const widthToTicks = (w: number) => Math.round(Math.log(1 + w) / Math.log(1.0001));
@@ -278,6 +278,140 @@ export const volAdaptiveTrend = (opts: {
       ) {
         return;
       }
+      ctx.rebalance(...rangeAround(ctx, w));
+      outSince = null;
+    },
+  };
+};
+
+/**
+ * 7. F4: Adaptacyjna Z HEDGE PERP zamiast wyjścia z LP.
+ *
+ * W czasie sygnału DOWN (ten sam detektor EMA co volAdaptiveTrend) pozycja LP
+ * ZOSTAJE (dalej zbiera fees), a deltę ETH neutralizuje short ETH-perp:
+ *  - sizing 'full'   — short = cała ekspozycja ETH (delta→0; maksymalna obrona,
+ *    w oknach up/flat z sygnałem płaci odbiciem),
+ *  - sizing 'excess' — short = nadwyżka ETH ponad 50% wartości portfela
+ *    (neutralizuje tylko wypukłość LP względem HODL 50/50 — uczciwsze vsHODL).
+ * Koszty: taker takerBps na każdej korekcie shorta + FUNDING historyczny
+ * (fundingAt: r za 8h; konwencja perpów: r>0 → short DOSTAJE funding, r<0 →
+ * short płaci — w bearach r bywa ujemny i to jest główny koszt tej obrony).
+ * Uproszczenia (świadome, opisać przy wnioskach): cross-margin bez modelu
+ * depozytu/likwidacji; PnL shorta rozliczany na bieżąco do nogi stable
+ * (może chwilowo zejść pod zero); tylko pule quote:'USD'.
+ */
+export const volAdaptiveHedge = (opts: {
+  k: number;
+  horizonDays: number;
+  hysteresisSec: number;
+  maxPaybackDays: number;
+  trendHLDays: number;
+  trendThresh: number;
+  sizing: 'full' | 'excess';
+  fundingAt: (tsSec: number) => number;
+  takerBps?: number;
+  reentryAboveEma?: boolean;
+  minWidth?: number;
+  maxWidth?: number;
+}): Strategy => {
+  let outSince: number | null = null;
+  let ema: number | null = null;
+  let lastTs: number | null = null;
+  let down = false;
+  let shortSize = 0; // ETH
+  let shortLastP = 0;
+  let shortLastTs = 0;
+  const tau = (opts.trendHLDays * 86400) / Math.LN2;
+  const taker = (opts.takerBps ?? 5) / 10_000;
+
+  const width = (ctx: Ctx) =>
+    Math.min(Math.max(opts.k * ctx.volDaily * Math.sqrt(opts.horizonDays), opts.minWidth ?? 0.01), opts.maxWidth ?? 0.6);
+
+  const stableLeg = (ctx: Ctx): 'cash0' | 'cash1' => (ctx.spec.ethIsToken0 ? 'cash1' : 'cash0');
+
+  const ethExposure = (ctx: Ctx): number => {
+    const ethCash = ctx.spec.ethIsToken0 ? ctx.state.cash0 : ctx.state.cash1;
+    let ethPos = 0;
+    if (ctx.state.pos) {
+      const a = amountsForL(ctx.state.pos.L, ctx.state.pos.lo, ctx.state.pos.hi, ctx.ev.sqrtP, ctx.spec);
+      ethPos = ctx.spec.ethIsToken0 ? a.a0 + ctx.state.pos.fees0 : a.a1 + ctx.state.pos.fees1;
+    }
+    return ethCash + ethPos;
+  };
+
+  const settleAndAdjust = (ctx: Ctx) => {
+    if (ctx.spec.quote === 'WETH') throw new Error('volAdaptiveHedge: tylko pule quote USD');
+    const P = ethUsd(ctx.ev.sqrtP, ctx.spec);
+    const leg = stableLeg(ctx);
+    // 1. rozliczenie istniejącego shorta: PnL ceny + funding
+    if (shortSize > 0) {
+      const pnl = shortSize * (shortLastP - P);
+      const dt = Math.max(ctx.ev.ts - shortLastTs, 0);
+      const funding = shortSize * P * opts.fundingAt(ctx.ev.ts) * (dt / 28_800);
+      ctx.state[leg] += pnl + funding;
+    }
+    shortLastP = P;
+    shortLastTs = ctx.ev.ts;
+    // 2. docelowy rozmiar
+    let target = 0;
+    if (down) {
+      const exp = ethExposure(ctx);
+      target = opts.sizing === 'full' ? exp : Math.max(0, exp - ctx.valueUsd() / 2 / P);
+    }
+    // 3. korekta z pasmem 15% (koszt taker na obrocie)
+    const base = Math.max(target, shortSize);
+    if ((base > 0 && Math.abs(target - shortSize) / base > 0.15) || (target === 0 && shortSize > 0)) {
+      const turnover = Math.abs(target - shortSize) * P;
+      ctx.state[leg] -= turnover * taker;
+      ctx.state.swapCostUsd += turnover * taker;
+      shortSize = target;
+    }
+  };
+
+  const updateTrend = (ctx: Ctx) => {
+    const logP = Math.log(ethUsd(ctx.ev.sqrtP, ctx.spec));
+    if (ema === null || lastTs === null) {
+      ema = logP;
+      lastTs = ctx.ev.ts;
+      return;
+    }
+    const dt = Math.max(ctx.ev.ts - lastTs, 1);
+    const a = 1 - Math.exp(-dt / tau);
+    ema = (1 - a) * ema + a * logP;
+    lastTs = ctx.ev.ts;
+    const gap = logP - ema;
+    if (!down && gap < -opts.trendThresh) down = true;
+    else if (down && gap > (opts.reentryAboveEma ? 0 : -opts.trendThresh / 2)) down = false;
+  };
+
+  return {
+    name: `Adapt k=${opts.k} + hedge(${opts.sizing},HL${opts.trendHLDays}d,${(opts.trendThresh * 100).toFixed(0)}%${opts.reentryAboveEma ? ',re>ema' : ''})`,
+    init: (ctx) => {
+      updateTrend(ctx);
+      ctx.openPosition(...rangeAround(ctx, width(ctx)));
+      shortLastP = ethUsd(ctx.ev.sqrtP, ctx.spec);
+      shortLastTs = ctx.ev.ts;
+    },
+    onEvent: (ctx) => {
+      updateTrend(ctx);
+      settleAndAdjust(ctx);
+      const p = ctx.state.pos;
+      if (!p) return;
+      const out = ctx.ev.t < p.lo || ctx.ev.t >= p.hi;
+      if (!out) {
+        outSince = null;
+        return;
+      }
+      if (outSince === null) outSince = ctx.ev.ts;
+      if (ctx.ev.ts - outSince < opts.hysteresisSec) return;
+      const w = width(ctx);
+      const valueUsd = ctx.valueUsd();
+      const costUsd = ctx.spec.gasUsdPerRebalance + valueUsd * 0.5 * (ctx.spec.feeRate + ctx.spec.slippageBps / 10_000);
+      const bandTicks = 2 * ctx.spec.tickSpacing;
+      const ourTicks = Math.max(widthToTicks(w) * 2, bandTicks);
+      const ourYieldDaily = ctx.poolFeeYieldDaily * (bandTicks / ourTicks);
+      const expectedDailyFees = valueUsd * ourYieldDaily;
+      if (Number.isFinite(opts.maxPaybackDays) && expectedDailyFees > 0 && costUsd / expectedDailyFees > opts.maxPaybackDays) return;
       ctx.rebalance(...rangeAround(ctx, w));
       outSince = null;
     },

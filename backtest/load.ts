@@ -69,6 +69,29 @@ async function loadUsdRef(refId: string): Promise<(b: number) => number> {
   };
 }
 
+/** funding perp (F4): step-function ts(sec) → rate za okres 8h (Binance).
+ *  Konwencja: r > 0 → short DOSTAJE funding. */
+export function loadFunding(symbol = 'ETHUSDT'): ((tsSec: number) => number) | null {
+  const p = path.join(__dirname, '..', 'data', 'funding', `${symbol}.json`);
+  if (!fs.existsSync(p)) return null;
+  const arr = JSON.parse(fs.readFileSync(p, 'utf8')) as Array<{ t: number; r: number }>;
+  if (!arr.length) return null;
+  const ts = arr.map((x) => x.t / 1000);
+  const rs = arr.map((x) => x.r);
+  return (tsSec: number): number => {
+    if (tsSec <= ts[0]) return rs[0];
+    if (tsSec >= ts[ts.length - 1]) return rs[rs.length - 1];
+    let lo = 0;
+    let hi = ts.length - 1;
+    while (lo < hi - 1) {
+      const mid = (lo + hi) >> 1;
+      if (ts[mid] <= tsSec) lo = mid;
+      else hi = mid;
+    }
+    return rs[lo];
+  };
+}
+
 export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: PoolSpec } | null> {
   const metaPath = path.join(CACHE, `${id}.meta.json`);
   const dataPath = path.join(CACHE, `${id}.ndjson`);

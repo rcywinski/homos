@@ -21,8 +21,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { runStrategy, Strategy, ethUsd } from './engine';
-import { hodl5050, passiveWide, fixedNaive, volAdaptive, volAdaptiveTrend } from './strategies';
-import { loadPool } from './load'; // wspólny loader (obsługuje też pary quote:'WETH')
+import { hodl5050, passiveWide, fixedNaive, volAdaptive, volAdaptiveTrend, volAdaptiveHedge } from './strategies';
+import { loadPool, loadFunding } from './load'; // wspólny loader (obsługuje też pary quote:'WETH')
 
 const OUT = path.join(__dirname, 'results');
 
@@ -46,11 +46,27 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
   console.log(`${id}: ${swaps.length} swapów, ${totalDays.toFixed(1)} dni · okna ${windowDays}d co ${stepDays}d · reżim: ±${REGIME_THRESHOLD * 100}%\n`);
 
   const trendBase = { k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, trendHLDays: 7, trendThresh: 0.05 } as const;
-  // zestaw sterowany env WF_SET: 'trend-sweep' = tylko nowe warianty exit
-  // (baseline'y znane z poprzednich runów; limit czasu wywołań w sesji Fable),
-  // domyślnie pełny zestaw.
+  // zestaw sterowany env WF_SET: 'hedge' = F4 (hedge perp; wymaga
+  // data/funding/ETHUSDT.json), 'trend-sweep' = warianty exit, domyślnie kanon.
+  const fundingAt = loadFunding('ETHUSDT');
+  const mkHedge = (): Strategy[] => {
+    if (!fundingAt) {
+      console.error('WF_SET=hedge wymaga data/funding/ETHUSDT.json — najpierw: npx tsx scripts/fetch-funding.ts ETHUSDT 400');
+      process.exit(1);
+    }
+    return [
+      hodl5050,
+      volAdaptive({ k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
+      volAdaptiveTrend({ ...trendBase, mode: 'exit', reentryAboveEma: true }), // domyślny v1.1
+      volAdaptiveHedge({ ...trendBase, sizing: 'full', fundingAt }),
+      volAdaptiveHedge({ ...trendBase, sizing: 'excess', fundingAt }),
+      volAdaptiveHedge({ ...trendBase, sizing: 'excess', fundingAt, reentryAboveEma: true }),
+    ];
+  };
   const mkStrategies = (): Strategy[] =>
-    process.env.WF_SET === 'trend-sweep'
+    process.env.WF_SET === 'hedge'
+      ? mkHedge()
+      : process.env.WF_SET === 'trend-sweep'
       ? [
           hodl5050,
           volAdaptiveTrend({ ...trendBase, mode: 'exit', volGateRatio: 1.4, trendThresh2: 0.10 }),
