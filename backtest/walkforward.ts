@@ -87,6 +87,7 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
 
   // per strategia: lista {vsHodl, regime, start} z każdego okna
   const dist: Record<string, Array<{ v: number; regime: Regime; start: number; pchg: number; apr: number }>> = {};
+  const hodlDist: Array<{ regime: Regime; apr: number }> = []; // benchmark do prognozy per pogoda rynku
   const windowMeta: Array<{ start: number; pchgPct: number; regime: Regime }> = [];
   let windows = 0;
 
@@ -110,6 +111,7 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       if (r.name === 'HODL 50/50') continue;
       (dist[r.name] ??= []).push({ v: ((r.finalUsd / hodl.finalUsd) - 1) * 100, regime, start, pchg: pchg * 100, apr: r.aprPct });
     }
+    hodlDist.push({ regime, apr: hodl.aprPct });
     process.stdout.write(`\rokno ${windows} (${regime}, ${pct(pchg * 100)}%)…  `);
   }
 
@@ -144,8 +146,14 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
     (s as any).aprQ75 = q(aprs, 0.75);
     const byRegime: any = {};
     for (const rg of ['up', 'down', 'flat'] as Regime[]) {
-      const vals = entries.filter((e) => e.regime === rg).map((e) => e.v);
-      if (vals.length) byRegime[rg] = stat(vals);
+      const es = entries.filter((e) => e.regime === rg);
+      if (es.length) {
+        byRegime[rg] = stat(es.map((e) => e.v));
+        const aprs = es.map((e) => e.apr);
+        byRegime[rg].aprQ25 = q(aprs, 0.25);
+        byRegime[rg].aprMed = q(aprs, 0.5);
+        byRegime[rg].aprQ75 = q(aprs, 0.75);
+      }
     }
     summary[name] = { ...s, byRegime };
     console.log(
@@ -165,8 +173,14 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
 
   console.log('\nKRYTERIUM "prawidłowego" algorytmu: %wygr. ≥ 65 i najgorsze okno > -3; bramka PLAN.md: wygrana w ≥2 reżimach.');
   fs.mkdirSync(OUT, { recursive: true });
+  // benchmark HODL per reżim (kontrast "algorytm vs zwykłe trzymanie" w prognozie)
+  const hodlByRegime: any = {};
+  for (const rg of ['up', 'down', 'flat'] as Regime[]) {
+    const aprs = hodlDist.filter((e) => e.regime === rg).map((e) => e.apr);
+    if (aprs.length) hodlByRegime[rg] = { aprQ25: q(aprs, 0.25), aprMed: q(aprs, 0.5), aprQ75: q(aprs, 0.75), windows: aprs.length };
+  }
   fs.writeFileSync(
     path.join(OUT, `walkforward-${id}-${windowDays}d.json`),
-    JSON.stringify({ id, windowDays, stepDays, windows, regimeThreshold: REGIME_THRESHOLD, regimeCounts, windowMeta, summary }, null, 2)
+    JSON.stringify({ id, windowDays, stepDays, windows, regimeThreshold: REGIME_THRESHOLD, regimeCounts, windowMeta, summary, hodlByRegime }, null, 2)
   );
 })();

@@ -66,13 +66,28 @@ for (const p of PORTFOLIO) {
     console.warn(`${p.file}: brak kwantyli APR — przelicz walkforward nową wersją (17.08+)`);
     continue;
   }
+  // prognoza PER POGODA RYNKU (v2): APR strategii vs HODL w każdym reżimie —
+  // uczciwe rozdzielenie zasługi algorytmu od kierunku rynku
+  const regimes: any = {};
+  for (const rg of ['down', 'flat', 'up']) {
+    const b = s.byRegime?.[rg];
+    const h = d.hodlByRegime?.[rg];
+    if (b?.aprMed !== undefined) {
+      regimes[rg] = { aprMed: b.aprMed, aprQ25: b.aprQ25, aprQ75: b.aprQ75, hodlAprMed: h?.aprMed ?? null, windows: b.windows };
+    }
+  }
   out.push({
     poolId: p.poolId, symbol: p.symbol, strategy: p.strategy, note: p.note ?? null,
     windowDays: d.windowDays, windows: d.windows,
     aprQ25: s.aprQ25, aprMed: s.aprMed, aprQ75: s.aprQ75,
     vsHodlMean: s.mean, winPct: s.winPct, worst: s.worst,
+    regimes,
   });
-  console.log(`${p.symbol}: APR słabo/typowo/dobrze = ${s.aprQ25.toFixed(1)} / ${s.aprMed.toFixed(1)} / ${s.aprQ75.toFixed(1)} %`);
+  console.log(`${p.symbol}:`);
+  for (const rg of ['down', 'flat', 'up']) {
+    const r = regimes[rg];
+    if (r) console.log(`  ${rg.padEnd(5)} APR med ${r.aprMed.toFixed(1).padStart(7)}%  (HODL: ${r.hodlAprMed?.toFixed(1) ?? 'b.d.'}%)  [${r.windows} okien]`);
+  }
 }
 fs.writeFileSync(path.join(RES, 'forecast.json'), JSON.stringify({ generatedAt: new Date().toISOString(), disclaimer: 'Scenariusze z rozkładu 45-dniowych okien ostatnich 365 dni (rok głównie spadkowy). To nie obietnica zysku.', pools: out }, null, 2));
 console.log(`→ backtest/results/forecast.json (${out.length} pul)`);
