@@ -1,0 +1,76 @@
+{
+  "generatedAt": "2026-08-17T14:11:30.317Z",
+  "disclaimer": "Scenariusze z rozkładu 45-dniowych okien ostatnich 365 dni (rok głównie spadkowy). To nie obietnica zysku.",
+  "pools": [
+    {
+      "poolId": "base-weth-usdc-030",
+      "symbol": "WETH/USDC 0.3% Base",
+      "strategy": "Adapt k=3 + hedge(excess,HL7d,5%)",
+      "note": "hedge-excess (v1.2); wykonanie shorta ręczne na GMX do czasu integracji",
+      "windowDays": 45,
+      "windows": 22,
+      "aprQ25": -66.36412954715023,
+      "aprMed": -16.59089552986157,
+      "aprQ75": 63.12721192023139,
+      "vsHodlMean": 1.3872486600723357,
+      "winPct": 72.72727272727273,
+      "worst": -2.8809872919006274
+    },
+    {
+      "poolId": "base-weth-usdc-005",
+      "symbol": "WETH/USDC 0.05% Base",
+      "strategy": "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+      "note": null,
+      "windowDays": 45,
+      "windows": 22,
+      "aprQ25": -64.13978121778908,
+      "aprMed": -26.009138680193246,
+      "aprQ75": 33.50247506515282,
+      "vsHodlMean": 1.1640278024620985,
+      "winPct": 68.18181818181817,
+      "worst": -2.578657865641243
+    },
+    {
+      "poolId": "mainnet-usdc-weth-005",
+      "symbol": "USDC/WETH 0.05% Ethereum",
+      "strategy": "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+      "note": null,
+      "windowDays": 45,
+      "windows": 22,
+      "aprQ25": -70.1154889170437,
+      "aprMed": -11.232514085180846,
+      "aprQ75": 37.07683664631087,
+      "vsHodlMean": 0.6629829242718007,
+      "winPct": 59.09090909090909,
+      "worst": -1.752253496417211
+    },
+    {
+      "poolId": "arbitrum-weth-usdc-005",
+      "symbol": "WETH/USDC 0.05% Arbitrum",
+      "strategy": "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+      "note": null,
+      "windowDays": 45,
+      "windows": 22,
+      "aprQ25": -58.411896993864644,
+      "aprMed": -20.030627448211714,
+      "aprQ75": 43.74604261556079,
+      "vsHodlMean": 0.6720128325881348,
+      "winPct": 72.72727272727273,
+      "worst": -3.4855890761843478
+    },
+    {
+      "poolId": "base-cbbtc-weth-005",
+      "symbol": "WETH/cbBTC 0.05% Base",
+      "strategy": "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+      "note": "para bez nogi stable — wynik jedzie na cenie krypto (pełna beta); w portfelu tylko przy świadomej ekspozycji",
+      "windowDays": 45,
+      "windows": 22,
+      "aprQ25": -85.5318216290996,
+      "aprMed": -24.81301004316102,
+      "aprQ75": 71.96686302297567,
+      "vsHodlMean": 0.8624613129488712,
+      "winPct": 81.81818181818183,
+      "worst": -1.7663294223046466
+    }
+  ]
+}
