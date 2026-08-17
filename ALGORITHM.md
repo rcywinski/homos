@@ -1,4 +1,4 @@
-# ALGORITHM.md — v1.1 (zamrożone 2026-08-11; rewizja §4 tego samego dnia)
+# ALGORITHM.md — v1.2 (zamrożone 2026-08-11; rewizje §4: v1.1 11.08, v1.2 17.08)
 
 > Jedna prawda o parametrach strategii. Zmiany TYLKO przez wpis w CONTEXT.md
 > (sekcja 2, decyzje) z uzasadnieniem na danych. Źródła empiryczne: meta-backtest
@@ -49,6 +49,18 @@
   Rewizja zatwierdzona przez Rafała ~14:30.
 - Odrzucone: widen (bez efektu), block (szkodzi), dwupoziomowy vg+t2
   (overfit do base-030).
+- **v1.2 (17.08, decyzja Rafała): dla base-weth-usdc-030 bezpiecznik =
+  HEDGE-EXCESS** — na sygnale DOWN pozycja LP ZOSTAJE (zbiera fees), short
+  ETH-perp niweluje nadwyżkę ETH ponad 50% wartości (korekty przy odchyleniu
+  >15%, taker ~5 bps, funding wg rynku — historycznie +2.9%/r NA KORZYŚĆ
+  shorta). Uzasadnienie: jedyna konfiguracja domykająca bramkę na base-030
+  na OBU oknach (45d: 73%/−2.88; 60d: 81%/−2.74; wcześniej worst −8…−12).
+  Odrzucone: hedge-full (quasi-makro-short — down 83–100% wygr, ale up
+  ujemny, ogon zostaje, średnie zawyżone spadkową próbką); hedge na mainnecie
+  (whipsaw) i na pulach 005 (excess tam słaby — anomalia odnotowana).
+  WYKONAWCZO: wymaga venue perp (research F4-op: Hyperliquid/GMX — konto,
+  min size, ryzyko likwidacji); DO TEGO CZASU bot emituje EXIT_TREND także
+  dla base-030 (exit = fallback wykonawczy hedge'a).
 - Świadomy koszt: późniejszy powrót omija początek odbicia (kilka dziesiątych
   p.p. na niektórych pulach). Ogon NIE jest w pełni usunięty — hedge (F4)
   pozostaje otwartym frontem.

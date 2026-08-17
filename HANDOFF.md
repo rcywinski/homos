@@ -66,9 +66,28 @@ i jutrzejszy pipeline 07:30.)
   16GB) mimo dużych pul (base-005 16.5M swapów, arbitrum-005 12.6M).
 
 ## @Sonnet (sesja UI, Cowork)
-Skrzynka pusta.
+- [Fable→Sonnet, 2026-08-17 ~15:0x] KARTA PROPOZYCJI kind='HEDGE' (ALGORITHM
+  v1.2 — dla base-030 bot proponuje teraz hedge zamiast wyjścia; kontekst:
+  CONTEXT wpisy 17.08 ~14:00/~14:40). Wzorzec jak karta EXIT_TREND:
+  nagłówek "🛡 Hedge: <symbol>", note w żółtym boxie (bot podaje gotowy
+  tekst z rozmiarem), NOWE pola `BotProposal.hedgeSizeEth?/hedgeNotionalUsd?`
+  — pokaż wyróżnione ("SHORT ~0.85 ETH ≈ $1 600"). Akcje: [Otwórz GMX ↗]
+  (link `https://app.gmx.io/#/trade/?market=ETH-USD` target_blank — wykonanie
+  ręczne na Arbitrum przez Rabby) + [Odrzuć]. BEZ przycisku auto-wykonania
+  (perp poza appką). Defensywny fallback nieznanych kind już masz — HEDGE
+  tylko dopisz do typu.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [Fable→CC-Mac, 2026-08-17 ~15:0x] COMMIT+PUSH: bot/config.ts
+  (BotPool.trendAction, base-030 → 'hedge'), bot/observer.ts (propozycje
+  kind='HEDGE' z sizingiem excess + notą GMX; tsc czysty) + md-ki. Msg:
+  "feat(bot): propozycje HEDGE dla base-030 (ALGORITHM v1.2)". Potem wpis
+  do @CC-Win: git pull + `nssm restart homos-bot`.
+- [✅ ZROBIONE przez CC-Mac] (oryginał niżej):
+  COMMIT+PUSH (docs): ALGORITHM.md (v1.2 —
+  hedge-excess dla base-030, decyzja Rafała), CONTEXT.md (werdykt F4 + tabela
+  decyzji), HANDOFF.md. Msg: "docs: ALGORITHM v1.2 — hedge-excess dla base-030
+  (F4 zaliczone na obu oknach)".
 - [✅ ZROBIONE przez CC-Mac — kod 1925cf8, wyniki 03a309f, notka w @Fable] (oryginał niżej):
   **F4 HEDGE — dane + runy** (kod gotowy,
   tsc czysty):

@@ -22,6 +22,7 @@
 | 2026-08-10 | SQLite + CSV od pierwszej transakcji | Podatki PL + audytowalność |
 | 2026-08-11 | ALGORITHM.md v1 ZAMROŻONE: k=3 (ETH/stable; cbBTC k=2), h=24, payback≤7d, bezpiecznik trendu = czysty exit(HL7d,5%) | Walk-forward 365d + cross-walidacja 5 runów out-of-sample; decyzja Rafała (profil exit — najlepszy poza pulą strojenia, najmniej parametrów) |
 | 2026-08-11 | REWIZJA v1.1 (§4): powrót po spadku = re>EMA (ETH/stable); cbBTC zostaje przy czystym exit | Pełne 365d base-005/mainnet-005 (po 22 okna) odwróciły ranking: re>EMA wygrywa 4/5 pul, na base-005 PIERWSZE pełne przejście bramki (68% wygr, worst −2.52); poranny wybór opierał się na 4-oknowych runach 90d |
+| 2026-08-17 | REWIZJA v1.2 (§4): base-030 → bezpiecznik HEDGE-EXCESS (short perp nadwyżki ETH >50%, LP zostaje); wykonawczo po integracji venue perp, do tego czasu EXIT_TREND jako fallback | F4: jedyna konfiguracja domykająca bramkę na base-030 na obu oknach (73%/−2.88, 81%/−2.74); funding historycznie +2.9%/r dla shorta; hedge-full i hedge na mainnet/005 odrzucone |
 
 ## 3. Rzeczy do zweryfikowania na aktualnych danych (nie z pamięci AI)
 
@@ -734,6 +735,66 @@ granica; prawda pomiędzy). Interpretacja (Fable, pełne JSON-y w backtest/resul
    ~15:23, optimism-weth-usdc-030-365d 75MB ~15:26); walkforwardy 45/15
    u CC-Mac w toku — ocena bramki (≥65% wygr ∧ worst >−3; benchmark
    base-005: 68%/−2.52) po dojechaniu JSON-ów.
+
+### 2026-08-17 (~14:40) — F4-op: WYBÓR VENUE PERP DLA HEDGE (research, decyzja dwuetapowa)
+Kandydaci zbadani pod nasz tryb (pół-auto, hedge $1–5k notional):
+- **GMX v2 (Arbitrum)**: open/close 4–6 bps (oracle pricing, bez orderbooku),
+  ale UWAGA: **borrowing fee** (ciągły koszt, rośnie z utylizacją puli —
+  konfiguracje rzędu kilkunastu–65%/r przy 100% utylizacji; przy naszym duty
+  cycle ~20–40% czasu w sygnale szacunkowo ~1–1.5% portfela/r w złym
+  scenariuszu). PLUS operacyjny: TEN SAM wallet i flow Rabby co Uniswap,
+  sieć już w stacku — zero nowego modelu powierniczego.
+- **Hyperliquid**: taker 4.5 bps, zero gas, czysty funding (bez borrowing
+  fee — taniej w utrzymaniu), agent wallet = łatwa pełna automatyzacja.
+  MINUSY dla pół-auto: własny L1 (bridge USDC = kapitał wydzielony z
+  portfela), zatwierdzanie przez Rabby NIE działa, klucz agenta na serwerze
+  to nowy wektor ryzyka.
+**DECYZJA (rekomendacja Fable): dwuetapowo — START na GMX v2** (pół-auto,
+spójny z całym flow projektu; monitorować borrowing fee ETH na żywo — jeśli
+w praktyce >15%/r w naszych oknach, rewizja), **Hyperliquid przy przejściu
+na full-auto** (tań szy w utrzymaniu, wymaga decyzji o agent-key).
+NASTĘPNE KROKI F4-op: (1) ręczna pozycja testowa Rafała na GMX ($100–200
+short ETH, przejście pełnego flow + odczyt realnego borrowing fee);
+(2) bot: propozycja kind HEDGE dla base-030 (rozmiar = nadwyżka ETH >50%,
+link do GMX) zamiast czystego EXIT_TREND — implementacja po teście ręcznym;
+(3) uproszczenia modelu backtestu do pamiętania: borrowing fee GMX NIE był
+modelowany (model = taker 5 bps + funding Binance — bliższy Hyperliquid).
+
+### 2026-08-17 (~16:00) — F4-op: PIERWSZY TESTOWY HEDGE OTWARTY NA GMX (flow zweryfikowany)
+Rafał przeszedł pełny flow ręczny: bridge USDC ETH→Arbitrum (Across, ~1 min,
+koszt ~$0.42) + bridge 0.003 WETH→ETH na gaz → approve USDC OGRANICZONY do
+$200 (nie unlimited — higiena jak przy Uniswap) → short ETH/USD 1× $149.91
+@ $1,897.31, likwidacja $3,780 (2× spot), wejście: fee $0.06 (4 bps ✓ model),
+impact 0.000%, network fee $0.39 (keeper — koszt STAŁY per zlecenie: przy
+$150 to 26 bps, przy docelowych $1.5–3k → 1–3 bps, pomijalne; DOPISAĆ do
+modelu korekt). Pozycja trzymana do jutra → odczyt borrow/funding fee
+(GMX ma borrowing fee ZALEŻNY od utylizacji, którego model nie zawierał —
+to główna niewiadoma kosztowa). LEKCJA OPERACYJNA do ALGORITHM przy
+następnej rewizji: hedge wymaga STAŁEJ rezerwy USDC + odrobiny ETH na
+Arbitrum (bridge w środku spadku = antywzorzec).
+
+### 2026-08-17 (~14:00) — F4 HEDGE: WYNIKI I WERDYKT — base-030 PRZECHODZI BRAMKĘ
+Funding ETH-perp (Binance, 400d): średnio **+2.9%/r DLA shorta** (26% okresów
+ujemnych) — koszt hedge'a NIE jest deal-breakerem. 5 runów WF_SET=hedge:
+1. **PRZEŁOM: base-030 + hedge-excess ZALICZA BRAMKĘ NA OBU OKNACH** —
+   45d: +1.39 śr / 73% wygr / worst −2.88; 60d: +2.24 / 81% / −2.74.
+   Najtrudniejsza pula projektu (dotąd worst −8…−12) domknięta: LP zostaje
+   w rynku i zbiera fees, short niweluje tylko nadwyżkę ETH ponad 50%.
+2. **hedge-full = quasi-makro-short**: down fenomenalny (+6…+10 śr.,
+   83–100% wygr), ale up ujemny i ogon zostaje (worst −3.9…−11.8);
+   wysokie średnie (+3…+7) są w dużej mierze artefaktem PRÓBKI (rok
+   spadkowy: 10–13/22 okien down). NIE jako domyślny — zbyt kierunkowy.
+3. **mainnet: hedge ODPADA** (whipsaw — flat −3.2, up −4.9; excess 0% wygr
+   w down) — tam zostaje exit-re>ema (+0.66/+1.07, worst −1.7…−2.2).
+4. Anomalia odnotowana (bez dociekania — nie stroimy na siłę): excess słaby
+   na pulach 005 (down −1.8…−2.3) mimo sukcesu na base-030.
+5. Uproszczenia modelu (przy wnioskach pamiętać): brak depozytu/likwidacji,
+   PnL do nogi stable, taker 5 bps, funding wg historii Binance.
+REKOMENDACJA (→ decyzja Rafała): ALGORITHM v1.2 — dla base-weth-usdc-030
+bezpiecznik docelowo 'hedge-excess' (zamiast exit); reszta pul bez zmian
+(exit-re>ema; cbBTC czysty exit). WYKONAWCZO hedge wymaga integracji z venue
+perp (Hyperliquid/GMX — research F4-op) — do tego czasu bot w OBSERWUJ dalej
+emituje EXIT_TREND, a docelowa akcja dla base-030 zapisana jako hedge.
 
 ### 2026-08-17 (~12:30) — INCYDENT .bot/pipeline DOMKNIĘTY (wzorowa koordynacja 3 sesji)
 Przebieg: Fable wykrył ryzyko (śledzony .bot + runner reset --hard = nadpisywanie
