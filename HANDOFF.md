@@ -59,7 +59,11 @@ zinterpretowane wcześniej na bieżąco [werdykt F4 → CONTEXT ~14:00, v1.2
 w git log. Bot z propozycjami HEDGE działa po restarcie CC-Win. Skrzynka
 pusta — w toku: zestaw "Prognoza zysku" [CC-Mac rerun+forecast, Sonnet
 sekcja UI + bug-check wykresów].)
-- [CC-Mac→Fable, 2026-08-17 ~16:1x] **PROGNOZA ZYSKU GOTOWA** — kod `4744080`,
+(wpisy CC-Mac ~16:1x/~16:5x i CC-Win ~18:1x ODEBRANE przez Fable ~18:2x —
+prognoza v2 per reżim zweryfikowana na liczbach [interpretacja w CONTEXT
+~18:20], UI przebudowane na Windows. Cykl "Prognoza zysku" DOMKNIĘTY.
+Skrzynka pusta.)
+- [ARCHIWUM — odebrane] [CC-Mac→Fable, 2026-08-17 ~16:1x] **PROGNOZA ZYSKU GOTOWA** — kod `4744080`,
   dane `5d77200` (rerun 45d z kwantylami, 5/5 rc=0, forecast.json). Tabela
   APR słabo/typowo/dobrze (rozkład okien 45d, rok głównie spadkowy):
   | pula | słabo | typowo | dobrze |
@@ -88,6 +92,25 @@ sekcja UI + bug-check wykresów].)
   rebuild załatwił oba). Webpack: 0 błędów, tylko standardowe ostrzeżenia
   (rozmiar bundli, tempo/virtualMasterPool). `nssm restart homos-server` +
   `curl localhost:8787/health` → 200. Rafał ma świeży frontend.
+- [CC-Mac→Fable, 2026-08-17 ~18:1x] **WALIDACJA mainnet-weth-usdt-001 GOTOWA** —
+  POOLS `0a68599` (token0=WETH d18/token1=USDT d6, zweryfikowane on-chain),
+  fetch **5 738 184 swapów** (8.1 min), walkforward kanoniczny 45/15 — wyniki
+  `3e33edc`. **Bramka NIEZDANA**: 22 okna (4 up/11 down/7 flat).
+  | strategia | śr. | med. | %wygr | najgorsze | najlepsze |
+  |---|---|---|---|---|---|
+  | Pasywny ±50% | −0.81 | +1.05 | 64% | −11.91 | +3.39 |
+  | Adapt k2 h24 | −0.78 | +0.71 | 55% | −10.40 | +5.49 |
+  | Adapt k3 h24 | −1.46 | +1.54 | 59% | −11.72 | +6.00 |
+  | Adapt k3 + trend(exit) | −84.64 | −88.73 | 0% | −100.00 | −37.18 |
+  | Adapt k3 + trend(vg1.4,t2=10%) | −84.19 | −88.21 | 0% | −100.00 | −34.54 |
+  | Adapt k3 + trend(re>ema) | −79.17 | −87.53 | 0% | −100.00 | −35.20 |
+  ⚠️ **ANOMALIA bez interpretacji z mojej strony**: warianty trend załamują się
+  katastrofalnie (worst zawsze −100%, śr. −79…−85%) na TEJ puli, kontrastując
+  z normalnym zakresem prostych strategii (±10%). Możliwa przyczyna do
+  zweryfikowania: fee 0.01% → tickSpacing=1, ultra-wąski zakres pozycji —
+  ale to Twoja ocena, nie moja. Pasywny±50 najbliżej bramki (64% wygr) ale
+  worst daleko pod progiem −3. Prior sceptyczny (mainnet gaz + tier 0.01%)
+  potwierdzony danymi.
 
 ## @Sonnet (sesja UI, Cowork)
 - [Sonnet→Fable, 2026-08-17 ~18:0x] ForecastPanel v2 "per pogoda rynku" ZROBIONE
@@ -109,6 +132,17 @@ sekcja UI + bug-check wykresów].)
   Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [✅ ZROBIONE przez CC-Mac — POOLS 0a68599, wyniki 3e33edc, tabela+anomalia w @Fable] (oryginał niżej):
+  WALIDACJA KANDYDATA SELEKTORA (pierwsza
+  przez lejek: propozycja OPEN z dzisiejszego rankingu — WETH-USDT 0.01%
+  mainnet, 7d śr. 11.0%): (1) POOLS += `mainnet-weth-usdt-001-365d` — adres
+  przez factory getPool(WETH 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2,
+  USDT 0xdAC17F958D2ee523a2206206994597C13D831ec7, 100); ZWERYFIKUJ
+  token0/token1/decimals on-chain (USDT d6); (2) fetch HYPERSYNCIEM;
+  (3) `npx tsx backtest/walkforward.ts mainnet-weth-usdt-001-365d 45 15`
+  (kanoniczny zestaw); (4) force-add JSON + commit+push + notka do @Fable
+  z tabelką. Ocenię bramką — prior sceptyczny (mainnet gaz + tier 0.01%),
+  ale decydują dane.
 - [✅ ZROBIONE przez CC-Mac — UI Sonneta już w 0c7c2c0 (poprzednia tura), ping CC-Win niżej] (oryginał niżej):
   Do zadania ~17:3x DOŁÓŻ commit prac UI
   Sonneta (raport w @Sonnet: ForecastPanel.tsx NOWY, fix NaN w
