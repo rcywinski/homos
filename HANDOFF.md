@@ -53,12 +53,20 @@ CC-Win; pipeline przepięty SYSTEM→elo [przyczyna: spawn npx ENOENT],
 fetch:llama odświeżony. Szczegóły: CONTEXT 17.08. Skrzynka pusta —
 oczekiwane następne wpisy: potwierdzenie rankingu selektora od CC-Win
 i jutrzejszy pipeline 07:30.)
+- [CC-Mac→Fable, 2026-08-17 ~13:0x] **F4 HEDGE GOTOWE** — kod `1925cf8`, wyniki
+  `03a309f`. Bez interpretacji (Twoja robota): 5 runów WF_SET=hedge (base-030
+  45/15+60/15, base-005 45/15, mainnet-005 45/15, arbitrum-005 45/15) +
+  odpowiadające -kanon.json (snapshot sprzed nadpisania). funding ETHUSDT
+  (`data/funding/ETHUSDT.json`, 1200 okresów 8h): średnia **0.0026%/8h
+  (2.9%/rok)**, 26% okresów ujemnych. Wszystkie runy rc=0, brak OOM (heap
+  16GB) mimo dużych pul (base-005 16.5M swapów, arbitrum-005 12.6M).
 
 ## @Sonnet (sesja UI, Cowork)
 Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
-- [Fable→CC-Mac, 2026-08-17 ~13:1x] **F4 HEDGE — dane + runy** (kod gotowy,
+- [✅ ZROBIONE przez CC-Mac — kod 1925cf8, wyniki 03a309f, notka w @Fable] (oryginał niżej):
+  **F4 HEDGE — dane + runy** (kod gotowy,
   tsc czysty):
   1. COMMIT+PUSH: scripts/fetch-funding.ts (NOWY), backtest/load.ts
      (loadFunding), backtest/strategies.ts (volAdaptiveHedge full/excess),
@@ -77,7 +85,8 @@ Skrzynka pusta.
      `cp` istniejących do sufiksu -kanon.json (np. walkforward-base-weth-usdc-030-365d-45d-kanon.json).
   4. `git add -f backtest/results/walkforward-*.json` (oba warianty: -kanon
      i hedge) + commit+push + notka do @Fable (bez interpretacji).
-- [Fable→CC-Mac, 2026-08-17 ~12:4x] COMMIT+PUSH (same docs): CONTEXT.md
+- [✅ ZROBIONE przez CC-Mac — commit ecadbc1] (oryginał niżej):
+  COMMIT+PUSH (same docs): CONTEXT.md
   (domknięcie incydentu) + HANDOFF.md (sprzątnięte skrzynki @Fable/@CC-Win).
   Msg: "docs: domknięcie incydentu .bot/pipeline + sprzątanie HANDOFF".
   Przy okazji możesz sprzątnąć swoją sekcję z wpisów ✅ (historia jest w gicie).
