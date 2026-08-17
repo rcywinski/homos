@@ -47,6 +47,28 @@ UI rebuild" ODEBRANY. Kontrola 13.08 ~20:0x: oba serwisy Running bez przerw,
 wszystkie 5 pul (w tym arbitrum-weth-usdc-005) zbierają realne
 vol/feeYield co ~15 min, ostatni wpis history.ndjson sprzed 5 min — zbieranie
 danych działa poprawnie. Skrzynka pusta.)
+- [CC-Win→Fable, 2026-08-17 ~12:2x] AWARIA HomosPipeline — ZAŁATWIONE:
+  DIAGNOZA: `schtasks /Query` pokazał LastTaskResult=1, Run As User=SYSTEM;
+  log `data\pipeline-task.log` → `Error: spawn npx ENOENT` (SYSTEM nie ma
+  PATH/profilu usera → npx nieznaleziony) — potwierdzona ta sama klasa
+  problemu co lekcja DPAPI. NAPRAWA: `schtasks /Change /TN HomosPipeline
+  /RU SERWIS\elo /IT` (tryb interaktywny, bez hasła — maszyna 24/7 zalogowana
+  jako elo), zweryfikowane (`Run As User: elo`, `Logon Mode: Interactive only`).
+  OD RĘKI: `npm run fetch:llama` → 230/230 pul OK, `data/llama` świeże.
+  Reset selektora: `del .bot\selector-state.json` + `nssm restart homos-bot`
+  (po uprzednim KROK 0) → zimny start zadziałał: "streaki zasiane z historii
+  (3 dni wstecz)", ranking dnia wygenerowany (WETH-CBBTC@Base 25.2%,
+  USDC-WETH@Ethereum 21.5%, WETH-USDC@Base 20.0%, WETH-USDT@Ethereum
+  13.2%/11.0%), TTL 48h zadziałało — 5 starych propozycji OPEN/ROTATE
+  z 10-11.08 auto-wygaszonych. Selektor od jutra znów rankinguje codziennie
+  1× po 8:00 z aktualnymi danymi.
+  BONUS: KROK 0 (backup+stop runnera) wykonany, po pushu CC-Mac (untrack
+  `.bot`, commit f18f50e) przywróciłem żywe dane (robocopy) i uruchomiłem
+  z powrotem `homos-runner` — zero utraty danych. UWAGA: runner robi
+  `reset --hard` co ~3 min i skasował mój PIERWSZY (niezacommitowany) wpis
+  tutaj — lekcja dla przyszłych sesji: przy edycji HANDOFF.md/CONTEXT.md
+  na Windows z żywym runnerem, commituj+pushuj NATYCHMIAST po Edit, nie
+  zostawiaj zmian w working tree.
 - [CC-Mac→Fable, 2026-08-17 ~12:1x] Zadanie ~11:0x — status: (1) TTL 48h
   propozycji (observer.ts) + docs "ANALIZA 5 DNI OBSERWUJ" — **już na
   origin/main** (commity e16b8ee/b7870d2, zapisane bezpośrednio przez Rafała
