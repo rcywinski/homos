@@ -19,6 +19,7 @@ import { planRebalance, RebalancePlan } from '../utils/rebalanceBuilder';
 import BotStatusDot from './BotStatusDot';
 import BotTelemetry from './BotTelemetry';
 import ObservationAnalysis from './ObservationAnalysis';
+import ForecastPanel from './ForecastPanel';
 import CockpitPositionActions, { CloseModal, RebalanceModal } from './CockpitPositionActions';
 import RebalanceSequenceModal from './RebalanceSequenceModal';
 
@@ -340,7 +341,37 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                       </>
                     )}
 
-                    {!['REBALANCE', 'OPEN', 'ROTATE', 'EXIT_TREND'].includes(kind) && (
+                    {kind === 'HEDGE' && (
+                      <>
+                        <div className="morning-proposal-line">
+                          🛡 Hedge: {p.symbol ?? p.poolId ?? `#${p.tokenId}`}
+                        </div>
+                        {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
+                        {(typeof p.hedgeSizeEth === 'number' || typeof p.hedgeNotionalUsd === 'number') && (
+                          <div className="morning-proposal-line morning-hedge-size">
+                            SHORT{typeof p.hedgeSizeEth === 'number' && <> ~{p.hedgeSizeEth.toFixed(2)} ETH</>}
+                            {typeof p.hedgeNotionalUsd === 'number' && <> ≈ ${p.hedgeNotionalUsd.toLocaleString()}</>}
+                          </div>
+                        )}
+                        {/* Perp poza appką (GMX na Arbitrum) — wykonanie ręczne przez Rabby,
+                            brak przycisku auto-execute (HANDOFF Fable→Sonnet 2026-08-17 ~15:0x). */}
+                        <div className="morning-proposal-actions">
+                          <a
+                            className="action-button primary"
+                            href="https://app.gmx.io/#/trade/?market=ETH-USD"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Otwórz GMX ↗
+                          </a>
+                          <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                            Odrzuć
+                          </button>
+                        </div>
+                      </>
+                    )}
+
+                    {!['REBALANCE', 'OPEN', 'ROTATE', 'EXIT_TREND', 'HEDGE'].includes(kind) && (
                       <>
                         {/* Nieznany kind (np. przyszłe rozszerzenie schematu bota) — pokaż
                             jako szarą notę zamiast crashować albo renderować pustą kartę. */}
@@ -395,6 +426,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           )}
 
           <BotTelemetry bot={bot} />
+          <ForecastPanel bot={bot} />
           <ObservationAnalysis bot={bot} />
         </div>
       )}

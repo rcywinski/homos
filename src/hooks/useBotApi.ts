@@ -28,7 +28,7 @@ export interface BotProposal {
    *  (kompatybilność wstecz ze starszymi wpisami w proposals.json). Karty w
    *  MorningCockpit.tsx renderują nieznane wartości `kind` jako szarą notę,
    *  zamiast crashować, na wypadek kolejnych rozszerzeń schematu. */
-  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND';
+  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND' | 'HEDGE';
   action: string;
   suggestedRange?: { tickLower?: number; tickUpper?: number; usdLo: number; usdHi: number };
   costUsd?: number;
@@ -40,6 +40,11 @@ export interface BotProposal {
   apy7d?: number;
   heldApy7d?: number; // przy ROTATE: 7d APY puli, którą rotujemy
   breakEvenDays?: number; // przy ROTATE: dni do pokrycia kosztu przejścia
+  // HEDGE (ALGORITHM.md v1.2 — hedge-excess dla base-030, HANDOFF Fable→Sonnet
+  // 2026-08-17 ~15:0x): bot proponuje SHORT perp na Arbitrum/GMX zamiast wyjścia
+  // z LP. Wykonanie ręczne (poza appką, przez Rabby) — brak auto-execute.
+  hedgeSizeEth?: number;
+  hedgeNotionalUsd?: number;
   note?: string;
   // bot/observer.ts uses 'open'/'dismissed'; state.json only ever contains
   // 'open' ones (server-side filtered) but we check defensively anyway.

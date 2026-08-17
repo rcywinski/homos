@@ -33,7 +33,12 @@ import { UseBotApi, BotProposal } from '../hooks/useBotApi';
 import { BOT_POOL_META } from '../config/botPools';
 
 interface HistoryPoint {
-  ts: number; // sekundy epoch (jak windowMeta.start w backtest/results/*.json)
+  // BUG-CHECK 2026-08-17 (HANDOFF Fable→Sonnet): observer.ts pisze
+  // `ts: new Date().toISOString()` (string), NIE liczbę sekund jak zakładał
+  // ten komentarz. Realny endpoint zwraca więc ISO string. Trzymamy typ
+  // szeroki i normalizujemy przez tsSeconds() poniżej — to był powód
+  // pustych wykresów (a.ts - b.ts na stringach = NaN, cała krzywa NaN).
+  ts: number | string;
   poolId: string;
   price: number;
   volDaily?: number;
@@ -59,6 +64,13 @@ interface WalkforwardFile {
 
 const EMA_GAP_DANGER_PCT = -5; // ALGORITHM.md §4 — próg bezpiecznika trendu
 const WALKFORWARD_NAME_SUFFIX = '-365d-45d';
+
+/** Normalizuje HistoryPoint.ts (ISO string z observer.ts, ale defensywnie też liczby s/ms) do epoch-sekund. */
+function tsSeconds(v: number | string): number {
+  if (typeof v === 'number') return v > 1e12 ? v / 1000 : v; // ms vs s heurystyka
+  const ms = Date.parse(v);
+  return isFinite(ms) ? ms / 1000 : NaN;
+}
 
 interface Props {
   bot: UseBotApi;
@@ -165,16 +177,20 @@ const KIND_LABEL: Record<string, string> = {
   OPEN: 'OPEN',
   ROTATE: 'ROTATE',
   EXIT_TREND: 'EXIT_TREND',
+  HEDGE: 'HEDGE',
 };
 
 const PoolHistoryChart: FC<{ points: HistoryPoint[]; proposals: BotProposal[] }> = ({ points, proposals }) => {
-  const pts = [...points].sort((a, b) => a.ts - b.ts);
+  const pts = [...points]
+    .map((p) => ({ ...p, tsSec: tsSeconds(p.ts) }))
+    .filter((p) => isFinite(p.tsSec))
+    .sort((a, b) => a.tsSec - b.tsSec);
   if (pts.length < 2) {
     return <div className="morning-note muted">za mało punktów historii jeszcze zebranych dla tej puli.</div>;
   }
 
-  const tMin = pts[0].ts;
-  const tMax = pts[pts.length - 1].ts;
+  const tMin = pts[0].tsSec;
+  const tMax = pts[pts.length - 1].tsSec;
   const tSpan = Math.max(1, tMax - tMin);
   const x = (t: number) => CHART_PAD + ((t - tMin) / tSpan) * (CHART_W - 2 * CHART_PAD);
 
@@ -188,14 +204,14 @@ const PoolHistoryChart: FC<{ points: HistoryPoint[]; proposals: BotProposal[] }>
 
   const priceLine = pts
     .filter((p) => typeof p.price === 'number' && isFinite(p.price))
-    .map((p) => `${x(p.ts).toFixed(1)},${y(p.price).toFixed(1)}`)
+    .map((p) => `${x(p.tsSec).toFixed(1)},${y(p.price).toFixed(1)}`)
     .join(' ');
 
   const hasRange = pts.some((p) => typeof p.rangeLo === 'number' && typeof p.rangeHi === 'number');
   const loPts = pts.filter((p) => typeof p.rangeLo === 'number');
   const hiPts = pts.filter((p) => typeof p.rangeHi === 'number');
   const rangeBand = hasRange
-    ? [...loPts.map((p) => `${x(p.ts).toFixed(1)},${y(p.rangeLo as number).toFixed(1)}`), ...hiPts.map((p) => `${x(p.ts).toFixed(1)},${y(p.rangeHi as number).toFixed(1)}`).reverse()].join(' ')
+    ? [...loPts.map((p) => `${x(p.tsSec).toFixed(1)},${y(p.rangeLo as number).toFixed(1)}`), ...hiPts.map((p) => `${x(p.tsSec).toFixed(1)},${y(p.rangeHi as number).toFixed(1)}`).reverse()].join(' ')
     : '';
 
   const emaPts = pts.filter((p) => typeof p.emaGapPct === 'number');
@@ -205,7 +221,7 @@ const PoolHistoryChart: FC<{ points: HistoryPoint[]; proposals: BotProposal[] }>
   const emaMax = Math.max(0, ...(emaVals.length ? emaVals : [0]));
   const emaSpan = Math.max(1e-9, emaMax - emaMin);
   const yEma = (v: number) => EMA_H - ((v - emaMin) / emaSpan) * EMA_H;
-  const emaLine = emaPts.map((p) => `${x(p.ts).toFixed(1)},${yEma(p.emaGapPct as number).toFixed(1)}`).join(' ');
+  const emaLine = emaPts.map((p) => `${x(p.tsSec).toFixed(1)},${yEma(p.emaGapPct as number).toFixed(1)}`).join(' ');
   const dangerY = yEma(EMA_GAP_DANGER_PCT);
 
   return (
