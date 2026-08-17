@@ -413,6 +413,65 @@
   runnera wymagany restart homos-bot; weryfikacja: telemetria pokaże cbBTC
   ~$60–70k zamiast $0.
 
+## H. POMYSŁY NA PRZYSZŁE MODUŁY (backlog pomysłów — nie w budowie)
+
+- [ ] **ZATWIERDZANIE Z TELEFONU + PUSH (pomysł Rafała 17.08)**: pełna pętla
+  "zagrożenie/okazja → push na telefon → podpis w Rabby mobile w minutę".
+  NAJTAŃSZA ŚCIEŻKA (większość już istnieje — bot 24/7 to jest ten backend):
+  1. [tani, od zaraz] AKTYWOWAĆ Telegram: wpisać TG_TOKEN/TG_CHAT w .env na
+     Windows (kod alertów JUŻ jest w observerze — sekcja D kolejki!) —
+     natychmiastowe pushe o każdej propozycji;
+  2. [1 partia Sonnet] link w wiadomości TG → karta propozycji w PWA
+     (deep-link {base}/?proposal=<id>; iPhone przez VPN — rozważyć WireGuard
+     on-demand, żeby VPN wstawał sam);
+  3. [1 partia Sonnet + config] WalletConnect w wagmi/connectkit obok
+     injected — na telefonie [Zatwierdź] otwiera Rabby mobile do podpisu
+     (te same buildery transakcji, zero zmian w logice);
+  4. [opcjonalnie] web-push z PWA (iOS ≥16.4 wspiera dla zainstalowanych
+     PWA) zamiast/obok Telegrama.
+  Zasada bez zmian: człowiek podpisuje KAŻDĄ transakcję (to jest tryb
+  PROPONUJ w wersji mobilnej, nie automat); backend niczego nie wykonuje sam.
+
+- [ ] **PORTFEL SPRZĘTOWY (pytanie Rafała 17.08 — wykonalne bez zmian w kodzie)**:
+  Ledger/Trezor podpinany PRZEZ Rabby (Add Hardware Wallet) — klucz zostaje
+  na urządzeniu, każdy podpis = fizyczny guzik; aplikacja/bot bez żadnych
+  zmian (wagmi→Rabby→Ledger; BOT_WATCH_ADDRESS to jedna zmienna). Docelowa
+  architektura: kapitał LP na sprzętowym + osobny mały portfel operacyjny
+  (hot) wyłącznie pod przyszły automat hedge'a. Przy wdrożeniu pamiętać:
+  blind signing dla multicalli (kompensowane podglądem Rabby), migracja
+  pozycji = transfer NFT albo zamknij-otwórz z nowego adresu.
+
+- [ ] **AUTOMATYZACJA HEDGE (plan 3-stopniowy, zaakceptowany kierunkowo 17.08)**:
+  (1) TERAZ: propozycja + ręczny GMX (faza testów). (2) NASTĘPNY KROK
+  BUDOWLANY: builder zamówień GMX v2 (createOrder na ExchangeRouter,
+  rozmiar z propozycji HEDGE, 1×, limity poślizgu) + [Zatwierdź hedge]
+  w kokpicie — jeden podpis w Rabby, wzorzec rebalanceBuilder (sesja Fable
+  + partia Sonnet). (3) AUTO po okresie PROPONUJ: preferencyjnie Hyperliquid
+  agent-wallet (klucz może handlować, NIE może wypłacać — ograniczony promień
+  rażenia) albo osobny portfel operacyjny GMX na Windows (DPAPI, tylko margin
+  hedge'a); twarde limity w kodzie (max notional, max zleceń/dzień,
+  kill-switch). Hedge = najlepszy kandydat na pierwszą automatyzację
+  projektu: mała kwota, 1×, obiektywny sygnał, ograniczona strata,
+  koszt spóźnienia realny.
+
+- [ ] **MODUŁ SHORTÓW KIERUNKOWYCH (pomysł Rafała, 17.08)**: małe kwoty
+  shortowane na samym krypto (ETH/BTC perp na GMX/Hyperliquid) na sygnale
+  trendu — de facto handlowanie SAMYM sygnałem bezpiecznika (EMA7d, próg −5%,
+  min. tygodniowa obserwacja), bez nogi LP. PRZESŁANKI ZA (z danych F4):
+  hedge-full w oknach down +6…+10 p.p. przy 83–100% trafień; detektor już
+  zwalidowany; funding historycznie sprzyja shortom (+2.9%/r). ZASTRZEŻENIA
+  (uczciwie): (a) to inna klasa ryzyka niż LP — czysty zakład kierunkowy;
+  w oknach up/flat sygnały fałszywe krwawią (hedge-full: up ujemny wszędzie,
+  mainnet-seria pokazała podatność na whipsaw); (b) wynik całoroczny
+  hedge-full był zawyżony spadkową próbką — moduł wymaga WŁASNEJ bramki
+  (backtest: strategia short-na-sygnale vs cash, walk-forward per reżim —
+  silnik ma już wszystkie klocki: detektor, funding, taker; tani do
+  policzenia); (c) sizing: sleeve ≤5–10% kapitału, zawsze 1×, nigdy
+  lewarowane; (d) wykonawczo: to samo venue co hedge (GMX), więc moduł
+  naturalnie dziedziczy infrastrukturę F4-op. KROK PIERWSZY (gdy wrócimy):
+  backtest czystego shorta-na-sygnale na naszych seriach 365d — werdykt
+  liczbami zanim powstanie jakikolwiek kod produkcyjny.
+
 ## G. ULEPSZENIA INFRASTRUKTURY KOLEJKI (backlog, niepilne)
 - [ ] Runner: opcjonalne załączanie wskazanych plików wyników do commita
   (backtest/results/ jest gitignored — dziś wraca tylko ogon konsoli w done/;

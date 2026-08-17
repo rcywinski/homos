@@ -760,6 +760,21 @@ link do GMX) zamiast czystego EXIT_TREND — implementacja po teście ręcznym;
 (3) uproszczenia modelu backtestu do pamiętania: borrowing fee GMX NIE był
 modelowany (model = taker 5 bps + funding Binance — bliższy Hyperliquid).
 
+### 2026-08-17 (~18:20) — PROGNOZA ZYSKU v2 (per pogoda rynku) — WDROŻONA end-to-end
+Cykl domknięty w jeden wieczór (Fable spec+kod → CC-Mac rerun+forecast →
+Sonnet RegimeTable + fix NaN wykresów → CC-Win rebuild UI). Kluczowa decyzja
+projektowa: v1 (jedna mediana APR) ODRZUCONA — mieszała zasługę algorytmu
+z kierunkiem rynku spadkowej próbki ("typowo −$69/mies" przy algorytmie
+bijącym HODL w 73% okien). v2 pokazuje per pula tabelę reżimową
+[spada/stoi/rośnie] × [algorytm vs HODL] w $/mies od kwoty użytkownika.
+Odczyt z danych (na $5k, mediany okien 45d): we FLAT algorytm +$12…+189/mies
+vs HODL −35…+38 (główna przewaga); w DOWN równo lub odrobinę lepiej (hedge
+base-030: −277 vs −277 — bez cudów, ale bez pogorszenia); w UP przeważnie
+lepiej (005-ki), na base-030 hedge oddaje część wzrostu (+532 vs +607 —
+koszt ubezpieczenia) — wszystko zgodne z konstrukcją strategii. LEKCJA
+do powtarzania: liczby "dla laika" muszą rozdzielać betę rynku od alfy
+algorytmu, inaczej kłamią w obie strony.
+
 ### 2026-08-17 (~16:00) — F4-op: PIERWSZY TESTOWY HEDGE OTWARTY NA GMX (flow zweryfikowany)
 Rafał przeszedł pełny flow ręczny: bridge USDC ETH→Arbitrum (Across, ~1 min,
 koszt ~$0.42) + bridge 0.003 WETH→ETH na gaz → approve USDC OGRANICZONY do
