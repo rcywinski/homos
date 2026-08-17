@@ -134,6 +134,28 @@ const saveState = () => {
 };
 const saveProposals = () => fs.writeFileSync(PROPOSALS_PATH, JSON.stringify(proposals, bigintReplacer, 2));
 
+// TTL propozycji selektora (dodane 17.08 po analizie OBSERWUJ): OPEN/ROTATE
+// opierają się na dziennym rankingu — po 48h ranking jest nieaktualny i wisząca
+// propozycja wprowadza w błąd (widzieliśmy wpisy z 10.08 żywe 17.08).
+// REBALANCE/EXIT_TREND nie wygasają (bazują na stanie pozycji, nie rankingu).
+const PROPOSAL_TTL_MS = 48 * 3600 * 1000;
+function expireStaleProposals() {
+  let changed = false;
+  for (const p of proposals) {
+    if (p.status !== 'open') continue;
+    if ((p.kind === 'OPEN' || p.kind === 'ROTATE') && Date.now() - new Date(p.createdAt).getTime() > PROPOSAL_TTL_MS) {
+      p.status = 'dismissed';
+      p.note = `${p.note ? p.note + ' · ' : ''}[auto-wygaszona po 48h — ranking nieaktualny]`;
+      changed = true;
+      log(`proposal ${p.id}: auto-wygaszona (TTL 48h)`);
+    }
+  }
+  if (changed) {
+    saveProposals();
+    saveState();
+  }
+}
+
 async function telegram(text: string) {
   const t = process.env.TG_TOKEN, c = process.env.TG_CHAT;
   if (!t || !c) return;
@@ -441,5 +463,7 @@ function runSelector() {
   setInterval(refreshStats, INTERVALS.statsSec * 1000);
   setInterval(refreshPositions, INTERVALS.positionsSec * 1000);
   setInterval(runSelector, 60 * 60 * 1000); // co godzinę sprawdza, czy dziś już był
+  expireStaleProposals();
+  setInterval(expireStaleProposals, 60 * 60 * 1000);
   log('pętle uruchomione (60s ceny / 15min statystyki / 5min pozycje / selektor 1×dziennie po 8:00)');
 })();
