@@ -735,6 +735,20 @@ granica; prawda pomiędzy). Interpretacja (Fable, pełne JSON-y w backtest/resul
    u CC-Mac w toku — ocena bramki (≥65% wygr ∧ worst >−3; benchmark
    base-005: 68%/−2.52) po dojechaniu JSON-ów.
 
+### 2026-08-17 (~12:30) — INCYDENT .bot/pipeline DOMKNIĘTY (wzorowa koordynacja 3 sesji)
+Przebieg: Fable wykrył ryzyko (śledzony .bot + runner reset --hard = nadpisywanie
+żywych danych co 3 min) → CC-Win krok 0 (backup robocopy + stop runnera) +
+diagnoza HomosPipeline (**SYSTEM → `spawn npx ENOENT`** — trzecia iteracja
+lekcji "wszystko co dotyka node/npm/git na tym Windowsie musi chodzić jako
+konto elo") + przepięcie na elo + ręczny fetch:llama → CC-Mac WSTRZYMAŁ
+untrack do potwierdzenia kroku 0 (deadlock potwierdzenia rozcięty przez
+Fable — CC-Win zapisał potwierdzenie lokalnie bez pusha) → untrack f18f50e →
+CC-Win: pull, restore backupu, start runnera, restart bota. Zero utraty danych.
+DO POTWIERDZENIA (następny kontakt/pull): ranking selektora z 17.08 po
+resecie selector-state + jutrzejszy automatyczny pipeline 07:30 (pierwszy
+raz na koncie elo). Pomiar trafności selektora startuje od dziś na świeżych
+rankingach (potrzebny ~tydzień).
+
 ### 2026-08-17 — Fable: ANALIZA 5 DNI OBSERWUJ (12–17.08) + awaria pipeline + TTL propozycji
 Dane: jednorazowy snapshot .bot/* z Windows (2395 snapshotów history, log,
 propozycje, stany). WYNIKI:
