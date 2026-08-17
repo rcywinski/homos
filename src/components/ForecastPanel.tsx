@@ -1,21 +1,42 @@
 /**
  * ForecastPanel.tsx — "Prognoza zysku" (HANDOFF Fable→Sonnet 2026-08-17
- * ~16:3x). Życzenie Rafała: widok dla laika, dolary zamiast procentów.
+ * ~16:3x, v2 "per pogoda rynku" ~17:4x). Życzenie Rafała: widok dla laika,
+ * dolary zamiast procentów.
  *
  * Endpoint: GET {base}/api/results/forecast.json (istniejący generyczny
  * endpoint bot/server.ts `/api/results/:name`, ten sam wzorzec co
  * useWalkforward w ObservationAnalysis.tsx — zero zmian po stronie serwera).
  * Kształt: { generatedAt, disclaimer, pools: [{ poolId, symbol, strategy,
- * note, aprQ25, aprMed, aprQ75, winPct, worst }] }.
+ * note, aprQ25, aprMed, aprQ75, winPct, worst, regimes?: { down?/flat?/up?:
+ * { aprMed, aprQ25, aprQ75, hodlAprMed, windows } } }] } — regimes dodane
+ * w v2 (backtest/forecast.ts, CC-Mac ~17:3x): rozdziela zasługę algorytmu
+ * od kierunku rynku (v1 z jedną medianą myliła jedno z drugim w spadkowej
+ * próbce). Gdy plik jest jeszcze stary (brak `regimes` dla puli) —
+ * fallback na dawne kafle tydzień/miesiąc/rok.
  *
  * ZAKRES TWARDY: BEZ własnych obliczeń finansowych poza mnożeniem kwoty —
- * wszystkie APR-y (Q25/med/Q75) liczy backtest/forecast.ts (CC-Mac), UI
- * tylko przelicza na USD per okres: kwota × apr/100 / okresówRoku
- * (tydzień /52, miesiąc /12, rok /1). Ujemne wyniki NIE są ukrywane
- * (uczciwość wobec Rafała) — czerwony kolor zamiast pomijania.
+ * wszystkie APR-y liczy backtest/forecast.ts (CC-Mac), UI tylko przelicza
+ * na USD: miesiąc = kwota×aprMed/100/12 (v2, per reżim) albo
+ * kwota×apr/100/okresówRoku (v1 fallback, tydzień /52, miesiąc /12, rok /1).
+ * Ujemne wyniki NIE są ukrywane (uczciwość wobec Rafała) — czerwony kolor
+ * zamiast pomijania.
  */
 import React, { FC, useEffect, useState } from 'react';
 import { UseBotApi } from '../hooks/useBotApi';
+
+interface RegimeStats {
+  aprMed: number;
+  aprQ25?: number;
+  aprQ75?: number;
+  hodlAprMed?: number | null;
+  windows?: number;
+}
+
+interface ForecastRegimes {
+  down?: RegimeStats;
+  flat?: RegimeStats;
+  up?: RegimeStats;
+}
 
 interface ForecastPoolRow {
   poolId: string;
@@ -27,6 +48,7 @@ interface ForecastPoolRow {
   aprQ75: number;
   winPct?: number;
   worst?: number;
+  regimes?: ForecastRegimes;
 }
 
 interface ForecastFile {
@@ -144,6 +166,69 @@ const ForecastTile: FC<{ row: ForecastPoolRow; amount: number }> = ({ row, amoun
   );
 };
 
+const REGIME_LABEL: Record<'down' | 'flat' | 'up', string> = {
+  down: '📉 rynek spada',
+  flat: '➡ stoi',
+  up: '📈 rośnie',
+};
+const REGIME_ORDER: Array<'down' | 'flat' | 'up'> = ['down', 'flat', 'up'];
+
+const RegimeTable: FC<{ row: ForecastPoolRow; amount: number }> = ({ row, amount }) => {
+  const regimes = row.regimes as ForecastRegimes;
+  return (
+    <div className="forecast-pool-tile">
+      <div className="morning-section-title forecast-pool-title">
+        {row.symbol ?? row.poolId}
+        {row.strategy && <span className="muted forecast-strategy"> · {row.strategy}</span>}
+      </div>
+      {row.note && <div className="morning-note muted forecast-pool-note">{row.note}</div>}
+      <table className="forecast-regime-table">
+        <thead>
+          <tr>
+            <th>pogoda rynku (okno ~45 dni)</th>
+            <th>algorytm</th>
+            <th>zwykłe trzymanie 50/50</th>
+          </tr>
+        </thead>
+        <tbody>
+          {REGIME_ORDER.map((key) => {
+            const r = regimes[key];
+            if (!r) return null;
+            const algoUsd = (amount * r.aprMed) / 100 / 12;
+            const hodlUsd = typeof r.hodlAprMed === 'number' ? (amount * r.hodlAprMed) / 100 / 12 : null;
+            const better = hodlUsd !== null && algoUsd > hodlUsd;
+            return (
+              <tr key={key} className={better ? 'forecast-regime-better' : undefined}>
+                <td>{REGIME_LABEL[key]}</td>
+                <td className={algoUsd < 0 ? 'forecast-negative' : ''}>{fmtSigned(algoUsd)}/mies.</td>
+                <td className={hodlUsd !== null && hodlUsd < 0 ? 'forecast-negative' : ''}>
+                  {hodlUsd !== null ? `${fmtSigned(hodlUsd)}/mies.` : '—'}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <div className="muted forecast-legend">
+        Której pogody będzie najwięcej — nikt nie wie; algorytm ma wygrywać z trzymaniem w każdej.
+      </div>
+      {(typeof row.winPct === 'number' || typeof row.worst === 'number') && (
+        <div className="muted forecast-footnote">
+          {typeof row.winPct === 'number' && <>trafność {row.winPct.toFixed(0)}%</>}
+          {typeof row.winPct === 'number' && typeof row.worst === 'number' && ' · '}
+          {typeof row.worst === 'number' && <>najgorsze okno {row.worst.toFixed(1)}% APR</>}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** v2 renderuje tabelę per pogoda, gdy pula ma choć jeden reżim; inaczej fallback na dawne kafle. */
+const ForecastPoolCard: FC<{ row: ForecastPoolRow; amount: number }> = ({ row, amount }) => {
+  const hasRegimes = row.regimes && (row.regimes.down || row.regimes.flat || row.regimes.up);
+  return hasRegimes ? <RegimeTable row={row} amount={amount} /> : <ForecastTile row={row} amount={amount} />;
+};
+
 interface Props {
   bot: UseBotApi;
 }
@@ -191,7 +276,7 @@ const ForecastPanel: FC<Props> = ({ bot }) => {
           {state === 'ok' && data?.pools && data.pools.length > 0 && (
             <div className="forecast-pool-grid">
               {data.pools.map((row) => (
-                <ForecastTile key={row.poolId} row={row} amount={amount} />
+                <ForecastPoolCard key={row.poolId} row={row} amount={amount} />
               ))}
             </div>
           )}

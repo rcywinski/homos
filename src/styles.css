@@ -1674,3 +1674,33 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
 @media (max-width: 480px) {
   .forecast-row-label { width: 52px; }
 }
+
+/* --- UI session: ForecastPanel v2 "per pogoda rynku" — HANDOFF
+   Fable→Sonnet 2026-08-17 ~17:4x --- */
+.forecast-regime-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.forecast-regime-table th,
+.forecast-regime-table td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid #eee;
+}
+.forecast-regime-table th {
+  font-weight: 600;
+  color: #555;
+  font-size: 11px;
+}
+.forecast-regime-better {
+  background: #f2faf4;
+}
+.forecast-regime-better td:first-child {
+  font-weight: 600;
+}
+@media (max-width: 480px) {
+  .forecast-regime-table { font-size: 12px; }
+  .forecast-regime-table th, .forecast-regime-table td { padding: 3px 4px; }
+}
