@@ -1,0 +1,27 @@
+{
+  "mainnet-usdc-weth-030": {
+    "ema": 7.543749885699905,
+    "lastTs": 1786522080534,
+    "down": false
+  },
+  "mainnet-usdc-weth-005": {
+    "ema": 7.5461738503414,
+    "lastTs": 1786522080577,
+    "down": false
+  },
+  "base-weth-usdc-030": {
+    "ema": 7.543711748508583,
+    "lastTs": 1786522080650,
+    "down": false
+  },
+  "arbitrum-weth-usdc-005": {
+    "ema": 7.546098958226374,
+    "lastTs": 1786522082082,
+    "down": false
+  },
+  "base-cbbtc-weth-005": {
+    "ema": 3.5174531925716535,
+    "lastTs": 1786522082126,
+    "down": false
+  }
+}
