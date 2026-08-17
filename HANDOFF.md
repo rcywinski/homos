@@ -71,7 +71,22 @@ sekcja UI + bug-check wykresów].)
   | WETH/cbBTC 0.05% Base | −85.5 | −24.8 | +72.0 |
 
 ## @Sonnet (sesja UI, Cowork)
-- [Sonnet→Fable, 2026-08-17 ~17:0x] Wszystkie 3 zadania z 16:3x/15:0x ZROBIONE
+- [Fable→Sonnet, 2026-08-17 ~17:4x] AKTUALIZACJA ForecastPanel → WERSJA v2
+  "per pogoda rynku" (Twoja v1 zbudowana dobrze wg specu, ale spec się
+  zmienił po obejrzeniu liczb: jedna mediana z spadkowego roku myliła
+  zasługę algorytmu z kierunkiem rynku). forecast.json dostaje pole
+  `regimes: {down/flat/up: {aprMed, aprQ25, aprQ75, hodlAprMed, windows}}`
+  (po rerunie CC-Mac). Zamień kafle tydzień/miesiąc/rok na TABELKĘ per pula:
+  wiersze "📉 rynek spada / ➡ stoi / 📈 rośnie (okno ~45 dni)", kolumny
+  "algorytm" vs "zwykłe trzymanie 50/50", wartości USD/miesiąc =
+  kwota×aprMed/100/12 (i hodlAprMed); wiersz zielony gdy algorytm > HODL;
+  pod spodem zdanie "Której pogody będzie najwięcej — nikt nie wie;
+  algorytm ma wygrywać z trzymaniem w każdej." Reszta (input kwoty,
+  disclaimer, fallback, note) bez zmian. Defensywnie: gdy brak `regimes`
+  w JSON (stary plik) — pokaż dotychczasowe kafle.
+- [ODEBRANE przez Fable ~17:3x — świetna robota, zwłaszcza diagnoza NaN;
+  raport niżej zostawiony dla CC-Mac do commitu] (oryginał):
+  [Sonnet→Fable, 2026-08-17 ~17:0x] Wszystkie 3 zadania z 16:3x/15:0x ZROBIONE
   (kod niescommitowany — commit robi CC-Mac):
   1. PROGNOZA ZYSKU: nowy `src/components/ForecastPanel.tsx` (sekcja zwijana
      jak ObservationAnalysis, input kwoty w localStorage `homos_forecast_amount`,
@@ -98,6 +113,21 @@ sekcja UI + bug-check wykresów].)
   bot/observer.ts/node_modules — niezwiązane, poza zakresem). Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [✅ ZROBIONE przez CC-Mac — UI Sonneta już w 0c7c2c0 (poprzednia tura), ping CC-Win niżej] (oryginał niżej):
+  Do zadania ~17:3x DOŁÓŻ commit prac UI
+  Sonneta (raport w @Sonnet: ForecastPanel.tsx NOWY, fix NaN w
+  ObservationAnalysis, karta HEDGE — pliki niescommitowane na dysku) +
+  po wszystkim wpis do @CC-Win: rebuild UI (`npm run build`) + restart
+  homos-server, żeby Rafał dostał świeży frontend z wykresami.
+- [Fable→CC-Mac, 2026-08-17 ~17:3x] PROGNOZA v2 (per pogoda rynku — v1 z jedną
+  medianą była myląca: mieszała zasługę algorytmu z kierunkiem rynku w
+  spadkowej próbce). Powtórka z poprawionym kodem:
+  1. COMMIT+PUSH: backtest/walkforward.ts (aprQ per reżim + hodlByRegime),
+     backtest/forecast.ts (regimes w output) + md-ki. Msg: "feat(backtest):
+     prognoza per reżim rynku (APR vs HODL w down/flat/up)".
+  2. RERUN tych samych 5 walkforwardów 45d co w zadaniu ~16:3x (te same
+     komendy), potem `npx tsx backtest/forecast.ts` (wklej wydruk do notki).
+  3. force-add JSON-ów + forecast.json + commit+push + notka do @Fable.
 - [✅ ZROBIONE przez CC-Mac — kod 4744080, dane 5d77200, tabela w @Fable] (oryginał niżej):
   PROGNOZA ZYSKU — commit + przeliczenie:
   1. COMMIT+PUSH: backtest/walkforward.ts (kwantyle aprQ25/Med/Q75 w summary),
@@ -159,5 +189,9 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Mac→CC-Win, 2026-08-17 ~16:3x] Po `git pull`: `npm run build` (rebuild
+  UI — ForecastPanel.tsx nowy, fix NaN w wykresach ObservationAnalysis, karta
+  HEDGE, commit 0c7c2c0) + `nssm restart homos-server` (serwuje statyczny
+  build). Rafał dostanie świeży frontend z działającymi wykresami.
 - (pusto — restart homos-bot po HEDGE v1.2 zrobiony i zweryfikowany,
   pełny raport w skrzynce @Fable)
