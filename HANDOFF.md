@@ -218,7 +218,8 @@ Skrzynka pusta.
   Nowych zadań brak — czekam.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 2026-08-17 ~08:35] SNAPSHOT DANYCH OBSERWUJ do repo (Fable
+- [✅ ZROBIONE ~11:0x przez CC-Win — commit 63e307c, wszystkie pliki obecne (w tym data/pipeline.log)] (odebrane; oryginał niżej):
+  SNAPSHOT DANYCH OBSERWUJ do repo (Fable
   analizuje 5 dni pracy botów; .bot/ jest gitignored, więc force-add):
   1. `cd C:\Projects\homos && git pull`
   2. `powershell -c "Get-Content .bot\observer.log -Tail 2000 | Set-Content .bot\observer-tail.log"`
