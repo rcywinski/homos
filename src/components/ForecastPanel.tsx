@@ -209,9 +209,6 @@ const RegimeTable: FC<{ row: ForecastPoolRow; amount: number }> = ({ row, amount
           })}
         </tbody>
       </table>
-      <div className="muted forecast-legend">
-        Której pogody będzie najwięcej — nikt nie wie; algorytm ma wygrywać z trzymaniem w każdej.
-      </div>
       {(typeof row.winPct === 'number' || typeof row.worst === 'number') && (
         <div className="muted forecast-footnote">
           {typeof row.winPct === 'number' && <>trafność {row.winPct.toFixed(0)}%</>}
