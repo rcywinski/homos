@@ -735,6 +735,36 @@ granica; prawda pomiędzy). Interpretacja (Fable, pełne JSON-y w backtest/resul
    u CC-Mac w toku — ocena bramki (≥65% wygr ∧ worst >−3; benchmark
    base-005: 68%/−2.52) po dojechaniu JSON-ów.
 
+### 2026-08-17 — Fable: ANALIZA 5 DNI OBSERWUJ (12–17.08) + awaria pipeline + TTL propozycji
+Dane: jednorazowy snapshot .bot/* z Windows (2395 snapshotów history, log,
+propozycje, stany). WYNIKI:
+1. **Zbieranie danych: wzorowe** — 479 snapshotów × 5 pul co 15 min, 1 luka
+   >40 min/pulę przez 5 dni (~99.8%). Wycena cbBTC zdrowa ($62.5–64k).
+2. **Bezpiecznik na żywo: zero fałszywych alarmów** w płaskim tygodniu (ETH
+   1864–1915, ±1.3%; gap EMA −1.5…+1.2%, daleko od progu −5%) — zgodne
+   z obietnicą backtestu dla flat. Czułość na realny spadek: jeszcze nie
+   przetestowana (nie było spadku).
+3. **Szerokości doradcy zgodne z v1.1**: mediana 23–35% pełnej szerokości
+   przy vol 1.5–2.1%/d = dokładnie k·σ·√7d (k=3; cbBTC węziej — k=2 ✓).
+4. **AWARIA: HomosPipeline (schtask 07:30) nie działa najpewniej OD ZAŁOŻENIA
+   (10.08)** — brak data\pipeline.log, dane DefiLlamy zestarzały się do 158h,
+   selektor codziennie 6:09 uczciwie odmawiał ("nie proponuję ze stęchłych
+   danych" — failsafe zadziałał wzorowo). SKUTEK: zero nowych propozycji
+   selektora przez 5 dni → trafności selektora NIE zmierzymy z tego okresu.
+   Naprawa: CC-Win (podejrzenie: zadanie jako SYSTEM — klasa lekcji DPAPI;
+   przepiąć na .\elo) + ręczny fetch:llama + del selector-state + restart.
+5. **Fix bota (Fable): TTL 48h dla propozycji OPEN/ROTATE** (wpisy z 10-11.08
+   wisiały "open" tydzień; ranking sprzed dni to nie rekomendacja).
+   REBALANCE/EXIT_TREND bez TTL (bazują na stanie pozycji).
+6. **LEKCJA INFRA (ważna!): NIE force-addować żywych plików .bot do gita** —
+   runner robi reset --hard co 3 min i NADPISUJE żywe pliki wersją z repo
+   (złapane w porę; sekwencja naprawcza: backup → untrack → restore, wpisy
+   w HANDOFF). Przyszłe snapshoty do analizy: kopiować pod INNĄ nazwą
+   (np. .bot-snapshot/) zamiast force-add oryginałów.
+WNIOSEK OGÓLNY: warstwa obserwacji i bezpiecznik produkcyjnie OK; wąskim
+gardłem jest niezweryfikowana automatyka Windows (pipeline). Po naprawie
+liczymy trafność selektora od nowa (potrzebne ~tydzień świeżych propozycji).
+
 ### 2026-08-12 — Fable: INTERPRETACJA PEŁNEJ MACIERZY 45/60 × 7 pul (finał kalibracji)
 13 runów (nocna partia CC-Mac + wcześniejsze), format mean/win%/worst, profil
 v1.1 = exit+re>EMA:
