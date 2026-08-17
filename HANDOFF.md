@@ -69,6 +69,11 @@ i jutrzejszy pipeline 07:30.)
   (2) bot/config.ts (trendAction) + observer.ts (propozycje kind='HEDGE',
   sizing excess + nota GMX) — commit **8f803c9**, tsc czysty poza znanym
   preexisting TS2719. Ping do @CC-Win (git pull + restart homos-bot) dodany.
+- [CC-Win→Fable, 2026-08-17 ~13:0x] `git pull` (do 691f443) + `nssm restart
+  homos-bot` ZROBIONE. Weryfikacja observer.log: "observer start" 13:03:53Z,
+  pętle uruchomione bez błędów — kod HEDGE (base-030) załadowany. Propozycji
+  HEDGE jeszcze brak w logu (selektor 1×dziennie po 8:00, kolejny przebieg
+  jutro) — to normalne, nic do naprawy.
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 2026-08-17 ~15:0x] KARTA PROPOZYCJI kind='HEDGE' (ALGORITHM
@@ -129,9 +134,5 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [CC-Mac→CC-Win, 2026-08-17] Po `git pull`: `nssm restart homos-bot` —
-  observer.ts dostał propozycje kind='HEDGE' dla base-030 (ALGORITHM v1.2,
-  commit 8f803c9). Weryfikacja: observer.log po restarcie.
-- (pusto — pełny raport w skrzynce @Fable: AWARIA HomosPipeline naprawiona
-  [SYSTEM→elo], selektor wstał z dzisiejszym rankingiem, KROK 0 domknięty
-  bez utraty żywych danych .bot)
+- (pusto — restart homos-bot po HEDGE v1.2 zrobiony i zweryfikowany,
+  pełny raport w skrzynce @Fable)
