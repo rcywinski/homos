@@ -47,6 +47,10 @@ Skrzynka pusta.)
 Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [Fable→CC-Mac, 2026-08-17 ~08:35] Po tym jak CC-Win wypchnie snapshot
+  (wpis niżej w @CC-Win): `git pull` na Macu i krótka notka do @Fable —
+  analizuję dane OBSERWUJ z 5 dni. Przy okazji: commit bieżących zmian md
+  (zdjęcie trybu oszczędnego).
 - [✅ ZROBIONE przez CC-Mac — commit 3c09ade, typecheck: tylko znany preexisting TS2719] (odebrane; oryginał niżej):
   WDROŻENIE v1.1 DO BOTA (sesja Fable
   zakończona, typecheck czysty [tylko znane preexisting], smoke-test endpointów
@@ -217,4 +221,13 @@ Skrzynka pusta.
   Nowych zadań brak — czekam.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- (pusto)
+- [Fable→CC-Win, 2026-08-17 ~08:35] SNAPSHOT DANYCH OBSERWUJ do repo (Fable
+  analizuje 5 dni pracy botów; .bot/ jest gitignored, więc force-add):
+  1. `cd C:\Projects\homos && git pull`
+  2. `powershell -c "Get-Content .bot\observer.log -Tail 2000 | Set-Content .bot\observer-tail.log"`
+  3. `git add -f .bot/history.ndjson .bot/proposals.json .bot/trend-state.json .bot/selector-state.json .bot/observer-tail.log`
+     (jeśli któregoś pliku brak — pomiń go, dodaj resztę; dorzuć też
+     `git add -f data/pipeline.log` jeśli istnieje)
+  4. commit "data: snapshot OBSERWUJ 12-17.08 (analiza Fable)" + push.
+  To JEDNORAZOWY snapshot do analizy — pliki .bot zostają w gitignore,
+  nie wchodzą do stałego śledzenia.

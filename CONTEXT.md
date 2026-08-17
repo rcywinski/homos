@@ -735,6 +735,26 @@ granica; prawda pomiędzy). Interpretacja (Fable, pełne JSON-y w backtest/resul
    u CC-Mac w toku — ocena bramki (≥65% wygr ∧ worst >−3; benchmark
    base-005: 68%/−2.52) po dojechaniu JSON-ów.
 
+### 2026-08-12 — Fable: INTERPRETACJA PEŁNEJ MACIERZY 45/60 × 7 pul (finał kalibracji)
+13 runów (nocna partia CC-Mac + wcześniejsze), format mean/win%/worst, profil
+v1.1 = exit+re>EMA:
+1. **Profil v1.1 POTWIERDZONY na pełnej macierzy**: dodatnia średnia w 12/13
+   runów (jedyny minus: odrzucony OP), najlepsza/blisko-najlepszej średnia
+   w 11/13, ogon NIGDY gorszy niż −8.1 (baseline k3: do −13.9). Wyjątek cbBTC
+   (czysty exit ≥ re>EMA) też potwierdzony — konfiguracja per klasa zostaje.
+2. **Bramka (win≥65 ∧ worst>−3) FORMALNIE ZALICZONA NA 3 PULACH**:
+   cbBTC-005 (OBA okna: 82%/−1.8 i 76-81%/−1.4…−2.1), base-005 45d
+   (68%/−2.5), mainnet-005 60d (71%/−2.2…−2.4). Arbitrum-005 o włos (45d:
+   73%/−3.5). NAJTRUDNIEJSZA pozostaje base-030 (worst −7.8…−8.1 mimo
+   profilu) — tier 0.3% + głębokie trendy; to główny argument za F4.
+3. Okna 60d systematycznie słabsze dla profili trendowych (długi trend mieści
+   się w oknie) — bezpiecznik nie zastąpi hedge'a na wielomiesięczny bear.
+4. Arbitrum: 005 >> 030 (030: 48-64% win, worst −6) — selektor i tak
+   preferuje wyższe APY, ale przy równych APY wybierać głębszą pulę 005.
+**KALIBRACJA ZAMKNIĘTA.** ~~Do 16.08 tryb OSZCZĘDNY~~ (WYGASŁO 17.08 — limit
+odnowiony, wracamy do normalnej pracy; w dniach 12–16.08 maszyny zbierały
+dane OBSERWUJ zgodnie z planem).
+
 ### 2026-08-12 — Sesja Fable-desktop: ALGORITHM v1.1 WDROŻONY DO ŻYWEGO BOTA
 Zaplanowana sesja botowa wykonana w całości (typecheck: tylko znane
 preexisting; smoke-test serwera lokalnie OK, traversal zablokowany):
