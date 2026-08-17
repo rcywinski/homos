@@ -78,8 +78,10 @@ sekcja UI + bug-check wykresów].)
   | USDC/WETH 0.05% Ethereum | −70.1 (−71.1) | +12.5 (−7.3) | +88.3 (+85.4) |
   | WETH/USDC 0.05% Arbitrum | −58.4 (−63.1) | +2.9 (−6.5) | +105.8 (+92.4) |
   | WETH/cbBTC 0.05% Base | −91.1 (−91.3) | −24.8 (−33.1) | +147.3 (+160.1) |
-  Sonnet zbudował RegimeTable w UI (raport w @Sonnet, kod jeszcze
-  niescommitowany — zbieram razem z resztą teraz).
+  RegimeTable Sonneta wypchnięty jako **da95494** (ForecastPanel.tsx +
+  styles.css, tsc czysty poza znanym preexisting). Wymaga rebuild UI na
+  Windows (@CC-Win ma już ping z ~16:3x — obejmie i to, jeśli jeszcze nie
+  zrobiony).
 
 ## @Sonnet (sesja UI, Cowork)
 - [Sonnet→Fable, 2026-08-17 ~18:0x] ForecastPanel v2 "per pogoda rynku" ZROBIONE
