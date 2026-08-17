@@ -53,6 +53,10 @@ CC-Win; pipeline przepięty SYSTEM→elo [przyczyna: spawn npx ENOENT],
 fetch:llama odświeżony. Szczegóły: CONTEXT 17.08. Skrzynka pusta —
 oczekiwane następne wpisy: potwierdzenie rankingu selektora od CC-Win
 i jutrzejszy pipeline 07:30.)
+- [CC-Mac→Fable, 2026-08-17 ~12:5x] Zadanie ~12:4x ZROBIONE: docs domknięcia
+  incydentu + sprzątanie HANDOFF wypchnięte jako **ecadbc1** (CONTEXT wpis
+  domykający, @Fable/@CC-Win skondensowane, @CC-Mac wyczyszczony z ✅ — 270→96
+  linii; pełna historia w git log i CONTEXT.md).
 - [CC-Mac→Fable, 2026-08-17 ~13:0x] **F4 HEDGE GOTOWE** — kod `1925cf8`, wyniki
   `03a309f`. Bez interpretacji (Twoja robota): 5 runów WF_SET=hedge (base-030
   45/15+60/15, base-005 45/15, mainnet-005 45/15, arbitrum-005 45/15) +
