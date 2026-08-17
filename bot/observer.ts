@@ -100,8 +100,11 @@ interface Proposal {
   createdAt: string;
   tokenId: string; // '' dla propozycji OPEN z selektora
   poolId: string; // '' gdy pula spoza BOT_POOLS (selektor → note)
-  /** REBALANCE (doradca pozycji) | OPEN / ROTATE (selektor) | EXIT_TREND (bezpiecznik v1.1) */
-  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND';
+  /** REBALANCE (doradca) | OPEN/ROTATE (selektor) | EXIT_TREND / HEDGE (bezpiecznik v1.2) */
+  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND' | 'HEDGE';
+  /** dla kind HEDGE: sugerowany rozmiar shorta (nadwyżka ETH ponad 50% wartości) */
+  hedgeSizeEth?: number;
+  hedgeNotionalUsd?: number;
   action: string;
   suggestedRange?: { tickLower: number; tickUpper: number; usdLo: number; usdHi: number };
   costUsd?: number;
@@ -232,24 +235,47 @@ function updateTrend(p: BotPool, price: number, nowMs: number): number {
   return gap * 100;
 }
 
-/** propozycja EXIT_TREND dla każdej naszej pozycji w puli z sygnałem DOWN */
+/** propozycja obrony (EXIT_TREND lub HEDGE wg pool.trendAction — ALGORITHM
+ *  v1.2 §4) dla każdej naszej pozycji w puli z sygnałem DOWN */
 function proposeExitTrend(pool: BotPool, gap: number) {
   const held = positions.filter((x) => x.poolId === pool.id);
   if (!held.length) return;
+  const action = pool.trendAction ?? 'exit';
+  const kind = action === 'hedge' ? 'HEDGE' : 'EXIT_TREND';
   for (const pos of held) {
     const key = `trend-${pool.id}-${pos.tokenId}-${new Date().toISOString().slice(0, 10)}`;
-    // dedup: jedna OTWARTA propozycja EXIT_TREND per pozycja (niezależnie od dnia)
-    if (proposals.some((x) => x.kind === 'EXIT_TREND' && x.tokenId === pos.tokenId && x.status === 'open')) continue;
-    const prop: Proposal = {
-      id: key, createdAt: new Date().toISOString(), tokenId: pos.tokenId, poolId: pool.id,
-      kind: 'EXIT_TREND', action: 'EXIT_TREND',
-      symbol: `${pool.sym0}-${pool.sym1}`,
-      note: `Bezpiecznik trendu (ALGORITHM v1.1 §4): cena ${(gap * 100).toFixed(1)}% pod EMA${TREND.hlDays}d (próg −${TREND.thresh * 100}%). Sugestia: zamknij pozycję do cash 50/50; powrót po ${(pool.trendReentry ?? 'aboveEma') === 'aboveEma' ? 'powrocie ceny NAD EMA' : 'gap > −' + (TREND.thresh * 50) + '%'}.`,
-      status: 'open',
-    };
+    // dedup: jedna OTWARTA propozycja obrony per pozycja (niezależnie od dnia)
+    if (proposals.some((x) => (x.kind === 'EXIT_TREND' || x.kind === 'HEDGE') && x.tokenId === pos.tokenId && x.status === 'open')) continue;
+    const gapTxt = `cena ${(gap * 100).toFixed(1)}% pod EMA${TREND.hlDays}d (próg −${TREND.thresh * 100}%)`;
+    let prop: Proposal;
+    let msg: string;
+    if (kind === 'HEDGE') {
+      // sizing excess: short = nadwyżka ETH ponad 50% wartości pozycji
+      const P = live[pool.id]?.ethUsd ?? 0;
+      const ethAmt = pool.ethIsToken0 ? pos.amount0 : pos.amount1;
+      const sizeEth = P > 0 ? Math.max(0, ethAmt - pos.valueUsd / 2 / P) : 0;
+      const notional = sizeEth * P;
+      prop = {
+        id: key, createdAt: new Date().toISOString(), tokenId: pos.tokenId, poolId: pool.id,
+        kind: 'HEDGE', action: 'HEDGE',
+        symbol: `${pool.sym0}-${pool.sym1}`,
+        hedgeSizeEth: sizeEth, hedgeNotionalUsd: notional,
+        note: `Bezpiecznik v1.2 (hedge-excess): ${gapTxt}. Sugestia: SHORT ${sizeEth.toFixed(4)} ETH (~$${notional.toFixed(0)}) na GMX v2 (Arbitrum, app.gmx.io) — pozycja LP ZOSTAJE i zbiera fees. Zamknij short po zgaśnięciu sygnału (cena nad EMA). Fallback bez konta perp: zamknij pozycję do cash 50/50 (exit).`,
+        status: 'open',
+      };
+      msg = `🛡 HOMOS: HEDGE — ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Propozycja: short ${sizeEth.toFixed(4)} ETH (~$${notional.toFixed(0)}) na GMX; LP zostaje. [tryb OBSERWUJ — nic nie wykonano]`;
+    } else {
+      prop = {
+        id: key, createdAt: new Date().toISOString(), tokenId: pos.tokenId, poolId: pool.id,
+        kind: 'EXIT_TREND', action: 'EXIT_TREND',
+        symbol: `${pool.sym0}-${pool.sym1}`,
+        note: `Bezpiecznik trendu (ALGORITHM v1.2 §4): ${gapTxt}. Sugestia: zamknij pozycję do cash 50/50; powrót po ${(pool.trendReentry ?? 'aboveEma') === 'aboveEma' ? 'powrocie ceny NAD EMA' : 'gap > −' + (TREND.thresh * 50) + '%'}.`,
+        status: 'open',
+      };
+      msg = `⛔ HOMOS: BEZPIECZNIK TRENDU — ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Propozycja: wyjdź do cash 50/50. [tryb OBSERWUJ — nic nie wykonano]`;
+    }
     proposals.push(prop);
     saveProposals();
-    const msg = `⛔ HOMOS: BEZPIECZNIK TRENDU — ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): cena ${(gap * 100).toFixed(1)}% pod EMA7d. Propozycja: wyjdź do cash 50/50. [tryb OBSERWUJ — nic nie wykonano]`;
     log(msg);
     telegram(msg);
   }

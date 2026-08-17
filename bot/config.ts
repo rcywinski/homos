@@ -32,6 +32,10 @@ export interface BotPool {
    *  [domyślny, ETH/stable] — sygnał gaśnie dopiero gdy cena NAD EMA;
    *  'half' [cbBTC] — gaśnie przy gap > −thresh/2 (czysty exit) */
   trendReentry?: 'aboveEma' | 'half';
+  /** akcja obronna na sygnale DOWN (ALGORITHM v1.2 §4): 'exit' [domyślna] —
+   *  propozycja wyjścia do cash 50/50; 'hedge' [base-030] — propozycja
+   *  shorta perp (GMX) na nadwyżkę ETH ponad 50% wartości, LP zostaje */
+  trendAction?: 'exit' | 'hedge';
 }
 
 /** Bezpiecznik trendu spadkowego (ALGORITHM.md v1.1 §4) — jedna prawda. */
@@ -61,6 +65,7 @@ export const BOT_POOLS: BotPool[] = [
     address: '0x6c561B446416E1A00E8E93E221854d6eA4171372',
     feeBps: 3000, ethIsToken0: true, d0: 18, d1: 6, sym0: 'WETH', sym1: 'USDC',
     t0: '0x4200000000000000000000000000000000000006', t1: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    trendAction: 'hedge', // ALGORITHM v1.2: hedge-excess (bramka 73%/−2.88 i 81%/−2.74)
   },
   {
     // para skorelowana (PAIRS.md: sleeve pasywny ±15%); cena kwotowana w WETH,
