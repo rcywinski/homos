@@ -86,7 +86,7 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
         ];
 
   // per strategia: lista {vsHodl, regime, start} z każdego okna
-  const dist: Record<string, Array<{ v: number; regime: Regime; start: number; pchg: number }>> = {};
+  const dist: Record<string, Array<{ v: number; regime: Regime; start: number; pchg: number; apr: number }>> = {};
   const windowMeta: Array<{ start: number; pchgPct: number; regime: Regime }> = [];
   let windows = 0;
 
@@ -108,7 +108,7 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
     const hodl = res.find((r) => r.name === 'HODL 50/50')!;
     for (const r of res) {
       if (r.name === 'HODL 50/50') continue;
-      (dist[r.name] ??= []).push({ v: ((r.finalUsd / hodl.finalUsd) - 1) * 100, regime, start, pchg: pchg * 100 });
+      (dist[r.name] ??= []).push({ v: ((r.finalUsd / hodl.finalUsd) - 1) * 100, regime, start, pchg: pchg * 100, apr: r.aprPct });
     }
     process.stdout.write(`\rokno ${windows} (${regime}, ${pct(pchg * 100)}%)…  `);
   }
@@ -130,9 +130,18 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
     };
   };
 
+  const q = (vals: number[], p: number) => {
+    const s = [...vals].sort((a, b) => a - b);
+    return s[Math.min(Math.floor(p * s.length), s.length - 1)];
+  };
   const summary: any = {};
   for (const [name, entries] of Object.entries(dist)) {
     const s = stat(entries.map((e) => e.v));
+    // absolutne APR okien (do prognozy zysku "dla ludzi" w UI):
+    const aprs = entries.map((e) => e.apr);
+    (s as any).aprQ25 = q(aprs, 0.25);
+    (s as any).aprMed = q(aprs, 0.5);
+    (s as any).aprQ75 = q(aprs, 0.75);
     const byRegime: any = {};
     for (const rg of ['up', 'down', 'flat'] as Regime[]) {
       const vals = entries.filter((e) => e.regime === rg).map((e) => e.v);
