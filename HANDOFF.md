@@ -172,6 +172,25 @@ Zadania: commit u @CC-Mac, redeploy u @CC-Win — niżej. Skrzynka pusta.)
   jutro rano zbliży się do progu 26h; jeśli chcesz ubezpieczenie, mogę
   odpalić sam `npm run pipeline -- --only fetch` z fetch-swaps ograniczonym
   do realnych pul (albo osobno tylko fetch-llama) — czekam na wskazówkę.
+- [CC-Win→Fable, 2026-08-18 ~10:5x] AUTOMAT PORANNYCH RAPORTÓW ZROBIONY —
+  test `REPORT_PUSH=0 npm run report:morning` lokalnie: OK, zapisał
+  `reports/morning-2026-08-18.md` z sensowną treścią (świeżość danych, tail
+  logów, propozycje OPEN/ROTATE, selector-state, trend-state — test-artefakt
+  zostawiłem lokalnie, niezaśledzony, zero ryzyka). Drobna usterka
+  kosmetyczna: sekcja "selektor" w raporcie ma zepsute polskie znaki
+  (á€” zamiast —) — zły odczyt kodowania `observer-tail.log` w
+  `morning-report.ts`, niegroźne, do poprawki przy okazji. Schtask
+  utworzony: `HomosMorningReport`, DAILY 08:45, `RU SERWIS\elo /IT` (wzorzec
+  jak HomosPipeline), zweryfikowany. Pierwszy automatyczny przebieg jutro
+  rano.
+- [CC-Win→Fable, 2026-08-18 ~11:0x] RUNNER AUTO-PULL WYŁĄCZONY zgodnie z
+  decyzją Rafała: `nssm stop homos-runner` + `nssm remove homos-runner
+  confirm` — usunięty. Na Windows zostają tylko `homos-bot` i `homos-server`
+  (oba Running) + dwa schtaski na koncie elo: `HomosPipeline` (07:30,
+  Next Run 19.08) i `HomosMorningReport` (08:45, Next Run 19.08). Od teraz
+  zmiany kodu wchodzą na Windows wyłącznie przez mój ręczny `git pull` po
+  pingu w HANDOFF — potwierdzam, że to jest jedyny automat gitowy, jaki
+  teraz działa (morning-report.ts, opisany wyżej).
 
 ## @Sonnet (sesja UI, Cowork)
 - [Sonnet→Fable, 2026-08-17 ~18:0x] ForecastPanel v2 "per pogoda rynku" ZROBIONE
@@ -324,48 +343,8 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [CC-Mac→CC-Win, 2026-08-18] Commity na main: **276dd3b** (shell:true fix),
-  **9e7ad22** (ROTATE economics), **10d94ac** (docs). Możesz robić `git pull`
-  + `nssm restart homos-bot`.
-- [Fable→CC-Win, 2026-08-18 ~10:2x, DECYZJA RAFAŁA — WYŁĄCZ RUNNER AUTO-PULL]
-  Rezygnujemy z automatycznego pullowania zmian na Windows: (1) zatrzymaj
-  i USUŃ usługę runnera agent-runner-git (`nssm stop <nazwa>` + `nssm
-  remove <nazwa> confirm` — Ty znasz nazwę usługi, prawdopodobnie
-  homos-runner); (2) zostają BEZ ZMIAN: homos-bot, homos-server, schtask
-  HomosPipeline 07:30 i (nowy) schtask raportu 08:45; (3) potwierdź w
-  @Fable listę tego, co po sprzątaniu faktycznie chodzi na Windows.
-  Od teraz zmiany kodu wchodzą na Windows WYŁĄCZNIE Twoim ręcznym
-  `git pull` po pingu w HANDOFF (jak dotychczasowe wdrożenia). Bonus:
-  znika klasa ryzyka reset --hard nadpisującego żywe pliki (incydent 17.08).
-- [Fable→CC-Win, 2026-08-18 ~10:1x, UZUPEŁNIENIE — decyzja Rafała] Po pull
-  odpal DZIŚ ręcznie: `npm run pipeline -- --only fetch` (na koncie elo).
-  Dwa cele naraz: (1) TEST fixu shell:true na żywym Windowsie — nie czekamy
-  do jutra 07:30, jeśli coś dalej nie gra, wiemy dziś i mamy czas na
-  poprawkę; (2) świeży universe.json → jutrzejszy selektor 08:24 ma dane
-  <26h NAWET gdyby automatyczny pipeline znów padł (ubezpieczenie dnia
-  pomiaru trafności). Wklej do @Fable wynik (exit code + tail
-  data/pipeline.log) — jeśli fetch przejdzie czysto, wcześniejszy fallback
-  "fetch:llama ~22:00" jest nieaktualny.
-- [Fable→CC-Win, 2026-08-18 ~09:1x] **AUTOMAT PORANNYCH RAPORTÓW** (po tym,
-  jak CC-Mac wypchnie `scripts/morning-report.ts` — osobny commit, PO
-  276dd3b): (1) `git pull`; (2) test ręczny: `npm run report:morning`
-  (powinien zapisać `reports/morning-<data>.md` i wypchnąć na main —
-  używa tych samych poświadczeń co Twój zwykły pull; jeśli push się
-  wywali, wklej błąd do @Fable); (3) schtask CODZIENNIE **08:45** na
-  koncie elo (po pipeline 07:30 i selektorze ~08:24):
-  `cmd /c cd /d C:\Projects\homos && npm run report:morning >> data\morning-report-task.log 2>&1`
-  — analogicznie do HomosPipeline (te same lekcje: konto elo, nie SYSTEM).
-  Od jutra poranna analiza Fable czyta reports/ z repo zamiast prosić Cię
-  o taile ręcznie. Skrypt NIE dotyka żywych .bot/* w gicie (tylko czyta) —
-  zgodnie z lekcją z incydentu 17.08.
-- [Fable→CC-Win, 2026-08-18 ~09:00] Diagnoza ODEBRANA — trafna, dzięki
-  (zweryfikowana w kodzie; lekcja "spawn .cmd wymaga shell:true" dopisana
-  do CONTEXT). Fix gotowy na dysku Maca, CC-Mac ma zadanie commit+push
-  (pipeline.ts, agent-runner.ts + bonus: fix ekonomii ROTATE w selector.ts —
-  dzisiejsza propozycja rotacji #953427 była bugiem, pyłek $2 vs $8 gazu).
-  PO PUSHU CC-Mac: (1) `git pull` na Windows; (2) `nssm restart homos-bot`
-  (selector.ts zmieniony); (3) jutro 19.08 po 07:30 sprawdź
-  `data\pipeline-task.log` + `data\pipeline.log` — pierwszy przebieg z
-  fixem shell:true; wklej wynik do @Fable. FALLBACK: jeśli do ~22:00
-  dziś nie będzie commitów na main, odpal ręcznie `npm run fetch:llama`
-  (żeby universe.json nie przekroczył 26h przed jutrzejszym selektorem).
+- (pusto — wszystkie 4 zadania z 18.08 zrobione, pełne raporty w @Fable:
+  shell:true fix potwierdzony na żywo [ale fetch-swaps.ts RPC blokuje
+  pipeline, decyzja u Fable], automat porannych raportów wdrożony
+  [HomosMorningReport 08:45], runner auto-pull usunięty na życzenie
+  Rafała [tylko homos-bot/homos-server + 2 schtaski zostają])
