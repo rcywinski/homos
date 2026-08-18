@@ -15,6 +15,11 @@ const TOKEN_KEY = 'homos_api_token';
 const DEFAULT_BASE = 'http://localhost:8787';
 const POLL_MS = 60_000;
 const STALE_MS = 5 * 60_000;
+// Paper trading (bot/paper.ts, TASKS-UI.md Partia 5) — dane zmieniają się co
+// 15 min (cykl statystyk observer.ts), więc osobny, WOLNIEJSZY timer niż
+// /api/state (60s) — zgodnie z zadaniem "żadnego drugiego pollera /api/state".
+const PAPER_POLL_MS = 5 * 60_000;
+const PAPER_HOURS = 168; // 7 dni
 
 export interface BotProposal {
   id: string;
@@ -88,6 +93,68 @@ export interface BotStateShape {
 
 export type BotStatus = 'loading' | 'online' | 'stale' | 'offline';
 
+// Paper trading — GET /api/paper?hours=N (bot/paper.ts, HANDOFF Fable→CC-Mac
+// 2026-08-18 ~11:3x, wpięte pod TASKS-UI.md Partia 5). Wirtualny portfel
+// $10k/pula wg ALGORITHM v1.2, zero prawdziwych transakcji.
+export interface PaperHedge {
+  sizeBase: number;
+  entryUsd: number;
+  fundingUsd: number;
+}
+
+export interface PaperPosition {
+  poolId: string;
+  status: 'open' | 'cash' | 'pending' | string;
+  tickLower: number;
+  tickUpper: number;
+  capitalUsd: number;
+  feesUsd: number;
+  costsUsd: number;
+  rebalances: number;
+  hedge: PaperHedge | null;
+  hedgePnlRealizedUsd: number;
+  openedAt: string;
+  startedAt: string;
+}
+
+export interface PaperStateShape {
+  startedAt: string;
+  capitalPerPoolUsd: number;
+  updatedAt: string;
+  positions: Record<string, PaperPosition>;
+}
+
+export interface PaperHistoryPoint {
+  ts: string;
+  poolId: string;
+  status: string;
+  equityUsd: number;
+  hodlUsd: number;
+  feesUsd: number;
+  costsUsd: number;
+  inRange: boolean;
+  trendDown: boolean;
+  rebalances: number;
+}
+
+export interface PaperEvent {
+  ts: string;
+  poolId: string;
+  kind: 'OPEN' | 'REBALANCE' | 'EXIT_TREND' | 'REENTRY' | 'HEDGE_OPEN' | 'HEDGE_CLOSE' | string;
+  [key: string]: unknown;
+}
+
+export interface PaperData {
+  state: PaperStateShape;
+  history: PaperHistoryPoint[];
+  events: PaperEvent[];
+}
+
+// 'not-started' == 503 z /api/paper (paper jeszcze nie ruszył na serwerze,
+// np. świeży restart bota przed pierwszym cyklem statystyk) — odróżnione od
+// 'error' (sieć/token/inny błąd), żeby panel pokazał właściwy komunikat.
+export type PaperStatus = 'loading' | 'ok' | 'not-started' | 'error';
+
 export interface UseBotApi {
   state: BotStateShape | null;
   status: BotStatus;
@@ -98,6 +165,8 @@ export interface UseBotApi {
   setApiToken: (v: string) => void;
   dismissProposal: (id: string) => Promise<void>;
   refresh: () => void;
+  paper: PaperData | null;
+  paperStatus: PaperStatus;
 }
 
 const readLocal = (key: string, fallback: string): string => {
@@ -115,6 +184,8 @@ export function useBotApi(): UseBotApi {
   const [status, setStatus] = useState<BotStatus>('loading');
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [paper, setPaper] = useState<PaperData | null>(null);
+  const [paperStatus, setPaperStatus] = useState<PaperStatus>('loading');
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
@@ -148,6 +219,38 @@ export function useBotApi(): UseBotApi {
     return () => clearInterval(id);
   }, [fetchState, tick]);
 
+  const fetchPaper = useCallback(async () => {
+    try {
+      const headers: Record<string, string> = {};
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+      const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/paper?hours=${PAPER_HOURS}`, { headers });
+      if (res.status === 503) {
+        // paper jeszcze nie ruszył na serwerze (świeży restart, przed pierwszym cyklem statystyk)
+        setPaper(null);
+        setPaperStatus('not-started');
+        return;
+      }
+      if (!res.ok) {
+        setPaper(null);
+        setPaperStatus('error');
+        return;
+      }
+      const data: PaperData = await res.json();
+      setPaper(data);
+      setPaperStatus('ok');
+    } catch {
+      // sieć niedostępna — jak przy /api/state, cicho (bot offline w dev bywa normą)
+      setPaper(null);
+      setPaperStatus('error');
+    }
+  }, [apiBase, apiToken]);
+
+  useEffect(() => {
+    fetchPaper();
+    const id = setInterval(fetchPaper, PAPER_POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchPaper, tick]);
+
   const dismissProposal = useCallback(
     async (id: string) => {
       try {
@@ -180,5 +283,5 @@ export function useBotApi(): UseBotApi {
     setApiTokenState(v);
   }, []);
 
-  return { state, status, error, apiBase, apiToken, setApiBase, setApiToken, dismissProposal, refresh };
+  return { state, status, error, apiBase, apiToken, setApiBase, setApiToken, dismissProposal, refresh, paper, paperStatus };
 }
