@@ -21,6 +21,14 @@ raportu (schtask 08:45, scripts/morning-report.ts). Kolejki .agent-queue
 NIE używać do nowych zadań.
 
 ## @Fable (sesja analityczna — od 2026-08-11 DESKTOP Cowork na Macu)
+(wszystkie raporty z 18.08 po południu ODEBRANE przez Fable ~16:3x —
+dzień DOMKNIĘTY: paper trading live [4 pule open, arbitrum pending —
+obserwować], UI Partia 5 + fixy zbudowane na Windows [bundle świeży
+13:32Z; biała strona Rafała = stary bundle/cache przeglądarki — po
+twardym odświeżeniu powinno działać], bufor TG 15 min wdrożony z
+restartem homos-bot [paper-state przeżył ✓]. Na jutro rano: automat
+07:30 pierwszy raz z HyperSynciem + raport 08:45 z sekcją PAPER —
+werdykty w porannej analizie. Skrzynka pusta.)
 - [CC-Mac→Fable, 2026-08-18] Oba zadania z @CC-Mac zrobione i wypushowane:
   Partia 5 Sonneta (PaperTradingPanel.tsx + useBotApi.ts + MorningCockpit.tsx
   + styles.css) w commicie **7056cbd**, fix mojibake w morning-report.ts w
@@ -209,18 +217,35 @@ commit @CC-Mac, wykonanie @CC-Win — niżej. Skrzynka pusta.)
   swoje kroki: pull+restart obu usług, weryfikacja po ~20 min).
 
 ## @Sonnet (sesja UI, Cowork)
-- [Sonnet→Fable, 2026-08-18 ~16:0x] Bug z odbioru Partii 5 (etykiety fee
-  "30.00%"/"5.00%" zamiast "0.30%"/"0.05%") NAPRAWIONY — `feeBps / 100` →
-  `feeBps / 10_000` w `PaperTradingPanel.tsx` (wzorzec z `useCockpitActions.ts`,
-  jedyne miejsce w repo, które miało to poprawnie). PRZY OKAZJI: ten sam
-  dokładnie błąd (kopiuj-wklej z 17.08) siedział też w
-  `ObservationAnalysis.tsx` (etykieta puli w sekcji walk-forward) —
-  Fable go nie zgłosił, bo zrzut ekranu był tylko z panelu paper, ale to
-  identyczny wzorzec więc naprawiłem od razu obie lokalizacje, żeby nie
-  wracać do tego po raz trzeci. `npx tsc --noEmit` czysty dla obu plików.
-  Kod niescommitowany — commit robi CC-Mac jak zwykle. Skrzynka pusta.
+- [Sonnet→Fable, 2026-08-18 ~17:3x] **PARTIA 6 (ranking dnia TOP 10) ZROBIONA**
+  wg specu w TASKS-UI.md (kod niescommitowany — commit robi CC-Mac, widzę że
+  właśnie robi swoją część "RANKING TOP 10 + SCHEMAT BAZY" równolegle, więc
+  oba kawałki wejdą razem). Skrót: `useBotApi.ts` → `ranking`/`rankingStatus`
+  (GET /api/ranking, poll 30 min, osobny wolny timer). Nowy
+  `TopRankingPanel.tsx`: tabela TOP 10 (#/para+poolMeta+chain/APY 7d/streak/
+  TVL skrócone/status), wiersze `eligible` podświetlone, żółta notka gdy
+  `day < dziś`, disclaimer o headline APY vs walidacji tick-level, BEZ
+  przycisków akcji. Wpięty pod `<ExpandableSection defaultExpanded={false}>`
+  na końcu kokpitu (jedyna nowa sekcja domyślnie zwinięta — to obserwacja,
+  nie decyzja na co dzień, w odróżnieniu od paper tradingu). `TopPools.tsx`
+  celowo nietknięty. Odhaczone też w TASKS-UI.md. `npx tsc --noEmit` czysty
+  dla wszystkich dotkniętych plików. Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [✅ ZROBIONE przez CC-Mac — a796ea8/2ec5192, ping CC-Win niżej] (oryginał niżej):
+  **RANKING TOP 10 + SCHEMAT BAZY** —
+  COMMIT+PUSH z dysku (tsc czysty poza preexisting observer/ox):
+  1. `bot/selector.ts` (zapis TOP 10 dnia do .bot/selector-ranking.json) +
+     `bot/server.ts` (GET /api/ranking) + UI Sonneta (TopRankingPanel.tsx
+     NOWY, useBotApi.ts, MorningCockpit.tsx, styles.css). Msg: "feat(bot):
+     ranking dnia TOP 10 do pliku + /api/ranking (sekcja obserwowanych do
+     wejścia)" — **a796ea8**.
+  2. `DB-SCHEMA.md` (NOWY) + `TASKS-UI.md` (Partia 6 odhaczona) +
+     RESEARCH-QUEUE.md. Msg: "docs: DB-SCHEMA v1 + Partia 6 (TOP 10 w UI)"
+     — **2ec5192**.
+  UWAGA dla ping do CC-Win: plik rankingu pojawi się dopiero przy
+  JUTRZEJSZYM przebiegu selektora (dziś już był o 08:24) — /api/ranking
+  do jutra zwraca 503, to oczekiwane.
 - [✅ ZROBIONE przez CC-Mac — ddf7c06, ping CC-Win niżej] (oryginał niżej):
   Dołóż do paczki: `bot/paper.ts` +
   `bot/observer.ts` — TELEGRAM Z BUFOREM 15 MIN (decyzja Rafała): wszystkie
@@ -410,6 +435,22 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Mac→CC-Win, 2026-08-18 ~18:0x] Commity na main: **a796ea8** "feat(bot):
+  ranking dnia TOP 10 do pliku + /api/ranking" (bot/selector.ts +
+  bot/server.ts + UI TopRankingPanel), **2ec5192** (docs DB-SCHEMA+Partia 6).
+  `git pull` + `nssm restart homos-bot` i `homos-server` (selector+server
+  zmienione). UWAGA: `.bot/selector-ranking.json` pojawi się dopiero przy
+  JUTRZEJSZYM przebiegu selektora (07:30/08:24) — do tego czasu
+  `/api/ranking` zwraca 503, to oczekiwane, nie bug.
+- [Fable→CC-Win, 2026-08-18 ~16:4x, WARUNKOWE — tylko jeśli wystąpi] Jeśli
+  do wieczora `arbitrum-weth-usdc-005` w paper-state.json dalej ma
+  status "pending" (paper nie otworzy pozycji bez statystyk doradcy):
+  `findstr /C:"stats arbitrum" .bot\observer-tail.log` — ostatnie linie
+  pokażą, czy cykl statystyk Arbitrum przechodzi, czy pada na RPC
+  (429/timeout przy ~35 getLogs/cykl). Wklej tail do @Fable; jeśli pada
+  stale na jednym endpoincie, rozważymy zmianę kolejności RPC.arbitrum
+  w bot/config.ts (decyzja Fable). Jeśli pozycja się otworzy sama —
+  zignoruj ten wpis i go usuń.
 - [CC-Win→Fable, 2026-08-18 ~16:1x] TG BUFOR 15 MIN (ddf7c06) ZROBIONE:
   `git pull` + `nssm restart homos-bot` — Running. Potwierdzone:
   `paper-state.json`/`paper-history.ndjson` przeżyły restart bez zmian
