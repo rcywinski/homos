@@ -1704,3 +1704,130 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   .forecast-regime-table { font-size: 12px; }
   .forecast-regime-table th, .forecast-regime-table td { padding: 3px 4px; }
 }
+
+/* --- UI session: PaperTradingPanel.tsx (TASKS-UI.md Partia 5) — wizualizacja
+   paper-tradingu (bot/paper.ts). Wzorzec morning-*/telemetry-*/forecast-* --- */
+.paper-positive {
+  color: #1a7a3c;
+}
+.paper-total-header {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+.paper-total-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.paper-total-value {
+  font-size: 20px;
+  font-weight: 600;
+}
+.paper-subtitle {
+  font-size: 11px;
+  margin-bottom: 12px;
+}
+.paper-pool-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.paper-pool-card {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fafafa;
+}
+.paper-pool-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.paper-pool-equity {
+  font-weight: 600;
+}
+.paper-badge-trend-down {
+  color: #e04334;
+}
+.paper-pool-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-bottom: 6px;
+}
+.paper-pool-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 13px;
+  min-width: 90px;
+}
+.paper-pool-stat .muted {
+  font-size: 11px;
+}
+.paper-pool-stat-hodl span:last-child {
+  font-weight: 600;
+}
+.paper-hedge-line {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.paper-sparkline {
+  display: block;
+  width: 100%;
+  height: 46px;
+}
+.paper-spark-equity {
+  stroke: #1a6ae0;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+.paper-spark-hodl {
+  stroke: #999;
+  stroke-width: 1.2;
+  stroke-dasharray: 3 2;
+  vector-effect: non-scaling-stroke;
+}
+.paper-events-title {
+  margin-top: 6px;
+}
+.paper-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+.paper-event-row {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 3px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+.paper-event-row:last-child {
+  border-bottom: none;
+}
+.paper-event-date {
+  white-space: nowrap;
+}
+.paper-event-pool {
+  flex: 1;
+}
+.paper-disclaimer {
+  font-size: 11px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #ddd;
+}
+@media (max-width: 480px) {
+  .paper-total-header { gap: 10px; }
+  .paper-total-value { font-size: 17px; }
+  .paper-pool-stat { min-width: 45%; }
+  .paper-event-row { flex-wrap: wrap; }
+}

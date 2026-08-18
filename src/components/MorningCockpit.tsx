@@ -22,6 +22,8 @@ import ObservationAnalysis from './ObservationAnalysis';
 import ForecastPanel from './ForecastPanel';
 import CockpitPositionActions, { CloseModal, RebalanceModal } from './CockpitPositionActions';
 import RebalanceSequenceModal from './RebalanceSequenceModal';
+import PaperTradingPanel from './PaperTradingPanel';
+import ExpandableSection from './ExpandableSection';
 
 const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -424,6 +426,10 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
               })}
             </div>
           )}
+
+          <ExpandableSection title="📊 Paper trading" defaultExpanded={true}>
+            <PaperTradingPanel bot={bot} />
+          </ExpandableSection>
 
           <BotTelemetry bot={bot} />
           <ForecastPanel bot={bot} />
