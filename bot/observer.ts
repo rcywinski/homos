@@ -160,7 +160,18 @@ function expireStaleProposals() {
   }
 }
 
-async function telegram(text: string) {
+// --- Telegram: BUFOR 15 min (decyzja Rafała 18.08) ---
+// Wiadomości NIE wychodzą od razu: zbierają się w kolejce i co 15 min lecą
+// JEDNĄ zbiorczą wiadomością. Powody: (1) anty-spam — seria zdarzeń z jednego
+// cyklu to jeden komunikat; (2) limit Telegrama ~1 msg/s per czat — burst
+// >1 dostawał 429 bez retry i przepadał (18.08: z 5 STARTów paper doszedł 1).
+// Koszt: opóźnienie do 15 min — akceptowalne w trybie OBSERWUJ (człowiek
+// i tak zatwierdza w Rabby, nic nie wykonuje się samo).
+const tgQueue: string[] = [];
+const TG_FLUSH_MS = 15 * 60 * 1000;
+const TG_CHUNK = 3900; // twardy limit Telegrama: 4096 znaków/wiadomość
+
+async function telegramSendNow(text: string) {
   const t = process.env.TG_TOKEN, c = process.env.TG_CHAT;
   if (!t || !c) return;
   try {
@@ -171,6 +182,29 @@ async function telegram(text: string) {
   } catch (e) {
     log(`telegram error: ${e}`);
   }
+}
+
+/** publiczny interfejs (używany wszędzie) — tylko dokłada do kolejki */
+async function telegram(text: string) {
+  tgQueue.push(text);
+}
+
+async function flushTelegram() {
+  if (!tgQueue.length) return;
+  const msgs = tgQueue.splice(0, tgQueue.length);
+  // sklejanie w paczki ≤TG_CHUNK bez cięcia pojedynczych wiadomości w pół
+  const batches: string[] = [];
+  let cur = '';
+  for (const m of msgs) {
+    if (cur && cur.length + 2 + m.length > TG_CHUNK) { batches.push(cur); cur = m; }
+    else cur = cur ? `${cur}\n\n${m}` : m;
+  }
+  if (cur) batches.push(cur);
+  for (const b of batches) {
+    await telegramSendNow(b);
+    if (batches.length > 1) await new Promise((r) => setTimeout(r, 1500)); // limit 1 msg/s
+  }
+  log(`telegram: wysłano ${msgs.length} wiadomości w ${batches.length} paczce/paczkach`);
 }
 
 // --- orientacja cen per pula ---
@@ -526,5 +560,6 @@ function runSelector() {
   setInterval(runSelector, 60 * 60 * 1000); // co godzinę sprawdza, czy dziś już był
   expireStaleProposals();
   setInterval(expireStaleProposals, 60 * 60 * 1000);
+  setInterval(flushTelegram, TG_FLUSH_MS); // zbiorcza wiadomość TG co 15 min
   log('pętle uruchomione (60s ceny / 15min statystyki / 5min pozycje / selektor 1×dziennie po 8:00)');
 })();

@@ -159,6 +159,9 @@ function openPosition(pos: PaperPosition, p: BotPool, pr: LegPrices, stats: Pool
 /** jeden przebieg paper-tradingu — wołać po cyklu statystyk observera (15 min) */
 export function paperTick(ctx: PaperCtx) {
   const now = Date.now();
+  // milestony zbierane per CYKL i wysyłane JEDNĄ wiadomością — Telegram dławi
+  // >1 msg/s do czatu (429 bez retry = zguba; lekcja 18.08: z 5 STARTów doszedł 1)
+  const notes: string[] = [];
   for (const p of BOT_POOLS) {
     try {
       const lv = ctx.getPool(p.id);
@@ -178,7 +181,7 @@ export function paperTick(ctx: PaperCtx) {
         if (lv.stats) {
           openPosition(pos, p, pr, lv.stats, CAPITAL_USD, 'OPEN', ctx);
           const m = `📊 PAPER: START ${p.id} — $${CAPITAL_USD} w zakresie ±${((state.positions[p.id].tickUpper! - state.positions[p.id].tickLower!) / 2 * 0.0001 * 100).toFixed(1)}% (symulacja, nic nie wykonano)`;
-          ctx.log(m); void ctx.telegram(m);
+          ctx.log(m); notes.push(m);
           save();
         }
         continue;
@@ -211,7 +214,7 @@ export function paperTick(ctx: PaperCtx) {
           pos.liquidity = undefined;
           event(p.id, 'EXIT_TREND', { valueUsd: value, costUsd: cost });
           const m = `📊 PAPER: EXIT_TREND ${p.id} — zamykam wirtualnie $${value.toFixed(0)} do cash (koszt $${cost.toFixed(2)}); wrócę po zgaśnięciu sygnału`;
-          ctx.log(m); void ctx.telegram(m);
+          ctx.log(m); notes.push(m);
         } else if (!pos.hedge) {
           // hedge-excess: short nadwyżki tokena bazowego ponad 50% wartości
           const baseAmt = pos.liquidity! * amountsPerL(pr.human, tickToHuman(pos.tickLower!, p.d0, p.d1), tickToHuman(pos.tickUpper!, p.d0, p.d1))[p.ethIsToken0 ? 'a0' : 'a1'];
@@ -223,7 +226,7 @@ export function paperTick(ctx: PaperCtx) {
             pos.costsUsd += taker;
             event(p.id, 'HEDGE_OPEN', { sizeBase, entryUsd: baseUsd, takerUsd: taker });
             const m = `📊 PAPER: HEDGE ${p.id} — wirtualny short ${sizeBase.toFixed(4)} @ $${baseUsd.toFixed(0)} (~$${(sizeBase * baseUsd).toFixed(0)}); LP zostaje`;
-            ctx.log(m); void ctx.telegram(m);
+            ctx.log(m); notes.push(m);
           }
         }
       }
@@ -239,7 +242,7 @@ export function paperTick(ctx: PaperCtx) {
           event(p.id, 'HEDGE_CLOSE', { pnlUsd: pnl, takerUsd: taker, exitUsd: baseUsd });
           const m = `📊 PAPER: HEDGE CLOSE ${p.id} — PnL shorta $${(pnl - taker).toFixed(2)} (w tym funding $${pos.hedge.fundingUsd.toFixed(2)})`;
           pos.hedge = null;
-          ctx.log(m); void ctx.telegram(m);
+          ctx.log(m); notes.push(m);
         }
       }
 
@@ -250,7 +253,7 @@ export function paperTick(ctx: PaperCtx) {
         pos.costsUsd += cost;
         openPosition(pos, p, pr, lv.stats, capital - cost, 'REENTRY', ctx);
         const m = `📊 PAPER: REENTRY ${p.id} — sygnał zgasł, otwieram ponownie $${(capital - cost).toFixed(0)}`;
-        ctx.log(m); void ctx.telegram(m);
+        ctx.log(m); notes.push(m);
       }
 
       // REBALANS: histereza 24h poza zakresem + payback ≤7d
@@ -272,7 +275,7 @@ export function paperTick(ctx: PaperCtx) {
             pos.rebalances += 1;
             openPosition(pos, p, pr, lv.stats, capital, 'REBALANCE', ctx);
             const m = `📊 PAPER: REBALANS ${p.id} (#${pos.rebalances}) — nowy zakres, kapitał $${capital.toFixed(0)}, koszt $${cost.toFixed(2)}, payback ~${a.paybackDays?.toFixed(1)}d`;
-            ctx.log(m); void ctx.telegram(m);
+            ctx.log(m); notes.push(m);
           }
           // payback za długi → czekamy dalej (histereza biegnie, sprawdzimy za cykl)
         }
@@ -297,5 +300,6 @@ export function paperTick(ctx: PaperCtx) {
       ctx.log(`paper ${p.id} failed: ${String(e).slice(0, 140)}`);
     }
   }
+  if (notes.length) void ctx.telegram(notes.join('\n\n'));
   save();
 }
