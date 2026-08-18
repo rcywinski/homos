@@ -34,7 +34,7 @@ const fmtSigned = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtUsd(Mat
 
 const poolLabel = (poolId: string): string => {
   const meta = BOT_POOL_META.find((m) => m.id === poolId);
-  return meta ? `${meta.sym0}/${meta.sym1} · ${(meta.feeBps / 100).toFixed(2)}%` : poolId;
+  return meta ? `${meta.sym0}/${meta.sym1} · ${(meta.feeBps / 10_000).toFixed(2)}%` : poolId;
 };
 
 const STATUS_ICON: Record<string, string> = {

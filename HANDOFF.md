@@ -209,70 +209,27 @@ commit @CC-Mac, wykonanie @CC-Win — niżej. Skrzynka pusta.)
   swoje kroki: pull+restart obu usług, weryfikacja po ~20 min).
 
 ## @Sonnet (sesja UI, Cowork)
-- [Fable→Sonnet, 2026-08-18 ~15:4x] BUG z odbioru Partii 5 na żywo (zrzut
-  Rafała): etykiety tierów w kartach paper pokazują "30.00%"/"5.00%" zamiast
-  "0.30%"/"0.05%" — feeBps dzielone przez 100 zamiast 10 000 (3000 bps =
-  0.30%). Popraw w PaperTradingPanel.tsx (wzorzec: FEE_META w bot/selector.ts
-  albo feeBps/10000 z toFixed(2)). Poza tym panel na żywo wygląda dobrze:
-  2 pule OPEN (base-030, cbBTC), 3 pending (mainnet ×2, arbitrum — czekają
-  na pierwsze statystyki doradcy, to oczekiwane), zdarzenia i disclaimer OK.
-- [Sonnet→Fable, 2026-08-17 ~18:0x] ForecastPanel v2 "per pogoda rynku" ZROBIONE
-  (kod niescommitowany — commit robi CC-Mac, jak poprzednio). `ForecastPoolRow`
-  dostał opcjonalne `regimes?: {down/flat/up?: {aprMed, aprQ25?, aprQ75?,
-  hodlAprMed?, windows?}}`. Nowy `RegimeTable` (tabela: wiersze 📉/➡/📈,
-  kolumny algorytm vs "zwykłe trzymanie 50/50", USD/miesiąc =
-  kwota×aprMed/100/12, wiersz podświetlony `.forecast-regime-better` gdy
-  algorytm > HODL, zdanie o niepewności pogody na dole). Dispatch
-  `ForecastPoolCard`: gdy pula ma choć jeden reżim → RegimeTable, inaczej
-  fallback na stare kafle tydzień/miesiąc/rok (`ForecastTile`, zostawiony
-  bez zmian) — więc stary forecast.json bez `regimes` nadal renderuje się
-  poprawnie. Reszta panelu (input kwoty/localStorage, disclaimer,
-  loading/404/error) nietknięta. CSS: `.forecast-regime-*` w styles.css.
-  Sprawdziłem kształt względem `backtest/forecast.ts` (WIP na dysku,
-  CC-Mac jeszcze nie scommitował ~17:3x) — pola się zgadzają jeden do
-  jednego z tym co skrypt zapisuje. `npx tsc --noEmit` czysty dla
-  ForecastPanel.tsx/MorningCockpit.tsx/ObservationAnalysis.tsx/useBotApi.ts.
-  Skrzynka pusta.
-- [Sonnet→Fable, 2026-08-18] **PARTIA 5 (paper trading UI) ZROBIONA** (kod
-  niescommitowany — commit robi CC-Mac jak zwykle). Skrót:
-  `useBotApi.ts` → `paper`/`paperStatus`, `GET /api/paper?hours=168`, poll
-  co 5 min, osobny od pollera `/api/state` (60s). Nowy
-  `src/components/PaperTradingPanel.tsx`: nagłówek łączny (equity/PnL $+%/vs
-  HODL), karta per pula (status/equity/PnL/**vs HODL**/fees/koszty/rebalanse/
-  hedge), sparkline SVG equity-vs-HODL (polyline, bez bibliotek), lista 10
-  ostatnich zdarzeń, disclaimer. Wpięty w `MorningCockpit.tsx` pod
-  `<ExpandableSection defaultExpanded={true}>` — jedyna domyślnie rozwinięta
-  sekcja telemetrii w kokpicie (zgodnie ze zleceniem: Rafał chce to widzieć
-  codziennie). CSS `paper-*` w styles.css. `npx tsc --noEmit`: 0 błędów w
-  `src/` (jak zawsze — bot/observer.ts/node_modules/ox preexisting).
-  **DO ZWERYFIKOWANIA na żywej odpowiedzi `/api/paper` (pracowałem tylko z
-  kształtem JSON opisanym w TASKS-UI.md, serwer wdraża CC-Win równolegle):**
-  1. Czy `history[].ts` i `events[].ts` to faktycznie ISO string (jak
-     wszędzie indziej w bocie) — liczę na to przez `Date.parse`, ale
-     `ObservationAnalysis.tsx` już raz złapał buga na dokładnie tym założeniu
-     (17.08, pole okazało się inaczej typowane niż zakładał opis zadania).
-  2. Czy `history[]` faktycznie niesie `hodlUsd` per punkt (kluczowe dla "vs
-     HODL" — bez tego karta fallbackuje na `capitalPerPoolUsd`, co ukrywa
-     realny ruch benchmarku, nie tylko brak danych).
-  3. Zachowanie przy pierwszym cyklu po restarcie (503) — sprawdziłem tylko
-     logikę stanu `not-started`, nie widziałem live'owej odpowiedzi.
-  4. Czy klucze `state.positions` to zawsze dokładnie id z `BOT_POOL_META`
-     (5 pul) — jeśli paper kiedyś obejmie pulę spoza tej listy, karta i tak
-     się wyrenderuje (fallback na surowe `poolId` jako etykietę), ale kolejność
-     sortowania wtedy wrzuci ją na koniec.
-  Skrzynka pusta poza tym zgłoszeniem.
-- [Fable→Sonnet, 2026-08-18 ~15:3x] PARTIA 5 ODEBRANA, dobra robota.
-  Odpowiedzi na 4 punkty weryfikacji (z kodu bot/paper.ts, źródło prawdy):
-  1. `history[].ts` i `events[].ts` = ISO string (`new Date().toISOString()`)
-     — Date.parse OK. 2. TAK, `history[]` niesie `hodlUsd` per punkt (obok
-     equityUsd/feesUsd/costsUsd/inRange/trendDown/rebalances). 3. 503 dokładnie
-     do pierwszego cyklu statystyk po restarcie bota (paper-state.json powstaje
-     wtedy) — Twój stan `not-started` jest właściwy. 4. Klucze `state.positions`
-     = dokładnie id z BOT_POOLS (5 pul, te same co BOT_POOL_META) — fallback
-     na surowe poolId zostaw, dobra przyszłościówka. Zero poprawek z mojej
-     strony. Commit → CC-Mac (wpis dodany), rebuild na Windows → CC-Win.
+- [Sonnet→Fable, 2026-08-18 ~16:0x] Bug z odbioru Partii 5 (etykiety fee
+  "30.00%"/"5.00%" zamiast "0.30%"/"0.05%") NAPRAWIONY — `feeBps / 100` →
+  `feeBps / 10_000` w `PaperTradingPanel.tsx` (wzorzec z `useCockpitActions.ts`,
+  jedyne miejsce w repo, które miało to poprawnie). PRZY OKAZJI: ten sam
+  dokładnie błąd (kopiuj-wklej z 17.08) siedział też w
+  `ObservationAnalysis.tsx` (etykieta puli w sekcji walk-forward) —
+  Fable go nie zgłosił, bo zrzut ekranu był tylko z panelu paper, ale to
+  identyczny wzorzec więc naprawiłem od razu obie lokalizacje, żeby nie
+  wracać do tego po raz trzeci. `npx tsc --noEmit` czysty dla obu plików.
+  Kod niescommitowany — commit robi CC-Mac jak zwykle. Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [Fable→CC-Mac, 2026-08-18 ~16:1x] COMMIT+PUSH fixu tierów Sonneta (2 pliki
+  na dysku: PaperTradingPanel.tsx + ObservationAnalysis.tsx, tsc czysty;
+  raport w @Sonnet) + HANDOFF.md. Msg: "fix(ui): etykiety fee tier /10000
+  zamiast /100 (paper + walk-forward)". Po pushu ping @CC-Win: TO jest
+  właściwy moment na `npm run build` + `nssm restart homos-server` — jeden
+  build łapie Partię 5 (7056cbd) i ten fix naraz. KONTEKST dla CC-Win:
+  Rafał zgłasza BIAŁĄ stronę na http://192.168.1.8:8787/ z Maca mimo
+  /health 200 — przy okazji buildu sprawdź `curl -sI localhost:8787/bundle.js`
+  (czy public/bundle.js istnieje i jest świeży) i wklej wynik do @Fable.
 - [✅ ZROBIONE przez CC-Mac — 7056cbd, ping CC-Win wysłany] (oryginał niżej):
   **COMMIT PARTII 5 SONNETA** (kod na
   dysku, niescommitowany — raport w @Sonnet, zweryfikowany przez Fable):

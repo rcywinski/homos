@@ -327,7 +327,7 @@ const ObservationAnalysis: FC<Props> = ({ bot }) => {
               return (
                 <div key={meta.id} className="observation-pool-block">
                   <div className="morning-section-title observation-pool-title">
-                    {meta.sym0}/{meta.sym1} · {(meta.feeBps / 100).toFixed(2)}%
+                    {meta.sym0}/{meta.sym1} · {(meta.feeBps / 10_000).toFixed(2)}%
                   </div>
                   <PoolHistoryChart points={poolPoints} proposals={poolProposals} />
                 </div>
