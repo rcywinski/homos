@@ -19,7 +19,8 @@
     "backtest:selection": "tsx backtest/selection.ts",
     "pipeline": "tsx scripts/pipeline.ts",
     "scan": "tsx backtest/scan-universe.ts",
-    "runner:git": "tsx scripts/agent-runner-git.ts"
+    "runner:git": "tsx scripts/agent-runner-git.ts",
+    "report:morning": "tsx scripts/morning-report.ts"
   },
   "author": "HOMO$",
   "license": "ISC",

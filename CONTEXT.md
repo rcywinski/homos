@@ -834,6 +834,48 @@ na żywo (Rafał: 3 propozycje na telefonie 08:24). USTALENIA I DZIAŁANIA:
 OTWARTE dziś (Rafał): odczyt borrow/funding z testowego shorta GMX ($150,
 otwarty 17.08 ~16:00) + zamknięcie — główna niewiadoma kosztowa hedge.
 
+### 2026-08-18 ~09:3x — F4-op: ODCZYT KOSZTÓW TESTOWEGO SHORTA GMX (po ~17h)
+Zrzut z GMX (Rafał): margin $149.92, **borrow fee $0.00, negative funding
+fee $0.00** po ~17h utrzymania; PnL −$0.39 (−0.25% = ruch ceny ETH, nie
+koszt). ODCZYT: koszty CIĄGŁE utrzymania shorta na tym rynku/w tym oknie
+≈ zero (przy $150 nawet 15%/r dawałoby ~$0.06/dzień — wyświetliłoby się;
+zaokrąglenie w dół możliwe, ale rząd wielkości potwierdzony). Obawa o
+borrowing fee GMX (jedyna niemodelowana pozycja kosztowa) na razie NIE
+potwierdza się — próbka 17h, niska utylizacja; przy realnym hedge
+monitorować dalej (UI GMX pokazuje bieżący "Borrow Fee/Day" per rynek —
+odczytywać przy otwarciu, nie czekać dnia). Struktura kosztów przy tej
+skali: dominują STAŁE keeper fees ($0.39 otwarcie + ~$0.39 zamknięcie =
+~52 bps przy $150; przy docelowych $1.5–3k → 3–5 bps, pomijalne) — zgodnie
+z notą z 17.08. WNIOSEK: GMX jako venue hedge POTWIERDZONY kosztowo na
+poziomie testu; flow + koszty realne ≈ model (taker 4 bps, funding/borrow
+~0 w oknie testu). Pozycję można zamknąć — cel testu osiągnięty.
+
+### 2026-08-18 ~10:0x — F4-op: TEST GMX DOMKNIĘTY (short zamknięty, pełny bilans round-trip)
+Rafał zamknął testowy short (100% market, received 149.35 USDC z marginu
+149.92). PEŁNY BILANS CYKLU ($149.91 notional, ~18h):
+- **Koszty ciągłe: borrow $0.00, funding +$0.06 DLA NAS** (short DOSTAŁ
+  funding — kierunkowo zgodne z historią Binance +2.9%/r dla shorta;
+  $0.06/18h na $150 ≈ +2.0%/r annualizowane ✓ model). Claim +$0.06 na GMX
+  do odebrania przy okazji (drobiazg, nie gonić).
+- **Koszty stałe (keeper/network): $0.39 otwarcie + $0.41 zamknięcie =
+  $0.80/cykl** — przy $150 to ~53 bps, przy docelowych $1.5–3k → 3–5 bps.
+- **Koszty zmienne: otwarcie fee 4 bps + impact 0; zamknięcie fee 6 bps
+  + net price impact −12.8 bps** — razem ~23 bps/cykl vs model ~10–15
+  (taker 5+slippage 5). ⚠️ Impact przy ZAMKNIĘCIU (−0.128%) jedyna pozycja
+  wyraźnie ponad model — obserwować przy realnym sizingu $1.5–3k (GMX
+  liczy impact od skew OI, nie od rozmiaru vs książka; może być i lepiej,
+  i gorzej). PnL cenowy −$0.31 (ETH lekko w górę) — poza rachunkiem kosztów.
+- **RAZEM koszty round-trip bez ceny: ~$1.08 (~72 bps @ $150) → przy
+  $2k szacunkowo ~25–30 bps/cykl + funding zwykle NA PLUS.**
+WERDYKT F4-op: **GMX v2 zatwierdzony operacyjnie jako venue hedge-excess
+dla base-030** (flow Rabby ✓, koszty ≈ model ✓, borrow ≈ 0 ✓, funding
+dodatni ✓). Do ALGORITHM przy następnej rewizji: (1) stała rezerwa USDC
++ gaz ETH na Arbitrum (lekcja z 17.08), (2) korekta modelu kosztów hedge:
++6 bps close fee i impact do obserwacji, keeper $0.80/cykl stały.
+NASTĘPNY KROK F4: propozycje HEDGE bota (już emitowane dla base-030) mają
+realną, przetestowaną ścieżkę wykonania — zostaje decyzja kapitałowa
+(wejście LP w base-030) zanim hedge będzie miał co zabezpieczać.
+
 ### 2026-08-18 07:5x — Sesja Fable (poranny brief): brak śladów pipeline'u/selektora z dziś
 Rutyna: git log bez zmian od `a67ff78` (17.08 18:16) — zero nowych commitów
 runnera/CC; `.agent-queue/done/` bez nowych plików (ostatnie z 11.08).
