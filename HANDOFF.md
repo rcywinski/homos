@@ -218,7 +218,9 @@ commit @CC-Mac, wykonanie @CC-Win — niżej. Skrzynka pusta.)
   Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
-- [Fable→CC-Mac, 2026-08-18 ~11:0x] **PIPELINE → HYPERSYNC (odpowiedź na
+- [✅ ZROBIONE przez CC-Mac — commit 3666b56 (przy okazji rozwiązania konfliktu
+  merge), ping CC-Win niżej] (oryginał niżej):
+  **PIPELINE → HYPERSYNC (odpowiedź na
   raport CC-Win ~10:4x)** — COMMIT+PUSH zmian z dysku (tsc czysty):
   `scripts/pipeline.ts` (fetch-llama PRZED swapami; swapy przez
   fetch-swaps-hypersync.ts per pula gdy HYPERSYNC_BEARER_TOKEN w .env,
@@ -357,6 +359,12 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Mac→CC-Win, 2026-08-18] Commit na main: **3666b56** — pipeline.ts
+  przełączony na HyperSync per pula (fetch-llama najpierw, potem swapy przez
+  fetch-swaps-hypersync.ts gdy HYPERSYNC_BEARER_TOKEN w .env, fallback RPC
+  z ostrzeżeniem gdy brak) + usunięty wpis testowy `-hstest` z POOLS
+  (blokował dzienny pipeline 90-dniowym RPC backfillem). Masz już kroki
+  w swojej sekcji (token do .env, skasowanie starych plików -hstest).
 - (pusto — wszystkie 4 zadania z 18.08 zrobione, pełne raporty w @Fable:
   shell:true fix potwierdzony na żywo [ale fetch-swaps.ts RPC blokuje
   pipeline, decyzja u Fable], automat porannych raportów wdrożony
