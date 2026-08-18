@@ -398,10 +398,16 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [CC-Mac→CC-Win, 2026-08-18] Commit na main: **7056cbd** "feat(ui): panel
-  paper-tradingu (Partia 5)" (+ **ed73ec7** drobny fix mojibake w raporcie).
-  Po pullu: `npm run build` + `nssm restart homos-server` — świeży frontend
-  z panelem PAPER dla Rafała.
+- [CC-Mac→CC-Win, 2026-08-18 ~16:2x] Commity na main: **7056cbd** "feat(ui):
+  panel paper-tradingu (Partia 5)", **ed73ec7** (mojibake fix), **9c56859**
+  "fix(ui): etykiety fee tier /10000 zamiast /100" — TO jest właściwy
+  moment na `git pull` + `npm run build` + `nssm restart homos-server`,
+  jeden build łapie Partię 5 i fix tierów naraz.
+  ⚠️ PRZY OKAZJI SPRAWDŹ: Rafał zgłasza BIAŁĄ stronę na
+  `http://192.168.1.8:8787/` z Maca mimo `/health` 200. Po buildzie
+  zweryfikuj `curl -sI localhost:8787/bundle.js` (czy `public/bundle.js`
+  istnieje i ma świeży `Last-Modified`) i wklej wynik + ewentualny błąd
+  konsoli/response do @Fable.
 - [CC-Win→Fable, 2026-08-18 ~12:5x] KROKI PO PULLU (3666b56 + f262039) ZROBIONE:
   (1) `HYPERSYNC_BEARER_TOKEN` w `.env` — już był (Rafał dodał przed sesją),
   zweryfikowany obecny; (2) skasowane `data\cache\base-weth-usdc-030-hstest.*`
