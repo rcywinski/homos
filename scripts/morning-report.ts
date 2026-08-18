@@ -66,9 +66,19 @@ const ptask = readSafe(path.join(DATA, 'pipeline-task.log'));
 if (ptask) sections.push('## pipeline-task.log (tail)\n```\n' + tail(ptask, 12) + '\n```');
 
 // --- selektor: linie z ostatnich 2 dni ---
+// observer-tail.log na Windows bywa podwójnie zakodowany (UTF-8 przepuszczone
+// przez cp1250 przy przekierowaniu konsoli) — mapa najczęstszych sekwencji
+// mojibake dla polskich znaków (zgłoszone przez CC-Win 18.08, kosmetyka).
+const MOJIBAKE: Array<[RegExp, string]> = [
+  [/Ä…/g, 'ą'], [/Ä‡/g, 'ć'], [/Ä™/g, 'ę'], [/Ĺ‚/g, 'ł'], [/Ĺ„/g, 'ń'],
+  [/Ăł/g, 'ó'], [/Ĺ›/g, 'ś'], [/Ĺş/g, 'ź'], [/Ĺź/g, 'ż'], [/Ĺ»/g, 'Ż'],
+  [/Ĺš/g, 'Ś'], [/Ĺ /g, 'Ł '], [/â€”/g, '—'], [/â€“/g, '–'], [/â‰Ą/g, '≥'],
+  [/â‰¤/g, '≤'], [/â†’/g, '→'],
+];
+const demojibake = (s: string) => MOJIBAKE.reduce((acc, [re, ch]) => acc.replace(re, ch), s);
 const olog = readSafe(path.join(BOT, 'observer-tail.log'));
 if (olog) {
-  const sel = olog.split('\n').filter((l) => /selector:|ranking dnia/i.test(l));
+  const sel = olog.split('\n').filter((l) => /selector:|ranking dnia/i.test(l)).map(demojibake);
   sections.push('## selektor (linie z observer-tail.log, ostatnie 30)\n```\n' + sel.slice(-30).join('\n') + '\n```');
 } else sections.push('## selektor\nBRAK .bot/observer-tail.log');
 
