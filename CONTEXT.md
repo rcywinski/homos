@@ -788,6 +788,52 @@ sceptyczny). Otwarte na jutro: odczyt borrow/funding z testowego shorta
 GMX + zamknięcie (Rafał), brief 07:50 (pierwszy pełny cykl po naprawie
 pipeline), start dziennika trafności selektora.
 
+### 2026-08-18 ~09:00 — Fable: PORANNA ANALIZA — diagnoza CC-Win + 2 bugi naprawione + start dziennika trafności
+Odpowiedź CC-Win odebrana (HANDOFF, commit 29a7991), Telegram potwierdzony
+na żywo (Rafał: 3 propozycje na telefonie 08:24). USTALENIA I DZIAŁANIA:
+1. **Pipeline 07:30 NADAL pada — ale z innej przyczyny niż sądziliśmy.**
+   Naprawa konta SYSTEM→elo (17.08) nie pomogła, bo root cause to
+   `spawn('npx')` bez `shell:true` w `scripts/pipeline.ts:38` — na Windows
+   spawn() nie uruchamia plików .cmd (npx=npx.cmd) → ENOENT niezależnie od
+   konta. Diagnoza CC-Win zweryfikowana w kodzie: TRAFNA. **FIX (Fable, na
+   dysku, czeka na commit CC-Mac):** `shell: process.platform==='win32'` w
+   pipeline.ts — DOKŁADNIE ten wzorzec, który już działa w agent-runner-git.ts:79
+   na tym samym serwerze. Ten sam guard dopisany do agent-runner.ts:93
+   (stary mostek, spawn('npm') — ta sama klasa błędu). Lekcja do kolekcji
+   "Node na Windows": spawn dowolnego .cmd/.bat wymaga shell:true — to już
+   CZWARTA odsłona tej klasy (pm2 npx → tsx cli, NSSM SYSTEM→elo, schtask
+   konto, teraz spawn bez shell).
+2. **Selektor mimo to ZADZIAŁAŁ** (dane z ręcznego fetch:llama CC-Win,
+   18h < 26h): ranking dnia = WETH-CBBTC@Base 25.2%, USDC-WETH@Ethereum
+   21.5%, WETH-USDC@Base 20.0%, WETH-USDT@Ethereum 13.2/11.0. 3 propozycje
+   (Telegram 08:24): OPEN WETH-CBBTC 0.05 Base, OPEN WETH-USDC 0.3 Base,
+   ROTATE #953427→WETH-CBBTC "payback 4.8d".
+3. **BUG EKONOMII ROTATE złapany 1. dnia pomiaru trafności**: propozycja
+   rotacji pozycji-pyłka #953427 ($2.08, mainnet) z "paybackiem 4.8d" —
+   breakEvenDays liczony był CZYSTO PROCENTOWO (SWITCH_COST_PCT/edge),
+   bez wartości USD pozycji i bez stałego gazu; realny koszt (~$8 gaz
+   mainnet) to 4× wartość pozycji. **FIX (Fable, bot/selector.ts, na
+   dysku):** koszt przejścia w USD (0.3% proporcjonalnie + gaz per sieć
+   8/0.1/0.2 jak w backtest/engine.ts, po połowie cyklu na zamknięcie
+   i otwarcie) / dzienna przewaga w USD na TEJ pozycji + próg
+   MIN_ROTATE_USD=$25 (pyłki pomijane z logiem). Dla #953427: payback
+   ~10 000 dni → poprawnie odrzucane. Typecheck czysty (tylko preexisting
+   observer.ts/getBlock).
+4. **Dziennik trafności selektora WYSTARTOWAŁ**: nowy plik SELECTOR-LOG.md
+   (wpisy 17.08 WETH-USDT odrzucona ✓ i 18.08 — 3 propozycje z oceną).
+5. **Ocena propozycji dnia**: WETH-CBBTC 0.05 Base — pula w pełni
+   zwalidowana (bramka PASS), propozycja merytorycznie OK, wykonanie =
+   decyzja kapitałowa (wciąż OBSERWUJ). WETH-USDC 0.3 Base — zwalidowana
+   warunkowo (bramka tylko z hedge-excess v1.2; hedge wykonawczo
+   niezintegrowany → fallback EXIT_TREND). ROTATE — błędna (pkt 3).
+6. **RYZYKO NA JUTRO** (za CC-Win): universe.json przekroczy 26h przed
+   pipeline 07:30 19.08 — jeśli fix nie wejdzie na Windows do wieczora,
+   selektor odmówi ("stęchłe dane"). Ścieżka: CC-Mac commit+push (wpis w
+   HANDOFF) → CC-Win pull + restart homos-bot; fallback: ręczny fetch:llama
+   CC-Win wieczorem.
+OTWARTE dziś (Rafał): odczyt borrow/funding z testowego shorta GMX ($150,
+otwarty 17.08 ~16:00) + zamknięcie — główna niewiadoma kosztowa hedge.
+
 ### 2026-08-18 07:5x — Sesja Fable (poranny brief): brak śladów pipeline'u/selektora z dziś
 Rutyna: git log bez zmian od `a67ff78` (17.08 18:16) — zero nowych commitów
 runnera/CC; `.agent-queue/done/` bez nowych plików (ostatnie z 11.08).
