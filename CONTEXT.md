@@ -760,6 +760,56 @@ link do GMX) zamiast czystego EXIT_TREND — implementacja po teście ręcznym;
 (3) uproszczenia modelu backtestu do pamiętania: borrowing fee GMX NIE był
 modelowany (model = taker 5 bps + funding Binance — bliższy Hyperliquid).
 
+### 2026-08-17 (~20:00) — PIERWSZY WERDYKT LEJKA SELEKTORA: WETH-USDT 0.01% mainnet = NIE
+Walidacja tick-level kandydata z dzisiejszego żywego rankingu (5.74M swapów,
+365d, 22 okna): **ODRZUCONY** — wszystkie strategie z ujemną średnią vsHODL
+(pasywny −0.81, k2 −0.78, k3 −1.46), worst −10…−12, zero konfiguracji
+w pobliżu bramki. Zgodne z priorem (mainnet gaz + tier 0.01%). Headline
+11% APR z rankingu ≠ osiągalny wynik LP — kolejne potwierdzenie, że lejek
+(ranking → tick-level → bramka) jest konieczny. Do dziennika trafności:
+propozycja OPEN z 17.08 oceniona jako poprawnie ODRZUCONA przez walidację.
+BONUS: walidacja wykryła buga silnika — probe-swapy (sondy przez puste
+ticki, ±13–20k ticków) wybijały fałszywy sygnał trendu i warianty exit
+"traciły" −100%. Fix: filtr probe-swapów w loadPool (>1000 ticków od
+rolling-mediany; na głębokich pulach no-op — zweryfikowane na mainnet-030:
+0 odrzuconych). Baseline'y puli były policzone poprawnie — werdykt stoi.
+
+### 2026-08-17 (~wieczór) — POWIADOMIENIA TELEGRAM AKTYWNE + backlog mobilny
+Rafał założył bota Telegram, przetestował sendMessage (dochodzi na telefon),
+wpisał TG_TOKEN/TG_CHAT do .env na Windows i zrestartował homos-bot —
+**kanał push działa**: każda propozycja (REBALANCE/OPEN/ROTATE/EXIT_TREND/
+HEDGE) leci teraz alertem na telefon. Do sekcji H dopisane pomysły:
+zatwierdzanie z telefonu (deep-link z TG do karty PWA + WalletConnect →
+Rabby mobile — 2 partie Sonnet), moduł shortów kierunkowych (własna bramka
+przed budową), portfel sprzętowy (przez Rabby, zero zmian w kodzie),
+automatyzacja hedge 3-stopniowa. Zlecona walidacja pierwszego kandydata
+z żywego rankingu selektora (WETH-USDT 0.01% mainnet — CC-Mac, prior
+sceptyczny). Otwarte na jutro: odczyt borrow/funding z testowego shorta
+GMX + zamknięcie (Rafał), brief 07:50 (pierwszy pełny cykl po naprawie
+pipeline), start dziennika trafności selektora.
+
+### 2026-08-18 07:5x — Sesja Fable (poranny brief): brak śladów pipeline'u/selektora z dziś
+Rutyna: git log bez zmian od `a67ff78` (17.08 18:16) — zero nowych commitów
+runnera/CC; `.agent-queue/done/` bez nowych plików (ostatnie z 11.08).
+`.bot/*` NA MACU ISTNIEJE (inaczej niż zakładała poprzednia notatka), ale to
+STARY snapshot sprzed naprawy: ostatni wpis `observer-tail.log` 17.08 08:38,
+`selector-state.json` `lastRunDate: 2026-08-17`, ostatnia linia `selector:`
+z 06:09 to jeszcze komunikat o STĘCHŁYCH danych (157.9h) — sprzed przepięcia
+pipeline'u na konto elo. **Brak jakiegokolwiek śladu pierwszego pełnego cyklu
+07:30 na koncie elo (miał być dziś, 18.08) ani rankingu/propozycji z dziś** —
+niemożliwe do stwierdzenia stąd, czy pipeline w ogóle odpalił, czy selektor
+coś zaproponował. Dopisana prośba do @CC-Win (HANDOFF) o tail
+`observer.log`/`observer-tail.log` (linie `selector:` + `ranking dnia`)
+i `data\pipeline-task.log` z dzisiejszego przebiegu.
+**Pomiar trafności selektora**: brak nowej propozycji do zalogowania —
+dziennik (data / pula / APY z rankingu) ruszy dopiero gdy przyjdzie
+potwierdzenie świeżego rankingu z 18.08 lub później.
+**Brief dla Rafała**: system bez zmian od wczoraj wieczór (18:16) — żadnych
+nowych commitów ani propozycji. Nie widzę stąd, czy dzisiejszy pipeline
+07:30 (pierwszy od naprawy na koncie elo) w ogóle wystartował — poproszony
+CC-Win o wklejenie logów z Windows, sam sprawdzę jak dojdą. Nic nie wymaga
+Twojej decyzji teraz.
+
 ### 2026-08-17 (~18:20) — PROGNOZA ZYSKU v2 (per pogoda rynku) — WDROŻONA end-to-end
 Cykl domknięty w jeden wieczór (Fable spec+kod → CC-Mac rerun+forecast →
 Sonnet RegimeTable + fix NaN wykresów → CC-Win rebuild UI). Kluczowa decyzja

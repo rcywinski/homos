@@ -148,5 +148,39 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
     seen.add(k);
     return true;
   });
-  return { swaps: dedup, spec };
+  // FILTR PROBE-SWAPÓW (17.08, po anomalii WETH-USDT 0.01%: sondy przez puste
+  // ticki ±13–20k ticków od rynku wybijały fałszywy sygnał trendu i strategia
+  // "wychodziła" po absurdalnej cenie → −100%). Odrzucamy eventy odchylone
+  // > 1000 ticków (~10.5%) od rolling-mediany 201 swapów — prawdziwe ruchy
+  // (nawet flash-crashe) nie skaczą o 10% w obrębie ~200 swapów na pulach,
+  // które analizujemy; dla głębokich pul filtr to no-op (zweryfikowane:
+  // wyniki mainnet-030 identyczne). pegged.ts ma własny, ostrzejszy (300).
+  const OUTLIER_TICKS = 1000;
+  const W = 201;
+  const win: number[] = [];
+  const sortedW: number[] = [];
+  const ins = (v: number) => {
+    let lo = 0, hi = sortedW.length;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (sortedW[m] < v) lo = m + 1; else hi = m; }
+    sortedW.splice(lo, 0, v);
+  };
+  const del = (v: number) => {
+    let lo = 0, hi = sortedW.length;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (sortedW[m] < v) lo = m + 1; else hi = m; }
+    sortedW.splice(lo, 1);
+  };
+  const filtered: SwapEv[] = [];
+  let dropped = 0;
+  for (const s of dedup) {
+    if (win.length >= 50 && Math.abs(s.t - sortedW[sortedW.length >> 1]) > OUTLIER_TICKS) {
+      dropped++;
+      continue;
+    }
+    filtered.push(s);
+    win.push(s.t);
+    ins(s.t);
+    if (win.length > W) del(win.shift()!);
+  }
+  if (dropped) console.log(`[${id}] filtr probe-swapów: odrzucono ${dropped} (${((dropped / dedup.length) * 100).toFixed(4)}%)`);
+  return { swaps: filtered, spec };
 }

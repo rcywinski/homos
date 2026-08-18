@@ -250,7 +250,11 @@
 ## D. OPERACYJNE PRZYPOMNIENIA
 
 - [ ] Test fizycznego rebootu Windows (usługi NSSM mają wstać same).
-- [ ] TG_TOKEN/TG_CHAT w .env na Windows → alerty Telegram z propozycji.
+- [~] TG_TOKEN/TG_CHAT → alerty Telegram: bot Telegram ZAŁOŻONY i PRZETESTOWANY
+  17.08 (Rafał; sendMessage dochodzi na telefon, TG_CHAT=8712401405, token
+  u Rafała — NIE do repo). POZOSTAŁO: wpisać oba do `C:\Projects\homos\.env`
+  na Windows + `nssm restart homos-bot` (Rafał ręcznie albo CC-Win — token
+  trzeba przekazać poza gitem, np. wkleić bezpośrednio w terminalu Windows).
 - [ ] Poranne zadanie 8:00 "newsy → postawa ryzyka dnia" (zaplanowane zadanie
   Claude; użytkownik da znać kiedy utworzyć).
 - [ ] iPhone: wejść przez VPN na http://192.168.1.8:8787, Add to Home Screen (PWA).
