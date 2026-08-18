@@ -18,6 +18,7 @@
  *    runner auto-pull (reset --hard co 3 min) WYCOFANY decyzją Rafała
  *    18.08 — ten skrypt jest odtąd JEDYNYM automatem gitowym na Windows.
  */
+import 'dotenv/config';
 import { execSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -86,8 +87,49 @@ for (const f of ['selector-state.json', 'trend-state.json']) {
   if (s) sections.push(`## ${f}\n\`\`\`json\n${s.trim()}\n\`\`\``);
 }
 
+// --- PAPER TRADING: podsumowanie dnia (stan + PnL vs HODL per pula) ---
+let tgPaperDigest: string | null = null;
+const paperRaw = readSafe(path.join(BOT, 'paper-state.json'));
+if (paperRaw) {
+  try {
+    const ps = JSON.parse(paperRaw);
+    // ostatnia próbka equity per pula z paper-history.ndjson
+    const lastRow: Record<string, any> = {};
+    const ph = readSafe(path.join(BOT, 'paper-history.ndjson'));
+    if (ph) for (const line of ph.trimEnd().split('\n')) {
+      try { const r = JSON.parse(line); lastRow[r.poolId] = r; } catch { /* pomiń */ }
+    }
+    const cap = ps.capitalPerPoolUsd ?? 10_000;
+    const rows: string[] = ['| pula | status | equity | PnL | vs HODL | fees | reb |', '|---|---|---|---|---|---|---|'];
+    const tg: string[] = [];
+    let totalEq = 0, totalHodl = 0, n = 0;
+    for (const [poolId, posRaw] of Object.entries<any>(ps.positions ?? {})) {
+      const r = lastRow[poolId];
+      if (!r) continue;
+      const pnl = r.equityUsd - cap;
+      const vsHodl = r.equityUsd - r.hodlUsd;
+      totalEq += r.equityUsd; totalHodl += r.hodlUsd; n++;
+      rows.push(`| ${poolId} | ${posRaw.status}${r.trendDown ? ' ⛔' : ''} | $${r.equityUsd.toFixed(0)} | ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(0)} | ${vsHodl >= 0 ? '+' : ''}$${vsHodl.toFixed(0)} | $${r.feesUsd.toFixed(2)} | ${r.rebalances} |`);
+      tg.push(`${poolId}: $${r.equityUsd.toFixed(0)} (${vsHodl >= 0 ? '+' : ''}$${vsHodl.toFixed(0)} vs HODL)`);
+    }
+    if (n > 0) {
+      rows.push(`| **RAZEM** | | **$${totalEq.toFixed(0)}** | ${totalEq - n * cap >= 0 ? '+' : ''}$${(totalEq - n * cap).toFixed(0)} | ${totalEq - totalHodl >= 0 ? '+' : ''}$${(totalEq - totalHodl).toFixed(0)} | | |`);
+      sections.push(`## PAPER TRADING (start ${(ps.startedAt || '').slice(0, 10)}, $${cap}/pula)\n\n${rows.join('\n')}`);
+      tgPaperDigest = `📊 PAPER dziś: razem $${totalEq.toFixed(0)} (${totalEq - totalHodl >= 0 ? '+' : ''}$${(totalEq - totalHodl).toFixed(0)} vs HODL)\n${tg.join('\n')}`;
+    }
+  } catch { sections.push('## PAPER TRADING\npaper-state.json nieparsowalny'); }
+}
+
 fs.writeFileSync(OUT, sections.join('\n\n') + '\n');
 console.log(`zapisano ${path.relative(ROOT, OUT)}`);
+
+// --- Telegram: dzienny digest paper-tradingu (decyzja Rafała 18.08) ---
+if (tgPaperDigest && process.env.TG_TOKEN && process.env.TG_CHAT) {
+  fetch(`https://api.telegram.org/bot${process.env.TG_TOKEN}/sendMessage`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: process.env.TG_CHAT, text: tgPaperDigest }),
+  }).catch((e) => console.log(`telegram digest error: ${e}`));
+}
 
 // --- commit + push (szybko, z retry) ---
 if (process.env.REPORT_PUSH === '0') { console.log('REPORT_PUSH=0 — bez gita'); process.exit(0); }
