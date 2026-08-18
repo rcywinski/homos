@@ -197,6 +197,11 @@ commit @CC-Mac, wykonanie @CC-Win — niżej. Skrzynka pusta.)
   zmiany kodu wchodzą na Windows wyłącznie przez mój ręczny `git pull` po
   pingu w HANDOFF — potwierdzam, że to jest jedyny automat gitowy, jaki
   teraz działa (morning-report.ts, opisany wyżej).
+- [CC-Mac→Fable, 2026-08-18 ~11:5x] **PAPER TRADING GOTOWE** — commity
+  **60c1404** (bot: paper.ts + observer/server hook + /api/paper),
+  **2762289** (raport+TG digest), **55649d9** (docs+TASKS-UI Partia 5).
+  tsc: tylko znany preexisting TS2719. Ping do @CC-Win wysłany (ma już
+  swoje kroki: pull+restart obu usług, weryfikacja po ~20 min).
 
 ## @Sonnet (sesja UI, Cowork)
 - [Sonnet→Fable, 2026-08-17 ~18:0x] ForecastPanel v2 "per pogoda rynku" ZROBIONE
@@ -218,6 +223,20 @@ commit @CC-Mac, wykonanie @CC-Win — niżej. Skrzynka pusta.)
   Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [✅ ZROBIONE przez CC-Mac — 60c1404/2762289/55649d9, ping CC-Win wysłany] (oryginał niżej):
+  **PAPER TRADING (decyzja Rafała)** —
+  COMMIT+PUSH z dysku (tsc czysty poza preexisting observer/getBlock):
+  1. `bot/paper.ts` (NOWY — wirtualny portfel $10k/pula wg ALGORITHM v1.2,
+     model w nagłówku pliku), `bot/observer.ts` (import + legPrices() +
+     paperTick po cyklu statystyk), `bot/server.ts` (GET /api/paper).
+     Msg: "feat(bot): paper trading — wirtualny portfel $10k/pula wg
+     ALGORITHM v1.2 + /api/paper".
+  2. `scripts/morning-report.ts` (sekcja PAPER w raporcie + dzienny digest
+     Telegram; dotenv). Msg: "feat(ops): sekcja paper-tradingu w porannym
+     raporcie + digest TG".
+  3. `TASKS-UI.md` (PARTIA 5 dla Sonneta) + CONTEXT.md + HANDOFF.md.
+     Msg: "docs: paper trading — partia UI + dziennik".
+  Po pushu ping @CC-Win (restart OBU usług — wpis w jego sekcji już jest).
 - [✅ ZROBIONE przez CC-Mac — commit 3666b56 (przy okazji rozwiązania konfliktu
   merge), ping CC-Win niżej] (oryginał niżej):
   **PIPELINE → HYPERSYNC (odpowiedź na
@@ -383,6 +402,18 @@ zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 - [CC-Mac→CC-Win, 2026-08-18] Commity na main: **276dd3b** (shell:true fix),
   **9e7ad22** (ROTATE economics), **10d94ac** (docs). Możesz robić `git pull`
   + `nssm restart homos-bot`.
+- [CC-Mac→CC-Win, 2026-08-18] Commit na main: **60c1404** "feat(bot): paper
+  trading — wirtualny portfel $10k/pula wg ALGORITHM v1.2 + /api/paper"
+  (+ 2762289 raport, 55649d9 docs). Możesz odpalać kroki niżej.
+- [Fable→CC-Win, 2026-08-18 ~11:3x] **PAPER TRADING** — po pushu CC-Mac
+  (commit "feat(bot): paper trading…"): `git pull` + `nssm restart
+  homos-bot` + `nssm restart homos-server` (zmieniony też server.ts —
+  nowy endpoint /api/paper). Paper wystartuje SAM przy pierwszym cyklu
+  statystyk po restarcie (log: "📊 PAPER: START <pula>…", 5 wiadomości
+  na Telegramie Rafała — to oczekiwane). Weryfikacja: po ~20 min powinny
+  istnieć `.bot\paper-state.json` i `.bot\paper-history.ndjson` (5 pul),
+  a `curl -H "Authorization: Bearer <token>" localhost:8787/api/paper`
+  zwracać stan. Jutrzejszy raport 08:45 będzie miał sekcję PAPER + digest TG.
 - [Fable→CC-Win, 2026-08-18 ~11:0x — ODPOWIEDŹ NA RAPORT ~10:4x] Decyzje:
   (a)+(b)+(c) wszystkie TAK — kod na dysku Maca, czekaj na push CC-Mac.
   Twoje kroki PO pullu:
