@@ -222,6 +222,31 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
   }
 
   const eligible = ranking.filter((p) => p.streak >= PERSIST_DAYS).slice(0, TOP_N);
+
+  // TOP 10 dnia → .bot/selector-ranking.json (sekcja "obserwowane do wejścia"
+  // w UI + przyszły import do SQLite selector_ranking; decyzja Rafała 18.08).
+  try {
+    fs.writeFileSync(
+      path.join(ROOT, STATE_DIR, 'selector-ranking.json'),
+      JSON.stringify({
+        day: today(),
+        generatedAt: new Date().toISOString(),
+        criteria: { window: `${RANK_WINDOW_D}d śr. apyBase`, persistDays: PERSIST_DAYS, minTvlUsd: MIN_TVL, filter: 'uniswap-v3, majors, ETH/Base/Arb' },
+        rows: ranking.slice(0, 10).map((p, i) => ({
+          rank: i + 1,
+          symbol: p.symbol, chain: p.chain, poolMeta: p.poolMeta,
+          apy7d: +p.apy7d.toFixed(2), streak: p.streak,
+          eligible: p.streak >= PERSIST_DAYS,
+          tvlUsd: Math.round(p.tvlUsd),
+          botPoolId: p.botPool?.id ?? null, // w konfiguracji bota = wykonywalna od ręki
+          llamaUuid: p.pool,
+        })),
+      }, null, 2)
+    );
+  } catch (e) {
+    ctx.log(`selector: zapis rankingu nieudany: ${String(e).slice(0, 120)}`);
+  }
+
   const positions = ctx.getPositions();
   const heldPoolIds = new Set(positions.map((p) => p.poolId));
   const heldLlama = new Map<string, RankedPool>(); // poolId → wpis rankingu obecnej puli

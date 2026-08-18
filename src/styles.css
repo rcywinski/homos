@@ -1276,6 +1276,7 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
 
 .morning-note { font-size: 12px; color: #888; margin: 6px 0; }
 .morning-error { color: #b91c1c; }
+.morning-note-warn { color: #b45309; background: #fff8e1; border-radius: 6px; padding: 6px 8px; }
 
 .morning-section-title {
   font-size: 12px;
@@ -1830,4 +1831,31 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   .paper-total-value { font-size: 17px; }
   .paper-pool-stat { min-width: 45%; }
   .paper-event-row { flex-wrap: wrap; }
+}
+
+/* --- UI session: TopRankingPanel.tsx (TASKS-UI.md Partia 6, ranking dnia
+   TOP 10) — HANDOFF Fable→Sonnet 2026-08-18. Wzorzec telemetry-table --- */
+.topranking-criteria {
+  font-weight: 400;
+  text-transform: none;
+}
+.topranking-table {
+  width: 100%;
+}
+.topranking-eligible {
+  background: #f2f7fe;
+}
+.topranking-status-in {
+  color: #1a6ae0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.topranking-disclaimer {
+  font-size: 11px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed #ddd;
+}
+@media (max-width: 480px) {
+  .topranking-table { font-size: 12px; }
 }

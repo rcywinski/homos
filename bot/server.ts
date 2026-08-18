@@ -82,6 +82,14 @@ app.get('/api/history', (req, res) => {
   res.json(out);
 });
 
+// Ranking dnia selektora (TOP 10 pul "obserwowanych do wejścia") —
+// pisze bot/selector.ts raz dziennie po 8:00.
+app.get('/api/ranking', (_req, res) => {
+  const r = readJson(path.join(DIR, 'selector-ranking.json'));
+  if (!r) return res.status(503).json({ error: 'ranking not generated yet (selector runs daily after 8:00)' });
+  res.json(r);
+});
+
 // Paper trading (bot/paper.ts): stan wirtualnego portfela + próbki equity
 // + księga decyzji. Query: ?hours=N (historia, domyślnie 72h, max 30 dni).
 app.get('/api/paper', (req, res) => {

@@ -23,6 +23,7 @@ import ForecastPanel from './ForecastPanel';
 import CockpitPositionActions, { CloseModal, RebalanceModal } from './CockpitPositionActions';
 import RebalanceSequenceModal from './RebalanceSequenceModal';
 import PaperTradingPanel from './PaperTradingPanel';
+import TopRankingPanel from './TopRankingPanel';
 import ExpandableSection from './ExpandableSection';
 
 const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -434,6 +435,10 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           <BotTelemetry bot={bot} />
           <ForecastPanel bot={bot} />
           <ObservationAnalysis bot={bot} />
+
+          <ExpandableSection title="🏆 Ranking dnia (TOP 10)" defaultExpanded={false}>
+            <TopRankingPanel bot={bot} />
+          </ExpandableSection>
         </div>
       )}
 

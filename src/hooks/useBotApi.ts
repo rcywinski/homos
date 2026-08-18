@@ -20,6 +20,9 @@ const STALE_MS = 5 * 60_000;
 // /api/state (60s) — zgodnie z zadaniem "żadnego drugiego pollera /api/state".
 const PAPER_POLL_MS = 5 * 60_000;
 const PAPER_HOURS = 168; // 7 dni
+// Ranking dnia (bot/selector.ts, TASKS-UI.md Partia 6) — plik odświeżany raz
+// dziennie (po 8:00) — poll RZADKI, wyraźnie wolniejszy niż paper/state.
+const RANKING_POLL_MS = 30 * 60_000;
 
 export interface BotProposal {
   id: string;
@@ -155,6 +158,41 @@ export interface PaperData {
 // 'error' (sieć/token/inny błąd), żeby panel pokazał właściwy komunikat.
 export type PaperStatus = 'loading' | 'ok' | 'not-started' | 'error';
 
+// Ranking dnia — GET /api/ranking (bot/selector.ts, HANDOFF Fable→Sonnet
+// 2026-08-18, TASKS-UI.md Partia 6). TOP 10 pul wg polityki ALGORITHM,
+// zapisywane raz dziennie do .bot/selector-ranking.json.
+export interface RankingRow {
+  rank: number;
+  symbol: string;
+  chain: string;
+  poolMeta: string;
+  apy7d: number;
+  streak: number;
+  eligible: boolean;
+  tvlUsd: number;
+  botPoolId: string | null;
+  llamaUuid?: string;
+}
+
+export interface RankingCriteria {
+  window?: string;
+  persistDays?: number;
+  minTvlUsd?: number;
+  filter?: string;
+  [key: string]: unknown;
+}
+
+export interface RankingData {
+  day: string;
+  generatedAt: string;
+  criteria: RankingCriteria;
+  rows: RankingRow[];
+}
+
+// 'not-started' == 503 (selektor jeszcze nie zapisał pierwszego rankingu —
+// oczekiwane do pierwszego przebiegu po 8:00).
+export type RankingStatus = 'loading' | 'ok' | 'not-started' | 'error';
+
 export interface UseBotApi {
   state: BotStateShape | null;
   status: BotStatus;
@@ -167,6 +205,8 @@ export interface UseBotApi {
   refresh: () => void;
   paper: PaperData | null;
   paperStatus: PaperStatus;
+  ranking: RankingData | null;
+  rankingStatus: RankingStatus;
 }
 
 const readLocal = (key: string, fallback: string): string => {
@@ -186,6 +226,8 @@ export function useBotApi(): UseBotApi {
   const [tick, setTick] = useState(0);
   const [paper, setPaper] = useState<PaperData | null>(null);
   const [paperStatus, setPaperStatus] = useState<PaperStatus>('loading');
+  const [ranking, setRanking] = useState<RankingData | null>(null);
+  const [rankingStatus, setRankingStatus] = useState<RankingStatus>('loading');
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
@@ -251,6 +293,38 @@ export function useBotApi(): UseBotApi {
     return () => clearInterval(id);
   }, [fetchPaper, tick]);
 
+  const fetchRanking = useCallback(async () => {
+    try {
+      const headers: Record<string, string> = {};
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+      const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/ranking`, { headers });
+      if (res.status === 503) {
+        // selektor jeszcze nie zapisał pierwszego rankingu (przed pierwszym przebiegiem po 8:00)
+        setRanking(null);
+        setRankingStatus('not-started');
+        return;
+      }
+      if (!res.ok) {
+        setRanking(null);
+        setRankingStatus('error');
+        return;
+      }
+      const data: RankingData = await res.json();
+      setRanking(data);
+      setRankingStatus('ok');
+    } catch {
+      // sieć niedostępna — jak przy /api/state/paper, cicho
+      setRanking(null);
+      setRankingStatus('error');
+    }
+  }, [apiBase, apiToken]);
+
+  useEffect(() => {
+    fetchRanking();
+    const id = setInterval(fetchRanking, RANKING_POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchRanking, tick]);
+
   const dismissProposal = useCallback(
     async (id: string) => {
       try {
@@ -283,5 +357,19 @@ export function useBotApi(): UseBotApi {
     setApiTokenState(v);
   }, []);
 
-  return { state, status, error, apiBase, apiToken, setApiBase, setApiToken, dismissProposal, refresh, paper, paperStatus };
+  return {
+    state,
+    status,
+    error,
+    apiBase,
+    apiToken,
+    setApiBase,
+    setApiToken,
+    dismissProposal,
+    refresh,
+    paper,
+    paperStatus,
+    ranking,
+    rankingStatus,
+  };
 }
