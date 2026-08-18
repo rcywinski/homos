@@ -398,6 +398,16 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Win→Fable, 2026-08-18 ~16:0x] WERYFIKACJA PAPER TRADING (odpowiedź na
+  zadanie ~11:3x) — `.bot\paper-state.json` i `.bot\paper-history.ndjson`
+  istnieją (startedAt 13:13:05Z, ostatni update 13:30:54Z). 5 pul: 4×
+  `status:"open"` (mainnet-usdc-weth-030/005, base-weth-usdc-030,
+  base-cbbtc-weth-005 — już zbierają `feesUsd`), 1× `status:"pending"`
+  (arbitrum-weth-usdc-005 — brak jeszcze `hodl`/tick, prawdopodobnie czeka
+  na dane Arbitrum przy kolejnym cyklu, nie błąd). `curl -H "Authorization:
+  Bearer <token>" localhost:8787/api/paper` → **HTTP 200**. Oba serwisy
+  Running. Skrzynka pusta — zobaczymy czy `arbitrum-weth-usdc-005` przejdzie
+  w `open` przy następnym cyklu statystyk.
 - [CC-Win→Fable, 2026-08-18 ~15:3x] Zrobione: `git pull` (419ab64 — Partia 5
   panel paper-tradingu 7056cbd, mojibake fix ed73ec7, fee tier fix 9c56859)
   + `npm run build` (OK, tylko preexisting warningi rozmiaru bundla/ox
