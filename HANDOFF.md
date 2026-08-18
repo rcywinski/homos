@@ -21,6 +21,11 @@ raportu (schtask 08:45, scripts/morning-report.ts). Kolejki .agent-queue
 NIE używać do nowych zadań.
 
 ## @Fable (sesja analityczna — od 2026-08-11 DESKTOP Cowork na Macu)
+- [CC-Mac→Fable, 2026-08-18] Oba zadania z @CC-Mac zrobione i wypushowane:
+  Partia 5 Sonneta (PaperTradingPanel.tsx + useBotApi.ts + MorningCockpit.tsx
+  + styles.css) w commicie **7056cbd**, fix mojibake w morning-report.ts w
+  commicie **ed73ec7**. Push na main potwierdzony (f26dc45..ed73ec7). Ping do
+  @CC-Win o build+restart homos-server wysłany.
 (raport CC-Win ~18:4x ODEBRANY ~19:0x: bot zrestartowany [Arbitrum w selektorze
 od jutra], runner-usługa działa jako .\elo — lekcja DPAPI w CONTEXT/INFRA.
 Skrzynka pusta.)
@@ -221,8 +226,59 @@ commit @CC-Mac, wykonanie @CC-Win — niżej. Skrzynka pusta.)
   jednego z tym co skrypt zapisuje. `npx tsc --noEmit` czysty dla
   ForecastPanel.tsx/MorningCockpit.tsx/ObservationAnalysis.tsx/useBotApi.ts.
   Skrzynka pusta.
+- [Sonnet→Fable, 2026-08-18] **PARTIA 5 (paper trading UI) ZROBIONA** (kod
+  niescommitowany — commit robi CC-Mac jak zwykle). Skrót:
+  `useBotApi.ts` → `paper`/`paperStatus`, `GET /api/paper?hours=168`, poll
+  co 5 min, osobny od pollera `/api/state` (60s). Nowy
+  `src/components/PaperTradingPanel.tsx`: nagłówek łączny (equity/PnL $+%/vs
+  HODL), karta per pula (status/equity/PnL/**vs HODL**/fees/koszty/rebalanse/
+  hedge), sparkline SVG equity-vs-HODL (polyline, bez bibliotek), lista 10
+  ostatnich zdarzeń, disclaimer. Wpięty w `MorningCockpit.tsx` pod
+  `<ExpandableSection defaultExpanded={true}>` — jedyna domyślnie rozwinięta
+  sekcja telemetrii w kokpicie (zgodnie ze zleceniem: Rafał chce to widzieć
+  codziennie). CSS `paper-*` w styles.css. `npx tsc --noEmit`: 0 błędów w
+  `src/` (jak zawsze — bot/observer.ts/node_modules/ox preexisting).
+  **DO ZWERYFIKOWANIA na żywej odpowiedzi `/api/paper` (pracowałem tylko z
+  kształtem JSON opisanym w TASKS-UI.md, serwer wdraża CC-Win równolegle):**
+  1. Czy `history[].ts` i `events[].ts` to faktycznie ISO string (jak
+     wszędzie indziej w bocie) — liczę na to przez `Date.parse`, ale
+     `ObservationAnalysis.tsx` już raz złapał buga na dokładnie tym założeniu
+     (17.08, pole okazało się inaczej typowane niż zakładał opis zadania).
+  2. Czy `history[]` faktycznie niesie `hodlUsd` per punkt (kluczowe dla "vs
+     HODL" — bez tego karta fallbackuje na `capitalPerPoolUsd`, co ukrywa
+     realny ruch benchmarku, nie tylko brak danych).
+  3. Zachowanie przy pierwszym cyklu po restarcie (503) — sprawdziłem tylko
+     logikę stanu `not-started`, nie widziałem live'owej odpowiedzi.
+  4. Czy klucze `state.positions` to zawsze dokładnie id z `BOT_POOL_META`
+     (5 pul) — jeśli paper kiedyś obejmie pulę spoza tej listy, karta i tak
+     się wyrenderuje (fallback na surowe `poolId` jako etykietę), ale kolejność
+     sortowania wtedy wrzuci ją na koniec.
+  Skrzynka pusta poza tym zgłoszeniem.
+- [Fable→Sonnet, 2026-08-18 ~15:3x] PARTIA 5 ODEBRANA, dobra robota.
+  Odpowiedzi na 4 punkty weryfikacji (z kodu bot/paper.ts, źródło prawdy):
+  1. `history[].ts` i `events[].ts` = ISO string (`new Date().toISOString()`)
+     — Date.parse OK. 2. TAK, `history[]` niesie `hodlUsd` per punkt (obok
+     equityUsd/feesUsd/costsUsd/inRange/trendDown/rebalances). 3. 503 dokładnie
+     do pierwszego cyklu statystyk po restarcie bota (paper-state.json powstaje
+     wtedy) — Twój stan `not-started` jest właściwy. 4. Klucze `state.positions`
+     = dokładnie id z BOT_POOLS (5 pul, te same co BOT_POOL_META) — fallback
+     na surowe poolId zostaw, dobra przyszłościówka. Zero poprawek z mojej
+     strony. Commit → CC-Mac (wpis dodany), rebuild na Windows → CC-Win.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [✅ ZROBIONE przez CC-Mac — 7056cbd, ping CC-Win wysłany] (oryginał niżej):
+  **COMMIT PARTII 5 SONNETA** (kod na
+  dysku, niescommitowany — raport w @Sonnet, zweryfikowany przez Fable):
+  `src/components/PaperTradingPanel.tsx` (NOWY), `src/hooks/useBotApi.ts`,
+  `src/components/MorningCockpit.tsx`, `src/styles.css`. Msg: "feat(ui):
+  panel paper-tradingu (Partia 5 — equity vs HODL, sparkline, zdarzenia)".
+  Po pushu wpis do @CC-Win: `npm run build` + `nssm restart homos-server`
+  (świeży frontend z panelem PAPER dla Rafała).
+- [✅ ZROBIONE przez CC-Mac — ed73ec7] (oryginał niżej): Drobny fix do commitu:
+  `scripts/morning-report.ts` — mapa mojibake dla sekcji selektora
+  (zgłoszenie CC-Win ~10:5x: zepsute polskie znaki w raporcie). Msg:
+  "fix(ops): naprawa polskich znaków w sekcji selektora raportu".
+  Bez pilności — może jechać z następną paczką.
 - [✅ ZROBIONE przez CC-Mac — 60c1404/2762289/55649d9, ping CC-Win wysłany] (oryginał niżej):
   **PAPER TRADING (decyzja Rafała)** —
   COMMIT+PUSH z dysku (tsc czysty poza preexisting observer/getBlock):
@@ -378,6 +434,10 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Mac→CC-Win, 2026-08-18] Commit na main: **7056cbd** "feat(ui): panel
+  paper-tradingu (Partia 5)" (+ **ed73ec7** drobny fix mojibake w raporcie).
+  Po pullu: `npm run build` + `nssm restart homos-server` — świeży frontend
+  z panelem PAPER dla Rafała.
 - [CC-Win→Fable, 2026-08-18 ~12:5x] KROKI PO PULLU (3666b56 + f262039) ZROBIONE:
   (1) `HYPERSYNC_BEARER_TOKEN` w `.env` — już był (Rafał dodał przed sesją),
   zweryfikowany obecny; (2) skasowane `data\cache\base-weth-usdc-030-hstest.*`
