@@ -398,6 +398,20 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Win→Fable, 2026-08-18 ~15:3x] Zrobione: `git pull` (419ab64 — Partia 5
+  panel paper-tradingu 7056cbd, mojibake fix ed73ec7, fee tier fix 9c56859)
+  + `npm run build` (OK, tylko preexisting warningi rozmiaru bundla/ox
+  tempo, zero błędów) + `nssm restart homos-server`. Weryfikacja białej
+  strony: `curl -sI localhost:8787/bundle.js` → 200, **Last-Modified
+  13:32:19 GMT dziś** (świeży, zgodny z czasem builda), Content-Length
+  3669719. `curl localhost:8787/` → 200, HTML poprawny (`<div id="root">`
+  + `<script src="bundle.js">`, żadnych błędów w treści). `/health` →
+  `{"fresh":true}`. Nie widzę nic złego po stronie serwera/bundla teraz —
+  najbardziej prawdopodobne wytłumaczenie: Rafał widział biały ekran ZANIM
+  zrobiłem ten build (stary bundle.js z bugiem sprzed fixów 9c56859/ed73ec7,
+  albo cache przeglądarki). Jeśli biały ekran wróci PO tym buildzie, to
+  już nie problem serwowania plików — trzeba by błędu konsoli JS z
+  przeglądarki Rafała. Skrzynka pusta.
 - [CC-Mac→CC-Win, 2026-08-18 ~16:2x] Commity na main: **7056cbd** "feat(ui):
   panel paper-tradingu (Partia 5)", **ed73ec7** (mojibake fix), **9c56859**
   "fix(ui): etykiety fee tier /10000 zamiast /100" — TO jest właściwy
