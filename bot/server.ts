@@ -3,6 +3,7 @@
  *   npm run bot:server   (port 8787; docelowo pm2 na Windows, patrz INFRA.md)
  * Endpoints:
  *   GET  /api/state                     — pełny stan (pule, pozycje, propozycje)
+ *   GET  /api/paper?hours=N             — paper trading: stan + equity + księga
  *   POST /api/proposals/:id/dismiss     — odrzuć propozycję
  *   GET  /health                        — 200 gdy stan świeży (<5 min), BEZ tokena
  *
@@ -79,6 +80,29 @@ app.get('/api/history', (req, res) => {
     } catch { /* niepełna linia w trakcie zapisu — pomiń */ }
   }
   res.json(out);
+});
+
+// Paper trading (bot/paper.ts): stan wirtualnego portfela + próbki equity
+// + księga decyzji. Query: ?hours=N (historia, domyślnie 72h, max 30 dni).
+app.get('/api/paper', (req, res) => {
+  const st = readJson(path.join(DIR, 'paper-state.json'));
+  if (!st) return res.status(503).json({ error: 'paper trading not started yet' });
+  const hours = Math.min(Math.max(Number(req.query.hours) || 72, 1), 24 * 30);
+  const cutoff = Date.now() - hours * 3600 * 1000;
+  const readNdjson = (file: string, limit: number) => {
+    const p = path.join(DIR, file);
+    if (!fs.existsSync(p)) return [];
+    const out: unknown[] = [];
+    for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        const row = JSON.parse(line);
+        if (new Date(row.ts).getTime() >= cutoff) out.push(row);
+      } catch { /* pomiń uszkodzoną linię */ }
+    }
+    return out.slice(-limit);
+  };
+  res.json({ state: st, history: readNdjson('paper-history.ndjson', 20_000), events: readNdjson('paper-events.ndjson', 500) });
 });
 
 // Wyniki backtestów/walk-forwardów liczone przez pipeline (backtest/results/*.json).

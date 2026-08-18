@@ -19,6 +19,7 @@ import { ADVISOR_PARAMS } from '../src/utils/advisor';
 import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, PoolStats } from '../src/utils/advisor';
 import { getAmountsForLiquidity, sqrtPriceX96ToHumanPrice } from '../src/utils/v3math';
 import { runSelectorIfDue, SelectorProposal } from './selector';
+import { paperTick, LegPrices } from './paper';
 
 const ROOT = path.join(__dirname, '..');
 const DIR = path.join(ROOT, STATE_DIR);
@@ -349,6 +350,21 @@ async function refreshStats() {
       log(`stats ${p.id} failed: ${String(e).slice(0, 120)}`);
     }
   }
+  // paper trading: wirtualny portfel wg ALGORITHM v1.2 (po odświeżeniu statystyk)
+  try {
+    paperTick({
+      log,
+      telegram,
+      getPool: (poolId: string) => {
+        const p = BOT_POOLS.find((b) => b.id === poolId);
+        const lv = p ? live[poolId] : undefined;
+        if (!p || !lv) return null;
+        return { stats: lv.stats, prices: legPrices(p), trendDown: lv.trendDown ?? false };
+      },
+    });
+  } catch (e) {
+    log(`paper tick crashed: ${String(e).slice(0, 160)}`);
+  }
   saveState();
 }
 
@@ -423,6 +439,25 @@ async function refreshPositions() {
     }
   }
   saveState();
+}
+
+/** ceny USD obu nóg puli + cena human — dla paper-tradingu (ta sama logika
+ *  wyceny co refreshPositions; respektuje quote:'WETH') */
+function legPrices(p: BotPool): LegPrices | null {
+  const lv = live[p.id];
+  if (!lv) return null;
+  const human = sqrtPriceX96ToHumanPrice(BigInt(lv.sqrtPriceX96), p.d0, p.d1);
+  let px0: number, px1: number;
+  if ((p.quote ?? 'USD') === 'USD') {
+    px0 = p.ethIsToken0 ? lv.ethUsd : 1;
+    px1 = p.ethIsToken0 ? 1 : lv.ethUsd;
+  } else {
+    const ref = refEthUsd(p);
+    if (ref == null) return null;
+    px0 = p.ethIsToken0 ? ref : lv.ethUsd;
+    px1 = p.ethIsToken0 ? lv.ethUsd : ref;
+  }
+  return { px0, px1, human };
 }
 
 /** tick → cena USD tokena bazowego puli (respektuje quote:'WETH' przez kurs referencyjny) */
