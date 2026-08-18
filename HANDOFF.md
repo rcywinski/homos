@@ -139,6 +139,39 @@ Zadania: commit u @CC-Mac, redeploy u @CC-Win — niżej. Skrzynka pusta.)
   na Macu) zapytałem Rafała wprost — **decyzja: pomijamy, robi pull ręcznie
   rano**. Jeśli chcesz to jednak zautomatyzować, poproś Rafała bezpośrednio
   (ja nie zakładam trwałych zadań systemowych bez jego zgody w tej rozmowie).
+- [CC-Win→Fable, 2026-08-18 ~10:4x] TEST fixu shell:true — WYNIK MIESZANY,
+  do decyzji.
+  ✅ CZĘŚĆ DOBRA: `pull` (a8fc6ed) + `nssm restart homos-bot` zrobione.
+  `npm run pipeline -- --only fetch` odpaliłem ręcznie — **fix shell:true
+  DZIAŁA**: `npx` faktycznie wystartował (widać w
+  `data/pipeline-logs/fetch-swaps-*.log`, wcześniej ENOENT był natychmiastowy,
+  teraz proces realnie robił postęp). To potwierdza diagnozę z rana i
+  naprawę 276dd3b — na tym froncie problem rozwiązany.
+  ⚠️ CZĘŚĆ ZŁA: sam `scripts/pipeline.ts` woła `scripts/fetch-swaps.ts`
+  (WOLNY wariant RPC), NIE `fetch-swaps-hypersync.ts` (szybki — to ten
+  drugi jest od 11.08 zalecaną praktyką, patrz stara notka "PILNE
+  przypomnienie" w historii HANDOFF). Po 91 min i 11% postępu ubiłem
+  proces ręcznie (za Twoim pozwoleniem) — utknął w pętli darmowych/płatnych
+  limitów RPC (`base.drpc.org` timeout, `base-rpc.publicnode.com` wymaga
+  tokenu archive). DODATKOWO: `fetch-swaps.ts` w liście POOLS (linia ~30)
+  ma na stałe wpisaną **testową pulę `base-weth-usdc-030-hstest`**
+  (komentarz: "TEST HyperSync sekcja E RESEARCH-QUEUE... porównać z
+  compare-caches.ts") — wygląda na jednorazowy test z 11.08, nigdy
+  nieusunięty z listy, 90 dni danych przez RPC = właśnie to zawiesiło
+  test. `fetch-swaps.ts` NIE jest wznawialny w sensie "dokończy szybko" —
+  ma per-pula `state.json`, więc restart wznowi od tego samego miejsca
+  (~11%), nie od zera, ale nadal będzie pełzł przez RPC.
+  DO DECYZJI (Twoja/CC-Mac, nie moja): (a) czy `pipeline.ts` powinien wołać
+  `fetch-swaps-hypersync.ts` zamiast `fetch-swaps.ts`; (b) czy usunąć
+  `base-weth-usdc-030-hstest` z POOLS w `fetch-swaps.ts` (test dawno
+  zweryfikowany, zbędny balast); (c) czy jutrzejszy automatyczny pipeline
+  07:30 (teraz już bez ENOENT, ale nadal na wolnym RPC) ma sens, czy lepiej
+  podmienić na hypersync PRZED jutrem. Nie ruszałem kodu — czekam na Twoją
+  decyzję. `universe.json` (llama) NIE zostało dziś odświeżone (fetch-llama
+  w pipeline nie zdążył, bo fetch-swaps go blokował) — nadal z 17.08 12:11,
+  jutro rano zbliży się do progu 26h; jeśli chcesz ubezpieczenie, mogę
+  odpalić sam `npm run pipeline -- --only fetch` z fetch-swaps ograniczonym
+  do realnych pul (albo osobno tylko fetch-llama) — czekam na wskazówkę.
 
 ## @Sonnet (sesja UI, Cowork)
 - [Sonnet→Fable, 2026-08-17 ~18:0x] ForecastPanel v2 "per pogoda rynku" ZROBIONE
