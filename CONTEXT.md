@@ -35,6 +35,56 @@
 
 ## 4. Dziennik sesji
 
+### 2026-08-18 — Sesja UI (Sonnet) — Partia 5: wizualizacja paper-tradingu ✅
+Wykonana cała Partia 5 z TASKS-UI.md (zlecona przez Fable ~11:3x, kod
+bot/paper.ts + /api/paper wpięte przez CC-Mac/CC-Win równolegle). Zakres:
+wyłącznie src/**, bot/** nietknięty (nawet nie czytany poza kształtem
+odpowiedzi z opisu zadania).
+
+1. **`src/hooks/useBotApi.ts` rozszerzony**: nowy stan `paper`/`paperStatus`
+   — `GET {base}/api/paper?hours=168`, poll co 5 min (`PAPER_POLL_MS`, OSOBNY
+   od istniejącego 60s pollera `/api/state` — zero zmian w tamtym). Typy
+   `PaperData`/`PaperStateShape`/`PaperPosition`/`PaperHistoryPoint`/
+   `PaperEvent`/`PaperHedge` jeden do jednego z kształtem JSON wklejonym do
+   zadania. `503` → `paperStatus: 'not-started'` (odróżnione od `'error'`,
+   żeby panel pokazał właściwy, spokojny komunikat zamiast "błąd").
+2. **`src/components/PaperTradingPanel.tsx`** (nowy): nagłówek łączny (suma
+   equity, PnL $+% od startu, vs HODL $), karty per pula (status 🟢/💤/⏳,
+   badge ⛔ przy `trendDown`, equity/PnL/**vs HODL** (wyróżnione)/fees/koszty/
+   rebalanse, linia hedge gdy `position.hedge` niepusty), sparkline SVG
+   equity-vs-HODL (inline polyline, bez bibliotek — wzorzec `PoolHistoryChart`
+   z ObservationAnalysis.tsx), lista ostatnich 10 zdarzeń z ikoną wg `kind`,
+   disclaimer. Decyzja projektowa: "teraz" equity/hodl per pula liczone z
+   OSTATNIEGO punktu `history` tej puli (niesie `hodlUsd`, którego
+   `state.positions[poolId]` nie ma), fallback na `position.capitalUsd` gdy
+   historia jeszcze pusta (pula świeżo `pending`).
+3. **Wpięcie**: `MorningCockpit.tsx` → `<ExpandableSection title="📊 Paper
+   trading" defaultExpanded={true}>` nad `BotTelemetry` — jedyna sekcja w
+   środku kokpitu domyślnie rozwinięta (zgodnie ze zleceniem: Rafał chce to
+   widzieć codziennie, reszta telemetrii zostaje zwinięta jak dotychczas).
+4. **Stany brzegowe**: 503 → "Paper trading wystartuje po najbliższym
+   restarcie bota"; błąd sieci/serwera → notka wyciszona; pula z <2 punktami
+   historii → karta bez sparkline'a (tekst zamiast wykresu, jak przy braku
+   historii w ObservationAnalysis).
+5. **CSS**: nowa sekcja `paper-*` w styles.css (spójna z `morning-*`/
+   `telemetry-*`/`forecast-*`; reużyte `.forecast-negative` dla wartości
+   ujemnych, nowa `.paper-positive` dla dodatnich).
+
+Zero przycisków akcji (to symulacja), zero nowego pollera `/api/state`, zero
+zmian w bot/** — zgodnie z zakresem zadania.
+
+Typecheck (`npx tsc --noEmit -p tsconfig.json`, w kontenerze): 0 błędów w
+`src/`. Pozostałe błędy (bot/observer.ts — niezgodność typów viem w
+`getBlock`, node_modules/ox) preexisting, poza zakresem tej sesji.
+
+**Do zweryfikowania na żywo:** panel wobec REALNEJ odpowiedzi `/api/paper`
+(ta sesja pracowała wyłącznie z kształtem JSON opisanym w TASKS-UI.md —
+serwer z endpointem wdraża równolegle CC-Win) — zwłaszcza czy `history[]`
+faktycznie zawiera `hodlUsd` per punkt (kluczowe dla "vs HODL"), i czy
+sortowanie `ts` jako string ISO parsuje się poprawnie (Sparkline/latestFor
+używają `Date.parse`, defensywnie jak `tsSeconds()` w ObservationAnalysis.tsx
+po buchu z 17.08 — ts tam też okazał się stringiem, nie liczbą).
+
 ### 2026-08-10 — Sesja UI (Sonnet) — Partia 4b (częściowo): [Zatwierdź] dla REBALANCE
 Wykonana Partia 4b dla REBALANCE (punkt 1 checklisty); ROTATE świadomie
 zostawiony jako TODO (punkt 2) — builder tego nie obsługuje, patrz niżej.
@@ -862,6 +912,8 @@ CC-Mac → pull + restart homos-bot i homos-server na Windows (CC-Win).
 Po restarcie paper wystartuje sam przy pierwszym cyklu statystyk.
 INTERPRETACJA za ~tydzień: paper vs HODL na żywo = najmocniejszy argument
 przy decyzji kapitałowej (sekcja C RESEARCH-QUEUE) i bramce PROPONUJ.
+**URUCHOMIONY NA ŻYWO ~15:xx 18.08** — CC-Win pull+restart, Rafał potwierdza
+"📊 PAPER: START" na Telegramie. Licznik bije; t0 pomiaru = 18.08 po południu.
 
 ### 2026-08-18 ~09:3x — F4-op: ODCZYT KOSZTÓW TESTOWEGO SHORTA GMX (po ~17h)
 Zrzut z GMX (Rafał): margin $149.92, **borrow fee $0.00, negative funding

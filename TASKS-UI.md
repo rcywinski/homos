@@ -222,7 +222,7 @@ Typecheck (`npx tsc --noEmit -p tsconfig.json`, zweryfikowane na maszynie
 użytkownika): 0 błędów w `src/`. Pozostałe błędy (bot/observer.ts,
 node_modules/ox) są preexisting i poza zakresem tej sesji.
 
-## PARTIA 5 — PAPER TRADING: wizualizacja wirtualnego portfela (zlecone przez Fable 18.08, decyzja Rafała)
+## PARTIA 5 — PAPER TRADING: wizualizacja wirtualnego portfela ✅ wykonana (zlecone przez Fable 18.08, decyzja Rafała)
 
 KONTEKST: bot prowadzi teraz PAPER TRADING (bot/paper.ts) — wirtualny portfel
 $10k na każdą pulę z BOT_POOLS, prowadzony przez ALGORITHM v1.2 na żywych
@@ -282,3 +282,34 @@ ZAKRES (wyłącznie src/**, bot/** tylko do czytania — jak zawsze):
 
 NIE robić: żadnych przycisków akcji (to symulacja — nic do zatwierdzania),
 żadnych zmian w bot/**, żadnego drugiego pollera /api/state.
+
+- [x] `useBotApi.ts`: `paper`/`paperStatus` (GET /api/paper?hours=168, poll
+      co 5 min — osobny, wolniejszy timer, `PAPER_POLL_MS`). Typy `PaperData`/
+      `PaperStateShape`/`PaperPosition`/`PaperHistoryPoint`/`PaperEvent`/`PaperHedge`
+      wg kształtu ze zlecenia. 503 → `paperStatus: 'not-started'` (bot świeżo
+      zrestartowany, paper jeszcze nie ruszył), inne błędy/sieć → `'error'`.
+- [x] `src/components/PaperTradingPanel.tsx` (nowy): nagłówek łączny (equity/
+      PnL $+%/vs HODL), karta per pula (status ikoną, badge ⛔ trendDown,
+      equity/PnL/vs HODL/fees/koszty/rebalanse, linia hedge gdy otwarty),
+      sparkline SVG equity vs HODL (inline, bez bibliotek — polyline, wzorzec
+      `PoolHistoryChart` z ObservationAnalysis.tsx), lista ostatnich 10 zdarzeń
+      (ikona wg kind), disclaimer. "Teraz" equity/hodl per pula liczone z
+      OSTATNIEGO punktu `history` dla tej puli (ma `hodlUsd`, którego
+      `state.positions` nie niesie) z fallbackiem na `position.capitalUsd`,
+      gdy historia jeszcze pusta (pula `pending`).
+- [x] Wpięty w `MorningCockpit.tsx` pod `<ExpandableSection title="📊 Paper
+      trading" defaultExpanded={true}>` (jedyna sekcja w kokpicie domyślnie
+      rozwinięta poza samym kokpitem — zgodnie ze zleceniem "Rafał chce to
+      widzieć codziennie"), nad `BotTelemetry`.
+- [x] Stany brzegowe: `not-started` (503) → komunikat o restarcie bota;
+      `error`/`loading` → notka wyciszona; pula bez ≥2 punktów historii →
+      karta bez sparkline'a (tekst zamiast wykresu).
+- [x] CSS: sekcja `/* PaperTradingPanel.tsx (Partia 5) */` w styles.css,
+      klasy `paper-*`, spójne z `morning-*`/`telemetry-*`/`forecast-*`
+      (reużyte `.forecast-negative` dla wartości ujemnych, nowa `.paper-positive`
+      dla dodatnich).
+
+Typecheck (`npx tsc --noEmit -p tsconfig.json`, w kontenerze): 0 błędów w
+`src/`. Pozostałe błędy (bot/observer.ts — niezgodność typów viem w getBlock,
+node_modules/ox) preexisting, poza zakresem tej sesji — jak w poprzednich
+partiach.
