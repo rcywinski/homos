@@ -221,3 +221,64 @@ są preexisting i poza zakresem tej sesji.
 Typecheck (`npx tsc --noEmit -p tsconfig.json`, zweryfikowane na maszynie
 użytkownika): 0 błędów w `src/`. Pozostałe błędy (bot/observer.ts,
 node_modules/ox) są preexisting i poza zakresem tej sesji.
+
+## PARTIA 5 — PAPER TRADING: wizualizacja wirtualnego portfela (zlecone przez Fable 18.08, decyzja Rafała)
+
+KONTEKST: bot prowadzi teraz PAPER TRADING (bot/paper.ts) — wirtualny portfel
+$10k na każdą pulę z BOT_POOLS, prowadzony przez ALGORITHM v1.2 na żywych
+danych (fees z trailing fee-yieldu, rebalanse z histerezą 24h+payback,
+bezpiecznik exit/hedge). Zero transakcji — czysta symulacja. Rafał chce
+WIDZIEĆ dziennie, ile algorytm wirtualnie zarabia/traci per pula i łącznie.
+
+DANE: `GET {base}/api/paper?hours=N` (Bearer token jak reszta API; domyślnie
+72h, max 720). Kształt odpowiedzi:
+```json
+{
+  "state": {
+    "startedAt": "ISO", "capitalPerPoolUsd": 10000, "updatedAt": "ISO",
+    "positions": { "<poolId>": {
+      "poolId": "...", "status": "open|cash|pending",
+      "tickLower": 0, "tickUpper": 0, "capitalUsd": 0,
+      "feesUsd": 0, "costsUsd": 0, "rebalances": 0,
+      "hedge": {"sizeBase":0,"entryUsd":0,"fundingUsd":0} | null,
+      "hedgePnlRealizedUsd": 0, "openedAt": "ISO", "startedAt": "ISO"
+    } }
+  },
+  "history": [ {"ts":"ISO","poolId":"...","status":"open","equityUsd":0,
+    "hodlUsd":0,"feesUsd":0,"costsUsd":0,"inRange":true,"trendDown":false,
+    "rebalances":0}, ... ],
+  "events": [ {"ts":"ISO","poolId":"...","kind":"OPEN|REBALANCE|EXIT_TREND|REENTRY|HEDGE_OPEN|HEDGE_CLOSE", ...}, ... ]
+}
+```
+
+ZAKRES (wyłącznie src/**, bot/** tylko do czytania — jak zawsze):
+1. **`useBotApi.ts`**: nowa funkcja/stan `paper` — fetch `GET /api/paper?hours=168`
+   (7 dni) odświeżany co 5 min (osobny, wolniejszy timer niż state 60s —
+   dane zmieniają się co 15 min). Typy wg kształtu wyżej.
+2. **Nowa sekcja `PaperTradingPanel.tsx`** w kokpicie (zwijana,
+   `ExpandableSection`, domyślnie ROZWINIĘTA — Rafał chce to widzieć
+   codziennie):
+   - NAGŁÓWEK ŁĄCZNY: suma equity wszystkich pul, PnL od startu ($ i %),
+     vs HODL ($) — kolor zielony/czerwony; podpis "symulacja $10k/pula,
+     start <data>".
+   - KARTA PER PULA: nazwa puli, status (🟢 pozycja otwarta / 💤 cash po
+     bezpieczniku / ⏳ czeka na dane; badge ⛔ gdy trendDown), equity teraz,
+     PnL od startu, **vs HODL 50/50** (kluczowa liczba — wyróżnić), fees
+     zebrane, koszty, liczba rebalansów; jeśli hedge otwarty — linia
+     "🛡 short $X @ $Y (funding $Z)".
+   - **SPARKLINE equity vs HODL** per pula (SVG inline, bez bibliotek — jak
+     krzywe w report.html): 7 dni z `history`, dwie linie (equity kolor
+     akcentu, hodl szary przerywany), oś ukryta, tooltip zbędny.
+   - LISTA OSTATNICH ZDARZEŃ (z `events`, max 10, od najnowszych): ikona wg
+     kind (🔓 OPEN / 🔄 REBALANCE / ⛔ EXIT_TREND / 🔁 REENTRY / 🛡 HEDGE_*),
+     data, pula, 1 linia szczegółów.
+   - DISCLAIMER na dole (szary, mały): "Symulacja na żywych danych rynkowych.
+     Fees liczone z trailing fee-yieldu pasma (model doradcy), nie per-swap.
+     To nie są prawdziwe pieniądze ani gwarancja wyników."
+3. **Stany brzegowe**: 503 z /api/paper (paper jeszcze nie wystartował na
+   serwerze) → sekcja pokazuje "Paper trading wystartuje po najbliższym
+   restarcie bota"; brak history dla puli → karta bez sparkline'a.
+4. CSS: klasy `paper-*` w styles.css, spójne z `morning-*`/`telemetry-*`.
+
+NIE robić: żadnych przycisków akcji (to symulacja — nic do zatwierdzania),
+żadnych zmian w bot/**, żadnego drugiego pollera /api/state.

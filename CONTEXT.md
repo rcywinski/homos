@@ -835,6 +835,34 @@ na żywo (Rafał: 3 propozycje na telefonie 08:24). USTALENIA I DZIAŁANIA:
 OTWARTE dziś (Rafał): odczyt borrow/funding z testowego shorta GMX ($150,
 otwarty 17.08 ~16:00) + zamknięcie — główna niewiadoma kosztowa hedge.
 
+### 2026-08-18 ~11:3x — PAPER TRADING ZBUDOWANY (decyzja Rafała: "rozpiszmy i zbudujmy")
+Nowy moduł `bot/paper.ts` — wirtualny portfel prowadzony przez ALGORITHM
+v1.2 na żywych danych, $10k na każdą pulę BOT_POOLS (PAPER_CAPITAL_USD env).
+Odpowiada na pytanie "jak algorytm zachowałby się na prawdziwym kapitale":
+- Model UCZCIWIE udokumentowany w nagłówku pliku: otwarcie w zakresie
+  doradcy (k per pula), fees = trailing fee-yield pasma × udział szerokości
+  × Δt (TA SAMA formuła co payback doradcy — nie per-swap replay), rebalans
+  = poza zakresem ≥24h + payback ≤7d (histereza z ALGORITHM), koszty jak
+  w backteście (gas per chain + pół obrotu × fee+slippage), bezpiecznik
+  per pula: exit→cash/reentry lub hedge-excess (wirtualny short, taker
+  5 bps, funding +2.9%/r), benchmark HODL 50/50 zamrożony na wejściu,
+  wycena respektuje quote:'WETH'.
+- Integracja: paperTick() po każdym cyklu statystyk observera (15 min);
+  stan .bot/paper-state.json, księga paper-events.ndjson, próbki equity
+  paper-history.ndjson (gitignored — jak reszta .bot).
+- Telegram: milestony 📊 PAPER (START/REBALANS/EXIT_TREND/REENTRY/HEDGE
+  open+close) — informacyjne, zero Rabby (symulacja niczego nie podpisuje).
+- Dzienny digest: morning-report.ts (08:45 Windows) dostał sekcję PAPER
+  (tabela equity/PnL/vs HODL per pula + RAZEM) i wysyła skrót Telegramem.
+- API: GET /api/paper?hours=N (server.ts) — stan+historia+księga dla UI.
+- UI: PARTIA 5 w TASKS-UI.md dla Sonneta (PaperTradingPanel: karta per pula
+  z equity/vs HODL/sparkline SVG, nagłówek łączny, lista zdarzeń, disclaimer).
+Typecheck czysty (poza preexisting observer/getBlock). Wdrożenie: commit
+CC-Mac → pull + restart homos-bot i homos-server na Windows (CC-Win).
+Po restarcie paper wystartuje sam przy pierwszym cyklu statystyk.
+INTERPRETACJA za ~tydzień: paper vs HODL na żywo = najmocniejszy argument
+przy decyzji kapitałowej (sekcja C RESEARCH-QUEUE) i bramce PROPONUJ.
+
 ### 2026-08-18 ~09:3x — F4-op: ODCZYT KOSZTÓW TESTOWEGO SHORTA GMX (po ~17h)
 Zrzut z GMX (Rafał): margin $149.92, **borrow fee $0.00, negative funding
 fee $0.00** po ~17h utrzymania; PnL −$0.39 (−0.25% = ruch ceny ETH, nie
