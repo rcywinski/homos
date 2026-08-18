@@ -35,7 +35,9 @@ function runStep(name: string, script: string, args: string[] = []): Promise<num
   return new Promise((resolve) => {
     const logFile = path.join(LOGDIR, `${name}-${Date.now()}.log`);
     const out = fs.createWriteStream(logFile);
-    const child = spawn('npx', ['tsx', script, ...args], { cwd: ROOT, env: process.env });
+    // shell:true na Windows — spawn() nie uruchamia bezpośrednio npx.cmd (ENOENT);
+    // ten sam wzorzec co w agent-runner-git.ts (sprawdzony na serwerze Windows).
+    const child = spawn('npx', ['tsx', script, ...args], { cwd: ROOT, env: process.env, shell: process.platform === 'win32' });
     child.stdout.on('data', (d) => out.write(d));
     child.stderr.on('data', (d) => out.write(d));
     child.on('close', (code) => {

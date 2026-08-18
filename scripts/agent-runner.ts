@@ -94,6 +94,8 @@ async function runJob(jobFile: string) {
     cwd: ROOT,
     env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
+    // Windows: spawn() nie uruchamia npm.cmd bez shell (ENOENT) — jak w agent-runner-git.ts
+    shell: process.platform === 'win32',
   });
 
   status.running = { job: jobName, script, pid: child.pid || -1, since: new Date().toISOString() };
