@@ -13,8 +13,10 @@
  * Zasady bezpieczeństwa (lekcje z CONTEXT 17.08):
  *  - NIE dotyka żywych plików .bot/* w gicie — tylko CZYTA i kopiuje treść
  *    do osobnego pliku w reports/ (katalog śledzony).
- *  - commit+push natychmiast po zapisie (runner-git robi reset --hard co
- *    ~3 min — okno ryzyka musi być sekundowe); push z retry pull --rebase.
+ *  - commit+push natychmiast po zapisie; push z retry pull --rebase
+ *    (odporność na równoległe pushe innych sesji). Uwaga historyczna:
+ *    runner auto-pull (reset --hard co 3 min) WYCOFANY decyzją Rafała
+ *    18.08 — ten skrypt jest odtąd JEDYNYM automatem gitowym na Windows.
  */
 import { execSync } from 'child_process';
 import * as fs from 'fs';

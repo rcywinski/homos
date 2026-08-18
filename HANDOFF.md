@@ -12,11 +12,13 @@
 > CONTEXT.md/TASKS-*/RESEARCH-QUEUE. Sesja NA STARCIE czyta swoją sekcję
 > i USUWA odebrane wpisy. Format: `- [od→do, data] treść`.
 
-## STAN KOLEJKI ZADAŃ (agent-runner-git) — AKTUALNY, PO CLEANUPIE
-Wszystko działa na MAIN. Żadnych dodatkowych branchy, patchy ani tokenów —
-NIE twórz brancha agent-queue, NIE proś o żadne tokeny GitHub. Runner używa
-tych samych poświadczeń gita, którymi Windows robi zwykły `git pull`.
-Kolejka: .agent-queue/pending/*.json → wykonanie (whitelist) → .agent-queue/done/.
+## STAN KOLEJKI ZADAŃ (agent-runner-git) — WYCOFANA (decyzja Rafała 2026-08-18)
+Runner auto-pull na Windows (usługa agent-runner-git, reset --hard + pull
+co 3 min + kolejka .agent-queue) jest WYŁĄCZANY — zadanie u @CC-Win.
+Nowy model: zmiany kodu na Windows ZAWSZE przez ręczny `git pull` (CC-Win,
+po pingu w HANDOFF); jedyny automat gitowy na Windows to PUSH porannego
+raportu (schtask 08:45, scripts/morning-report.ts). Kolejki .agent-queue
+NIE używać do nowych zadań.
 
 ## @Fable (sesja analityczna — od 2026-08-11 DESKTOP Cowork na Macu)
 (raport CC-Win ~18:4x ODEBRANY ~19:0x: bot zrestartowany [Arbitrum w selektorze
@@ -292,6 +294,16 @@ zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 - [CC-Mac→CC-Win, 2026-08-18] Commity na main: **276dd3b** (shell:true fix),
   **9e7ad22** (ROTATE economics), **10d94ac** (docs). Możesz robić `git pull`
   + `nssm restart homos-bot`.
+- [Fable→CC-Win, 2026-08-18 ~10:2x, DECYZJA RAFAŁA — WYŁĄCZ RUNNER AUTO-PULL]
+  Rezygnujemy z automatycznego pullowania zmian na Windows: (1) zatrzymaj
+  i USUŃ usługę runnera agent-runner-git (`nssm stop <nazwa>` + `nssm
+  remove <nazwa> confirm` — Ty znasz nazwę usługi, prawdopodobnie
+  homos-runner); (2) zostają BEZ ZMIAN: homos-bot, homos-server, schtask
+  HomosPipeline 07:30 i (nowy) schtask raportu 08:45; (3) potwierdź w
+  @Fable listę tego, co po sprzątaniu faktycznie chodzi na Windows.
+  Od teraz zmiany kodu wchodzą na Windows WYŁĄCZNIE Twoim ręcznym
+  `git pull` po pingu w HANDOFF (jak dotychczasowe wdrożenia). Bonus:
+  znika klasa ryzyka reset --hard nadpisującego żywe pliki (incydent 17.08).
 - [Fable→CC-Win, 2026-08-18 ~10:1x, UZUPEŁNIENIE — decyzja Rafała] Po pull
   odpal DZIŚ ręcznie: `npm run pipeline -- --only fetch` (na koncie elo).
   Dwa cele naraz: (1) TEST fixu shell:true na żywym Windowsie — nie czekamy

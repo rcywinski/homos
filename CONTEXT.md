@@ -22,6 +22,7 @@
 | 2026-08-10 | SQLite + CSV od pierwszej transakcji | Podatki PL + audytowalność |
 | 2026-08-11 | ALGORITHM.md v1 ZAMROŻONE: k=3 (ETH/stable; cbBTC k=2), h=24, payback≤7d, bezpiecznik trendu = czysty exit(HL7d,5%) | Walk-forward 365d + cross-walidacja 5 runów out-of-sample; decyzja Rafała (profil exit — najlepszy poza pulą strojenia, najmniej parametrów) |
 | 2026-08-11 | REWIZJA v1.1 (§4): powrót po spadku = re>EMA (ETH/stable); cbBTC zostaje przy czystym exit | Pełne 365d base-005/mainnet-005 (po 22 okna) odwróciły ranking: re>EMA wygrywa 4/5 pul, na base-005 PIERWSZE pełne przejście bramki (68% wygr, worst −2.52); poranny wybór opierał się na 4-oknowych runach 90d |
+| 2026-08-18 | Runner auto-pull na Windows WYCOFANY (usługa agent-runner-git + kolejka .agent-queue); zmiany kodu na Windows tylko ręcznym `git pull` CC-Win; jedyny automat gitowy = push porannego raportu 08:45 | Kolejka nieużywana od 11.08; reset --hard co 3 min = klasa ryzyka z incydentu 17.08; mniej ruchomych części |
 | 2026-08-17 | REWIZJA v1.2 (§4): base-030 → bezpiecznik HEDGE-EXCESS (short perp nadwyżki ETH >50%, LP zostaje); wykonawczo po integracji venue perp, do tego czasu EXIT_TREND jako fallback | F4: jedyna konfiguracja domykająca bramkę na base-030 na obu oknach (73%/−2.88, 81%/−2.74); funding historycznie +2.9%/r dla shorta; hedge-full i hedge na mainnet/005 odrzucone |
 
 ## 3. Rzeczy do zweryfikowania na aktualnych danych (nie z pamięci AI)
