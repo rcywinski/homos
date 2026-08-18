@@ -88,8 +88,9 @@
 - [x] Historie DefiLlama 240 pul (4.4y dziennych apyBase/TVL) — pobrane.
 - [x] Fix odświeżania: fetch-llama teraz odświeża pliki starsze niż 24h
   (wcześniej resume pomijał je na zawsze — codzienny pipeline byłby ślepy).
-- [ ] **Weryfikacja jutro po 7:30**: czy HomosPipeline (Harmonogram zadań Windows)
-  wykonał się i dociągnął świeże dane (data/pipeline.log + mtime cache).
+- [~] **Weryfikacja pipeline 07:30** — saga domknięta fixem shell:true (18.08,
+  CONTEXT); weryfikacja pierwszego czystego przebiegu 19.08 zlecona CC-Win
+  (HANDOFF), raport przyjdzie automatem porannym (reports/).
 
 ## B. ANALIZY DO PUSZCZENIA (po danych z A; wszystko lokalne skrypty)
 
@@ -230,7 +231,11 @@
   7d+persyst.3d+majors; zakres k=3·σ·√7d (cbBTC k=2); trigger h24+payback≤7d;
   bezpiecznik trendu czysty exit(HL7d,5%); collect 8×gaz; portfel po rewizji
   cbBTC. Plik: ALGORITHM.md (ograniczenia w §8).
-- [ ] **Wdrożenie parametrów v1 do żywego bota (sesja Fable — kod bot/)**
+- [x] **Wdrożenie parametrów v1 do żywego bota — ZROBIONE** (v1.1 wdrożone
+  12.08 [3c09ade], v1.2 HEDGE 17.08 [8f803c9]; advisorK per pula, EXIT_TREND,
+  history.ndjson + /api/history, ObservationAnalysis w UI — wszystko chodzi
+  na Windows; audyt listy 18.08). Oryginalny opis (historyczny):
+  (sesja Fable — kod bot/)
   (+dopisane 11.08 wieczorem, decyzja Rafała ws. dashboardu obserwacji:
   (4) observer: append snapshotu co cykl 15min do `.bot/history.ndjson`
   {ts,poolId,price,volDaily,feeYieldDaily,rangeLo,rangeHi,emaGapPct};
@@ -242,8 +247,23 @@
   log-ceny per pula (HL7d) + propozycja EXIT_TREND gdy gap<−5% (OBSERWUJ:
   tylko propozycja+Telegram, człowiek zatwierdza w Rabby); (3) UI: karta
   propozycji EXIT_TREND u Sonneta (TASKS-UI).
+- [ ] **DECYZJA KAPITAŁOWA (→ Rafał) — pierwsze wejście LP wg ALGORITHM v1.2**:
+  technicznie wszystko gotowe (pule zwalidowane, kokpit z [Otwórz →],
+  propozycje na Telegramie, prognoza per reżim w UI) — brakuje tylko decyzji
+  ile i gdzie. Kandydaci wg stanu walidacji:
+  (a) **WETH-CBBTC 0.05 Base** — bramka PASS oba okna (82%/−1.8), selektor
+  proponuje od 2 dni; UWAGA: obie nogi crypto = pełna beta (prognoza:
+  down −85%… / up +72% na $5k — patrz forecast), to sleeve "correlated",
+  nie rdzeń; (b) **base-005 / mainnet-005** — bramka pass (45d/60d),
+  ETH/stable = połowa w stable; (c) **base-030** — bramka tylko z
+  hedge-excess; wykonawczo hedge ręczny na GMX (przetestowany 17–18.08)
+  albo poczekać na builder [Zatwierdź hedge]. Do decyzji też: kwota startowa
+  (plan $5–25k), podział (portfel szkicowy z PAIRS.md: 40/25/20/15) i los
+  pyłków mainnet #953427/#953465 (~$90 — zamknąć przy okazji?).
+  Rekomendację szczegółową przygotuje Fable na życzenie.
 - [ ] **Przegląd sygnałów bota z okresu OBSERWUJ** (po ~2 tyg. logów): trafność
   propozycji vs kryterium z ALGORITHM.md → decyzja o trybie PROPONUJ.
+  Pomiar trafności selektora RUSZYŁ 18.08 (SELECTOR-LOG.md).
 - [ ] Backfill: dzienne snapshoty rankingu Pool Scannera do SQLite (żeby za rok
   mieć własną, niezależną od DefiLlamy historię selekcji).
 
@@ -275,30 +295,18 @@
   ("selector: ranking dnia — eligible…"). Selektor czyta data/llama/ (pipeline 07:30
   musi zbiec przed 8:00). UWAGA: wymaga data/llama także NA WINDOWS (pipeline tam pisze).
 - [x] Commit+push `src/utils/rebalanceBuilder.ts` — ✅ ZROBIONE (w commicie `4242221`).
-- [ ] **Konsumenci UI Partii 4 — untracked na Macu, do commitu przez sesję UI**:
-  `src/components/BotTelemetry.tsx`, `src/components/CockpitPositionActions.tsx`,
-  `src/hooks/useCockpitActions.ts`, `src/config/botPools.ts` (karty
-  [Zatwierdź]/[Modyfikuj]/[Odrzuć] + wywołanie rebalanceBuilder + podpisy Rabby).
+- [x] **Konsumenci UI Partii 4 — SCOMMITOWANE** (git ls-files potwierdza
+  wszystkie 4 pliki + ForecastPanel; src/ czysty — audyt 18.08).
 - [ ] Jednolinijkowy fix fetch-swaps: exit code != 0 przy FAILED puli (zgłoszone przez CC).
-- [ ] **Wdrożenie selector v1.1 (fix zimnego startu) na Windows**: commit+push
-  `bot/selector.ts`, na Windows: `git pull`, USUNĄĆ `.bot\selector-state.json`
-  (żeby zasiew streaków i dzisiejszy przebieg wykonały się od nowa),
-  `nssm restart homos-bot`; w `.bot\observer.log` powinno pojawić się
-  "zimny start — streaki zasiane" + "ranking dnia — eligible top5" + propozycje.
-- [ ] **Commit prac UI Sonneta (P3/P4/4b)** — na dysku Maca jest ~13 nieskomitowanych
-  plików src/** (git status); dla porządku i backupu (UI działa z working tree,
-  więc nie blokuje jutra).
-- [ ] **cbBTC/WETH 0.05% Base do BOT_POOLS — ŚWIADOMIE ODŁOŻONE**: adres puli
-  zweryfikowany z cache fetchera: `0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1`
-  (feeBps 500, token0=cbBTC d8, token1=WETH d18, ethIsToken0=false). BLOKER
-  projektowy: observer/telemetria/propozycje zakładają pary kwotowane w USD
-  (pole ethUsd, konwersje toUsd) — dla cbBTC/WETH cena to WETH-za-cbBTC i
-  wyświetlanie byłoby błędne. Wymaga: pola orientacji ceny per pula (np.
-  quote: 'USD'|'WETH') w BotPool + poprawek w observer.ts (ethUsd/valueUsd),
-  selector.ts (toUsd w getSuggestion), UI (BotTelemetry nagłówek, karty).
-  Sesja analityczna (Fable) — nie hotfix. Do tego czasu propozycje OPEN na
-  cbBTC pokazują się z notą "spoza konfiguracji" (uczciwe) a otwarcie ręcznie
-  przez Zarządzaj → PoolBrowser (cbBTC/WETH tam JEST).
+- [x] **Wdrożenie selector v1.1 na Windows — ZROBIONE** (12.08, raport CC-Win;
+  selektor emituje ranking dnia i propozycje — potwierdzone na żywo 18.08).
+- [x] **Commit prac UI Sonneta (P3/P4/4b) — ZROBIONE** (src/ czysty w git
+  status; audyt 18.08).
+- [x] **cbBTC/WETH 0.05% Base w bocie — ZROBIONE** (audyt Fable 18.08: wpis
+  z blokerem był nieaktualny — wdrożenie v1.1 z 11.08 wykonało całość:
+  quote:'WETH'+usdRefPoolId, observer/selektor/UI kompletne; dowód na żywo:
+  propozycja OPEN 18.08 bez noty "spoza konfiguracji", pula widoczna w
+  Prognozie zysku). Reszta = kosmetyka BotTelemetry (ewent. partia Sonnet).
 - [x] **Windows nie miał data/llama (zgłoszone przez sesję Windows)** — data/ jest
   w .gitignore, dane NIE wędrują przez git; każda maszyna buduje własny cache.
   Rozwiązanie: `npm run fetch:llama` (lekki, same API — NIE pełny pipeline, żeby
