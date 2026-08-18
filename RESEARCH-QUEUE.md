@@ -258,6 +258,11 @@
 - [ ] Poranne zadanie 8:00 "newsy → postawa ryzyka dnia" (zaplanowane zadanie
   Claude; użytkownik da znać kiedy utworzyć).
 - [ ] iPhone: wejść przez VPN na http://192.168.1.8:8787, Add to Home Screen (PWA).
+- [ ] **GMX: claim +$0.06 positive funding fees** (zakładka Claims na
+  app.gmx.io, Arbitrum) — zostało po zamkniętym teście shorta 18.08.
+  Odebrać przy okazji NASTĘPNEGO testu/pozycji na GMX (nie warto gazu
+  specjalnie); przy okazji odczytać bieżący "Borrow Fee/Day" rynku
+  ETH/USD do kalibracji modelu kosztów hedge.
 
 ## E. WDROŻENIA KODU (dla Claude Code / terminala)
 - [x] **Selektor pul w bocie (NOWE, 2026-08-10)**: `bot/selector.ts` + zmiany w
