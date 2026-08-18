@@ -31,6 +31,14 @@ const MIN_TVL = 3_000_000;
 const MAJORS = /ETH|BTC|USDC|USDT|DAI|USDS/;
 const SWITCH_COST_PCT = 0.3; // wyjście+wejście, % kapitału (2× 0.15 z selection.ts)
 const MAX_PAYBACK_DAYS = 10; // przewaga musi pokryć koszt przejścia w ≤10 dni
+const MIN_ROTATE_USD = 25; // pozycje-pyłki: koszt stały gazu > wartość, nie proponujemy rotacji
+// gaz za PEŁNY cykl (zamknięcie+otwarcie) per sieć — te same założenia co backtest/engine.ts
+const GAS_CYCLE_USD: Record<string, number> = { mainnet: 8, base: 0.1, arbitrum: 0.2 };
+const gasCycleUsd = (key: string): number => {
+  const k = key.toLowerCase();
+  for (const [chain, usd] of Object.entries(GAS_CYCLE_USD)) if (k.includes(chain) || (chain === 'mainnet' && k.includes('ethereum'))) return usd;
+  return 1; // nieznana sieć: ostrożny domyślny
+};
 const RUN_AFTER_HOUR = 8; // lokalna godzina, po pipeline 07:30
 const MAX_DATA_AGE_H = 26; // nie proponuj ze stęchłych danych
 const REPROPOSE_COOLDOWN_D = 7; // odrzucona propozycja nie wraca przez tydzień
@@ -269,9 +277,23 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
         .filter((x): x is { pos: (typeof positions)[0]; r: RankedPool } => !!x.r)
         .sort((a, b) => a.r.apy7d - b.r.apy7d);
       const weakest = heldRanked[0];
-      if (weakest) {
+      if (weakest && weakest.pos.valueUsd < MIN_ROTATE_USD) {
+        ctx.log(
+          `selector: rotacja pominięta — pozycja #${weakest.pos.tokenId} warta $${weakest.pos.valueUsd.toFixed(2)} < $${MIN_ROTATE_USD} (gaz stały > sens ekonomiczny)`
+        );
+      } else if (weakest) {
         const edge = bestCand.apy7d - weakest.r.apy7d; // p.p. rocznie
-        const breakEvenDays = edge > 0 ? (SWITCH_COST_PCT / (edge / 365)) : Infinity;
+        // koszt PRZEJŚCIA W USD: część proporcjonalna (swap/slippage) + STAŁY gaz
+        // (zamknięcie na sieci źródłowej + otwarcie na docelowej — po połowie cyklu).
+        // Poprzednia wersja liczyła payback czysto procentowo i dla pozycji-pyłków
+        // ($2) proponowała rotacje, gdzie sam gaz mainnet ($8) przekraczał wartość pozycji.
+        const posUsd = weakest.pos.valueUsd;
+        const costUsd =
+          posUsd * (SWITCH_COST_PCT / 100) +
+          gasCycleUsd(weakest.pos.poolId) / 2 +
+          gasCycleUsd(bestCand.botPool?.id ?? bestCand.chain ?? '') / 2;
+        const edgeUsdPerDay = posUsd * (edge / 100) / 365;
+        const breakEvenDays = edgeUsdPerDay > 0 ? costUsd / edgeUsdPerDay : Infinity;
         if (breakEvenDays <= MAX_PAYBACK_DAYS) {
           const id = `rotate-${weakest.pos.tokenId}-${bestCand.pool}`;
           if (!blocked(ctx, id)) {
