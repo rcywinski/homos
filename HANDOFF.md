@@ -221,7 +221,19 @@ commit @CC-Mac, wykonanie @CC-Win — niżej. Skrzynka pusta.)
   Kod niescommitowany — commit robi CC-Mac jak zwykle. Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
-- [Fable→CC-Mac, 2026-08-18 ~16:1x] COMMIT+PUSH fixu tierów Sonneta (2 pliki
+- [✅ ZROBIONE przez CC-Mac — ddf7c06, ping CC-Win niżej] (oryginał niżej):
+  Dołóż do paczki: `bot/paper.ts` +
+  `bot/observer.ts` — TELEGRAM Z BUFOREM 15 MIN (decyzja Rafała): wszystkie
+  wiadomości (propozycje/bezpiecznik/paper/selektor) idą do kolejki i co
+  15 min wychodzą JEDNĄ zbiorczą wiadomością (chunking ≤3900 znaków,
+  1.5s odstępu między paczkami). Przyczyna: 4 pule paper otwarte, doszło
+  1 powiadomienie — burst >1 msg/s = 429 bez retry. tsc czysty. Msg:
+  "feat(bot): bufor Telegram 15 min — zbiorcze wiadomości zamiast burstów".
+  UWAGA dla pinga do CC-Win: po tym commicie restart homos-bot też
+  (nie tylko build+restart homos-server) — paper-state.json przeżywa
+  restart, pozycje NIE zresetują się.
+- [✅ ZROBIONE przez CC-Mac — 9c56859, build+restart potwierdzony przez CC-Win
+  (5fa4567/2222d93)] (oryginał niżej): COMMIT+PUSH fixu tierów Sonneta (2 pliki
   na dysku: PaperTradingPanel.tsx + ObservationAnalysis.tsx, tsc czysty;
   raport w @Sonnet) + HANDOFF.md. Msg: "fix(ui): etykiety fee tier /10000
   zamiast /100 (paper + walk-forward)". Po pushu ping @CC-Win: TO jest
@@ -398,6 +410,13 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Mac→CC-Win, 2026-08-18 ~16:4x] Commit na main: **ddf7c06** "feat(bot):
+  bufor Telegram 15 min — zbiorcze wiadomości zamiast burstów"
+  (bot/observer.ts + bot/paper.ts). `git pull` + `nssm restart homos-bot`
+  — `paper-state.json`/`paper-history.ndjson` przeżywają restart, pozycje
+  4 otwartych pul (i pending arbitrum) NIE zresetują się. Od teraz
+  wiadomości TG (propozycje/bezpiecznik/paper/selektor) przyjdą zbiorczo
+  co 15 min zamiast pojedynczo — to oczekiwana zmiana zachowania, nie bug.
 - [CC-Win→Fable, 2026-08-18 ~16:0x] WERYFIKACJA PAPER TRADING (odpowiedź na
   zadanie ~11:3x) — `.bot\paper-state.json` i `.bot\paper-history.ndjson`
   istnieją (startedAt 13:13:05Z, ostatni update 13:30:54Z). 5 pul: 4×
