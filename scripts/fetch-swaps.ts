@@ -28,15 +28,10 @@ export interface PoolCfg {
 }
 
 export const POOLS: PoolCfg[] = [
-  {
-    // TEST HyperSync (sekcja E RESEARCH-QUEUE): ta sama pula co istniejący
-    // cache base-weth-usdc-030 (90d z RPC) pod świeżym id — po pobraniu
-    // porównać: npx tsx scripts/compare-caches.ts base-weth-usdc-030 base-weth-usdc-030-hstest
-    id: 'base-weth-usdc-030-hstest',
-    chain: 'base',
-    address: '0x6c561B446416E1A00E8E93E221854d6eA4171372',
-    feeBps: 3000, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 90,
-  },
+  // (wpis testowy base-weth-usdc-030-hstest USUNIĘTY 18.08 — test HyperSync
+  // dawno zaliczony [compare-caches zgodny]; zostawiony w POOLS blokował
+  // dzienny pipeline 90-dniowym backfillem przez RPC. Pliki -hstest w
+  // data/cache do skasowania na obu maszynach.)
   {
     id: 'mainnet-usdc-weth-005',
     chain: 'mainnet',

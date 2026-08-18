@@ -260,7 +260,10 @@
   albo poczekać na builder [Zatwierdź hedge]. Do decyzji też: kwota startowa
   (plan $5–25k), podział (portfel szkicowy z PAIRS.md: 40/25/20/15) i los
   pyłków mainnet #953427/#953465 (~$90 — zamknąć przy okazji?).
-  Rekomendację szczegółową przygotuje Fable na życzenie.
+  PRZY WEJŚCIU w cbBTC rozstrzygnąć napięcie k2/k3 (CONTEXT 12.08: ALGORITHM
+  v1.1 zamroził k=2 z single-runu, pełny walk-forward mówi k3>k2; prognoza
+  w UI liczona profilem k3 — bot gra k2). Rekomendację szczegółową
+  przygotuje Fable na życzenie.
 - [ ] **Przegląd sygnałów bota z okresu OBSERWUJ** (po ~2 tyg. logów): trafność
   propozycji vs kryterium z ALGORITHM.md → decyzja o trybie PROPONUJ.
   Pomiar trafności selektora RUSZYŁ 18.08 (SELECTOR-LOG.md).

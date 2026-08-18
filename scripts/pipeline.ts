@@ -16,9 +16,11 @@
  *    ostatnie <24h (state nextBlock vs teraz),
  *  - log całości: data/pipeline.log (+ pełne logi kroków w data/pipeline-logs/).
  */
+import 'dotenv/config';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { POOLS } from './fetch-swaps'; // guard require.main w fetch-swaps — import NIE odpala fetchu
 
 const ROOT = path.join(__dirname, '..');
 const LOGDIR = path.join(ROOT, 'data', 'pipeline-logs');
@@ -86,8 +88,22 @@ function swapsFresh(): { fresh: string[]; stale: string[] } {
   log(`=== PIPELINE START (only=${only ?? 'all'}) ===`);
 
   if (!only || only === 'fetch') {
-    if (!(await withRetry('fetch-swaps', () => runStep('fetch-swaps', 'scripts/fetch-swaps.ts')))) failures.push('fetch-swaps');
+    // KOLEJNOŚĆ (lekcja 18.08): fetch-llama NAJPIERW — tani (same API DefiLlamy)
+    // i KRYTYCZNY dla selektora (failsafe 26h); wolne swapy nie mogą go blokować.
     if (!(await withRetry('fetch-llama', () => runStep('fetch-llama', 'scripts/fetch-llama-history.ts')))) failures.push('fetch-llama');
+    // Swapy: HyperSync per pula (minuty) gdy jest token; fallback = stary
+    // wariant RPC (godziny na darmowych limitach — lekcja 18.08: 11%/91min).
+    const hsToken = process.env.HYPERSYNC_BEARER_TOKEN || process.env.ENVIO_API_TOKEN;
+    if (hsToken) {
+      for (const p of POOLS) {
+        if (!p.address) { log(`fetch-swaps-hs: pomijam ${p.id} (brak adresu w cfg — HyperSync nie robi factory-lookup)`); continue; }
+        if (!(await withRetry(`hs-${p.id}`, () => runStep(`hs-${p.id}`, 'scripts/fetch-swaps-hypersync.ts', [p.id]), 2)))
+          failures.push(`hs-${p.id}`);
+      }
+    } else {
+      log('BRAK HYPERSYNC_BEARER_TOKEN w .env — fallback na wolny fetch-swaps.ts (RPC); dopisz token (envio.dev), żeby fetch trwał minuty zamiast godzin');
+      if (!(await withRetry('fetch-swaps', () => runStep('fetch-swaps', 'scripts/fetch-swaps.ts')))) failures.push('fetch-swaps');
+    }
     const { fresh, stale } = swapsFresh();
     log(`świeżość swap cache: OK=[${fresh.join(', ')}] BRAKI=[${stale.join(', ')}]`);
   }
