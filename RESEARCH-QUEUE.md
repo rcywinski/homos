@@ -435,6 +435,29 @@
 
 ## H. POMYSŁY NA PRZYSZŁE MODUŁY (backlog pomysłów — nie w budowie)
 
+- [ ] **SQLITE DLA LOGÓW/PAPER (pomysł Rafała 18.08)** — SCHEMAT
+  ZAPROJEKTOWANY: **DB-SCHEMA.md** (zasady rozszerzalności: migracje
+  numerowane, raw-bigint jako TEXT, JSON1 na płynne ładunki, słowniki
+  jako tabele; DDL v1: pool/venue/pool_snapshot/proposal/selector_ranking/
+  paper_sample/paper_event/position/tx/backtest_run + widoki). Do
+  implementacji wg §4 dokumentu. Reszta opisu: warstwa zapisu BEZ
+  zmian (ndjson append-only, crash-safe), NOWY krok pipeline'u 07:30 —
+  import przyrostowy do `data/homos.db` (better-sqlite3): history.ndjson,
+  paper-history/events, proposals, SELECTOR-LOG. Zysk: zapytania w poprzek
+  czasu (trafność selektora vs walidacje!), agregacje pod UI, retencja,
+  fundament pod księgowość podatkową przy realnym kapitale (decyzja
+  2026-08-10 „SQLite+CSV" — to jej realizacja). Backup łapie plik .db
+  automatycznie. Wykonanie: Fable (schemat+skrypt) + CC-Mac (commit) +
+  CC-Win (krok w pipeline).
+- [ ] **DOCKERIZACJA JAKO ARTEFAKT (pomysł Rafała 18.08)**: Dockerfile +
+  docker-compose (homos-bot, homos-server; wolumeny .bot/ i data/; .env
+  przez env_file) W REPO, budowane/testowane na Macu — na Windowsie NADAL
+  natywnie NSSM (Docker Desktop/WSL2 = 1–2 GB RAM narzutu, zbędny koszt
+  na obecnym sprzęcie). Cel: przyszły deploy na VPS = docker compose up.
+  PRZY przenosinach (nie teraz) do decyzji: model zaufania VPS —
+  ekspozycja API (firewall/WireGuard), sekrety (BOT_API_TOKEN/TG/HyperSync
+  poza obrazem), backup wolumenów.
+
 - [ ] **ZATWIERDZANIE Z TELEFONU + PUSH (pomysł Rafała 17.08)**: pełna pętla
   "zagrożenie/okazja → push na telefon → podpis w Rabby mobile w minutę".
   NAJTAŃSZA ŚCIEŻKA (większość już istnieje — bot 24/7 to jest ten backend):

@@ -313,3 +313,66 @@ Typecheck (`npx tsc --noEmit -p tsconfig.json`, w kontenerze): 0 błędów w
 `src/`. Pozostałe błędy (bot/observer.ts — niezgodność typów viem w getBlock,
 node_modules/ox) preexisting, poza zakresem tej sesji — jak w poprzednich
 partiach.
+
+## PARTIA 6 — TOP 10 pul dnia (obserwowane do wejścia) ✅ wykonana — zlecone przez Fable 18.08 (pomysł Rafała)
+
+KONTEKST: selektor codziennie (po 8:00) liczy ranking pul wg polityki
+ALGORITHM (7d śr. apyBase, persystencja ≥3d, majors, TVL≥$3M, ETH/Base/Arb)
+i od teraz zapisuje TOP 10 do `.bot/selector-ranking.json`; serwer wystawia
+`GET {base}/api/ranking` (Bearer token; 503 dopóki selektor nie zapisał —
+PIERWSZY plik pojawi się jutro po 8:00). Kształt:
+```json
+{ "day":"YYYY-MM-DD", "generatedAt":"ISO",
+  "criteria": {"window":"7d śr. apyBase","persistDays":3,"minTvlUsd":3000000,"filter":"..."},
+  "rows": [ {"rank":1,"symbol":"WETH-CBBTC","chain":"Base","poolMeta":"0.05%",
+    "apy7d":25.2,"streak":5,"eligible":true,"tvlUsd":123456789,
+    "botPoolId":"base-cbbtc-weth-005"|null,"llamaUuid":"..."}, ... ] }
+```
+
+ZAKRES (wyłącznie src/**):
+1. `useBotApi.ts`: fetch `GET /api/ranking` odświeżany co 30 min (dane
+   zmieniają się raz dziennie — nie częściej!), typy wg kształtu wyżej.
+2. Nowa sekcja `TopRankingPanel.tsx` w kokpicie (zwijana, domyślnie
+   ZWINIĘTA — to obserwacja, nie codzienna decyzja): tabela TOP 10 —
+   kolumny: #, para (symbol + poolMeta + chain), APY 7d, streak (np.
+   "5d w topie"), TVL (skrót $XXM), status. Status per wiersz:
+   ✅ "w konfiguracji bota" gdy `botPoolId` (pula wykonywalna od ręki,
+   przechodzi przez lejek walidacji), szary "poza konfiguracją" gdy null.
+   Wiersze `eligible:true` wyróżnione (to z nich selektor proponuje OPEN).
+   Nagłówek: "Ranking dnia <day>" + kryteria drobnym drukiem (z `criteria`).
+3. Stany: 503 → "Ranking pojawi się po pierwszym przebiegu selektora
+   (codziennie po 8:00)"; dane z wczoraj (day < dziś) → żółta notka
+   "ranking z <day> — dzisiejszy przebieg jeszcze nie wygenerowany".
+4. WAŻNE (uczciwość UI): pod tabelą jedno zdanie disclaimera — "Headline
+   APY z rankingu ≠ osiągalny wynik LP; pule wchodzą do gry dopiero po
+   walidacji tick-level (patrz WETH-USDT 0.01%: 11% w rankingu, odrzucona
+   walidacją)." NIE dodawać przycisków akcji przy wierszach.
+5. CSS `topranking-*`; UWAGA: istnieje stary `TopPools.tsx` (DefiLlama
+   client-side, sekcja "Top pule" z sesji 2e) — NIE ruszać go w tej partii;
+   decyzja o scaleniu/wycofaniu zapadnie osobno.
+
+- [x] `useBotApi.ts`: `ranking`/`rankingStatus` (GET /api/ranking, poll co
+      30 min — `RANKING_POLL_MS`, osobny od paper/state). Typy `RankingData`/
+      `RankingRow`/`RankingCriteria`/`RankingStatus` wg kształtu ze zlecenia.
+      503 → `'not-started'`, inne błędy/sieć → `'error'`.
+- [x] `src/components/TopRankingPanel.tsx` (nowy): tabela TOP 10 (#, para+
+      poolMeta+chain, APY 7d, streak "Nd w topie", TVL skrócone $X.XM/$Xk,
+      status ✅ "w konfiguracji bota" / szare "poza konfiguracją"), wiersze
+      `eligible:true` podświetlone (`.topranking-eligible`), nagłówek
+      "Ranking dnia <day>" + kryteria drobnym drukiem, żółta notka gdy
+      `day < dziś`, disclaimer o headline APY vs walidacji tick-level pod
+      tabelą. Reużyty wzorzec `telemetry-table` (jak WalkforwardMiniTable).
+- [x] Wpięty w `MorningCockpit.tsx` pod `<ExpandableSection title="🏆 Ranking
+      dnia (TOP 10)" defaultExpanded={false}>` (jedyna sekcja domyślnie
+      zwinięta wśród nowych paneli — to obserwacja, nie codzienna decyzja),
+      na końcu kokpitu po ObservationAnalysis. `TopPools.tsx` nietknięty.
+- [x] Stany brzegowe: `not-started` (503) → komunikat o pierwszym przebiegu
+      selektora po 8:00; `error`/`loading` → notka wyciszona; ranking pusty
+      (`rows.length === 0`) → notka.
+- [x] CSS: sekcja `/* TopRankingPanel.tsx (Partia 6) */` w styles.css, klasy
+      `topranking-*` + nowa `.morning-note-warn` (żółta notka nieaktualnego
+      dnia, reużywalna gdzie indziej).
+
+Typecheck (`npx tsc --noEmit -p tsconfig.json`): 0 błędów w `src/`.
+Pozostałe błędy (bot/observer.ts, node_modules/ox) preexisting, poza
+zakresem tej sesji — jak w poprzednich partiach.
