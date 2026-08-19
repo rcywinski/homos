@@ -285,7 +285,7 @@
   trzeba przekazać poza gitem, np. wkleić bezpośrednio w terminalu Windows).
 - [ ] Poranne zadanie 8:00 "newsy → postawa ryzyka dnia" (zaplanowane zadanie
   Claude; użytkownik da znać kiedy utworzyć).
-- [ ] iPhone: wejść przez VPN na http://192.168.1.8:8787, Add to Home Screen (PWA).
+- [x] iPhone: Add to Home Screen (PWA) — ZROBIONE 19.08 (Rafał): apka na home screen, Rabby przez WalletConnect + API bota podłączone. Wymagało 3 fixów buildu/UI (dziennik CONTEXT 19.08 ~15:5x).
 - [ ] **GMX: claim +$0.06 positive funding fees** (zakładka Claims na
   app.gmx.io, Arbitrum) — zostało po zamkniętym teście shorta 18.08.
   Odebrać przy okazji NASTĘPNEGO testu/pozycji na GMX (nie warto gazu
