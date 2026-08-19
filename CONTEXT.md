@@ -1424,3 +1424,28 @@ Podział ról z v1.1 (re>EMA dla ETH/stable, czysty exit dla cbBTC) trzyma się
 też na 60d — każdy profil wygrywa dokładnie tam, gdzie go przypisaliśmy.
 Bramka globalna: 2 pule pass (base-005-45d, mainnet-005-60d) + cbBTC pass
 (60d) — hedge F4 wciąż otwarty front, ale ogon systematycznie maleje.
+
+### 2026-08-19 07:50 — Sesja Fable-desktop (poranny brief): za wcześnie na weryfikację, HANDOFF wysprzątany
+Rutyna: git log bez nowych commitów od wczoraj 17:40 (666736c/4b9e4b2 —
+tylko ranking TOP 10 + docs z 18.08 wieczorem); `.agent-queue/done/` bez
+zmian od 11.08 (zgodnie z decyzją o wycofaniu runnera). `.bot/` na Macu
+nadal STALE (17.08 10:43) — potwierdza, że żywe dane bota żyją na
+Windows, nie w repo Maca. `reports/` puste w repo — **to oczekiwane**:
+pierwszy pełny przebieg pipeline'u z fixem shell:true+HyperSync (konto
+elo) miał start 07:30 lokalnie, ale jedyny automat gitowy na Windows
+(push raportu) odpala się dopiero o 08:45 — ta sesja startuje wcześniej,
+więc brak śladu w gicie NIE jest anomalią, tylko kwestią czasu. Poprosiłem
+@CC-Win (wpis w HANDOFF) o wklejenie tail `pipeline-task.log` + linii
+`selector:`/„ranking dnia" po tym jak oba schtaski (07:30, 08:45) się
+wykonają — potrzebne do SELECTOR-LOG.md (pomiar trafności od 17.08, dziś
+brak jeszcze wpisu). Porządki: sekcja @Fable w HANDOFF.md wyczyszczona z
+historii 11–18.08 (wszystko było już odebrane/pusta, pełny zapis zostaje
+w gicie) — zostawiony tylko nagłówek + notka o stanie tej sesji.
+
+**Brief dla Rafała:** System bez zmian od wczorajszego wieczora — ostatnie
+commity to ranking TOP 10 (18.08 ~17:40), wszystkie zadania z wczoraj
+domknięte. Za wcześnie, by ocenić dzisiejszy pierwszy pełny przebieg
+pipeline'u (fix shell:true + HyperSync, start 07:30) — raport z Windows
+wpada dopiero o 08:45, poprosiłem @CC-Win o potwierdzenie i świeży ranking
+selektora po tym fakcie. Nic nie wymaga Twojej decyzji teraz; jeśli
+pipeline padnie tym samym błędem co poprzednio, dostaniesz sygnał osobno.

@@ -21,201 +21,20 @@ raportu (schtask 08:45, scripts/morning-report.ts). Kolejki .agent-queue
 NIE używać do nowych zadań.
 
 ## @Fable (sesja analityczna — od 2026-08-11 DESKTOP Cowork na Macu)
-(wszystkie raporty z 18.08 po południu ODEBRANE przez Fable ~16:3x —
-dzień DOMKNIĘTY: paper trading live [4 pule open, arbitrum pending —
-obserwować], UI Partia 5 + fixy zbudowane na Windows [bundle świeży
-13:32Z; biała strona Rafała = stary bundle/cache przeglądarki — po
-twardym odświeżeniu powinno działać], bufor TG 15 min wdrożony z
-restartem homos-bot [paper-state przeżył ✓]. Na jutro rano: automat
-07:30 pierwszy raz z HyperSynciem + raport 08:45 z sekcją PAPER —
-werdykty w porannej analizie. Skrzynka pusta.)
-- [CC-Mac→Fable, 2026-08-18] Oba zadania z @CC-Mac zrobione i wypushowane:
-  Partia 5 Sonneta (PaperTradingPanel.tsx + useBotApi.ts + MorningCockpit.tsx
-  + styles.css) w commicie **7056cbd**, fix mojibake w morning-report.ts w
-  commicie **ed73ec7**. Push na main potwierdzony (f26dc45..ed73ec7). Ping do
-  @CC-Win o build+restart homos-server wysłany.
-(raport CC-Win ~18:4x ODEBRANY ~19:0x: bot zrestartowany [Arbitrum w selektorze
-od jutra], runner-usługa działa jako .\elo — lekcja DPAPI w CONTEXT/INFRA.
-Skrzynka pusta.)
-> Bootstrap z 2026-08-11 ODEBRANY przez nową sesję Fable (desktop, nie cloud).
-> WAŻNA różnica vs plan: sesja ma bezpośredni dostęp do dysku Maca (mount),
-> ale sandbox NIE ma poświadczeń GitHub → git push/pull NIEMOŻLIWY z tej
-> sesji. Decyzja Rafała: push robi CC-Mac (status quo). Pobudki: zadania
-> harmonogramu Cowork (07:50 codziennie + 13:30 jednorazowa 11.08) — działają
-> tylko przy OTWARTEJ aplikacji Claude na Macu.
-(raport CC-Mac ~15:2x "REWIZJA v1.1 + F.B zrobione w całości" ODEBRANY ~15:37
-przez pobudkę Fable: commity 627cc38/8636d63/602c644 zweryfikowane, pegged
-usdc-usdt + wsteth-weth ZINTERPRETOWANE → CONTEXT dziennik ~15:40 + RESEARCH-QUEUE
-F.B/C zaktualizowane. Werdykt: sleeve pegged na v3 = rekomendacja NIE.
-Skrzynka pusta — czekam na walkforwardy arbitrum/optimism 45/15 → ocena bramki.)
-(walkforwardy arb/op ODEBRANE ~16:15, werdykt w CONTEXT: Arbitrum → selektor,
-OP → nie. Skrzynka pusta.)
-(poranny brief 12.08 07:50: nocna partia db2e3e5 ODEBRANA i ZINTERPRETOWANA —
-wpis CONTEXT "2026-08-12 07:50". Skrót: mainnet-005-60d PEŁNY PASS bramki
-oboma profilami trendowymi; cbBTC-60d exit pass 81%/−1.36; arb-030 fail →
-na Arbitrum gramy 005; arb-005 na 60d nie potwierdza 45d. Odebrane też oba
-raporty Sonneta [Arbitrum w UI, EXIT_TREND, ObservationAnalysis — konwencję
-nazw /api/results `walkforward-<botPoolId>-365d-45d.json` honoruję w server.ts].
-Skrzynka pusta.)
-(raport CC-Win 12.08 ~10:1x "wdrożenie v1.1 (3c09ade) + restart bot/server +
-UI rebuild" ODEBRANY. Kontrola 13.08 ~20:0x: oba serwisy Running bez przerw,
-wszystkie 5 pul (w tym arbitrum-weth-usdc-005) zbierają realne
-vol/feeYield co ~15 min, ostatni wpis history.ndjson sprzed 5 min — zbieranie
-danych działa poprawnie. Skrzynka pusta.)
-(incydent .bot/pipeline z 17.08 DOMKNIĘTY ~12:3x — pełna sekwencja: krok 0
-CC-Win [backup+stop runnera] → untrack CC-Mac [f18f50e] → restore+restart
-CC-Win; pipeline przepięty SYSTEM→elo [przyczyna: spawn npx ENOENT],
-fetch:llama odświeżony. Szczegóły: CONTEXT 17.08. Skrzynka pusta —
-oczekiwane następne wpisy: potwierdzenie rankingu selektora od CC-Win
-i jutrzejszy pipeline 07:30.)
-(wpisy CC-Mac ~12:5x/~13:0x/~15:1x ODEBRANE przez Fable ~17:0x — wszystkie
-zinterpretowane wcześniej na bieżąco [werdykt F4 → CONTEXT ~14:00, v1.2
-→ ~14:40]; commity ecadbc1/1925cf8/03a309f/5da54a8/8f803c9 zweryfikowane
-w git log. Bot z propozycjami HEDGE działa po restarcie CC-Win. Skrzynka
-pusta — w toku: zestaw "Prognoza zysku" [CC-Mac rerun+forecast, Sonnet
-sekcja UI + bug-check wykresów].)
-(wpisy CC-Mac ~16:1x/~16:5x i CC-Win ~18:1x ODEBRANE przez Fable ~18:2x —
-prognoza v2 per reżim zweryfikowana na liczbach [interpretacja w CONTEXT
-~18:20], UI przebudowane na Windows. Cykl "Prognoza zysku" DOMKNIĘTY.
-Skrzynka pusta.)
-- [ARCHIWUM — odebrane] [CC-Mac→Fable, 2026-08-17 ~16:1x] **PROGNOZA ZYSKU GOTOWA** — kod `4744080`,
-  dane `5d77200` (rerun 45d z kwantylami, 5/5 rc=0, forecast.json). Tabela
-  APR słabo/typowo/dobrze (rozkład okien 45d, rok głównie spadkowy):
-  | pula | słabo | typowo | dobrze |
-  |---|---|---|---|
-  | WETH/USDC 0.3% Base | −66.4 | −16.6 | +63.1 |
-  | WETH/USDC 0.05% Base | −64.1 | −26.0 | +33.5 |
-  | USDC/WETH 0.05% Ethereum | −70.1 | −11.2 | +37.1 |
-  | WETH/USDC 0.05% Arbitrum | −58.4 | −20.0 | +43.7 |
-  | WETH/cbBTC 0.05% Base | −85.5 | −24.8 | +72.0 |
-(PROGNOZA v2 [68870bf/13573e9] + RegimeTable Sonneta [da95494] + rebuild UI
-CC-Win [3590bf7] + WALIDACJA mainnet-weth-usdt-001 [0a68599/3e33edc, bramka
-NIEZDANA, anomalia trend = probe-swapy] ODEBRANE i ZINTERPRETOWANE na bieżąco
-17.08 wieczorem: wpisy CONTEXT "~18:20 PROGNOZA ZYSKU v2… WDROŻONA" i "~20:00
-PIERWSZY WERDYKT LEJKA SELEKTORA… NIE" [fix probe-swapów w loadPool
-opisany tam]. Skrzynka pusta.)
-(diagnoza CC-Win z ~08:3x ODEBRANA ~09:00 przez Fable — zweryfikowana w
-kodzie: TRAFNA [spawn('npx') bez shell:true, pipeline.ts:38]. Fix na dysku
-Maca + przy okazji złapany i naprawiony bug ekonomii ROTATE [propozycja
-rotacji pozycji $2.08 z "paybackiem 4.8d" — liczony bez USD i gazu].
-Telegram potwierdzony na żywo przez Rafała (3 propozycje 08:24). Wpis
-CONTEXT "2026-08-18 ~09:00", dziennik trafności: SELECTOR-LOG.md (NOWY).
-Zadania: commit u @CC-Mac, redeploy u @CC-Win — niżej. Skrzynka pusta.)
-- [CC-Win→Fable, 2026-08-18 ~08:3x] DIAGNOZA (odpowiedź na prośbę wyżej) —
-  **naprawa z 17.08 (SYSTEM→elo) NIE naprawiła prawdziwej przyczyny.**
-  `data\pipeline-task.log`: task na koncie elo faktycznie wystartował
-  18.08 05:30:02 UTC (=07:30 lokalnie), ale padł z DOKŁADNIE tym samym
-  błędem co wcześniej: `Error: spawn npx ENOENT`. PRAWDZIWA PRZYCZYNA
-  (znaleziona w kodzie): `scripts/pipeline.ts:38` woła
-  `spawn('npx', ['tsx', script, ...])` **bez `shell: true`** — na Windows
-  `child_process.spawn()` nie potrafi bezpośrednio uruchomić plików
-  `.cmd`/`.bat` (npx to `npx.cmd`), stąd ENOENT NIEZALEŻNIE od konta
-  (SYSTEM czy elo — dlatego wczorajsza naprawa konta nie pomogła, problem
-  nigdy nie był w PATH/koncie). Lekcja DPAPI NIE miała tu zastosowania —
-  to inna klasa błędu (Node+Windows spawn batch-files). SUGEROWANA NAPRAWA
-  (kod, do zrobienia przez CC-Mac): w `runStep()` dodać `{ shell: true }`
-  do opcji spawn, albo użyć `spawn(process.platform === 'win32' ? 'npx.cmd'
-  : 'npx', ...)`. `bot/observer.ts`/`bot/selector.ts` używają tego samego
-  wzorca gdzieś indziej — warto sprawdzić czy mają ten sam problem
-  (na razie działają, bo są uruchamiane przez NSSM jako długo żyjący
-  proces node, nie przez spawn('npx')).
-  SELEKTOR mimo to zadziałał dziś (`observer.log` 18.08 06:24:26Z):
-  `data/llama/universe.json` ma timestamp 17.08 12:11 (mój ręczny
-  `fetch:llama` sprzed 18h) — nadal <26h, więc BEZ ostrzeżenia "stęchłe
-  dane". Ranking dnia (identyczny jak wczorajszy zimny start, bo dane
-  źródłowe te same): WETH-CBBTC@Base 25.2%, USDC-WETH@Ethereum 21.5%,
-  WETH-USDC@Base 20.0%, WETH-USDT@Ethereum 13.2%/11.0%. Padły 3 świeże
-  propozycje (NIE TTL-wygaszone): OTWÓRZ WETH-CBBTC@Base, OTWÓRZ
-  WETH-USDC@Base, ROTUJ #953427→WETH-CBBTC (zwrot kosztu ~4.8d).
-  ⚠️ RYZYKO: bez fixu kodu pipeline będzie padał codziennie o 07:30 —
-  jutro (19.08) `universe.json` przekroczy 26h i selektor znów zacznie
-  odrzucać ze "stęchłych danych". Do jutra rana potrzebny albo fix kodu
-  (CC-Mac) + mój redeploy, albo mój kolejny ręczny `fetch:llama`.
-- [CC-Mac→Fable, 2026-08-18 ~09:1x] **RERUN mainnet-weth-usdt-001 GOTOWY**
-  (fix probe-swapów już był na dysku/w commicie 8157776 — sam rerun +
-  wyniki: **191fb01**). Filtr odrzucił 1688 swapów (0.029%). Trendy wróciły
-  do sensownego zakresu — POTWIERDZONA diagnoza (były to probe-swapy):
-  | strategia | śr. | %wygr | najgorsze |
-  |---|---|---|---|
-  | Pasywny ±50% | −0.87 | 64% | −12.01 |
-  | Adapt k2 h24 | −0.69 | 55% | −9.18 |
-  | Adapt k3 h24 | −1.37 | 59% | −10.41 |
-  | Adapt k3 + trend(exit) | −10.24 | 0% | −21.75 |
-  | Adapt k3 + trend(vg1.4,t2=10%) | −7.21 | 5% | −14.81 |
-  | Adapt k3 + trend(re>ema) | −7.22 | 0% | −13.41 |
-  Bramka nadal NIEZDANA (bez zmian werdyktu — to była higiena silnika,
-  nie zmiana decyzji o puli, zgodnie z Twoją zapowiedzią).
-- [CC-Mac→Fable, 2026-08-18 ~09:2x] **AUTOMAT RAPORTÓW — kod gotowy, launchd
-  POMINIĘTY**: scripts/morning-report.ts + package.json — commit **fc17f51**
-  (sanity: tsc bez nowych błędów, test lokalny REPORT_PUSH=0 zadziałał,
-  test-artefakt usunięty przed commitem). Część 2 (launchd auto-pull 08:55
-  na Macu) zapytałem Rafała wprost — **decyzja: pomijamy, robi pull ręcznie
-  rano**. Jeśli chcesz to jednak zautomatyzować, poproś Rafała bezpośrednio
-  (ja nie zakładam trwałych zadań systemowych bez jego zgody w tej rozmowie).
-(raport CC-Win ~10:4x ODEBRANY ~11:0x przez Fable — DECYZJE PODJĘTE I
-WDROŻONE w kodzie na dysku: (a) pipeline → HyperSync per pula z fallbackiem
-RPC gdy brak tokenu; (b) hstest USUNIĘTY z POOLS; (c) fetch-llama
-przestawiony PRZED swapy [wolny fetch nigdy więcej nie zagłodzi selektora];
-jutrzejszy automat 07:30 MA sens po tych zmianach. tsc czysty. Zadania:
-commit @CC-Mac, wykonanie @CC-Win — niżej. Skrzynka pusta.)
-- [ODEBRANE — archiwum] [CC-Win→Fable, 2026-08-18 ~10:4x] TEST fixu shell:true — WYNIK MIESZANY,
-  do decyzji.
-  ✅ CZĘŚĆ DOBRA: `pull` (a8fc6ed) + `nssm restart homos-bot` zrobione.
-  `npm run pipeline -- --only fetch` odpaliłem ręcznie — **fix shell:true
-  DZIAŁA**: `npx` faktycznie wystartował (widać w
-  `data/pipeline-logs/fetch-swaps-*.log`, wcześniej ENOENT był natychmiastowy,
-  teraz proces realnie robił postęp). To potwierdza diagnozę z rana i
-  naprawę 276dd3b — na tym froncie problem rozwiązany.
-  ⚠️ CZĘŚĆ ZŁA: sam `scripts/pipeline.ts` woła `scripts/fetch-swaps.ts`
-  (WOLNY wariant RPC), NIE `fetch-swaps-hypersync.ts` (szybki — to ten
-  drugi jest od 11.08 zalecaną praktyką, patrz stara notka "PILNE
-  przypomnienie" w historii HANDOFF). Po 91 min i 11% postępu ubiłem
-  proces ręcznie (za Twoim pozwoleniem) — utknął w pętli darmowych/płatnych
-  limitów RPC (`base.drpc.org` timeout, `base-rpc.publicnode.com` wymaga
-  tokenu archive). DODATKOWO: `fetch-swaps.ts` w liście POOLS (linia ~30)
-  ma na stałe wpisaną **testową pulę `base-weth-usdc-030-hstest`**
-  (komentarz: "TEST HyperSync sekcja E RESEARCH-QUEUE... porównać z
-  compare-caches.ts") — wygląda na jednorazowy test z 11.08, nigdy
-  nieusunięty z listy, 90 dni danych przez RPC = właśnie to zawiesiło
-  test. `fetch-swaps.ts` NIE jest wznawialny w sensie "dokończy szybko" —
-  ma per-pula `state.json`, więc restart wznowi od tego samego miejsca
-  (~11%), nie od zera, ale nadal będzie pełzł przez RPC.
-  DO DECYZJI (Twoja/CC-Mac, nie moja): (a) czy `pipeline.ts` powinien wołać
-  `fetch-swaps-hypersync.ts` zamiast `fetch-swaps.ts`; (b) czy usunąć
-  `base-weth-usdc-030-hstest` z POOLS w `fetch-swaps.ts` (test dawno
-  zweryfikowany, zbędny balast); (c) czy jutrzejszy automatyczny pipeline
-  07:30 (teraz już bez ENOENT, ale nadal na wolnym RPC) ma sens, czy lepiej
-  podmienić na hypersync PRZED jutrem. Nie ruszałem kodu — czekam na Twoją
-  decyzję. `universe.json` (llama) NIE zostało dziś odświeżone (fetch-llama
-  w pipeline nie zdążył, bo fetch-swaps go blokował) — nadal z 17.08 12:11,
-  jutro rano zbliży się do progu 26h; jeśli chcesz ubezpieczenie, mogę
-  odpalić sam `npm run pipeline -- --only fetch` z fetch-swaps ograniczonym
-  do realnych pul (albo osobno tylko fetch-llama) — czekam na wskazówkę.
-- [CC-Win→Fable, 2026-08-18 ~10:5x] AUTOMAT PORANNYCH RAPORTÓW ZROBIONY —
-  test `REPORT_PUSH=0 npm run report:morning` lokalnie: OK, zapisał
-  `reports/morning-2026-08-18.md` z sensowną treścią (świeżość danych, tail
-  logów, propozycje OPEN/ROTATE, selector-state, trend-state — test-artefakt
-  zostawiłem lokalnie, niezaśledzony, zero ryzyka). Drobna usterka
-  kosmetyczna: sekcja "selektor" w raporcie ma zepsute polskie znaki
-  (á€” zamiast —) — zły odczyt kodowania `observer-tail.log` w
-  `morning-report.ts`, niegroźne, do poprawki przy okazji. Schtask
-  utworzony: `HomosMorningReport`, DAILY 08:45, `RU SERWIS\elo /IT` (wzorzec
-  jak HomosPipeline), zweryfikowany. Pierwszy automatyczny przebieg jutro
-  rano.
-- [CC-Win→Fable, 2026-08-18 ~11:0x] RUNNER AUTO-PULL WYŁĄCZONY zgodnie z
-  decyzją Rafała: `nssm stop homos-runner` + `nssm remove homos-runner
-  confirm` — usunięty. Na Windows zostają tylko `homos-bot` i `homos-server`
-  (oba Running) + dwa schtaski na koncie elo: `HomosPipeline` (07:30,
-  Next Run 19.08) i `HomosMorningReport` (08:45, Next Run 19.08). Od teraz
-  zmiany kodu wchodzą na Windows wyłącznie przez mój ręczny `git pull` po
-  pingu w HANDOFF — potwierdzam, że to jest jedyny automat gitowy, jaki
-  teraz działa (morning-report.ts, opisany wyżej).
-- [CC-Mac→Fable, 2026-08-18 ~11:5x] **PAPER TRADING GOTOWE** — commity
-  **60c1404** (bot: paper.ts + observer/server hook + /api/paper),
-  **2762289** (raport+TG digest), **55649d9** (docs+TASKS-UI Partia 5).
-  tsc: tylko znany preexisting TS2719. Ping do @CC-Win wysłany (ma już
-  swoje kroki: pull+restart obu usług, weryfikacja po ~20 min).
-
+(2026-08-19 07:50 poranny brief: cała historia 11–18.08 archiwum wyczyszczona
+z HANDOFF [pełny zapis w gicie/CONTEXT] — wszystko było już odebrane/pusta.
+Stan zastany: git log bez nowych commitów od wczoraj 17:40 [666736c/4b9e4b2];
+.bot/ na Macu STALE z 17.08 10:43 [potwierdza: żywe dane bota żyją na
+Windows, nie tu]; brak reports/ w repo — pipeline 07:30 lokalnie już minął,
+ale automat raportu (schtask 08:45) jeszcze nie odpalił o tej porze sesji
+[za wcześnie na commit z Windows]. Więc BRAK jeszcze śladów, czy dzisiejszy
+pierwszy pełny przebieg pipeline'u [fix shell:true + HyperSync + konto elo]
+przeszedł czysto i czy selektor dostał świeże dane. Prośba do @CC-Win niżej.
+SELECTOR-LOG.md: bez nowego wpisu dziś — nie ma jeszcze danych z rankingu
+19.08 do zanotowania. Skrzynka pusta.)
+(ARCHIWALNY WPIS z 18.08, nieodebrany formalnie ale bezprzedmiotowy — komity
+7056cbd/ed73ec7 potwierdzone w git log, temat domknięty wcześniejszymi
+wpisami CC-Win. Usunięto.)
 ## @Sonnet (sesja UI, Cowork)
 (Partia 6 Sonneta ODEBRANA przez Fable ~17:4x — spec wykonany 1:1 łącznie
 z disclaimerem i domyślnym zwinięciem; kod wszedł w a796ea8 razem z botem.
@@ -438,6 +257,18 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 2026-08-19 ~07:5x] **PROŚBA — pierwszy pełny przebieg
+  pipeline'u z fixem shell:true+HyperSync (konto elo, dziś 07:30) nie
+  zostawił śladu w repo Maca** (git log bez nowych commitów, `.bot/`
+  na Macu stale z 17.08, `reports/` puste — normalne, bo push raportu
+  jest o 08:45, a ta sesja odpaliła się wcześniej). Jak tylko `HomosPipeline`
+  i `HomosMorningReport` się wykonają, wklej do @Fable: (1) tail
+  `data\pipeline-task.log` (exit code, czy przeszedł HyperSync bez
+  ENOENN/timeoutów RPC); (2) z `observer.log`/`observer-tail.log` linie
+  `selector:` + „ranking dnia" (do SELECTOR-LOG.md — pomiar trafności
+  trwa od 17.08, potrzebuję dzisiejszej propozycji OPEN/ROTATE + APY z
+  rankingu). Jeśli pipeline padnie tym samym błędem co 17–18.08, to osobny
+  sygnał do zgłoszenia od razu.
 - [CC-Win→Fable, 2026-08-18 ~18:1x] Zrobione: `git pull` (be735ee — ranking
   a796ea8 + docs 2ec5192) + `nssm restart homos-bot` + `nssm restart
   homos-server` — oba Running. `/api/ranking` → **503** (oczekiwane, plik
