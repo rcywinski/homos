@@ -157,6 +157,13 @@ export const POOLS: PoolCfg[] = [
     address: '0xc7bbec68d12a0d1830360f8ec58fa599ba1b0e9b',
     feeBps: 100, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=WETH, token1=USDT — zweryfikowane on-chain (getPool z factory)
   },
+  // --- Walidacja kandydata selektora #2 (ranking 19.08, 7d śr. 21.9%) ---
+  {
+    id: 'mainnet-usdc-weth-001-365d',
+    chain: 'mainnet',
+    address: '0xe0554a476a092703abdb3ef35c80e0d76d32939f',
+    feeBps: 100, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365, // token0=USDC, token1=WETH — zweryfikowane on-chain (getPool z factory)
+  },
 ];
 
 // Kolejność ma znaczenie: najpierw endpointy z dostępem do pełnej historii.
