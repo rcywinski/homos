@@ -12,7 +12,15 @@ import { useCallback, useEffect, useState } from 'react';
 
 const BASE_KEY = 'homos_api_base';
 const TOKEN_KEY = 'homos_api_token';
-const DEFAULT_BASE = 'http://localhost:8787';
+// Domyślnie ORIGIN strony — UI jest serwowane z tego samego serwera co API
+// (homos-server :8787), więc localhost jako default psuł dostęp z każdego
+// urządzenia poza samym serwerem (Mac ~14:2x i iPhone ~15:4x 19.08 —
+// puste panele mimo zapisanego tokena). localhost zostaje tylko dla
+// dev-serwera na :3000 (webpack-dev), gdzie origin nie ma API.
+const DEFAULT_BASE =
+  typeof window !== 'undefined' && window.location.origin.includes(':8787')
+    ? window.location.origin
+    : 'http://localhost:8787';
 const POLL_MS = 60_000;
 const STALE_MS = 5 * 60_000;
 // Paper trading (bot/paper.ts, TASKS-UI.md Partia 5) — dane zmieniają się co
