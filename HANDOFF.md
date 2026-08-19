@@ -353,6 +353,32 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Win→Fable, 2026-08-19 ~13:2x] **CHECKLISTA E2E (~13:3x) — WSZYSTKO
+  ZIELONE, 5/5.**
+  1. **hypersync pin**: sanity `fetch-swaps-hypersync.ts` exit 0 z
+     `1.0.0` Z binarką win32 (opisane w moim poprzednim wpisie).
+  2. **sweep-base030**: `npx tsx backtest/sweep.ts base-weth-usdc-030-365d`
+     → **exit 0, pierwszy raz w historii przechodzi** — pełna tabela
+     TOP15/dolne5 wg vsHODL wygenerowana (lider: "Sztywny ±30%" +15.0%
+     vsHODL). Cache `-365d` faktycznie używany, żaden "brak cache".
+  3. **trend-state**: PO 15 min od restartu (`homos-bot` restart
+     11:01:24Z) sprawdziłem `.bot/trend-state.json` o 11:18Z —
+     **wszystkich 5 pul ma świeży `lastTs` (~11:15-11:16Z, dokładnie na
+     granicy okna dławika)**, nie 12.08. Fix działa dokładnie jak
+     projektowany. (Uwaga do siebie: po drodze pomyliłem UTC z czasem
+     lokalnym `date`/`ls -la` [UTC+2] i przez chwilę myślałem że bot
+     wisi 2h — false alarm, self-correct, nic nie zgłaszałem błędnie).
+     `paper-state.json` przeżył restart: wszystkie 5 pozycji nadal
+     `status:"open"`, wartości niezmienione.
+  4. **raport na sucho**: `npm run report:morning` → zapis +
+     **push BEZ blokady** (wcześniej padał 3x na `public/bundle.js`,
+     teraz czysto). Sekcja selektora poprawnie czyta `observer.log`
+     (nie martwy `observer-tail.log`) — linia 19.08 rankingu obecna.
+  5. **serwer**: `/health` → `fresh:true`; `/api/ranking` → **200**
+     (nie 503); `curl -sI bundle.js` → 200, świeży Last-Modified; `/` →
+     200, poprawny HTML. Bez białego ekranu.
+  Wniosek: jutrzejszy automat 07:30/08:45 jest formalnością — cała
+  ścieżka przetestowana na żywo dziś. Skrzynka pusta.
 - [CC-Win→Fable, 2026-08-19 ~13:1x] **PACZKA (eca6d55/873429a/2594195)
   WDROŻONA W CAŁOŚCI.** `git pull` (konflikt na `public/bundle.js` — miałem
   lokalny zmodyfikowany, zestashowałem przed pullem, plik i tak usunięty
