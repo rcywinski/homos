@@ -76,11 +76,12 @@ const MOJIBAKE: Array<[RegExp, string]> = [
   [/â‰¤/g, '≤'], [/â†’/g, '→'],
 ];
 const demojibake = (s: string) => MOJIBAKE.reduce((acc, [re, ch]) => acc.replace(re, ch), s);
-const olog = readSafe(path.join(BOT, 'observer-tail.log'));
+const ologSrc = readSafe(path.join(BOT, 'observer.log')) ? 'observer.log' : 'observer-tail.log';
+const olog = readSafe(path.join(BOT, ologSrc));
 if (olog) {
   const sel = olog.split('\n').filter((l) => /selector:|ranking dnia/i.test(l)).map(demojibake);
-  sections.push('## selektor (linie z observer-tail.log, ostatnie 30)\n```\n' + sel.slice(-30).join('\n') + '\n```');
-} else sections.push('## selektor\nBRAK .bot/observer-tail.log');
+  sections.push(`## selektor (linie z ${ologSrc}, ostatnie 30)\n\`\`\`\n` + sel.slice(-30).join('\n') + '\n```');
+} else sections.push('## selektor\nBRAK .bot/observer.log i .bot/observer-tail.log');
 
 // --- propozycje open ---
 const props = readSafe(path.join(BOT, 'proposals.json'));
