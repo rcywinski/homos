@@ -24,6 +24,8 @@
 | 2026-08-11 | REWIZJA v1.1 (§4): powrót po spadku = re>EMA (ETH/stable); cbBTC zostaje przy czystym exit | Pełne 365d base-005/mainnet-005 (po 22 okna) odwróciły ranking: re>EMA wygrywa 4/5 pul, na base-005 PIERWSZE pełne przejście bramki (68% wygr, worst −2.52); poranny wybór opierał się na 4-oknowych runach 90d |
 | 2026-08-18 | Runner auto-pull na Windows WYCOFANY (usługa agent-runner-git + kolejka .agent-queue); zmiany kodu na Windows tylko ręcznym `git pull` CC-Win; jedyny automat gitowy = push porannego raportu 08:45 | Kolejka nieużywana od 11.08; reset --hard co 3 min = klasa ryzyka z incydentu 17.08; mniej ruchomych części |
 | 2026-08-17 | REWIZJA v1.2 (§4): base-030 → bezpiecznik HEDGE-EXCESS (short perp nadwyżki ETH >50%, LP zostaje); wykonawczo po integracji venue perp, do tego czasu EXIT_TREND jako fallback | F4: jedyna konfiguracja domykająca bramkę na base-030 na obu oknach (73%/−2.88, 81%/−2.74); funding historycznie +2.9%/r dla shorta; hedge-full i hedge na mainnet/005 odrzucone |
+| 2026-08-19 | `public/bundle.js` → untracked (`git rm --cached`); build artefakt żyje tylko na dysku | Tracked bundle (stary eb1c772, mimo .gitignore) blokował auto-push porannego raportu na Windows po każdym buildzie (3× pad 19.08) |
+| 2026-08-19 | Po KAŻDEJ naprawie pipeline'u: ręczna weryfikacja TEGO SAMEGO DNIA (`npm run pipeline -- --only fetch` na Windows, iterować aż przejdzie) — automat 07:30 to rutyna, nie jedyny test | 3 dni z rzędu pipeline padał na czymś innym (ENOENT → shell:true → brak node_modules); debug raz na dobę przez poranny automat = za wolna pętla |
 
 ## 3. Rzeczy do zweryfikowania na aktualnych danych (nie z pamięci AI)
 
@@ -34,6 +36,29 @@
 - [ ] Istniejące otwarte pozycje użytkownika w Uniswap (podpiąć w F2 jako pierwsze dane żywe)
 
 ## 4. Dziennik sesji
+
+### 2026-08-19 — Sesja analityczna (Fable) — odbiór nocy: root cause pipeline'u, ranking dnia #2, decyzje
+Pipeline 07:30 padł na wszystkich 19 krokach hs-*, ale NIE przez shell:true —
+ten fix działa (kroki się odpalają, fetch-llama przeszedł, universe.json 1.2h).
+Root cause (trafna diagnoza CC-Win): `@envio-dev/hypersync-client` w
+package.json od 11.08 (d17a878), ale nigdy `npm install` na Windows — brak
+pakietu to twardy throw PRZED fallbackiem RPC. Naprawione (`npm install`);
+pierwszy w pełni czysty przebieg spodziewany 20.08 07:30. Selektor mimo to
+zadziałał (nie zależy od swap-fetchu): ranking 19.08 zanotowany w
+SELECTOR-LOG.md, rotacja pyłka #953427 poprawnie pominięta progiem $25
+(fix z 18.08 potwierdzony na żywo 1. dnia). Paper trading dzień 1: $50 179
+(+$179), vs HODL ~0 — bez wniosków, fees dopiero kapią.
+Decyzje Rafała: (1) untrack `public/bundle.js` (tabela §2; zadanie CC-Mac,
+CC-Win po pullu musi od razu build+restart — plik zniknie z dysku);
+(2) kandydat selektora USDC-WETH 0.01% mainnet (21.9% 7d, 6 dni w topie) →
+walidacja tick-level przez lejek (zadanie CC-Mac; prior sceptyczny jak przy
+WETH-USDT 0.01% odrzuconym 17.08).
+Anomalie wyłapane w raporcie, do wyjaśnienia: (a) `observer-tail.log` martwy
+od 17.08 — sekcja selektora w morning-report.ts czyta zły plik (fix u CC-Mac);
+(b) `trend-state.json` lastTs=12.08 08:08 UTC na WSZYSTKICH 5 pulach —
+bezpiecznik trendu może nie aktualizować EMA od tygodnia (pytanie u CC-Win,
+rozstrzygnięcie danymi z observer.log); (c) `.agent-queue/runner-status.json`
+wciąż się aktualizuje mimo usunięcia runnera 18.08 — CC-Win bada, kto pisze.
 
 ### 2026-08-18 — Sesja UI (Sonnet) — Partia 5: wizualizacja paper-tradingu ✅
 Wykonana cała Partia 5 z TASKS-UI.md (zlecona przez Fable ~11:3x, kod

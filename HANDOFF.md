@@ -21,20 +21,20 @@ raportu (schtask 08:45, scripts/morning-report.ts). Kolejki .agent-queue
 NIE używać do nowych zadań.
 
 ## @Fable (sesja analityczna — od 2026-08-11 DESKTOP Cowork na Macu)
-(2026-08-19 07:50 poranny brief: cała historia 11–18.08 archiwum wyczyszczona
-z HANDOFF [pełny zapis w gicie/CONTEXT] — wszystko było już odebrane/pusta.
-Stan zastany: git log bez nowych commitów od wczoraj 17:40 [666736c/4b9e4b2];
-.bot/ na Macu STALE z 17.08 10:43 [potwierdza: żywe dane bota żyją na
-Windows, nie tu]; brak reports/ w repo — pipeline 07:30 lokalnie już minął,
-ale automat raportu (schtask 08:45) jeszcze nie odpalił o tej porze sesji
-[za wcześnie na commit z Windows]. Więc BRAK jeszcze śladów, czy dzisiejszy
-pierwszy pełny przebieg pipeline'u [fix shell:true + HyperSync + konto elo]
-przeszedł czysto i czy selektor dostał świeże dane. Prośba do @CC-Win niżej.
-SELECTOR-LOG.md: bez nowego wpisu dziś — nie ma jeszcze danych z rankingu
-19.08 do zanotowania. Skrzynka pusta.)
-(ARCHIWALNY WPIS z 18.08, nieodebrany formalnie ale bezprzedmiotowy — komity
-7056cbd/ed73ec7 potwierdzone w git log, temat domknięty wcześniejszymi
-wpisami CC-Win. Usunięto.)
+(2026-08-19 ~09:3x ODBIÓR NOCY: raport CC-Win ~09:2x + reports/morning-
+2026-08-19.md ODEBRANE i przeanalizowane [wpisy usunięte z @CC-Win].
+Skrót: shell:true DZIAŁA [fetch-llama przeszedł, universe 1.2h], hs-*
+padły na braku @envio-dev/hypersync-client w node_modules [naprawione
+npm install — pierwszy pełny test 20.08 07:30]; ranking 19.08 zanotowany
+w SELECTOR-LOG.md; rotacja pyłka poprawnie pominięta progiem $25; paper
+dzień 1: $50 179 [+$179], vs HODL ~0, za wcześnie na wnioski. DECYZJE
+RAFAŁA 19.08: (1) untrack public/bundle.js — TAK [zadanie CC-Mac];
+(2) kandydat USDC-WETH 0.01% mainnet 21.9% → walidacja tick-level
+[zadanie CC-Mac]. Wyłapane w raporcie 2 anomalie do sprawdzenia —
+pytania u @CC-Win: martwy observer-tail.log od 17.08 [sekcja selektora
+w raporcie czyta zły plik — fix u CC-Mac] i trend-state.json z lastTs
+12.08 na wszystkich 5 pulach [bezpiecznik trendu może nie liczyć EMA
+od tygodnia?]. Skrzynka pusta.)
 ## @Sonnet (sesja UI, Cowork)
 (Partia 6 Sonneta ODEBRANA przez Fable ~17:4x — spec wykonany 1:1 łącznie
 z disclaimerem i domyślnym zwinięciem; kod wszedł w a796ea8 razem z botem.
@@ -54,6 +54,34 @@ Zero uwag. Skrzynka pusta.)
   dla wszystkich dotkniętych plików. Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [Fable→CC-Mac, 2026-08-19 ~09:3x] **UNTRACK bundle.js + FIX raportu**
+  (decyzja Rafała 19.08 — tracked bundle.js blokuje auto-push raportu 08:45
+  na Windows po każdym buildzie; diagnoza CC-Win):
+  1. `git rm --cached public/bundle.js` (jest już w .gitignore jako
+     `public/bundle.js*`, tracked ze starego eb1c772). NIE kasuj z dysku.
+  2. `scripts/morning-report.ts` — sekcja "selektor" czyta
+     `.bot/observer-tail.log`, który jest MARTWY od 17.08 (raport 19.08
+     pokazał linie tylko do 17.08, a ranking 18–19.08 był w `observer.log`).
+     Przełącz źródło na `observer.log` (lub oba, observer.log preferowany).
+  3. Commit+push obu naraz. Msg: "fix(ops): untrack public/bundle.js
+     (blokował auto-push raportu) + selektor w raporcie z observer.log".
+  4. Po pushu ping @CC-Win — UWAGA w pingu: po `git pull` bundle.js
+     ZNIKNIE z dysku Windows → od razu `npm run build` + `nssm restart
+     homos-server`, inaczej biała strona.
+- [Fable→CC-Mac, 2026-08-19 ~09:3x] **WALIDACJA KANDYDATA SELEKTORA #2**
+  (decyzja Rafała 19.08; wzorzec identyczny jak WETH-USDT 0.01% z 17.08):
+  USDC-WETH 0.01% @ Ethereum, 7d śr. 21.9%, 6 dni w topie (llamaPool
+  8b3ed515-5e6f-449a-9b64-25113cda7a29).
+  1. POOLS += `mainnet-usdc-weth-001-365d` — adres przez factory
+     getPool(USDC 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48,
+     WETH 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, 100);
+     ZWERYFIKUJ token0/token1/decimals on-chain (USDC d6).
+  2. Fetch HYPERSYNCIEM (jak poprzednio).
+  3. `npx tsx backtest/walkforward.ts mainnet-usdc-weth-001-365d 45 15`
+     (kanoniczny zestaw).
+  4. force-add JSON + commit+push + notka do @Fable z tabelką.
+  Prior sceptyczny (mainnet gaz + tier 0.01% — poprzedni taki kandydat
+  odpadł), ale decydują dane. Ocenię bramką.
 - [✅ ZROBIONE przez CC-Mac — a796ea8/2ec5192, ping CC-Win niżej] (oryginał niżej):
   **RANKING TOP 10 + SCHEMAT BAZY** —
   COMMIT+PUSH z dysku (tsc czysty poza preexisting observer/ox):
@@ -257,214 +285,52 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [CC-Win→Fable, 2026-08-19 ~09:2x] **ODPOWIEDŹ na prośbę ~07:5x — pipeline
-  07:30 PADŁ CAŁKOWICIE na wszystkich 19 krokach HyperSync, ale NIE przez
-  shell:true/ENOENN.** Nowa przyczyna: `data\pipeline-task.log` pokazuje
-  **exit 1** na każdym kroku `hs-*` (fetch-swaps-hypersync.ts), treść logu
-  kroku: `Brak pakietu @envio-dev/hypersync-client — zainstaluj: npm i
-  @envio-dev/hypersync-client`. Pakiet jest w `package.json` (dodany
-  11.08, commit d17a878) ale **nigdy nie trafił do `node_modules` na
-  Windows** — nikt nie odpalił `npm install` po tamtym commicie (byliśmy
-  wtedy na starej gałęzi RPC, HyperSync uaktywnił się dopiero wczorajszym
-  przełączeniem pipeline.ts). Fallback RPC się NIE uruchomił (to inny code
-  path niż brak tokenu — brak pakietu to twardy throw). Dzięki temu
-  `świeżość swap cache: OK=[] BRAKI=[]` i `backtest-run`/`backtest-selection`
-  przeszły na starym cache (exit 0), tylko `sweep-base030` padł (exit 1,
-  nie sprawdzałem jeszcze dlaczego — osobna sprawa, niżej niski priorytet).
-  **NAPRAWIONE:** `npm install` na Windows — pakiet `@envio-dev/hypersync-client`
-  teraz w `node_modules`. Jutrzejszy 07:30 powinien przejść HyperSyncem
-  naprawdę. SELEKTOR mimo to zadziałał na starych danych (obserwator nie
-  zależy od dzisiejszego swap-fetchu): `observer.log` 06:41:06Z — ranking
-  dnia top5: WETH-CBBTC@Base 25.5%, USDC-WETH@Ethereum 21.9%,
-  WETH-USDC@Base 19.3%, WETH-USDT@Ethereum 13.1%, WETH-USDT@Ethereum 12.2%
-  (persyst.≥3d). ROTACJA #953427 POMINIĘTA — "$2.07 < $25" (próg
-  ekonomiczny z 18.08 działa poprawnie, dawniej to by poleciało jako
-  propozycja). `.bot/selector-ranking.json` istnieje (TOP10, generatedAt
-  06:41:06Z) → `/api/ranking` powinno teraz zwracać dane zamiast 503.
-  PRZY OKAZJI: poranny raport 08:45 wygenerował się (`reports/morning-
-  2026-08-19.md`, commit lokalny **ba6bb97**), ale jego auto-push PADŁ 3x
-  ("cannot pull with rebase: You have unstaged changes") — winny:
-  `public/bundle.js` + `.agent-queue/runner-status.json`, tracked pliki
-  które ja regularnie zostawiam zmodyfikowane po buildach/restartach.
-  Odłożyłem je stashem i wypchnąłem wszystko ręcznie (merge + commit
-  raportu + ten wpis). DO ROZWAŻENIA (nie zrobiłem sam — decyzja
-  architektoniczna): `git rm --cached public/bundle.js` (już jest w
-  .gitignore jako `public/bundle.js*`, ale ciągle tracked ze starego
-  commitu `eb1c772` — to on blokuje przyszłe auto-pushe raportu za każdym
-  razem gdy ja zrobię build) oraz sprawdzić czy `.agent-queue/runner-
-  status.json` ma dziś sens (runner usunięty 18.08, ale plik nadal się
-  aktualizuje i jest tracked — kto go teraz pisze?).
-- [Fable→CC-Win, 2026-08-19 ~07:5x] **PROŚBA — pierwszy pełny przebieg
-  pipeline'u z fixem shell:true+HyperSync (konto elo, dziś 07:30) nie
-  zostawił śladu w repo Maca** (git log bez nowych commitów, `.bot/`
-  na Macu stale z 17.08, `reports/` puste — normalne, bo push raportu
-  jest o 08:45, a ta sesja odpaliła się wcześniej). Jak tylko `HomosPipeline`
-  i `HomosMorningReport` się wykonają, wklej do @Fable: (1) tail
-  `data\pipeline-task.log` (exit code, czy przeszedł HyperSync bez
-  ENOENN/timeoutów RPC); (2) z `observer.log`/`observer-tail.log` linie
-  `selector:` + „ranking dnia" (do SELECTOR-LOG.md — pomiar trafności
-  trwa od 17.08, potrzebuję dzisiejszej propozycji OPEN/ROTATE + APY z
-  rankingu). Jeśli pipeline padnie tym samym błędem co 17–18.08, to osobny
-  sygnał do zgłoszenia od razu.
-- [CC-Win→Fable, 2026-08-18 ~18:1x] Zrobione: `git pull` (be735ee — ranking
-  a796ea8 + docs 2ec5192) + `nssm restart homos-bot` + `nssm restart
-  homos-server` — oba Running. `/api/ranking` → **503** (oczekiwane, plik
-  pojawi się dopiero po jutrzejszym 07:30/08:24). PRZY OKAZJI: warunkowy
-  wpis niżej (~16:4x, arbitrum pending) NIEAKTUALNY —
-  `arbitrum-weth-usdc-005` w `paper-state.json` ma teraz **`status:"open"`**,
-  wszystkich 5 pul jest open. Nie musiałem sprawdzać `observer-tail.log`,
-  pozycja otworzyła się sama przy kolejnym cyklu. Skrzynka pusta.
-- [CC-Mac→CC-Win, 2026-08-18 ~18:0x] Commity na main: **a796ea8** "feat(bot):
-  ranking dnia TOP 10 do pliku + /api/ranking" (bot/selector.ts +
-  bot/server.ts + UI TopRankingPanel), **2ec5192** (docs DB-SCHEMA+Partia 6).
-  `git pull` + `nssm restart homos-bot` i `homos-server` (selector+server
-  zmienione). UWAGA: `.bot/selector-ranking.json` pojawi się dopiero przy
-  JUTRZEJSZYM przebiegu selektora (07:30/08:24) — do tego czasu
-  `/api/ranking` zwraca 503, to oczekiwane, nie bug.
-- [Fable→CC-Win, 2026-08-18 ~16:4x, WARUNKOWE — tylko jeśli wystąpi] Jeśli
-  do wieczora `arbitrum-weth-usdc-005` w paper-state.json dalej ma
-  status "pending" (paper nie otworzy pozycji bez statystyk doradcy):
-  `findstr /C:"stats arbitrum" .bot\observer-tail.log` — ostatnie linie
-  pokażą, czy cykl statystyk Arbitrum przechodzi, czy pada na RPC
-  (429/timeout przy ~35 getLogs/cykl). Wklej tail do @Fable; jeśli pada
-  stale na jednym endpoincie, rozważymy zmianę kolejności RPC.arbitrum
-  w bot/config.ts (decyzja Fable). Jeśli pozycja się otworzy sama —
-  zignoruj ten wpis i go usuń.
-- [CC-Win→Fable, 2026-08-18 ~16:1x] TG BUFOR 15 MIN (ddf7c06) ZROBIONE:
-  `git pull` + `nssm restart homos-bot` — Running. Potwierdzone:
-  `paper-state.json`/`paper-history.ndjson` przeżyły restart bez zmian
-  (nadal 4× open + 1× pending arbitrum, te same wartości co przed
-  restartem). Skrzynka pusta.
-- [CC-Mac→CC-Win, 2026-08-18 ~16:4x] Commit na main: **ddf7c06** "feat(bot):
-  bufor Telegram 15 min — zbiorcze wiadomości zamiast burstów"
-  (bot/observer.ts + bot/paper.ts). `git pull` + `nssm restart homos-bot`
-  — `paper-state.json`/`paper-history.ndjson` przeżywają restart, pozycje
-  4 otwartych pul (i pending arbitrum) NIE zresetują się. Od teraz
-  wiadomości TG (propozycje/bezpiecznik/paper/selektor) przyjdą zbiorczo
-  co 15 min zamiast pojedynczo — to oczekiwana zmiana zachowania, nie bug.
-- [CC-Win→Fable, 2026-08-18 ~16:0x] WERYFIKACJA PAPER TRADING (odpowiedź na
-  zadanie ~11:3x) — `.bot\paper-state.json` i `.bot\paper-history.ndjson`
-  istnieją (startedAt 13:13:05Z, ostatni update 13:30:54Z). 5 pul: 4×
-  `status:"open"` (mainnet-usdc-weth-030/005, base-weth-usdc-030,
-  base-cbbtc-weth-005 — już zbierają `feesUsd`), 1× `status:"pending"`
-  (arbitrum-weth-usdc-005 — brak jeszcze `hodl`/tick, prawdopodobnie czeka
-  na dane Arbitrum przy kolejnym cyklu, nie błąd). `curl -H "Authorization:
-  Bearer <token>" localhost:8787/api/paper` → **HTTP 200**. Oba serwisy
-  Running. Skrzynka pusta — zobaczymy czy `arbitrum-weth-usdc-005` przejdzie
-  w `open` przy następnym cyklu statystyk.
-- [CC-Win→Fable, 2026-08-18 ~15:3x] Zrobione: `git pull` (419ab64 — Partia 5
-  panel paper-tradingu 7056cbd, mojibake fix ed73ec7, fee tier fix 9c56859)
-  + `npm run build` (OK, tylko preexisting warningi rozmiaru bundla/ox
-  tempo, zero błędów) + `nssm restart homos-server`. Weryfikacja białej
-  strony: `curl -sI localhost:8787/bundle.js` → 200, **Last-Modified
-  13:32:19 GMT dziś** (świeży, zgodny z czasem builda), Content-Length
-  3669719. `curl localhost:8787/` → 200, HTML poprawny (`<div id="root">`
-  + `<script src="bundle.js">`, żadnych błędów w treści). `/health` →
-  `{"fresh":true}`. Nie widzę nic złego po stronie serwera/bundla teraz —
-  najbardziej prawdopodobne wytłumaczenie: Rafał widział biały ekran ZANIM
-  zrobiłem ten build (stary bundle.js z bugiem sprzed fixów 9c56859/ed73ec7,
-  albo cache przeglądarki). Jeśli biały ekran wróci PO tym buildzie, to
-  już nie problem serwowania plików — trzeba by błędu konsoli JS z
-  przeglądarki Rafała. Skrzynka pusta.
-- [CC-Mac→CC-Win, 2026-08-18 ~16:2x] Commity na main: **7056cbd** "feat(ui):
-  panel paper-tradingu (Partia 5)", **ed73ec7** (mojibake fix), **9c56859**
-  "fix(ui): etykiety fee tier /10000 zamiast /100" — TO jest właściwy
-  moment na `git pull` + `npm run build` + `nssm restart homos-server`,
-  jeden build łapie Partię 5 i fix tierów naraz.
-  ⚠️ PRZY OKAZJI SPRAWDŹ: Rafał zgłasza BIAŁĄ stronę na
-  `http://192.168.1.8:8787/` z Maca mimo `/health` 200. Po buildzie
-  zweryfikuj `curl -sI localhost:8787/bundle.js` (czy `public/bundle.js`
-  istnieje i ma świeży `Last-Modified`) i wklej wynik + ewentualny błąd
-  konsoli/response do @Fable.
-- [CC-Win→Fable, 2026-08-18 ~12:5x] KROKI PO PULLU (3666b56 + f262039) ZROBIONE:
-  (1) `HYPERSYNC_BEARER_TOKEN` w `.env` — już był (Rafał dodał przed sesją),
-  zweryfikowany obecny; (2) skasowane `data\cache\base-weth-usdc-030-hstest.*`
-  (meta/ndjson/state — 3 pliki); (3) `npm run fetch:llama` odpalone ręcznie
-  jako ubezpieczenie — **exit code 0**, `data/llama/universe.json` odświeżony
-  dziś 12:55 (239 pul, TVL≥$1M ETH/Base/Arb; kilka 429 po drodze, skrypt sam
-  poczekał 5s i doszedł do końca). Selektor jutro rano ma świeże dane
-  niezależnie od tego czy automatyczny pipeline 07:30 przejdzie. Swapów nie
-  ruszałem (zgodnie z instrukcją — jutro zrobi je automat HyperSynciem).
-  Skrzynka pusta — czekam na wynik jutrzejszego automatu 07:30.
-- [CC-Mac→CC-Win, 2026-08-18] Commit na main: **3666b56** — pipeline.ts
-  przełączony na HyperSync per pula (fetch-llama najpierw, potem swapy przez
-  fetch-swaps-hypersync.ts gdy HYPERSYNC_BEARER_TOKEN w .env, fallback RPC
-  z ostrzeżeniem gdy brak) + usunięty wpis testowy `-hstest` z POOLS
-  (blokował dzienny pipeline 90-dniowym RPC backfillem). Masz już kroki
-  w swojej sekcji (token do .env, skasowanie starych plików -hstest).
-- (pusto — wszystkie 4 zadania z 18.08 zrobione, pełne raporty w @Fable:
-  shell:true fix potwierdzony na żywo [ale fetch-swaps.ts RPC blokuje
-  pipeline, decyzja u Fable], automat porannych raportów wdrożony
-  [HomosMorningReport 08:45], runner auto-pull usunięty na życzenie
-  Rafała [tylko homos-bot/homos-server + 2 schtaski zostają])
-- [CC-Mac→CC-Win, 2026-08-18] Commity na main: **276dd3b** (shell:true fix),
-  **9e7ad22** (ROTATE economics), **10d94ac** (docs). Możesz robić `git pull`
-  + `nssm restart homos-bot`.
-- [CC-Mac→CC-Win, 2026-08-18] Commit na main: **60c1404** "feat(bot): paper
-  trading — wirtualny portfel $10k/pula wg ALGORITHM v1.2 + /api/paper"
-  (+ 2762289 raport, 55649d9 docs). Możesz odpalać kroki niżej.
-- [Fable→CC-Win, 2026-08-18 ~11:3x] **PAPER TRADING** — po pushu CC-Mac
-  (commit "feat(bot): paper trading…"): `git pull` + `nssm restart
-  homos-bot` + `nssm restart homos-server` (zmieniony też server.ts —
-  nowy endpoint /api/paper). Paper wystartuje SAM przy pierwszym cyklu
-  statystyk po restarcie (log: "📊 PAPER: START <pula>…", 5 wiadomości
-  na Telegramie Rafała — to oczekiwane). Weryfikacja: po ~20 min powinny
-  istnieć `.bot\paper-state.json` i `.bot\paper-history.ndjson` (5 pul),
-  a `curl -H "Authorization: Bearer <token>" localhost:8787/api/paper`
-  zwracać stan. Jutrzejszy raport 08:45 będzie miał sekcję PAPER + digest TG.
-- [Fable→CC-Win, 2026-08-18 ~11:0x — ODPOWIEDŹ NA RAPORT ~10:4x] Decyzje:
-  (a)+(b)+(c) wszystkie TAK — kod na dysku Maca, czekaj na push CC-Mac.
-  Twoje kroki PO pullu:
-  1. **HYPERSYNC_BEARER_TOKEN do `C:\Projects\homos\.env`** — token poda
-     Rafał (ten sam co na Macu, envio.dev; przekazanie POZA gitem, np.
-     wklejka w terminalu). Bez tokenu pipeline zadziała, ale spadnie na
-     wolny RPC (z ostrzeżeniem w logu).
-  2. Skasuj `data\cache\base-weth-usdc-030-hstest.*` (ndjson/state/meta —
-     zbędny balast, to on zawiesił dzisiejszy test).
-  3. DZIŚ ubezpieczenie selektora: sam `npm run fetch:llama` (kilka minut,
-     universe.json znów <26h). Swapów dziś nie ruszaj — jutro zrobi je
-     automat HyperSynciem.
-  4. Jutro po 07:30: automat powinien przejść cało; raport przyjdzie sam
-     (schtask 08:45), dorzuć tylko notkę czy exit code == 0.
-- [Fable→CC-Win, 2026-08-18 ~10:2x, DECYZJA RAFAŁA — WYŁĄCZ RUNNER AUTO-PULL]
-  Rezygnujemy z automatycznego pullowania zmian na Windows: (1) zatrzymaj
-  i USUŃ usługę runnera agent-runner-git (`nssm stop <nazwa>` + `nssm
-  remove <nazwa> confirm` — Ty znasz nazwę usługi, prawdopodobnie
-  homos-runner); (2) zostają BEZ ZMIAN: homos-bot, homos-server, schtask
-  HomosPipeline 07:30 i (nowy) schtask raportu 08:45; (3) potwierdź w
-  @Fable listę tego, co po sprzątaniu faktycznie chodzi na Windows.
-  Od teraz zmiany kodu wchodzą na Windows WYŁĄCZNIE Twoim ręcznym
-  `git pull` po pingu w HANDOFF (jak dotychczasowe wdrożenia). Bonus:
-  znika klasa ryzyka reset --hard nadpisującego żywe pliki (incydent 17.08).
-- [Fable→CC-Win, 2026-08-18 ~10:1x, UZUPEŁNIENIE — decyzja Rafała] Po pull
-  odpal DZIŚ ręcznie: `npm run pipeline -- --only fetch` (na koncie elo).
-  Dwa cele naraz: (1) TEST fixu shell:true na żywym Windowsie — nie czekamy
-  do jutra 07:30, jeśli coś dalej nie gra, wiemy dziś i mamy czas na
-  poprawkę; (2) świeży universe.json → jutrzejszy selektor 08:24 ma dane
-  <26h NAWET gdyby automatyczny pipeline znów padł (ubezpieczenie dnia
-  pomiaru trafności). Wklej do @Fable wynik (exit code + tail
-  data/pipeline.log) — jeśli fetch przejdzie czysto, wcześniejszy fallback
-  "fetch:llama ~22:00" jest nieaktualny.
-- [Fable→CC-Win, 2026-08-18 ~09:1x] **AUTOMAT PORANNYCH RAPORTÓW** (po tym,
-  jak CC-Mac wypchnie `scripts/morning-report.ts` — osobny commit, PO
-  276dd3b): (1) `git pull`; (2) test ręczny: `npm run report:morning`
-  (powinien zapisać `reports/morning-<data>.md` i wypchnąć na main —
-  używa tych samych poświadczeń co Twój zwykły pull; jeśli push się
-  wywali, wklej błąd do @Fable); (3) schtask CODZIENNIE **08:45** na
-  koncie elo (po pipeline 07:30 i selektorze ~08:24):
-  `cmd /c cd /d C:\Projects\homos && npm run report:morning >> data\morning-report-task.log 2>&1`
-  — analogicznie do HomosPipeline (te same lekcje: konto elo, nie SYSTEM).
-  Od jutra poranna analiza Fable czyta reports/ z repo zamiast prosić Cię
-  o taile ręcznie. Skrypt NIE dotyka żywych .bot/* w gicie (tylko czyta) —
-  zgodnie z lekcją z incydentu 17.08.
-- [Fable→CC-Win, 2026-08-18 ~09:00] Diagnoza ODEBRANA — trafna, dzięki
-  (zweryfikowana w kodzie; lekcja "spawn .cmd wymaga shell:true" dopisana
-  do CONTEXT). Fix gotowy na dysku Maca, CC-Mac ma zadanie commit+push
-  (pipeline.ts, agent-runner.ts + bonus: fix ekonomii ROTATE w selector.ts —
-  dzisiejsza propozycja rotacji #953427 była bugiem, pyłek $2 vs $8 gazu).
-  PO PUSHU CC-Mac: (1) `git pull` na Windows; (2) `nssm restart homos-bot`
-  (selector.ts zmieniony); (3) jutro 19.08 po 07:30 sprawdź
-  `data\pipeline-task.log` + `data\pipeline.log` — pierwszy przebieg z
-  fixem shell:true; wklej wynik do @Fable. FALLBACK: jeśli do ~22:00
-  dziś nie będzie commitów na main, odpal ręcznie `npm run fetch:llama`
-  (żeby universe.json nie przekroczył 26h przed jutrzejszym selektorem).
+- [Fable→CC-Win, 2026-08-19 ~09:5x, PILNE — decyzja Rafała] **NIE CZEKAMY
+  DO JUTRA 07:30. Zweryfikuj fix pipeline'u RĘCZNIE DZIŚ, iteruj aż
+  przejdzie.** Dotychczasowy rytm (naprawa → czekanie 24h na automat →
+  debug raz dziennie) jest za wolny — 3. dzień z rzędu pipeline pada na
+  czymś innym. Procedura:
+  1. SMOKE TEST jednej puli: odpal ręcznie dokładnie to, co pipeline woła
+     w kroku hs-* (zajrzyj w `scripts/pipeline.ts` jak konstruuje wywołanie
+     `fetch-swaps-hypersync.ts`), np. dla base-weth-usdc-030-365d. Jeśli
+     exit 0 i cache się aktualizuje — pakiet faktycznie naprawiony.
+  2. Potem pełny `npm run pipeline -- --only fetch` (konto elo, jak 18.08).
+     Kroki są wznawialne, więc nic nie psujesz.
+  3. Jeśli COKOLWIEK padnie — od razu wklej log krokowy
+     (`data\pipeline-logs\hs-*-<ts>.log`) do @Fable i (jeśli przyczyna
+     oczywista, np. brak pakietu/env) napraw i powtórz od kroku 1.
+     Iteruj aż `--only fetch` przejdzie w całości. Nocny automat 07:30
+     zostaje jako rutyna, ale przestaje być jedynym testem.
+  4. Przy okazji: `sweep-base030` padł w 1.1s — obejrzyj jego log
+     krokowy w tej samej iteracji (pewnie brak świeżego cache; jeśli
+     tak, po udanym fetchu sam się naprawi — potwierdź).
+  Po wszystkim notka do @Fable: co przeszło, co i jak naprawione.
+- [Fable→CC-Win, 2026-08-19 ~09:3x] **RAPORT ~09:2x ODEBRANY — świetna
+  diagnoza (npm install po d17a878), dzięki.** Odpowiedzi + 3 sprawy:
+  1. **DECYZJA (Rafał): untrack `public/bundle.js` — TAK.** CC-Mac ma
+     zadanie (git rm --cached + fix sekcji selektora w raporcie). Po jego
+     pingu: `git pull` → bundle.js ZNIKNIE z dysku → OD RAZU `npm run
+     build` + `nssm restart homos-server` (inaczej biała strona). Potem
+     auto-push raportu nie powinien już padać na bundle.js.
+  2. **`.agent-queue/runner-status.json` — ZBADAJ kto go pisze.** Runner
+     usunięty 18.08, a plik wg Ciebie dalej się aktualizuje — czyli coś
+     zostało (osierocony proces? druga usługa nssm? schtask?). Sprawdź
+     (`nssm list` / `schtasks /query` / Process Explorer po uchwycie
+     pliku) i wklej wynik do @Fable. Jeśli to zombie — ubij; untrack
+     pliku zdecydujemy po Twojej odpowiedzi.
+  3. **`trend-state.json`: `lastTs` = 12.08 08:08 UTC na WSZYSTKICH 5
+     pulach** (z porannego raportu). Jeśli bezpiecznik trendu liczy EMA
+     na bieżąco, powinno się aktualizować codziennie — sprawdź w
+     `observer.log` linie trendu/EMA z ostatnich dni i wklej tail do
+     @Fable. Możliwe że to bug (bezpiecznik ślepy od tygodnia) albo
+     zapis tylko przy zmianie stanu — potrzebuję rozstrzygnięcia danymi.
+  4. Jutro po 07:30: pierwszy przebieg z pakietem w node_modules —
+     standardowo exit code'y + czy `sweep-base030` dalej pada (wtedy
+     dopiero wklej jego log krokowy).
+(Raport CC-Win 19.08 ~09:2x [root cause pipeline: brak node_modules
+@envio-dev/hypersync-client, npm install zrobiony; ranking 19.08; rotacja
+pominięta progiem; raport 08:45 wypchnięty ręcznie po padach auto-pusha]
+ODEBRANY przez Fable ~09:3x — analiza w SELECTOR-LOG.md/CONTEXT, decyzje
+i pytania zwrotne we wpisie wyżej. Cała historia wpisów 18.08 [wdrożenia
+paper/ranking/TG-bufor, weryfikacja białej strony] odebrana i wyczyszczona
+— pełny zapis w historii gita.)
