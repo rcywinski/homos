@@ -26,6 +26,7 @@
 | 2026-08-17 | REWIZJA v1.2 (§4): base-030 → bezpiecznik HEDGE-EXCESS (short perp nadwyżki ETH >50%, LP zostaje); wykonawczo po integracji venue perp, do tego czasu EXIT_TREND jako fallback | F4: jedyna konfiguracja domykająca bramkę na base-030 na obu oknach (73%/−2.88, 81%/−2.74); funding historycznie +2.9%/r dla shorta; hedge-full i hedge na mainnet/005 odrzucone |
 | 2026-08-19 | `public/bundle.js` → untracked (`git rm --cached`); build artefakt żyje tylko na dysku | Tracked bundle (stary eb1c772, mimo .gitignore) blokował auto-push porannego raportu na Windows po każdym buildzie (3× pad 19.08) |
 | 2026-08-19 | Po KAŻDEJ naprawie pipeline'u: ręczna weryfikacja TEGO SAMEGO DNIA (`npm run pipeline -- --only fetch` na Windows, iterować aż przejdzie) — automat 07:30 to rutyna, nie jedyny test | 3 dni z rzędu pipeline padał na czymś innym (ENOENT → shell:true → brak node_modules); debug raz na dobę przez poranny automat = za wolna pętla |
+| 2026-08-19 | `@envio-dev/hypersync-client` PIN **1.0.0** repo-wide (dokładny, bez karetki) | Envio nie publikuje binarki win32 po 1.0.0 (^1.4.0 = wrapper bez natywki → twardy throw na Windows); darwin idzie do 1.4.0, stąd działało na Macu. API używane przez nas identyczne w 1.0.0 (diff CC-Win); zweryfikowane w npm registry przez Fable. Wspólny lockfile > nieużywane helpery 1.x |
 
 ## 3. Rzeczy do zweryfikowania na aktualnych danych (nie z pamięci AI)
 
@@ -59,6 +60,17 @@ od 17.08 — sekcja selektora w morning-report.ts czyta zły plik (fix u CC-Mac)
 bezpiecznik trendu może nie aktualizować EMA od tygodnia (pytanie u CC-Win,
 rozstrzygnięcie danymi z observer.log); (c) `.agent-queue/runner-status.json`
 wciąż się aktualizuje mimo usunięcia runnera 18.08 — CC-Win bada, kto pisze.
+
+KOREKTA ~11:4x (po ręcznej weryfikacji CC-Win — nowa zasada "nie czekamy na
+automat" zadziałała pierwszego dnia): root cause NIE był "brak npm install".
+Prawdziwa przyczyna: `@envio-dev/hypersync-client@^1.4.0` nie ma binarki
+win32 (Envio publikuje ją tylko do 1.0.0; darwin do 1.4.0 — dlatego Mac
+działał). Zweryfikowane niezależnie w npm registry przez Fable. Po lokalnym
+`--no-save` 1.0.0 na Windows: pełny `--only fetch` **18/18 pul exit 0** —
+pierwszy w pełni czysty przebieg fetchu od startu automatu. Decyzje Fable:
+pin 1.0.0 repo-wide (tabela §2) + `sweep-base030` przepięty na cache
+`-365d` (stary, osobny bug: krok wołał id żywej puli, której nic nie
+fetchuje — ta sama pula on-chain co wariant badawczy). Zadania u CC-Mac.
 
 ### 2026-08-18 — Sesja UI (Sonnet) — Partia 5: wizualizacja paper-tradingu ✅
 Wykonana cała Partia 5 z TASKS-UI.md (zlecona przez Fable ~11:3x, kod
