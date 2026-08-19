@@ -93,6 +93,23 @@ i skrypt npm `runner:git` USUNIĘTE z repo (+ `.agent-queue/` w
 .gitignore); historia w gicie. CC-Win przed pullem musi odrzucić lokalny
 diff (`git checkout -- .agent-queue/runner-status.json`).
 
+~14:0x — DOMKNIĘCIE DNIA. (1) WERDYKT kandydata #2: USDC-WETH 0.01%
+mainnet **ODRZUCONA bramką** (walkforward 365d/22 okna, 135a155: najlepsza
+strategia 55% wygr. vs próg ≥65, worst −18.0 vs próg >−3; warianty z
+bezpiecznikiem 0% wygr.) — wzorzec identyczny jak WETH-USDT 0.01% z 17.08;
+obserwacja w SELECTOR-LOG: 2/2 kandydatów mainnet tier 0.01% odpada mimo
+top headline APY, po 3. odrzuceniu rozważyć wykluczenie mainnet-001 z
+propozycji OPEN (decyzja Rafała). (2) E2E po paczce: wdrożenie CC-Win
+czyste (hypersync 1.0.0 z binarką, sanity exit 0, build+2 restarty);
+raport na sucho 13:07 PRZESZEDŁ — auto-push bez blokady bundle.js
+(c85c9aa) i sekcja selektora z observer.log z pełną historią rankingów =
+oba fixy potwierdzone na żywo TEGO SAMEGO dnia. Trend-state po restarcie:
+świeży lastTs na 1/5 pul w snapshot 13:07 — oczekiwane (globalny throttle:
+pierwszy zapis łapie pozostałe pule ze stanem sprzed ich 1. cyklu),
+potwierdzenie 5/5 u CC-Win. Kosmetyka do naprawy przy okazji: sekcja
+"pipeline.log (ostatni przebieg)" raportu pokazuje blok z 17.08 (zadanie
+niskiego priorytetu u CC-Mac).
+
 ### 2026-08-18 — Sesja UI (Sonnet) — Partia 5: wizualizacja paper-tradingu ✅
 Wykonana cała Partia 5 z TASKS-UI.md (zlecona przez Fable ~11:3x, kod
 bot/paper.ts + /api/paper wpięte przez CC-Mac/CC-Win równolegle). Zakres:
