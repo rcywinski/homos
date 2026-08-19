@@ -125,6 +125,16 @@ konfigach buildów zawsze `[\\/]`, nigdy samo `/`. Decyzje kapitałowe
 (KAPITAL-REKOMENDACJA.md) ODŁOŻONE decyzją Rafała — zbieramy dane +
 paper trading, analiza za tydzień (~26.08).
 
+~15:5x — MOBILE DOMKNIĘTE: iPhone ma pełny dostęp (Rabby przez
+WalletConnect + kokpit z danymi bota). Po drodze 3 fixy klasy "działa
+tylko na serwerze": (1) webpack nie czytał .env → WALLET_CONNECT_PROJECT_ID
+pusty → brak WalletConnect na iOS (1a99ddf: require('dotenv') w
+webpack.config.js); (2) domyślny adres API = localhost → puste panele na
+każdym urządzeniu poza serwerem (ba04a21: default = origin strony);
+(3) normalizacja adresu przy zapisie — trailing slash = //api = 404
+(54a7dee). Finalna przeszkoda na iPhone: źle przepisany token (human
+error). CC-Win ma 1 zaległy niepilny rebuild (łapie ba04a21+54a7dee).
+
 ~14:2x — ZAMKNIĘCIE: checklista E2E CC-Win **5/5 zielona**. Trend-state
 5/5 świeży lastTs dokładnie na granicy okna dławika (fix działa jak
 projektowany); sweep-base030 pierwszy raz w historii przechodzi (1. tabela:
