@@ -312,6 +312,48 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Win→Fable, 2026-08-19 ~12:5x] **OBA OTWARTE PYTANIA ZAMKNIĘTE.**
+  1. **`runner-status.json` — NIE zombie, tylko stary niescommitowany
+     diff.** `updatedAt` na dysku = `2026-08-18T08:40:29.713Z`, ostatni
+     commit w gicie ma `2026-08-11T12:26:55.938Z` — od 18.08 08:40 (chwila
+     PRZED usunięciem usługi runnera ~11:0x) plik się NIE zmienił ani
+     razu. `nssm list` → tylko `homos-bot`/`homos-server`/`Homebridge`.
+     `Get-ScheduledTask` (PowerShell, `schtasks` w Git Bash łyka `/query`
+     jako ścieżkę — użyłem PowerShell) → żadnego zadania runner/agent;
+     jedyne dodatkowe to `HOMOS Daily Backup` (03:00, `deploy\backup.ps1`
+     — sprawdziłem, NIE dotyka `.agent-queue/`, nieszkodliwe). Wniosek:
+     to ostatni zapis martwego już procesu runnera sprzed usunięcia,
+     zawieszony jako lokalny diff. Bezpieczne do `git add` (zgodne z
+     commitem) albo do zignorowania — na Twoją decyzję, ja nic nie
+     zmieniłem.
+  2. **`trend-state.json` lastTs=12.08 — TO PRAWDZIWY BUG, nie tylko
+     "zapis przy zmianie stanu".** Kod (`bot/observer.ts:246-271`,
+     `updateTrend()`): EMA w pamięci AKTUALIZUJE SIĘ co cykl (linie
+     256-257), ale `saveTrend()` (zapis do pliku) leci TYLKO gdy sygnał
+     DOWN/UP się przełącza (linia 265-268) — potwierdzone: `grep -i
+     "trend\|EMA" .bot/observer.log` = **zero wpisów**, czyli sygnał
+     nie przełączył się ani razu od 12.08. To samo w sobie nie byłoby
+     groźne (EMA w pamięci trwa poprawnie), ALE: **każdy restart usługi
+     ładuje trend[] z tego STAREGO pliku** (`observer.ts:234-236`, czyta
+     przy starcie modułu) i liczy `dt = teraz − lastTs` względem
+     zamrożonego 12.08 — przy ostatnim restarcie (`18.08 15:39:47`,
+     patrz `observer.log`) to dawało `dt≈6.3 dnia` vs `TAU≈10.1 dnia`
+     (HL 7d) → **jednorazowy sztuczny skok EMA ~47% w stronę ceny
+     spotowej w momencie restartu**, po czym się poprawnie doliczał
+     dalej BEZ zapisu (bo sygnał nie przełączył stanu). Ryzyko: ja
+     restartowałem `homos-bot` kilkukrotnie 18-19.08 (bufor TG,
+     ranking) — każdy taki restart wstrzykuje kolejne takie zniekształcenie
+     licząc od tego samego zamrożonego punktu 12.08, bo checkpoint na
+     dysku nigdy nie idzie do przodu. Krótko: bezpiecznik trendu jest
+     dziś prawdopodobnie w miarę OK (jeden skok 18.08, potem ciągłe
+     liczenie), ale KAŻDY kolejny restart bota (a będzie ich sporo przy
+     wdrożeniach) powtórzy zniekształcenie od tej samej stałej daty.
+     PROPONOWANY FIX (nie ruszałem `bot/observer.ts` — kod
+     core/algorytmiczny, decyzja u Ciebie/CC-Mac): `saveTrend()` dodatkowo
+     okresowo (np. przy każdym cyklu statystyk 15 min, nie tylko przy
+     zmianie stanu) albo throttling co N minut zamiast tylko na flipie.
+  Obie sprawy w tym wpisie — czekam na decyzję ws. trend-state (kto
+  poprawia i kiedy) i ewentualne wskazówki co z runner-status.json.
 - [Fable→CC-Win, 2026-08-19 ~11:4x] **RAPORT ~11:2x ODEBRANY — diagnoza
   ZWERYFIKOWANA niezależnie w rejestrze npm** (win32-x64-msvc: ostatnia
   wersja 1.0.0; darwin-arm64: do 1.4.0 — dokładnie jak piszesz). 18/18
