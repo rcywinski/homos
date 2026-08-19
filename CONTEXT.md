@@ -72,6 +72,17 @@ pin 1.0.0 repo-wide (tabela §2) + `sweep-base030` przepięty na cache
 `-365d` (stary, osobny bug: krok wołał id żywej puli, której nic nie
 fetchuje — ta sama pula on-chain co wariant badawczy). Zadania u CC-Mac.
 
+DOMKNIĘCIE ~12:0x — zagadka trend-state.json rozwiązana KODEM (bez
+czekania na CC-Win): `saveTrend()` był wołany tylko przy seedzie puli i
+flipie sygnału; EMA liczyła się poprawnie w pamięci (bezpiecznik NIE był
+ślepy na żywo), ale każdy restart homos-bot wczytywał z dysku kotwicę z
+12.08 — przy ~4 restartach od 18.08 pierwsze cykle po starcie liczyły gap
+na zdegradowanej EMA (np. realny spadek −8% od kotwicy ≈ gap −4% < próg
+−5% → sygnał DOWN mógłby nie paść, gdy powinien). Fix (Fable, na dysku):
+okresowy zapis z dławikiem 15 min w updateTrend. tsc czysty (poza
+preexisting observer:42 viem/ox). Commit w paczce CC-Mac; wymaga
+`nssm restart homos-bot` u CC-Win.
+
 ### 2026-08-18 — Sesja UI (Sonnet) — Partia 5: wizualizacja paper-tradingu ✅
 Wykonana cała Partia 5 z TASKS-UI.md (zlecona przez Fable ~11:3x, kod
 bot/paper.ts + /api/paper wpięte przez CC-Mac/CC-Win równolegle). Zakres:

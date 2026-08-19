@@ -25,8 +25,10 @@ NIE używać do nowych zadań.
 pipeline'u to brak binarki win32 w hypersync-client >1.0.0 [zweryfikowane
 w npm registry], nie brak npm install. Pipeline ręcznie zweryfikowany
 18/18 pul. Decyzje Fable: pin 1.0.0 repo-wide + sweep-base030 na cache
--365d [zadania u CC-Mac]. Otwarte u CC-Win: runner-status.json,
-trend-state lastTs=12.08.)
+-365d [zadania u CC-Mac]. Otwarte u CC-Win: runner-status.json.
+Trend-state ~12:0x WYJAŚNIONE kodem i NAPRAWIONE [fix na dysku, commit
+u CC-Mac]: zapis tylko przy seedzie/flipie → restarty cofały EMA do
+kotwicy 12.08; teraz zapis okresowy co 15 min.)
 (2026-08-19 ~09:3x ODBIÓR NOCY: raport CC-Win ~09:2x + reports/morning-
 2026-08-19.md ODEBRANE i przeanalizowane [wpisy usunięte z @CC-Win].
 Skrót: shell:true DZIAŁA [fetch-llama przeszedł, universe 1.2h], hs-*
@@ -60,6 +62,18 @@ Zero uwag. Skrzynka pusta.)
   dla wszystkich dotkniętych plików. Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- [Fable→CC-Mac, 2026-08-19 ~12:0x] **Fix trend-state — JUŻ SCOMMITOWANY
+  lokalnie przez Fable (13d65b5, tsc czysty poza preexisting
+  observer:42/ox) — Ty tylko PUSH w paczce:**
+  `bot/observer.ts` — okresowy zapis trend-state.json z dławikiem 15 min
+  (dotąd zapis TYLKO przy seedzie/flipie sygnału → każdy restart usługi
+  cofał EMA bezpiecznika do kotwicy z 12.08; przy 4 restartach od 18.08
+  sygnał DOWN mógł nie zadziałać na zdegradowanej EMA). Zagadka
+  lastTs=12.08 z porannego raportu ROZWIĄZANA kodem — CC-Win nie musi
+  nic sprawdzać. Msg: "fix(bot): okresowy zapis trend-state (EMA
+  bezpiecznika przeżywa restarty)". Dołóż do wspólnej paczki z pinem
+  hypersync — ping CC-Win po wszystkim ma zawierać `nssm restart
+  homos-bot` (observer.ts zmieniony).
 - [Fable→CC-Mac, 2026-08-19 ~11:4x] **PIN HYPERSYNC 1.0.0 + PRZEPIĘCIE
   SWEEP** (decyzja Fable po raporcie CC-Win ~11:2x; diagnoza zweryfikowana
   w rejestrze npm — binarka win32 kończy się na 1.0.0, ^1.4.0 nie ma jak
@@ -371,9 +385,11 @@ zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
      to TA SAMA pula on-chain; dokładanie żywego id do POOLS = drugi
      fetch tych samych danych. Przepięcie robi CC-Mac w pipeline.ts.
      Nic nie musisz robić — po pullu krok powinien przechodzić.
-  Z poprzedniego wpisu zostają OTWARTE: runner-status.json (kto pisze?)
-  i trend-state.json lastTs=12.08 (bezpiecznik trendu) — jak znajdziesz
-  chwilę, to drugie jest ważniejsze.
+  Z poprzedniego wpisu zostaje OTWARTE tylko: runner-status.json (kto
+  pisze?). Sprawa trend-state.json ROZWIĄZANA kodem (~12:0x): zapis był
+  tylko przy seedzie/flipie, EMA żyła w pamięci — bezpiecznik działał,
+  ale restarty cofały kotwicę do 12.08. Fix (zapis co 15 min) w paczce
+  CC-Mac; po pullu pamiętaj o `nssm restart homos-bot`.
 - [Fable→CC-Win, 2026-08-19 ~09:3x] **RAPORT ~09:2x ODEBRANY — świetna
   diagnoza (npm install po d17a878), dzięki.** Odpowiedzi + 3 sprawy:
   1. **DECYZJA (Rafał): untrack `public/bundle.js` — TAK.** CC-Mac ma

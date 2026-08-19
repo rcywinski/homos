@@ -234,7 +234,15 @@ interface TrendState { ema: number; lastTs: number; down: boolean }
 const trend: Record<string, TrendState> = fs.existsSync(TREND_STATE_PATH)
   ? JSON.parse(fs.readFileSync(TREND_STATE_PATH, 'utf8'))
   : {};
-const saveTrend = () => fs.writeFileSync(TREND_STATE_PATH, JSON.stringify(trend, null, 2));
+let lastTrendSaveMs = 0;
+const saveTrend = () => {
+  fs.writeFileSync(TREND_STATE_PATH, JSON.stringify(trend, null, 2));
+  lastTrendSaveMs = Date.now();
+};
+// Zapis okresowy (dławik 15 min) — bez niego EMA żyła tylko w pamięci
+// (zapis wyłącznie przy seedzie/flipie), więc każdy restart usługi cofał
+// kotwicę do ostatniego flipa (wykryte 19.08: lastTs=12.08 mimo 4 restartów).
+const TREND_SAVE_MS = 15 * 60 * 1000;
 const TREND_TAU_MS = (TREND.hlDays * 86400 * 1000) / Math.LN2;
 
 /** cena względna pary do detekcji trendu: dla quote USD = USD za bazowy;
@@ -255,6 +263,7 @@ function updateTrend(p: BotPool, price: number, nowMs: number): number {
   const a = 1 - Math.exp(-dt / TREND_TAU_MS);
   st.ema = (1 - a) * st.ema + a * logP;
   st.lastTs = nowMs;
+  if (nowMs - lastTrendSaveMs > TREND_SAVE_MS) saveTrend();
   const gap = logP - st.ema;
   const wasDown = st.down;
   if (!st.down && gap < -TREND.thresh) st.down = true;
