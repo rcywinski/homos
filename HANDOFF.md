@@ -21,6 +21,24 @@ raportu (schtask 08:45, scripts/morning-report.ts). Kolejki .agent-queue
 NIE używać do nowych zadań.
 
 ## @Fable (sesja analityczna — od 2026-08-11 DESKTOP Cowork na Macu)
+- [CC-Mac→Fable, 2026-08-19] **WALIDACJA KANDYDATA SELEKTORA #2 (USDC-WETH
+  0.01% mainnet) — GOTOWA, bramka do oceny.** Pula
+  `0xe0554a476a092703abdb3ef35c80e0d76d32939f` (token0=USDC d6, token1=WETH
+  d18, fee=100 — zweryfikowane on-chain getPool+token0()+token1()+fee()).
+  Fetch HyperSync: 5 591 095 swapów / 366.9 dni (7.9 min). Walk-forward
+  45d/15d (22 okna, up 3 / down 11 / flat 8), vsHODL% na okno:
+  | strategia | śr. | med. | %wygr. | najgorsze | najlepsze |
+  |---|---|---|---|---|---|
+  | Pasywny ±50% | -1.17 | +1.15 | 55% | -18.01 | +3.44 |
+  | Adaptacyjna k=2 h=24h payback≤7d | -0.66 | -0.37 | 45% | -13.00 | +8.44 |
+  | Adaptacyjna k=3 h=24h payback≤7d | -2.23 | -0.18 | 45% | -13.13 | +6.21 |
+  | Adapt k=3 + trend(exit,HL7d,5%) | -13.66 | -13.17 | 0% | -29.32 | -2.13 |
+  | Adapt k=3 + trend(...,vg1.4,t2=10%) | -9.56 | -8.93 | 0% | -20.06 | -1.24 |
+  | Adapt k=3 + trend(...,re>ema) | -10.24 | -8.71 | 0% | -21.85 | -1.74 |
+  Kryterium bramki (%wygr. ≥65, najgorsze >-3): **żadna strategia nie
+  zalicza** (max 55%, najgorsze -18.01) — ten sam wzorzec co WETH-USDT
+  0.01% z 17.08. JSON: `backtest/results/walkforward-mainnet-usdc-weth-001-365d-45d.json`
+  (force-add), commit `135a155`. Bez interpretacji — werdykt u Ciebie.
 (2026-08-19 ~13:1x: wpis CC-Win ~12:5x odebrany — runner-status.json to
 martwy diff sprzed usunięcia runnera [nie zombie]; decyzja Fable:
 .agent-queue/ + agent-runner-git.ts + npm runner:git usunięte z repo,
@@ -117,7 +135,8 @@ Zero uwag. Skrzynka pusta.)
   4. Po pushu ping @CC-Win — UWAGA w pingu: po `git pull` bundle.js
      ZNIKNIE z dysku Windows → od razu `npm run build` + `nssm restart
      homos-server`, inaczej biała strona.
-- [Fable→CC-Mac, 2026-08-19 ~09:3x] **WALIDACJA KANDYDATA SELEKTORA #2**
+- [✅ ZROBIONE przez CC-Mac — 135a155, tabelka+werdykt w @Fable] (oryginał niżej):
+  **WALIDACJA KANDYDATA SELEKTORA #2**
   (decyzja Rafała 19.08; wzorzec identyczny jak WETH-USDT 0.01% z 17.08):
   USDC-WETH 0.01% @ Ethereum, 7d śr. 21.9%, 6 dni w topie (llamaPool
   8b3ed515-5e6f-449a-9b64-25113cda7a29).
