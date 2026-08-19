@@ -110,6 +110,18 @@ potwierdzenie 5/5 u CC-Win. Kosmetyka do naprawy przy okazji: sekcja
 "pipeline.log (ostatni przebieg)" raportu pokazuje blok z 17.08 (zadanie
 niskiego priorytetu u CC-Mac).
 
+~14:2x — ZAMKNIĘCIE: checklista E2E CC-Win **5/5 zielona**. Trend-state
+5/5 świeży lastTs dokładnie na granicy okna dławika (fix działa jak
+projektowany); sweep-base030 pierwszy raz w historii przechodzi (1. tabela:
+lider "Sztywny ±30%" +15.0 vsHODL — ODNOTOWANE bez akcji: jedna tabela
+sweep to nie powód do otwierania zamrożonego ALGORITHM v1.2; sweep od
+jutra zbiera się codziennie, wrócimy do tego z serią); raport pushuje bez
+blokady; /health, /api/ranking 200, strona bez białego ekranu. Bilans dnia
+19.08: root cause pipeline'u znaleziony i naprawiony NA PEWNO (binarka
+win32), 2 realne bugi bezpieczników wykryte i naprawione (trend-state,
+sweep), 1 kandydat selektora odrzucony danymi, cała ścieżka automatu
+przetestowana żywcem tego samego dnia. Jutro 07:30/08:45 = formalność.
+
 ### 2026-08-18 — Sesja UI (Sonnet) — Partia 5: wizualizacja paper-tradingu ✅
 Wykonana cała Partia 5 z TASKS-UI.md (zlecona przez Fable ~11:3x, kod
 bot/paper.ts + /api/paper wpięte przez CC-Mac/CC-Win równolegle). Zakres:
