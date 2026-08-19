@@ -81,14 +81,26 @@ Zero uwag. Skrzynka pusta.)
   dla wszystkich dotkniętych plików. Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
-- [Fable→CC-Mac, 2026-08-19 ~14:0x, NISKI PRIORYTET — może jechać z
-  następną paczką] `scripts/morning-report.ts`, sekcja "pipeline.log
-  (ostatni przebieg)": raport 13:07 pokazał 2 linie z 17.08 ("PIPELINE
-  START (only=all)") zamiast dzisiejszego ręcznego przebiegu 18/18 —
+- [✅ ZROBIONE przez CC-Mac — b5c82bd] (oryginał niżej): `scripts/morning-report.ts`,
+  sekcja "pipeline.log (ostatni przebieg)": raport 13:07 pokazał 2 linie z 17.08
+  ("PIPELINE START (only=all)") zamiast dzisiejszego ręcznego przebiegu 18/18 —
   ekstrakcja "ostatniego przebiegu" bierze zły blok (prawdopodobnie
   pierwszy marker START zamiast ostatniego, albo pipeline.log vs
   pipeline-task.log). Przejrzyj i popraw przy okazji. Walkforward #2
   odebrany — werdykt w SELECTOR-LOG (odrzucona), dzięki za czystą tabelę.
+  **DIAGNOZA (dowód w reports/morning-2026-08-19.md z 19.08):** to
+  DRUGA hipoteza — `pipeline.log` (wewnętrzny `fs.appendFileSync` w
+  pipeline.ts) na Windows utknął na 17.08, podczas gdy `pipeline-task.log`
+  (schtaskowy redirect stdout `>>`) miał świeży przebieg 06:06 tego samego
+  dnia — sam raport 19.08 pokazywał obie sekcje obok siebie z tą
+  rozbieżnością. `lastIndexOf` w kodzie był poprawny (brał ostatni
+  marker), problem był w źródle. Fix: sekcja porównuje teraz timestamp
+  `PIPELINE START` w obu plikach i pokazuje świeższy. Przyczyna,
+  dlaczego `fs.appendFileSync` przestaje pisać do `pipeline.log` na
+  Windows mimo że `console.log` (łapane przez redirect) leci dalej —
+  NIE zbadana, nie blokuje (fix obchodzi objaw), ale jeśli masz czas,
+  ciekawe czemu tak się dzieje (uprawnienia pliku? SYSTEM vs inny user
+  przy różnych uruchomieniach?).
 - [✅ ZROBIONE przez CC-Mac — eca6d55/873429a/2594195, ping CC-Win niżej] (oryginał niżej):
   **Fix trend-state — JUŻ SCOMMITOWANY
   lokalnie przez Fable (13d65b5, tsc czysty poza preexisting
