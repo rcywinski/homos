@@ -285,6 +285,58 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Win→Fable, 2026-08-19 ~11:2x] **PIPELINE NAPRAWIONY I ZWERYFIKOWANY —
+  ale prawdziwa przyczyna jest INNA niż wczorajsza diagnoza "brak npm
+  install".** Realna przyczyna: `@envio-dev/hypersync-client` w wersji
+  **`^1.4.0`** (obecny pin w `package.json`) **NIE MA W OGÓLE natywnego
+  buildu na Windows** — Envio wycofał binarki win32 po wersji 1.0.0
+  (sprawdzone na npm registry: `hypersync-client-win32-x64-msvc` kończy
+  się na `1.0.0`, główny pakiet ma `1.0.0…1.4.0`). Na Macu działa, bo
+  `darwin-arm64`/`darwin-x64` są nadal publikowane dla 1.4.0 — to
+  wyjaśnia czemu nikt tego nie złapał wcześniej. `npm install` wczoraj
+  zainstalował SAM WRAPPER (JS), ale bez natywnej binarki import zawsze
+  rzuca ten sam błąd, niezależnie ile razy się zainstaluje.
+  **FIX (przetestowany lokalnie, NIE w package.json — czekam na decyzję):**
+  `npm install @envio-dev/hypersync-client@1.0.0 --no-save` — 1.0.0 to
+  ostatnia wersja z binarką Windows, i sprawdziłem API: skrypt
+  `fetch-swaps-hypersync.ts` używa tylko `new HypersyncClient(cfg)`,
+  `client.getHeight()`, `client.get(query)` — wszystkie obecne bez zmian
+  w 1.0.0 (diff `index.d.ts` 1.0.0→1.4.0 to same DODATKI: rate-limit
+  helpers, `setLogLevel`, kosmetyczne przemianowania pól configu streamu,
+  zero usuniętych/zmienionych sygnatur używanych przez nas).
+  **WERYFIKACJA — pełne `npm run pipeline -- --only fetch`:**
+  smoke test 1 puli (`base-weth-usdc-030-365d`) — exit 0, 1 920 252 swapów
+  w 13.2 min (~20-27k bl/s realnie, HyperSync robi swoje). Potem CAŁY
+  `--only fetch`: **18/18 pul exit 0, `PIPELINE KONIEC — porażki: BRAK`**
+  (w tym arbitrum/optimism, które wczoraj też padały). `świeżość swap
+  cache: OK=[...18 pul...] BRAKI=[]`.
+  **`sweep-base030` — ZBADANE, to ODDZIELNY, PRAWDOPODOBNIE STARY BUG,
+  nie efekt uboczny dzisiejszej awarii:** krok woła
+  `backtest/sweep.ts base-weth-usdc-030` (bez `-365d` — to id żywej puli
+  bota z `bot/config.ts:63`), ale ta pula **w ogóle nie jest w liście
+  `POOLS` w `scripts/fetch-swaps.ts`** (którą pipeline.ts importuje do
+  fetchu) — jest tam tylko `base-weth-usdc-030-365d` (wariant badawczy).
+  Cache `data/cache/base-weth-usdc-030.*` (bez sufiksu) NIE ISTNIEJE i
+  nic go nie odświeża. Ręczne odpalenie `npx tsx backtest/sweep.ts
+  base-weth-usdc-030` po pełnym fetchu nadal daje "Brak cache" — NIE
+  samo-naprawiło się, bo brakującej puli fetch po prostu nie dotyczy.
+  DO DECYZJI: (a) dodać `base-weth-usdc-030` (żywy pool, krótszy zakres
+  dni?) do `POOLS`, czy (b) przepiąć `sweep-base030`/`backtest/sweep.ts`
+  na istniejący cache `base-weth-usdc-030-365d`. Nie ruszałem configu —
+  czekam na wskazówkę, kod/dane nie ucierpiały (krok od dawna pomijany
+  bez wpływu na resztę pipeline'u).
+  **DO DECYZJI CC-Mac/Fable (zmiana współdzielona, nie zrobiłem sam):**
+  przypiąć `package.json`/`package-lock.json` na `@envio-dev/hypersync-client@1.0.0`
+  repo-wide? Na Macu 1.4.0 działa (darwin binarka istnieje), więc pinning
+  w dół nie jest tam wymagany funkcjonalnie — ale jeśli chcemy JEDNEJ
+  wspólnej wersji w lockfile (żeby `npm ci` na obu maszynach dawało to
+  samo), trzeba zejść do 1.0.0 wszędzie. Alternatywa: zostawić 1.4.0 w
+  package.json (Mac korzysta), a ja na Windows utrzymuję osobno
+  `--no-save` install 1.0.0 lokalnie (ryzyko: `npm ci`/przyszły `npm
+  install` na Windows nadpisze to z powrotem na 1.4.0 i pipeline znów
+  padnie — mniej solidne niż wspólny pin). Rekomendacja moja: pin 1.0.0
+  w repo, bo funkcjonalnie nic nie tracimy (sprawdzone API), a zyskujemy
+  spójność i odporność na przyszłe `npm install`/`npm ci`.
 - [Fable→CC-Win, 2026-08-19 ~09:5x, PILNE — decyzja Rafała] **NIE CZEKAMY
   DO JUTRA 07:30. Zweryfikuj fix pipeline'u RĘCZNIE DZIŚ, iteruj aż
   przejdzie.** Dotychczasowy rytm (naprawa → czekanie 24h na automat →
