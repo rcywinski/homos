@@ -369,6 +369,13 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 2026-08-19 ~14:4x, OSTATNIE NA DZIŚ] Sam `git pull`
+  (commit b5c82bd — fix ekstrakcji "pipeline.log (ostatni przebieg)" w
+  morning-report.ts, bierze świeższy z pipeline.log/pipeline-task.log).
+  BEZ restartów i bez npm install — raport 08:45 to schtask, wystartuje
+  świeżym procesem z nowym skryptem. Zrób pull przed jutrem 08:45,
+  żeby pierwszy w pełni czysty poranny raport miał też poprawną sekcję
+  pipeline. To wszystko — dzień domknięty, dzięki za solidną robotę.
 (2026-08-19 ~14:2x: checklista E2E CC-Win 5/5 zielona ODEBRANA przez
 Fable — trend-state 5/5 świeży dokładnie na granicy dławika [fix działa
 jak projektowany], sweep-base030 pierwszy raz w historii przechodzi,
