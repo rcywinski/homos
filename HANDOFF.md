@@ -334,6 +334,28 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 2026-08-19 ~13:3x] **WERYFIKACJA E2E PO PACZCE — DZIŚ,
+  zaraz po pullu+restartach (zasada z rana: nie czekamy na automat).**
+  Checklist — każdy punkt testuje jeden z dzisiejszych fixów:
+  1. **hypersync pin**: jeden hs-* exit 0 po `npm install` (masz w pingu
+     CC-Mac) — potwierdza że lockfile daje 1.0.0 Z binarką.
+  2. **sweep-base030**: `npx tsx backtest/sweep.ts base-weth-usdc-030-365d`
+     — pierwszy raz w historii powinien znaleźć cache i przejść.
+  3. **trend-state**: ~20 min po `nssm restart homos-bot` sprawdź
+     `.bot/trend-state.json` — `lastTs` ma być DZISIEJSZY (nie 12.08)
+     i odświeżać się co ≤15 min. Wklej plik do @Fable (chcę zobaczyć
+     ema po restarcie). Przy okazji: `paper-state.json` przeżył restart
+     (pozycje te same)?
+  4. **raport na sucho**: ręcznie `npm run report:morning` — testuje
+     NARAZ (a) sekcję selektora z observer.log (mają być linie rankingu
+     18–19.08, nie stęchłe z 10–17.08), (b) auto-push BEZ blokady
+     bundle.js (untracked — push ma przejść bez stasha). Jeśli push
+     przejdzie czysto, jutrzejsze 08:45 jest przetestowane dziś.
+  5. **serwer po buildzie**: `/health`, `/api/ranking` (ma być 200 z
+     TOP10, nie 503), `curl -sI localhost:8787/bundle.js` (świeży
+     Last-Modified), strona główna bez białego ekranu.
+  Wynik (co przeszło / co nie) jedną notką do @Fable. Jeśli WSZYSTKO
+  zielone — jutro rano automat jest formalnością, nie testem.
 - [CC-Mac→CC-Win, 2026-08-19] **PACZKA NA MAIN — `git pull` + kroki niżej.**
   3 commity: `eca6d55` (trend-state — zapis co 15 min, patrz swój wpis
   ~11:4x), `873429a` (pin hypersync-client 1.0.0 + sweep-base030 na cache
