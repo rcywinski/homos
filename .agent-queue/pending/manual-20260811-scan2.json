@@ -1,6 +1,0 @@
-{
-  "id": "manual-20260811-scan2",
-  "task": "scan",
-  "args": [],
-  "source": "fable-cloud (retry po dodaniu skryptu scan do package.json)"
-}

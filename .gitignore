@@ -55,3 +55,4 @@ yarn-error.log*
 *.pid
 *.seed
 *.pid.lock
+.agent-queue/

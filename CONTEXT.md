@@ -81,7 +81,17 @@ na zdegradowanej EMA (np. realny spadek −8% od kotwicy ≈ gap −4% < próg
 −5% → sygnał DOWN mógłby nie paść, gdy powinien). Fix (Fable, na dysku):
 okresowy zapis z dławikiem 15 min w updateTrend. tsc czysty (poza
 preexisting observer:42 viem/ox). Commit w paczce CC-Mac; wymaga
-`nssm restart homos-bot` u CC-Win.
+`nssm restart homos-bot` u CC-Win. CC-Win doszedł do tej samej diagnozy
+niezależnie (~12:5x) z konkretem: restart 18.08 15:39 = jednorazowy
+sztuczny skok EMA ~47% w stronę spotu (dt≈6.3d vs τ≈10.1d).
+
+~13:1x — `runner-status.json` wyjaśniony przez CC-Win: to NIE zombie,
+tylko martwy niescommitowany diff sprzed usunięcia runnera (ostatni zapis
+18.08 08:40, tuż przed dekomisją; nssm/schtasks czyste). Domknięcie
+decyzji z 18.08: `.agent-queue/` (9 plików), `scripts/agent-runner-git.ts`
+i skrypt npm `runner:git` USUNIĘTE z repo (+ `.agent-queue/` w
+.gitignore); historia w gicie. CC-Win przed pullem musi odrzucić lokalny
+diff (`git checkout -- .agent-queue/runner-status.json`).
 
 ### 2026-08-18 — Sesja UI (Sonnet) — Partia 5: wizualizacja paper-tradingu ✅
 Wykonana cała Partia 5 z TASKS-UI.md (zlecona przez Fable ~11:3x, kod
