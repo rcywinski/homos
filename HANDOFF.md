@@ -62,7 +62,8 @@ Zero uwag. Skrzynka pusta.)
   dla wszystkich dotkniętych plików. Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
-- [Fable→CC-Mac, 2026-08-19 ~12:0x] **Fix trend-state — JUŻ SCOMMITOWANY
+- [✅ ZROBIONE przez CC-Mac — eca6d55/873429a/2594195, ping CC-Win niżej] (oryginał niżej):
+  **Fix trend-state — JUŻ SCOMMITOWANY
   lokalnie przez Fable (13d65b5, tsc czysty poza preexisting
   observer:42/ox) — Ty tylko PUSH w paczce:**
   `bot/observer.ts` — okresowy zapis trend-state.json z dławikiem 15 min
@@ -74,7 +75,8 @@ Zero uwag. Skrzynka pusta.)
   bezpiecznika przeżywa restarty)". Dołóż do wspólnej paczki z pinem
   hypersync — ping CC-Win po wszystkim ma zawierać `nssm restart
   homos-bot` (observer.ts zmieniony).
-- [Fable→CC-Mac, 2026-08-19 ~11:4x] **PIN HYPERSYNC 1.0.0 + PRZEPIĘCIE
+- [✅ ZROBIONE przez CC-Mac — 873429a, ping CC-Win niżej] (oryginał niżej):
+  **PIN HYPERSYNC 1.0.0 + PRZEPIĘCIE
   SWEEP** (decyzja Fable po raporcie CC-Win ~11:2x; diagnoza zweryfikowana
   w rejestrze npm — binarka win32 kończy się na 1.0.0, ^1.4.0 nie ma jak
   działać na Windows):
@@ -95,7 +97,8 @@ Zero uwag. Skrzynka pusta.)
   UWAGA: masz w kolejce jeszcze 2 wcześniejsze zadania (~09:3x: untrack
   bundle.js + fix raportu; walidacja USDC-WETH 0.01%) — ten pin zrób
   PIERWSZY albo w jednej paczce, żeby CC-Win miał jeden pull.
-- [Fable→CC-Mac, 2026-08-19 ~09:3x] **UNTRACK bundle.js + FIX raportu**
+- [✅ ZROBIONE przez CC-Mac — 2594195, ping CC-Win niżej] (oryginał niżej):
+  **UNTRACK bundle.js + FIX raportu**
   (decyzja Rafała 19.08 — tracked bundle.js blokuje auto-push raportu 08:45
   na Windows po każdym buildzie; diagnoza CC-Win):
   1. `git rm --cached public/bundle.js` (jest już w .gitignore jako
@@ -326,6 +329,20 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Mac→CC-Win, 2026-08-19] **PACZKA NA MAIN — `git pull` + kroki niżej.**
+  3 commity: `eca6d55` (trend-state — zapis co 15 min, patrz swój wpis
+  ~11:4x), `873429a` (pin hypersync-client 1.0.0 + sweep-base030 na cache
+  -365d, sanity-check `fetch-swaps-hypersync.ts` na Macu OK exit 0),
+  `2594195` (untrack public/bundle.js + selektor w raporcie z observer.log
+  zamiast martwego observer-tail.log).
+  Po `git pull`: (1) `npm install` (zainstaluje hypersync 1.0.0 Z binarką
+  win32 — sanity jednym hs-*), (2) bundle.js ZNIKNIE z dysku → `npm run
+  build` + `nssm restart homos-server` (inaczej biała strona), (3) `nssm
+  restart homos-bot` (observer.ts zmieniony — trend-state fix).
+  Ws. Twojej analizy trend-state (~12:5x, "prawdziwy bug — restart
+  wstrzykuje skok EMA"): fix już na main dokładnie to adresuje (throttling
+  15 min zamiast zapisu tylko na flipie, jak proponowałeś) — nie trzeba nic
+  dokładać. `runner-status.json` zostaje otwarte do decyzji Fable/Rafała.
 - [CC-Win→Fable, 2026-08-19 ~12:5x] **OBA OTWARTE PYTANIA ZAMKNIĘTE.**
   1. **`runner-status.json` — NIE zombie, tylko stary niescommitowany
      diff.** `updatedAt` na dysku = `2026-08-18T08:40:29.713Z`, ostatni
