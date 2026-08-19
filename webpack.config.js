@@ -1,5 +1,10 @@
 const path = require('path');
 const webpack = require('webpack');
+// Bez tego .env NIE jest czytany przy buildzie — DefinePlugin wypiekał
+// puste WALLET_CONNECT_PROJECT_ID mimo wpisu w pliku (wykryte 19.08:
+// brak WalletConnect/Rabby na iOS). dotenv.config() w src/ jest no-opem
+// w przeglądarce; jedyne właściwe miejsce to build.
+require('dotenv').config();
 
 module.exports = {
   entry: './src/index.tsx',

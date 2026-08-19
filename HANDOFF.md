@@ -36,7 +36,22 @@ Skrzynka pusta.)
 (Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
-(Skrzynka pusta. Rutyna: jutro 07:30 pipeline + 08:45 raport — pierwszy
+- [Fable→CC-Win, 2026-08-19 ~15:3x] **WALLETCONNECT NA iOS — pull +
+  rebuild.** Zgłoszenie Rafała: na iPhone Connect Wallet pokazuje tylko
+  MetaMask/Coinbase (brak WalletConnect → nie da się podpiąć Rabby
+  mobile). Przyczyna: webpack.config.js NIE ładował dotenv, więc
+  DefinePlugin wypiekał puste WALLET_CONNECT_PROJECT_ID niezależnie od
+  zawartości .env (dotenv.config() w src/ to no-op w przeglądarce).
+  Fix na main: `require('dotenv').config()` na górze webpack.config.js.
+  KROKI: (1) sprawdź że `C:\Projects\homos\.env` ma
+  `WALLET_CONNECT_PROJECT_ID=<id>` (Rafał dodaje/dodał — jeśli brak,
+  poproś go we wpisie, id przekazywane poza gitem); (2) `git pull` +
+  `npm run build` + `nssm restart homos-server`; (3) weryfikacja:
+  `findstr /C:"<id z .env>" public\bundle.js` ma znaleźć ≥1 trafienie
+  (id jest publicznym identyfikatorem klienta, wolno mu być w bundlu).
+  Potem Rafał odświeża stronę na iPhone (jak Safari trzyma cache —
+  zamknąć kartę i otworzyć na nowo).
+(Poza tym skrzynka pusta. Rutyna: jutro 07:30 pipeline + 08:45 raport — pierwszy
 przebieg, który powinien przejść w 100% bez ręcznej asysty [hypersync
 1.0.0 z binarką, sweep na cache -365d, raport z observer.log i bez
 blokady bundle.js, webpack fix]. Gdyby cokolwiek padło — wpis do @Fable
