@@ -57,12 +57,25 @@ const newestCache = (() => {
 sections.push(`## Świeżość danych\n- universe.json: ${ageH(path.join(DATA, 'llama', 'universe.json'))}\n- swap cache: ${newestCache}`);
 
 // --- pipeline: ostatni przebieg ---
+// data/pipeline.log (zapis wewnętrzny przez fs.appendFileSync w pipeline.ts) i
+// data/pipeline-task.log (redirect stdout `>>` ze schtaska na Windows) bywają
+// rozjechane — zaobserwowane 19.08: pipeline-task.log miał świeży przebieg
+// 06:06, a pipeline.log utknął na 17.08 mimo tego samego uruchomienia. Bierz
+// świeższy z dwóch (po timestampie linii "PIPELINE START"), nie na sztywno pipeline.log.
+const lastRunBlock = (content: string): { ts: string; block: string } | null => {
+  const idx = content.lastIndexOf('PIPELINE START');
+  if (idx < 0) return null;
+  const lineStart = content.lastIndexOf('\n', idx) + 1;
+  const block = content.slice(lineStart);
+  return { ts: block.slice(0, block.indexOf(' ')), block };
+};
 const plog = readSafe(path.join(DATA, 'pipeline.log'));
-if (plog) {
-  const lastStart = plog.lastIndexOf('PIPELINE START');
-  sections.push('## pipeline.log (ostatni przebieg)\n```\n' + tail(lastStart >= 0 ? plog.slice(lastStart) : plog, 40) + '\n```');
-} else sections.push('## pipeline.log\nBRAK PLIKU');
 const ptask = readSafe(path.join(DATA, 'pipeline-task.log'));
+const runs = [plog && lastRunBlock(plog), ptask && lastRunBlock(ptask)].filter((r): r is { ts: string; block: string } => !!r);
+if (runs.length) {
+  const newest = runs.reduce((a, b) => (b.ts > a.ts ? b : a));
+  sections.push('## pipeline.log (ostatni przebieg)\n```\n' + tail(newest.block, 40) + '\n```');
+} else sections.push('## pipeline.log\nBRAK PLIKU (ani pipeline.log, ani pipeline-task.log)');
 if (ptask) sections.push('## pipeline-task.log (tail)\n```\n' + tail(ptask, 12) + '\n```');
 
 // --- selektor: linie z ostatnich 2 dni ---
