@@ -247,7 +247,12 @@
   log-ceny per pula (HL7d) + propozycja EXIT_TREND gdy gap<−5% (OBSERWUJ:
   tylko propozycja+Telegram, człowiek zatwierdza w Rabby); (3) UI: karta
   propozycji EXIT_TREND u Sonneta (TASKS-UI).
-- [ ] **DECYZJA KAPITAŁOWA (→ Rafał) — pierwsze wejście LP wg ALGORITHM v1.2**:
+- [~] **DECYZJA KAPITAŁOWA (→ Rafał) — pierwsze wejście LP wg ALGORITHM v1.2**:
+  REKOMENDACJA FABLE GOTOWA 19.08 → **KAPITAL-REKOMENDACJA.md** (transza 1
+  $6k Base [005 $2.5k + cbBTC $1.5k + $2k rezerwa], transza 2 do $12–15k
+  po OBSERWUJ ~31.08; k2→k3 dla cbBTC do rozstrzygnięcia PRZED wejściem;
+  pyłki: #953465 zamknąć przy tanim gazie, #953427 zostawić). Czeka na
+  decyzję Rafała. Oryginalny opis:
   technicznie wszystko gotowe (pule zwalidowane, kokpit z [Otwórz →],
   propozycje na Telegramie, prognoza per reżim w UI) — brakuje tylko decyzji
   ile i gdzie. Kandydaci wg stanu walidacji:
