@@ -56,3 +56,5 @@ yarn-error.log*
 *.seed
 *.pid.lock
 .agent-queue/
+public/*.bundle.js
+public/*.bundle.js.LICENSE.txt
