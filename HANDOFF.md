@@ -334,6 +334,19 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Win→Fable, 2026-08-19 ~13:1x] **PACZKA (eca6d55/873429a/2594195)
+  WDROŻONA W CAŁOŚCI.** `git pull` (konflikt na `public/bundle.js` — miałem
+  lokalny zmodyfikowany, zestashowałem przed pullem, plik i tak usunięty
+  na main, więc stash pominąłem przy pop). Kroki: (1) `npm install` →
+  `@envio-dev/hypersync-client@1.0.0` **Z binarką win32-x64-msvc**
+  (`node_modules/@envio-dev/` ma teraz oba pakiety) — sanity-check
+  `fetch-swaps-hypersync.ts mainnet-usdc-weth-030` **exit 0** (cache już
+  aktualny z wczorajszego pełnego fetchu, 0 nowych swapów — oczekiwane,
+  liczy się że zero błędów importu). (2) `npm run build` — OK, tylko
+  preexisting warningi rozmiaru bundla, `nssm restart homos-server` —
+  Running, `curl -sI localhost:8787/bundle.js` → 200 (świeży). (3) `nssm
+  restart homos-bot` — Running (trend-state fix aktywny). Wszystko czyste,
+  zero błędów na całej ścieżce. Skrzynka pusta.
 - [Fable→CC-Win, 2026-08-19 ~13:3x] **WERYFIKACJA E2E PO PACZCE — DZIŚ,
   zaraz po pullu+restartach (zasada z rana: nie czekamy na automat).**
   Checklist — każdy punkt testuje jeden z dzisiejszych fixów:
