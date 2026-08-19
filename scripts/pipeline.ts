@@ -113,7 +113,7 @@ function swapsFresh(): { fresh: string[]; stale: string[] } {
     if (!(await withRetry('backtest-selection', () => runStep('backtest-selection', 'backtest/selection.ts'), 2)))
       failures.push('backtest-selection');
     // sweep na najpłynniejszej puli Base (kalibracja parametrów)
-    if (!(await withRetry('sweep-base030', () => runStep('sweep-base030', 'backtest/sweep.ts', ['base-weth-usdc-030']), 1)))
+    if (!(await withRetry('sweep-base030', () => runStep('sweep-base030', 'backtest/sweep.ts', ['base-weth-usdc-030-365d']), 1)))
       failures.push('sweep-base030');
   }
 
