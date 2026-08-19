@@ -12,12 +12,19 @@ module.exports = {
     rules: [
       {
         test: /\.(ts|tsx|js|jsx|mjs)$/,
-        exclude: /node_modules\/(?!(framer-motion)\/).*/,
+        // [\\/] zamiast /: na Windows ścieżki mają backslashe — stary regex
+        // nie wykluczał NIC, babel transpilował całe node_modules i preset-env
+        // (bez targets = najstarsze przeglądarki) przepisywał `2n ** 7n` (viem)
+        // na Math.pow(2n,7n) → TypeError przy starcie → biała strona
+        // (incydent 18-19.08: każdy build z Windows był zepsuty, z Maca OK).
+        exclude: /node_modules[\\/](?!framer-motion[\\/])/,
         use: {
           loader: 'babel-loader',
           options: {
             presets: [
-              '@babel/preset-env',
+              // targets es2020: BigInt/`**` zostają natywne nawet gdyby
+              // exclude znów przepuścił node_modules (druga linia obrony)
+              ['@babel/preset-env', { targets: { chrome: '80', safari: '14', firefox: '78' } }],
               '@babel/preset-react',
               '@babel/preset-typescript'
             ]

@@ -369,6 +369,21 @@ wdrożenie bota v1.1, incydent .bot/pipeline] wyczyszczona z HANDOFF — pełny
 zapis w historii gita i CONTEXT.md. Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 2026-08-19 ~14:5x] **BIAŁA STRONA ROZWIĄZANA — po pullu
+  rebuild.** Root cause (zdiagnozowane na żywo z przeglądarki Rafała +
+  bundle.js z Twojego serwera): exclude w webpack.config.js zakładał
+  separator `/`, na Windows ścieżki mają `\` → babel transpilował CAŁE
+  node_modules, a preset-env bez targets przepisywał `2n ** 7n` (viem)
+  na `Math.pow(2n,7n)` = TypeError przy starcie bundla, zanim React się
+  zamontuje. KAŻDY build z Windows był zepsuty, z Maca OK — stąd zeszła
+  Ci wczoraj weryfikacja "serwer zdrowy, pewnie cache": serwowanie było
+  OK, bundle był zepsuty. Fix na main (webpack.config.js `[\\/]` +
+  targets es2020 w preset-env i .babelrc; build na Macu czysty, zero
+  Math.pow(2n w bundlu). KROKI: `git pull` (złapiesz też b5c82bd — fix
+  raportu z wcześniejszego pingu) + `npm run build` + `nssm restart
+  homos-server`, potem sprawdź w logu buildu/bundlu:
+  `findstr /C:"Math.pow(2n" public\bundle.js` ma NIC nie znaleźć,
+  i daj znać — Rafał sprawdzi stronę z Maca.
 - [Fable→CC-Win, 2026-08-19 ~14:4x, OSTATNIE NA DZIŚ] Sam `git pull`
   (commit b5c82bd — fix ekstrakcji "pipeline.log (ostatni przebieg)" w
   morning-report.ts, bierze świeższy z pipeline.log/pipeline-task.log).

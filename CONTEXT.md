@@ -110,6 +110,21 @@ potwierdzenie 5/5 u CC-Win. Kosmetyka do naprawy przy okazji: sekcja
 "pipeline.log (ostatni przebieg)" raportu pokazuje blok z 17.08 (zadanie
 niskiego priorytetu u CC-Mac).
 
+~15:0x — BIAŁA STRONA (zgłoszenie Rafała 18.08, wróciło 19.08) ROZWIĄZANA
+(Fable, diagnoza na żywo przez Chrome z Maca): bundle z Windows rzucał na
+starcie `TypeError: Cannot convert a BigInt value to a number` w
+`Math.pow(2n,7n)` — babel przepisywał `2n ** 7n` z viem na Math.pow, bo
+(a) exclude w webpack.config.js zakładał separator `/` a Windows ma `\` →
+transpilowane było CAŁE node_modules (na Macu poprawnie pomijane — dlatego
+buildy z Maca działały, z Windows nie), (b) preset-env w opcjach webpacka
+był bez targets (=najstarsze przeglądarki; .babelrc z targetami jest w
+.gitignore, więc na Windows go nie ma). Fix e63856c: `[\\/]` w exclude +
+jawne targets es2020 (chrome 80/safari 14/ff 78) w preset-env. Build na
+Macu czysty, zero `Math.pow(2n` w bundlu. LEKCJA: regexy ścieżek w
+konfigach buildów zawsze `[\\/]`, nigdy samo `/`. Decyzje kapitałowe
+(KAPITAL-REKOMENDACJA.md) ODŁOŻONE decyzją Rafała — zbieramy dane +
+paper trading, analiza za tydzień (~26.08).
+
 ~14:2x — ZAMKNIĘCIE: checklista E2E CC-Win **5/5 zielona**. Trend-state
 5/5 świeży lastTs dokładnie na granicy okna dławika (fix działa jak
 projektowany); sweep-base030 pierwszy raz w historii przechodzi (1. tabela:
