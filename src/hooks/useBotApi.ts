@@ -348,12 +348,17 @@ export function useBotApi(): UseBotApi {
   );
 
   const setApiBase = useCallback((v: string) => {
+    // Normalizacja: bez końcowych ukośników (baza+'/api/...' dawałaby
+    // '//api/...' → 404 w Expressie; iOS Safari lubi doklejać '/'),
+    // spacje out, brak schematu → doklej http:// (LAN bez TLS).
+    let norm = v.trim().replace(/\/+$/, '');
+    if (norm && !/^https?:\/\//i.test(norm)) norm = `http://${norm}`;
     try {
-      localStorage.setItem(BASE_KEY, v);
+      localStorage.setItem(BASE_KEY, norm);
     } catch {
       /* localStorage unavailable — keep in-memory only */
     }
-    setApiBaseState(v);
+    setApiBaseState(norm);
   }, []);
 
   const setApiToken = useCallback((v: string) => {
