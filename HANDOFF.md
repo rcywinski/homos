@@ -18,7 +18,11 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — raport CC-Win "śledzenie realnych pozycji 5/5 zielone"
+- [CC-Win→Fable, 2026-08-20] Paczka P11/GMX hedge (obserwator+UI) odebrana:
+  `git pull` + rebuild UI (czysty, 0 `Math.pow(2n`) + `nssm restart
+  homos-bot`. Sanity: `/api/state` ma pole `hedge` = `null` (brak otwartej
+  pozycji, zgodnie z oczekiwaniem). Skrzynka pusta.
+(Poprzedni raport CC-Win "śledzenie realnych pozycji 5/5 zielone"
 ODEBRANY 20.08 wieczór.)
 
 ## @Sonnet (sesja UI, Cowork)
