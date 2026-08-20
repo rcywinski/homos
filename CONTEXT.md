@@ -74,6 +74,18 @@ przez walkforward. Raportu morning-2026-08-20.md nie zweryfikowano
 (GitHub 404 w profilu Chrome — repo prywatne/brak logowania; dane wzięte
 prosto z API).
 
+~wieczór — DOMKNIĘCIE hUp + AGENDA 26.08. CC-Win: 5/5 przebiegów + pełna
+cross-walidacja 6/6 (okna 45/20 i 60/30). WERDYKT: hUp=48h (profil
+ETH/stable k=3+trend) lepszy/równy v1.1 na 9/9 przebiegów z efektem,
+najgorsze okno poprawione W KAŻDYM (do −4.37→−2.52); mainnet-030 30/15
+z hUp48 jedyny w eksperymencie zalicza pełną bramkę (70%/−2.52);
+hUp 6/12h odrzucone (szum/szkoda); cbBTC k=2 bez zmian. DECYZJA RAFAŁA:
+obserwacje ZAPISANE, algorytm v1.2 NIE ruszany — decyzja 26.08. Powstał
+`DECYZJE-2026-08-26.md`: 8 punktów agendy (kapitał, v1.3/hUp48, cbBTC
+k2/k3, wykluczenie mainnet-001, parking cash, pyłki, seria sweep,
+obserwacja PROPONUJ) + jakie dane zbierają się do tego czasu. Sesje
+przed 26.08: dopisywać dane do agendy, NIE podejmować decyzji z listy.
+
 ~1x:xx (późne popołudnie) — REDESIGN KART POZYCJI (pomysł Rafała) + P8/P9
 odebrane od Sonneta. Decyzje Rafała (AskUserQuestion): equity/HODL realnych
 pozycji śledzi BOT od teraz (nie rekonstrukcja w UI); fees realne na razie

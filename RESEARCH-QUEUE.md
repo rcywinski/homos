@@ -160,13 +160,19 @@
   (o włos); arb-005-60d NIE potwierdza 45d (exit 62%/−4.15); **arb-030 FAIL**
   → na Arbitrum tylko 005. Napięcie do v1.2: na cbBTC walk-forward mówi k3>k2
   (zamrożone k=2 z single-runu). Szczegóły: CONTEXT wpis 12.08.
-- [ ] **Warianty triggera rebalansu** (po B2 ZDEGRADOWANE do drugorzędnych —
+- [~] **Warianty triggera rebalansu** (po B2 ZDEGRADOWANE do drugorzędnych —
   ogon robią okna DOWN, nie timing triggera; nadal warte sprawdzenia PO
   bezpieczniku trendu):
   do strategies.ts dodać (a) bufor cenowy (rebalans po wyjściu o X% poza zakres,
   nie od razu), (b) odwrót momentum (rebalans dopiero gdy EWMA-trend wraca ku
   zakresowi), (c) powrót-do-zakresu (czekaj aż cena wróci; rebalans tylko po
   T dniach poza). Sweep na 365d.
+  → CZĘŚCIOWO ZROBIONE 20.08 (nowy wariant d): **ASYMETRYCZNA HISTEREZA
+  hUp** (`hysteresisUpSec` w strategies.ts, zestaw `WF_SET=hup`) —
+  POLICZONE W CAŁOŚCI (11 przebiegów, 5 pul, okna 30/45/60d): hUp=48h
+  lepszy/równy v1.1 na 9/9 przebiegów z efektem, ogon poprawiony wszędzie;
+  hUp 6/12h odrzucone; cbBTC bez zmian. DECYZJA o wdrożeniu (v1.3) →
+  **DECYZJE-2026-08-26.md pkt 2** (Rafał, 26.08).
 - [ ] **Compounding w silniku**: akcja collect+reinwestycja przy fees > próg
   (50× gaz), zmierzyć wpływ na APR (oczekiwane +1–2 p.p.).
 - [x] **Egzotyki: pełny PnL tick-level** (po A4) vs cbBTC/majors — decyzja
