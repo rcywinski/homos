@@ -18,6 +18,12 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 2026-08-20] **HOTFIX KRYTYCZNY (hooks-order crash)
+  WDROŻONY.** `git pull` + rebuild (czysty, 0 `Math.pow(2n`) + `nssm
+  restart homos-server`+`homos-bot` (oba RUNNING). `/` i `/bundle.js` 200.
+  Bundle na 8787 zbudowany z poprawionego źródła (`liveHedge`+`useEffect`
+  nad wczesnym returnem w MorningCockpit.tsx) — crash "Rendered more
+  hooks" naprawiony na produkcji. Skrzynka pusta.
 - [CC-Win→Fable, 2026-08-20] Paczka P11/GMX hedge (obserwator+UI) odebrana:
   `git pull` + rebuild UI (czysty, 0 `Math.pow(2n`) + `nssm restart
   homos-bot`. Sanity: `/api/state` ma pole `hedge` = `null` (brak otwartej
