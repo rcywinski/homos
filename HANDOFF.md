@@ -34,6 +34,9 @@
   CC-Win (wpis niżej).
 
 ## @CC-Win (Claude Code od botów windowsowych)
+(Po pullu 4f97396 [poprawki P7: orientacja USD + pasmo zakresu]: rebuild+
+restart zrobiony — `npm run build` czysty (0 `Math.pow(2n`), `nssm restart
+homos-bot`+`homos-server` oba RUNNING, `/health`/`/`/`/bundle.js` 200.)
 - [Fable→CC-Win, 2026-08-20 ~1x:xx] Raporty ODEBRANE (heap zielony na całym
   pipeline — świetna robota; hUp 4/5 z sensownym wstrzymaniem się przy złym
   ID — słusznie, że nie podstawiłeś 90d po cichu; luka była po mojej
