@@ -212,7 +212,9 @@ export function planRebalance(params: {
   // ---- KROK 2: swap wyrównujący (estymata; float — miny chronią) ----
   // docelowa proporcja raw a1/a0 dla nowego zakresu przy bieżącej cenie
   const sqrtP = BigInt(pool.sqrtRatioX96.toString());
-  const PROBE_L = 10n ** 18n;
+  // literał zamiast `10n ** 18n` — babel transpiluje `**` na Math.pow() bez
+  // rozróżniania typu, co dla BigIntów rzuca w runtime (patrz hedgeBuilder.ts)
+  const PROBE_L = 1_000_000_000_000_000_000n; // 10n ** 18n
   const probe = getAmountsForLiquidity(sqrtP, newTickLower, newTickUpper, PROBE_L);
   const pRaw = (Number(sqrtP) / 2 ** 96) ** 2; // token1_raw za token0_raw
   const h0 = Number(withdraw0);
@@ -542,7 +544,7 @@ export function planRotate(params: {
 
   // ---- swap WYRÓWNUJĄCY pod nowy zakres (w NOWEJ puli) — logika jak w planRebalance ----
   const sqrtPNew = BigInt(newPool.sqrtRatioX96.toString());
-  const probe = getAmountsForLiquidity(sqrtPNew, newTickLower, newTickUpper, 10n ** 18n);
+  const probe = getAmountsForLiquidity(sqrtPNew, newTickLower, newTickUpper, 1_000_000_000_000_000_000n); // 10n ** 18n
   const totalV1 = bal0 * pRawNew + bal1;
   let target0: number;
   if (probe.amount0 === 0n) target0 = 0;

@@ -125,6 +125,23 @@ const live: Record<string, PoolLive> = {};
 let positions: WatchedPosition[] = [];
 let proposals: Proposal[] = fs.existsSync(PROPOSALS_PATH) ? JSON.parse(fs.readFileSync(PROPOSALS_PATH, 'utf8')) : [];
 
+// --- śledzenie REALNYCH pozycji jak w paper (20.08, decyzja Rafała):
+// equity + HODL per tokenId, próbki co cykl refreshPositions (5 min).
+// HODL = kwoty tokenów ZAMROŻONE przy pierwszym zauważeniu pozycji przez
+// bota (kotwica w .bot/positions-hodl.json — restart jej nie zeruje);
+// UWAGA uczciwości: dla pozycji starszych niż wdrożenie kotwica = stan z
+// dziś, nie z prawdziwego otwarcia — porównanie biegnie "od teraz".
+// Wykresy UI (redesign kart pozycji wg wzorca paper) czytają
+// /api/positions-history. Format próbki jak paper-history (price/lo/hi
+// human) — UI reużywa te same komponenty.
+const POS_HIST_PATH = path.join(DIR, 'positions-history.ndjson');
+const POS_HODL_PATH = path.join(DIR, 'positions-hodl.json');
+interface PosHodlAnchor { a0: number; a1: number; poolId: string; anchoredAt: string }
+const posHodl: Record<string, PosHodlAnchor> = fs.existsSync(POS_HODL_PATH)
+  ? JSON.parse(fs.readFileSync(POS_HODL_PATH, 'utf8'))
+  : {};
+const savePosHodl = () => fs.writeFileSync(POS_HODL_PATH, JSON.stringify(posHodl, null, 2));
+
 const bigintReplacer = (_key: string, value: unknown) => (typeof value === 'bigint' ? value.toString() : value);
 
 const saveState = () => {
@@ -467,6 +484,31 @@ async function refreshPositions() {
           inRange: lv.tick >= Number(lo) && lv.tick < Number(hi),
           advice, paybackDays: payback,
         });
+
+        // próbka equity/HODL realnej pozycji (wzorzec paper-history)
+        try {
+          const id = tokenId.toString();
+          if (!posHodl[id]) {
+            posHodl[id] = { a0, a1, poolId: match.id, anchoredAt: new Date().toISOString() };
+            savePosHodl();
+            log(`positions: kotwica HODL dla #${id} (${match.id}): ${a0.toFixed(6)} + ${a1.toFixed(6)}`);
+          }
+          const anchor = posHodl[id];
+          const hodlUsd = anchor.a0 * px0 + anchor.a1 * px1;
+          const tickHuman = (t: number) => Math.pow(1.0001, t) * Math.pow(10, match.d0 - match.d1);
+          fs.appendFileSync(
+            POS_HIST_PATH,
+            JSON.stringify({
+              ts: new Date().toISOString(), tokenId: id, poolId: match.id,
+              valueUsd: +valueUsd.toFixed(2), hodlUsd: +hodlUsd.toFixed(2),
+              inRange: lv.tick >= Number(lo) && lv.tick < Number(hi),
+              price: +sqrtPriceX96ToHumanPrice(BigInt(lv.sqrtPriceX96), match.d0, match.d1).toPrecision(6),
+              lo: +tickHuman(Number(lo)).toPrecision(6), hi: +tickHuman(Number(hi)).toPrecision(6),
+            }) + '\n'
+          );
+        } catch (e) {
+          log(`positions history #${tokenId}: ${String(e).slice(0, 100)}`);
+        }
       }
     } catch (e) {
       log(`positions chain ${chainId} failed: ${String(e).slice(0, 140)}`);

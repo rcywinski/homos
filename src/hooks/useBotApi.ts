@@ -31,6 +31,10 @@ const PAPER_HOURS = 168; // 7 dni
 // Ranking dnia (bot/selector.ts, TASKS-UI.md Partia 6) — plik odświeżany raz
 // dziennie (po 8:00) — poll RZADKI, wyraźnie wolniejszy niż paper/state.
 const RANKING_POLL_MS = 30 * 60_000;
+// Historia REALNYCH pozycji (bot/observer.ts refreshPositions, TASKS-UI.md
+// Partia 10) — próbki co ~5 min, ten sam interwał pollingu co paper.
+const POSITIONS_HISTORY_POLL_MS = 5 * 60_000;
+const POSITIONS_HISTORY_HOURS = 168; // 7 dni, jak paper
 
 export interface BotProposal {
   id: string;
@@ -120,6 +124,10 @@ export interface PaperPosition {
   tickUpper: number;
   capitalUsd: number;
   feesUsd: number;
+  /** fees od ostatniego collect/rebalansu (bot/paper.ts:69) — reinwestowane
+   *  przy najbliższym rebalansie. Partia 10: `feesUsd - feesSinceRebalanceUsd`
+   *  = już reinwestowane, `feesSinceRebalanceUsd` = narosłe od tamtej pory. */
+  feesSinceRebalanceUsd: number;
   costsUsd: number;
   rebalances: number;
   hedge: PaperHedge | null;
@@ -208,6 +216,31 @@ export interface RankingData {
 // oczekiwane do pierwszego przebiegu po 8:00).
 export type RankingStatus = 'loading' | 'ok' | 'not-started' | 'error';
 
+// Historia REALNYCH pozycji — GET /api/positions-history?hours=N (bot/observer.ts
+// refreshPositions, HANDOFF Fable→Sonnet 2026-08-20, TASKS-UI.md Partia 10:
+// redesign kart pozycji wg wzorca paper). Kształt próbki JAK PaperHistoryPoint,
+// ale bez `status` (realna pozycja nie ma stanu cash/pending — jest "otwarta"
+// dopóki bot ją widzi) i z `tokenId` zamiast tego; price/lo/hi ZAWSZE obecne
+// (obserwator pisze je bezwarunkowo, w odróżnieniu od paper, gdzie lo/hi
+// zależą od status==='open'). Endpoint zwraca zwykłą tablicę JSON (jak
+// /api/history), nie {state,history,events} jak /api/paper.
+export interface PositionHistoryPoint {
+  ts: string;
+  tokenId: string;
+  poolId: string;
+  valueUsd: number;
+  hodlUsd: number;
+  inRange: boolean;
+  price?: number;
+  lo?: number;
+  hi?: number;
+}
+
+// 'not-started' nie jest tu spodziewane (endpoint zawsze zwraca [] gdy plik
+// jeszcze nie istnieje — 200, nie 503) ale trzymane dla spójności z
+// paper/ranking i na wypadek przyszłej zmiany serwera.
+export type PositionsHistoryStatus = 'loading' | 'ok' | 'not-started' | 'error';
+
 export interface UseBotApi {
   state: BotStateShape | null;
   status: BotStatus;
@@ -222,6 +255,8 @@ export interface UseBotApi {
   paperStatus: PaperStatus;
   ranking: RankingData | null;
   rankingStatus: RankingStatus;
+  positionsHistory: PositionHistoryPoint[] | null;
+  positionsHistoryStatus: PositionsHistoryStatus;
 }
 
 const readLocal = (key: string, fallback: string): string => {
@@ -243,6 +278,8 @@ export function useBotApi(): UseBotApi {
   const [paperStatus, setPaperStatus] = useState<PaperStatus>('loading');
   const [ranking, setRanking] = useState<RankingData | null>(null);
   const [rankingStatus, setRankingStatus] = useState<RankingStatus>('loading');
+  const [positionsHistory, setPositionsHistory] = useState<PositionHistoryPoint[] | null>(null);
+  const [positionsHistoryStatus, setPositionsHistoryStatus] = useState<PositionsHistoryStatus>('loading');
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
@@ -340,6 +377,37 @@ export function useBotApi(): UseBotApi {
     return () => clearInterval(id);
   }, [fetchRanking, tick]);
 
+  const fetchPositionsHistory = useCallback(async () => {
+    try {
+      const headers: Record<string, string> = {};
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+      const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/positions-history?hours=${POSITIONS_HISTORY_HOURS}`, { headers });
+      if (res.status === 503) {
+        setPositionsHistory(null);
+        setPositionsHistoryStatus('not-started');
+        return;
+      }
+      if (!res.ok) {
+        setPositionsHistory(null);
+        setPositionsHistoryStatus('error');
+        return;
+      }
+      const data: PositionHistoryPoint[] = await res.json();
+      setPositionsHistory(data);
+      setPositionsHistoryStatus('ok');
+    } catch {
+      // sieć niedostępna — jak przy /api/state/paper, cicho
+      setPositionsHistory(null);
+      setPositionsHistoryStatus('error');
+    }
+  }, [apiBase, apiToken]);
+
+  useEffect(() => {
+    fetchPositionsHistory();
+    const id = setInterval(fetchPositionsHistory, POSITIONS_HISTORY_POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchPositionsHistory, tick]);
+
   const dismissProposal = useCallback(
     async (id: string) => {
       try {
@@ -391,5 +459,7 @@ export function useBotApi(): UseBotApi {
     paperStatus,
     ranking,
     rankingStatus,
+    positionsHistory,
+    positionsHistoryStatus,
   };
 }

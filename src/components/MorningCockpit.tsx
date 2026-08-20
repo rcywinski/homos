@@ -15,13 +15,19 @@ import { usePortfolio, PortfolioPosition } from '../hooks/usePortfolio';
 import { UseBotApi, BotProposal } from '../hooks/useBotApi';
 import { useCockpitActions, RebalanceTarget } from '../hooks/useCockpitActions';
 import { useRebalanceExecution } from '../hooks/useRebalanceExecution';
-import { planRebalance, RebalancePlan } from '../utils/rebalanceBuilder';
+import { useRotateExecution } from '../hooks/useRotateExecution';
+import { useHedgeExecution, loadHedgeOpen, HedgeOpenState } from '../hooks/useHedgeExecution';
+import { planRebalance, RebalancePlan, planRotate, RotatePlan } from '../utils/rebalanceBuilder';
+import { planHedgeOpen, planHedgeClose, HedgePlan } from '../utils/hedgeBuilder';
 import BotStatusDot from './BotStatusDot';
 import BotTelemetry from './BotTelemetry';
 import ObservationAnalysis from './ObservationAnalysis';
 import ForecastPanel from './ForecastPanel';
 import CockpitPositionActions, { CloseModal, RebalanceModal } from './CockpitPositionActions';
+import { Sparkline, PriceRangeChart, EquityChartPoint } from './PositionCharts';
 import RebalanceSequenceModal from './RebalanceSequenceModal';
+import RotateSequenceModal from './RotateSequenceModal';
+import HedgeConfirmModal from './HedgeConfirmModal';
 import PaperTradingPanel from './PaperTradingPanel';
 import TopRankingPanel from './TopRankingPanel';
 import ExpandableSection from './ExpandableSection';
@@ -65,17 +71,40 @@ interface SequenceModalState {
   proposalId: string;
 }
 
+// [Zatwierdź] ROTATE (Partia 8, domknięcie TODO z Partii 4b) — planRotate()
+// wymaga DWÓCH pul (stara/nowa), stąd osobny stan modala od REBALANCE.
+interface RotateSequenceModalState {
+  plan: RotatePlan;
+  newPool: Pool;
+  newTickLower: number;
+  newTickUpper: number;
+  proposalId: string;
+}
+
+// [Zatwierdź hedge] / [Zamknij short] (Partia 9) — jeden modal, dwa kierunki
+// (plan.preview.direction rozróżnia). proposalId=null dla zamknięcia (nie ma
+// propozycji bota do odrzucenia — user zamyka z własnej inicjatywy).
+interface HedgeModalState {
+  plan: HedgePlan;
+  proposalId: string | null;
+}
+
 const MorningCockpit: FC<Props> = ({ bot }) => {
   const { address } = useAccount();
   const portfolio = usePortfolio();
   const cockpitActions = useCockpitActions();
   const rebalanceExecution = useRebalanceExecution();
+  const rotateExecution = useRotateExecution();
+  const hedgeExecution = useHedgeExecution();
   const [collapsed, setCollapsed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [baseInput, setBaseInput] = useState(bot.apiBase);
   const [tokenInput, setTokenInput] = useState(bot.apiToken);
   const [proposalModal, setProposalModal] = useState<ProposalModalState | null>(null);
   const [sequenceModal, setSequenceModal] = useState<SequenceModalState | null>(null);
+  const [rotateModal, setRotateModal] = useState<RotateSequenceModalState | null>(null);
+  const [hedgeModal, setHedgeModal] = useState<HedgeModalState | null>(null);
+  const [hedgeOpen, setHedgeOpen] = useState<HedgeOpenState | null>(() => loadHedgeOpen());
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [proposalError, setProposalError] = useState<string | null>(null);
 
@@ -134,6 +163,117 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
       setSequenceModal({ plan, pool: pos.pool, newTickLower, newTickUpper, proposalId: p.id });
     } catch (e) {
       setProposalError(`Nie udało się zbudować planu rebalansu: ${e instanceof Error ? e.message.slice(0, 160) : String(e)}`);
+    }
+  };
+
+  // ROTATE "Zatwierdź →" (Partia 8, domknięcie TODO z Partii 4b): stara i nowa
+  // pozycja są w RÓŻNYCH pulach — buduje oba Pool (stara z portfela, nowa z
+  // resolveBotPool, ten sam odczyt co "2. Otwórz nową →") i woła planRotate().
+  // WARUNEK: ta sama sieć (planRotate rzuca inaczej — złapane niżej z
+  // komunikatem "użyj kroków ręcznych"). Kroki 1/2 ręczne ZOSTAJĄ jako fallback.
+  const openRotateApprove = async (p: BotProposal) => {
+    const pos = findHeldPosition(p.tokenId);
+    if (!pos || !pos.pool) {
+      setProposalError(`Pozycja #${p.tokenId} nie znaleziona w portfelu albo brak danych puli (może już zamknięta) — odśwież.`);
+      return;
+    }
+    if (!address) {
+      setProposalError('Portfel niepołączony.');
+      return;
+    }
+    if (!p.poolId) {
+      setProposalError('Propozycja nie wskazuje puli docelowej — użyj kroków ręcznych poniżej.');
+      return;
+    }
+    const newTickLower = p.suggestedRange?.tickLower;
+    const newTickUpper = p.suggestedRange?.tickUpper;
+    if (newTickLower === undefined || newTickUpper === undefined) {
+      setProposalError(`Propozycja #${p.tokenId} nie ma pełnego zakresu (ticki) do automatycznej sekwencji — użyj kroków ręcznych poniżej.`);
+      return;
+    }
+    setResolvingId(p.id);
+    setProposalError(null);
+    const target = await cockpitActions.resolveBotPool(p.poolId);
+    setResolvingId(null);
+    if (!target || !target.pool) {
+      setProposalError('Nie udało się pobrać danych puli docelowej — spróbuj ponownie albo użyj kroków ręcznych.');
+      return;
+    }
+    if (target.chainId !== pos.chainId) {
+      setProposalError('Rotacja cross-chain: automatyczne zatwierdzenie niedostępne (różne sieci) — użyj kroków ręcznych poniżej.');
+      return;
+    }
+    try {
+      const plan = planRotate({
+        oldPool: pos.pool,
+        newPool: target.pool,
+        chainId: pos.chainId,
+        tokenId: pos.tokenId,
+        liquidity: BigInt(pos.liquidity),
+        tickLower: pos.tickLower,
+        tickUpper: pos.tickUpper,
+        newTickLower,
+        newTickUpper,
+        feesOwed0: BigInt(pos.feesOwed0Raw),
+        feesOwed1: BigInt(pos.feesOwed1Raw),
+        recipient: address,
+        slippageBps: 50,
+      });
+      rotateExecution.reset();
+      setRotateModal({ plan, newPool: target.pool, newTickLower, newTickUpper, proposalId: p.id });
+    } catch (e) {
+      setProposalError(
+        `Nie udało się zbudować planu rotacji: ${e instanceof Error ? e.message.slice(0, 200) : String(e)} — użyj kroków ręcznych poniżej.`
+      );
+    }
+  };
+
+  // HEDGE "Zatwierdź hedge →" (Partia 9): sizeEth z propozycji bota,
+  // ethPriceUsd z telemetrii puli (state.pools[poolId].ethUsd — ta sama pula,
+  // dla której bot wyliczył sizeEth). Link "Otwórz GMX ↗" zostaje jako fallback.
+  const openHedgeApprove = (p: BotProposal) => {
+    if (!address) {
+      setProposalError('Portfel niepołączony.');
+      return;
+    }
+    const sizeEth = p.hedgeSizeEth;
+    if (typeof sizeEth !== 'number' || sizeEth <= 0) {
+      setProposalError('Propozycja nie ma rozmiaru hedge (sizeEth) — użyj linku GMX ręcznie.');
+      return;
+    }
+    const ethPriceUsd = bot.state?.pools?.find((pl) => pl.id === p.poolId)?.ethUsd;
+    if (typeof ethPriceUsd !== 'number' || ethPriceUsd <= 0) {
+      setProposalError('Brak aktualnej ceny ETH z telemetrii bota — użyj linku GMX ręcznie.');
+      return;
+    }
+    setProposalError(null);
+    try {
+      const plan = planHedgeOpen({ sizeEth, ethPriceUsd, recipient: address });
+      hedgeExecution.reset();
+      setHedgeModal({ plan, proposalId: p.id });
+    } catch (e) {
+      setProposalError(`Nie udało się zbudować planu hedge: ${e instanceof Error ? e.message.slice(0, 200) : String(e)} — użyj linku GMX ręcznie.`);
+    }
+  };
+
+  // [Zamknij short →] (Partia 9, pkt 4): stan otwartego shorta z localStorage
+  // (homos_hedge_open, zapisany przy udanym otwarciu) — cena ETH z DOWOLNEJ
+  // żywej puli w telemetrii (hedge to jeden rynek ETH/USD niezależnie od tego,
+  // która pula LP go wywołała).
+  const openHedgeCloseModal = () => {
+    if (!address || !hedgeOpen) return;
+    const ethPriceUsd = bot.state?.pools?.find((pl) => typeof pl.ethUsd === 'number' && pl.ethUsd > 0)?.ethUsd;
+    if (typeof ethPriceUsd !== 'number' || ethPriceUsd <= 0) {
+      setProposalError('Brak aktualnej ceny ETH z bota — nie można zbudować zamknięcia. Zamknij ręcznie na app.gmx.io.');
+      return;
+    }
+    setProposalError(null);
+    try {
+      const plan = planHedgeClose({ sizeUsd: hedgeOpen.sizeUsd, collateralUsd: hedgeOpen.collateralUsd, ethPriceUsd, recipient: address });
+      hedgeExecution.reset();
+      setHedgeModal({ plan, proposalId: null });
+    } catch (e) {
+      setProposalError(`Nie udało się zbudować zamknięcia hedge: ${e instanceof Error ? e.message.slice(0, 200) : String(e)}`);
     }
   };
 
@@ -239,6 +379,18 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           )}
           {portfolio.error && <div className="morning-note morning-error">Błąd portfela: {portfolio.error}</div>}
 
+          {hedgeOpen && (
+            <div className="morning-note morning-proposal-note morning-hedge-open-note">
+              🛡 Otwarty short (hedge): ~${hedgeOpen.sizeUsd.toFixed(0)} (collateral ${hedgeOpen.collateralUsd.toFixed(0)}) od{' '}
+              {new Date(hedgeOpen.ts).toLocaleDateString('pl-PL')}
+              <div className="morning-proposal-actions">
+                <button className="action-button" onClick={openHedgeCloseModal}>
+                  Zamknij short →
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="morning-section-title">Propozycje bota</div>
           {bot.status === 'offline' ? (
             <div className="morning-bot-offline">
@@ -306,12 +458,17 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                           {typeof p.breakEvenDays === 'number' && <> · koszt przejścia zwraca się w ~{p.breakEvenDays.toFixed(1)}d</>}
                         </div>
                         {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
-                        {/* Partia 4b: brak automatycznego [Zatwierdź] dla ROTATE — stara i nowa
-                            pozycja są w RÓŻNYCH pulach, a rebalanceBuilder.planRebalance()
-                            zakłada jeden Pool na wejściu (patrz TODO w TASKS-UI.md Partia 4b,
-                            punkt 2). Zostaje na krokach 1/2 ręcznych z Partii 4. */}
-                        <div className="morning-note">Automatyczne [Zatwierdź] dla ROTATE: TODO (różne pule stara/nowa) — wykonaj kroki 1/2 poniżej ręcznie.</div>
+                        {/* Partia 8 (domknięcie TODO z Partii 4b): automatyczne [Zatwierdź]
+                            wymaga planRotate() (stara+nowa pula, ta sama sieć) — gdy pary
+                            rozłączne albo różne sieci, openRotateApprove pokaże błąd i
+                            zostają kroki 1/2 ręczne poniżej jako fallback. */}
+                        <div className="morning-note">
+                          [Zatwierdź] wykona sekwencję automatycznie (tylko ta sama sieć) — kroki 1/2 poniżej zostają jako opcja ręczna.
+                        </div>
                         <div className="morning-proposal-actions">
+                          <button className="action-button primary" disabled={resolvingId === p.id} onClick={() => openRotateApprove(p)}>
+                            {resolvingId === p.id ? 'Wczytywanie…' : 'Zatwierdź →'}
+                          </button>
                           <button className="action-button" onClick={() => openCloseForProposal(p)}>
                             1. Zamknij starą →
                           </button>
@@ -356,15 +513,14 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                             {typeof p.hedgeNotionalUsd === 'number' && <> ≈ ${p.hedgeNotionalUsd.toLocaleString()}</>}
                           </div>
                         )}
-                        {/* Perp poza appką (GMX na Arbitrum) — wykonanie ręczne przez Rabby,
-                            brak przycisku auto-execute (HANDOFF Fable→Sonnet 2026-08-17 ~15:0x). */}
+                        {/* Partia 9: [Zatwierdź hedge] wysyła zlecenie z tej appki (multicall
+                            ExchangeRoutera GMX, 1 podpis) — link GMX zostaje jako fallback
+                            ręczny (HANDOFF Fable→Sonnet 2026-08-17 ~15:0x, rozszerzone 20.08). */}
                         <div className="morning-proposal-actions">
-                          <a
-                            className="action-button primary"
-                            href="https://app.gmx.io/#/trade/?market=ETH-USD"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
+                          <button className="action-button primary" onClick={() => openHedgeApprove(p)}>
+                            Zatwierdź hedge →
+                          </button>
+                          <a className="action-button" href="https://app.gmx.io/#/trade/?market=ETH-USD" target="_blank" rel="noreferrer">
                             Otwórz GMX ↗
                           </a>
                           <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
@@ -409,11 +565,41 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                 // zwięzłej karty listy; pełny pasek USD zostaje w MyPositions.
                 const span = p.tickUpper - p.tickLower;
                 const pct = span > 0 && p.pool ? Math.min(100, Math.max(0, ((p.pool.tickCurrent - p.tickLower) / span) * 100)) : 50;
+
+                // Partia 10: dwa wykresy jak w PaperTradingPanel, z
+                // positionsHistory (GET /api/positions-history, filtrowane po
+                // tokenId — unikalny per pozycja, nie trzeba dopasowywać po
+                // poolId). Mapowanie na EquityChartPoint: valueUsd→equityUsd
+                // (PositionHistoryPoint nie ma `status` — Sparkline/
+                // PriceRangeChart traktują wtedy każdą próbkę jak "otwartą",
+                // cieniując tylko !inRange, nigdy cash — realne pozycje nie
+                // mają stanu cash jak paper).
+                const rawPosHistory = (bot.positionsHistory ?? []).filter((h) => h.tokenId === p.tokenId);
+                // botPoolId (np. "arbitrum-weth-usdc-005") z samej próbki —
+                // NIE mylić z p.poolAddress (adres kontraktu); PriceRangeChart
+                // szuka po tym id w BOT_POOL_META (orientacja ceny/formatowanie).
+                const botPoolId = rawPosHistory[0]?.poolId ?? '';
+                const posHistory: EquityChartPoint[] = rawPosHistory.map((h) => ({
+                  ts: h.ts,
+                  equityUsd: h.valueUsd,
+                  hodlUsd: h.hodlUsd,
+                  inRange: h.inRange,
+                  price: h.price,
+                  lo: h.lo,
+                  hi: h.hi,
+                }));
+                // Kotwica HODL = pierwsza (najstarsza) próbka bota dla tego
+                // tokenId — pole anchoredAt nie przychodzi w odpowiedzi API
+                // (patrz TASKS-UI.md Partia 10 pkt 4), więc bierzemy ts
+                // pierwszego snapshotu jako uczciwy podpis "od kiedy liczymy".
+                const hodlSince = posHistory.length > 0 ? [...posHistory].sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))[0].ts : null;
+
                 return (
                   <div key={`${p.chainId}-${p.tokenId}`} className="cockpit-position-card">
+                    <CockpitPositionActions position={p} actions={cockpitActions} onChanged={portfolio.refresh} bot={bot} />
                     <div className="cockpit-position-card-header">
                       <span>
-                        {ADVICE_ICON[p.advice ?? ''] ?? '·'} #{p.tokenId} {p.poolLabel}
+                        {ADVICE_ICON[p.advice ?? ''] ?? '·'} {p.poolLabel} · #{p.tokenId}
                       </span>
                       <span className="muted">{p.valueUsd !== null ? fmtUsd(p.valueUsd) : '— (bez wyceny)'}</span>
                     </div>
@@ -421,7 +607,18 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                       <div className="range-bar-marker" style={{ left: `${pct}%` }} />
                     </div>
                     {p.feesUsd > 0.001 && <div className="cockpit-position-fees muted">Nieodebrane fee: {fmtUsd(p.feesUsd)}</div>}
-                    <CockpitPositionActions position={p} actions={cockpitActions} onChanged={portfolio.refresh} bot={bot} />
+
+                    {posHistory.length >= 2 ? (
+                      <>
+                        <Sparkline points={posHistory} events={[]} />
+                        {hodlSince && (
+                          <div className="muted paper-range-caption">HODL liczony od {new Date(hodlSince).toLocaleDateString('pl-PL')}</div>
+                        )}
+                        <PriceRangeChart poolId={botPoolId} points={posHistory} events={[]} />
+                      </>
+                    ) : (
+                      <div className="morning-note muted">za mało punktów historii pozycji jeszcze zebranych.</div>
+                    )}
                   </div>
                 );
               })}
@@ -482,6 +679,33 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
             portfolio.refresh();
             bot.dismissProposal(sequenceModal.proposalId);
             setSequenceModal(null);
+          }}
+        />
+      )}
+      {rotateModal && (
+        <RotateSequenceModal
+          plan={rotateModal.plan}
+          newPool={rotateModal.newPool}
+          newTickLower={rotateModal.newTickLower}
+          newTickUpper={rotateModal.newTickUpper}
+          execution={rotateExecution}
+          onClose={() => setRotateModal(null)}
+          onDone={() => {
+            portfolio.refresh();
+            bot.dismissProposal(rotateModal.proposalId);
+            setRotateModal(null);
+          }}
+        />
+      )}
+      {hedgeModal && (
+        <HedgeConfirmModal
+          plan={hedgeModal.plan}
+          execution={hedgeExecution}
+          onClose={() => setHedgeModal(null)}
+          onDone={() => {
+            if (hedgeModal.proposalId) bot.dismissProposal(hedgeModal.proposalId);
+            setHedgeOpen(loadHedgeOpen());
+            setHedgeModal(null);
           }}
         />
       )}

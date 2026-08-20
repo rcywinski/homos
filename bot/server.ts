@@ -82,6 +82,25 @@ app.get('/api/history', (req, res) => {
   res.json(out);
 });
 
+// Historia equity/HODL REALNYCH pozycji (redesign kart pozycji wg wzorca
+// paper, 20.08). Plik: .bot/positions-history.ndjson — pisze observer co
+// cykl refreshPositions (5 min); kształt próbki jak paper-history + tokenId.
+app.get('/api/positions-history', (req, res) => {
+  const P = path.join(DIR, 'positions-history.ndjson');
+  if (!fs.existsSync(P)) return res.json([]);
+  const hours = Math.min(Math.max(Number(req.query.hours) || 72, 1), 24 * 30);
+  const cutoff = Date.now() - hours * 3600 * 1000;
+  const out: unknown[] = [];
+  for (const line of fs.readFileSync(P, 'utf8').split('\n')) {
+    if (!line.trim()) continue;
+    try {
+      const j = JSON.parse(line);
+      if (new Date(j.ts).getTime() >= cutoff) out.push(j);
+    } catch { /* niepełna linia w trakcie zapisu — pomiń */ }
+  }
+  res.json(out);
+});
+
 // Ranking dnia selektora (TOP 10 pul "obserwowanych do wejścia") —
 // pisze bot/selector.ts raz dziennie po 8:00.
 app.get('/api/ranking', (_req, res) => {

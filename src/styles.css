@@ -1337,6 +1337,7 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   border: 1px solid #eef1f5;
   border-radius: 10px;
   padding: 12px 14px;
+  position: relative; /* zakotwiczenie menu ⋮ (Partia 10) */
 }
 
 .cockpit-position-card-header {
@@ -1344,6 +1345,7 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   justify-content: space-between;
   font-size: 13px;
   margin-bottom: 8px;
+  padding-right: 34px; /* miejsce na menu ⋮ zakotwiczone w rogu karty (Partia 10) */
 }
 
 .cockpit-range-bar {
@@ -1372,6 +1374,66 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   flex-basis: 100%;
   margin-top: 6px;
   font-size: 12px;
+}
+
+/* Menu ⋮ (Partia 10, zastępuje rząd 3 przycisków — karty pozycji mają teraz
+   dwa wykresy zamiast miejsca na rząd). Zakotwiczone w prawym górnym rogu
+   karty (.cockpit-position-card ma position:relative). */
+.cockpit-position-actions-menu {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: block;
+}
+
+.cockpit-menu-trigger {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #dde3ec;
+  background: #fff;
+  color: #555;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cockpit-menu-trigger:hover {
+  background: #f0f3f8;
+}
+
+.cockpit-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #dde3ec;
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  min-width: 170px;
+  z-index: 5;
+  overflow: hidden;
+}
+
+.cockpit-menu-item {
+  padding: 9px 12px;
+  border: none;
+  background: #fff;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+  color: #222;
+}
+
+.cockpit-menu-item:hover:not(:disabled) {
+  background: #f0f3f8;
+}
+
+.cockpit-menu-item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* Telemetria bota — zwijana sekcja wewnątrz kokpitu (domyślnie zwinięta) */
@@ -1496,6 +1558,15 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   margin: 0;
 }
 .morning-proposal-line { font-size: 13px; }
+
+/* --- UI session: Partia 8/9 (ROTATE [Zatwierdź] + hedge GMX) — HANDOFF
+   Fable→Sonnet 2026-08-20. Status "otwarty short" — niebieski, nie żółty
+   (żółty = ostrzeżenie bota, tu to neutralny stan), reużywa layout
+   morning-proposal-note/-actions. --- */
+.morning-hedge-open-note {
+  background: #eef4fd;
+  color: #1a4d8f;
+}
 
 @media (max-width: 480px) {
   .morning-proposal-actions .action-button { min-width: 100%; }

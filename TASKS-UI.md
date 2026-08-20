@@ -462,7 +462,7 @@ styles.css). bot/** nie ruszać (zmiana w paper.ts już zrobiona przez Fable).
       linia = cena".
 - [x] typecheck czysty dla PaperTradingPanel.tsx.
 
-## PARTIA 8 — ROTATE: automatyczne [Zatwierdź] (cross-pool) — zlecone przez Fable 20.08 (decyzja Rafała)
+## PARTIA 8 — ROTATE: automatyczne [Zatwierdź] (cross-pool) ✅ wykonana — zlecone przez Fable 20.08 (decyzja Rafała)
 
 KONTEKST: domknięcie świadomego TODO z Partii 4b. `planRotate()` w
 `src/utils/rebalanceBuilder.ts` JUŻ ISTNIEJE (Fable, tsc czysty) — obsługuje
@@ -496,12 +496,30 @@ rebalanceBuilder.ts NIE ruszać (gotowy); bot/** nie dotykać.
 4. **Stany brzegowe**: brak pozycji do zamknięcia (OPEN-only) → karta bez
    zmian; pary rozłączne (throw z planRotate) → notka + kroki ręczne.
 
-- [ ] useRotateExecution (plan → sekwencja z symulacją i resume)
-- [ ] modal sekwencji (reuse/bliźniak)
-- [ ] karta ROTATE: [Zatwierdź] + warunek samej sieci + fallback ręczny
-- [ ] stany brzegowe + typecheck 0 błędów w src/
+- [x] `useRotateExecution.ts` (nowy) — kopia wzorca useRebalanceExecution.ts
+      (freshWalletClient, client.call symulacja przed wysyłką, addTransaction,
+      resume po awarii); różnica: mint przebudowywany z sald NOWEJ puli
+      (`newPool`), nie starej. Progres w localStorage pod OSOBNYM prefiksem
+      `homos_rotate_progress_${chainId}_${tokenId}` (własne save/load/clear w
+      tym pliku — rebalanceBuilder.ts nieruszany, żeby nie kolidować z
+      progresem zwykłego REBALANCE na tym samym tokenId).
+- [x] `RotateSequenceModal.tsx` (nowy, bliźniak RebalanceSequenceModal.tsx) —
+      przyjmuje `newPool` zamiast `pool`, podgląd `preview.bridgeSwap`/
+      `balanceSwap` zamiast `swapSkipped`, "dokończ krok N/M" z
+      `loadRotateProgress`.
+- [x] karta ROTATE (MorningCockpit.tsx): `openRotateApprove()` — buduje
+      `oldPool` z trzymanej pozycji, `newPool` przez `resolveBotPool(poolId)`
+      (ten sam odczyt co "2. Otwórz nową →"), sprawdza `newTickLower/Upper`
+      z `p.suggestedRange` i `target.chainId === pos.chainId` PRZED wywołaniem
+      `planRotate()` — przy różnych sieciach/braku ticków/rozłącznych parach
+      pokazuje `proposalError` i zostają kroki 1/2 ręczne (nieusunięte,
+      fallback). Przycisk `[Zatwierdź →]` primary, obok istniejących.
+- [x] stany brzegowe: brak pozycji/pool → błąd; różne sieci → komunikat
+      "rotacja cross-chain… użyj kroków ręcznych"; throw z `planRotate`
+      (pary rozłączne) złapany → komunikat + fallback ręczny. typecheck 0
+      błędów w src/ (`npx tsc --noEmit -p tsconfig.json`).
 
-## PARTIA 9 — [Zatwierdź hedge] na GMX (karta propozycji HEDGE) — zlecone przez Fable 20.08 (decyzja Rafała)
+## PARTIA 9 — [Zatwierdź hedge] na GMX (karta propozycji HEDGE) ✅ wykonana — zlecone przez Fable 20.08 (decyzja Rafała)
 
 KONTEKST: krok 2 planu automatyzacji hedge (F4-op). `src/utils/hedgeBuilder.ts`
 JUŻ ISTNIEJE (Fable, tsc czysty): `planHedgeOpen({sizeEth, ethPriceUsd,
@@ -537,8 +555,144 @@ ZAKRES TWARDY: tylko src/**; hedgeBuilder.ts NIE ruszać; bot/** nie dotykać.
 5. **Stany brzegowe**: brak ETH na executionFee na Arbitrum → komunikat;
    sizeUsd < $11 (throw z buildera) → komunikat "za mała nadwyżka na hedge".
 
-- [ ] karta HEDGE: [Zatwierdź hedge →] + fallback ręczny
-- [ ] useHedgeExecution: switch→saldo/allowance→approve→SYMULACJA→wysyłka
-- [ ] modal potwierdzenia z preview i ostrzeżeniami
-- [ ] [Zamknij short →] + stan w localStorage
-- [ ] stany brzegowe + typecheck 0 błędów w src/
+- [x] karta HEDGE (MorningCockpit.tsx): `[Zatwierdź hedge →]` primary obok
+      istniejącego linku "Otwórz GMX ↗" (fallback ręczny, zostaje).
+      `openHedgeApprove()` — `sizeEth` z `p.hedgeSizeEth`, `ethPriceUsd` z
+      `bot.state.pools[poolId].ethUsd` (ta sama pula, dla której bot policzył
+      sizeEth); brak jednego z nich → `proposalError` + użyj linku ręcznie.
+- [x] `useHedgeExecution.ts` (nowy) — sieć ZAWSZE Arbitrum (GMX_ARBITRUM.chainId,
+      zaszyte, nie parametr — hedge to osobny rynek niż pula LP); PRZED
+      budową jakiejkolwiek tx sprawdza saldo USDC vs `plan.approval.amount` —
+      za mało → rzuca czytelny błąd i NIC nie wysyła (bez auto-swapów w v1);
+      allowance → approve tylko gdy trzeba; OBOWIĄZKOWA `client.call`
+      symulacja przed wysyłką (jak w rebalanceBuilder — weryfikuje ABI o żywy
+      kontrakt); `addTransaction` z `plan.summary`. Uwaga implementacyjna:
+      `GMX_ARBITRUM.chainId` z `as const` to literał `42161`, co łapało zbyt
+      wąski overload wagmi (`wc.chain` typowało się na `never`, TS2345) —
+      fix: `HEDGE_CHAIN_ID: number = GMX_ARBITRUM.chainId` (ten sam wzorzec co
+      w reszcie kokpitu, gdzie chainId zawsze jest `number`, nie literałem).
+- [x] `HedgeConfirmModal.tsx` (nowy, wspólny dla open/close wg
+      `plan.preview.direction`) — summary + preview (sizeEth/sizeUsd,
+      collateral, dźwignia, cena akceptowalna, execution fee), ostrzeżenie
+      o wykonaniu przez keepera GMX po cenie oracle + link do app.gmx.io do
+      sprawdzenia statusu, notka o pierwszym teście na małej kwocie (tylko
+      przy otwarciu).
+- [x] `[Zamknij short →]` — persystentny status `🛡 Otwarty short (hedge)`
+      (niebieska notka, klasa `.morning-hedge-open-note`) nad sekcją
+      "Propozycje bota", widoczny gdy `homos_hedge_open` w localStorage;
+      `openHedgeCloseModal()` buduje `planHedgeClose` z zapisanego
+      sizeUsd/collateralUsd + bieżącej `ethUsd` z dowolnej żywej puli w
+      telemetrii. Zapis/czyszczenie stanu w `useHedgeExecution.ts` —
+      automatyczne wg `plan.preview.direction` po udanej wysyłce.
+- [x] stany brzegowe: brak `sizeEth`/`ethPriceUsd` w propozycji → komunikat +
+      link ręczny; za mało USDC na Arbitrum → błąd z kwotą brakującą, zero
+      auto-swapów; `sizeUsd < $11` (throw z `planHedgeOpen`) → złapane,
+      komunikat. typecheck 0 błędów w src/.
+
+## PARTIA 10 — Redesign kart REALNYCH pozycji wg wzorca paper ✅ wykonana (pomysł Rafała 20.08)
+
+KONTEKST: karty pozycji w kokpicie mają wyglądać jak karty paper tradingu
+(dwa wykresy: equity vs HODL + cena vs zakres), akcje przenoszą się do
+hamburgera. Backend GOTOWY (Fable): observer zapisuje co 5 min próbki
+realnych pozycji do `.bot/positions-history.ndjson` — kształt JAK
+paper-history plus `tokenId`: {ts, tokenId, poolId, valueUsd, hodlUsd,
+inRange, price, lo, hi}; endpoint `GET /api/positions-history?hours=N`
+(tail, auth jak reszta /api). Kotwica HODL = stan pozycji przy PIERWSZYM
+zauważeniu przez bota (dla starych pozycji #953465/#953427 = od wdrożenia,
+nie od prawdziwego otwarcia — patrz punkt 4 o komunikacji tego w UI).
+
+ZAKRES TWARDY: tylko src/**; bot/** gotowy, nie ruszać.
+
+1. **Wykresy na kartach pozycji** (`MorningCockpit`/`CockpitPositionActions`):
+   REUŻYĆ komponenty z PaperTradingPanel (sparkline equity-vs-HODL +
+   PriceRangeChart + cieniowanie inRange) — wyekstrahować je do wspólnego
+   pliku (np. `src/components/PositionCharts.tsx`) zamiast kopiować; dane
+   z nowego stanu `positionsHistory` w `useBotApi.ts` (GET
+   /api/positions-history?hours=168, poll co 5 min — wzorzec paper).
+   Filtrowanie po tokenId. Stany brzegowe jak w P7 (brak próbek → bez
+   wykresu, <2 punkty → tekst).
+2. **Hamburger zamiast przycisków**: prawy górny róg karty pozycji — menu ⋮
+   (dropdown, bez bibliotek) z akcjami [💰 Zbierz fees] / [⏹ Zamknij] /
+   [🔄 Rebalans ręczny] (istniejące handlery z useCockpitActions — TYLKO
+   przeniesienie wyzwalaczy, zero zmian w logice). Pozycje disabled z
+   tooltipem jak dotychczasowe przyciski. Zamykanie menu: klik poza/Esc.
+3. **Rozdział fees**: na kartach REALNYCH pozycji metryka "Nieodebrane fees"
+   (dane już są w usePortfolio ze static collect) — wyraźnie, obok wartości
+   pozycji ("zebrane od otwarcia" ŚWIADOMIE później — wymaga indeksowania
+   eventów Collect, decyzja Rafała: nie teraz). W PAPER panelu rozbić
+   dotychczasowe "Fee zebrane" na dwie liczby z pól, które JUŻ przychodzą
+   w /api/paper: "reinwestowane" = feesUsd − feesSinceRebalanceUsd oraz
+   "narosłe (do reinwestycji)" = feesSinceRebalanceUsd — nazwać po ludzku,
+   np. "fees: $X (w tym $Y czeka na rebalans)".
+4. **Uczciwość HODL**: przy wykresie equity-vs-HODL realnej pozycji dopisek
+   drobnym drukiem "HODL liczony od <data kotwicy>" (pole anchoredAt NIE
+   przychodzi w próbkach — wziąć ts PIERWSZEJ próbki danego tokenId).
+5. **Spójność**: karta realnej pozycji wizualnie jak karta paper (te same
+   klasy paper-*/wspólne style), nagłówek: para · tier · sieć · #tokenId.
+
+- [x] **ekstrakcja wspólnych komponentów wykresów** — `src/components/PositionCharts.tsx`
+      (nowy): `Sparkline`/`PriceRangeChart`/`EventMarkers`/`stateBands`/
+      `toTsPoints`/`makeXScale`/`fmtPrice`/`ethIsToken0`/`toDisplay` wyekstrahowane
+      z `PaperTradingPanel.tsx` bez zmiany logiki. Generyczne nad `EquityChartPoint`
+      (wymaga tylko `ts/equityUsd/hodlUsd/inRange`, opcjonalnie `status/price/lo/hi`)
+      — `PaperHistoryPoint` pasuje strukturalnie bez zmian, `PositionHistoryPoint`
+      (realne pozycje, brak `status`) mapowany na wejściu w MorningCockpit.tsx.
+      `stateBands()` uodporniona na brak `status` (realne pozycje: cieniowanie
+      tylko po `!inRange`, nigdy "cash" — tego stanu tam nie ma).
+      `PaperTradingPanel.tsx` zaktualizowany, żeby importować z nowego pliku
+      (usunięta duplikacja ~200 linii).
+- [x] **useBotApi: positionsHistory** — `POSITIONS_HISTORY_POLL_MS`/`_HOURS`,
+      `PositionHistoryPoint`/`PositionsHistoryStatus`, `fetchPositionsHistory`
+      (GET /api/positions-history?hours=168, poll co 5 min, wzorzec `fetchPaper`/
+      `fetchRanking`; 503→`not-started`, błąd→`error`). Kształt zweryfikowany
+      wprost wobec `git diff bot/server.ts`/`bot/observer.ts` (tablica JSON,
+      `price/lo/hi` zawsze obecne, brak pola `status`).
+- [x] **karty pozycji: dwa wykresy + nagłówek** — MorningCockpit.tsx: nagłówek
+      zmieniony na `para · tier · sieć · #tokenId` (tokenId przeniesiony na
+      koniec, `poolLabel` już niósł "para tier · sieć"); `positionsHistory`
+      filtrowane po `tokenId` (unikalny per pozycja — bez potrzeby poolId),
+      zmapowane na `EquityChartPoint[]`; `<Sparkline>`+`<PriceRangeChart
+      poolId={botPoolId}>` (poolId z samej próbki historii — NIE poolAddress,
+      bo `BOT_POOL_META`/orientacja ceny kluczują po botPoolId). <2 próbki →
+      tekst "za mało punktów historii pozycji jeszcze zebranych.".
+- [x] **hamburger ⋮** — `CockpitPositionActions.tsx`: rząd 3 przycisków
+      zamieniony na `⋮` + dropdown (`cockpit-menu-*` w styles.css), ZERO zmian
+      w handlerach/logice (te same `onClick`/`disabled`/`title`, tylko
+      przeniesione do pozycji menu, zamykanych po kliknięciu). Zamykanie:
+      klik poza (`mousedown` na `document`) i `Esc` — `useRef` + `useEffect`
+      sprzątany w cleanupie. `CloseModal`/`RebalanceModal` nietknięte.
+- [x] **fees** — realne pozycje: istniejąca linijka "Nieodebrane fee" (już
+      była, zweryfikowana jako spełniająca wymóg — obok wartości pozycji w
+      nagłówku karty). Paper: `PaperPosition.feesSinceRebalanceUsd` dodane do
+      `useBotApi.ts` (zweryfikowane wprost w `bot/paper.ts` — pole zawsze
+      serializowane w `state.positions[id]`, nie tylko wewnętrznie); "Fee
+      zebrane" rozbite na "Fee reinwestowane" (`feesUsd − feesSinceRebalanceUsd`,
+      z podłogą 0) i "Fee narosłe (do reinwestycji)" (`feesSinceRebalanceUsd`).
+- [x] **dopisek "HODL od <data>"** — `hodlSince` = `ts` najstarszej próbki
+      danego `tokenId` w `positionsHistory` (posortowane rosnąco po dacie —
+      `anchoredAt` faktycznie nie przychodzi w odpowiedzi, zgodnie z
+      zapowiedzią w KONTEKŚCIE), pokazany jako `.paper-range-caption` nad
+      wykresem cena/zakres.
+- [x] **stany brzegowe + typecheck** — jak w P7 (brak próbek → bez wykresów,
+      <2 punkty → tekst zamiast wykresu, `PriceRangeChart` samo zwraca `null`
+      gdy <2 próbki z `price`). `npx tsc --noEmit -p tsconfig.json`: 0 błędów
+      w `src/` (pozostałe `bot/observer.ts`/`node_modules/ox` preexisting,
+      jak w poprzednich partiach). `npm run build`: czysty (tylko warningi o
+      rozmiarze bundle'a, preexisting).
+
+### Hotfix przy okazji (20.08, zgłoszenie Rafała: "nie wstaje aplikacja lokalnie")
+- [x] **`Cannot convert a BigInt value to a number` w runtime** —
+      `src/utils/hedgeBuilder.ts` (`10n ** 30n`, `10n ** 12n`) i
+      `src/utils/rebalanceBuilder.ts` (`10n ** 18n` ×2, dodane w P8/P9)
+      używały `**` na BigIntach; babel (`transform-exponentiation-operator`)
+      transpiluje `**` na `Math.pow()` BEZ rozróżniania typu operandów —
+      `Math.pow(10n, 30n)` rzuca w runtime (tsc/build tego nie łapią, pada
+      dopiero w przeglądarce). Ten sam bug był już raz naprawiony gdzie
+      indziej (build CC-Win, wzmianka "0 Math.pow(2n" w HANDOFF) — wrócił,
+      bo nowy kod (hedgeBuilder/rebalanceBuilder z P8/P9) go nie znał. Fix:
+      literały (`1_000_000_000_000_000_000n` itd.) zamiast `**` we
+      wszystkich czterech miejscach, z komentarzem ostrzegawczym przy każdym,
+      żeby nie wróciło znowu. Zweryfikowane też na poziomie builda:
+      `grep -oE "Math\.pow\([0-9]+n" public/*.bundle.js` — brak trafień.
+      (Pozostałe `**` w repo są Number**Number — `2 ** 96` itp. — te są
+      bezpieczne, `Math.pow(2,96)` działa normalnie.)

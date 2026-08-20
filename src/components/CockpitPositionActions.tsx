@@ -1,11 +1,17 @@
 /**
  * CockpitPositionActions.tsx — [💰 Zbierz fees] / [⏹ Zamknij] / [🔄 Rebalans
- * ręczny] buttons + their two modals, rendered per position in the morning
- * cockpit (TASKS-UI.md Partia 3, UX-COCKPIT.md §1.A.3). All write logic lives
- * in useCockpitActions.ts — this component is presentational plus local modal
- * state (percentage slider, slippage, token amounts).
+ * ręczny] akcje + ich dwa modale, renderowane per pozycja w porannym kokpicie
+ * (TASKS-UI.md Partia 3, UX-COCKPIT.md §1.A.3). Cała logika zapisu żyje w
+ * useCockpitActions.ts — ten komponent jest prezentacyjny plus lokalny stan
+ * modali (suwak procentu, slippage, kwoty tokenów).
+ *
+ * Partia 10 (20.08, redesign kart wg wzorca paper): trzy przyciski w rzędzie
+ * zamienione na menu ⋮ (dropdown, bez bibliotek) — SAME handlery/logika,
+ * tylko przeniesiony trigger UI (karty realnych pozycji mają teraz dwa
+ * wykresy zamiast miejsca na rząd przycisków). `CloseModal`/`RebalanceModal`
+ * (eksportowane, reużywane gdzie indziej) BEZ zmian.
  */
-import React, { FC, useEffect, useMemo, useState } from 'react';
+import React, { FC, useEffect, useMemo, useRef, useState } from 'react';
 import { formatUnits, parseUnits } from 'viem';
 import { nearestUsableTick, TICK_SPACINGS } from '@uniswap/v3-sdk';
 import { calculateOptimalAmounts } from '../utils/liquidityManagement';
@@ -30,33 +36,72 @@ const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { minimumFractionD
 const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bot }) => {
   const [closeOpen, setCloseOpen] = useState(false);
   const [rebalanceOpen, setRebalanceOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const worthwhile = isCollectWorthwhile(p);
   const busyCollect = actions.busyKey === `${p.chainId}-${p.tokenId}-collect`;
   const busyClose = actions.busyKey === `${p.chainId}-${p.tokenId}-close`;
   const busyRebalance = actions.busyKey === `${p.chainId}-${p.tokenId}-rebalance`;
 
+  // Zamykanie menu klikiem poza / Esc — bez bibliotek (wzorzec: nasłuch na
+  // document, sprzątany w cleanupie efektu).
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onDocClick);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [menuOpen]);
+
   return (
-    <div className="cockpit-position-actions">
-      <button
-        className="action-button"
-        disabled={!worthwhile || busyCollect}
-        title={worthwhile ? undefined : `nieopłacalne: fee ${fmtUsd(p.feesUsd)} < próg ${fmtUsd(collectThresholdUsd(p.chainId))}`}
-        onClick={() => actions.collectFees(p).then(onChanged)}
-      >
-        {busyCollect ? 'Zbieranie…' : '💰 Zbierz fees'}
+    <div className="cockpit-position-actions cockpit-position-actions-menu" ref={menuRef}>
+      <button className="cockpit-menu-trigger" aria-label="Akcje pozycji" onClick={() => setMenuOpen((v) => !v)}>
+        ⋮
       </button>
-      <button className="action-button" onClick={() => setCloseOpen(true)}>
-        ⏹ Zamknij
-      </button>
-      <button
-        className="action-button"
-        disabled={!p.pool}
-        title={p.pool ? undefined : 'brak danych puli (spróbuj odświeżyć)'}
-        onClick={() => setRebalanceOpen(true)}
-      >
-        🔄 Rebalans ręczny
-      </button>
+      {menuOpen && (
+        <div className="cockpit-menu-dropdown">
+          <button
+            className="cockpit-menu-item"
+            disabled={!worthwhile || busyCollect}
+            title={worthwhile ? undefined : `nieopłacalne: fee ${fmtUsd(p.feesUsd)} < próg ${fmtUsd(collectThresholdUsd(p.chainId))}`}
+            onClick={() => {
+              setMenuOpen(false);
+              actions.collectFees(p).then(onChanged);
+            }}
+          >
+            {busyCollect ? 'Zbieranie…' : '💰 Zbierz fees'}
+          </button>
+          <button
+            className="cockpit-menu-item"
+            onClick={() => {
+              setMenuOpen(false);
+              setCloseOpen(true);
+            }}
+          >
+            ⏹ Zamknij
+          </button>
+          <button
+            className="cockpit-menu-item"
+            disabled={!p.pool}
+            title={p.pool ? undefined : 'brak danych puli (spróbuj odświeżyć)'}
+            onClick={() => {
+              setMenuOpen(false);
+              setRebalanceOpen(true);
+            }}
+          >
+            🔄 Rebalans ręczny
+          </button>
+        </div>
+      )}
 
       {closeOpen && (
         <CloseModal

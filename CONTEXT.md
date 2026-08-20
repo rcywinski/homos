@@ -74,6 +74,22 @@ przez walkforward. Raportu morning-2026-08-20.md nie zweryfikowano
 (GitHub 404 w profilu Chrome — repo prywatne/brak logowania; dane wzięte
 prosto z API).
 
+~1x:xx (późne popołudnie) — REDESIGN KART POZYCJI (pomysł Rafała) + P8/P9
+odebrane od Sonneta. Decyzje Rafała (AskUserQuestion): equity/HODL realnych
+pozycji śledzi BOT od teraz (nie rekonstrukcja w UI); fees realne na razie
+tylko "nieodebrane" (indeksowanie Collect później). Pytanie Rafała "czemu
+nie użyć HODL z paper dla #953465/#953427 (ta sama pula)": NIE wprost —
+HODL to kwoty zamrożone w chwili otwarcia, paper kotwiczył $10k 50/50
+18.08 @ ~1898, realne pozycje mają inne kwoty/moment; wspólna jest seria
+cen, mechanizm ten sam. Zrobione (Fable, tsc czysty): observer — kotwice
+`.bot/positions-hodl.json` (pierwsze zauważenie pozycji; dla starych
+pozycji = od wdrożenia, nie od otwarcia) + próbki `.bot/
+positions-history.ndjson` co 5 min (kształt jak paper-history + tokenId);
+server — GET /api/positions-history. UI = TASKS-UI PARTIA 10 (karty jak
+paper przez WSPÓLNE komponenty, hamburger ⋮ zamiast przycisków, rozdział
+fees: nieodebrane na realnych + feesUsd/feesSinceRebalance na paper,
+dopisek "HODL od <data kotwicy>").
+
 ~1x:xx (popołudnie) — SPRINT 4/5/6 (decyzja Rafała: "róbmy teraz"):
 (1) TBTC-WBTC DOMKNIĘTE: QUOTE_REF_EXT w backtest/load.ts (USD-za-WBTC
 z wbtc-usdc-030, jawny assetIsToken0), pegged.ts policzony przez Fable

@@ -33,10 +33,17 @@
  * (to symulacja, nic do zatwierdzania), żadnego drugiego pollera /api/state.
  * Wykres jako inline SVG polyline bez nowych zależności — wzorzec
  * ObservationAnalysis.tsx (PoolHistoryChart).
+ *
+ * Partia 10 (20.08): logika wykresów (Sparkline/PriceRangeChart/EventMarkers/
+ * stateBands/orientacja ceny) wyekstrahowana do PositionCharts.tsx — używana
+ * teraz też przez karty REALNYCH pozycji w MorningCockpit.tsx. Tu zostaje
+ * tylko import + mapowanie PaperHistoryPoint→EquityChartPoint (structural
+ * typing — PaperHistoryPoint ma equityUsd, więc pasuje bez zmian).
  */
 import React, { FC } from 'react';
 import { UseBotApi, PaperHistoryPoint, PaperEvent, PaperPosition } from '../hooks/useBotApi';
 import { BOT_POOL_META } from '../config/botPools';
+import { Sparkline, PriceRangeChart } from './PositionCharts';
 
 const fmtUsd = (v: number) =>
   (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -47,31 +54,6 @@ const poolLabel = (poolId: string): string => {
   const meta = BOT_POOL_META.find((m) => m.id === poolId);
   return meta ? `${meta.sym0}/${meta.sym1} · ${(meta.feeBps / 10_000).toFixed(2)}%` : poolId;
 };
-
-// Pule quote-owane w WETH (np. cbBTC — cena to ~0.0296 WETH/cbBTC) potrzebują
-// więcej cyfr znaczących niż pule USD-quote (Partia 7, uwaga ze zlecenia).
-const fmtPrice = (poolId: string, v: number): string =>
-  poolId.toLowerCase().includes('cbbtc') ? v.toPrecision(4) : v.toLocaleString('en-US', { maximumFractionDigits: 0 });
-
-// Orientacja ceny — POPRAWKA po odbiorze P7 (Fable→Sonnet 2026-08-20):
-// `price`/`lo`/`hi` z bot/paper.ts to "human" token1-per-token0 (konwencja
-// Uniswap), NIE zawsze USD. Dla pul mainnet (sym0='USDC', sym1='WETH') to
-// WETH-per-USDC ≈ 0.00044 — zaokrągla się do zera w UI. Wzorzec z reszty
-// kokpitu (AddLiquidity.tsx/MyPositions.tsx/CockpitPositionActions.tsx):
-// `ethIsToken0 ? raw : 1/raw`. cbBTC (sym0='WETH', quote cbBTC) ma
-// ethIsToken0=true → BEZ zmian, zostaje czytelne 0.03183 (zgodnie ze
-// zleceniem — tam nie ma nogi USD do której inwertować).
-const ethIsToken0 = (poolId: string): boolean => {
-  const meta = BOT_POOL_META.find((m) => m.id === poolId);
-  return meta ? meta.sym0.includes('ETH') : true;
-};
-
-// Transformuje pojedynczą surową wartość (price/lo/hi) do orientacji
-// wyświetlanej. Stosowana WCZEŚNIE — przed liczeniem skali Y i punktów
-// wykresu, nie tylko w etykietach — dzięki temu cała geometria (linia,
-// pasmo, skala) jest w jednej, spójnej orientacji i "cena rośnie w USD =
-// linia w górę" działa automatycznie, bez osobnego odwracania osi.
-const toDisplay = (poolId: string, raw: number): number => (ethIsToken0(poolId) ? raw : 1 / raw);
 
 const STATUS_ICON: Record<string, string> = {
   open: '🟢',
@@ -94,210 +76,6 @@ function latestFor(history: PaperHistoryPoint[], poolId: string): PaperHistoryPo
   if (pts.length === 0) return null;
   return pts.reduce((a, b) => (Date.parse(b.ts) > Date.parse(a.ts) ? b : a));
 }
-
-const SPARK_W = 260;
-const SPARK_H = 46;
-const SPARK_PAD = 3;
-const PRICE_H = 54;
-
-interface TsPoint extends PaperHistoryPoint {
-  tsMs: number;
-}
-
-function toTsPoints(points: PaperHistoryPoint[]): TsPoint[] {
-  return points
-    .map((p) => ({ ...p, tsMs: Date.parse(p.ts) }))
-    .filter((p) => isFinite(p.tsMs))
-    .sort((a, b) => a.tsMs - b.tsMs);
-}
-
-function makeXScale(pts: TsPoint[], width: number, pad: number) {
-  const tMin = pts[0].tsMs;
-  const tMax = pts[pts.length - 1].tsMs;
-  const tSpan = Math.max(1, tMax - tMin);
-  return (t: number) => pad + ((t - tMin) / tSpan) * (width - 2 * pad);
-}
-
-/**
- * Pasy tła współdzielone przez oba wykresy (equity-vs-HODL i cena-vs-zakres):
- * żółtawy = poza zakresem (status open, !inRange), szary = cash (bezpiecznik
- * trendu zaparkował kapitał). Działa na CAŁEJ historii, nawet sprzed 20.08
- * (inRange/status były od zawsze — tylko price/lo/hi są nowe).
- */
-function stateBands(pts: TsPoint[], x: (t: number) => number, rightEdge: number) {
-  const bands: { x1: number; x2: number; cls: string }[] = [];
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i];
-    const cls = p.status === 'cash' ? 'paper-range-band-cash' : p.status === 'open' && !p.inRange ? 'paper-range-band-out' : null;
-    if (!cls) continue;
-    const x1 = x(p.tsMs);
-    const x2 = i + 1 < pts.length ? x(pts[i + 1].tsMs) : rightEdge;
-    bands.push({ x1, x2, cls });
-  }
-  return bands;
-}
-
-// Znaczniki na wykresach (podzbiór EVENT_ICON — spec Partii 7 wymienia tylko te trzy).
-const CHART_EVENT_ICON: Record<string, string> = {
-  EXIT_TREND: '⛔',
-  REENTRY: '▶',
-  REBALANCE: '🔄',
-};
-
-const EventMarkers: FC<{ events: PaperEvent[]; x: (t: number) => number; tMin: number; tMax: number; height: number }> = ({
-  events,
-  x,
-  tMin,
-  tMax,
-  height,
-}) => (
-  <>
-    {events
-      .filter((e) => CHART_EVENT_ICON[e.kind])
-      .map((e, i) => {
-        const ts = Date.parse(e.ts);
-        if (!isFinite(ts) || ts < tMin || ts > tMax) return null;
-        return (
-          <line
-            key={`${e.ts}-${i}`}
-            x1={x(ts)}
-            x2={x(ts)}
-            y1={0}
-            y2={height}
-            className={`paper-range-event-marker paper-range-event-${e.kind.toLowerCase()}`}
-          >
-            <title>{`${CHART_EVENT_ICON[e.kind]} ${e.kind} · ${new Date(e.ts).toLocaleString('pl-PL')}`}</title>
-          </line>
-        );
-      })}
-  </>
-);
-
-const Sparkline: FC<{ points: PaperHistoryPoint[]; events: PaperEvent[] }> = ({ points, events }) => {
-  const pts = toTsPoints(points);
-  if (pts.length < 2) return null;
-
-  const x = makeXScale(pts, SPARK_W, SPARK_PAD);
-  const rightEdge = SPARK_W - SPARK_PAD;
-
-  const vals = pts.flatMap((p) => [p.equityUsd, p.hodlUsd]).filter((v) => typeof v === 'number' && isFinite(v));
-  if (vals.length === 0) return null;
-  const yMin = Math.min(...vals);
-  const yMax = Math.max(...vals);
-  const ySpan = Math.max(1e-9, yMax - yMin);
-  const y = (v: number) => SPARK_H - SPARK_PAD - ((v - yMin) / ySpan) * (SPARK_H - 2 * SPARK_PAD);
-
-  const equityLine = pts.map((p) => `${x(p.tsMs).toFixed(1)},${y(p.equityUsd).toFixed(1)}`).join(' ');
-  const hodlLine = pts.map((p) => `${x(p.tsMs).toFixed(1)},${y(p.hodlUsd).toFixed(1)}`).join(' ');
-  const bands = stateBands(pts, x, rightEdge);
-
-  return (
-    <>
-      <svg viewBox={`0 0 ${SPARK_W} ${SPARK_H}`} className="paper-sparkline" preserveAspectRatio="none">
-        {bands.map((b, i) => (
-          <rect key={i} x={b.x1} y={0} width={Math.max(0, b.x2 - b.x1)} height={SPARK_H} className={b.cls} />
-        ))}
-        <polyline className="paper-spark-hodl" points={hodlLine} fill="none" />
-        <polyline className="paper-spark-equity" points={equityLine} fill="none" />
-        <EventMarkers events={events} x={x} tMin={pts[0].tsMs} tMax={pts[pts.length - 1].tsMs} height={SPARK_H} />
-      </svg>
-      {bands.length > 0 && <div className="muted paper-range-legend">żółte tło = poza zakresem · szare tło = cash (bezpiecznik)</div>}
-    </>
-  );
-};
-
-/**
- * Mini-wykres "cena vs pasmo zakresu bota" — TYLKO gdy pula ma ≥2 próbki
- * z `price` (bot/paper.ts, od 20.08). Pasmo lo–hi rysowane per interwał
- * "od próbki do następnej" — daje efekt schodkowy przy rebalansie (granice
- * realnie się zmieniają skokowo, nie płynnie). Linia ceny dzielona na
- * ciągłe odcinki (przerwa tam, gdzie stare próbki sprzed 20.08 nie mają
- * pola `price` w ogóle — feature-detect, nie interpolować przez dziurę).
- */
-const PriceRangeChart: FC<{ poolId: string; points: PaperHistoryPoint[]; events: PaperEvent[] }> = ({ poolId, points, events }) => {
-  const pts = toTsPoints(points);
-  const priceCount = pts.filter((p) => typeof p.price === 'number' && isFinite(p.price as number)).length;
-  if (pts.length < 2 || priceCount < 2) return null;
-
-  const x = makeXScale(pts, SPARK_W, SPARK_PAD);
-  const rightEdge = SPARK_W - SPARK_PAD;
-  const disp = (v: number) => toDisplay(poolId, v);
-
-  // Wszystko poniżej pracuje na wartościach PO transformacji (disp) — cena/
-  // lo/hi zamienione na orientację wyświetlaną raz, na wejściu, więc skala Y
-  // i punkty wykresu są spójne bez osobnego odwracania osi (patrz komentarz
-  // przy toDisplay wyżej).
-  const yVals = pts.flatMap((p) => [p.price, p.lo, p.hi]).filter((v): v is number => typeof v === 'number' && isFinite(v)).map(disp);
-  const yMin0 = Math.min(...yVals);
-  const yMax0 = Math.max(...yVals);
-  const margin = Math.max(1e-9, (yMax0 - yMin0) * 0.06);
-  const yMin = yMin0 - margin;
-  const yMax = yMax0 + margin;
-  const ySpan = Math.max(1e-9, yMax - yMin);
-  const y = (v: number) => PRICE_H - SPARK_PAD - ((v - yMin) / ySpan) * (PRICE_H - 2 * SPARK_PAD);
-
-  const bands = stateBands(pts, x, rightEdge);
-
-  const rangeSegs: { x1: number; x2: number; yTop: number; yBottom: number }[] = [];
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i];
-    if (p.status !== 'open' || typeof p.lo !== 'number' || typeof p.hi !== 'number') continue;
-    // disp() może odwracać porządek (inwersja jest malejąca) — brać min/max
-    // z dwóch przetransformowanych wartości, nie zakładać które jest górą.
-    const dA = disp(p.lo);
-    const dB = disp(p.hi);
-    const dispLo = Math.min(dA, dB);
-    const dispHi = Math.max(dA, dB);
-    const x1 = x(p.tsMs);
-    const x2 = i + 1 < pts.length ? x(pts[i + 1].tsMs) : rightEdge;
-    rangeSegs.push({ x1, x2, yTop: y(dispHi), yBottom: y(dispLo) });
-  }
-
-  const priceSegs: string[] = [];
-  let cur: string[] = [];
-  for (const p of pts) {
-    if (typeof p.price === 'number' && isFinite(p.price)) {
-      cur.push(`${x(p.tsMs).toFixed(1)},${y(disp(p.price)).toFixed(1)}`);
-    } else if (cur.length) {
-      priceSegs.push(cur.join(' '));
-      cur = [];
-    }
-  }
-  if (cur.length) priceSegs.push(cur.join(' '));
-
-  const last = [...pts].reverse().find((p) => typeof p.price === 'number' && isFinite(p.price as number));
-  const lastLo = last && typeof last.lo === 'number' && typeof last.hi === 'number' ? Math.min(disp(last.lo), disp(last.hi)) : null;
-  const lastHi = last && typeof last.lo === 'number' && typeof last.hi === 'number' ? Math.max(disp(last.lo), disp(last.hi)) : null;
-
-  return (
-    <div className="paper-range-chart-wrap">
-      <svg viewBox={`0 0 ${SPARK_W} ${PRICE_H}`} className="paper-range-chart" preserveAspectRatio="none">
-        {bands.map((b, i) => (
-          <rect key={i} x={b.x1} y={0} width={Math.max(0, b.x2 - b.x1)} height={PRICE_H} className={b.cls} />
-        ))}
-        {rangeSegs.map((s, i) => (
-          <rect key={i} x={s.x1} y={s.yTop} width={Math.max(0, s.x2 - s.x1)} height={Math.max(0, s.yBottom - s.yTop)} className="paper-range-band" />
-        ))}
-        {priceSegs.map((seg, i) => (
-          <polyline key={i} className="paper-range-price-line" points={seg} fill="none" />
-        ))}
-        <EventMarkers events={events} x={x} tMin={pts[0].tsMs} tMax={pts[pts.length - 1].tsMs} height={PRICE_H} />
-      </svg>
-      <div className="muted paper-range-legend">niebieskie pasmo = zakres bota · czarna linia = cena</div>
-      {last && typeof last.price === 'number' && (
-        <div className="muted paper-range-caption">
-          cena: {fmtPrice(poolId, disp(last.price))}
-          {lastLo !== null && lastHi !== null && (
-            <>
-              {' '}
-              · zakres: {fmtPrice(poolId, lastLo)}–{fmtPrice(poolId, lastHi)}
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
 
 const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHistoryPoint[]; events: PaperEvent[]; capitalPerPoolUsd: number }> = ({
   poolId,
@@ -335,8 +113,12 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
           <span className={vsHodl < 0 ? 'forecast-negative' : 'paper-positive'}>{fmtSigned(vsHodl)}</span>
         </div>
         <div className="paper-pool-stat">
-          <span className="muted">Fee zebrane</span>
-          <span>{fmtUsd(position.feesUsd)}</span>
+          <span className="muted">Fee reinwestowane</span>
+          <span>{fmtUsd(Math.max(0, position.feesUsd - (position.feesSinceRebalanceUsd ?? 0)))}</span>
+        </div>
+        <div className="paper-pool-stat">
+          <span className="muted">Fee narosłe (do reinwestycji)</span>
+          <span>{fmtUsd(position.feesSinceRebalanceUsd ?? 0)}</span>
         </div>
         <div className="paper-pool-stat">
           <span className="muted">Koszty</span>

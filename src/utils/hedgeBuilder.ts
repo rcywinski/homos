@@ -62,8 +62,14 @@ export const ORDER_TYPE = { MarketIncrease: 2, MarketDecrease: 4 } as const;
 // DecreasePositionSwapType: 1 = wypłać PnL w tokenie collateralu (USDC)
 const SWAP_PNL_TO_COLLATERAL = 1;
 
-const USD_1E30 = 10n ** 30n;
-const PRICE_1E12 = 10n ** 12n; // dla indexu 18 dec: 30-18
+// UWAGA: NIE używać `**` na BigIntach — babel (transform-exponentiation-operator)
+// transpiluje `**` na `Math.pow()` bez rozróżniania typu operandów, a
+// `Math.pow(10n, 30n)` rzuca "Cannot convert a BigInt value to a number" w
+// runtime (build/tsc tego nie łapie — pada dopiero w przeglądarce). Ten sam
+// bug był już raz naprawiony gdzie indziej (build CC-Win, P7) — literały
+// zamiast `**` są tu odporne na powrót problemu.
+const USD_1E30 = 1_000_000_000_000_000_000_000_000_000_000n; // 10n ** 30n
+const PRICE_1E12 = 1_000_000_000_000n; // 10n ** 12n, dla indexu 18 dec: 30-18
 
 // --- ABI (tylko używane funkcje ExchangeRoutera) ---
 const EXCHANGE_ROUTER_ABI = [
