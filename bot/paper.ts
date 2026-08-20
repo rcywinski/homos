@@ -287,6 +287,11 @@ export function paperTick(ctx: PaperCtx) {
         ? pos.hedge.sizeBase * (pos.hedge.entryUsd - (p.ethIsToken0 ? pr.px0 : pr.px1)) + pos.hedge.fundingUsd
         : 0;
       const equity = lpValue + pos.feesSinceRebalanceUsd + pos.hedgePnlRealizedUsd + hedgeOpenPnl;
+      // price/lo/hi (human) — od 20.08, dla pasma zakresu na wykresach UI
+      // (Partia 7); lo/hi tylko gdy pozycja otwarta (w cash zakresu nie ma).
+      const range = pos.status === 'open' && pos.tickLower != null
+        ? { lo: +tickToHuman(pos.tickLower, p.d0, p.d1).toPrecision(6), hi: +tickToHuman(pos.tickUpper!, p.d0, p.d1).toPrecision(6) }
+        : {};
       fs.appendFileSync(
         HISTORY_PATH,
         JSON.stringify({
@@ -294,6 +299,7 @@ export function paperTick(ctx: PaperCtx) {
           equityUsd: +equity.toFixed(2), hodlUsd: +hodlValueUsd(pos, pr).toFixed(2),
           feesUsd: +pos.feesUsd.toFixed(2), costsUsd: +pos.costsUsd.toFixed(2),
           inRange, trendDown: lv.trendDown, rebalances: pos.rebalances,
+          price: +pr.human.toPrecision(6), ...range,
         }) + '\n'
       );
     } catch (e) {

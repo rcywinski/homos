@@ -146,6 +146,13 @@ export interface PaperHistoryPoint {
   inRange: boolean;
   trendDown: boolean;
   rebalances: number;
+  // Od 20.08 (bot/paper.ts, TASKS-UI.md Partia 7) — cena (human) i granice
+  // zakresu bota (human), TYLKO gdy status==='open' (w cash zakresu nie ma).
+  // Starsze próbki z historii (sprzed 20.08) tych pól NIE mają — UI musi to
+  // przeżyć (feature-detect po typeof, nie zakładać obecności).
+  price?: number;
+  lo?: number;
+  hi?: number;
 }
 
 export interface PaperEvent {
