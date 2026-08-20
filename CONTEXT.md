@@ -74,6 +74,35 @@ przez walkforward. Raportu morning-2026-08-20.md nie zweryfikowano
 (GitHub 404 w profilu Chrome — repo prywatne/brak logowania; dane wzięte
 prosto z API).
 
+~późny wieczór — HEDGE WIDOCZNY W SYSTEMIE (uwaga Rafała po teście: short
+istniał tylko na GMX i w localStorage jednej przeglądarki — bot ślepy,
+zero wykresów/raportu/telefonu/alertu o sierocie). Zrobione (Fable, tsc
+czysty): observer czyta pozycje konta z GMX Readera co cykl (ABI Position.
+Props wg MAIN — 10 pól numbers z pendingImpactAmount; sanity-check skal
+łapie ew. zmianę ABI) → `state.hedge` (size/entry/PnL/equity) + próbki
+positions-history pod 'gmx-eth-short' (benchmark hodlUsd=collateral,
+czyli "cash bez shorta") + Telegram na open/close + ostrzeżenie ~1/dobę
+gdy short wisi bez sygnału DOWN. Adresy reader/dataStore dopisane do
+GMX_ARBITRUM w hedgeBuilder. UI = TASKS-UI PARTIA 11 (karta hedge z
+state.hedge, [Zamknij short] z danych on-chain, localStorage tylko
+fallback). Wymaga restartu homos-bot u CC-Win po commicie.
+
+~wieczór — TEST E2E HEDGE GMX ZALICZONY (Rafał, realne $15 na Arbitrum).
+Pełna pętla przez naszą apkę: [Testowy short ~$15] → symulacja → podpis
+Rabby → keeper wykonał (short ETH/USD 1×, size $15.00, collateral 14.99
+USDC, entry $2274.43) → [Zamknij short →] → executeOrder zwrócił +14.96
+USDC i +0.0006 ETH (nadpłata keepera), pozycja zniknęła na GMX; przy
+okazji claim $0.06 z 18.08 odebrany. Koszt testu ~$0.40. Wnioski: (1)
+builder (adresy/ABI/jednostki/acceptable) ZWERYFIKOWANY BOJOWO — bezpiecznik
+hedge-excess base-030 wykonawczo GOTOWY jednym podpisem (fallback
+EXIT_TREND przestaje być jedyną opcją); (2) BUG WYKRYTY I NAPRAWIONY w
+useHedgeExecution: Rabby zwrócił hash, którego publicnode nie przyjął w
+eth_getTransactionReceipt → hook rzucał PO wysłaniu i nie zapisywał stanu
+shorta; fix: walidacja formatu hasha + receipt-wait jako best-effort
+(nigdy nie failuje przepływu po podpisie). LEKCJA repo-wide: po
+sendTransaction tx JEST wysłana — dalsze kroki degradować łagodnie.
+Przycisk testowy USUNIĘTY po zaliczeniu.
+
 ~wieczór — DOMKNIĘCIE hUp + AGENDA 26.08. CC-Win: 5/5 przebiegów + pełna
 cross-walidacja 6/6 (okna 45/20 i 60/30). WERDYKT: hUp=48h (profil
 ETH/stable k=3+trend) lepszy/równy v1.1 na 9/9 przebiegów z efektem,

@@ -8,7 +8,7 @@
  * (BotTelemetry.tsx). Collapsible, compact, plain CSS (see styles.css,
  * "UI session" sections, classes prefixed morning-, cockpit- and telemetry-).
  */
-import React, { FC, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { Pool } from '@uniswap/v3-sdk';
 import { usePortfolio, PortfolioPosition } from '../hooks/usePortfolio';
@@ -16,7 +16,7 @@ import { UseBotApi, BotProposal } from '../hooks/useBotApi';
 import { useCockpitActions, RebalanceTarget } from '../hooks/useCockpitActions';
 import { useRebalanceExecution } from '../hooks/useRebalanceExecution';
 import { useRotateExecution } from '../hooks/useRotateExecution';
-import { useHedgeExecution, loadHedgeOpen, HedgeOpenState } from '../hooks/useHedgeExecution';
+import { useHedgeExecution, loadHedgeOpen, clearHedgeOpen, HedgeOpenState } from '../hooks/useHedgeExecution';
 import { planRebalance, RebalancePlan, planRotate, RotatePlan } from '../utils/rebalanceBuilder';
 import { planHedgeOpen, planHedgeClose, HedgePlan } from '../utils/hedgeBuilder';
 import BotStatusDot from './BotStatusDot';
@@ -33,6 +33,7 @@ import TopRankingPanel from './TopRankingPanel';
 import ExpandableSection from './ExpandableSection';
 
 const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtSigned = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtUsd(Math.abs(v));
 
 const ADVICE_ICON: Record<string, string> = {
   IN_RANGE_HOLD: '✅',
@@ -256,12 +257,22 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
     }
   };
 
-  // [Zamknij short →] (Partia 9, pkt 4): stan otwartego shorta z localStorage
-  // (homos_hedge_open, zapisany przy udanym otwarciu) — cena ETH z DOWOLNEJ
-  // żywej puli w telemetrii (hedge to jeden rynek ETH/USD niezależnie od tego,
-  // która pula LP go wywołała).
+  // 20.08: test E2E hedge ($15 short otwarty i zamknięty przez apkę —
+  // szczegóły CONTEXT ~wieczór) wykonany przez TYMCZASOWY przycisk, usunięty
+  // po zaliczeniu. Ścieżka produkcyjna = karta propozycji HEDGE poniżej.
+
+  // [Zamknij short →] (Partia 9 pkt 4, Partia 11 pkt 2/3): sizeUsd/collateralUsd
+  // brane PRZEDE WSZYSTKIM z `bot.state.hedge` (dane on-chain, odczyt Readerem
+  // GMX co cykl — prawda), localStorage (homos_hedge_open) to TYLKO fallback
+  // na czas gdy bot jest offline / state.hedge jeszcze niedostępne. Cena ETH
+  // z DOWOLNEJ żywej puli w telemetrii (hedge to jeden rynek ETH/USD
+  // niezależnie od tego, która pula LP go wywołała).
+  const liveHedge = bot.state?.hedge;
   const openHedgeCloseModal = () => {
-    if (!address || !hedgeOpen) return;
+    if (!address) return;
+    const sizeUsd = liveHedge ? liveHedge.sizeUsd : hedgeOpen?.sizeUsd;
+    const collateralUsd = liveHedge ? liveHedge.collateralUsd : hedgeOpen?.collateralUsd;
+    if (typeof sizeUsd !== 'number' || typeof collateralUsd !== 'number') return;
     const ethPriceUsd = bot.state?.pools?.find((pl) => typeof pl.ethUsd === 'number' && pl.ethUsd > 0)?.ethUsd;
     if (typeof ethPriceUsd !== 'number' || ethPriceUsd <= 0) {
       setProposalError('Brak aktualnej ceny ETH z bota — nie można zbudować zamknięcia. Zamknij ręcznie na app.gmx.io.');
@@ -269,13 +280,25 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
     }
     setProposalError(null);
     try {
-      const plan = planHedgeClose({ sizeUsd: hedgeOpen.sizeUsd, collateralUsd: hedgeOpen.collateralUsd, ethPriceUsd, recipient: address });
+      const plan = planHedgeClose({ sizeUsd, collateralUsd, ethPriceUsd, recipient: address });
       hedgeExecution.reset();
       setHedgeModal({ plan, proposalId: null });
     } catch (e) {
       setProposalError(`Nie udało się zbudować zamknięcia hedge: ${e instanceof Error ? e.message.slice(0, 200) : String(e)}`);
     }
   };
+
+  // Partia 11 pkt 3: localStorage to TYLKO fallback — gdy bot POTWIERDZA
+  // (state.hedge === null, jawnie, nie undefined/state jeszcze niewczytany)
+  // brak pozycji, a fallback jest ustawiony (np. bo Reader jeszcze nie widział
+  // zamknięcia w momencie zapisu, albo user zamknął ręcznie na app.gmx.io),
+  // czyścimy — bot mówi prawdę o stanie on-chain.
+  useEffect(() => {
+    if (bot.state && bot.state.hedge === null && hedgeOpen) {
+      clearHedgeOpen();
+      setHedgeOpen(null);
+    }
+  }, [bot.state, hedgeOpen]);
 
   // OPEN "Otwórz →" / ROTATE krok 2 "Otwórz nową →": pula z propozycji może
   // być taka, w której user nie ma jeszcze pozycji — trzeba ją wyliczyć
@@ -379,9 +402,16 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           )}
           {portfolio.error && <div className="morning-note morning-error">Błąd portfela: {portfolio.error}</div>}
 
-          {hedgeOpen && (
+          {/* Partia 11: gdy bot POTWIERDZA hedge (state.hedge, on-chain) —
+              karta w sekcji pozycji niżej przejmuje pokazywanie/[Zamknij
+              short →], notka localStorage znika (jedno źródło prawdy na
+              ekranie). Notka zostaje jako fallback TYLKO gdy bot offline/
+              state.hedge jeszcze niedostępne, a fallback z ostatniego
+              udanego otwarcia w tej przeglądarce wciąż jest ustawiony. */}
+          {!liveHedge && hedgeOpen && (
             <div className="morning-note morning-proposal-note morning-hedge-open-note">
-              🛡 Otwarty short (hedge): ~${hedgeOpen.sizeUsd.toFixed(0)} (collateral ${hedgeOpen.collateralUsd.toFixed(0)}) od{' '}
+              🛡 Otwarty short (hedge, z ostatniego zapisu w tej przeglądarce — bot offline/dane jeszcze niedostępne): ~$
+              {hedgeOpen.sizeUsd.toFixed(0)} (collateral ${hedgeOpen.collateralUsd.toFixed(0)}) od{' '}
               {new Date(hedgeOpen.ts).toLocaleDateString('pl-PL')}
               <div className="morning-proposal-actions">
                 <button className="action-button" onClick={openHedgeCloseModal}>
@@ -555,10 +585,50 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           <div className="morning-section-title">Pozycje — akcje</div>
           {portfolio.loading ? (
             <div className="morning-note">Ładowanie pozycji…</div>
-          ) : portfolio.positions.length === 0 ? (
+          ) : portfolio.positions.length === 0 && !liveHedge ? (
             <div className="morning-note">Brak otwartych pozycji.</div>
           ) : (
             <div className="cockpit-position-cards">
+              {liveHedge && (
+                <div className="cockpit-position-card">
+                  <div className="cockpit-position-card-header">
+                    <span>
+                      🛡 GMX ETH/USD · {liveHedge.isLong ? 'LONG ⚠️' : 'SHORT'} 1×
+                    </span>
+                    <span className="muted">{fmtUsd(liveHedge.equityUsd)}</span>
+                  </div>
+                  {liveHedge.isLong && (
+                    <div className="morning-note morning-error">
+                      ⚠️ Pozycja LONG na GMX — bot oczekuje SHORT (hedge przeciw spadkowi ceny LP). Sprawdź ręcznie na app.gmx.io.
+                    </div>
+                  )}
+                  <div className="cockpit-position-fees muted">
+                    {liveHedge.sizeEth.toFixed(4)} ETH (~{fmtUsd(liveHedge.sizeUsd)}) @ {fmtUsd(liveHedge.entryPriceUsd)} · collateral{' '}
+                    {fmtUsd(liveHedge.collateralUsd)}
+                  </div>
+                  <div className={`cockpit-position-fees ${liveHedge.pnlUsd < 0 ? 'forecast-negative' : 'paper-positive'}`}>
+                    PnL: {fmtSigned(liveHedge.pnlUsd)}
+                  </div>
+                  {(() => {
+                    const hedgeHistory: EquityChartPoint[] = (bot.positionsHistory ?? [])
+                      .filter((h) => h.tokenId === 'gmx-eth-short')
+                      .map((h) => ({ ts: h.ts, equityUsd: h.valueUsd, hodlUsd: h.hodlUsd, inRange: h.inRange, price: h.price }));
+                    // BEZ PriceRangeChart — perp nie ma zakresu (brak lo/hi w
+                    // próbkach, patrz komentarz w bot/observer.ts); tylko equity
+                    // vs collateral (benchmark "cash bez shorta").
+                    return hedgeHistory.length >= 2 ? (
+                      <Sparkline points={hedgeHistory} events={[]} />
+                    ) : (
+                      <div className="morning-note muted">za mało punktów historii hedge jeszcze zebranych.</div>
+                    );
+                  })()}
+                  <div className="cockpit-position-actions" style={{ marginTop: 8 }}>
+                    <button className="action-button" onClick={openHedgeCloseModal}>
+                      Zamknij short →
+                    </button>
+                  </div>
+                </div>
+              )}
               {portfolio.positions.map((p) => {
                 // Pasek zakresu uproszczony do ułamka ticków (bez orientacji
                 // cenowej per para, jak w MyPositions.tsx) — wystarczające dla

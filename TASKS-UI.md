@@ -696,3 +696,76 @@ ZAKRES TWARDY: tylko src/**; bot/** gotowy, nie ruszać.
       `grep -oE "Math\.pow\([0-9]+n" public/*.bundle.js` — brak trafień.
       (Pozostałe `**` w repo są Number**Number — `2 ** 96` itp. — te są
       bezpieczne, `Math.pow(2,96)` działa normalnie.)
+
+## PARTIA 11 — Hedge GMX widoczny w aplikacji ✅ wykonana (uwaga Rafała po teście E2E 20.08)
+
+KONTEKST: testowy short $15 istniał tylko na app.gmx.io i w localStorage
+jednej przeglądarki — nie było go na wykresach/telefonie/raporcie. Backend
+GOTOWY (Fable): observer czyta pozycje z GMX Readera co cykl (5 min) →
+(1) `state.hedge` w /api/state: {isLong, sizeUsd, sizeEth, collateralUsd,
+entryPriceUsd, pnlUsd, equityUsd, updatedAt} | null; (2) próbki w
+/api/positions-history pod tokenId 'gmx-eth-short' (poolId 'gmx-eth-usd',
+valueUsd=equity, hodlUsd=collateral jako benchmark "cash bez shorta",
+price=ETH USD, BEZ lo/hi — perp nie ma zakresu); (3) Telegram na
+przejściach open/close + ostrzeżenie o sierocie.
+
+ZAKRES TWARDY: tylko src/**; bot/** gotowy.
+
+1. **Typy** (`useBotApi.ts`): `BotState.hedge?: BotHedgeLive | null` (kształt
+   wyżej).
+2. **Karta hedge w sekcji pozycji**: gdy `state.hedge` ≠ null — karta
+   "🛡 GMX ETH/USD · SHORT 1×" (rozmiar/entry/PnL kolorowany/collateral) +
+   sparkline equity-vs-collateral z positions-history ('gmx-eth-short');
+   BEZ wykresu cena-vs-pasmo (brak lo/hi → PriceRangeChart i tak się nie
+   wyrenderuje — zweryfikować, że cicho, nie z błędem). Przycisk
+   [Zamknij short →] przeniesiony na tę kartę (istniejący handler
+   openHedgeCloseModal; sizeUsd/collateralUsd brać z `state.hedge`, NIE z
+   localStorage — dane on-chain są prawdą).
+3. **localStorage `homos_hedge_open` = tylko fallback** na czas gdy bot
+   offline / state.hedge niedostępne (stara notka zostaje wtedy); gdy
+   state.hedge żyje, notka localStorage ukryta (jedno źródło prawdy na
+   ekranie). Przy state.hedge===null a localStorage ustawionym → wyczyść
+   localStorage (bot mówi: pozycji nie ma).
+4. Stany brzegowe: hedge LONG (nie powinien istnieć, ale pokazać uczciwie
+   z ⚠️); brak próbek historii → karta bez sparkline.
+
+- [x] **typy `BotHedgeLive` + `state.hedge`** (`useBotApi.ts`) — kształt
+      zweryfikowany wprost wobec `interface HedgeLive` w `bot/observer.ts`
+      (isLong/sizeUsd/sizeEth/collateralUsd/entryPriceUsd/pnlUsd/equityUsd/
+      updatedAt). `hedge?: BotHedgeLive | null` na `BotStateShape` — `null`
+      jawne (bot potwierdza brak pozycji) odróżnione od pola nieobecnego
+      (starszy state.json / stan jeszcze niewczytany), bo tylko `null` jest
+      podstawą do auto-czyszczenia fallbacku localStorage.
+- [x] **karta hedge w sekcji pozycji** (`MorningCockpit.tsx`) — renderowana
+      jako pierwsza karta w `cockpit-position-cards` gdy `bot.state.hedge`
+      istnieje (siatka kart pokazuje się też, gdy user nie ma ŻADNEJ pozycji
+      LP, ale ma hedge — warunek pustej sekcji rozszerzony o `!liveHedge`).
+      Nagłówek "🛡 GMX ETH/USD · SHORT 1×" (LONG → "LONG ⚠️" + żółty box
+      ostrzeżenia, pkt 4), linia rozmiar/entry/collateral, PnL kolorowany
+      (zielony/czerwony jak `paper-positive`/`forecast-negative`), sparkline
+      equity-vs-collateral z `positionsHistory` filtrowanego po tokenId
+      `'gmx-eth-short'` (mapowane `valueUsd→equityUsd`, `hodlUsd`=collateral
+      benchmark — reużyty `<Sparkline>` z `PositionCharts.tsx`, ZERO zmian w
+      komponencie). `<PriceRangeChart>` ŚWIADOMIE nieużyty — zweryfikowano, że
+      przy samym `price` (bez `lo`/`hi`) komponent NIE zwróciłby `null`
+      automatycznie (renderowałby samą linię ceny bez pasma) wbrew założeniu
+      w opisie zadania — bezpieczniej i zgodnie z duchem "BEZ wykresu
+      cena-vs-pasmo" po prostu go nie wołać na tej karcie, niż polegać na
+      milczącym samo-ukryciu. `[Zamknij short →]` przeniesiony na kartę,
+      reużywa istniejący `openHedgeCloseModal` (patrz niżej).
+- [x] **localStorage jako fallback + auto-czyszczenie** — `openHedgeCloseModal`
+      przebudowany: sizeUsd/collateralUsd biorą PIERWSZEŃSTWO z `bot.state.hedge`
+      (on-chain, prawda), `homos_hedge_open` (localStorage) tylko gdy
+      `state.hedge` niedostępny. Persystentna notka "🛡 Otwarty short" (dawniej
+      zawsze widoczna przy `hedgeOpen`) teraz warunek `!liveHedge && hedgeOpen`
+      — znika, gdy karta hedge (z danych on-chain) już to pokazuje, jedno
+      źródło prawdy na ekranie; treść notki dopisana "z ostatniego zapisu w
+      tej przeglądarce — bot offline/dane jeszcze niedostępne", żeby nie
+      mylić z danymi live. Nowy `useEffect`: `state.hedge === null` (JAWNIE,
+      nie `undefined`) + `hedgeOpen` ustawiony → `clearHedgeOpen()` +
+      `setHedgeOpen(null)` (bot potwierdza brak pozycji — fallback nieaktualny).
+- [x] **stany brzegowe + typecheck** — LONG pokazany uczciwie z ⚠️ (pkt 4);
+      brak próbek historii hedge (<2) → tekst zamiast sparkline'a, zero
+      błędu. `npx tsc --noEmit -p tsconfig.json`: 0 błędów w `src/`
+      (pozostałe `bot/observer.ts`/`node_modules/ox` preexisting). `npm run
+      build`: czysty (tylko warningi o rozmiarze bundle'a, preexisting).

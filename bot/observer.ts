@@ -136,6 +136,72 @@ let proposals: Proposal[] = fs.existsSync(PROPOSALS_PATH) ? JSON.parse(fs.readFi
 // human) — UI reużywa te same komponenty.
 const POS_HIST_PATH = path.join(DIR, 'positions-history.ndjson');
 const POS_HODL_PATH = path.join(DIR, 'positions-hodl.json');
+
+// --- śledzenie REALNEGO hedge'a na GMX (20.08, uwaga Rafała po teście E2E:
+// short istniał tylko na app.gmx.io i w localStorage jednej przeglądarki —
+// bot go nie widział, więc nie było go na wykresach/raporcie/iPhone i nikt
+// nie ostrzegłby "sygnał zgasł, a short wisi"). Odczyt przez GMX Reader
+// (getAccountPositions) co cykl refreshPositions; stan w state.json
+// (pole `hedge`), próbka equity do positions-history pod tokenId
+// 'gmx-eth-short' (UI: karta bez pasma zakresu — perp nie ma zakresu).
+// UWAGA ABI: struct Position.Props wg MAIN gmx-synthetics (10 pól w
+// numbers, w tym pendingImpactAmount int256) — przy aktualizacji GMX
+// zweryfikować kształt, zły decode przesuwa pola; sanity-check niżej
+// (market/skala) łapie rozjazd i loguje zamiast podawać śmieci.
+const GMX = {
+  reader: '0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789',
+  dataStore: '0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8',
+  ethUsdMarket: '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336',
+} as const;
+const GMX_READER_ABI = [
+  {
+    name: 'getAccountPositions', type: 'function', stateMutability: 'view',
+    inputs: [
+      { name: 'dataStore', type: 'address' },
+      { name: 'account', type: 'address' },
+      { name: 'start', type: 'uint256' },
+      { name: 'end', type: 'uint256' },
+    ],
+    outputs: [{
+      name: 'positions', type: 'tuple[]', components: [
+        {
+          name: 'addresses', type: 'tuple', components: [
+            { name: 'account', type: 'address' },
+            { name: 'market', type: 'address' },
+            { name: 'collateralToken', type: 'address' },
+          ],
+        },
+        {
+          name: 'numbers', type: 'tuple', components: [
+            { name: 'sizeInUsd', type: 'uint256' },
+            { name: 'sizeInTokens', type: 'uint256' },
+            { name: 'collateralAmount', type: 'uint256' },
+            { name: 'pendingImpactAmount', type: 'int256' },
+            { name: 'borrowingFactor', type: 'uint256' },
+            { name: 'fundingFeeAmountPerSize', type: 'uint256' },
+            { name: 'longTokenClaimableFundingAmountPerSize', type: 'uint256' },
+            { name: 'shortTokenClaimableFundingAmountPerSize', type: 'uint256' },
+            { name: 'increasedAtTime', type: 'uint256' },
+            { name: 'decreasedAtTime', type: 'uint256' },
+          ],
+        },
+        { name: 'flags', type: 'tuple', components: [{ name: 'isLong', type: 'bool' }] },
+      ],
+    }],
+  },
+] as const;
+export interface HedgeLive {
+  isLong: boolean;
+  sizeUsd: number;
+  sizeEth: number;
+  collateralUsd: number;
+  entryPriceUsd: number;
+  pnlUsd: number; // vs bieżący mark (ethUsd z telemetrii)
+  equityUsd: number; // collateral + pnl
+  updatedAt: string;
+}
+let hedgeLive: HedgeLive | null = null;
+let hedgeWasOpen = false; // do powiadomień na przejściach open/close
 interface PosHodlAnchor { a0: number; a1: number; poolId: string; anchoredAt: string }
 const posHodl: Record<string, PosHodlAnchor> = fs.existsSync(POS_HODL_PATH)
   ? JSON.parse(fs.readFileSync(POS_HODL_PATH, 'utf8'))
@@ -148,7 +214,7 @@ const saveState = () => {
   fs.writeFileSync(
     STATE_PATH,
     JSON.stringify(
-      { updatedAt: new Date().toISOString(), mode: 'OBSERVE', watch: WATCH_ADDRESS, pools: Object.values(live), positions, proposals: proposals.filter((p) => p.status === 'open') },
+      { updatedAt: new Date().toISOString(), mode: 'OBSERVE', watch: WATCH_ADDRESS, pools: Object.values(live), positions, hedge: hedgeLive, proposals: proposals.filter((p) => p.status === 'open') },
       bigintReplacer, 2
     )
   );
@@ -515,6 +581,64 @@ async function refreshPositions() {
     }
   }
   positions = found;
+
+  // --- realny hedge na GMX (Arbitrum) — odczyt Readerem, patrz komentarz przy GMX ---
+  try {
+    const arb = clients['arbitrum'];
+    const ethUsdNow = Object.values(live).find((l) => typeof l.ethUsd === 'number' && l.ethUsd > 0)?.ethUsd ?? 0;
+    if (arb && ethUsdNow > 0) {
+      const raw = (await arb.readContract({
+        address: GMX.reader as `0x${string}`, abi: GMX_READER_ABI, functionName: 'getAccountPositions',
+        args: [GMX.dataStore as `0x${string}`, WATCH_ADDRESS, 0n, 20n],
+      })) as ReadonlyArray<{ addresses: { market: string }; numbers: { sizeInUsd: bigint; sizeInTokens: bigint; collateralAmount: bigint }; flags: { isLong: boolean } }>;
+      const p = raw.find((x) => x.addresses.market.toLowerCase() === GMX.ethUsdMarket.toLowerCase() && x.numbers.sizeInUsd > 0n);
+      if (p) {
+        const sizeUsd = Number(p.numbers.sizeInUsd) / 1e30;
+        const sizeEth = Number(p.numbers.sizeInTokens) / 1e18;
+        const collateralUsd = Number(p.numbers.collateralAmount) / 1e6; // USDC
+        // sanity (zły decode po aktualizacji ABI GMX → absurdalne skale)
+        if (sizeUsd > 0.01 && sizeUsd < 1e7 && sizeEth > 0 && collateralUsd < 1e7) {
+          const entry = sizeUsd / sizeEth;
+          const pnl = (p.flags.isLong ? ethUsdNow - entry : entry - ethUsdNow) * sizeEth;
+          hedgeLive = {
+            isLong: p.flags.isLong, sizeUsd, sizeEth, collateralUsd,
+            entryPriceUsd: entry, pnlUsd: pnl, equityUsd: collateralUsd + pnl,
+            updatedAt: new Date().toISOString(),
+          };
+          fs.appendFileSync(
+            POS_HIST_PATH,
+            JSON.stringify({
+              ts: new Date().toISOString(), tokenId: 'gmx-eth-short', poolId: 'gmx-eth-usd',
+              valueUsd: +hedgeLive.equityUsd.toFixed(2), hodlUsd: +collateralUsd.toFixed(2), // benchmark: cash (collateral bez shorta)
+              inRange: true, price: +ethUsdNow.toFixed(2),
+            }) + '\n'
+          );
+          if (!hedgeWasOpen) {
+            hedgeWasOpen = true;
+            void telegram(`🛡 HOMOS: wykryto ${p.flags.isLong ? 'LONG' : 'SHORT'} na GMX ETH/USD — $${sizeUsd.toFixed(0)} @ $${entry.toFixed(0)}, collateral $${collateralUsd.toFixed(0)} (odczyt on-chain, obserwuję co cykl)`);
+          }
+          // ostrzeżenie o sierocie: short wisi, a ŻADNA pula nie ma sygnału DOWN
+          const anyDown = Object.values(trend).some((t) => t.down);
+          if (!p.flags.isLong && !anyDown && Math.random() < 0.017) {
+            // ~raz na dobę przy cyklu 5 min (288 cykli * 0.017 ≈ 5; wystarczająco rzadko, zero dodatkowego stanu)
+            void telegram(`⚠️ HOMOS: short GMX $${sizeUsd.toFixed(0)} otwarty, a sygnał trendu NIE jest DOWN na żadnej puli — sprawdź, czy nie zostawić/zamknąć (PnL $${pnl.toFixed(2)})`);
+          }
+        } else {
+          log(`gmx hedge: odczyt poza skalą (sizeUsd=${sizeUsd}, sizeEth=${sizeEth}) — możliwa zmiana ABI Readera, pomijam`);
+          hedgeLive = null;
+        }
+      } else {
+        if (hedgeWasOpen) {
+          hedgeWasOpen = false;
+          void telegram('🛡 HOMOS: pozycja hedge na GMX ZAMKNIĘTA (Reader nie widzi już pozycji)');
+        }
+        hedgeLive = null;
+      }
+    }
+  } catch (e) {
+    log(`gmx hedge read failed: ${String(e).slice(0, 140)}`);
+  }
+
   // pozycja otwarta/wykryta w TRAKCIE trwającego sygnału DOWN też dostaje
   // propozycję (transition-only by ją ominął; dedup w proposeExitTrend)
   for (const p of BOT_POOLS) {

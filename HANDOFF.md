@@ -22,26 +22,42 @@
 ODEBRANY 20.08 wieczór.)
 
 ## @Sonnet (sesja UI, Cowork)
-- [Fable→Sonnet, 2026-08-20 wieczór] P10 ODEBRANA ✅ (raport skasowany wg
-  protokołu; dzięki za hotfix `10n ** Xn` — mój błąd w hedgeBuilder, lekcja
-  zapisana). FYI: "paski" na niebieskim pasmie NIE zniknęły po P10 — to nie
-  CSS, tylko rect-per-próbka + obwódka z P7 (kreska na każdej granicy
-  próbek). Naprawione przez Fable bezpośrednio w `PositionCharts.tsx`
-  (sklejanie sąsiednich segmentów o identycznych lo/hi w jeden rect; nowy
-  rect dopiero przy rebalansie lub po przerwie cash). tsc czysty. Nic do
-  zrobienia — wpis czysto informacyjny, skasuj po przeczytaniu.
+(Skrzynka pusta — raport P11 odebrany przez Fable 20.08 późny wieczór;
+dobry catch z PriceRangeChart przy samych `price` bez lo/hi — załozenie w
+opisie zadania było błędne, słusznie nie wołasz komponentu zamiast liczyć
+na ciche samo-ukrycie.)
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
 > Zasada dla CC-Mac (tańszy model): wykonuj zadania DOKŁADNIE wg wpisów;
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-- [Fable→CC-Mac, 2026-08-20 wieczór] Commit+push drobnej poprawki UI z
-  odbioru P10 (uwaga Rafała): `src/components/MorningCockpit.tsx` — zielony
-  pasek zakresu (P1) na kartach pozycji pokazuje się już TYLKO jako fallback
-  gdy wykres cena-vs-pasmo nie ma jeszcze ≥2 próbek (potem był duplikatem).
-  tsc czysty. Po pushu ping CC-Win: sam rebuild UI (`npx webpack --mode
-  production`), bez restartu usług.
+- [Fable→CC-Mac, 2026-08-20 wieczór] Commit+push poprawek UI z odbioru P10
+  (`src/components/MorningCockpit.tsx`, tsc czysty): (1) zielony pasek
+  zakresu (P1) na kartach pozycji tylko jako fallback gdy wykres
+  cena-vs-pasmo nie ma ≥2 próbek (potem duplikat — uwaga Rafała);
+  (2) JEDNORAZOWY przycisk "🧪 Testowy short ~$15 →" (decyzja Rafała: test
+  E2E ścieżki hedge GMX zanim bezpiecznik użyje jej na serio; sygnał UP =
+  brak karty HEDGE, więc bez przycisku nie ma jak; pełna ścieżka z
+  symulacją; DO USUNIĘCIA po teście). Po pushu ping CC-Win: sam rebuild UI
+  (`npx webpack --mode production`), bez restartu usług.
+  AKTUALIZACJA (ta sama paczka, ~30 min później): TEST ZALICZONY na żywo
+  ($15 open+close, GMX czysty) → przycisk testowy JUŻ USUNIĘTY z kodu;
+  dodatkowo w paczce: fix `useHedgeExecution.ts` (receipt-wait best-effort
+  + walidacja hasha — bug wykryty testem: Rabby-hash odrzucany przez
+  publicnode wywalał przepływ PO wysłaniu tx) oraz wpisy
+  CONTEXT/RESEARCH-QUEUE/DECYZJE. tsc czysty.
+  AKTUALIZACJA 2 (jeszcze ta sama paczka): + `bot/observer.ts` (odczyt
+  pozycji z GMX Readera → state.hedge + próbki 'gmx-eth-short' + alerty),
+  `src/utils/hedgeBuilder.ts` (adresy reader/dataStore), TASKS-UI Partia 11.
+  Przez zmianę w bot/** ping CC-Win musi objąć TAKŻE `nssm restart
+  homos-bot` (nie tylko rebuild UI).
+  AKTUALIZACJA 3 (finalna zawartość paczki): + kod Sonneta P11
+  (useBotApi BotHedgeLive/state.hedge, karta hedge w MorningCockpit ze
+  sparklinem i [Zamknij short →] z danych on-chain, localStorage jako
+  fallback z auto-czyszczeniem; tsc+build czyste u Sonneta). Po pushu
+  ping CC-Win: `git pull` + rebuild UI + `nssm restart homos-bot`;
+  sanity: /api/state ma pole `hedge` (teraz null — brak pozycji).
 
 ## @CC-Win (Claude Code od botów windowsowych)
 (Skrzynka pusta.)

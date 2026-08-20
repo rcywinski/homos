@@ -51,6 +51,10 @@ export const GMX_ARBITRUM = {
   ethUsdMarket: '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336' as Address,
   usdc: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' as Address, // natywne USDC
   weth: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1' as Address,
+  // odczyt pozycji (bot/observer śledzi realny hedge — dodane 20.08 po
+  // teście E2E, gdy wyszło że short nie jest widoczny nigdzie poza GMX):
+  reader: '0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789' as Address,
+  dataStore: '0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8' as Address,
 } as const;
 
 /** domyślna opłata keepera; nadpłata wraca — lepiej dać zapas niż utknąć.

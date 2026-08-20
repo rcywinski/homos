@@ -97,6 +97,26 @@ export interface BotWatchedPosition {
   paybackDays: number | null;
 }
 
+// Hedge REALNY na GMX (Arbitrum) — odczyt Readerem co cykl observera,
+// HANDOFF Fable→Sonnet 2026-08-20 późny wieczór, TASKS-UI.md Partia 11
+// (uwaga Rafała po teście E2E: short istniał tylko na app.gmx.io i w
+// localStorage jednej przeglądarki, nie było go widać nigdzie w apce).
+// Kształt zweryfikowany wprost wobec `interface HedgeLive` w bot/observer.ts.
+// `null` = bot potwierdza brak pozycji (Reader nie widzi nic) — odróżnione
+// od `undefined`/pola nieobecnego (starszy state.json sprzed tej zmiany, albo
+// jeszcze niewczytany stan) — TYLKO `null` jest podstawą do auto-czyszczenia
+// fallbacku localStorage (patrz MorningCockpit.tsx).
+export interface BotHedgeLive {
+  isLong: boolean;
+  sizeUsd: number;
+  sizeEth: number;
+  collateralUsd: number;
+  entryPriceUsd: number;
+  pnlUsd: number;
+  equityUsd: number;
+  updatedAt: string;
+}
+
 export interface BotStateShape {
   updatedAt: string;
   mode?: string;
@@ -104,6 +124,7 @@ export interface BotStateShape {
   pools?: BotPoolLive[];
   positions?: BotWatchedPosition[];
   proposals?: BotProposal[];
+  hedge?: BotHedgeLive | null;
 }
 
 export type BotStatus = 'loading' | 'online' | 'stale' | 'offline';

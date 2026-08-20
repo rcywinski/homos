@@ -509,13 +509,14 @@
 
 - [~] **AUTOMATYZACJA HEDGE (plan 3-stopniowy, zaakceptowany kierunkowo 17.08)**:
   (1) TERAZ: propozycja + ręczny GMX (faza testów). (2) NASTĘPNY KROK
-  BUDOWLANY — **builder ZROBIONY 20.08 (Fable)**: `src/utils/hedgeBuilder.ts`
-  (planHedgeOpen/planHedgeClose — multicall ExchangeRoutera: sendWnt fee +
-  sendTokens USDC + createOrder MarketIncrease/Decrease, short 1×, acceptable
-  price = limit poślizgu; adresy z contracts.json 20.08 + rynek z żywego API;
-  struct z autoCancel/dataList — NAJNOWSZY kształt). UI = TASKS-UI Partia 9
-  (Sonnet). Przed pierwszym realnym użyciem: symulacja eth_call (wymuszona
-  w partii) + test na ~$15. (3) AUTO po okresie PROPONUJ: preferencyjnie Hyperliquid
+  BUDOWLANY — **builder ZROBIONY 20.08 (Fable) i PRZETESTOWANY E2E NA
+  ŻYWO tego samego dnia (Rafał, $15)**: `src/utils/hedgeBuilder.ts` +
+  Partia 9 UI — pełna pętla open→keeper→close→zwrot środków przeszła
+  przez apkę bez błędu (szczegóły CONTEXT 20.08 ~wieczór; po drodze
+  naprawiony receipt-wait w useHedgeExecution). Krok 2 planu = GOTOWY
+  WYKONAWCZO; bezpiecznik hedge-excess base-030 przestaje zależeć od
+  fallbacku EXIT_TREND. Następny etap (3, auto po okresie PROPONUJ) bez
+  zmian — osobna decyzja. (3) AUTO po okresie PROPONUJ: preferencyjnie Hyperliquid
   agent-wallet (klucz może handlować, NIE może wypłacać — ograniczony promień
   rażenia) albo osobny portfel operacyjny GMX na Windows (DPAPI, tylko margin
   hedge'a); twarde limity w kodzie (max notional, max zleceń/dzień,

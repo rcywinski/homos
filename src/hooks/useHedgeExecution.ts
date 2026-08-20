@@ -85,6 +85,26 @@ export function useHedgeExecution() {
     return getWalletClient(config, { chainId: HEDGE_CHAIN_ID });
   }, [walletChainId, switchChainAsync]);
 
+  // FIX 20.08 (test Rafała ~$15): Rabby zwrócił hash, którego publicnode nie
+  // przyjął w eth_getTransactionReceipt ("Invalid parameters") — hook rzucał
+  // PO udanym wysłaniu i NIE zapisywał stanu shorta, mimo że pozycja żyła
+  // on-chain. Zasada: po sendTransaction tx JEST wysłana — czekanie na
+  // receipt to best-effort (walidacja formatu hasha + try/catch), nigdy
+  // powód do phase:'error'.
+  const isTxHash = (h: unknown): h is `0x${string}` => typeof h === 'string' && /^0x[0-9a-fA-F]{64}$/.test(h);
+  const waitBestEffort = useCallback(async (hash: unknown, label: string) => {
+    if (!client) return;
+    if (!isTxHash(hash)) {
+      console.warn(`[hedge] ${label}: portfel zwrócił nietypowy hash (${String(hash).slice(0, 80)}…) — pomijam receipt`);
+      return;
+    }
+    try {
+      await client.waitForTransactionReceipt({ hash });
+    } catch (e) {
+      console.warn(`[hedge] ${label}: receipt-wait nieudany (${String(e).slice(0, 140)}) — tx już wysłana, kontynuuję`);
+    }
+  }, [client]);
+
   const execute = useCallback(
     async (plan: HedgePlan, onDone?: () => void) => {
       if (!address) return;
@@ -107,8 +127,8 @@ export function useHedgeExecution() {
           if (allowance < plan.approval.amount) {
             setStatus({ phase: 'approving', message: 'Approve USDC dla GMX Router…' });
             const hash = await wc.sendTransaction({ to: plan.approval.tx.to, data: plan.approval.tx.data, value: plan.approval.tx.value, account: address, chain: wc.chain });
-            await client.waitForTransactionReceipt({ hash });
-            addTransaction(address, hash, plan.chainId, 'Approve USDC dla GMX Router (hedge)');
+            await waitBestEffort(hash, 'approve');
+            if (isTxHash(hash)) addTransaction(address, hash, plan.chainId, 'Approve USDC dla GMX Router (hedge)');
           }
         }
 
@@ -117,8 +137,8 @@ export function useHedgeExecution() {
         setStatus({ phase: 'sending', message: 'Podpis w Rabby…' });
         const hash = await wc.sendTransaction({ to: plan.tx.to, data: plan.tx.data, value: plan.tx.value, account: address, chain: wc.chain });
         setStatus({ phase: 'sending', message: 'Potwierdzanie…' });
-        await client.waitForTransactionReceipt({ hash });
-        addTransaction(address, hash, plan.chainId, plan.summary);
+        await waitBestEffort(hash, 'order');
+        if (isTxHash(hash)) addTransaction(address, hash, plan.chainId, plan.summary);
 
         if (plan.preview.direction === 'open-short') {
           saveHedgeOpen({ sizeUsd: plan.preview.sizeUsd, collateralUsd: plan.preview.collateralUsdc, ts: new Date().toISOString() });
