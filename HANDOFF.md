@@ -18,16 +18,8 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 2026-08-20] **Śledzenie realnych pozycji — 5/5 sanity
-  ZIELONE.** Rebuild (`npm run build` czysty, 0 `Math.pow(2n`) + `nssm
-  restart homos-bot`+`homos-server` (oba RUNNING). Po ~2 min od restartu:
-  `.bot/positions-history.ndjson` ma obie próbki (#953427 $2.28,
-  #953465 $95.02, `mainnet-usdc-weth-030`, `inRange:true`, `price/lo/hi`
-  obecne); `.bot/positions-hodl.json` ma 2 kotwice (`a0`/`a1`/`poolId`/
-  `anchoredAt` dla obu tokenId); `/api/positions-history` z Bearer tokenem
-  z `.env` → 200. Skrzynka pusta.
-(Skrzynka pusta — raport CC-Win hUp 5/5 + cross-walidacja 6/6 ODEBRANY
-20.08 wieczór; tabele w gicie, werdykt i agenda w DECYZJE-2026-08-26.md.)
+(Skrzynka pusta — raport CC-Win "śledzenie realnych pozycji 5/5 zielone"
+ODEBRANY 20.08 wieczór.)
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 2026-08-20 wieczór] P10 ODEBRANA ✅ (raport skasowany wg
@@ -44,9 +36,12 @@
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-(Skrzynka pusta — dokumenty [DECYZJE-2026-08-26.md NOWY, CONTEXT.md,
-RESEARCH-QUEUE.md] wypchnięte, bez pingu CC-Win jak zlecono.)
+- [Fable→CC-Mac, 2026-08-20 wieczór] Commit+push drobnej poprawki UI z
+  odbioru P10 (uwaga Rafała): `src/components/MorningCockpit.tsx` — zielony
+  pasek zakresu (P1) na kartach pozycji pokazuje się już TYLKO jako fallback
+  gdy wykres cena-vs-pasmo nie ma jeszcze ≥2 próbek (potem był duplikatem).
+  tsc czysty. Po pushu ping CC-Win: sam rebuild UI (`npx webpack --mode
+  production`), bez restartu usług.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-(hUp 5/5 + cross-walidacja 6/6 zrobione i wypchnięte — pełny raport w
-@Fable wyżej. bot/config.ts nietknięty.)
+(Skrzynka pusta.)

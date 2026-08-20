@@ -603,9 +603,14 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                       </span>
                       <span className="muted">{p.valueUsd !== null ? fmtUsd(p.valueUsd) : '— (bez wyceny)'}</span>
                     </div>
-                    <div className={`range-bar ${p.inRange ? 'in-range' : 'out-of-range'} cockpit-range-bar`}>
-                      <div className="range-bar-marker" style={{ left: `${pct}%` }} />
-                    </div>
+                    {/* Stary pasek zakresu (P1) tylko jako FALLBACK, dopóki
+                        wykres cena-vs-pasmo nie ma danych — potem duplikat
+                        (uwaga Rafała z odbioru P10: "nie powinien być wywalony?") */}
+                    {posHistory.length < 2 && (
+                      <div className={`range-bar ${p.inRange ? 'in-range' : 'out-of-range'} cockpit-range-bar`}>
+                        <div className="range-bar-marker" style={{ left: `${pct}%` }} />
+                      </div>
+                    )}
                     {p.feesUsd > 0.001 && <div className="cockpit-position-fees muted">Nieodebrane fee: {fmtUsd(p.feesUsd)}</div>}
 
                     {posHistory.length >= 2 ? (
