@@ -1561,3 +1561,29 @@ pipeline'u (fix shell:true + HyperSync, start 07:30) — raport z Windows
 wpada dopiero o 08:45, poprosiłem @CC-Win o potwierdzenie i świeży ranking
 selektora po tym fakcie. Nic nie wymaga Twojej decyzji teraz; jeśli
 pipeline padnie tym samym błędem co poprzednio, dostaniesz sygnał osobno.
+
+### 2026-08-20 07:5x — Sesja Fable-desktop (poranny brief): brak śladów dzisiejszego przebiegu, ponowna prośba do CC-Win
+Rutyna: `git log` bez nowych commitów od wczoraj 14:48 (ba04a21/54a7dee/
+4b95fe1/041b872 — fixy API-adresu na Macu/iPhone + porządki RESEARCH-QUEUE,
+mobile domknięte). `.agent-queue/` już nie istnieje w repo (reorganizacja
+struktury — bez znaczenia dla briefu, ostatnio i tak nieużywana od 11.08).
+HANDOFF @Fable: zastałem pustą skrzynkę, ale @CC-Win miał nieodebrane
+potwierdzenie wdrożenia fixu API-adresu (deploy OK, `curl` 200) — odebrane
+i skasowane. KLUCZOWE (pkt 3 rutyny): wg SELECTOR-LOG z 19.08 dzisiejszy
+przebieg 07:30 miał być pierwszym w pełni czystym testem po fixie
+HyperSync (`npm install @envio-dev/hypersync-client` na Windows) — ale
+`.bot/` na Macu nadal STALE z 17.08 10:43 i `data/pipeline.log` bez wpisu
+nowszego niż 17.08 (repo Maca nie ma żywych danych bota, to oczekiwane).
+Brak commitów/wpisów CC-Win potwierdzających wynik dzisiejszego testu —
+dopisałem do @CC-Win prośbę o wklejenie ogona observer.log
+(linie "selector:"/"ranking dnia") + tail pipeline-task.log. Brak nowej
+propozycji OPEN/ROTATE do zalogowania w SELECTOR-LOG — najnowsza znana
+to WETH-USDT 0.05% @ Ethereum z 19.08 (13.1% APY, bez walidacji, obserwacja).
+
+**Brief dla Rafała:** Bez zmian technicznych od wczorajszego popołudnia
+(ostatnie commity to fixy mobile/WalletConnect, wszystko domknięte).
+Nie mam jeszcze potwierdzenia, czy dzisiejszy pierwszy pełny test fixu
+HyperSync na Windows (start 07:30) przeszedł czysto — poprosiłem @CC-Win
+o wklejenie logów po przebiegu, bo repo na Macu nie widzi danych bota
+na żywo. Nic nie wymaga Twojej decyzji teraz; jeśli test padnie, dostaniesz
+sygnał osobno po odpowiedzi CC-Win.
