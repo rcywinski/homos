@@ -461,3 +461,84 @@ styles.css). bot/** nie ruszać (zmiana w paper.ts już zrobiona przez Fable).
       legenda pod wykresem ceny: "niebieskie pasmo = zakres bota · czarna
       linia = cena".
 - [x] typecheck czysty dla PaperTradingPanel.tsx.
+
+## PARTIA 8 — ROTATE: automatyczne [Zatwierdź] (cross-pool) — zlecone przez Fable 20.08 (decyzja Rafała)
+
+KONTEKST: domknięcie świadomego TODO z Partii 4b. `planRotate()` w
+`src/utils/rebalanceBuilder.ts` JUŻ ISTNIEJE (Fable, tsc czysty) — obsługuje
+starą i nową pozycję w RÓŻNYCH pulach TEJ SAMEJ sieci: ta sama para (zmiana
+tieru) albo para z jednym wspólnym tokenem (np. WETH/USDC → cbBTC/WETH).
+Sekwencja 3–4 kroków: zamknij starą → [swap unikalny→wspólny w starej puli]
+→ [swap wyrównujący w nowej puli] → mint w nowej. Zwraca `RotatePlan`
+(steps/approvals/preview — kształt analogiczny do RebalancePlan).
+
+ZAKRES TWARDY: tylko src/** (hook + modal + karta ROTATE w MorningCockpit);
+rebalanceBuilder.ts NIE ruszać (gotowy); bot/** nie dotykać.
+
+1. **`useRotateExecution.ts`** (nowy hook, wzorzec useRebalanceExecution z
+   P4b): buduje dwa `Pool` (stara pozycja: z `PortfolioPosition.pool`; nowa:
+   `resolveBotPool(poolId)` z useCockpitActions — JUŻ istnieje), woła
+   `planRotate`, wykonuje kroki sekwencyjnie przez Rabby (approvals wg
+   allowance, symulacja client.call przed wysłaniem — jak w P4b), mint
+   PRZEBUDOWANY przed wysłaniem z faktycznych sald (`buildMintStep` z
+   pool=NOWA). Postęp w localStorage (saveProgress — klucz per stary
+   tokenId; totalSteps zmienny 3/4). Failure w środku → komunikat "środki
+   bezpieczne na walletcie, dokończ pozostałe kroki".
+2. **Modal sekwencji** — reużyć `RebalanceSequenceModal` jeśli da się
+   sparametryzować listą kroków (plan.steps ma już labele/detail); inaczej
+   bliźniaczy `RotateSequenceModal`.
+3. **Karta ROTATE w MorningCockpit**: przycisk [Zatwierdź →] obok
+   istniejących ręcznych [1. Zamknij starą →]/[2. Otwórz nową →] (ręczne
+   ZOSTAJĄ jako fallback). WARUNEK pokazania [Zatwierdź]: ta sama sieć
+   (chainId starej pozycji == chainId puli z propozycji) — przy różnych
+   sieciach pokaż notkę "rotacja cross-chain: użyj kroków ręcznych"
+   (planRotate i tak rzuci — złapać i pokazać komunikat).
+4. **Stany brzegowe**: brak pozycji do zamknięcia (OPEN-only) → karta bez
+   zmian; pary rozłączne (throw z planRotate) → notka + kroki ręczne.
+
+- [ ] useRotateExecution (plan → sekwencja z symulacją i resume)
+- [ ] modal sekwencji (reuse/bliźniak)
+- [ ] karta ROTATE: [Zatwierdź] + warunek samej sieci + fallback ręczny
+- [ ] stany brzegowe + typecheck 0 błędów w src/
+
+## PARTIA 9 — [Zatwierdź hedge] na GMX (karta propozycji HEDGE) — zlecone przez Fable 20.08 (decyzja Rafała)
+
+KONTEKST: krok 2 planu automatyzacji hedge (F4-op). `src/utils/hedgeBuilder.ts`
+JUŻ ISTNIEJE (Fable, tsc czysty): `planHedgeOpen({sizeEth, ethPriceUsd,
+recipient, ...})` / `planHedgeClose(...)` → `{tx, approval, summary, preview}`.
+Jeden multicall ExchangeRoutera GMX (value = executionFee w ETH!), approval
+USDC→Router osobno. Adresy/ABI zweryfikowane 20.08 (komentarze w pliku).
+
+ZAKRES TWARDY: tylko src/**; hedgeBuilder.ts NIE ruszać; bot/** nie dotykać.
+
+1. **Karta propozycji HEDGE** (`MorningCockpit.tsx`): propozycje bota
+   `kind==='HEDGE'` (base-030, v1.2) dostają przycisk [Zatwierdź hedge →]
+   obok istniejącej notki ręcznej (notka ZOSTAJE jako fallback). `sizeEth`
+   z propozycji (pole w note/propozycji — sprawdź realny kształt w
+   bot/observer.ts proposeExitTrend, gałąź hedge), `ethPriceUsd` z
+   `bot.state` tej puli.
+2. **Hook `useHedgeExecution.ts`**: (a) switch sieci na Arbitrum (42161) —
+   hedge jest ZAWSZE na Arbitrum, niezależnie od sieci puli LP (wzorzec
+   cross-chain switch + świeży walletClient z useCockpitActions); (b) saldo
+   +allowance USDC (natywne 0xaf88...5831) — gdy USDC za mało, pokaż ile
+   brakuje i NIE buduj tx (bez auto-swapów w v1); (c) approve jeśli trzeba →
+   (d) SYMULACJA eth_call multicalla (OBOWIĄZKOWA — weryfikuje też ABI o
+   żywy kontrakt; revert → pokaż błąd, nie wysyłaj) → (e) wysyłka przez
+   Rabby; value tx = executionFee (preview.executionFeeEth).
+3. **Modal potwierdzenia**: summary + preview (rozmiar ETH/$, collateral,
+   acceptable price, execution fee) + ostrzeżenie "zlecenie wykona keeper
+   GMX po cenie oracle (max poślizg = acceptable); status pozycji sprawdź
+   na app.gmx.io" + notka o pierwszym teście na małej kwocie.
+4. **Zamknięcie**: przy zgaśnięciu sygnału bot NIE wysyła propozycji CLOSE
+   (na razie) — w karcie pozycji hedge (jeśli user zapisał otwarcie —
+   localStorage `homos_hedge_open` z {sizeUsd, collateralUsd, ts}) pokaż
+   [Zamknij short →] przez planHedgeClose. Prosto: zapis stanu przy udanym
+   otwarciu, czyszczenie przy zamknięciu.
+5. **Stany brzegowe**: brak ETH na executionFee na Arbitrum → komunikat;
+   sizeUsd < $11 (throw z buildera) → komunikat "za mała nadwyżka na hedge".
+
+- [ ] karta HEDGE: [Zatwierdź hedge →] + fallback ręczny
+- [ ] useHedgeExecution: switch→saldo/allowance→approve→SYMULACJA→wysyłka
+- [ ] modal potwierdzenia z preview i ostrzeżeniami
+- [ ] [Zamknij short →] + stan w localStorage
+- [ ] stany brzegowe + typecheck 0 błędów w src/

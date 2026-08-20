@@ -277,7 +277,10 @@
 
 ## D. OPERACYJNE PRZYPOMNIENIA
 
-- [ ] Test fizycznego rebootu Windows (usługi NSSM mają wstać same).
+- [x] Test fizycznego rebootu Windows — ✅ POTWIERDZONE (Rafał, 20.08: kilka
+  restartów, usługi NSSM wstają same). POZOSTAŁO (Rafał, ręcznie w BIOS):
+  ustawić auto-power-on po awarii zasilania (AC Power Loss → Power On /
+  Restore Last State) — 19.08 komputer nie wstał sam po zaniku prądu.
 - [~] TG_TOKEN/TG_CHAT → alerty Telegram: bot Telegram ZAŁOŻONY i PRZETESTOWANY
   17.08 (Rafał; sendMessage dochodzi na telefon, TG_CHAT=8712401405, token
   u Rafała — NIE do repo). POZOSTAŁO: wpisać oba do `C:\Projects\homos\.env`
@@ -392,8 +395,17 @@
   (rozrzut = niepewność silnika); mainnet-usdc-usdt +1.4…+12 (kontrola OK);
   wsteth-weth **−2…+11 vsHODL** (konserwatywnie ujemne + pełna beta ETH).
   Rebalanse natychmiastowe wszędzie ujemne (chasing); histereza obowiązkowa.
-  ZOSTAŁO: tbtc-wbtc (czeka na QUOTE_REF USD/BTC — kod Fable; referencja
-  wbtc-usdc-030 pobrana).
+  ✅ tbtc-wbtc DOMKNIĘTE 20.08 (Fable): QUOTE_REF_EXT w load.ts (referencja
+  USD-za-WBTC z wbtc-usdc-030, jawny `assetIsToken0` — cfg.ethIsToken0
+  referencji mówi o ETH, nie o WBTC). Wynik pegged.ts (132k swapów, 367d,
+  $10k): HODL −44.7% APR (rok spadkowy BTC — sleeve to pełna beta BTC, nie
+  parking USD!); najlepsze ±0.10–0.20% h=24h ledwie +2.0–2.3 p.p. vsHODL
+  (fees $239–345/rok przy gas $32–104); wąskie bez histerezy MASAKRA
+  (±0.05%: $9.6k gazu, −100%). Rekordowe v/tvl 10.5 NIE zmienia obrazu:
+  dywidenda koncentracji istnieje, ale przy $10k to ~$200/rok za pełną
+  ekspozycję kierunkową BTC. "3%/tydz" na v3 pegged: potwierdzone NIE
+  ISTNIEJE. → F.C: rekomendacja "świadome NIE dla sleeve pegged" STOI,
+  teraz z kompletem danych (ostatni kandydat policzony).
 - [ ] **C: decyzja (→ Rafał)** — rekomendacja Fable po F.B: **świadome NIE
   dla sleeve'u pegged na v3** ("3%/tydz nie istnieje"; konserwatywnie 1–3%/r).
   Jedyny sensowny kandydat: mała pozycja arb-usdc-usdt jako parking kapitału.
@@ -489,12 +501,15 @@
   blind signing dla multicalli (kompensowane podglądem Rabby), migracja
   pozycji = transfer NFT albo zamknij-otwórz z nowego adresu.
 
-- [ ] **AUTOMATYZACJA HEDGE (plan 3-stopniowy, zaakceptowany kierunkowo 17.08)**:
+- [~] **AUTOMATYZACJA HEDGE (plan 3-stopniowy, zaakceptowany kierunkowo 17.08)**:
   (1) TERAZ: propozycja + ręczny GMX (faza testów). (2) NASTĘPNY KROK
-  BUDOWLANY: builder zamówień GMX v2 (createOrder na ExchangeRouter,
-  rozmiar z propozycji HEDGE, 1×, limity poślizgu) + [Zatwierdź hedge]
-  w kokpicie — jeden podpis w Rabby, wzorzec rebalanceBuilder (sesja Fable
-  + partia Sonnet). (3) AUTO po okresie PROPONUJ: preferencyjnie Hyperliquid
+  BUDOWLANY — **builder ZROBIONY 20.08 (Fable)**: `src/utils/hedgeBuilder.ts`
+  (planHedgeOpen/planHedgeClose — multicall ExchangeRoutera: sendWnt fee +
+  sendTokens USDC + createOrder MarketIncrease/Decrease, short 1×, acceptable
+  price = limit poślizgu; adresy z contracts.json 20.08 + rynek z żywego API;
+  struct z autoCancel/dataList — NAJNOWSZY kształt). UI = TASKS-UI Partia 9
+  (Sonnet). Przed pierwszym realnym użyciem: symulacja eth_call (wymuszona
+  w partii) + test na ~$15. (3) AUTO po okresie PROPONUJ: preferencyjnie Hyperliquid
   agent-wallet (klucz może handlować, NIE może wypłacać — ograniczony promień
   rażenia) albo osobny portfel operacyjny GMX na Windows (DPAPI, tylko margin
   hedge'a); twarde limity w kodzie (max notional, max zleceń/dzień,

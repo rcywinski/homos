@@ -24,14 +24,25 @@ export const QUOTE_WETH_REF: Record<string, string> = {
   'base-cbbtc-weth-005-365d': 'base-weth-usdc-030-365d',
   'mainnet-wtao-weth-100': 'mainnet-usdc-weth-005',
   'mainnet-wsteth-weth-001': 'mainnet-usdc-weth-005-365d', // F.B: LST, token1=WETH
-  // UWAGA: mainnet-tbtc-wbtc-001 kwotowany w WBTC — wymaga referencji USD/BTC
-  // (brak cache WBTC/USDC; zadanie w RESEARCH-QUEUE F) — NIE liczyć silnikiem do tego czasu.
+};
+
+/** QUOTE_REF (20.08): pule kwotowane w INNYM aktywie niż WETH/stable (np.
+ *  tbtc-wbtc → USD-za-WBTC). Silnikowo identyczne z quote:'WETH' — spec.quote
+ *  znaczy tak naprawdę "noga kwotująca wyceniana zewnętrzną referencją USD".
+ *  `assetIsToken0`: czy wyceniany asset jest token0 W PULI REFERENCYJNEJ —
+ *  jawnie, bo cfg.ethIsToken0 referencji mówi o ETH, nie o naszym assecie
+ *  (wbtc-usdc-030 ma ethIsToken0:false, a WBTC JEST token0). */
+export const QUOTE_REF_EXT: Record<string, { ref: string; assetIsToken0: boolean }> = {
+  // token0=tBTC(d18), token1=WBTC(d8) → quote asset WBTC = token1 (spec.ethIsToken0:false z cfg ✓)
+  'mainnet-tbtc-wbtc-001': { ref: 'mainnet-wbtc-usdc-030', assetIsToken0: true },
 };
 
 const SAMPLE_EVERY = 100; // próbkowanie serii referencyjnej (co N-ty swap)
 
-/** step-function USD-za-WETH po bloku, z cache pary USDC/WETH */
-async function loadUsdRef(refId: string): Promise<(b: number) => number> {
+/** step-function USD-za-<asset> po bloku, z cache pary <asset>/stable.
+ *  `assetIsToken0` — jawny override orientacji (domyślnie cfg.ethIsToken0,
+ *  poprawne dla referencji USDC/WETH; dla innych assetów podać jawnie). */
+async function loadUsdRef(refId: string, assetIsToken0?: boolean): Promise<(b: number) => number> {
   const metaPath = path.join(CACHE, `${refId}.meta.json`);
   const dataPath = path.join(CACHE, `${refId}.ndjson`);
   if (!fs.existsSync(metaPath) || !fs.existsSync(dataPath)) {
@@ -48,7 +59,7 @@ async function loadUsdRef(refId: string): Promise<(b: number) => number> {
     const j = JSON.parse(line);
     const sqrtP = Number(BigInt(j.sp)) / 2 ** 96;
     const p = sqrtP * sqrtP * 10 ** (cfg.token0Decimals - cfg.token1Decimals); // token1/token0 human
-    const usd = cfg.ethIsToken0 ? p : 1 / p;
+    const usd = (assetIsToken0 ?? cfg.ethIsToken0) ? p : 1 / p;
     blocks.push(j.b);
     prices.push(usd);
   }
@@ -122,6 +133,10 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
   if (QUOTE_WETH_REF[id]) {
     spec.quote = 'WETH';
     spec.usdPerEth = await loadUsdRef(QUOTE_WETH_REF[id]);
+  } else if (QUOTE_REF_EXT[id]) {
+    // silnikowo to samo co quote:'WETH' — zewnętrzna referencja USD nogi kwotującej
+    spec.quote = 'WETH';
+    spec.usdPerEth = await loadUsdRef(QUOTE_REF_EXT[id].ref, QUOTE_REF_EXT[id].assetIsToken0);
   }
 
   const swaps: SwapEv[] = [];
