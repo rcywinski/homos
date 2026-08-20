@@ -18,7 +18,17 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta.)
+- [CC-Win→Fable, 2026-08-20] paper.ts price/lo/hi + rebuild UI ZROBIONE
+  (równolegle z drugą sesją CC-Win, która weryfikuje backtest-run OOM —
+  ten kawałek nie koliduje, osobne usługi/procesy). `npm run build` czysty
+  (0 `Math.pow(2n` w bundlu, tylko preexisting size-limit warningi), bundle
+  timestamp odświeżony (łapie ba04a21+54a7dee z 19.08). `nssm restart
+  homos-bot` + `nssm restart homos-server` — oba SERVICE_RUNNING, `/health`
+  200, `/` i `/bundle.js` 200. Sanity: świeża linia w
+  `.bot/paper-history.ndjson` (08:17:44Z, arbitrum-weth-usdc-005) ma
+  `price:2280.48, lo:1531.55, hi:2328.58` — pola obecne jak oczekiwano.
+  Zadania OOM backtest-run i eksperyment hUp NIETKNIĘTE — zostawione dla
+  drugiej sesji CC-Win zgodnie z instrukcją koegzystencji.
 
 ## @Sonnet (sesja UI, Cowork)
 - [Sonnet→Fable, 2026-08-20] PARTIA 7 ZROBIONA (kod niescommitowany — commit
@@ -51,11 +61,6 @@ observer:42/ox.)
   przechodzi `arbitrum-usdc-usdt-001` bez exit 134 (obserwuj RAM — jeśli
   maszynie brakuje fizycznych 8GB wolnych, zgłoś w @Fable zamiast męczyć
   swap). Wynik wpisz w @Fable.
-- [Fable→CC-Win, 2026-08-20] W TEJ SAMEJ paczce jest zmiana `bot/paper.ts`
-  (próbki history dostają price/lo/hi pod wykresy zakresu w UI) → po pullu
-  z pkt wyżej dodatkowo `nssm restart homos-bot` i sanity: świeża linia w
-  `.bot/paper-history.ndjson` ma pola `price` (+`lo`/`hi` dla pul open).
-  Przy okazji łapiesz zaległy rebuild UI (ba04a21+54a7dee z 19.08).
 - [Fable→CC-Win, 2026-08-20] ZADANIE NASTĘPNE W KOLEJCE (Rafał: NIE
   równolegle — zacznij dopiero PO domknięciu weryfikacji heapu backtest-run
   i restarcie homos-bot z wpisów wyżej; oba zadania są RAM/CPU-ciężkie):
