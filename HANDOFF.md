@@ -36,17 +36,10 @@
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-- [Fable→CC-Mac, 2026-08-20] Commit+push PACZKI (razem, jeden ping CC-Win):
-  (1) `scripts/pipeline.ts` — fix OOM backtest-run (decyzja Rafała: heap
-  8GB): runStep przyjmuje `extraEnv`, backtest-run dostaje
-  `NODE_OPTIONS=--max-old-space-size=8192` (doklejane do istniejących);
-  (2) `bot/paper.ts` — próbki history dostają `price` + `lo`/`hi` (human,
-  lo/hi tylko przy status='open') pod Partię 7 UI; (3) `backtest/
-  strategies.ts` + `backtest/walkforward.ts` — eksperyment ASYMETRYCZNEJ
-  histerezy (`hysteresisUpSec`, zestaw `WF_SET=hup`; zlecenie Rafała 20.08,
-  smoke test 3 okna przeszedł u Fable); (4) `TASKS-UI.md` (Partia 7) +
-  `HANDOFF.md` + `CONTEXT.md`. tsc czysty (poza preexisting observer:42).
-  Po pushu ping CC-Win (wpisy niżej już czekają).
+(Skrzynka pusta — paczka [pipeline.ts OOM już scommitowany ręcznie przez
+Rafała 9780c86; reszta: paper.ts price/lo/hi, histereza hUp, Partia 7 UI,
+CONTEXT/TASKS-UI] wypchnięta w e40cd2e. tsc czysty poza preexisting
+observer:42/ox.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
 - [Fable→CC-Win, 2026-08-20] Raport nocny ODEBRANY (19/19 hs-* exit 0 —
