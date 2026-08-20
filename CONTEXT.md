@@ -38,6 +38,42 @@
 
 ## 4. Dziennik sesji
 
+### 2026-08-20 — Sesja analityczna (Fable) — odbiór nocy: PIERWSZY CZYSTY AUTOMAT + fix OOM
+Noc 20.08 = potwierdzenie wczorajszej roboty: pipeline 07:30 **19/19 kroków
+hs-* exit 0, zero asysty** (pierwszy w pełni czysty przebieg automatu w
+historii projektu), cache OK=[19] BRAKI=[], observer/state żywe (08:18–08:23).
+Selector 06:02Z: WETH-CBBTC@Base 46.7%, WETH-USDC@Base 43.6%, WETH-USDT@ETH
+33.1%, USDC-WETH@ETH 33.0%; pyłek #953427 poprawnie pominięty ($2.26<$25).
+Jedyna usterka nocy: `backtest-run` exit 134 (OOM, Node ~4GB heap) na
+`arbitrum-usdc-usdt-001` (685k swapów/365d) — nie-HyperSync, czysty brak
+pamięci; selection i sweep przeszły. Decyzja Rafała: **heap 8GB teraz**.
+Fix (Fable, na dysku): `scripts/pipeline.ts` — runStep z `extraEnv`,
+backtest-run dostaje `NODE_OPTIONS=--max-old-space-size=8192` (doklejane,
+nie nadpisuje). tsc czysty (poza preexisting observer:42). Commit u CC-Mac,
+weryfikacja tego samego dnia (`--only backtest`) u CC-Win — wpisy w HANDOFF.
+
+DOGRYWKA ~09:3x — pytania Rafała o noc, zbadane NA ŻYWYCH danych (API bota
+przez Chrome, token z localStorage kokpitu; .bot/ na Macu stale z 17.08):
+(1) Telegram 23:04 PL = paper EXIT_TREND base-cbbtc-weth-005 (19.08
+21:04Z): ETH +16% nad EMA7d, BTC nie nadążył → cena WZGLĘDNA cbBTC/WETH
+gap −5%+ pod EMA → czysty exit wg v1.1. Zamknięte $11 084 → cash $11 079
+(+10.8% od startu 18.08, koszt $5.62). Gap rano wciąż −7.9% → re-entry
+(half, > −2.5%) nieaktywny — cash czeka ZGODNIE z algorytmem.
+(2) HODL > bot na 5/5 (−305…−682 na $10k): ETH +18.7% od otwarcia
+(~1897→2253) — LP short gamma, 3 pule ETH/stable poza zakresem W GÓRĘ od
+9–11h (100% w USDC), rebalans zablokowany histerezą h=24 → najwcześniej
+dziś wieczorem, jeśli payback≤7d przejdzie. Nominalnie WSZYSTKIE pozycje
+na plusie. To oczekiwane zachowanie na reżimie trendu, nie bug — bramka
+wymaga bicia HODL na ≥2 reżimach łącznie, nie w każdym oknie.
+(3) Do agendy analizy ~26.08 dopisane (RESEARCH-QUEUE nietknięty, lista tu):
+a) asymetria histerezy / reakcja na trend UP (np. krótsze h przy wyjściu
+górą albo bezpiecznik UP), b) parking cash w stables na yield podczas
+exit (teraz cash leży bezczynnie), c) seria sweep-base030. ZASADA
+podtrzymana: zero strojenia po 2 dniach paper tradingu, zmiany tylko
+przez walkforward. Raportu morning-2026-08-20.md nie zweryfikowano
+(GitHub 404 w profilu Chrome — repo prywatne/brak logowania; dane wzięte
+prosto z API).
+
 ### 2026-08-19 — Sesja analityczna (Fable) — odbiór nocy: root cause pipeline'u, ranking dnia #2, decyzje
 Pipeline 07:30 padł na wszystkich 19 krokach hs-*, ale NIE przez shell:true —
 ten fix działa (kroki się odpalają, fetch-llama przeszedł, universe.json 1.2h).

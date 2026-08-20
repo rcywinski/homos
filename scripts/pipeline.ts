@@ -33,13 +33,13 @@ const log = (m: string) => {
   fs.appendFileSync(MAIN_LOG, line + '\n');
 };
 
-function runStep(name: string, script: string, args: string[] = []): Promise<number> {
+function runStep(name: string, script: string, args: string[] = [], extraEnv: Record<string, string> = {}): Promise<number> {
   return new Promise((resolve) => {
     const logFile = path.join(LOGDIR, `${name}-${Date.now()}.log`);
     const out = fs.createWriteStream(logFile);
     // shell:true na Windows — spawn() nie uruchamia bezpośrednio npx.cmd (ENOENT);
     // ten sam wzorzec co w agent-runner-git.ts (sprawdzony na serwerze Windows).
-    const child = spawn('npx', ['tsx', script, ...args], { cwd: ROOT, env: process.env, shell: process.platform === 'win32' });
+    const child = spawn('npx', ['tsx', script, ...args], { cwd: ROOT, env: { ...process.env, ...extraEnv }, shell: process.platform === 'win32' });
     child.stdout.on('data', (d) => out.write(d));
     child.stderr.on('data', (d) => out.write(d));
     child.on('close', (code) => {
@@ -109,7 +109,10 @@ function swapsFresh(): { fresh: string[]; stale: string[] } {
   }
 
   if (!only || only === 'backtest') {
-    if (!(await withRetry('backtest-run', () => runStep('backtest-run', 'backtest/run.ts'), 2))) failures.push('backtest-run');
+    // 8GB heap — OOM 20.08 na arbitrum-usdc-usdt-001 (685k swapów/365d) przy
+    // domyślnym ~4GB; NODE_OPTIONS dokleja się do istniejących, nie nadpisuje.
+    const heap = { NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --max-old-space-size=8192`.trim() };
+    if (!(await withRetry('backtest-run', () => runStep('backtest-run', 'backtest/run.ts', [], heap), 2))) failures.push('backtest-run');
     if (!(await withRetry('backtest-selection', () => runStep('backtest-selection', 'backtest/selection.ts'), 2)))
       failures.push('backtest-selection');
     // sweep na najpłynniejszej puli Base (kalibracja parametrów)
