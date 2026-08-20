@@ -74,6 +74,29 @@ przez walkforward. Raportu morning-2026-08-20.md nie zweryfikowano
 (GitHub 404 w profilu Chrome — repo prywatne/brak logowania; dane wzięte
 prosto z API).
 
+~10:1x — EKSPERYMENT ASYMETRYCZNEJ HISTEREZY zlecony (decyzja Rafała po
+analizie HODL>bot na pompie): `hysteresisUpSec` w volAdaptive i
+volAdaptiveTrend (kierunek wyjścia w cenie względnej bazy: ethIsToken0 →
+górą=t≥hi, inaczej t<lo), zestaw `WF_SET=hup` w walkforward.ts — referencje
+zamrożone v1.1 (k=3, re>EMA) i profil cbBTC (k=2, czysty exit) vs hUp=6/12/48h
+(hipoteza dwustronna: szybciej zbiera fees vs kupuje szczyt po pompie).
+Smoke test na Macu (3 okna, base-030): działa; sygnał wstępny — k=2+krótkie
+hUp w oknie up −5.6% (chase). Pełne 5×22 okna u CC-Win na świeżym cache
+(z pompą 19–20.08). Werdykt u Fable/Rafała; v1.2 zamrożony do decyzji.
+Uwaga warsztatowa: node_modules w repo jest darwin — w kontenerze Linux
+tsx odpalać z zewnętrznej instalacji (/tmp), NIE robić npm install w repo.
+
+~09:5x — WIDOCZNOŚĆ ZAKRESU NA WYKRESACH PAPER (pomysł Rafała): historia
+paper nie zapisywała ceny ani granic zakresu, więc na sparkline'ach nie
+widać KIEDY pozycja wypadła. Zrobione (Fable): `bot/paper.ts` — próbki
+history dostają `price` + `lo`/`hi` (human; lo/hi tylko przy open); tsc
+czysty. Zlecone: TASKS-UI.md PARTIA 7 (Sonnet) — cieniowanie okresów
+poza-zakresem/cash na equity-vs-HODL (działa też na starej historii z pól
+inRange/status), mini-wykres cena vs pasmo zakresu (segmenty per lo/hi),
+znaczniki EXIT_TREND/REENTRY/REBALANCE. HODL celowo bez zakresów (50/50
+zawsze — nie ma czego rysować). CC-Mac: commit paczki; CC-Win: restart
+homos-bot + sanity nowych pól.
+
 ### 2026-08-19 — Sesja analityczna (Fable) — odbiór nocy: root cause pipeline'u, ranking dnia #2, decyzje
 Pipeline 07:30 padł na wszystkich 19 krokach hs-*, ale NIE przez shell:true —
 ten fix działa (kroki się odpalają, fetch-llama przeszedł, universe.json 1.2h).

@@ -66,6 +66,9 @@ export const volAdaptive = (opts: {
   horizonDays: number;
   /** min czas poza zakresem przed rebalansem (sekundy) */
   hysteresisSec: number;
+  /** ASYMETRIA (eksperyment 20.08): osobna histereza gdy cena WZGLĘDNA bazy
+   *  (ETH/cbBTC) wyszła GÓRĄ z zakresu; brak = symetrycznie hysteresisSec */
+  hysteresisUpSec?: number;
   /** wymagany zwrot kosztu z fee w N dni (Infinity = wyłączony) */
   maxPaybackDays: number;
   minWidth?: number;
@@ -73,7 +76,7 @@ export const volAdaptive = (opts: {
 }): Strategy => {
   let outSince: number | null = null;
   return {
-    name: `Adaptacyjna k=${opts.k} h=${(opts.hysteresisSec / 3600).toFixed(0)}h payback≤${opts.maxPaybackDays}d`,
+    name: `Adaptacyjna k=${opts.k} h=${(opts.hysteresisSec / 3600).toFixed(0)}h${opts.hysteresisUpSec !== undefined ? `/hUp=${(opts.hysteresisUpSec / 3600).toFixed(0)}h` : ''} payback≤${opts.maxPaybackDays}d`,
     init: (ctx) => {
       const w = Math.min(
         Math.max(opts.k * ctx.volDaily * Math.sqrt(opts.horizonDays), opts.minWidth ?? 0.01),
@@ -90,7 +93,11 @@ export const volAdaptive = (opts: {
         return;
       }
       if (outSince === null) outSince = ctx.ev.ts;
-      if (ctx.ev.ts - outSince < opts.hysteresisSec) return;
+      // kierunek wyjścia w cenie WZGLĘDNEJ bazy: ethIsToken0 → cena ~1.0001^t
+      // (górą = t≥hi); eth jako token1 → cena ~1/1.0001^t (górą = t<lo)
+      const outUp = ctx.spec.ethIsToken0 ? ctx.ev.t >= p.hi : ctx.ev.t < p.lo;
+      const hSec = outUp ? opts.hysteresisUpSec ?? opts.hysteresisSec : opts.hysteresisSec;
+      if (ctx.ev.ts - outSince < hSec) return;
 
       // warunek opłacalności: koszt rebalansu musi się zwrócić z fee w maxPaybackDays
       const w = Math.min(
@@ -142,6 +149,8 @@ export const volAdaptiveTrend = (opts: {
   k: number;
   horizonDays: number;
   hysteresisSec: number;
+  /** ASYMETRIA (eksperyment 20.08): osobna histereza przy wyjściu GÓRĄ (jw.) */
+  hysteresisUpSec?: number;
   maxPaybackDays: number;
   trendHLDays: number;
   trendThresh: number;
@@ -229,7 +238,7 @@ export const volAdaptiveTrend = (opts: {
   };
 
   return {
-    name: `Adapt k=${opts.k} h=${(opts.hysteresisSec / 3600).toFixed(0)}h + trend(${opts.mode},HL${opts.trendHLDays}d,${(opts.trendThresh * 100).toFixed(0)}%${opts.volGateRatio ? `,vg${opts.volGateRatio}` : ''}${opts.trendThresh2 !== undefined ? `,t2=${(opts.trendThresh2 * 100).toFixed(0)}%` : ''}${opts.reentryAboveEma ? ',re>ema' : ''})`,
+    name: `Adapt k=${opts.k} h=${(opts.hysteresisSec / 3600).toFixed(0)}h${opts.hysteresisUpSec !== undefined ? `/hUp=${(opts.hysteresisUpSec / 3600).toFixed(0)}h` : ''} + trend(${opts.mode},HL${opts.trendHLDays}d,${(opts.trendThresh * 100).toFixed(0)}%${opts.volGateRatio ? `,vg${opts.volGateRatio}` : ''}${opts.trendThresh2 !== undefined ? `,t2=${(opts.trendThresh2 * 100).toFixed(0)}%` : ''}${opts.reentryAboveEma ? ',re>ema' : ''})`,
     init: (ctx) => {
       updateTrend(ctx);
       ctx.openPosition(...rangeAround(ctx, width(ctx)));
@@ -260,7 +269,9 @@ export const volAdaptiveTrend = (opts: {
       }
       if (opts.mode === 'block' && down) return; // czekamy aż trend zgaśnie
       if (outSince === null) outSince = ctx.ev.ts;
-      if (ctx.ev.ts - outSince < opts.hysteresisSec) return;
+      const outUp = ctx.spec.ethIsToken0 ? ctx.ev.t >= p.hi : ctx.ev.t < p.lo;
+      const hSec = outUp ? opts.hysteresisUpSec ?? opts.hysteresisSec : opts.hysteresisSec;
+      if (ctx.ev.ts - outSince < hSec) return;
 
       const w = width(ctx);
       const valueUsd = ctx.valueUsd();

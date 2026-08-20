@@ -376,3 +376,69 @@ ZAKRES (wyłącznie src/**):
 Typecheck (`npx tsc --noEmit -p tsconfig.json`): 0 błędów w `src/`.
 Pozostałe błędy (bot/observer.ts, node_modules/ox) preexisting, poza
 zakresem tej sesji — jak w poprzednich partiach.
+
+## PARTIA 7 — Paper trading: widoczność zakresu i momentów wypadnięcia ✅ wykonana (pomysł Rafała 20.08, zlecone przez Fable)
+
+KONTEKST (po co): 19–20.08 ETH +18.7% — 3 pule ETH/stable wypadły z zakresu
+górą, cbBTC poszła w EXIT_TREND. Na sparkline'ach equity-vs-HODL NIE WIDAĆ
+kiedy pozycja wypadła z zakresu ani kiedy siedzi w cash — a to klucz do
+zrozumienia, czemu HODL wygrywa (LP poza zakresem = 100% w jednej nodze).
+HODL nie ma zakresów (trzyma 50/50 zawsze) — wizualizujemy zakres BOTA na tle
+ceny + stany na osi czasu.
+
+DANE (co daje serwer): `history[]` z `/api/paper` ma od zawsze `inRange`
+(bool), `trendDown` (bool), `status` ('open'|'cash'|'pending') per próbka
+15 min; OD 20.08 (commit z tej paczki, po restarcie homos-bot) dochodzą:
+`price` (human, number), `lo`/`hi` (human, granice zakresu — TYLKO gdy
+status='open'; w cash brak pól). Starsze próbki tych pól NIE mają —
+UI musi to przeżyć (feature-detect, nie wykres pusty).
+
+ZAKRES TWARDY: tylko src/** (PaperTradingPanel.tsx, useBotApi.ts typy,
+styles.css). bot/** nie ruszać (zmiana w paper.ts już zrobiona przez Fable).
+
+1. **Typy** (`useBotApi.ts`): `PaperHistoryPoint` + `price?: number`,
+   `lo?: number`, `hi?: number`.
+2. **Cieniowanie stanów na istniejącym sparkline equity-vs-HODL** (działa
+   na CAŁEJ historii, też sprzed 20.08): pod polyline'ami pionowe pasy tła
+   per próbka — `!inRange && status==='open'` → żółtawy (poza zakresem),
+   `status==='cash'` → szary (bezpiecznik, kapitał zaparkowany). Legenda
+   jednolinijkowa pod wykresem. SVG inline, bez bibliotek (wzorzec P5).
+3. **Drugi mini-wykres "cena vs zakres"** (tylko gdy ≥2 próbki mają
+   `price`): linia ceny + pasmo `lo–hi` (rect/area między granicami; przy
+   rebalansie granice się zmieniają schodkowo — rysować pasmo per segment
+   próbek o tych samych lo/hi, nie jednym rectem). W odcinkach cash pasma
+   nie ma (brak lo/hi) — zostaje sama linia ceny na szarym tle z pkt 2.
+   Skala Y: min/max z (price, lo, hi) w oknie ±mały margines. UWAGA na
+   pule quote WETH (cbBTC): price to ~0.0296 — formatować `toPrecision(4)`,
+   nie `toFixed(0)`.
+4. **Znaczniki zdarzeń**: pionowa kreska na obu wykresach w ts zdarzeń
+   z `events[]` (EXIT_TREND ⛔, REENTRY ▶, REBALANCE 🔄) — events już są
+   w odpowiedzi /api/paper, dopasować po poolId+ts.
+5. **Stany brzegowe**: brak `price` we wszystkich próbkach → mini-wykres
+   ceny się nie renderuje (bez notki-błędu, po prostu go nie ma); mieszane
+   (stare+nowe) → cena rysowana od pierwszej próbki z `price`.
+
+- [x] typy PaperHistoryPoint (`price?/lo?/hi?` w useBotApi.ts, feature-detect —
+      starsze próbki sprzed 20.08 tych pól nie mają).
+- [x] cieniowanie stanów na sparkline equity-vs-HODL + legenda — helper
+      `stateBands()` współdzielony z mini-wykresem ceny (żółte tło = poza
+      zakresem, szare = cash), działa na CAŁEJ historii (inRange/status są
+      od zawsze).
+- [x] mini-wykres cena vs pasmo zakresu (`PriceRangeChart`) — pasmo lo–hi
+      rysowane per interwał "próbka→następna próbka" (efekt schodkowy przy
+      rebalansie), linia ceny w ciągłych odcinkach (przerwa tam, gdzie stare
+      próbki nie mają `price` w ogóle), cash bez pasma (samo szare tło +
+      linia ceny, bo `price` jest pisane też w cash — tylko `lo/hi` są
+      warunkowe na status='open'). Formatowanie: `toPrecision(4)` dla pul
+      quote-owanych w WETH (cbBTC), inaczej liczba całkowita USD-podobna.
+- [x] znaczniki zdarzeń EXIT_TREND/REENTRY/REBALANCE na osi czasu —
+      `EventMarkers` (pionowa kreska + `<title>` tooltip), wspólny dla obu
+      wykresów, dopasowany po poolId+ts (poolEvents filtrowane w PoolCard).
+- [x] stany brzegowe: brak `price` we wszystkich próbkach → `PriceRangeChart`
+      zwraca `null` (bez notki błędu, zgodnie ze zleceniem); mieszana
+      historia (stare+nowe) → linia ceny zaczyna się od pierwszej próbki
+      z `price`, nie interpoluje przez dziurę. CSS `paper-range-*` w
+      styles.css (reużyte `paper-range-band-out/cash` w obu wykresach dla
+      spójności wizualnej).
+- [x] typecheck 0 błędów w src/ (`npx tsc --noEmit -p tsconfig.json`) —
+      pozostałe błędy (bot/observer.ts, node_modules/ox) preexisting.

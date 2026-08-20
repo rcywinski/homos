@@ -63,9 +63,34 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       volAdaptiveHedge({ ...trendBase, sizing: 'excess', fundingAt, reentryAboveEma: true }),
     ];
   };
+  // 'hup' (eksperyment 20.08, zlecenie Rafała): ASYMETRYCZNA histereza —
+  // krótsza (6/12h) lub dłuższa (48h) gdy cena wychodzi z zakresu GÓRĄ
+  // (h=24 przy wyjściu dołem bez zmian). Motywacja: 19–20.08 ETH +18.7%,
+  // 3 pule ETH/stable stały 100% w USDC czekając pełne 24h. Hipoteza
+  // dwustronna: krótsze hUp = szybciej wraca do zbierania fees, ale kupuje
+  // ETH drożej po pompie (chase); dłuższe hUp = mniej chase'u. Porównanie
+  // WYŁĄCZNIE z zamrożonym v1.1 na tych samych oknach; k=2 czysty exit dla
+  // pul cbBTC (przy interpretacji patrzeć na wiersze zgodne z profilem puli).
+  const mkHup = (): Strategy[] => {
+    const v11 = { ...trendBase, mode: 'exit' as const, reentryAboveEma: true };
+    const cb = { ...trendBase, k: 2, mode: 'exit' as const };
+    return [
+      hodl5050,
+      volAdaptive({ k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
+      volAdaptiveTrend(v11), // referencja: zamrożony v1.1
+      volAdaptiveTrend({ ...v11, hysteresisUpSec: 6 * 3600 }),
+      volAdaptiveTrend({ ...v11, hysteresisUpSec: 12 * 3600 }),
+      volAdaptiveTrend({ ...v11, hysteresisUpSec: 48 * 3600 }),
+      volAdaptiveTrend(cb), // referencja: zamrożony profil cbBTC
+      volAdaptiveTrend({ ...cb, hysteresisUpSec: 6 * 3600 }),
+      volAdaptiveTrend({ ...cb, hysteresisUpSec: 12 * 3600 }),
+    ];
+  };
   const mkStrategies = (): Strategy[] =>
     process.env.WF_SET === 'hedge'
       ? mkHedge()
+      : process.env.WF_SET === 'hup'
+      ? mkHup()
       : process.env.WF_SET === 'trend-sweep'
       ? [
           hodl5050,
