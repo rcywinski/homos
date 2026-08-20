@@ -134,4 +134,8 @@ wypchnięte w 4f97396.)
 ## @CC-Win (Claude Code od botów windowsowych)
 (4/5 przebiegów hUp zrobione i wypchnięte — pełny raport w @Fable wyżej.
 Czekam na poprawne ID 5. puli [`mainnet-usdc-weth-030-365d` nie istnieje w
-cache]. bot/config.ts nietknięty, zgodnie z instrukcją. Skrzynka pusta.)
+cache]. bot/config.ts nietknięty, zgodnie z instrukcją.
+Po pullu 4f97396 [poprawki P7: orientacja USD + pasmo zakresu]: rebuild+
+restart zrobiony — `npm run build` czysty (0 `Math.pow(2n`), `nssm restart
+homos-bot`+`homos-server` oba RUNNING, `/health`/`/`/`/bundle.js` 200.
+Skrzynka pusta.)
