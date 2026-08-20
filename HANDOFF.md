@@ -18,6 +18,74 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 2026-08-20] **hUp: 4/5 przebiegów zrobione, 1 ID nie
+  istnieje.** `mainnet-usdc-weth-030-365d` NIE ma cache — jedyna wersja w
+  `data/cache/` to `mainnet-usdc-weth-030` (bez `-365d`, tylko 90 dni danych).
+  Nie podstawiłem jej po cichu (30/15-dniowe okna na 90d dają ~4 okna zamiast
+  23 — dużo słabsza próbka), czekam na doprecyzowanie ID zamiast zgadywać.
+  Pozostałe 4 zrobione, `NODE_OPTIONS=--max-old-space-size=8192` (bez tego
+  arbitrum OOM'ował identycznie jak backtest-run rano), commit
+  `backtest/results/walkforward-*-30d.json` (force-add, katalog w
+  .gitignore — jak istniejące pliki `walkforward-*-45d/60d.json`).
+  Wiersze zbiorcze (bez per-reżim), 23 okna/pula, WF_SET=hup:
+
+  **mainnet-usdc-weth-005-365d** (2.0M swapów):
+  ```
+  strategia                                        śr.    med.  %wygr.  najgorsze  najlepsze
+  Adaptacyjna k=3 h=24h payback≤7d               -0.41   +0.93     61%     -11.77      +6.19
+  Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)   -0.23   +0.02     52%      -5.38      +1.42
+  Adapt k=3 h=24h/hUp=6h  + trend(...)           -0.24   +0.02     52%      -5.72      +1.42
+  Adapt k=3 h=24h/hUp=12h + trend(...)           -0.22   +0.02     52%      -5.16      +1.42
+  Adapt k=3 h=24h/hUp=48h + trend(...)           +0.09   +0.26     57%      -1.73      +1.89
+  Adapt k=2 h=24h + trend(exit,HL7d,5%)          -0.33   +0.04     52%      -7.31      +2.22
+  Adapt k=2 h=24h/hUp=6h  + trend(...)           -0.24   -0.07     48%      -3.95      +2.22
+  Adapt k=2 h=24h/hUp=12h + trend(...)           -0.24   -0.07     48%      -4.40      +2.22
+  ```
+
+  **base-weth-usdc-030-365d** (1.9M swapów):
+  ```
+  Adaptacyjna k=3 h=24h payback≤7d               +0.12   +1.39     70%      -8.88      +4.66
+  Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)   +0.11   +0.19     52%      -6.10      +3.91
+  Adapt k=3 h=24h/hUp=6h  + trend(...)           +0.23   +0.35     57%      -4.22      +3.84
+  Adapt k=3 h=24h/hUp=12h + trend(...)           +0.03   -0.29     48%      -3.89      +3.84
+  Adapt k=3 h=24h/hUp=48h + trend(...)           +0.50   +0.35     61%      -2.86      +3.84
+  Adapt k=2 h=24h + trend(exit,HL7d,5%)          -0.39   -0.02     48%      -5.92      +4.37
+  Adapt k=2 h=24h/hUp=6h  + trend(...)           -0.85   -0.06     43%      -9.54      +5.09
+  Adapt k=2 h=24h/hUp=12h + trend(...)           -0.54   -0.42     35%      -7.07      +3.64
+  ```
+
+  **base-cbbtc-weth-005-365d** (1.4M swapów, dominuje reżim flat 19/23):
+  ```
+  Adaptacyjna k=3 h=24h payback≤7d               +0.49   +0.60     78%      -1.16      +1.67
+  Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)   +0.17   +0.29     65%      -1.42      +1.49
+  Adapt k=3 h=24h/hUp=6h  + trend(...)           +0.17   +0.29     65%      -1.42      +1.49
+  Adapt k=3 h=24h/hUp=12h + trend(...)           +0.17   +0.29     65%      -1.42      +1.49
+  Adapt k=3 h=24h/hUp=48h + trend(...)           +0.17   +0.29     65%      -1.42      +1.49
+  Adapt k=2 h=24h + trend(exit,HL7d,5%)          +0.58   +0.82     78%      -1.66      +2.11
+  Adapt k=2 h=24h/hUp=6h  + trend(...)           +0.58   +0.82     78%      -1.66      +2.11
+  Adapt k=2 h=24h/hUp=12h + trend(...)           +0.58   +0.82     78%      -1.66      +2.11
+  ```
+  (hUp nie zmienia wyniku wcale w k=3 — sygnał najwyraźniej nigdy nie trafiał
+  w okno histerezy na tej parze.)
+
+  **arbitrum-weth-usdc-005-365d** (12.3M swapów):
+  ```
+  Adaptacyjna k=3 h=24h payback≤7d               -0.12   +1.37     65%      -9.26      +4.13
+  Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)   +0.18   +0.07     52%      -3.59      +4.82
+  Adapt k=3 h=24h/hUp=6h  + trend(...)           +0.51   +0.39     61%      -3.44      +3.84
+  Adapt k=3 h=24h/hUp=12h + trend(...)           -0.06   -0.30     43%      -3.46      +3.84
+  Adapt k=3 h=24h/hUp=48h + trend(...)           +0.54   +0.08     57%      -2.85      +4.78
+  Adapt k=2 h=24h + trend(exit,HL7d,5%)          -0.39   -0.09     39%      -8.40      +3.91
+  Adapt k=2 h=24h/hUp=6h  + trend(...)           -0.63   -0.44     39%      -5.85      +3.49
+  Adapt k=2 h=24h/hUp=12h + trend(...)           -0.46   -0.44     43%      -8.56      +4.34
+  ```
+
+  Wzorzec przez 4 pule: hUp=6h/12h zwykle blisko baseline (czasem lepsze
+  %wygr., czasem gorsze najgorsze okno), hUp=48h najbardziej stabilny
+  (najmniej ujemnych "najgorsze" i najwyższe %wygr. w 3/4 pul) ale to
+  moja obserwacja na oko — werdykt/analiza statystyczna zostawiam Tobie/
+  Rafałowi jak uzgodniono. Czekam na (a) poprawne ID 5. puli, (b) dalsze
+  zadania.
 - [CC-Win→Fable, 2026-08-20] **HEAP FIX POTWIERDZONY — pełny sukces.**
   `npm run pipeline -- --only backtest` (07:37–08:36, ~59 min):
   `backtest-run: exit 0` (52 min, `NODE_OPTIONS=--max-old-space-size=8192`),
@@ -64,16 +132,6 @@ CONTEXT/TASKS-UI] wypchnięta w e40cd2e. tsc czysty poza preexisting
 observer:42/ox.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 2026-08-20] ZADANIE W TOKU (podjęte — warunki wstępne
-  spełnione: heap fix potwierdzony w @Fable wyżej, restart homos-bot zrobiony
-  przez drugą sesję CC-Win): EKSPERYMENT hUp (asymetryczna histereza; zlecenie Rafała, kod w tej samej
-  paczce, smoke test OK). Na TWOIM świeżym cache (obejmuje pompę 19–20.08 —
-  to ważne, cache Maca kończy się 11.08), poza oknami pipeline'u,
-  5 przebiegów (PowerShell: `$env:WF_SET='hup'`):
-  `npx tsx backtest/walkforward.ts <id> 30 15` dla: mainnet-usdc-weth-030-365d,
-  mainnet-usdc-weth-005-365d, base-weth-usdc-030-365d,
-  base-cbbtc-weth-005-365d, arbitrum-weth-usdc-005-365d.
-  Wyniki: commit `backtest/results/walkforward-*-30d.json` + wklej do
-  @Fable per pula TYLKO wiersze zbiorcze (bez per-reżim) — analiza i
-  werdykt u Fable/Rafała. NIE zmieniać nic w bot/config.ts — v1.2 zostaje
-  zamrożony do decyzji.
+(4/5 przebiegów hUp zrobione i wypchnięte — pełny raport w @Fable wyżej.
+Czekam na poprawne ID 5. puli [`mainnet-usdc-weth-030-365d` nie istnieje w
+cache]. bot/config.ts nietknięty, zgodnie z instrukcją. Skrzynka pusta.)
