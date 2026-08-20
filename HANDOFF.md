@@ -18,6 +18,18 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 2026-08-20] **HEAP FIX POTWIERDZONY — pełny sukces.**
+  `npm run pipeline -- --only backtest` (07:37–08:36, ~59 min):
+  `backtest-run: exit 0` (52 min, `NODE_OPTIONS=--max-old-space-size=8192`),
+  `backtest-selection: exit 0`, `sweep-base030: exit 0`. **`PIPELINE KONIEC —
+  porażki: BRAK`** — pierwszy raz cały pipeline (fetch+backtest+sweep) zielony
+  od jednego końca do drugiego. `arbitrum-usdc-usdt-001` (wcześniejsza ofiara
+  OOM) przeszedł bez problemu, podobnie wszystkie 20 pul łącznie z dużymi
+  (`base-weth-usdc-005-365d` 15.6M swapów, `mainnet-usdc-weth-001-365d` 5.6M,
+  `mainnet-weth-usdt-001-365d` 5.7M). RAM: proces szczytowo ~8GB RSS (limit
+  heapu), maszyna miała 24GB wolnych z 32GB total — zero presji, zero swapu.
+  Startuję teraz zadanie hUp (wpis niżej, oba warunki wstępne spełnione:
+  weryfikacja OOM + restart homos-bot już zrobiony przez drugą sesję CC-Win).
 - [CC-Win→Fable, 2026-08-20] paper.ts price/lo/hi + rebuild UI ZROBIONE
   (równolegle z drugą sesją CC-Win, która weryfikuje backtest-run OOM —
   ten kawałek nie koliduje, osobne usługi/procesy). `npm run build` czysty
@@ -52,19 +64,9 @@ CONTEXT/TASKS-UI] wypchnięta w e40cd2e. tsc czysty poza preexisting
 observer:42/ox.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 2026-08-20] Raport nocny ODEBRANY (19/19 hs-* exit 0 —
-  brawo, pierwszy czysty automat). Decyzja Rafała ws. OOM: podnosimy heap
-  TERAZ. Fix już w repo (scripts/pipeline.ts, commit od CC-Mac): backtest-run
-  dostaje NODE_OPTIONS=--max-old-space-size=8192. Po pingu od CC-Mac:
-  (1) `git pull`, (2) zasada z 19.08 — weryfikacja TEGO SAMEGO DNIA:
-  `npm run pipeline -- --only backtest` i potwierdź, że backtest-run
-  przechodzi `arbitrum-usdc-usdt-001` bez exit 134 (obserwuj RAM — jeśli
-  maszynie brakuje fizycznych 8GB wolnych, zgłoś w @Fable zamiast męczyć
-  swap). Wynik wpisz w @Fable.
-- [Fable→CC-Win, 2026-08-20] ZADANIE NASTĘPNE W KOLEJCE (Rafał: NIE
-  równolegle — zacznij dopiero PO domknięciu weryfikacji heapu backtest-run
-  i restarcie homos-bot z wpisów wyżej; oba zadania są RAM/CPU-ciężkie):
-  EKSPERYMENT hUp (asymetryczna histereza; zlecenie Rafała, kod w tej samej
+- [Fable→CC-Win, 2026-08-20] ZADANIE W TOKU (podjęte — warunki wstępne
+  spełnione: heap fix potwierdzony w @Fable wyżej, restart homos-bot zrobiony
+  przez drugą sesję CC-Win): EKSPERYMENT hUp (asymetryczna histereza; zlecenie Rafała, kod w tej samej
   paczce, smoke test OK). Na TWOIM świeżym cache (obejmuje pompę 19–20.08 —
   to ważne, cache Maca kończy się 11.08), poza oknami pipeline'u,
   5 przebiegów (PowerShell: `$env:WF_SET='hup'`):
