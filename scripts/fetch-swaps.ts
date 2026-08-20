@@ -92,6 +92,14 @@ export const POOLS: PoolCfg[] = [
     address: '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640',
     feeBps: 500, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365,
   },
+  {
+    // 20.08: brakująca 365d-wersja puli PRODUKCYJNEJ mainnet-030 (eksperyment
+    // hUp wykrył lukę — 4 z 5 pul bota miały cache 365d, ta tylko 90d).
+    id: 'mainnet-usdc-weth-030-365d',
+    chain: 'mainnet',
+    address: '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8',
+    feeBps: 3000, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365,
+  },
   // --- Sekcja F.A: sleeve par spiętych. Adresy przez factory + token0/token1 ZWERYFIKOWANE
   //     on-chain (token0()/token1(), lekcja cbBTC — orientacja NIE z nazwy pary). Fee 0.01% = 100. ---
   {

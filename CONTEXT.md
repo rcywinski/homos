@@ -74,6 +74,24 @@ przez walkforward. Raportu morning-2026-08-20.md nie zweryfikowano
 (GitHub 404 w profilu Chrome — repo prywatne/brak logowania; dane wzięte
 prosto z API).
 
+~1x:xx — WYNIKI DNIA (odbiór od CC-Win): (1) HEAP FIX: cały pipeline
+(fetch+backtest+sweep) pierwszy raz zielony end-to-end (backtest-run 52 min,
+peak ~8GB RSS przy 24GB wolnych — zero presji). (2) EKSPERYMENT hUp, 4/5
+pul (23 okna 30d/15d; mainnet-030-365d BRAK CACHE — luka po stronie Fable,
+definicja dodana do fetch-swaps.ts, fetch+run u CC-Win): WYNIK ODWROTNY DO
+INTUICJI — krótsza histereza górą (6/12h) nic nie daje albo szkodzi
+(hUp12 najgorsze, niemonotoniczność 6>12<48 = szum), za to hUp=48h
+poprawia v1.1 na WSZYSTKICH 3 pulach ETH/stable równocześnie w śr./
+%wygr./najgorszym oknie: mainnet-005 −0.23→+0.09 / 52→57% / −5.38→−1.73;
+base-030 +0.11→+0.50 / 52→61% / −6.10→−2.86; arb-005 +0.18→+0.54 /
+52→57% / −3.59→−2.85. Mechanizm spójny: nie kupować szczytu zaraz po
+pompie, poczekać na cofkę. cbBTC (k=2): hUp bez wpływu (78%/−1.66 bez
+zmian). Bramka: worst >−3 hUp48 przechodzi na 3/3, %wygr. ≥65 wciąż NIE
+(57–61). Zlecona cross-walidacja hUp48 na oknach 45/20 i 60/30 (3 pule,
+procedura jak przy zamrażaniu v1) + 5. pula po fetchu. v1.2 ZAMROŻONY —
+ewentualna zmiana h→h/hUp48 dopiero po walidacji, decyzją Rafała (agenda
+~26.08 razem z serią paper tradingu).
+
 ~10:1x — EKSPERYMENT ASYMETRYCZNEJ HISTEREZY zlecony (decyzja Rafała po
 analizie HODL>bot na pompie): `hysteresisUpSec` w volAdaptive i
 volAdaptiveTrend (kierunek wyjścia w cenie względnej bazy: ethIsToken0 →
