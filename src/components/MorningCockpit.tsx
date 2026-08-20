@@ -109,6 +109,21 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [proposalError, setProposalError] = useState<string | null>(null);
 
+  // Partia 11 pkt 3 (FIX 20.08 — crash "Rendered more hooks": ten useEffect
+  // stał PONIŻEJ wczesnego returnu `if (!portfolio.connected) return null`,
+  // więc liczba hooków zmieniała się między renderami przy zmianie stanu
+  // połączenia. ZASADA: WSZYSTKIE hooki nad KAŻDYM wczesnym returnem.)
+  // localStorage to TYLKO fallback — gdy bot POTWIERDZA (state.hedge === null,
+  // jawnie, nie undefined/state jeszcze niewczytany) brak pozycji, a fallback
+  // jest ustawiony, czyścimy — bot mówi prawdę o stanie on-chain.
+  const liveHedge = bot.state?.hedge;
+  useEffect(() => {
+    if (bot.state && bot.state.hedge === null && hedgeOpen) {
+      clearHedgeOpen();
+      setHedgeOpen(null);
+    }
+  }, [bot.state, hedgeOpen]);
+
   if (!portfolio.connected) return null;
 
   const findHeldPosition = (tokenId: string): PortfolioPosition | undefined => portfolio.positions.find((x) => x.tokenId === tokenId);
@@ -267,7 +282,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   // na czas gdy bot jest offline / state.hedge jeszcze niedostępne. Cena ETH
   // z DOWOLNEJ żywej puli w telemetrii (hedge to jeden rynek ETH/USD
   // niezależnie od tego, która pula LP go wywołała).
-  const liveHedge = bot.state?.hedge;
+  // (`liveHedge` zdefiniowany wyżej, nad wczesnym returnem — patrz FIX.)
   const openHedgeCloseModal = () => {
     if (!address) return;
     const sizeUsd = liveHedge ? liveHedge.sizeUsd : hedgeOpen?.sizeUsd;
@@ -287,18 +302,6 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
       setProposalError(`Nie udało się zbudować zamknięcia hedge: ${e instanceof Error ? e.message.slice(0, 200) : String(e)}`);
     }
   };
-
-  // Partia 11 pkt 3: localStorage to TYLKO fallback — gdy bot POTWIERDZA
-  // (state.hedge === null, jawnie, nie undefined/state jeszcze niewczytany)
-  // brak pozycji, a fallback jest ustawiony (np. bo Reader jeszcze nie widział
-  // zamknięcia w momencie zapisu, albo user zamknął ręcznie na app.gmx.io),
-  // czyścimy — bot mówi prawdę o stanie on-chain.
-  useEffect(() => {
-    if (bot.state && bot.state.hedge === null && hedgeOpen) {
-      clearHedgeOpen();
-      setHedgeOpen(null);
-    }
-  }, [bot.state, hedgeOpen]);
 
   // OPEN "Otwórz →" / ROTATE krok 2 "Otwórz nową →": pula z propozycji może
   // być taka, w której user nie ma jeszcze pozycji — trzeba ją wyliczyć

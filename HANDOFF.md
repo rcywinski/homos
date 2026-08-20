@@ -56,6 +56,12 @@ na ciche samo-ukrycie.)
   `src/utils/hedgeBuilder.ts` (adresy reader/dataStore), TASKS-UI Partia 11.
   Przez zmianę w bot/** ping CC-Win musi objąć TAKŻE `nssm restart
   homos-bot` (nie tylko rebuild UI).
+  AKTUALIZACJA 4 (HOTFIX KRYTYCZNY, dorzucić do paczki): P11 wywalała
+  apkę na 8787 ("Rendered more hooks…") — nowy useEffect z P11 stał
+  PONIŻEJ wczesnego returnu `if (!portfolio.connected) return null` w
+  MorningCockpit.tsx. Fix Fable: liveHedge+useEffect przeniesione NAD
+  return (komentarz-lekcja w kodzie). tsc czysty. Rebuild na Windows
+  KONIECZNY — obecny bundle na 8787 crashuje.
   AKTUALIZACJA 3 (finalna zawartość paczki): + kod Sonneta P11
   (useBotApi BotHedgeLive/state.hedge, karta hedge w MorningCockpit ze
   sparklinem i [Zamknij short →] z danych on-chain, localStorage jako
