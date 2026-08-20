@@ -442,3 +442,22 @@ styles.css). bot/** nie ruszać (zmiana w paper.ts już zrobiona przez Fable).
       spójności wizualnej).
 - [x] typecheck 0 błędów w src/ (`npx tsc --noEmit -p tsconfig.json`) —
       pozostałe błędy (bot/observer.ts, node_modules/ox) preexisting.
+
+### Poprawki po odbiorze P7 (2026-08-20, zrobione)
+- [x] **Orientacja USD** — `price`/`lo`/`hi` z bot/paper.ts to "human"
+      token1-per-token0 (konwencja Uniswap), nie zawsze USD. Pule mainnet
+      (sym0='USDC', sym1='WETH') dawały WETH-per-USDC ≈0.00044 → zaokrąglało
+      się do "0" w UI. Fix: `toDisplay(poolId, raw)` = `ethIsToken0 ? raw :
+      1/raw` (wzorzec z AddLiquidity.tsx/MyPositions.tsx/
+      CockpitPositionActions.tsx, `ethIsToken0 = sym0.includes('ETH')`).
+      Transformacja stosowana WCZEŚNIE — przed liczeniem skali Y i punktów
+      wykresu (nie tylko w etykietach), więc cała geometria jest w jednej
+      orientacji i "cena rośnie w USD = linia w górę" działa automatycznie.
+      Pasmo lo/hi: `Math.min/max` z dwóch przetransformowanych wartości
+      (inwersja jest malejąca, może zamienić kolejność). cbBTC (sym0='WETH')
+      → `ethIsToken0=true` → bez zmian, zostaje czytelne ~0.03183.
+- [x] **Czytelność pasma zakresu** — `.paper-range-band` z opacity 0.12 na
+      0.28 + delikatna obwódka (myliło się z szarym tłem cash). Dodana
+      legenda pod wykresem ceny: "niebieskie pasmo = zakres bota · czarna
+      linia = cena".
+- [x] typecheck czysty dla PaperTradingPanel.tsx.

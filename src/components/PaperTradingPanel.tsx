@@ -53,6 +53,26 @@ const poolLabel = (poolId: string): string => {
 const fmtPrice = (poolId: string, v: number): string =>
   poolId.toLowerCase().includes('cbbtc') ? v.toPrecision(4) : v.toLocaleString('en-US', { maximumFractionDigits: 0 });
 
+// Orientacja ceny — POPRAWKA po odbiorze P7 (Fable→Sonnet 2026-08-20):
+// `price`/`lo`/`hi` z bot/paper.ts to "human" token1-per-token0 (konwencja
+// Uniswap), NIE zawsze USD. Dla pul mainnet (sym0='USDC', sym1='WETH') to
+// WETH-per-USDC ≈ 0.00044 — zaokrągla się do zera w UI. Wzorzec z reszty
+// kokpitu (AddLiquidity.tsx/MyPositions.tsx/CockpitPositionActions.tsx):
+// `ethIsToken0 ? raw : 1/raw`. cbBTC (sym0='WETH', quote cbBTC) ma
+// ethIsToken0=true → BEZ zmian, zostaje czytelne 0.03183 (zgodnie ze
+// zleceniem — tam nie ma nogi USD do której inwertować).
+const ethIsToken0 = (poolId: string): boolean => {
+  const meta = BOT_POOL_META.find((m) => m.id === poolId);
+  return meta ? meta.sym0.includes('ETH') : true;
+};
+
+// Transformuje pojedynczą surową wartość (price/lo/hi) do orientacji
+// wyświetlanej. Stosowana WCZEŚNIE — przed liczeniem skali Y i punktów
+// wykresu, nie tylko w etykietach — dzięki temu cała geometria (linia,
+// pasmo, skala) jest w jednej, spójnej orientacji i "cena rośnie w USD =
+// linia w górę" działa automatycznie, bez osobnego odwracania osi.
+const toDisplay = (poolId: string, raw: number): number => (ethIsToken0(poolId) ? raw : 1 / raw);
+
 const STATUS_ICON: Record<string, string> = {
   open: '🟢',
   cash: '💤',
@@ -201,8 +221,13 @@ const PriceRangeChart: FC<{ poolId: string; points: PaperHistoryPoint[]; events:
 
   const x = makeXScale(pts, SPARK_W, SPARK_PAD);
   const rightEdge = SPARK_W - SPARK_PAD;
+  const disp = (v: number) => toDisplay(poolId, v);
 
-  const yVals = pts.flatMap((p) => [p.price, p.lo, p.hi]).filter((v): v is number => typeof v === 'number' && isFinite(v));
+  // Wszystko poniżej pracuje na wartościach PO transformacji (disp) — cena/
+  // lo/hi zamienione na orientację wyświetlaną raz, na wejściu, więc skala Y
+  // i punkty wykresu są spójne bez osobnego odwracania osi (patrz komentarz
+  // przy toDisplay wyżej).
+  const yVals = pts.flatMap((p) => [p.price, p.lo, p.hi]).filter((v): v is number => typeof v === 'number' && isFinite(v)).map(disp);
   const yMin0 = Math.min(...yVals);
   const yMax0 = Math.max(...yVals);
   const margin = Math.max(1e-9, (yMax0 - yMin0) * 0.06);
@@ -217,16 +242,22 @@ const PriceRangeChart: FC<{ poolId: string; points: PaperHistoryPoint[]; events:
   for (let i = 0; i < pts.length; i++) {
     const p = pts[i];
     if (p.status !== 'open' || typeof p.lo !== 'number' || typeof p.hi !== 'number') continue;
+    // disp() może odwracać porządek (inwersja jest malejąca) — brać min/max
+    // z dwóch przetransformowanych wartości, nie zakładać które jest górą.
+    const dA = disp(p.lo);
+    const dB = disp(p.hi);
+    const dispLo = Math.min(dA, dB);
+    const dispHi = Math.max(dA, dB);
     const x1 = x(p.tsMs);
     const x2 = i + 1 < pts.length ? x(pts[i + 1].tsMs) : rightEdge;
-    rangeSegs.push({ x1, x2, yTop: y(p.hi), yBottom: y(p.lo) });
+    rangeSegs.push({ x1, x2, yTop: y(dispHi), yBottom: y(dispLo) });
   }
 
   const priceSegs: string[] = [];
   let cur: string[] = [];
   for (const p of pts) {
     if (typeof p.price === 'number' && isFinite(p.price)) {
-      cur.push(`${x(p.tsMs).toFixed(1)},${y(p.price).toFixed(1)}`);
+      cur.push(`${x(p.tsMs).toFixed(1)},${y(disp(p.price)).toFixed(1)}`);
     } else if (cur.length) {
       priceSegs.push(cur.join(' '));
       cur = [];
@@ -235,6 +266,8 @@ const PriceRangeChart: FC<{ poolId: string; points: PaperHistoryPoint[]; events:
   if (cur.length) priceSegs.push(cur.join(' '));
 
   const last = [...pts].reverse().find((p) => typeof p.price === 'number' && isFinite(p.price as number));
+  const lastLo = last && typeof last.lo === 'number' && typeof last.hi === 'number' ? Math.min(disp(last.lo), disp(last.hi)) : null;
+  const lastHi = last && typeof last.lo === 'number' && typeof last.hi === 'number' ? Math.max(disp(last.lo), disp(last.hi)) : null;
 
   return (
     <div className="paper-range-chart-wrap">
@@ -250,13 +283,14 @@ const PriceRangeChart: FC<{ poolId: string; points: PaperHistoryPoint[]; events:
         ))}
         <EventMarkers events={events} x={x} tMin={pts[0].tsMs} tMax={pts[pts.length - 1].tsMs} height={PRICE_H} />
       </svg>
+      <div className="muted paper-range-legend">niebieskie pasmo = zakres bota · czarna linia = cena</div>
       {last && typeof last.price === 'number' && (
         <div className="muted paper-range-caption">
-          cena: {fmtPrice(poolId, last.price)}
-          {typeof last.lo === 'number' && typeof last.hi === 'number' && (
+          cena: {fmtPrice(poolId, disp(last.price))}
+          {lastLo !== null && lastHi !== null && (
             <>
               {' '}
-              · zakres: {fmtPrice(poolId, last.lo)}–{fmtPrice(poolId, last.hi)}
+              · zakres: {fmtPrice(poolId, lastLo)}–{fmtPrice(poolId, lastHi)}
             </>
           )}
         </div>

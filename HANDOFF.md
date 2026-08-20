@@ -111,25 +111,28 @@
   drugiej sesji CC-Win zgodnie z instrukcją koegzystencji.
 
 ## @Sonnet (sesja UI, Cowork)
-- [Sonnet→Fable, 2026-08-20] PARTIA 7 ZROBIONA (kod niescommitowany — commit
-  CC-Mac). `useBotApi.ts`: `PaperHistoryPoint.price?/lo?/hi?`. W
-  `PaperTradingPanel.tsx`: cieniowanie stanów (żółte=poza zakresem,
-  szare=cash) na sparkline equity-vs-HODL, nowy `PriceRangeChart` (pasmo
-  lo–hi schodkowe per rebalans, linia ceny w ciągłych odcinkach — przerwa
-  tylko tam gdzie stare próbki nie mają `price`), znaczniki
-  EXIT_TREND/REENTRY/REBALANCE na obu wykresach. Brak `price` → wykres się
-  nie renderuje (cicho, bez notki). CSS `paper-range-*`. Odhaczone w
-  TASKS-UI.md. `npx tsc --noEmit` czysty. Skrzynka pusta.
+- [Sonnet→Fable, 2026-08-20] POPRAWKI po odbiorze P7 ZROBIONE (kod
+  niescommitowany — commit CC-Mac). (1) Orientacja USD: `toDisplay(poolId,
+  raw) = ethIsToken0 ? raw : 1/raw` (wzorzec z AddLiquidity.tsx/
+  MyPositions.tsx), stosowana wcześnie — przed skalą Y i punktami wykresu,
+  nie tylko w etykietach, więc "cena rośnie = linia w górę" działa
+  automatycznie bez osobnego odwracania osi. Sanity: mainnet WETH-per-USDC
+  0.00044 → 2276.5 / zakres 2113–2405 (rząd wielkości zgodny z oczekiwanym
+  z odbioru). cbBTC bez zmian (0.03183). (2) Pasmo zakresu: opacity
+  0.12→0.28 + obwódka, legenda "niebieskie pasmo = zakres bota · czarna
+  linia = cena" pod wykresem ceny. `npx tsc --noEmit` czysty. Odhaczone w
+  TASKS-UI.md. Skrzynka pusta.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
 > Zasada dla CC-Mac (tańszy model): wykonuj zadania DOKŁADNIE wg wpisów;
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-(Skrzynka pusta — paczka [pipeline.ts OOM już scommitowany ręcznie przez
-Rafała 9780c86; reszta: paper.ts price/lo/hi, histereza hUp, Partia 7 UI,
-CONTEXT/TASKS-UI] wypchnięta w e40cd2e. tsc czysty poza preexisting
-observer:42/ox.)
+- [Fable→CC-Mac, 2026-08-20 ~11:2x] Commit+push POPRAWEK P7 od Sonneta
+  (leżą niescommitowane: `src/components/PaperTradingPanel.tsx`,
+  `src/styles.css`, + TASKS-UI.md/HANDOFF.md/CONTEXT.md): orientacja USD
+  na wykresie ceny (toDisplay 1/p dla pul z ETH-token1) + niebieskie pasmo
+  zakresu z legendą. Po pushu ping CC-Win (wpis rebuild niżej).
 
 ## @CC-Win (Claude Code od botów windowsowych)
 (4/5 przebiegów hUp zrobione i wypchnięte — pełny raport w @Fable wyżej.

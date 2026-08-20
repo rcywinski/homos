@@ -1821,9 +1821,15 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   height: 54px;
 }
 .paper-range-band {
+  /* POPRAWKA po odbiorze P7 (Fable→Sonnet 2026-08-20): przy opacity 0.12
+     pasmo myliło się z szarym tłem cash ("szare na żółtym to wyjście do
+     cash też?" — pytanie Rafała). Wyraźnie nasycony niebieski + delikatna
+     obwódka, żeby czytelnie odróżnić od paper-range-band-cash/out. */
   fill: #1a6ae0;
-  fill-opacity: 0.12;
-  stroke: none;
+  fill-opacity: 0.28;
+  stroke: #1a6ae0;
+  stroke-opacity: 0.5;
+  stroke-width: 0.5;
 }
 .paper-range-price-line {
   stroke: #1a1a1a;
