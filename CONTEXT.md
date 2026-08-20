@@ -74,6 +74,25 @@ przez walkforward. Raportu morning-2026-08-20.md nie zweryfikowano
 (GitHub 404 w profilu Chrome — repo prywatne/brak logowania; dane wzięte
 prosto z API).
 
+~1x:xx (popołudnie) — SPRINT 4/5/6 (decyzja Rafała: "róbmy teraz"):
+(1) TBTC-WBTC DOMKNIĘTE: QUOTE_REF_EXT w backtest/load.ts (USD-za-WBTC
+z wbtc-usdc-030, jawny assetIsToken0), pegged.ts policzony przez Fable
+w kontenerze: HODL −44.7% APR (rok spadkowy BTC), najlepsza strategia
++2.0–2.3 p.p. vsHODL — "3%/tydz" na v3 pegged ostatecznie NIE istnieje;
+rekomendacja F.C (NIE dla sleeve pegged) stoi z kompletem danych.
+(2) ROTATE CROSS-POOL: `planRotate()` w rebalanceBuilder.ts (ta sama sieć;
+ta sama para=zmiana tieru albo 1 wspólny token: zamknij→swap unikalny→
+wspólny w starej puli→swap wyrównujący w nowej→mint; pary rozłączne/
+cross-chain=throw z komunikatem). UI = TASKS-UI Partia 8.
+(3) HEDGE GMX: `src/utils/hedgeBuilder.ts` (planHedgeOpen/Close, short 1×
+ETH/USD Arbitrum, multicall sendWnt+sendTokens+createOrder; adresy
+zweryfikowane 20.08: ExchangeRouter 0x1C3f…6A41 z contracts.json, rynek
+0x70d9…6336 z api.gmxinfra, struct IBaseOrderUtils z main — z autoCancel/
+dataList). UI = TASKS-UI Partia 9 (symulacja eth_call OBOWIĄZKOWA, pierwszy
+test ~$15). tsc czysty po wszystkich trzech. NADTO: reboot Windows
+potwierdzony przez Rafała (D odhaczone; zostało auto-power-on w BIOS
+po awarii prądu — ręcznie Rafał).
+
 ~1x:xx — WYNIKI DNIA (odbiór od CC-Win): (1) HEAP FIX: cały pipeline
 (fetch+backtest+sweep) pierwszy raz zielony end-to-end (backtest-run 52 min,
 peak ~8GB RSS przy 24GB wolnych — zero presji). (2) EKSPERYMENT hUp, 4/5

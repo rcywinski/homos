@@ -379,6 +379,242 @@ export function buildMintStep(params: {
 }
 
 // ---------------------------------------------------------------------------
+// ROTATE cross-pool (20.08, domknięcie TODO z Partii 4b): stara i nowa pozycja
+// w RÓŻNYCH pulach. Ograniczenia v1 (świadome):
+//  - TA SAMA sieć (sekwencja tx nie zbridguje; rotacje cross-chain zostają na
+//    ręcznych krokach 1/2 jak dotychczas — UI ma to komunikować),
+//  - pary: identyczna (zmiana tieru, np. mainnet 030→005) albo z JEDNYM
+//    wspólnym tokenem (np. WETH/USDC → cbBTC/WETH przez wspólny WETH);
+//    pary rozłączne → throw (wybór trasy swapu to inna klasa problemu,
+//    a w BOT_POOLS taki przypadek nie występuje).
+// Sekwencja: 1) decrease+collect w starej puli → 2) swap "przelewający"
+// CAŁY unikalny token starej pary do wspólnego (w STAREJ puli — tam jest
+// płynność dla tej pary) → 3) swap wyrównujący proporcje pod nowy zakres
+// (w NOWEJ puli) → 4) mint w nowej puli. Kroki 2/3 pomijane, gdy zbędne
+// (ta sama para → tylko wyrównanie; zakres jednostronny → bez wyrównania).
+// Failure w środku = środki w cash na walletcie (stan bezpieczny, jak w
+// planRebalance); mint wykonawczo przebudować przez buildMintStep z
+// FAKTYCZNYCH sald (te same zasady co plan bazowy).
+// ---------------------------------------------------------------------------
+
+export interface RotatePlan {
+  chainId: number;
+  tokenId: string;
+  steps: RebalanceStep[];
+  approvals: RequiredApproval[];
+  /** pula, w której robimy mint (do buildMintStep po krokach swap) */
+  mintPool: 'new';
+  preview: {
+    withdraw0: number; withdraw1: number; // tokeny STAREJ puli
+    bridgeSwap: string | null;  // opis swapu unikalny→wspólny (null gdy ta sama para)
+    balanceSwap: string | null; // opis swapu wyrównującego w nowej puli
+    mint0: number; mint1: number; // ESTYMATA wejścia do minta (tokeny NOWEJ puli)
+  };
+}
+
+const addrEq = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
+export function planRotate(params: {
+  oldPool: Pool;
+  newPool: Pool;
+  chainId: number;
+  tokenId: string;
+  liquidity: bigint;
+  tickLower: number;
+  tickUpper: number;
+  newTickLower: number;
+  newTickUpper: number;
+  feesOwed0: bigint;
+  feesOwed1: bigint;
+  recipient: Address;
+  slippageBps: number;
+  deadlineSeconds?: number;
+}): RotatePlan {
+  const {
+    oldPool, newPool, chainId, tokenId, liquidity, tickLower, tickUpper,
+    newTickLower, newTickUpper, feesOwed0, feesOwed1, recipient, slippageBps,
+  } = params;
+  const manager = POSITION_MANAGER_ADDRESSES[chainId] as Address | undefined;
+  const router = SWAP_ROUTER_02[chainId];
+  if (!manager || !router) throw new Error(`Unsupported chain: ${chainId}`);
+  if (oldPool.chainId !== newPool.chainId) {
+    throw new Error('planRotate: pule na różnych sieciach — rotacja cross-chain wymaga ręcznych kroków (zamknij → przenieś → otwórz)');
+  }
+  const bips = Math.min(Math.max(Math.round(slippageBps), 5), 500);
+  const keep = new Fraction(10_000 - bips, 10_000);
+  const deadline = BigInt(Math.floor(Date.now() / 1000) + (params.deadlineSeconds ?? 1800));
+
+  // ---- KROK 1: decrease 100% + collect w STAREJ puli (dokładny) ----
+  const position = new Position({ pool: oldPool, tickLower, tickUpper, liquidity: liquidity.toString() });
+  const step1Data = encodeFunctionData({
+    abi: MULTICALL_ABI, functionName: 'multicall',
+    args: [[
+      encodeFunctionData({
+        abi: DECREASE_ABI, functionName: 'decreaseLiquidity',
+        args: [{
+          tokenId: BigInt(tokenId), liquidity,
+          amount0Min: BigInt(position.amount0.multiply(keep).quotient.toString()),
+          amount1Min: BigInt(position.amount1.multiply(keep).quotient.toString()),
+          deadline,
+        }],
+      }),
+      encodeFunctionData({
+        abi: COLLECT_ABI, functionName: 'collect',
+        args: [{ tokenId: BigInt(tokenId), recipient, amount0Max: MAX_UINT128, amount1Max: MAX_UINT128 }],
+      }),
+    ]],
+  });
+  const withdraw0 = BigInt(position.amount0.quotient.toString()) + feesOwed0;
+  const withdraw1 = BigInt(position.amount1.quotient.toString()) + feesOwed1;
+
+  // ---- mapowanie tokenów stara→nowa para ----
+  const o = [oldPool.token0, oldPool.token1];
+  const n = [newPool.token0, newPool.token1];
+  const feeFracOld = oldPool.fee / 1_000_000;
+  const feeFracNew = newPool.fee / 1_000_000;
+  const pRawOld = (Number(BigInt(oldPool.sqrtRatioX96.toString())) / 2 ** 96) ** 2; // o1_raw za o0_raw
+  const pRawNew = (Number(BigInt(newPool.sqrtRatioX96.toString())) / 2 ** 96) ** 2; // n1_raw za n0_raw
+
+  const samePair =
+    (addrEq(o[0].address, n[0].address) && addrEq(o[1].address, n[1].address)) ||
+    (addrEq(o[0].address, n[1].address) && addrEq(o[1].address, n[0].address));
+
+  const approvals: RequiredApproval[] = [];
+  const addApproval = (token: Address, symbol: string | undefined, spender: Address, amount: bigint, what: string) => {
+    if (amount <= 0n) return;
+    approvals.push({
+      token, spender, amount, label: `Approve ${symbol} ${what}`,
+      tx: { to: token, data: encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [spender, amount] }), value: 0n },
+    });
+  };
+  const mkSwapTx = (tokenIn: Address, tokenOut: Address, fee: number, amountIn: bigint, outMin: bigint): PlannedTx => ({
+    to: router,
+    data: encodeFunctionData({
+      abi: EXACT_INPUT_SINGLE_ABI, functionName: 'exactInputSingle',
+      args: [{ tokenIn, tokenOut, fee, recipient, amountIn, amountOutMinimum: outMin, sqrtPriceLimitX96: 0n }],
+    }),
+    value: 0n,
+  });
+
+  // salda robocze w tokenach NOWEJ puli (raw, float — miny chronią)
+  let bal0 = 0; // n0
+  let bal1 = 0; // n1
+  let bridgeSwapDesc: string | null = null;
+  const swapSteps: Array<Omit<RebalanceStep, 'index' | 'label'> & { shortLabel: string }> = [];
+
+  if (samePair) {
+    // przełóż salda na porządek tokenów nowej puli
+    if (addrEq(o[0].address, n[0].address)) { bal0 = Number(withdraw0); bal1 = Number(withdraw1); }
+    else { bal0 = Number(withdraw1); bal1 = Number(withdraw0); }
+  } else {
+    // wspólny token: dokładnie jeden
+    const sharedIdxOld = addrEq(o[0].address, n[0].address) || addrEq(o[0].address, n[1].address) ? 0
+      : addrEq(o[1].address, n[0].address) || addrEq(o[1].address, n[1].address) ? 1 : -1;
+    if (sharedIdxOld === -1) {
+      throw new Error(`planRotate: pary ${o[0].symbol}/${o[1].symbol} i ${n[0].symbol}/${n[1].symbol} nie mają wspólnego tokena — rotacja ręczna (2 kroki)`);
+    }
+    const shared = o[sharedIdxOld];
+    const uniqueOld = o[1 - sharedIdxOld];
+    const uniqueIn = [Number(withdraw0), Number(withdraw1)][1 - sharedIdxOld];
+    let sharedBal = [Number(withdraw0), Number(withdraw1)][sharedIdxOld];
+
+    // KROK: cały unikalny stary token → wspólny, w STAREJ puli
+    if (uniqueIn > 0) {
+      // cena wspólnego za unikalny w starej puli (raw): uwzględnij orientację
+      const sharedPerUnique = sharedIdxOld === 1 ? pRawOld : 1 / pRawOld;
+      const outEst = uniqueIn * sharedPerUnique * (1 - feeFracOld);
+      const inRaw = raw(uniqueIn, 0);
+      const outMinRaw = (raw(outEst, 0) * BigInt(10_000 - bips)) / 10_000n;
+      swapSteps.push({
+        kind: 'swap',
+        shortLabel: 'swap: stara para → wspólny token (w starej puli)',
+        tx: mkSwapTx(uniqueOld.address as Address, shared.address as Address, oldPool.fee, inRaw, outMinRaw),
+        detail: `${human(inRaw, uniqueOld.decimals).toFixed(6)} ${uniqueOld.symbol} → min. ${human(outMinRaw, shared.decimals).toFixed(6)} ${shared.symbol}`,
+      });
+      addApproval(uniqueOld.address as Address, uniqueOld.symbol, router, inRaw, 'dla routera (swap do wspólnego tokena)');
+      sharedBal += outEst;
+      bridgeSwapDesc = `${uniqueOld.symbol}→${shared.symbol} w starej puli`;
+    }
+    // całość w tokenie wspólnym — przypisz do właściwej nogi nowej puli
+    if (addrEq(shared.address, n[0].address)) { bal0 = sharedBal; bal1 = 0; }
+    else { bal0 = 0; bal1 = sharedBal; }
+  }
+
+  // ---- swap WYRÓWNUJĄCY pod nowy zakres (w NOWEJ puli) — logika jak w planRebalance ----
+  const sqrtPNew = BigInt(newPool.sqrtRatioX96.toString());
+  const probe = getAmountsForLiquidity(sqrtPNew, newTickLower, newTickUpper, 10n ** 18n);
+  const totalV1 = bal0 * pRawNew + bal1;
+  let target0: number;
+  if (probe.amount0 === 0n) target0 = 0;
+  else if (probe.amount1 === 0n) target0 = totalV1 / pRawNew;
+  else target0 = totalV1 / (pRawNew + Number(probe.amount1) / Number(probe.amount0));
+  const target1 = totalV1 - target0 * pRawNew;
+
+  let balanceSwapDesc: string | null = null;
+  let est0 = bal0;
+  let est1 = bal1;
+  const imbalanceV1 = Math.abs(bal0 - target0) * pRawNew;
+  if (totalV1 > 0 && (imbalanceV1 / totalV1) * 100 > SWAP_SKIP_PCT) {
+    const zeroToOne = bal0 > target0;
+    const inHuman = zeroToOne ? bal0 - target0 : bal1 - target1;
+    const outEst = zeroToOne ? inHuman * pRawNew * (1 - feeFracNew) : (inHuman / pRawNew) * (1 - feeFracNew);
+    const inRaw = raw(inHuman, 0);
+    const outMinRaw = (raw(outEst, 0) * BigInt(10_000 - bips)) / 10_000n;
+    const tin = zeroToOne ? n[0] : n[1];
+    const tout = zeroToOne ? n[1] : n[0];
+    swapSteps.push({
+      kind: 'swap',
+      shortLabel: 'swap wyrównujący proporcje (w nowej puli)',
+      tx: mkSwapTx(tin.address as Address, tout.address as Address, newPool.fee, inRaw, outMinRaw),
+      detail: `${human(inRaw, tin.decimals).toFixed(6)} ${tin.symbol} → min. ${human(outMinRaw, tout.decimals).toFixed(6)} ${tout.symbol}`,
+    });
+    addApproval(tin.address as Address, tin.symbol, router, inRaw, 'dla routera (swap wyrównujący)');
+    if (zeroToOne) { est0 = target0; est1 = bal1 + outEst; }
+    else { est0 = bal0 + outEst; est1 = target1; }
+    balanceSwapDesc = `${tin.symbol}→${tout.symbol} w nowej puli`;
+  }
+
+  // ---- mint w NOWEJ puli (ESTYMATA — wykonawczo buildMintStep z realnych sald) ----
+  const SAFETY = 0.998; // margines na nogach zasilanych swapami (realny out może być niższy)
+  const estMint0 = raw(est0 * SAFETY, 0);
+  const estMint1 = raw(est1 * SAFETY, 0);
+  const mintStep = buildMintStep({
+    pool: newPool, chainId, newTickLower, newTickUpper,
+    amount0: estMint0, amount1: estMint1, recipient, slippageBps: bips,
+    deadlineSeconds: params.deadlineSeconds,
+  });
+  addApproval(n[0].address as Address, n[0].symbol, manager, estMint0, 'dla NFT managera (mint)');
+  addApproval(n[1].address as Address, n[1].symbol, manager, estMint1, 'dla NFT managera (mint)');
+
+  // ---- złożenie kroków ----
+  const total = 1 + swapSteps.length + 1;
+  const steps: RebalanceStep[] = [{
+    index: 1, kind: 'decreaseCollect',
+    label: `Krok 1/${total}: zamknij starą pozycję #${tokenId} (${o[0].symbol}/${o[1].symbol}, decrease + collect)`,
+    tx: { to: manager, data: step1Data, value: 0n },
+    detail: `otrzymasz ~${human(withdraw0, o[0].decimals).toFixed(6)} ${o[0].symbol} + ${human(withdraw1, o[1].decimals).toFixed(6)} ${o[1].symbol} (kapitał + fee)`,
+  }];
+  swapSteps.forEach((s, i) => steps.push({
+    index: 2 + i, kind: s.kind, label: `Krok ${2 + i}/${total}: ${s.shortLabel}`, tx: s.tx, detail: s.detail,
+  }));
+  steps.push({
+    index: total, kind: 'mint',
+    label: `Krok ${total}/${total}: otwórz pozycję w NOWEJ puli ${n[0].symbol}/${n[1].symbol} [${newTickLower}, ${newTickUpper}]`,
+    tx: mintStep.tx,
+    detail: `ESTYMATA: ~${human(estMint0, n[0].decimals).toFixed(6)} ${n[0].symbol} + ${human(estMint1, n[1].decimals).toFixed(6)} ${n[1].symbol} — przed wysłaniem przebuduj z faktycznych sald (buildMintStep, pool=NOWA)`,
+  });
+
+  return {
+    chainId, tokenId, steps, approvals, mintPool: 'new',
+    preview: {
+      withdraw0: human(withdraw0, o[0].decimals), withdraw1: human(withdraw1, o[1].decimals),
+      bridgeSwap: bridgeSwapDesc, balanceSwap: balanceSwapDesc,
+      mint0: human(estMint0, n[0].decimals), mint1: human(estMint1, n[1].decimals),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Postęp sekwencji — przeżywa odświeżenie strony ("dokończ krok 2/3").
 // localStorage jak homos_api_base; klucz per pozycja.
 // ---------------------------------------------------------------------------
