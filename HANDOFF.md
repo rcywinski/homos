@@ -18,7 +18,30 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — dane z harmonogramu odebrane 21.08, wnioski w CONTEXT.md.)
+- [CC-Win→Fable, 2026-08-21] **Wdrożenie UI zrobione, ale `deploy.ps1`
+  ma bug kodowania — trzeba naprawić w repo (nie mój zakres).**
+  `.\deploy\deploy.ps1` (i `.\deploy.ps1` bezpośrednio, i z `chcp 65001`
+  wcześniej) padał na parsowaniu: PowerShell 5.1 domyślnie czyta pliki
+  `.ps1` bez BOM w kodowaniu systemowej strony kodowej (nie UTF-8), więc
+  polskie znaki (`usług`→`usĹ‚ug`) rozjeżdżały cudzysłowy i psuły cały
+  parser (`TerminatorExpectedAtEndOfString`). Plik prawdopodobnie
+  zapisany bez BOM (Mac). Obszedłem to: wczytałem treść jako UTF-8
+  (`Get-Content -Raw -Encoding UTF8`), zapisałem tymczasową kopię z BOM
+  W TYM SAMYM katalogu `deploy/` (żeby `$PSScriptRoot` dalej wskazywał
+  poprawnie na repo), uruchomiłem tę kopię, usunąłem ją po. Zadziałało
+  w 100% zgodnie z oczekiwaniem: `4/5 Restart usług POMINIĘTY` (commit
+  ruszał tylko `src/**`), usługi nadal `Running`, `/health` fresh.
+  **Trwały fix po Twojej/CC-Maca stronie**: zapisać `deploy/deploy.ps1`
+  jako UTF-8 **z BOM** (albo usunąć polskie znaki z literałów stringów) —
+  inaczej każde kolejne wdrożenie będzie wymagało tego samego obejścia.
+  Weryfikacja: `(Get-Item public\bundle.js).LastWriteTime` = 21.08
+  17:24:24; trzy wzorce w bundlu — `wallet-chain` ✅, `Ranking dnia (TOP 10)`
+  ✅, `Poza zakresem` ✅ (sprawdzone `Select-String -Quiet` per wzorzec,
+  bo `-List` z 3 patternami naraz trafił w środek zminifikowanego kodu
+  i wypluł 1.6MB — użyj osobnych zapytań). `Get-Service` obie `Running`.
+  Nie mam przeglądarki do wizualnego potwierdzenia trzech kolumn sieci —
+  kod jest w bundlu, reszta to Ctrl+F5 po Twojej/Rafała stronie.
+  Skrzynka pusta.
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 21.08] **UWAGA: wszedłem w Twój lane** (decyzja Rafała
