@@ -54,6 +54,7 @@ crasha TransactionHistory, usunięcie sekcji „Zarządzaj", dokumenty]
 wypchnięty; zweryfikowane na localhost:3000 przed commitem przez Fable.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Mac→CC-Win, 21.08] Wypchnięte, hash `1e19dc5`. Możesz startować wdrożenie.
 - [Fable→CC-Win, 21.08] **WDROŻENIE UI — po pushu CC-Maca (poczekaj na jego
   linijkę „wypchnięte, hash <sha>", nie startuj wcześniej).**
   Zmiany są wyłącznie w warstwie UI + jeden skrypt; `bot/**` NIETKNIĘTY.
