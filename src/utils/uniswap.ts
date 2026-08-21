@@ -1,46 +1,16 @@
 import { Token, Price } from '@uniswap/sdk-core';
 import { Pool, FeeAmount, TickMath, TICK_SPACINGS } from '@uniswap/v3-sdk';
 import { createPublicClient, http, createWalletClient, custom, PublicClient, WalletClient, Address, encodeFunctionData, decodeFunctionResult } from 'viem';
-import { sepolia, mainnet } from 'wagmi/chains';
+import { mainnet } from 'wagmi/chains';
 import JSBI from 'jsbi';
 import { sqrtPriceX96ToHumanPrice } from './v3math';
 import { ethers } from 'ethers';
 
 // Token Addresses
-export const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14'; // Sepolia WETH
-export const USDC_ADDRESS = '0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8'; // Sepolia USDC
-export const USDT_ADDRESS = '0x7169D38820dfd117C3FA1f22a697dBA58d90BA06'; // Sepolia USDT
 
 // Uniswap V3 contract addresses
-export const POOL_FACTORY_ADDRESS = '0x0227628f3F023bb0B980b67D528571c95c6DaC1c'; // Sepolia Factory
-export const SWAP_ROUTER_ADDRESS = '0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD'; // Sepolia Router
-export const NFT_MANAGER_ADDRESS = '0x1238536071E1c677A632429e3655c799b22cDA52'; // Sepolia NFT Manager
 
 // Token Instances
-export const WETH = new Token(
-  sepolia.id,
-  WETH_ADDRESS,
-  18,
-  'WETH',
-  'Wrapped Ether'
-);
-
-export const USDC = new Token(
-  sepolia.id,
-  USDC_ADDRESS,
-  6,
-  'USDC',
-  'USD Coin'
-);
-
-export const USDT = new Token(
-  sepolia.id,
-  USDT_ADDRESS,
-  6,
-  'USDT',
-  'Tether USD'
-);
-
 // Pool fee tiers
 export const FEE_TIERS = {
   LOWEST: FeeAmount.LOWEST,
@@ -146,102 +116,6 @@ export const getPoolPrice = async (
 /**
  * Gets or creates a pool instance
  */
-export const getOrCreatePool = async (
-  publicClient: PublicClient,
-  walletClient: WalletClient,
-  token0: Token,
-  token1: Token,
-  fee: FeeAmount
-): Promise<{ pool: Pool; address: string; isNew: boolean }> => {
-  try {
-    // Determine the network config based on the chain ID
-    const networkConfig = token0.chainId === 1 ? NETWORKS.MAINNET : NETWORKS.SEPOLIA;
-    
-    // Check if pool exists
-    const existingPool = await getExistingPool(
-      publicClient,
-      token0,
-      token1,
-      fee,
-      networkConfig
-    );
-
-    if (existingPool) {
-      return { ...existingPool, isNew: false };
-    }
-
-    // Pool doesn't exist, create it
-    const factoryAddress = POOL_FACTORY_ADDRESS;
-    const account = walletClient.account;
-    if (!account) throw new Error('Wallet account not available');
-
-    // Sort tokens in ascending order
-    let sortedTokens: [Token, Token];
-    if (token0.sortsBefore(token1)) {
-      sortedTokens = [token0, token1];
-    } else {
-      sortedTokens = [token1, token0];
-    }
-
-    // Create pool via Uniswap V3 factory
-    const hash = await walletClient.writeContract({
-      chain: sepolia,
-      account,
-      abi: POOL_FACTORY_ABI,
-      address: factoryAddress as `0x${string}`,
-      functionName: 'createPool',
-      args: [
-        sortedTokens[0].address as `0x${string}`,
-        sortedTokens[1].address as `0x${string}`,
-        fee,
-      ],
-    });
-
-    // Wait for transaction
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
-    // Get the pool address
-    const poolAddress = await publicClient.readContract({
-      address: factoryAddress,
-      abi: POOL_FACTORY_ABI,
-      functionName: 'getPool',
-      args: [sortedTokens[0].address as Address, sortedTokens[1].address as Address, fee],
-    }) as Address;
-
-    // Initialize the pool with a price
-    // For simplicity, we'll use a default price here
-    // In a real app, you'd want to use a price oracle or let the user specify
-    const sqrtPriceX96 = 792281625142643375935439503360n; // placeholder init price (test pool only)
-
-    const initHash = await walletClient.writeContract({
-      chain: sepolia,
-      account: account.address,
-      address: poolAddress,
-      abi: POOL_ABI,
-      functionName: 'initialize',
-      args: [sqrtPriceX96],
-    });
-
-    await publicClient.waitForTransactionReceipt({ hash: initHash });
-
-    // Create a new Pool instance
-    const poolState = await getPoolPrice(publicClient, poolAddress);
-
-    const createdPool = new Pool(
-      token0,
-      token1,
-      fee,
-      poolState.sqrtPriceX96.toString(),
-      poolState.liquidity.toString(),
-      poolState.tick
-    );
-
-    return { pool: createdPool, address: poolAddress, isNew: true };
-  } catch (error) {
-    console.error('Error creating pool:', error);
-    throw error;
-  }
-};
 
 /**
  * Gets the nearest valid tick for a given price in a pool
@@ -347,28 +221,6 @@ export const NETWORKS = {
         address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' as Address,
         decimals: 6,
         symbol: 'USDC'
-      }
-    }
-  },
-  SEPOLIA: {
-    chainId: 11155111,
-    name: 'Sepolia',
-    poolFactoryAddress: POOL_FACTORY_ADDRESS as Address,
-    tokens: {
-      WETH: {
-        address: WETH_ADDRESS as Address,
-        decimals: 18,
-        symbol: 'WETH'
-      },
-      USDC: {
-        address: USDC_ADDRESS as Address,
-        decimals: 6,
-        symbol: 'USDC'
-      },
-      USDT: {
-        address: USDT_ADDRESS as Address,
-        decimals: 6,
-        symbol: 'USDT'
       }
     }
   }

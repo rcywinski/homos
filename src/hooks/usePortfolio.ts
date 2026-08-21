@@ -183,11 +183,23 @@ export function usePortfolio(): PortfolioSummary {
   const clientArbitrum = usePublicClient({ chainId: 42161 });
   const clients: Record<number, ReturnType<typeof usePublicClient>> = { 1: clientMainnet, 8453: clientBase, 42161: clientArbitrum };
 
-  // Mirrors CompactWalletInfo's balance fetch (mainnet ETH/WETH/USDC) — kept
-  // separate from that component since it's presentational, this is data.
-  const { data: ethBal } = useBalance({ address, chainId: 1 });
-  const { data: wethBal } = useBalance({ address, token: NETWORKS.MAINNET.tokens.WETH.address, chainId: 1 });
-  const { data: usdcBal } = useBalance({ address, token: NETWORKS.MAINNET.tokens.USDC.address, chainId: 1 });
+  // Salda portfela — WSZYSTKIE TRZY SIECI.
+  // BŁĄD ZNALEZIONY 21.08: do tej pory liczony był wyłącznie mainnet (komentarz
+  // brzmiał „Mirrors CompactWalletInfo's balance fetch (mainnet ETH/WETH/USDC)"),
+  // podczas gdy pozycje czytamy z mainnet+Base+Arbitrum. Efekt: „Wartość łączna"
+  // w kokpicie ZANIŻAŁA stan portfela o wszystko, co leży na L2 — u Rafała
+  // ukrywało to 152 USDC na Arbitrum.
+  // Hooki wypisane jawnie (nie w pętli): ich liczba musi być stała między
+  // renderami — patrz dwa dzisiejsze crashe „Rendered more hooks…".
+  const { data: ethBalM } = useBalance({ address, chainId: 1 });
+  const { data: wethBalM } = useBalance({ address, token: NETWORKS.MAINNET.tokens.WETH.address, chainId: 1 });
+  const { data: usdcBalM } = useBalance({ address, token: NETWORKS.MAINNET.tokens.USDC.address, chainId: 1 });
+  const { data: ethBalB } = useBalance({ address, chainId: 8453 });
+  const { data: wethBalB } = useBalance({ address, token: NETWORKS.BASE.tokens.WETH.address, chainId: 8453 });
+  const { data: usdcBalB } = useBalance({ address, token: NETWORKS.BASE.tokens.USDC.address, chainId: 8453 });
+  const { data: ethBalA } = useBalance({ address, chainId: 42161 });
+  const { data: wethBalA } = useBalance({ address, token: NETWORKS.ARBITRUM.tokens.WETH.address, chainId: 42161 });
+  const { data: usdcBalA } = useBalance({ address, token: NETWORKS.ARBITRUM.tokens.USDC.address, chainId: 42161 });
 
   const [positions, setPositions] = useState<PortfolioPosition[]>([]);
   const [ethUsd, setEthUsd] = useState<number | null>(null);
@@ -429,10 +441,14 @@ export function usePortfolio(): PortfolioSummary {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, isConnected, tick]);
 
-  const walletUsd =
-    ethUsd !== null
-      ? Number(ethBal?.formatted ?? 0) * ethUsd + Number(wethBal?.formatted ?? 0) * ethUsd + Number(usdcBal?.formatted ?? 0)
-      : Number(usdcBal?.formatted ?? 0); // no ETH price yet — still show stablecoin balance
+  const num = (b?: { formatted: string }) => Number(b?.formatted ?? 0);
+  // ETH i WETH sumujemy przez wszystkie sieci (ten sam kurs), USDC to 1:1 USD.
+  // cbBTC na Base świadomie POMINIĘTE — wymagałoby kursu BTC, którego UI nie
+  // ma (bot liczy go przez pulę referencyjną). Jeśli kiedyś trzymamy tam realny
+  // kapitał, trzeba dociągnąć cenę, inaczej „Wartość łączna" znów będzie zaniżać.
+  const ethLike = num(ethBalM) + num(wethBalM) + num(ethBalB) + num(wethBalB) + num(ethBalA) + num(wethBalA);
+  const stables = num(usdcBalM) + num(usdcBalB) + num(usdcBalA);
+  const walletUsd = ethUsd !== null ? ethLike * ethUsd + stables : stables; // bez kursu ETH pokazujemy chociaż stablecoiny
 
   const positionsUsd = positions.reduce((sum, p) => sum + (p.valueUsd ?? 0), 0);
   const feesUsd = positions.reduce((sum, p) => sum + p.feesUsd, 0);

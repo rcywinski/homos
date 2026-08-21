@@ -824,3 +824,73 @@ identycznie jak zdrowa.
       eksport CSV pod podatki. Obecny zapis to localStorage, ostatnie
       **10** wpisów, per adres, bez eksportu — pod rozliczenia bezużyteczny
       (UI-VISION.md: SQLite + CSV, „każda akcja = zdarzenie podatkowe").
+- [x] **Ujednolicenie sekcji „Ranking dnia (TOP 10)"** (uwaga Rafała 21.08:
+      „ma jakąś dodatkową belkę"): panel był opakowany w `ExpandableSection`
+      w `MorningCockpit`, przez co dostawał ramkę karty i niebieski tytuł,
+      inaczej niż Telemetria bota / Prognoza zysku / Analiza obserwacji.
+      Teraz `TopRankingPanel` sam trzyma stan zwinięcia i używa tego samego
+      szkieletu (`telemetry-section` > `telemetry-header` > `telemetry-body`).
+      Ikona 🏆 usunięta. Data i kryteria zeszły z tytułu do linijki
+      `.topranking-criteria-line` w ciele sekcji. Stany błędu/ładowania
+      renderują się teraz WEWNĄTRZ sekcji (nagłówek widoczny zawsze) — przy
+      okazji `useState` jest przed wszystkimi returnami, zgodnie z lekcją
+      z dwóch crashy „Rendered more hooks…".
+- [x] **Pusty ekran bez portfela**: `MorningCockpit` zwracał `null`, gdy
+      portfel niepodłączony. Po usunięciu sekcji „Zarządzaj" oznaczało to
+      CAŁKOWICIE pustą stronę wyglądającą jak zepsuta aplikacja. Teraz jest
+      jednozdaniowy komunikat „Podłącz portfel…". Zauważone przy weryfikacji
+      w przeglądarce, nie zgłoszone — ale to pierwsza rzecz, jaką zobaczy
+      ktoś otwierający apkę bez portfela.
+- [x] **Kokpit jako główny layout** (decyzja Rafała 21.08: „po usunięciu
+      starego widoku kokpit to w zasadzie cała nasza aplikacja"): usunięty
+      tytuł „☀️ Poranny kokpit", strzałka zwijania i cały stan `collapsed`
+      — treść renderuje się zawsze. W nagłówku modułu zostało wyłącznie ⚙
+      (adres/token API) + kropka statusu bota. Kropkę najpierw usunąłem jako
+      duplikat tej z App.tsx — Rafał od razu zauważył brak, więc wróciła:
+      to WŁAŚNIE ona jest czytana jako „połączenie z serwerem żyje", bo stoi
+      obok ustawień połączenia. Lekcja: duplikat w UI nie zawsze jest zbędny,
+      liczy się kontekst, w którym stoi. Nowa klasa
+      `.morning-header-bare` (bez `cursor:pointer` i bez hovera, bo nagłówek
+      nie jest już przełącznikiem).
+- [x] **Nagłówek portfela: Sepolia usunięta + salda per sieć** (uwagi Rafała
+      21.08). Przy okazji ZNALEZIONY BŁĄD, nie tylko sprzątanie:
+      `CompactWalletInfo` miał logikę BINARNĄ — etykieta
+      `isMainnet ? 'Mainnet' : 'Sepolia'` i adresy tokenów „mainnet albo
+      Sepolia". Efekt: na Base i Arbitrum nagłówek pisał „Sepolia" i pytał
+      o salda pod adresami SEPOLII, więc WETH/USDC zawsze pokazywały 0.
+      Zweryfikowane na żywo: po poprawce nagłówek na Arbitrum pokazuje
+      **USDC: 152.78**, wcześniej 0.00000000.
+      Teraz: lista tokenów pochodzi z `NETWORKS` (utils/uniswap.ts) — czyli
+      tych, którymi bot operuje na danej sieci (Base ma cbBTC, mainnet USDT)
+      + natywny ETH; przełącznik ⇄ zastąpiony `<select>` z sieciami
+      Mainnet/Base/Arbitrum; format sald czytelny (`<0.0001` zamiast
+      ośmiu zer).
+      DLACZEGO NIE „wszystkie tokeny z portfela": po ERC-20 nie da się
+      wylistować sald bez indeksera (Alchemy/Covalent/Moralis) — RPC
+      odpowiada tylko na „ile mam TEGO tokena", a do tego dochodzą
+      tokeny-śmieci. Do rozważenia, jeśli kiedyś chcemy pełny widok portfela.
+- [x] Usunięte razem z Sepolią: `FaucetSection.tsx` (renderował się tylko na
+      Sepolii), `utils/wagmi.ts` (martwy, zero importerów), rozbudowany
+      `WalletInfo` (panel testnetowy, nigdzie nieimportowany), stałe
+      testnetowe i `getOrCreatePool` z `utils/uniswap.ts`, wpis SEPOLIA
+      w `NETWORKS`, sieć `sepolia` w `config/wallet.ts`.
+- [x] **Przełącznik sieci USUNIĘTY, trzy sieci obok siebie** (pytanie Rafała
+      21.08). Przełącznik był zbędny w obie strony: do OGLĄDANIA, bo
+      `usePortfolio` i tak czyta pozycje z mainnet+Base+Arbitrum naraz
+      (`usePublicClient({chainId})`), a salda da się czytać cross-chain
+      (`useBalance({chainId})`); do DZIAŁANIA, bo każda akcja przełącza sieć
+      sama przed podpisem (`switchChainAsync` w useCockpitActions /
+      useRebalanceExecution / useRotateExecution / useHedgeExecution).
+      Mógł więc tylko mylić („jestem na złej sieci, dlatego nie widzę środków").
+- [x] **DRUGI BŁĄD tej samej rodziny: „Wartość łączna" liczyła tylko mainnet.**
+      `usePortfolio` pobierał salda ETH/WETH/USDC wyłącznie z `chainId: 1`
+      (komentarz w kodzie: „Mirrors CompactWalletInfo's balance fetch"),
+      choć pozycje czytał z trzech sieci. Efekt: nagłówek zaniżał stan
+      portfela o wszystko na L2. Po poprawce **$160.98 → $321.12** (te same
+      152 USDC na Arbitrum, które wcześniej ukrywał nagłówek portfela).
+      Sumujemy ETH+WETH (jeden kurs) i USDC (1:1) przez trzy sieci.
+      ŚWIADOMIE POMINIĘTE: cbBTC na Base — wymaga kursu BTC, którego UI nie ma
+      (bot liczy go przez pulę referencyjną). Jeśli trafi tam realny kapitał,
+      trzeba dociągnąć cenę, inaczej „Wartość łączna" znów zaniży.
+      Hooki `useBalance` wypisane jawnie (3 sieci × 3 tokeny), nie w pętli —
+      liczba hooków musi być stała, patrz dwa dzisiejsze crashe.

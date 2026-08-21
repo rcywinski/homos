@@ -72,8 +72,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  max-height: 140px;
-  overflow: hidden;
+  /* 21.08: było `max-height:140px; overflow:hidden` — po rozbiciu sald na trzy
+     sieci obcinało nagłówki kolumn (MAINNET/BASE/ARBITRUM). Panel jest teraz
+     kompaktowy sam z siebie, więc limit jest zbędny. */
 }
 
 .app-content {
@@ -272,10 +273,10 @@
 .wallet-container {
   background-color: #f8f9fa;
   border-radius: 10px;
-  padding: 12px;
+  padding: 10px 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  width: 100%;
-  max-width: 420px;
+  width: auto;
+  max-width: none;
   transition: all 0.2s ease;
 }
 
@@ -1984,9 +1985,12 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
 
 /* --- UI session: TopRankingPanel.tsx (TASKS-UI.md Partia 6, ranking dnia
    TOP 10) — HANDOFF Fable→Sonnet 2026-08-18. Wzorzec telemetry-table --- */
-.topranking-criteria {
-  font-weight: 400;
-  text-transform: none;
+/* linia „data · kryteria" pod nagłówkiem sekcji (21.08: ranking dostał ten sam
+   szkielet co Telemetria/Prognoza/Analiza, więc kryteria zeszły z tytułu
+   do osobnej linijki w ciele sekcji) */
+.topranking-criteria-line {
+  font-size: 11px;
+  margin-bottom: 6px;
 }
 .topranking-table {
   width: 100%;
@@ -2007,4 +2011,66 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
 }
 @media (max-width: 480px) {
   .topranking-table { font-size: 12px; }
+}
+
+/* 21.08: kokpit jako główny layout — nagłówek stracił tytuł i strzałkę
+   (patrz komentarz w MorningCockpit.tsx), został sam ⚙ dosunięty do prawej.
+   Bez `cursor:pointer` i bez podświetlenia na hover, bo nie jest już
+   klikalnym przełącznikiem zwijania. */
+.morning-header-bare {
+  justify-content: flex-end;
+  padding: 10px 20px 0;
+  cursor: default;
+}
+.morning-header-bare:hover {
+  background-color: transparent;
+}
+
+/* Wybór sieci w nagłówku portfela (21.08: zastąpił przełącznik
+   Mainnet↔Sepolia — Sepolia usunięta, a przełącznik binarny i tak
+   pokazywał „Sepolia" na Base/Arbitrum). */
+.network-select {
+  background-color: #e9ecef;
+  border: none;
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 0.85rem;
+  color: #495057;
+  cursor: pointer;
+  text-align: center;
+}
+
+/* Nagłówek portfela 21.08: trzy sieci obok siebie zamiast przełącznika.
+   Aplikacja i tak czyta pozycje ze wszystkich trzech naraz (usePortfolio),
+   a akcje przełączają sieć same przed podpisem — ręczny przełącznik tylko
+   mylił. */
+.wallet-chains {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.wallet-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 118px;
+}
+.wallet-chain + .wallet-chain {
+  border-left: 1px solid #e9ecef;
+  padding-left: 10px;
+}
+.wallet-chain-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6c757d;
+}
+.wallet-chain .balance-item {
+  font-size: 0.78rem;
+  padding: 4px 6px;
+}
+@media (max-width: 768px) {
+  .wallet-chains { flex-direction: column; }
+  .wallet-chain + .wallet-chain { border-left: none; padding-left: 0; border-top: 1px solid #e9ecef; padding-top: 8px; }
 }

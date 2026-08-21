@@ -16,7 +16,7 @@
  * ZAKRES TWARDY: bot/** nietknięty. Stary `TopPools.tsx` (DefiLlama
  * client-side, sesja 2e) — celowo nieruszany, decyzja o scaleniu osobno.
  */
-import React, { FC } from 'react';
+import React, { FC, useState } from 'react';
 import { UseBotApi, RankingRow } from '../hooks/useBotApi';
 
 const fmtTvl = (v: number): string => {
@@ -48,70 +48,93 @@ interface Props {
   bot: UseBotApi;
 }
 
+/**
+ * UJEDNOLICENIE 21.08 (uwaga Rafała): sekcja miała własną „belkę" — była
+ * opakowana w `ExpandableSection` w MorningCockpit, przez co dostawała ramkę
+ * karty i niebieski tytuł, inaczej niż sąsiadki (Telemetria bota, Prognoza
+ * zysku, Analiza obserwacji). Teraz komponent sam trzyma swój stan zwinięcia
+ * i używa DOKŁADNIE tego samego szkieletu co one:
+ * `telemetry-section` > `telemetry-header` (tytuł + strzałka) > `telemetry-body`.
+ * Puchar 🏆 usunięty — sąsiadki nie mają ikon.
+ * UWAGA na hooki: `useState` MUSI zostać przed wszystkimi wczesnymi
+ * returnami (lekcja z crasha „Rendered more hooks…" 20.08 i 21.08) —
+ * dlatego stany błędu/ładowania renderują się teraz WEWNĄTRZ ciała sekcji,
+ * a nagłówek jest widoczny zawsze, tak jak w Telemetrii bota.
+ */
 const TopRankingPanel: FC<Props> = ({ bot }) => {
+  const [expanded, setExpanded] = useState(false);
   const { ranking, rankingStatus } = bot;
 
-  if (rankingStatus === 'not-started') {
-    return <div className="morning-note">Ranking pojawi się po pierwszym przebiegu selektora (codziennie po 8:00).</div>;
-  }
-  if (rankingStatus === 'error') {
-    return <div className="morning-note muted">Ranking niedostępny (błąd sieci lub serwera).</div>;
-  }
-  if (rankingStatus === 'loading' || !ranking) {
-    return <div className="morning-note muted">wczytywanie rankingu…</div>;
-  }
-
   const today = new Date().toISOString().slice(0, 10);
-  const isStale = ranking.day && ranking.day < today;
+  const isStale = !!ranking?.day && ranking.day < today;
 
   return (
-    <div className="topranking-panel">
-      <div className="morning-section-title">
-        Ranking dnia {ranking.day}
-        {ranking.criteria && (
-          <span className="muted topranking-criteria">
-            {' '}
-            · {ranking.criteria.window ?? ''}
-            {typeof ranking.criteria.persistDays === 'number' && <>, persystencja ≥{ranking.criteria.persistDays}d</>}
-            {typeof ranking.criteria.minTvlUsd === 'number' && <>, TVL≥{fmtTvl(ranking.criteria.minTvlUsd)}</>}
-          </span>
-        )}
+    <div className="telemetry-section">
+      <div className="telemetry-header" onClick={() => setExpanded((e) => !e)}>
+        <span className="morning-section-title telemetry-title">Ranking dnia (TOP 10)</span>
+        <span className="morning-toggle">{expanded ? '▼' : '▶'}</span>
       </div>
 
-      {isStale && (
-        <div className="morning-note morning-note-warn">
-          ranking z {ranking.day} — dzisiejszy przebieg jeszcze nie wygenerowany.
+      {expanded && (
+        <div className="telemetry-body">
+          {rankingStatus === 'not-started' ? (
+            <div className="morning-note">Ranking pojawi się po pierwszym przebiegu selektora (codziennie po 8:00).</div>
+          ) : rankingStatus === 'error' ? (
+            <div className="morning-note muted">Ranking niedostępny (błąd sieci lub serwera).</div>
+          ) : rankingStatus === 'loading' || !ranking ? (
+            <div className="morning-note muted">wczytywanie rankingu…</div>
+          ) : (
+            <>
+              <div className="muted topranking-criteria-line">
+                {ranking.day}
+                {ranking.criteria && (
+                  <>
+                    {' · '}
+                    {ranking.criteria.window ?? ''}
+                    {typeof ranking.criteria.persistDays === 'number' && <>, persystencja ≥{ranking.criteria.persistDays}d</>}
+                    {typeof ranking.criteria.minTvlUsd === 'number' && <>, TVL≥{fmtTvl(ranking.criteria.minTvlUsd)}</>}
+                  </>
+                )}
+              </div>
+
+              {isStale && (
+                <div className="morning-note morning-note-warn">
+                  ranking z {ranking.day} — dzisiejszy przebieg jeszcze nie wygenerowany.
+                </div>
+              )}
+
+              {ranking.rows.length === 0 ? (
+                <div className="morning-note muted">ranking pusty.</div>
+              ) : (
+                <div className="telemetry-table-wrap">
+                  <table className="telemetry-table topranking-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>para</th>
+                        <th>APY 7d</th>
+                        <th>streak</th>
+                        <th>TVL</th>
+                        <th>status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ranking.rows.map((row) => (
+                        <RankingRowView key={`${row.rank}-${row.symbol}`} row={row} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <div className="muted topranking-disclaimer">
+                Headline APY z rankingu ≠ osiągalny wynik LP; pule wchodzą do gry dopiero po walidacji tick-level (patrz
+                WETH-USDT 0.01%: 11% w rankingu, odrzucona walidacją).
+              </div>
+            </>
+          )}
         </div>
       )}
-
-      {ranking.rows.length === 0 ? (
-        <div className="morning-note muted">ranking pusty.</div>
-      ) : (
-        <div className="telemetry-table-wrap">
-          <table className="telemetry-table topranking-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>para</th>
-                <th>APY 7d</th>
-                <th>streak</th>
-                <th>TVL</th>
-                <th>status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ranking.rows.map((row) => (
-                <RankingRowView key={`${row.rank}-${row.symbol}`} row={row} />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <div className="muted topranking-disclaimer">
-        Headline APY z rankingu ≠ osiągalny wynik LP; pule wchodzą do gry dopiero po walidacji tick-level (patrz WETH-USDT
-        0.01%: 11% w rankingu, odrzucona walidacją).
-      </div>
     </div>
   );
 };

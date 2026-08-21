@@ -4,7 +4,6 @@ import { ConnectKitProvider, ConnectKitButton } from 'connectkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config } from './config/wallet';
 import { CompactWalletInfo } from './components/WalletInfo';
-import FaucetSection from './components/FaucetSection';
 import MorningCockpit from './components/MorningCockpit';
 import BotStatusDot from './components/BotStatusDot';
 import { useBotApi } from './hooks/useBotApi';
@@ -37,7 +36,6 @@ function AppShell() {
       </div>
 
       <div className="app-content">
-        <FaucetSection />
         <div className="main-content">
           <MorningCockpit bot={bot} />
           {/* USUNIĘTE 21.08 (decyzja Rafała): sekcja „Zarządzaj (zaawansowane)"

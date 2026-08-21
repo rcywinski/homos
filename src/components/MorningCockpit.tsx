@@ -1,12 +1,19 @@
 /**
- * MorningCockpit.tsx — poranny kokpit (UI-VISION.md §3.1, UX-COCKPIT.md §1,
- * TASKS-UI.md Partia 2 #0/#1 + Partia 3). First thing visible above the
- * "Zarządzaj (zaawansowane)" group: financial header (usePortfolio), bot
- * proposals (useBotApi), per-position cards with inline actions (Partia 3:
- * Zbierz fees / Zamknij / Rebalans ręczny — see CockpitPositionActions.tsx +
- * useCockpitActions.ts), and a collapsible bot telemetry table
- * (BotTelemetry.tsx). Collapsible, compact, plain CSS (see styles.css,
- * "UI session" sections, classes prefixed morning-, cockpit- and telemetry-).
+ * MorningCockpit.tsx — GŁÓWNY WIDOK aplikacji (UI-VISION.md §3.1,
+ * UX-COCKPIT.md §1, TASKS-UI.md Partie 2/3).
+ *
+ * 21.08: po usunięciu sekcji „Zarządzaj (zaawansowane)" kokpit nie jest już
+ * jednym z modułów — JEST całą aplikacją. Dlatego przestał być zwijany
+ * (nie ma tytułu ani strzałki, treść renderuje się zawsze). W nagłówku
+ * modułu została kropka statusu bota + ⚙ (adres/token API) — kropka jest
+ * wprawdzie duplikatem tej z App.tsx, ale to właśnie ona jest czytana jako
+ * „połączenie z serwerem żyje", bo stoi obok ustawień połączenia.
+ *
+ * Zawartość: nagłówek finansowy (usePortfolio), propozycje bota (useBotApi),
+ * karty pozycji z akcjami inline (CockpitPositionActions.tsx +
+ * useCockpitActions.ts), paper trading i cztery sekcje zwijane na dole
+ * (Telemetria / Prognoza / Analiza / Ranking). Plain CSS — patrz styles.css,
+ * klasy z prefiksami morning-, cockpit- i telemetry-.
  */
 import React, { FC, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
@@ -130,7 +137,6 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   const rebalanceExecution = useRebalanceExecution();
   const rotateExecution = useRotateExecution();
   const hedgeExecution = useHedgeExecution();
-  const [collapsed, setCollapsed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [baseInput, setBaseInput] = useState(bot.apiBase);
   const [tokenInput, setTokenInput] = useState(bot.apiToken);
@@ -157,7 +163,18 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
     }
   }, [bot.state, hedgeOpen]);
 
-  if (!portfolio.connected) return null;
+  // Bez portfela kokpit nie ma czego pokazać (pozycje/salda czyta z łańcucha).
+  // Do 21.08 zwracał tu `null` — a odkąd usunęliśmy sekcję „Zarządzaj",
+  // oznaczało to CAŁKOWICIE pustą stronę, wyglądającą jak zepsuta aplikacja.
+  if (!portfolio.connected) {
+    return (
+      <div className="morning-cockpit">
+        <div className="morning-note">
+          Podłącz portfel („Connect Wallet" u góry), żeby zobaczyć kokpit — pozycje, propozycje bota i paper trading.
+        </div>
+      </div>
+    );
+  }
 
   const findHeldPosition = (tokenId: string): PortfolioPosition | undefined => portfolio.positions.find((x) => x.tokenId === tokenId);
 
@@ -378,26 +395,30 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
 
   return (
     <div className="morning-cockpit">
-      <div className="morning-header" onClick={() => setCollapsed((c) => !c)}>
-        <h2>☀️ Poranny kokpit</h2>
+      {/* 21.08 (decyzja Rafała): po usunięciu sekcji „Zarządzaj" kokpit JEST
+          całą aplikacją, więc przestał być zwijanym modułem — nie ma tytułu
+          ani strzałki, treść renderuje się zawsze. Zostaje wyłącznie ⚙
+          (ustawienia połączenia z botem); kropka statusu bota nie jest tu
+          powtarzana, bo siedzi już w nagłówku aplikacji (App.tsx). */}
+      <div className="morning-header morning-header-bare">
         <div className="morning-header-actions">
+          {/* Kropka statusu bota: usunąłem ją 21.08 jako duplikat tej
+              z nagłówka aplikacji, ale Rafał od razu zauważył brak — czyli
+              to TA kropka jest czytana jako „połączenie z serwerem żyje",
+              bo stoi przy ustawieniach połączenia. Zostaje. */}
           <BotStatusDot status={bot.status} />
           <button
             className="morning-settings-btn"
             title="Ustawienia połączenia z botem"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowSettings((s) => !s);
-            }}
+            onClick={() => setShowSettings((s) => !s)}
           >
             ⚙
           </button>
-          <span className="morning-toggle">{collapsed ? '▶' : '▼'}</span>
         </div>
       </div>
 
       {showSettings && (
-        <div className="morning-settings" onClick={(e) => e.stopPropagation()}>
+        <div className="morning-settings">
           <label>
             Adres API bota
             <input value={baseInput} onChange={(e) => setBaseInput(e.target.value)} placeholder="http://192.168.1.8:8787" />
@@ -412,8 +433,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
         </div>
       )}
 
-      {!collapsed && (
-        <div className="morning-body">
+      <div className="morning-body">
           <div className="morning-summary">
             <div className="morning-stat">
               <span className="morning-stat-value">{portfolio.loading ? '…' : fmtUsd(portfolio.totalUsd)}</span>
@@ -776,15 +796,14 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
             <PaperTradingPanel bot={bot} />
           </ExpandableSection>
 
+          {/* Wszystkie cztery sekcje mają teraz ten sam szkielet (telemetry-section
+              z własnym nagłówkiem) — Ranking był wcześniej opakowany w
+              ExpandableSection i przez to dostawał dodatkową belkę/ramkę. */}
           <BotTelemetry bot={bot} />
           <ForecastPanel bot={bot} />
           <ObservationAnalysis bot={bot} />
-
-          <ExpandableSection title="🏆 Ranking dnia (TOP 10)" defaultExpanded={false}>
-            <TopRankingPanel bot={bot} />
-          </ExpandableSection>
-        </div>
-      )}
+          <TopRankingPanel bot={bot} />
+      </div>
 
       {proposalModal?.type === 'close' && (
         <CloseModal

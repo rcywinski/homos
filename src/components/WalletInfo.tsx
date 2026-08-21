@@ -1,140 +1,108 @@
 import React, { useState, useEffect } from 'react';
-import { useAccount, useBalance, useBlockNumber, useChainId, useSwitchChain } from 'wagmi';
+import { useAccount, useBalance } from 'wagmi';
 import { formatEther, formatUnits, isAddress } from 'viem';
-import { mainnet, sepolia } from 'wagmi/chains';
-import { USDC_ADDRESS } from '../utils/uniswap';
+import { NETWORKS } from '../utils/uniswap';
 
-// Mainnet USDC address
-const MAINNET_USDC_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48';
-// Mainnet and Sepolia WETH addresses
-const MAINNET_WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
-const SEPOLIA_WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
+/**
+ * PRZEBUDOWA 21.08 (uwagi Rafała: „przełącznik Sepolia do usunięcia",
+ * „może powinny być wyświetlane wszystkie waluty, a nie tylko wybrane 3").
+ *
+ * Co było źle — nie tylko kosmetycznie:
+ *  1. Etykieta sieci była BINARNA (`isMainnet ? 'Mainnet' : 'Sepolia'`), więc
+ *     na Base i Arbitrum nagłówek pokazywał „Sepolia". Kłamał o tym, na jakiej
+ *     sieci jesteś, a bot pracuje właśnie na Base/Arbitrum.
+ *  2. Adresy WETH/USDC też były binarne: poza mainnetem brane były adresy
+ *     SEPOLII, więc na Base/Arbitrum salda ZAWSZE pokazywały 0, nawet gdy
+ *     tokeny tam były.
+ *  3. Przycisk ⇄ przełączał wyłącznie mainnet↔Sepolia.
+ *
+ * Jak jest teraz: lista tokenów pochodzi z `NETWORKS` (utils/uniswap.ts) —
+ * czyli dokładnie z tych, którymi operuje bot na danej sieci (Base ma cbBTC,
+ * mainnet USDT itd.), plus natywny ETH. Zero adresów wpisanych na sztywno.
+ *
+ * DLACZEGO NIE „wszystkie tokeny z portfela": po ERC-20 nie da się
+ * wylistować sald bez indeksera (Alchemy/Covalent/Moralis) — RPC odpowiada
+ * tylko na pytanie „ile mam TEGO tokena". Do tego dochodzą tokeny-śmieci,
+ * których nikt nie chce oglądać w nagłówku. Jeśli kiedyś chcemy pełny widok
+ * portfela, trzeba dołożyć klucz do indeksera — wtedy ta lista staje się
+ * fallbackiem.
+ */
+
+const SUPPORTED = [NETWORKS.MAINNET, NETWORKS.BASE, NETWORKS.ARBITRUM];
+
+/** Tokeny warte pokazania na danej sieci — te, w których bot trzyma pozycje. */
+const tokensForChain = (chainId: number) => {
+  const net = SUPPORTED.find((n) => n.chainId === chainId);
+  if (!net) return [];
+  return Object.values(net.tokens as Record<string, { address: `0x${string}`; decimals: number; symbol: string }>);
+};
+
+/** Salda: krótko, ale bez mylącego zaokrąglenia do zera przy małych kwotach. */
+const fmtAmount = (value: bigint, decimals: number): string => {
+  const n = parseFloat(formatUnits(value, decimals));
+  if (n === 0) return '0';
+  if (n < 0.0001) return '<0.0001';
+  if (n < 1) return n.toFixed(4);
+  return n.toLocaleString('en-US', { maximumFractionDigits: 4 });
+};
+
+const TokenBalance: React.FC<{
+  address?: `0x${string}`;
+  token: { address: `0x${string}`; decimals: number; symbol: string };
+  chainId: number;
+}> = ({ address, token, chainId }) => {
+  const { data } = useBalance({ address, token: token.address, chainId });
+  if (!data) return null;
+  return (
+    <div className="balance-item">
+      {token.symbol}: {fmtAmount(data.value, token.decimals)}
+    </div>
+  );
+};
+
+/** Kolumna jednej sieci: natywny ETH + tokeny, którymi bot na niej operuje. */
+const ChainColumn: React.FC<{ address: `0x${string}`; net: (typeof SUPPORTED)[number] }> = ({ address, net }) => {
+  const { data: native } = useBalance({ address, chainId: net.chainId });
+  return (
+    <div className="wallet-chain">
+      <div className="wallet-chain-name">{net.name}</div>
+      <div className="balance-item">ETH: {native ? fmtAmount(native.value, 18) : '0'}</div>
+      {tokensForChain(net.chainId).map((t) => (
+        <TokenBalance key={`${net.chainId}-${t.address}`} address={address} token={t} chainId={net.chainId} />
+      ))}
+    </div>
+  );
+};
 
 export const CompactWalletInfo: React.FC = () => {
-  const { address: connectedAddress } = useAccount();
-  const chainId = useChainId();
-  const [isRabbyMode, setIsRabbyMode] = useState(false);
-  const [rabbyAddress, setRabbyAddress] = useState<`0x${string}` | ''>('');
-  const [showRabbyInput, setShowRabbyInput] = useState(false);
-  
-  // Determine which address to use
-  const address = isRabbyMode && rabbyAddress ? rabbyAddress : connectedAddress;
-  
-  // Use the determined address for balance checks
-  const { data: balance } = useBalance({ 
-    address,
-  });
-  
-  // Use the appropriate USDC address based on the network
-  const usdcAddress = chainId === mainnet.id ? MAINNET_USDC_ADDRESS : USDC_ADDRESS;
-  // Use the appropriate WETH address based on the network
-  const wethAddress = chainId === mainnet.id ? MAINNET_WETH_ADDRESS : SEPOLIA_WETH_ADDRESS;
-  
-  const { data: usdcBalance } = useBalance({ 
-    address,
-    token: usdcAddress as `0x${string}`,
-  });
-  
-  const { data: wethBalance } = useBalance({
-    address,
-    token: wethAddress as `0x${string}`,
-  });
-  
-  const { data: blockNumber } = useBlockNumber();
-  const { switchChain } = useSwitchChain();
-  
-  // Format balances
-  const ethFormattedBalance = balance ? 
-    parseFloat(formatEther(balance.value)).toFixed(8) : 
-    '0.00000000';
-    
-  const wethFormattedBalance = wethBalance ? 
-    parseFloat(formatUnits(wethBalance.value, 18)).toFixed(8) : 
-    '0.00000000';
-    
-  const usdcFormattedBalance = usdcBalance ? 
-    parseFloat(formatUnits(usdcBalance.value, 6)).toFixed(8) : 
-    '0.00000000';
-
-  if (!connectedAddress) return null;
-
-  const isMainnet = chainId === mainnet.id;
-  
-  const handleNetworkSwitch = () => {
-    if (isMainnet) {
-      switchChain({ chainId: sepolia.id });
-    } else {
-      switchChain({ chainId: mainnet.id });
-    }
-  };
-
-  return (
-    <div className="wallet-container">
-      <div className="wallet-content">
-        <div className="network-info">
-          <span>{isMainnet ? 'Mainnet' : 'Sepolia'}</span>
-          <button onClick={handleNetworkSwitch}>⇄</button>
-        </div>
-        
-        <div className="wallet-balances">
-          <div className="balance-item">ETH: {ethFormattedBalance}</div>
-          <div className="balance-item">WETH: {wethFormattedBalance}</div>
-          <div className="balance-item">USDC: {usdcFormattedBalance}</div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const WalletInfo: React.FC = () => {
   const { address } = useAccount();
-  const chainId = useChainId();
-
   if (!address) return null;
 
-  const isMainnet = chainId === mainnet.id;
-  const isSepolia = chainId === sepolia.id;
-
+  // BEZ przełącznika sieci (pytanie Rafała 21.08: „czy trzeba mieć ten
+  // przełącznik?"). Nie trzeba — i to nie jest kwestia gustu:
+  //  • do OGLĄDANIA nic nie wnosił: `usePortfolio` i tak czyta pozycje ze
+  //    wszystkich trzech sieci naraz (`usePublicClient({chainId: 1/8453/42161})`),
+  //    a salda też da się czytać cross-chain (`useBalance({chainId})`);
+  //  • do DZIAŁANIA jest zbędny, bo każda akcja przełącza sieć sama przed
+  //    podpisem (`switchChainAsync` w useCockpitActions / useRebalanceExecution
+  //    / useRotateExecution / useHedgeExecution).
+  // Ręczny przełącznik mógł więc tylko wprowadzać w błąd („jestem na złej
+  // sieci, to pewnie dlatego nie widzę środków").
   return (
-    <div className="wallet-info-detailed">
-      <div className="network-controls">
-        <h3>Network Controls</h3>
-        <div className="network-buttons">
-          <button className={isMainnet ? 'active' : ''}>
-            Switch to Mainnet
-          </button>
-          <button className={isSepolia ? 'active' : ''}>
-            Switch to Sepolia
-          </button>
-        </div>
-      </div>
-
-      <div className="faucet-section">
-        <h3>Get Free Sepolia ETH</h3>
-        <p>You'll need some test ETH to interact with Uniswap on Sepolia. Choose a faucet below to get started:</p>
-        <div className="faucet-options">
-          <div className="faucet-option">
-            <button onClick={() => window.open('https://sepoliafaucet.com/', '_blank')}>
-              Alchemy Faucet
-            </button>
-            <span>Get 0.5 Sepolia ETH daily (requires sign in)</span>
-          </div>
-          <div className="faucet-option">
-            <button onClick={() => window.open('https://www.infura.io/faucet/sepolia', '_blank')}>
-              Infura Faucet
-            </button>
-            <span>Get 0.5 Sepolia ETH daily (requires sign in)</span>
-          </div>
-          <div className="faucet-option">
-            <button onClick={() => window.open('https://quicknode.com/faucet/eth/sepolia', '_blank')}>
-              QuickNode Faucet
-            </button>
-            <span>Get 0.1 Sepolia ETH daily</span>
-          </div>
-        </div>
+    <div className="wallet-container">
+      <div className="wallet-chains">
+        {SUPPORTED.map((net) => (
+          <ChainColumn key={net.chainId} address={address} net={net} />
+        ))}
       </div>
     </div>
   );
 };
 
-export default WalletInfo; 
+/**
+ * Stary, rozbudowany widok portfela — był wyłącznie panelem testnetowym
+ * (przełączniki Mainnet/Sepolia + linki do faucetów Sepolii). Nigdzie nie
+ * importowany (App używa `CompactWalletInfo`), a po decyzji o usunięciu
+ * Sepolii nie ma czego pokazywać. Usunięty 21.08 razem z `FaucetSection`.
+ */
+export default CompactWalletInfo;
