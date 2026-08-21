@@ -1964,6 +1964,16 @@ USTERKA ESTYMATORA (osobna, przeciwna w kierunku): per-swapowy EWMA
 w `computeStats` zaniża zmienność wobec standardowego realized vol na tych
 samych danych — mainnet-usdc-weth-005, okno 7d: **1.00%/d (advisor) vs
 1.57/1.68/1.64/1.42%/d (próbka 1min/5min/15min/1h)**, czyli ok. −40%.
-Powód: ogromna liczba swapów z ZEROWYM ruchem ceny (ten sam tick) wchodzi
-do średniej jako r²=0 i rozcieńcza wynik. Efekt netto: w spokoju zakresy
-za wąskie, po wystrzale za szerokie. Do policzenia przed strojeniem k.
+POWÓD (zmierzony 21.08 po odpowiedzi CC-Win — moja pierwsza hipoteza
+o „swapach z zerowym ruchem ceny" była BŁĘDNA, takich swapów jest 0%):
+winne jest `dt = max(Δblok · blockTime, blockTime)` w `computeStats`.
+Na mainnet-usdc-weth-005 (24h): **33% sąsiednich par swapów siedzi w TYM
+SAMYM bloku** (dt prawdziwe = 0 s, podbijane do 12 s), 53% swapów żyje
+w blokach wieloswapowych, rekord 28 swapów w bloku. Wariancja jednego
+bloku rozkłada się więc na N×12 s zamiast 12 s → tempo wariancji dzielone
+przez N. Bias jest tym silniejszy, im większa aktywność — czyli DOKŁADNIE
+w momentach wysokiej zmienności, gdy szerokość zakresu ma największe
+znaczenie. Efekt netto: w spokoju zakresy za wąskie, po wystrzale za
+szerokie. Do policzenia przed strojeniem k.
+NARZĘDZIE: `scripts/vol-estimator-check.ts <pula> [godzin]` — liczy oba
+estymatory na TYM SAMYM oknie i podaje implikowane zakresy dla k=2/3/4.
