@@ -2026,3 +2026,28 @@ w rejestrze → `nssm start` obu usług → pull poprawionego deployu → sanity
 Przy okazji domykamy krok 6 addendum z 10.08 (test fizycznego rebootu),
 jedyny, którego nigdy nie wykonaliśmy — dziś wiemy, że właśnie tam
 chowała się ta usterka.
+
+**Korekta tej samej sesji (21.08, po raporcie CC-Win): pm2 NIE był przyczyną
+okien po reboocie.** CC-Win sprawdził ręcznie i pm2 nie miał autostartu
+nigdzie — ani `Run` w HKCU/HKLM, ani w Harmonogramie (`pm2 save` zapisuje
+tylko dump procesów; instalacja autostartu to osobne `pm2 startup`, którego
+`deploy.ps1` nigdy nie wołał). Czyli pm2 nie mógł otworzyć tych okien.
+Sprzątanie pm2→NSSM było mimo to potrzebne — skrypt deployu realnie
+wskrzeszał pm2 obok usług NSSM, co groziło dwoma observerami na tych samych
+plikach stanu — ale to była INNA usterka niż zgłoszona.
+NOWY TROP (do weryfikacji u CC-Win): Harmonogram zadań. `setup-windows.md`
+rejestruje „HOMOS Daily Backup" przez `Register-ScheduledTask` BEZ
+`-Principal`, czyli na koncie bieżącego użytkownika z logon type
+INTERACTIVE (zadanie startuje w sesji użytkownika i pokazuje okno), i z
+`-StartWhenAvailable` (nadrabianie pominiętego startu). Jeśli
+`HomosMorningReport` powstał tym samym wzorcem, to po nocy z wyłączonym
+komputerem oba zadania nadrabiają zaległe przebiegi zaraz po starcie —
+dwa okna, puste, bo wyjście idzie do logów. `HomosPipeline` ma `/RU SYSTEM`,
+więc jest niewinny. Rozstrzygnie `schtasks /Query /TN ... /XML`
+(`<LogonType>`, `<StartWhenAvailable>`, `<Hidden>`) + LastRunTime po
+reboocie. Uwaga przy poprawce: raport poranny jako jedyny automat gitowy
+pushuje do repo — przeniesienie go na SYSTEM może zerwać dostęp do
+credentiali gita (per-user), więc to nie jest zmiana „na jedno kliknięcie".
+LEKCJA PROCESOWA (druga dziś): najpierw dowód, potem teoria. Zbudowałem
+spójną narrację o pm2 na podstawie zgodności objawu z historią projektu,
+a nie na podstawie sprawdzenia, co faktycznie odpala się przy starcie.
