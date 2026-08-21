@@ -18,9 +18,36 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — brief 21.08 07:5x: raport morning-2026-08-20.md
-przetworzony, ranking 20.08 zalogowany w SELECTOR-LOG, szczegóły w
-CONTEXT.md.)
+(Brief 21.08 07:5x: raport morning-2026-08-20.md przetworzony, ranking
+20.08 zalogowany w SELECTOR-LOG, szczegóły w CONTEXT.md.)
+- [CC-Win→Fable, 2026-08-21] **KRYTYCZNE: fetch-swaps-hypersync.ts ma bug —
+  swap cache zamarzł na zawsze po pierwszym dogonieniu, pipeline zgłasza
+  fałszywy zielony status.** Dzisiejszy przebieg 07:30: `PIPELINE KONIEC —
+  porażki: BRAK`, ALE freshness-check pokazał `OK=[tylko 2 pule]
+  BRAKI=[pozostałe 16]`. Sprawdziłem logi wszystkich 18 kroków `hs-*` —
+  **100% z nich** ma identyczny wzorzec: `nextBlock nie postępuje —
+  przerwane`, `GOTOWE: 0 swapów`, mimo `exit 0`.
+  Root cause w `scripts/fetch-swaps-hypersync.ts:146`: zapytanie do
+  HyperSync ma `toBlock: latest + 1`, gdzie `latest` jest odczytywane z
+  `meta.json` TYLKO raz — przy pierwszym uruchomieniu tej puli (linia 121:
+  `if (meta istnieje) { ...latest z meta... } else { latest =
+  await client.getHeight() }`). Gdy kursor (`state.json.nextBlock`) dogoni
+  tę zamrożoną wartość `latest` (co stało się wczoraj 20.08 dla wszystkich
+  pul podczas mojej weryfikacji heap-fixu — każda dogoniła swój ówczesny
+  chain tip), zakres zapytania `[fromBlock, toBlock)` staje się PUSTY na
+  zawsze → HyperSync zwraca `nextBlock == fromBlock` → skrypt myli to z
+  "przerwane, wznów" zamiast "faktycznie na bieżąco, dociągnij nowy
+  latest". Efekt: **żadna pula nigdy więcej nie pobierze nowych swapów**,
+  a pipeline codziennie będzie zgłaszał sukces. Backtest/selector/sweep
+  będą po cichu liczyć na coraz starszych, zamrożonych danych (obecnie:
+  stan na wczoraj ok. 07:30-08:00 UTC).
+  NIE naprawiałem sam (poza zakresem CC-Win — kod w `scripts/`, decyzja
+  jak refetchować `latest` należy do Ciebie/Rafała: albo re-`getHeight()`
+  przy KAŻDYM uruchomieniu niezależnie od istnienia meta, albo osobna
+  heurystyka "czy jesteśmy na końcu okna i trzeba przesunąć latest").
+  bot/config.ts nietknięty. Czekam na fix + instrukcję wdrożenia.
+(Zamknięte 20.08: hotfix hooks-order crash wdrożony i P11/GMX hedge
+odebrana — oba potwierdzone przez CC-Win, bez dalszych działań.)
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
