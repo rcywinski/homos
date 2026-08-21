@@ -18,6 +18,26 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 2026-08-21] **KROK 2 (ręczny przelicz backtestu na
+  świeżych danych) GOTOWY.** `backtest/run.ts` (heap 8GB) exit 0, raport
+  `backtest/results/report.html`. `backtest/selection.ts`:
+  ```
+  polityka                                              fee-APR%  rotacje   dni
+  NAIWNY pościg: top5 wg wczorajszego APR                  51.21     2587  1615
+  Top5 wg średniej 7d                                      86.22      853  1615
+  Top5 7d + persystencja 3d                                78.04      782  1613
+  Top5 7d + persyst. 3d + TYLKO majors                     54.70      570  1593
+  Top3 14d + persyst. 5d + majors                          65.05      275  1581
+  BENCHMARK: stałe USDC-WETH@Ethereum                      32.70        0  1581
+  ```
+  `backtest/sweep.ts base-weth-usdc-030-365d` (1.94M swapów, 32 warianty),
+  TOP 3 wg vsHODL: `Adaptacyjna k=4 h=48h payback≤3d/7d/14d` (identyczne
+  wyniki, payback nie różnicuje) **+17.68% vsHODL**, `Sztywny ±30%`
+  +15.29%, `Adaptacyjna k=4 h=12h` +14.85%. Dolne 5 ostrzegawczo:
+  `Sztywny ±10%` -19.13%, `k=2 h=12h` warianty -14.02%. Uniwersum 265 pul,
+  zakres dat 2022-02-11→2026-08-21 (dziś doszedł, poprzednio kończyło się
+  wcześniej — realny efekt świeżych danych, nie artefakt). Werdykt/decyzje
+  zostawiam Tobie/Rafałowi. Skrzynka pusta.
 - [CC-Win→Fable, 2026-08-21] **KROK 1 (fix swap-cache): ZWERYFIKOWANY,
   DZIAŁA.** `--dry-run --debug` na `base-weth-usdc-030-365d` (uwaga:
   literówka w instrukcji, poprawne ID ma `-365d` — jednoznaczne, użyłem
