@@ -2051,3 +2051,39 @@ credentiali gita (per-user), więc to nie jest zmiana „na jedno kliknięcie".
 LEKCJA PROCESOWA (druga dziś): najpierw dowód, potem teoria. Zbudowałem
 spójną narrację o pm2 na podstawie zgodności objawu z historią projektu,
 a nie na podstawie sprawdzenia, co faktycznie odpala się przy starcie.
+
+### 2026-08-21 wieczór — Dwie usterki zgłoszone przez CC-Win po wdrożeniu UI (obie moje)
+1. **`deploy.ps1` nie parsował się na Windows — NAWRÓT błędu z 10.08.**
+   PowerShell 5.1 czyta `.ps1` bez BOM w systemowej stronie kodowej, więc
+   polskie znaki rozjeżdżały cudzysłowy (`TerminatorExpectedAtEndOfString`).
+   Dokładnie to samo zdarzyło się 10.08 na `backup.ps1`/`deploy.ps1` i
+   zostało wtedy naprawione — `backup.ps1` do dziś ma BOM (`efbbbf`), mój
+   nowy `deploy.ps1` miał `232064`. Pisałem go na Macu i zgubiłem BOM.
+   CC-Win obszedł to kopią z BOM-em i wdrożenie przeszło poprawnie
+   (`4/5 Restart usług POMINIĘTY`, usługi Running, /health fresh, trzy
+   markery w bundlu ✅).
+   NAPRAWIONE dwoma warstwami: (a) plik zapisany jako UTF-8 z BOM + CRLF;
+   (b) WSZYSTKIE literały stringów ASCII-only — polskie znaki zostają tylko
+   w komentarzach, gdzie zepsute bajty nie ruszają parsera. Druga warstwa
+   jest tu ważniejsza od pierwszej: BOM łatwo zgubić przy edycji z Maca,
+   a wtedy błąd wraca po raz trzeci.
+2. **Raport poranny NIE wypychał się sam od co najmniej 3 dni.**
+   `HomosMorningReport` kończył z `LastTaskResult: 1`: commit lokalny się
+   udawał, ale `git pull --rebase origin main` przerywał z „cannot pull with
+   rebase: You have unstaged changes", 3× pod rząd → `process.exit(1)`.
+   Winowajca: `data/pipeline.log`, dopisywany codziennie o 07:30 przez
+   pipeline i ŚLEDZONY przez gita mimo wpisu `data/` w `.gitignore` —
+   .gitignore nie działa wstecz na pliki już zaindeksowane. O 08:45 drzewo
+   było więc zawsze brudne. Raport trafiał na GitHub wyłącznie dlatego, że
+   CC-Win pushował coś później tego samego dnia i ciągnął go przy okazji;
+   bez niego wisiałby lokalnie bezterminowo.
+   NAPRAWIONE: `pull --rebase --autostash` (odporność na DOWOLNY brudny
+   plik — jutro będzie inny) ORAZ `git rm --cached data/pipeline.log`.
+   Świadomie oba, nie jedno: sam .gitignore załatwia dzisiejszy przypadek,
+   ale nie klasę problemu.
+   TEST WŁAŚCIWY: jutro 08:45 — `LastTaskResult: 0` i commit `report:` na
+   GitHubie z czasem ~08:45, nie doklejony do późniejszego pusha CC-Wina.
+LEKCJA (trzecia dziś z tej samej rodziny): zlecając komuś komendę, sprawdzam
+najpierw, czy narzędzie, do którego go odsyłam, jest zgodne ze środowiskiem
+docelowym. Rano odesłałem CC-Wina do `deploy.ps1` sprzed migracji na NSSM,
+wieczorem do skryptu, którego jego PowerShell nie umiał sparsować.

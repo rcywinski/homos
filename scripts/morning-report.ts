@@ -164,7 +164,16 @@ try {
   catch { console.log('nic do commitowania (raport bez zmian)'); process.exit(0); }
   let pushed = false;
   for (let i = 1; i <= 3 && !pushed; i++) {
-    try { git('pull --rebase origin main'); git('push origin main'); pushed = true; }
+    // --autostash (FIX 21.08): bez tego `pull --rebase` przerywał z
+    // "cannot pull with rebase: You have unstaged changes" i raport NIE
+    // wypychał się sam — zdiagnozowane przez CC-Win, działo się CODZIENNIE
+    // od co najmniej 3 dni. Winowajcą był `data/pipeline.log` (dopisywany
+    // o 07:30 przez pipeline, śledzony przez gita mimo wpisu `data/` w
+    // .gitignore — .gitignore nie działa na pliki już zaindeksowane).
+    // Sam log odpinamy osobno (`git rm --cached`), ale autostash zostaje
+    // jako odporność na DOWOLNY brudny plik: jutro będzie inny, a ten
+    // automat ma działać bez opieki.
+    try { git('pull --rebase --autostash origin main'); git('push origin main'); pushed = true; }
     catch (e) { console.log(`push podejście ${i}/3 nieudane: ${String(e).slice(0, 200)}`); }
   }
   if (!pushed) { console.error('PUSH NIEUDANY po 3 podejściach'); process.exit(1); }
