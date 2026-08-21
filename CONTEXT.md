@@ -1885,3 +1885,85 @@ SELEKTOR: ranking bez zmian (znana anomalia, patrz wpis wyżej), streaki 8d
 stabilne, rotacja pominięta 3. dzień ($2.29 < $25), 3 propozycje OPEN wiszą
 (19.08 ×2, 20.08 ×1) — wszystkie SPOZA BOT_POOLS, każda wymaga dopisania
 puli do `bot/config.ts` przed otwarciem. Do decyzji Rafała.
+
+### 2026-08-21 10:4x — Odbiór raportów CC-Win: fix swap-cache DZIAŁA na produkcji + pierwszy przelicz na świeżych danych
+KROK 1 (fix HyperSync) ZWERYFIKOWANY NA ŻYWO. `--dry-run` zachował się
+dokładnie jak w moim teście offline (`latest odświeżony: 50167847 →
+50253445 (+85598 bl)`, 38712 swapów, nic nie zapisane), powtórka z zapisem
+38719 (1 blok doszedł w międzyczasie). Pełny `pipeline --only fetch`:
+**OK=[20/20 pul], BRAKI=[], porażki: BRAK** — pierwszy raz od 20.08, gdy
+zielony status jest prawdziwy. Realne liczby swapów per pula (nie zera),
+żadna pula nie trafiła w `exit 1`. Uwaga na przyszłość: literówka w moim
+zleceniu (`base-weth-usdc-030` zamiast `-365d`) — CC-Win poprawnie uznał
+to za jednoznaczne i nie pytał; przy ID pul trzeba uważać na sufiks.
+KROK 2 (przelicz na świeżych danych) — dwa wyniki wymagające DECYZJI, obie
+na przegląd 26.08, nic nie ruszam wcześniej:
+ (a) `selection.ts`: nasza PRODUKCYJNA polityka (top5 7d + persyst. 3d +
+     TYLKO majors) = **54.70% fee-APR / 570 rotacji**, podczas gdy sama
+     „top5 wg średniej 7d" = **86.22% / 853 rotacje**, a z persystencją bez
+     filtra majors = 78.04% / 782. Czyli filtr majors kosztuje ~23-31 pkt
+     fee-APR. UWAGA metodologiczna zanim ktokolwiek to „naprawi": to jest
+     fee-APR, NIE vsHODL i NIE po ryzyku — majors to kontrola ryzyka
+     (płynność, IL, ryzyko tokena), więc różnica nie jest darmowym zyskiem.
+     Do przeglądu: policzyć te polityki w metryce vsHODL, zanim zdejmiemy
+     filtr. Benchmark stałego USDC-WETH@Eth = 32.70%.
+ (b) `sweep.ts base-weth-usdc-030-365d` (1.94M swapów, 32 warianty): TOP =
+     **adaptacyjna k=4, histereza 48h, +17.68% vsHODL**; payback 3/7/14d
+     daje IDENTYCZNE wyniki (parametr nie różnicuje — kandydat do
+     uproszczenia). Produkcja ma dziś k=3 i histerezę 24h. Dolne warianty
+     ostrzegawczo: sztywny ±10% −19.13%, k=2/h=12h −14.02%.
+     ZBIEŻNOŚĆ z dzisiejszym paper tradingiem: 3 rebalanse odpalone rano na
+     k=3/h=24h dały netto tylko +$69/+$93/+$87 (koszt zjadł większość) —
+     czyli żywe dane mówią to samo co sweep: za krótka histereza, rebalans
+     za wcześnie. To najmocniejszy argument parametryczny, jaki mamy.
+ANOMALIA RANKINGU — hipoteza CC-Win, częściowo domknięta. History NIE jest
+zamrożone tak jak swap cache (pula #1 ma dzisiejszy wpis z inną wartością
+apyBase: 140.73 vs 161.38 wczoraj). Realna usterka jest w
+`scripts/fetch-llama-history.ts:56-61`: pomija fetch puli, gdy plik ma
+mtime <24h — a cron chodzi w odstępach BLISKO 24h, więc raz zsynchronizowane
+mtime'y całego uniwersum (258 plików) permanentnie nie łapią się w okno i
+uniwersum przestaje się odświeżać. Pasuje do objawu (identyczny ranking na
+WSZYSTKICH 5 pulach). CC-Win przypadkiem przełamał zamrożenie własnym
+`--only fetch`, więc dokładne odtworzenie stanu z 06:23 przepadło.
+TEST ROZSTRZYGAJĄCY: jutrzejszy ranking MUSI się różnić od dzisiejszego —
+jeśli będzie identyczny, hipoteza pada. Fix (mtime → porównanie daty
+kalendarzowej, jak w swap-cache) czeka na wynik tego testu.
+OOM 134 z 20.08: zamknięte — to był ten sam OOM, który CC-Win naprawił
+20.08 (heap 4→8GB), a log pochodził z podejścia SPRZED fixu. Nie wróciło.
+
+### 2026-08-21 11:xx — Trzy pytania Rafała o paper trading: odpowiedzi + dwie usterki estymatora zmienności
+1. **cbBTC-WETH nie wraca z cash, bo sygnał trendu wciąż aktywny.** Trend
+   liczony jest na cenie WZGLĘDNEJ (`quote:'WETH'`), czyli cbBTC wyrażonym
+   w WETH (~33.3 z `trend-state.ema`), NIE w USD. `down` włącza się przy
+   gap < −5% pod EMA(HL 7d), a gaśnie — bo cbBTC ma `trendReentry:'half'` —
+   dopiero przy gap > −2.5%. Skoro ETH rośnie szybciej niż BTC, ratio
+   cbBTC/WETH osuwa się dalej, a EMA (HL 7d) goni cenę w dół: przy STAŁYM
+   dryfie gap potrafi utknąć poniżej progu w nieskończoność. To nie jest
+   błąd, to konstrukcja — ale znaczy, że „bezpiecznik" na parze
+   skorelowanej mierzy przewagę ETH nad BTC, a nie ryzyko spadku rynku.
+   Koszt: ~$767/dobę vs HODL przy rosnącym rynku.
+2. **Histereza rebalansu: TAK, jedno dotknięcie zakresu zeruje 24h** —
+   `paper.ts:261`. Próbka co 15 min z `stats.lastTick` (chwilowy tick, nie
+   TWAP), więc pozycja oscylująca przy krawędzi może nigdy nie uzbierać
+   24h. Dotyczy arbitrum-weth-usdc-005 (mainnet 0.05% rebalansował się
+   dziś rano — reb=1). Poszlaka za oscylacją: fees tej puli i tak urosły
+   o $2.41/dobę, a naliczają się WYŁĄCZNIE w zakresie.
+   → różnica bot/backtest opisana w DECYZJE-2026-08-26 pkt 10.
+3. **Szeroki zakres ±34% (1732–3128 przy 2406) — arytmetycznie poprawny.**
+   `w = k·σ_dzienna·√7`, k=3 ⇒ ±34% implikuje σ ≈ 4.33%/d (~83% w skali
+   roku). I to się zgadza z rynkiem: w naszym (zamrożonym) cache ETH stoi
+   ~1914, a dziś jest 2406 — ruch +25% w kilka dni. Czyli zakres jest
+   szeroki, bo estymator widzi realny wystrzał zmienności. Konstrukcja:
+   „3 sigma ruchu tygodniowego", świadomie szeroka, żeby nie rebalansować.
+   CENA: yield skaluje się ~1/szerokość, więc ±34% zamiast ±13% to ~2.6×
+   mniej fee. NOWA OBSERWACJA do przeglądu: σ z EWMA o półtrwaniu 12h
+   spuchnie PO ruchu i zostaje wysoka, gdy rynek się już uspokoi — czyli
+   otwieramy najszerszy (najsłabiej zarabiający) zakres dokładnie po
+   wystrzale. Kandydat: mieszać σ krótkie z długim albo skrócić horizonDays.
+USTERKA ESTYMATORA (osobna, przeciwna w kierunku): per-swapowy EWMA
+w `computeStats` zaniża zmienność wobec standardowego realized vol na tych
+samych danych — mainnet-usdc-weth-005, okno 7d: **1.00%/d (advisor) vs
+1.57/1.68/1.64/1.42%/d (próbka 1min/5min/15min/1h)**, czyli ok. −40%.
+Powód: ogromna liczba swapów z ZEROWYM ruchem ceny (ten sam tick) wchodzi
+do średniej jako r²=0 i rozcieńcza wynik. Efekt netto: w spokoju zakresy
+za wąskie, po wystrzale za szerokie. Do policzenia przed strojeniem k.
