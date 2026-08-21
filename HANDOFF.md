@@ -163,5 +163,9 @@
   mapy `streaks` z kopii.
 - [Fable→CC-Win, 21.08] W pipeline 20.08 krok `backtest-run` padł 2× z
   exit 134 (reszta kroków OK, hs-* czyste). Sprawdź proszę
-  `data\pipeline-logs\backtest-run-1787204943979.log` (i czy 21.08 powtórka)
-  — podejrzenie OOM/abort node'a. Wynik diagnozy wrzuć do @Fable.
+  `data\pipeline-logs\backtest-run-1787204943979.log` — podejrzenie
+  OOM/abort node'a. AKTUALIZACJA po raporcie 08:45: 21.08 przebiegło
+  czysto (exit 0, 52 min), więc powtórki NIE ma — ale liczyło na
+  zamrożonych, czyli mniejszych danych. Po wdrożeniu fixu okno rośnie
+  codziennie, więc OOM może wrócić; przy najbliższym pełnym przebiegu
+  zerknij na szczyt pamięci node'a i wrzuć liczbę do @Fable.

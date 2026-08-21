@@ -1855,3 +1855,33 @@ padał 20.08 z exit 134 (OOM) już przy 8GB heap. Diagnoza tego kroku jest
 osobnym zadaniem u CC-Win; jeśli OOM wróci, trzeba będzie przyciąć okno
 od lewej (rolling window zamiast rosnącego) — decyzja parametryczna, nie
 techniczna.
+
+### 2026-08-21 09:1x — Brief z przebiegów nocnych (raport 08:45): PIERWSZE 3 REBALANSE w paper tradingu
+Źródło: `reports/morning-2026-08-21.md` (push 08:45). Żywych danych bota nie
+ruszę z sesji Fable — bot siedzi na Windows za LAN/VPN bez port-forwardingu,
+a `.bot/` w repo na Macu jest z 17.08; raport 08:45 to najświeższa prawda.
+PIPELINE 05:30–06:30: 18/18 hs-* exit 0 w ~1.2s każdy = zero swapów (znany
+bug, dziś naprawiony); freshness OK=[2] BRAKI=[16]; backtest-run 52 min
+exit 0 — **anomalia exit 134 z 20.08 NIE powtórzyła się**, ale liczyła na
+zamrożonych (czyli mniejszych) danych, więc OOM może wrócić po odmrożeniu
+okna; selection OK, sweep 7 min OK. universe.json 1.2h, swap cache 21.2h.
+PAPER TRADING (start 18.08): equity $52456 → **$52724** (+$268/+0.5%).
+Pierwsze rebalanse od startu — `reb` 0→1 na trzech pulach ETH/USDC
+(mainnet 0.30, mainnet 0.05, base 0.30): histereza 24h poza zakresem
+dobiegła i payback wyszedł ≤7d. Fee-flow wyraźnie przyspieszył po
+re-centrowaniu (mainnet-030 $5.09→$8.76, base-030 $3.65→$8.57), ale equity
+per pula urosło tylko +$69/+$93/+$87 — koszt rebalansu zjadł resztę.
+vs HODL: −$2592 → **−$4328** (−$1736 w dobę, największa dzienna rozbieżność
+od startu; rynek rośnie, LP zostaje w tyle — mechanicznie oczekiwane).
+cbBTC-WETH: 2. dobę w `cash` po EXIT_TREND (jedyna pula z `down:true`,
+brak `trendAction:'hedge'` w config → domyślne 'exit'). Equity zamrożone
+$11079, ale vs HODL −253 → −1020: **samo siedzenie w gotówce kosztowało
+~$767 w dobę**, i to na puli #1 rankingu (46.7%). Materiał wprost do agendy
+przeglądu 26.08 (hUp/v1.2) — zgodnie z decyzją NIE ruszam v1.2 do tego czasu.
+WAŻNE: paper trading NIE jest skażony bugiem HyperSync — `refreshStats`
+liczy z `fetchRecentSwaps(...24h)` po RPC, nie ze swap cache'u. Bug dotyka
+wyłącznie backtest/selection/sweep.
+SELEKTOR: ranking bez zmian (znana anomalia, patrz wpis wyżej), streaki 8d
+stabilne, rotacja pominięta 3. dzień ($2.29 < $25), 3 propozycje OPEN wiszą
+(19.08 ×2, 20.08 ×1) — wszystkie SPOZA BOT_POOLS, każda wymaga dopisania
+puli do `bot/config.ts` przed otwarciem. Do decyzji Rafała.
