@@ -39,14 +39,48 @@ const d0 = cfg.token0Decimals;
 const d1 = cfg.token1Decimals;
 
 type Row = { b: number; sp: string };
-const rows: Row[] = fs
-  .readFileSync(dataPath, 'utf8')
-  .trim()
-  .split('\n')
-  .filter(Boolean)
-  .map((l) => JSON.parse(l))
-  .filter((r: Row) => r.sp)
-  .sort((a: Row, b: Row) => a.b - b.b);
+
+/**
+ * Czytanie OD KOŃCA pliku, chunkami — cache potrafi mieć >1.6GB, a limit
+ * stringa w Node to ~536MB (crash `Cannot create a string longer than
+ * 0x1fffffe8 characters`, zgłoszony przez CC-Win 21.08). Czytamy tylko tyle,
+ * ile trzeba na żądane okno godzin.
+ */
+function readTailRows(file: string, needFrom: (lastBlock: number) => number): Row[] {
+  const CHUNK = 4 * 1024 * 1024;
+  const fd = fs.openSync(file, 'r');
+  try {
+    let pos = fs.fstatSync(fd).size;
+    let carry = ''; // niedokończony PIERWSZY wiersz z poprzedniego (późniejszego) chunku
+    let rows: Row[] = [];
+    let fromBlock: number | null = null;
+    while (pos > 0) {
+      const len = Math.min(CHUNK, pos);
+      pos -= len;
+      const buf = Buffer.allocUnsafe(len);
+      fs.readSync(fd, buf, 0, len, pos);
+      const text = buf.toString('utf8') + carry;
+      const parts = text.split('\n');
+      carry = pos > 0 ? parts.shift() ?? '' : ''; // pierwszy fragment może być ucięty
+      const parsed: Row[] = [];
+      for (const l of parts) {
+        if (!l.trim()) continue;
+        try {
+          const r = JSON.parse(l) as Row;
+          if (r && r.sp && Number.isFinite(r.b)) parsed.push(r);
+        } catch {
+          /* ucięty/uszkodzony wiersz pomijamy */
+        }
+      }
+      rows = parsed.concat(rows);
+      if (fromBlock === null && rows.length) fromBlock = needFrom(Math.max(...rows.map((r) => r.b)));
+      if (fromBlock !== null && rows.length && Math.min(...rows.map((r) => r.b)) <= fromBlock) break;
+    }
+    return rows.sort((a, b) => a.b - b.b);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
 
 // cena "ludzka" nogi bazowej (ta sama konwencja co advisor/paper)
 const price = (r: Row) => {
@@ -55,6 +89,11 @@ const price = (r: Row) => {
   return cfg.ethIsToken0 ? p : 1 / p;
 };
 
+const rows = readTailRows(dataPath, (last) => last - Math.floor((hours * 3600) / bt));
+if (!rows.length) {
+  console.error(`${id}: brak wczytanych swapów`);
+  process.exit(1);
+}
 const lastBlock = rows[rows.length - 1].b;
 const fromBlock = lastBlock - Math.floor((hours * 3600) / bt);
 const w = rows.filter((r) => r.b > fromBlock);
@@ -100,6 +139,21 @@ function resampled(sec: number): number | null {
   return n >= 20 ? Math.sqrt((s / n) * (86400 / sec)) : null;
 }
 
+// (c) diagnostyka trend vs szarpanina: |ruch netto| / √Σr² po krokach swapowych.
+// ≈1 → błądzenie losowe; <1 → cena szarpie się w miejscu (estymator swapowy
+// ZAWYŻA względem realnego przemieszczenia); >1 → cena idzie w jedną stronę
+// małymi krokami (estymator swapowy ZANIŻA — suma kwadratów małych kroków jest
+// dużo mniejsza niż kwadrat ruchu łącznego).
+let sumR2 = 0;
+let prev: number | null = null;
+for (const r of w) {
+  const p = price(r);
+  if (prev) sumR2 += Math.log(p / prev) ** 2;
+  prev = p;
+}
+const netMove = Math.abs(Math.log(price(w[w.length - 1]) / price(w[0])));
+const trendRatio = sumR2 > 0 ? netMove / Math.sqrt(sumR2) : null;
+
 const width = (sigma: number, k: number) => Math.min(Math.max(k * sigma * Math.sqrt(7), 0.01), 0.6);
 const line = (nazwa: string, v: number | null) =>
   v === null
@@ -111,8 +165,44 @@ console.log(`cena na koniec okna: ${price(w[w.length - 1]).toFixed(2)}\n`);
 console.log(line('(a) advisor (per swap)', volAdvisor));
 for (const [nm, sec] of [['1 min', 60], ['5 min', 300], ['15 min', 900], ['1 h', 3600]] as const)
   console.log(line(`(b) realized vol @ ${nm}`, resampled(sec)));
-const ref = resampled(300);
+// --- werdykt z UWZGLĘDNIENIEM szumu mikrostruktury -------------------------
+// UWAGA (poprawka 21.08): realized vol przy próbce 1–5 min sam bywa ZAWYŻONY
+// przez odbijanie ceny w paśmie opłaty (bid-ask bounce) — im szersza opłata
+// (0.30% vs 0.05%), tym mocniej. Jeśli σ maleje monotonicznie wraz z
+// wydłużaniem próbki, to sygnatura szumu, a nie prawdziwa zmienność — wtedy
+// punktem odniesienia ma być próbka 15min/1h, NIE 5min.
+const v5 = resampled(300);
+const v15 = resampled(900);
+const v60 = resampled(3600);
+const noiseDecay = v5 && v60 ? (v5 - v60) / v5 : null;
+const ref = v60 ?? v15 ?? v5;
+const refName = v60 ? '1h' : v15 ? '15min' : '5min';
 if (ref) {
   const diff = ((volAdvisor - ref) / ref) * 100;
-  console.log(`\nadvisor vs realized@5min: ${diff >= 0 ? '+' : ''}${diff.toFixed(0)}%  ${Math.abs(diff) < 15 ? '(zgodne — brak istotnego obciążenia)' : diff < 0 ? '(advisor ZANIŻA)' : '(advisor ZAWYŻA)'}`);
+  console.log(
+    `\nwerdykt (odniesienie: realized@${refName}): advisor ${diff >= 0 ? '+' : ''}${diff.toFixed(0)}%  ` +
+      `${Math.abs(diff) < 15 ? '→ zgodne, brak istotnego obciążenia' : diff < 0 ? '→ advisor ZANIŻA' : '→ advisor ZAWYŻA'}`
+  );
+  if (noiseDecay !== null)
+    console.log(
+      `spadek σ z próbki 5min→1h: ${(noiseDecay * 100).toFixed(0)}%  ` +
+        `${noiseDecay > 0.25 ? '(silny szum mikrostruktury — NIE używaj 5min jako odniesienia)' : '(szum umiarkowany)'}`
+    );
+  console.log(`fee tier: ${(cfg.feeBps / 10000).toFixed(2)}% — im szersza opłata, tym większe odbicie w paśmie.`);
+}
+if (trendRatio !== null) {
+  console.log(
+    `\ntrend vs szarpanina: |ruch netto| ${(netMove * 100).toFixed(2)}% / √Σr² ${(Math.sqrt(sumR2) * 100).toFixed(2)}% = ${trendRatio.toFixed(2)}  ` +
+      (trendRatio < 0.5
+        ? '→ cena szarpie się w miejscu; estymator SWAPOWY zawyża wobec realnego przemieszczenia'
+        : trendRatio > 1.2
+          ? '→ cena idzie w jedną stronę małymi krokami; estymator SWAPOWY zaniża (suma kwadratów ≪ kwadrat ruchu)'
+          : '→ blisko błądzenia losowego')
+  );
+  console.log(
+    'WNIOSEK: dla ustawiania zakresu liczy się WIELKOŚĆ RUCHU w horyzoncie, nie „chop".\n' +
+      'σ liczona ze skoków swap-po-swapie jest zależna od mikrostruktury puli (fee tier,\n' +
+      'częstość transakcji), a nie od zmienności aktywa — dlatego dwie pule na TYM SAMYM\n' +
+      'ETH potrafią dać σ różniące się kilkukrotnie. Próbka czasowa (15min/1h) tego nie ma.'
+  );
 }

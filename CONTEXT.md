@@ -1960,20 +1960,33 @@ OOM 134 z 20.08: zamknięte — to był ten sam OOM, który CC-Win naprawił
    spuchnie PO ruchu i zostaje wysoka, gdy rynek się już uspokoi — czyli
    otwieramy najszerszy (najsłabiej zarabiający) zakres dokładnie po
    wystrzale. Kandydat: mieszać σ krótkie z długim albo skrócić horizonDays.
-USTERKA ESTYMATORA (osobna, przeciwna w kierunku): per-swapowy EWMA
-w `computeStats` zaniża zmienność wobec standardowego realized vol na tych
-samych danych — mainnet-usdc-weth-005, okno 7d: **1.00%/d (advisor) vs
-1.57/1.68/1.64/1.42%/d (próbka 1min/5min/15min/1h)**, czyli ok. −40%.
-POWÓD (zmierzony 21.08 po odpowiedzi CC-Win — moja pierwsza hipoteza
-o „swapach z zerowym ruchem ceny" była BŁĘDNA, takich swapów jest 0%):
-winne jest `dt = max(Δblok · blockTime, blockTime)` w `computeStats`.
-Na mainnet-usdc-weth-005 (24h): **33% sąsiednich par swapów siedzi w TYM
-SAMYM bloku** (dt prawdziwe = 0 s, podbijane do 12 s), 53% swapów żyje
-w blokach wieloswapowych, rekord 28 swapów w bloku. Wariancja jednego
-bloku rozkłada się więc na N×12 s zamiast 12 s → tempo wariancji dzielone
-przez N. Bias jest tym silniejszy, im większa aktywność — czyli DOKŁADNIE
-w momentach wysokiej zmienności, gdy szerokość zakresu ma największe
-znaczenie. Efekt netto: w spokoju zakresy za wąskie, po wystrzale za
-szerokie. Do policzenia przed strojeniem k.
-NARZĘDZIE: `scripts/vol-estimator-check.ts <pula> [godzin]` — liczy oba
-estymatory na TYM SAMYM oknie i podaje implikowane zakresy dla k=2/3/4.
+USTERKA ESTYMATORA — sprawa domknięta 21.08 po odpowiedzi CC-Win, PO DRODZE
+OBALIŁEM DWIE WŁASNE HIPOTEZY (odnotowuję, bo obie zdążyły trafić do
+dokumentów): (1) „swapy bez ruchu ceny" — takich jest 0%; (2) `dt =
+max(Δblok·blockTime, blockTime)` — efekt realny, ale drobny (na Base
+kolizje w bloku są rzadkie, a bias akurat tam NAJWIĘKSZY, więc to nie może
+być przyczyną).
+WŁAŚCIWY MECHANIZM: `computeStats` sumuje kwadraty zmian ceny
+SWAP-PO-SWAPIE, czyli mierzy „szarpaninę", a nie realne PRZEMIESZCZENIE
+ceny. Gdy rynek idzie w jedną stronę wieloma drobnymi krokami, suma
+kwadratów jest dużo mniejsza niż kwadrat ruchu łącznego. Diagnostyka
+|ruch netto| / √Σr² w tej samej dobie: mainnet-005 = 0.08 (stoi w miejscu
+i szarpie się), base-030 = 1.44, base-005 = 1.64 (idą w jedną stronę).
+DOWÓD, że to wada POMIARU, a nie właściwość rynku: trzy pule na TYM SAMYM
+ETH, ta sama doba — σ swapowa 0.97 / 0.25 / 0.61 %/d (rozrzut 4×), σ z
+siatki czasowej 1h: 1.13 / 1.04 / 1.70 %/d (rozrzut 1.6×, i to głównie z
+niezsynchronizowanych okien). Odchylenie advisora od odniesienia 1h:
+−14% / −76% / −64%. Estymator jest więc funkcją fee tieru i częstości
+transakcji w puli, a nie zmienności aktywa.
+SKUTEK: `w = k·σ·√7` dziedziczy błąd RÓŻNY per pula, więc jedno globalne
+`k` nie może być poprawne dla wszystkich pul naraz — a wszystkie
+dotychczasowe kalibracje k (walk-forward 365d, sweepy, hUp) były robione
+pod ten estymator. Rekomendacja do decyzji 26.08 (agenda pkt 11): liczyć σ
+z ceny próbkowanej w siatce 15min/1h. Uwaga na drugi koniec: próbka
+1–5 min bywa ZAWYŻONA przez odbicia w paśmie opłaty (mainnet-005: σ spada
+o 37% przy przejściu 5min→1h), więc odniesieniem ma być 15min/1h.
+NARZĘDZIE: `scripts/vol-estimator-check.ts <pula> [godzin]` — liczy
+estymatory na TYM SAMYM oknie, podaje zakresy dla k=2/3/4, sygnaturę szumu
+(5min→1h) i diagnostykę trend/szarpanina. Czyta OD KOŃCA pliku chunkami:
+cache bywa >2GB, a pierwsza wersja crashowała na limicie stringa Node
+(zgłosił CC-Win) — po naprawie plik 2.0GB liczy się w 0.08s przy 85MB RAM.
