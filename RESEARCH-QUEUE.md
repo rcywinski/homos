@@ -231,6 +231,16 @@
   Bramka F1 (bić HODL 50/50): przechodzi ≥1 strategia na KAŻDEJ z 5 pul (na cbBTC
   już tylko marginalnie: full-range +0.02 po korekcie orientacji).
 
+## C0. DO KONSULTACJI ZEWNĘTRZNEJ (Rafał, tydzień 25–31.08)
+
+- [ ] **Szerokość zakresu LP i pomiar zmienności** — brief samowystarczalny
+  w `PYTANIE-SZEROKOSC-I-SIGMA.md` (21.08). Do wklejenia innym modelom;
+  zawiera pomiar błędu σ na 4 pulach, listę hipotez JUŻ ODRZUCONYCH
+  (żeby konsultacja ich nie powtarzała) i 6 ponumerowanych pytań.
+  Wynik konsultacji → wejście do decyzji 26.08 pkt 11 (albo przesunięcie
+  decyzji, jeśli odpowiedzi otworzą nowy wątek). NIE zmieniamy do tego
+  czasu ani `k`, ani estymatora, ani histerezy.
+
 ## C. PO ANALIZACH (sesja Fable — interpretacja)
 
 - [x] **ALGORITHM.md v1 — ZAMROŻONE 11.08** (Fable + decyzja Rafała): selekcja

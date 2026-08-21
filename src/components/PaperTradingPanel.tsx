@@ -44,6 +44,7 @@ import React, { FC } from 'react';
 import { UseBotApi, PaperHistoryPoint, PaperEvent, PaperPosition } from '../hooks/useBotApi';
 import { BOT_POOL_META } from '../config/botPools';
 import { Sparkline, PriceRangeChart } from './PositionCharts';
+import { formatDuration } from '../utils/formatters';
 
 const fmtUsd = (v: number) =>
   (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -59,6 +60,25 @@ const STATUS_ICON: Record<string, string> = {
   open: '🟢',
   cash: '💤',
   pending: '⏳',
+};
+
+/** Ikona stanu pozycji. WAŻNE (prośba Rafała 21.08): pozycja OTWARTA, ale poza
+ *  zakresem, nie zarabia opłat — a do tej pory świeciła tą samą zieloną kropką
+ *  co zdrowa. Dlatego out-of-range PODMIENIA ikonę (jedna ikona = jeden stan),
+ *  zamiast dokładać drugi znaczek obok. */
+const statusIcon = (status: string, inRange: boolean | undefined): string =>
+  status === 'open' && inRange === false ? '⚠️' : (STATUS_ICON[status] ?? '·');
+
+/** Histereza rebalansu w paper-tradingu: 24h NIEPRZERWANIE poza zakresem
+ *  (bot/paper.ts HYSTERESIS_MS). Trzymamy tu kopię stałej, bo UI nie importuje
+ *  kodu bota — gdyby zmieniła się tam, trzeba poprawić i tu. */
+const HYSTERESIS_MS = 24 * 3600 * 1000;
+
+const statusTitle = (status: string, inRange: boolean | undefined): string => {
+  if (status === 'open') return inRange === false ? 'POZA zakresem — pozycja nie nalicza opłat' : 'W zakresie — pozycja zarabia';
+  if (status === 'cash') return 'W gotówce po bezpieczniku trendu — czeka na powrót';
+  if (status === 'pending') return 'Przed pierwszym otwarciem';
+  return status;
 };
 
 const EVENT_ICON: Record<string, string> = {
@@ -97,11 +117,50 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
     <div className="paper-pool-card">
       <div className="paper-pool-header">
         <span>
-          {STATUS_ICON[position.status] ?? '·'} {poolLabel(poolId)}
-          {trendDown && <span className="paper-badge-trend-down"> ⛔</span>}
+          <span title={statusTitle(position.status, last?.inRange)}>{statusIcon(position.status, last?.inRange)}</span> {poolLabel(poolId)}
+          {trendDown && (
+            <span className="paper-badge-trend-down" title="Sygnał bezpiecznika trendu (cena pod EMA)">
+              {' '}
+              ⛔
+            </span>
+          )}
         </span>
         <span className="paper-pool-equity">{fmtUsd(equity)}</span>
       </div>
+
+      {/* Licznik wypadnięcia (prośba Rafała 21.08). Pokazujemy TYLKO gdy
+          pozycja jest otwarta i poza zakresem. `outOfRangeSince` zeruje się
+          przy każdym powrocie do zakresu — to licznik CIĄGŁEGO wypadnięcia. */}
+      {position.status === 'open' && last?.inRange === false && (
+        <div className="out-of-range-timer">
+          {position.outOfRangeSince ? (
+            (() => {
+              const elapsed = Date.now() - position.outOfRangeSince;
+              const left = HYSTERESIS_MS - elapsed;
+              return (
+                <>
+                  <span className="out-of-range-elapsed">Poza zakresem: {formatDuration(elapsed)}</span>
+                  {left > 0 ? (
+                    <span className="muted" title="Po upływie 24h bot sprawdzi jeszcze, czy koszt rebalansu zwróci się z opłat w ≤7 dni. Powrót do zakresu zeruje licznik.">
+                      {' '}
+                      · próg rebalansu za {formatDuration(left)}
+                    </span>
+                  ) : (
+                    <span className="muted" title="Próg 24h minięty — rebalans czeka już tylko na warunek opłacalności (payback ≤7 dni).">
+                      {' '}
+                      · próg 24h minięty, czeka na opłacalność
+                    </span>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <span className="out-of-range-elapsed" title="Bot jeszcze nie zapisał momentu wypadnięcia (licznik ustawia się w najbliższym cyklu 15-minutowym).">
+              Poza zakresem (licznik startuje w najbliższym cyklu)
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="paper-pool-stats">
         <div className="paper-pool-stat">
@@ -212,6 +271,9 @@ const PaperTradingPanel: FC<Props> = ({ bot }) => {
       </div>
       <div className="muted paper-subtitle">
         symulacja ${state.capitalPerPoolUsd.toLocaleString()}/pula, start {new Date(state.startedAt).toLocaleDateString('pl-PL')}
+      </div>
+      <div className="muted status-legend">
+        🟢 w zakresie · ⚠️ poza zakresem (nie zarabia) · 💤 w gotówce · ⏳ przed startem · ⛔ sygnał trendu
       </div>
 
       {poolIds.length === 0 ? (

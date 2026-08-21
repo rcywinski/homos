@@ -45,6 +45,37 @@ export const addTransaction = (
   return storeTransaction(address, tx);
 };
 
+/**
+ * FIX 21.08 (crash „Rendered more hooks than during the previous render",
+ * odtworzony na localhost przy rozwijaniu sekcji „Zarządzaj"):
+ * poprzednia wersja wołała `useTransaction`/`useWaitForTransactionReceipt`/
+ * `useEffect` WEWNĄTRZ `transactions.forEach(...)`. Liczba hooków zależała
+ * więc od liczby transakcji w stanie „pending" i zmieniała się między
+ * renderami — złamana pierwsza zasada hooków, React wywalał całe drzewo.
+ *
+ * Poprawka: obserwator JEDNEJ transakcji jako osobny komponent. Hooki są
+ * na najwyższym poziomie komponentu (liczba stała), a zmienna jest liczba
+ * ZAMONTOWANYCH komponentów — co jest w Reakcie legalne. Nic nie renderuje.
+ */
+const PendingTxWatcher: FC<{
+  tx: Transaction;
+  address: string;
+  onResolved: (updated: Transaction[]) => void;
+}> = ({ tx, address, onResolved }) => {
+  const { data: transaction } = useTransaction({ hash: tx.hash as `0x${string}` });
+  const { isSuccess, isError } = useWaitForTransactionReceipt({ hash: tx.hash as `0x${string}` });
+
+  useEffect(() => {
+    if (transaction && (isSuccess || isError)) {
+      onResolved(storeTransaction(address, { ...tx, status: isSuccess ? 'confirmed' : 'failed' }));
+    }
+    // `tx` celowo po `hash` — obiekt jest odtwarzany przy każdym renderze rodzica
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transaction, isSuccess, isError, address, tx.hash]);
+
+  return null;
+};
+
 const TransactionHistory: FC = () => {
   const { address, isConnected } = useAccount();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -56,31 +87,9 @@ const TransactionHistory: FC = () => {
     }
   }, [address]);
 
-  // Monitor pending transactions
-  transactions.forEach(tx => {
-    if (tx.status === 'pending') {
-      const { data: transaction } = useTransaction({ 
-        hash: tx.hash as `0x${string}` 
-      });
-      
-      const { isSuccess, isError } = useWaitForTransactionReceipt({ 
-        hash: tx.hash as `0x${string}` 
-      });
+  if (!isConnected || !address) return null;
 
-      useEffect(() => {
-        if (transaction && (isSuccess || isError) && address) {
-          const updatedTx: Transaction = {
-            ...tx,
-            status: isSuccess ? 'confirmed' : 'failed'
-          };
-          const updated = storeTransaction(address, updatedTx);
-          setTransactions(updated);
-        }
-      }, [transaction, isSuccess, isError]);
-    }
-  });
-
-  if (!isConnected) return null;
+  const pending = transactions.filter((t) => t.status === 'pending');
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString();
@@ -99,6 +108,10 @@ const TransactionHistory: FC = () => {
 
   return (
     <ExpandableSection title="Transaction History">
+      {/* obserwatory transakcji w locie — nic nie renderują, patrz komentarz wyżej */}
+      {pending.map((tx) => (
+        <PendingTxWatcher key={`watch-${tx.hash}`} tx={tx} address={address} onResolved={setTransactions} />
+      ))}
       <div className="transaction-history">
         <div className="transaction-header">
           <h3>Transaction History</h3>

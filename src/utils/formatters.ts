@@ -78,3 +78,17 @@ export function formatPercentage(percentage: number): string {
   // For large percentages, no decimal places
   return Math.round(percentage) + '%';
 } 
+/**
+ * Czas trwania w formie zwięzłej: "48min", "6h 12min", "3d 4h".
+ * Bez sekund — bot próbkuje co 15 minut, więc większa precyzja byłaby fikcją.
+ * Dodane 21.08 pod licznik "ile pozycja jest poza zakresem" (paper + realne).
+ */
+export function formatDuration(ms: number): string {
+  const min = Math.max(0, Math.round(ms / 60000));
+  const d = Math.floor(min / 1440);
+  const h = Math.floor((min % 1440) / 60);
+  const m = min % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}min`;
+  return `${m}min`;
+}

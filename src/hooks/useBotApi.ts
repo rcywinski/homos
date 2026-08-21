@@ -155,6 +155,12 @@ export interface PaperPosition {
   hedgePnlRealizedUsd: number;
   openedAt: string;
   startedAt: string;
+  /** ms — moment, od którego pozycja jest NIEPRZERWANIE poza zakresem
+   *  (bot/paper.ts:72). Zeruje się przy każdym powrocie do zakresu, więc
+   *  licznik w UI jest licznikiem CIĄGŁEGO wypadnięcia, nie sumy. Pole było
+   *  zawsze w JSON z /api/paper (serwer oddaje cały paper-state.json),
+   *  brakowało go tylko w tym typie — dodane 21.08 pod licznik w UI. */
+  outOfRangeSince?: number | null;
 }
 
 export interface PaperStateShape {

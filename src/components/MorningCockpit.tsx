@@ -19,6 +19,7 @@ import { useRotateExecution } from '../hooks/useRotateExecution';
 import { useHedgeExecution, loadHedgeOpen, clearHedgeOpen, HedgeOpenState } from '../hooks/useHedgeExecution';
 import { planRebalance, RebalancePlan, planRotate, RotatePlan } from '../utils/rebalanceBuilder';
 import { planHedgeOpen, planHedgeClose, HedgePlan } from '../utils/hedgeBuilder';
+import { formatDuration } from '../utils/formatters';
 import BotStatusDot from './BotStatusDot';
 import BotTelemetry from './BotTelemetry';
 import ObservationAnalysis from './ObservationAnalysis';
@@ -40,6 +41,38 @@ const ADVICE_ICON: Record<string, string> = {
   REBALANCE: '🔄',
   WAIT_NOT_PROFITABLE: '⏳',
 };
+
+const ADVICE_TITLE: Record<string, string> = {
+  REBALANCE: 'Bot proponuje rebalans (koszt zwróci się z opłat)',
+  WAIT_NOT_PROFITABLE: 'Poza zakresem, ale rebalans na razie się nie opłaca — czekamy',
+};
+
+/** Ikona stanu REALNEJ pozycji — ten sam język co w paper-tradingu
+ *  (prośba Rafała 21.08: w tej sekcji nie było statusu w ogóle, a pozycja
+ *  poza zakresem wyglądała identycznie jak zdrowa).
+ *  Realna pozycja nie ma stanu 'cash'/'pending' — bot widzi ją albo nie. */
+const positionStatusIcon = (inRange: boolean): string => (inRange ? '🟢' : '⚠️');
+const positionStatusTitle = (inRange: boolean): string =>
+  inRange ? 'W zakresie — pozycja zarabia' : 'POZA zakresem — pozycja nie nalicza opłat';
+
+/**
+ * Od kiedy pozycja jest NIEPRZERWANIE poza zakresem — wyliczane z próbek
+ * historii (co ~15 min), bo dla REALNYCH pozycji bot nie trzyma znacznika
+ * `outOfRangeSince` (to pole istnieje tylko w paper-tradingu).
+ * Idziemy od najnowszej próbki wstecz, dopóki `inRange === false`; zwracamy
+ * ts pierwszej próbki tej serii. Wynik jest z natury przybliżony do 15 minut
+ * i NIE wykryje wypadnięcia krótszego niż odstęp między próbkami.
+ */
+function outOfRangeSinceFromHistory(points: Array<{ ts: string; inRange: boolean }>): number | null {
+  const sorted = [...points].sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts)); // najnowsze pierwsze
+  if (!sorted.length || sorted[0].inRange) return null;
+  let since = Date.parse(sorted[0].ts);
+  for (const p of sorted) {
+    if (p.inRange) break;
+    since = Date.parse(p.ts);
+  }
+  return Number.isFinite(since) ? since : null;
+}
 
 interface Props {
   bot: UseBotApi;
@@ -586,6 +619,9 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           {bot.status === 'stale' && <div className="morning-note">⚠ dane bota nieaktualne (starsze niż 5 min)</div>}
 
           <div className="morning-section-title">Pozycje — akcje</div>
+          <div className="muted status-legend">
+            🟢 w zakresie · ⚠️ poza zakresem (nie zarabia) · 🔄 do rebalansu · ⏳ rebalans nieopłacalny
+          </div>
           {portfolio.loading ? (
             <div className="morning-note">Ładowanie pozycji…</div>
           ) : portfolio.positions.length === 0 && !liveHedge ? (
@@ -672,10 +708,43 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                     <CockpitPositionActions position={p} actions={cockpitActions} onChanged={portfolio.refresh} bot={bot} />
                     <div className="cockpit-position-card-header">
                       <span>
-                        {ADVICE_ICON[p.advice ?? ''] ?? '·'} {p.poolLabel} · #{p.tokenId}
+                        {/* status pozycji NAJPIERW (zarabia / nie zarabia), rada bota
+                            jako drugi znaczek. ✅ IN_RANGE_HOLD pomijamy — 🟢 już to mówi. */}
+                        <span title={positionStatusTitle(p.inRange)}>{positionStatusIcon(p.inRange)}</span> {p.poolLabel} · #{p.tokenId}
+                        {p.advice && p.advice !== 'IN_RANGE_HOLD' && ADVICE_ICON[p.advice] && (
+                          <span title={ADVICE_TITLE[p.advice] ?? p.advice}> {ADVICE_ICON[p.advice]}</span>
+                        )}
                       </span>
                       <span className="muted">{p.valueUsd !== null ? fmtUsd(p.valueUsd) : '— (bez wyceny)'}</span>
                     </div>
+                    {/* Licznik wypadnięcia dla REALNEJ pozycji (prośba Rafała 21.08).
+                        Różnica wobec paper: bot NIE czeka tu 24h — propozycję
+                        rebalansu wystawia od razu, gdy doradca uzna ją za opłacalną
+                        (bot/observer.ts:544). Dlatego zamiast odliczania pokazujemy,
+                        na co pozycja faktycznie czeka. */}
+                    {!p.inRange && (() => {
+                      const since = outOfRangeSinceFromHistory(rawPosHistory);
+                      const waiting =
+                        p.advice === 'REBALANCE'
+                          ? 'bot proponuje rebalans (patrz „Propozycje")'
+                          : p.advice === 'WAIT_NOT_PROFITABLE'
+                            ? `rebalans na razie nieopłacalny${p.paybackDays != null ? ` (zwrot kosztu ~${p.paybackDays.toFixed(1)} dnia, próg 7)` : ''}`
+                            : 'brak danych doradcy dla tej puli';
+                      return (
+                        <div className="out-of-range-timer">
+                          <span className="out-of-range-elapsed">
+                            Poza zakresem: {since ? `~${formatDuration(Date.now() - since)}` : 'świeżo'}
+                          </span>
+                          <span
+                            className="muted"
+                            title="Realne pozycje nie mają histerezy 24h jak paper-trading — bot wystawia propozycję rebalansu od razu, gdy koszt zwróci się z opłat w ≤7 dni. Czas liczony z próbek co ~15 min."
+                          >
+                            {' '}
+                            · {waiting}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     {/* Stary pasek zakresu (P1) tylko jako FALLBACK, dopóki
                         wykres cena-vs-pasmo nie ma danych — potem duplikat
                         (uwaga Rafała z odbioru P10: "nie powinien być wywalony?") */}

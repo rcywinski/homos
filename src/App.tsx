@@ -4,16 +4,11 @@ import { ConnectKitProvider, ConnectKitButton } from 'connectkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config } from './config/wallet';
 import { CompactWalletInfo } from './components/WalletInfo';
-import PoolBrowser from './components/PoolBrowser';
-import TransactionHistory from './components/TransactionHistory';
 import FaucetSection from './components/FaucetSection';
 import MorningCockpit from './components/MorningCockpit';
 import BotStatusDot from './components/BotStatusDot';
-import ExpandableSection from './components/ExpandableSection';
 import { useBotApi } from './hooks/useBotApi';
 import './styles.css';
-import './styles/marketVolatility.css';
-import './styles/liquidityManager.css';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -45,16 +40,16 @@ function AppShell() {
         <FaucetSection />
         <div className="main-content">
           <MorningCockpit bot={bot} />
-          {/* Partia 3 (TASKS-UI.md / UX-COCKPIT.md §1.B): dawne sekcje
-              zdegradowane pod jeden zwijalny nagłówek, domyślnie zwinięty —
-              kokpit powyżej jest teraz głównym ekranem. Nic tu nie skasowane,
-              tylko schowane za jednym kliknięciem. */}
-          <ExpandableSection title="Zarządzaj (zaawansowane)" defaultExpanded={false}>
-            <PoolBrowser />
-            <div className="transaction-section">
-              <TransactionHistory />
-            </div>
-          </ExpandableSection>
+          {/* USUNIĘTE 21.08 (decyzja Rafała): sekcja „Zarządzaj (zaawansowane)"
+              — PoolBrowser/UniswapPool/LiquidityManager/MyPositions/TopPools/
+              MarketVolatility. Ręczne zarządzanie płynnością zastąpił kokpit
+              (openPositionAtRange / rebalans / rotacja / hedge), a ranking pul
+              przychodzi z bota, nie z DefiLlamy w przeglądarce.
+              `TransactionHistory` NIE zniknął — jest modułem ZAPISU dla akcji
+              kokpitu (`addTransaction` w use*Execution/useCockpitActions).
+              Jego widok jest tu odpięty świadomie: to localStorage, ostatnie
+              10 wpisów, bez eksportu — do zastąpienia księgą po stronie bota
+              (UI-VISION.md: SQLite + CSV pod rozliczenia podatkowe). */}
         </div>
       </div>
     </div>

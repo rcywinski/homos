@@ -769,3 +769,58 @@ ZAKRES TWARDY: tylko src/**; bot/** gotowy.
       błędu. `npx tsc --noEmit -p tsconfig.json`: 0 błędów w `src/`
       (pozostałe `bot/observer.ts`/`node_modules/ox` preexisting). `npm run
       build`: czysty (tylko warningi o rozmiarze bundle'a, preexisting).
+
+## Partia 11 (21.08, Fable za zgodą Rafała — normalnie lane @Sonnet): ikony stanu pozycji
+
+Zgłoszenie Rafała: „teraz jest cały czas zielona kropka nawet dla
+wypadniętych" — pozycja poza zakresem nie zarabia opłat, a wyglądała
+identycznie jak zdrowa.
+- [x] `PaperTradingPanel.tsx`: `statusIcon(status, inRange)` — 🟢 w zakresie,
+      **⚠️ poza zakresem**, 💤 w gotówce, ⏳ przed startem; ⛔ zostaje jako
+      osobny badge sygnału trendu. Out-of-range PODMIENIA ikonę, nie dokłada
+      drugiej (decyzja Rafała: jedna ikona = jeden stan).
+- [x] `MorningCockpit.tsx`, sekcja „Pozycje — akcje": ten sam język ikon dla
+      REALNYCH pozycji (wcześniej był tam tylko ADVICE_ICON, bez statusu).
+      ✅ IN_RANGE_HOLD usunięte z widoku (duplikat 🟢); rada bota pokazywana
+      jako drugi znaczek tylko dla 🔄 REBALANCE i ⏳ WAIT_NOT_PROFITABLE.
+- [x] `title=` na każdej ikonie (tooltip po polsku) + `.status-legend`
+      (legenda pod nagłówkiem obu sekcji), styl w `styles.css`.
+- Dane: `position.inRange` (realne) i `PaperHistoryPoint.inRange` (paper) —
+  były już w API, zero zmian po stronie bota. `npx tsc --noEmit` czysty.
+- [x] **Licznik czasu poza zakresem** (druga prośba Rafała, ten sam dzień):
+      paper — z `outOfRangeSince` (pole było w JSON z /api/paper, brakowało
+      w typie `PaperPosition`; dodane) + odliczanie do progu 24h i osobny
+      komunikat po jego minięciu („czeka na opłacalność"). Realne pozycje —
+      `outOfRangeSince` tam NIE istnieje, więc czas liczony z próbek
+      `positionsHistory` (`outOfRangeSinceFromHistory`, dokładność ~15 min,
+      prefiks „~"); zamiast odliczania pokazujemy, na co pozycja czeka, bo
+      realne pozycje nie mają histerezy 24h (patrz uwaga niżej).
+- [ ] **DO ROZSTRZYGNIĘCIA (nie UI, zgłoszone przy okazji):** paper czeka 24h
+      przed rebalansem, a dla REALNYCH pozycji `bot/observer.ts:544` wystawia
+      propozycję NATYCHMIAST, gdy doradca powie REBALANCE — bez histerezy.
+      Trzecia dziś znaleziona rozbieżność model/produkcja (por.
+      DECYZJE-2026-08-26 pkt 10). Do decyzji na przeglądzie 26.08.
+
+## Partia 12 (21.08): usunięcie sekcji „Zarządzaj (zaawansowane)" + fix crasha
+
+- [x] **CRASH ZNALEZIONY I NAPRAWIONY** (odtworzony na localhost z podłączonym
+      portfelem): `Rendered more hooks than during the previous render`,
+      stack → `TransactionHistory.tsx:75-77`. Powód: `useTransaction`,
+      `useWaitForTransactionReceipt` i `useEffect` wołane WEWNĄTRZ
+      `transactions.forEach(...)` — liczba hooków zależała od liczby
+      transakcji „pending" i zmieniała się między renderami. Poprawka:
+      obserwator jednej transakcji jako osobny komponent `PendingTxWatcher`
+      (hooki na najwyższym poziomie, zmienna jest liczba zamontowanych
+      komponentów — to legalne). WAŻNE: crash NIE był w kasowanym kodzie,
+      tylko w pliku, który zostaje — samo usunięcie sekcji by go nie
+      naprawiło, jedynie ukryło.
+- [x] Usunięte (10 plików + 3 CSS): `PoolBrowser`, `TopPools`, `UniswapPool`,
+      `MarketVolatility`, `utils/marketVolatility`, cały `LiquidityManager`
+      (z `components/`), `styles/{marketVolatility,liquidityManager,uniswapPool}.css`.
+- [x] `TransactionHistory` ZOSTAJE — to moduł zapisu dla akcji kokpitu
+      (`addTransaction` w use*Execution/useCockpitActions). Odpięty tylko
+      jego widok.
+- [ ] **NASTĘPNY KROK (nie UI):** księga transakcji po stronie bota +
+      eksport CSV pod podatki. Obecny zapis to localStorage, ostatnie
+      **10** wpisów, per adres, bez eksportu — pod rozliczenia bezużyteczny
+      (UI-VISION.md: SQLite + CSV, „każda akcja = zdarzenie podatkowe").

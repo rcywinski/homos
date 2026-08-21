@@ -1826,6 +1826,23 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
 .paper-badge-trend-down {
   color: #e04334;
 }
+/* Legenda ikon stanu (paper + "Pozycje — akcje"); dodana 21.08 razem
+   z ikoną ⚠️ dla pozycji poza zakresem. */
+.status-legend {
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 2px 0 8px;
+}
+/* Licznik "ile pozycja jest poza zakresem" (paper + realne pozycje). */
+.out-of-range-timer {
+  font-size: 11px;
+  line-height: 1.4;
+  margin: -2px 0 6px;
+}
+.out-of-range-elapsed {
+  color: #b26a00;
+  font-weight: 600;
+}
 .paper-pool-stats {
   display: flex;
   flex-wrap: wrap;
