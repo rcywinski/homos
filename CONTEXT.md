@@ -74,6 +74,20 @@ przez walkforward. Raportu morning-2026-08-20.md nie zweryfikowano
 (GitHub 404 w profilu Chrome — repo prywatne/brak logowania; dane wzięte
 prosto z API).
 
+~noc — ZAMKNIĘCIE DNIA 20.08: wieczorna paczka wdrożona na Windows W
+CAŁOŚCI (CC-Win: hotfix hooks na 8787 ✓ — crash z produkcji zszedł;
+homos-bot z GMX Readerem ✓, state.hedge=null zgodnie z prawdą on-chain;
+rebuild czysty). Po drodze hotfix krytyczny: useEffect z P11 pod wczesnym
+returnem w MorningCockpit → "Rendered more hooks" przy podłączeniu bota;
+LEKCJA (druga dziś klasy "u autora działa"): hooki ZAWSZE nad każdym
+wczesnym returnem. Bilans dnia: pierwszy w historii pipeline zielony
+end-to-end (8GB heap), eksperyment hUp policzony+cross-walidacja (werdykt
+48h czeka na 26.08), tbtc-wbtc domknięty (pegged: NIE), ROTATE cross-pool
++ hedge GMX zbudowane i hedge przetestowany bojowo ($15 E2E), realne
+pozycje i hedge śledzone przez bota z wykresami w UI, konto Kraken
+założone (on-ramp ~0,6–0,8%), agenda DECYZJE-2026-08-26.md gotowa.
+Jutro 07:30/08:45: automat z 20 pulami (w tym nowa mainnet-030-365d).
+
 ~późny wieczór — HEDGE WIDOCZNY W SYSTEMIE (uwaga Rafała po teście: short
 istniał tylko na GMX i w localStorage jednej przeglądarki — bot ślepy,
 zero wykresów/raportu/telefonu/alertu o sierocie). Zrobione (Fable, tsc
@@ -1740,3 +1754,24 @@ HyperSync na Windows (start 07:30) przeszedł czysto — poprosiłem @CC-Win
 o wklejenie logów po przebiegu, bo repo na Macu nie widzi danych bota
 na żywo. Nic nie wymaga Twojej decyzji teraz; jeśli test padnie, dostaniesz
 sygnał osobno po odpowiedzi CC-Win.
+
+### 2026-08-21 07:5x — Sesja Fable-desktop (poranny brief): fix HyperSync POTWIERDZONY, pierwszy ranking w pełni ze świeżych danych; nowa anomalia backtest-run exit 134
+Rutyna: git bez commitów od wczoraj 15:21 (hotfix hooks-order); HANDOFF
+wszystkie skrzynki puste (nic do odbioru). KLUCZOWE — raport
+`reports/morning-2026-08-20.md` (push 11:19, wpadł PO wczorajszym briefie)
+zamyka wątek z 19–20.08: pipeline 20.08 05:40Z przeszedł CZYSTO przez
+wszystkie kroki hs-* (exit 0, swap cache 0.9h, BRAKI=[]) — fix
+shell:true + `npm install @envio-dev/hypersync-client` DZIAŁA. Selektor
+06:02Z wydał ranking ze świeżych danych: top5 WETH-CBBTC@Base 46.7%,
+WETH-USDC@Base 43.6%, WETH-USDT@Eth 33.1%, USDC-WETH@Eth 33.0%,
+WETH-USDT@Eth 27.2% — APY wyraźnie wyżej niż na stęchłych danych z 17.08
+(25.2% → 46.7% dla lidera; skok to efekt świeżego 7d-okna, nie bug).
+Nowa propozycja OPEN: WETH-USDT 0.3% @ Ethereum 33.1% (pula SPOZA
+BOT_POOLS, bez walidacji) — zalogowana w SELECTOR-LOG wraz z pominiętą
+rotacją ($2.26<$25, 2. dzień działania progu). NOWA ANOMALIA: backtest-run
+padł 2×2 z exit 134 (prawd. OOM/abort node'a) — pipeline poszedł dalej,
+ale krok wymaga diagnozy; dopiszę do @CC-Win po dzisiejszym raporcie
+(08:45), by nie dublować pingów. Paper trading (start 18.08): $52456
+(+$2456), wszystkie pule na plusie nominalnie, vs HODL −$2592 (rynek
+rośnie — LP w górkę traci do HODL, oczekiwane). Dzisiejszy przebieg
+07:30: za wcześnie (raport 08:45).

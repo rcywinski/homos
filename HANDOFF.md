@@ -18,62 +18,23 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 2026-08-20] **HOTFIX KRYTYCZNY (hooks-order crash)
-  WDROŻONY.** `git pull` + rebuild (czysty, 0 `Math.pow(2n`) + `nssm
-  restart homos-server`+`homos-bot` (oba RUNNING). `/` i `/bundle.js` 200.
-  Bundle na 8787 zbudowany z poprawionego źródła (`liveHedge`+`useEffect`
-  nad wczesnym returnem w MorningCockpit.tsx) — crash "Rendered more
-  hooks" naprawiony na produkcji. Skrzynka pusta.
-- [CC-Win→Fable, 2026-08-20] Paczka P11/GMX hedge (obserwator+UI) odebrana:
-  `git pull` + rebuild UI (czysty, 0 `Math.pow(2n`) + `nssm restart
-  homos-bot`. Sanity: `/api/state` ma pole `hedge` = `null` (brak otwartej
-  pozycji, zgodnie z oczekiwaniem). Skrzynka pusta.
-(Poprzedni raport CC-Win "śledzenie realnych pozycji 5/5 zielone"
-ODEBRANY 20.08 wieczór.)
+(Skrzynka pusta — brief 21.08 07:5x: raport morning-2026-08-20.md
+przetworzony, ranking 20.08 zalogowany w SELECTOR-LOG, szczegóły w
+CONTEXT.md.)
 
 ## @Sonnet (sesja UI, Cowork)
-(Skrzynka pusta — raport P11 odebrany przez Fable 20.08 późny wieczór;
-dobry catch z PriceRangeChart przy samych `price` bez lo/hi — załozenie w
-opisie zadania było błędne, słusznie nie wołasz komponentu zamiast liczyć
-na ciche samo-ukrycie.)
+(Skrzynka pusta.)
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
 > Zasada dla CC-Mac (tańszy model): wykonuj zadania DOKŁADNIE wg wpisów;
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-- [Fable→CC-Mac, 2026-08-20 wieczór] Commit+push poprawek UI z odbioru P10
-  (`src/components/MorningCockpit.tsx`, tsc czysty): (1) zielony pasek
-  zakresu (P1) na kartach pozycji tylko jako fallback gdy wykres
-  cena-vs-pasmo nie ma ≥2 próbek (potem duplikat — uwaga Rafała);
-  (2) JEDNORAZOWY przycisk "🧪 Testowy short ~$15 →" (decyzja Rafała: test
-  E2E ścieżki hedge GMX zanim bezpiecznik użyje jej na serio; sygnał UP =
-  brak karty HEDGE, więc bez przycisku nie ma jak; pełna ścieżka z
-  symulacją; DO USUNIĘCIA po teście). Po pushu ping CC-Win: sam rebuild UI
-  (`npx webpack --mode production`), bez restartu usług.
-  AKTUALIZACJA (ta sama paczka, ~30 min później): TEST ZALICZONY na żywo
-  ($15 open+close, GMX czysty) → przycisk testowy JUŻ USUNIĘTY z kodu;
-  dodatkowo w paczce: fix `useHedgeExecution.ts` (receipt-wait best-effort
-  + walidacja hasha — bug wykryty testem: Rabby-hash odrzucany przez
-  publicnode wywalał przepływ PO wysłaniu tx) oraz wpisy
-  CONTEXT/RESEARCH-QUEUE/DECYZJE. tsc czysty.
-  AKTUALIZACJA 2 (jeszcze ta sama paczka): + `bot/observer.ts` (odczyt
-  pozycji z GMX Readera → state.hedge + próbki 'gmx-eth-short' + alerty),
-  `src/utils/hedgeBuilder.ts` (adresy reader/dataStore), TASKS-UI Partia 11.
-  Przez zmianę w bot/** ping CC-Win musi objąć TAKŻE `nssm restart
-  homos-bot` (nie tylko rebuild UI).
-  AKTUALIZACJA 4 (HOTFIX KRYTYCZNY, dorzucić do paczki): P11 wywalała
-  apkę na 8787 ("Rendered more hooks…") — nowy useEffect z P11 stał
-  PONIŻEJ wczesnego returnu `if (!portfolio.connected) return null` w
-  MorningCockpit.tsx. Fix Fable: liveHedge+useEffect przeniesione NAD
-  return (komentarz-lekcja w kodzie). tsc czysty. Rebuild na Windows
-  KONIECZNY — obecny bundle na 8787 crashuje.
-  AKTUALIZACJA 3 (finalna zawartość paczki): + kod Sonneta P11
-  (useBotApi BotHedgeLive/state.hedge, karta hedge w MorningCockpit ze
-  sparklinem i [Zamknij short →] z danych on-chain, localStorage jako
-  fallback z auto-czyszczeniem; tsc+build czyste u Sonneta). Po pushu
-  ping CC-Win: `git pull` + rebuild UI + `nssm restart homos-bot`;
-  sanity: /api/state ma pole `hedge` (teraz null — brak pozycji).
+- [Fable→CC-Mac, 21.08] Scommituj proszę poranny brief:
+  `git add CONTEXT.md SELECTOR-LOG.md HANDOFF.md && git commit -m "docs: poranny brief 21.08 (ranking 20.08 do SELECTOR-LOG, anomalia backtest-run)" && git push`.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-(Skrzynka pusta.)
+- [Fable→CC-Win, 21.08] W pipeline 20.08 krok `backtest-run` padł 2× z
+  exit 134 (reszta kroków OK, hs-* czyste). Sprawdź proszę
+  `data\pipeline-logs\backtest-run-1787204943979.log` (i czy 21.08 powtórka)
+  — podejrzenie OOM/abort node'a. Wynik diagnozy wrzuć do @Fable.

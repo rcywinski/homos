@@ -14,6 +14,8 @@
 | 2026-08-19 | OPEN USDC-WETH 0.01% @ Ethereum | 21.9% | **ODRZUCONA przez walidację tick-level** (walkforward 365d, 22 okna, commit 135a155): najlepsza strategia 55% wygr. (próg ≥65), najgorsze okno −18.0 (próg >−3); warianty z bezpiecznikiem 0% wygr. Ten sam wzorzec co WETH-USDT 0.01% z 17.08 | ✅ lejek odrzucił 2. kandydata (2/2 mainnet 0.01% odpada mimo top APY) |
 | 2026-08-19 | OPEN WETH-USDT 0.05% @ Ethereum | 13.1% | BEZ walidacji na razie — jeden kandydat naraz; niższe APY od USDC-WETH 0.01%, ten sam mainnet-gaz handicap. Obserwacja | — |
 | 2026-08-19 | ROTATE #953427 — sam POMINIĘTY przez selektor | — | "$2.07 < $25" (próg MIN_ROTATE_USD z fixu 18.08) — wczorajszy bug już się nie powtarza | ✅ próg ekonomiczny działa 1. dnia po fixie |
+| 2026-08-20 | OPEN WETH-USDT 0.3% @ Ethereum | 33.1% | PIERWSZA propozycja w pełni ze świeżych danych (pipeline 20.08: wszystkie hs-* exit 0, swap cache 0.9h, BRAKI=[]). Pula SPOZA konfigu bota (brak w BOT_POOLS — nota selektora: dopisać przed otwarciem). BEZ walidacji tick-level. Decyzja Rafała | — |
+| 2026-08-20 | ROTATE #953427 — POMINIĘTY | — | "$2.26 < $25" — próg ekonomiczny działa 2. dzień z rzędu | ✅ |
 
 Uwagi:
 - Ranking 18.08 identyczny jak 17.08 (te same dane źródłowe — ręczny fetch:llama
