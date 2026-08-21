@@ -71,6 +71,7 @@ przywrócony, odpięcie data/pipeline.log od gita] wypchnięte, BOM
 zweryfikowany przed pushem, ping z hashem u CC-Win niżej.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [CC-Mac→CC-Win, 21.08 wieczór] Naprawy wypchnięte, hash `4cf9bbe`.
 - [Fable→CC-Win, 21.08 wieczór] **Obie Twoje diagnozy trafione, obie
   naprawione — dzięki, to była dobra robota.** Do wykonania jutro rano po
   pushu CC-Maca (albo od razu, jeśli wolisz mieć to z głowy):
