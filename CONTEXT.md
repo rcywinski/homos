@@ -1990,3 +1990,39 @@ estymatory na TYM SAMYM oknie, podaje zakresy dla k=2/3/4, sygnaturę szumu
 (5min→1h) i diagnostykę trend/szarpanina. Czyta OD KOŃCA pliku chunkami:
 cache bywa >2GB, a pierwsza wersja crashowała na limicie stringa Node
 (zgłosił CC-Win) — po naprawie plik 2.0GB liczy się w 0.08s przy 85MB RAM.
+
+### 2026-08-21 ~16:0x — Wdrożenie UI OK, ale cofnęliśmy migrację NSSM→pm2 (mój błąd instrukcji)
+Wdrożenie samo w sobie zaliczone: `npm ci` 1308 pakietów bez błędów, build
+46s, `/health` → `{"fresh":true}`, bundle zawiera string „Poza zakresem"
+(czyli nowy kod faktycznie poszedł), zero `crashed` w observer.log,
+regresja `Math.pow(2n` z 19.08 nie wróciła. Wizualnie ikony potwierdziłem
+wcześniej na localhost u Rafała.
+BŁĄD PROCESOWY, wart zapamiętania: w instrukcji wdrożenia odesłałem CC-Win
+do `deploy/deploy.ps1`, nie sprawdziwszy, czy skrypt jest zgodny z aktualną
+infrastrukturą. NIE BYŁ — pochodził sprzed migracji z 10.08 i wciąż kończył
+się `pm2 startOrReload` + `pm2 save`, podczas gdy produkcja od 10.08 stoi
+na usługach NSSM (TASKS-WINDOWS-ADDENDUM: „boty mają być NIEWIDOCZNE";
+pm2 na Windows trzyma procesy w sesji użytkownika → dwa widoczne okna
+konsoli po reboocie). CC-Win, widząc `ecosystem.config.js` w commicie,
+rozsądnie założył zamierzoną migrację nssm→pm2 i zatrzymał usługi NSSM
+przed startem pm2 — co uchroniło nas przed dwiema instancjami bota na tych
+samych plikach stanu, ale zostawiło produkcję na pm2.
+To jest odpowiedź na dzisiejsze pytanie Rafała („po restarcie mam dwa puste
+terminale node, kiedyś ten problem już był"): okna to pm2, a wracały,
+bo KAŻDE wdrożenie po cichu przywracało pm2 obok NSSM. Skrypt deployu był
+mechanizmem nawrotu — dlatego problem „już był" i wracał.
+NAPRAWIONE: `deploy/deploy.ps1` przepisany na NSSM (pm2 usunięte ze
+skryptu), plus dwie rzeczy przy okazji: (a) restart usług jest POMIJANY,
+gdy commit rusza tylko `src/**` — `bot/server.ts` serwuje `public/` przez
+`express.static`, więc do wdrożenia UI wystarcza sam build; (b) sanity
+check `/health` wbudowany w skrypt. `ecosystem.config.js` zostaje jako
+artefakt, ale nie jest już nigdzie wołany.
+STAN DO DOMKNIĘCIA (zlecone CC-Win, PRZED najbliższym rebootem): usługi
+NSSM są zatrzymane, ale wciąż Automatic, a pm2 ma świeży dump po
+`pm2 save` — po restarcie mogą wstać OBA naraz (dwa observery na tych
+samych plikach = dublowane propozycje i wiadomości). Kolejność:
+`pm2 delete all` + `pm2 kill` → `pm2 unstartup` + kontrola klucza Run
+w rejestrze → `nssm start` obu usług → pull poprawionego deployu → sanity.
+Przy okazji domykamy krok 6 addendum z 10.08 (test fizycznego rebootu),
+jedyny, którego nigdy nie wykonaliśmy — dziś wiemy, że właśnie tam
+chowała się ta usterka.
