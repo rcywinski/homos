@@ -1775,3 +1775,83 @@ ale krok wymaga diagnozy; dopiszę do @CC-Win po dzisiejszym raporcie
 (+$2456), wszystkie pule na plusie nominalnie, vs HODL −$2592 (rynek
 rośnie — LP w górkę traci do HODL, oczekiwane). Dzisiejszy przebieg
 07:30: za wcześnie (raport 08:45).
+
+### 2026-08-21 (Fable, po briefie) — FIX: zamrożony `latest` w fetch-swaps-hypersync.ts (cichy stop całego swap-cache)
+Zgłoszenie CC-Win potwierdzone co do joty: 18/18 pul miało w meta.json
+`latest` zamrożony, a `state.json.nextBlock == latest+1` (sprawdzone na
+plikach w data/cache — np. arbitrum-usdc-usdt-001 latest=493413610 /
+nextBlock=493413611). Mechanizm: `latest` czytany z meta TYLKO przy
+pierwszym uruchomieniu puli → gdy kursor dogonił ówczesny chain tip
+(20.08, podczas weryfikacji heap-fixu), zakres `[fromBlock, latest+1)`
+stał się pusty NA ZAWSZE; HyperSync zwracał `nextBlock == fromBlock`,
+skrypt czytał to jako "przerwane" i kończył exit 0 → pipeline codziennie
+raportował `porażki: BRAK` na całkowicie martwym fetchu. Wniosek
+metodologiczny: "zielony pipeline" 20.08 opisany w briefie wyżej był
+prawdziwy TYLKO dla tego jednego przebiegu — od 21.08 był już fałszywy.
+
+Wdrożone w `scripts/fetch-swaps-hypersync.ts` (4 zmiany):
+1. `latest` odświeżany `client.getHeight()` przy KAŻDYM uruchomieniu
+   (`latest = max(meta.latest, tip)`); `startBlock` nadal z meta — okno
+   rośnie tylko z prawej, anchory i interpolacja czasu nienaruszone.
+2. `anchorSpan` (nowe pole meta) zamraża siatkę 11 anchorów na PIERWOTNYM
+   oknie — bez tego rosnące `blocksBack` przesuwałoby `anchorMarks` co dzień
+   i anchory z różnych dni opisywałyby różne punkty osi czasu.
+   Dodatkowo anchor "ogonowy" (próg 1% anchorSpan, ~max 100 szt.) dla
+   świeżych bloków, żeby backtest/load.ts interpolował, a nie ekstrapolował.
+3. Brak postępu `nextBlock` = ANOMALIA → `exit 1` (był exit 0). Koniec
+   fałszywego zielonego: pipeline policzy to jako porażkę kroku.
+4. Nowy wczesny exit 0 "na bieżąco" (kursor ≥ tip) — legalny brak pracy
+   odróżniony od awarii; + domknięcie strumienia ndjson przed `process.exit`
+   (inaczej exit ucina niezflushowany bufor).
+Typecheck: `npx tsc --noEmit` bez błędów w tym pliku (pozostałe błędy repo
+— bot/observer.ts viem, node_modules/ox — sprzed zmiany, nietknięte).
+Ryzyko duplikatów przy dociąganiu luki: brak (kursor idzie do przodu, a
+load.ts i tak deduplikuje). Do potwierdzenia po przebiegu na Windows:
+liczba swapów > 0 dla wszystkich 18 pul i BRAKI=[] we freshness-check.
+
+**Uzupełnienie (Fable, po pytaniu Rafała o ręczny ranking):** przy pisaniu
+zlecenia dla CC-Win wyszło rozróżnienie, którego wcześniej nie mieliśmy
+zapisanego wprost — **„ranking dnia" selektora NIE zależy od swap cache'u**.
+`bot/selector.ts:buildRanking` liczy apy7d z `data/llama/history/<uuid>.json`
+(apyBase, okno 7d) + `universe.json`; swapy karmią wyłącznie warstwę
+backtest/selection/sweep. Skutki: (a) ręczny przelicz po fixie HyperSync ma
+sens tylko dla backtestu, nie dla rankingu; (b) skok APY 20.08 (25.2%→46.7%),
+opisany w porannym briefie jako „efekt świeżego 7d-okna po fixie HyperSync",
+był przypisany do złej przyczyny — HyperSync nie mógł na to wpłynąć.
+NOWA ANOMALIA (do CC-Win): ranking 21.08 06:23 jest co do cyfry identyczny
+z 20.08 06:02 na wszystkich 5 pulach, mimo `universe.json` świeżego 1.2h.
+Przy oknie kroczącym 7d to praktycznie niemożliwe → hipoteza: `fetch-llama`
+odświeża universe.json, ale nie dopisuje punktów do history/*.json (drugi
+cichy zamrożony strumień, ten sam wzorzec co HyperSync). Weryfikacja: data
+ostatniego wpisu w `series` dla uuid z topu. Danych nie sprawdzę u siebie —
+`data/llama` w repo na Macu jest z 10.08 (żywe dane tylko na Windows).
+PUŁAPKA na przyszłość: ręczny bieg selektora tego samego dnia ZAWYŻA
+`streaks` (inkrementacja przy każdym `buildRanking`), więc psuje próg
+persystencji ≥3d — wymaga kopii i przywrócenia `.bot/selector-state.json`.
+
+**Weryfikacja fixu HyperSync (Fable, 21.08) — co jest sprawdzone, a co NIE.**
+Sieci do hypersync.xyz z sesji Fable nie ma, więc zamiast zapewnień: test
+offline na atrapie klienta (`/tmp`, kopia zamrożonej puli — produkcyjny
+cache nietknięty, `git status` czysty poza CONTEXT/HANDOFF/skryptem).
+SPRAWDZONE (4 ścieżki + dry-run, wszystkie zielone):
+ 1. zamrożony kursor + tip wyższy o dobę → okno przesunięte
+    (49791593→49834793), swapy dopisane, `anchorSpan` zamrożony na
+    pierwotnym oknie (15768000 = dokładnie stare `latest-startBlock`),
+    liczba anchorów bez zmian (11);
+ 2. API nie przesuwa kursora → `exit 1` + jasny log ANOMALIA (dawniej
+    cichy exit 0 = fałszywy zielony);
+ 3. brak nowych bloków → `exit 0`, ndjson bit-w-bit nietknięty;
+ 4. świeża pula bez meta → okno 90d policzone poprawnie, 11 anchorów.
+ 5. `--dry-run` (NOWE, na prośbę Rafała): liczy wszystko, md5 wszystkich
+    trzech plików cache'u bez zmian.
+NIESPRAWDZONE (i tylko to zostaje do potwierdzenia na Windows): realny
+kształt odpowiedzi HyperSync — atrapa zwraca to, co skrypt zakłada
+(`res.nextBlock`, `data.logs[].blockNumber`). Ta warstwa działała przed
+20.08, więc ryzyko małe, ale to jedyne miejsce, gdzie test niczego nie
+dowodzi. Stąd instrukcja dla CC-Win: najpierw `--dry-run`, potem zapis.
+RYZYKO NA PRZÓD (nie blokuje, ale wróci): okno rośnie teraz codziennie z
+prawej, więc backtest dostaje co dzień więcej swapów — a `backtest-run`
+padał 20.08 z exit 134 (OOM) już przy 8GB heap. Diagnoza tego kroku jest
+osobnym zadaniem u CC-Win; jeśli OOM wróci, trzeba będzie przyciąć okno
+od lewej (rolling window zamiast rosnącego) — decyzja parametryczna, nie
+techniczna.

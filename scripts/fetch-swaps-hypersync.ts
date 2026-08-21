@@ -67,6 +67,12 @@ function decodeSwap(dataHex: string) {
 (async () => {
   const id = process.argv[2];
   const debug = process.argv.includes('--debug');
+  // --dry-run: policz WSZYSTKO (odpytaj HyperSync, zdekoduj, zlicz swapy), ale
+  // nie tknij ndjson/state/meta. Do bezpiecznej weryfikacji fixu na produkcji.
+  const dryRun = process.argv.includes('--dry-run');
+  const writeJson = (p: string, data: unknown) => {
+    if (!dryRun) fs.writeFileSync(p, typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+  };
   const cfg: PoolCfg | undefined = POOLS.find((p: PoolCfg) => p.id === id);
   if (!cfg) {
     console.error(`Nieznana pula "${id}". Dostępne: ${POOLS.map((p: PoolCfg) => p.id).join(', ')}`);
@@ -106,40 +112,62 @@ function decodeSwap(dataHex: string) {
   const outPath = path.join(CACHE_DIR, `${cfg.id}.ndjson`);
   const metaPath = path.join(CACHE_DIR, `${cfg.id}.meta.json`);
 
-  // Okno blokowe: jeśli meta.json JUŻ istnieje (np. przejmujemy fetch zaczęty
-  // przez fetch-swaps.ts — przypadek A2), REUŻYWAMY jego startBlock/latest,
-  // żeby nie przesuwać okna i nie psuć anchorów/interpolacji czasu.
-  // Świeży fetch: wysokość łańcucha z HyperSync (bez RPC) i natychmiastowy
-  // zapis meta (fetch-swaps też pisze meta na starcie — przerwanie nie gubi cfg).
+  // Okno blokowe: startBlock jest STAŁY (z meta, jeśli istnieje — nie
+  // przesuwamy początku okna, nie psujemy anchorów), ale `latest` ODŚWIEŻAMY
+  // przy KAŻDYM uruchomieniu z aktualnej wysokości łańcucha.
+  // FIX 21.08 (bug od CC-Win): wcześniej `latest` czytany z meta tylko raz
+  // zamrażał koniec okna na zawsze — gdy kursor dogonił zamrożony tip, zakres
+  // [from, toBlock) był pusty do końca świata, skrypt kończył się exit 0
+  // ("nextBlock nie postępuje") i żadna pula nigdy nie pobierała nowych swapów.
   const metaPathEarly = path.join(CACHE_DIR, `${cfg.id}.meta.json`);
+  const tip = Number(await client.getHeight());
   let latest: number;
   let startBlock: number;
-  let blocksBack: number;
+  let anchorSpan: number; // szerokość okna, na której rozstawiono 11 anchorów
+  let savedAnchors: Array<{ block: number; ts: number }> = [];
   if (fs.existsSync(metaPathEarly)) {
     const m = JSON.parse(fs.readFileSync(metaPathEarly, 'utf8'));
-    latest = m.latest; startBlock = m.startBlock; blocksBack = latest - startBlock;
-    console.log(`[${cfg.id}] meta istnieje — okno z meta: ${startBlock}→${latest}`);
+    startBlock = m.startBlock;
+    savedAnchors = m.anchors ?? [];
+    latest = Math.max(Number(m.latest) || 0, tip);
+    // anchorSpan zamrożony przy pierwszym fetchu — inaczej rosnące okno
+    // przesuwałoby siatkę anchorMarks przy każdym uruchomieniu i anchory
+    // z różnych dni opisywałyby różne punkty osi czasu.
+    anchorSpan = Number(m.anchorSpan) || (Number(m.latest) || latest) - startBlock;
+    console.log(`[${cfg.id}] meta istnieje — startBlock ${startBlock} z meta, latest odświeżony: ${m.latest} → ${latest} (+${latest - (Number(m.latest) || latest)} bl)`);
   } else {
-    latest = Number(await client.getHeight());
-    blocksBack = Math.floor((cfg.days * 86400) / BLOCK_TIME[cfg.chain]);
-    startBlock = latest - blocksBack;
-    fs.writeFileSync(metaPathEarly, JSON.stringify({ cfg, startBlock, latest, anchors: [] }, null, 2));
+    latest = tip;
+    startBlock = latest - Math.floor((cfg.days * 86400) / BLOCK_TIME[cfg.chain]);
+    anchorSpan = latest - startBlock;
   }
+  const blocksBack = latest - startBlock;
+  if (dryRun) console.log(`[${cfg.id}] --dry-run: liczę, ale NIE zapisuję ndjson/state/meta`);
+  // natychmiastowy zapis meta (nowe latest nie może się zgubić przy przerwaniu)
+  writeJson(metaPathEarly, { cfg, startBlock, latest, anchorSpan, anchors: savedAnchors });
 
   let from = startBlock;
   if (fs.existsSync(statePath)) {
     from = JSON.parse(fs.readFileSync(statePath, 'utf8')).nextBlock;
     console.log(`[${cfg.id}] wznowienie od bloku ${from} (state.json wspólny z fetch-swaps)`);
   }
+  if (from >= latest + 1) {
+    console.log(`[${cfg.id}] na bieżąco: kursor ${from} ≥ tip ${latest} — nic do pobrania (0 nowych bloków od ostatniego przebiegu).`);
+    process.exit(0);
+  }
 
-  const out = fs.createWriteStream(outPath, { flags: 'a' });
+  // w dry-run piszemy do /dev/null (na Windows: NUL) — reszta ścieżki bez zmian
+  const out = fs.createWriteStream(dryRun ? (process.platform === 'win32' ? '\\\\.\\NUL' : '/dev/null') : outPath, { flags: dryRun ? 'w' : 'a' });
   let total = 0;
   const t0 = Date.now();
-  // anchory czasowe co ~10% zakresu — z timestampów bloków przy logach
-  const anchorMarks = Array.from({ length: 11 }, (_, i) => startBlock + Math.floor((blocksBack * i) / 10));
-  const anchors: Array<{ block: number; ts: number }> = fs.existsSync(metaPath)
-    ? JSON.parse(fs.readFileSync(metaPath, 'utf8')).anchors ?? []
-    : [];
+  // anchory czasowe co ~10% PIERWOTNEGO zakresu — z timestampów bloków przy logach
+  const anchorMarks = Array.from({ length: 11 }, (_, i) => startBlock + Math.floor((anchorSpan * i) / 10));
+  const anchors: Array<{ block: number; ts: number }> = savedAnchors;
+  // ostatni blok z timestampem widziany w tym przebiegu — dopisywany jako
+  // anchor ogonowy, żeby load.ts interpolował świeże dane zamiast
+  // ekstrapolować w nieskończoność z ostatniego starego segmentu.
+  let tailBlock = 0;
+  let tailTs = 0;
+  let stalled = false;
 
   let query: any = {
     fromBlock: from,
@@ -181,22 +209,41 @@ function decodeSwap(dataHex: string) {
         if (ts) anchors.push({ block: bn, ts });
         else break;
       }
+      const tsNow = tsByBlock.get(bn);
+      if (tsNow && bn > tailBlock) { tailBlock = bn; tailTs = tsNow; }
     }
     total += logs.length;
 
     const next = Number(res?.nextBlock ?? 0);
     if (!next || next <= query.fromBlock) {
-      console.error(`\n[${cfg.id}] nextBlock nie postępuje (${next}) — przerwane; stan zapisany, wznowisz.`);
+      // Prawdziwa anomalia: zakres [fromBlock, toBlock) jest niepusty (sprawdzone
+      // przed pętlą i przy każdej iteracji), więc HyperSync MUSI przesunąć kursor.
+      // Kiedyś kończyło się to exit 0 = fałszywy zielony status w pipeline.
+      console.error(`\n[${cfg.id}] ANOMALIA: nextBlock nie postępuje (${next}, fromBlock=${query.fromBlock}, toBlock=${latest + 1}) — przerwane, stan zapisany. Zgłaszam PORAŻKĘ (exit 1).`);
+      stalled = true;
       break;
     }
     query.fromBlock = next;
-    fs.writeFileSync(statePath, JSON.stringify({ nextBlock: next }));
+    if (!dryRun) fs.writeFileSync(statePath, JSON.stringify({ nextBlock: next }));
     const pct = (((next - startBlock) / blocksBack) * 100).toFixed(1);
     const rate = ((next - from) / ((Date.now() - t0) / 1000)).toFixed(0);
     process.stdout.write(`\r[${cfg.id}] ${pct}%  blok ${next}/${latest}  swapy: ${total}  ~${rate} bl/s   `);
     if (next > latest) break;
   }
 
-  fs.writeFileSync(metaPath, JSON.stringify({ cfg, startBlock, latest, anchors }, null, 2));
-  console.log(`\n[${cfg.id}] GOTOWE: ${total} swapów w ${((Date.now() - t0) / 60000).toFixed(1)} min → ${outPath}`);
+  // Anchor ogonowy: gdy siatka 11 jest pełna, dopisujemy punkt czasowy dla
+  // świeżo dociągniętych bloków (inaczej load.ts ekstrapolowałby czas dla
+  // każdego nowego dnia z ostatniego starego segmentu). Próg 1% anchorSpan
+  // ogranicza przyrost do ~100 dodatkowych anchorów na całe okno.
+  const lastAnchor = anchors[anchors.length - 1];
+  const tailGap = Math.max(1, Math.floor(anchorSpan / 100));
+  if (anchors.length >= 11 && tailTs && lastAnchor && tailBlock >= lastAnchor.block + tailGap) {
+    anchors.push({ block: tailBlock, ts: tailTs });
+  }
+  writeJson(metaPath, { cfg, startBlock, latest, anchorSpan, anchors });
+
+  // Domknięcie strumienia PRZED exit — process.exit ucina niezflushowane bufory.
+  await new Promise<void>((resolve) => out.end(resolve));
+  console.log(`\n[${cfg.id}] ${stalled ? 'PRZERWANE' : 'GOTOWE'}: ${total} swapów w ${((Date.now() - t0) / 60000).toFixed(1)} min → ${dryRun ? 'DRY-RUN (nic nie zapisano)' : outPath}`);
+  process.exit(stalled ? 1 : 0);
 })();
