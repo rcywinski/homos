@@ -2087,3 +2087,56 @@ LEKCJA (trzecia dziś z tej samej rodziny): zlecając komuś komendę, sprawdzam
 najpierw, czy narzędzie, do którego go odsyłam, jest zgodne ze środowiskiem
 docelowym. Rano odesłałem CC-Wina do `deploy.ps1` sprzed migracji na NSSM,
 wieczorem do skryptu, którego jego PowerShell nie umiał sparsować.
+
+**Domknięcie 21.08 (CC-Win, weryfikacja obu napraw).** `deploy.ps1` odpalony
+**po raz pierwszy bez żadnych obejść** — parser czysty (`PSParser::Tokenize`
+0 błędów), BOM potwierdzony bajtowo (239,187,191), pełny przebieg
+pull/npm ci/build/sanity, `4/5 Service restart SKIPPED` (brak zmian w bot/**),
+usługi Running, /health fresh. `data/pipeline.log` po pullu nadal na dysku
+(18190 B) i dalej dopisywany — odpięty tylko z indeksu, zgodnie z zamiarem.
+Smaczek: `git pull` u CC-Wina zaciął się na dokładnie tym samym problemie,
+który diagnozował godzinę wcześniej (jego własne appendy do wciąż śledzonego
+pliku) — rozwiązał to tym samym `git rm --cached` i poszło czysto.
+ZOSTAJE OTWARTE NA 22.08: test raportu porannego o 08:45 (`LastTaskResult: 0`
+i commit `report:` z czasem ~08:45, nie doklejony do późniejszego pusha).
+Dopiero po tym ruszamy okna konsoli z Harmonogramu — nie chcę zmieniać
+dwóch rzeczy naraz w jedynym automacie gitowym, jaki mamy.
+
+### 2026-08-22 09:1x — Pierwszy nocny przebieg po naprawach: wszystko zielone i tym razem PRAWDZIWIE
+**Test raportu porannego ZDANY.** `67ee89f report: poranny snapshot
+2026-08-22` z czasem **08:45:02**, i jest to JEDYNY commit od wczoraj 17:42 —
+czyli automat wypchnął się sam, bez pomocy CC-Wina. To był czysty
+eksperyment: nikt nic nie pushował przez noc. `pull --rebase --autostash`
++ odpięcie `data/pipeline.log` od indeksu działa.
+**Swap cache: `OK=[20 pul] BRAKI=[]`** — pierwszy raz osiągnięte przez
+AUTOMAT (wczoraj komplet dał ręczny bieg CC-Wina). Świeżość swap cache 1.2h
+zamiast wczorajszych 21.2h. Główna awaria z 21.08 domknięta w pełnym cyklu.
+**backtest-run: exit 0 za pierwszym podejściem, ~50 min** (05:32→06:23) —
+i to licząc na PEŁNYCH świeżych danych, nie na zamrożonych. Obawa o powrót
+OOM przy rosnącym oknie na razie się nie zmaterializowała; pomiar szczytu
+pamięci nadal warto zrobić.
+**Ranking DRGNĄŁ** (test hipotezy o `fetch-llama-history`): 46.7 → 68.6,
+43.6 → 63.8, zmienił się też skład topu (5. miejsce: WETH-USDT@Eth 27.2%
+→ WETH-CBBTC@Base 32.2%). UWAGA METODOLOGICZNA — to NIE dowodzi, że problem
+zniknął: (a) kod `scripts/fetch-llama-history.ts:56-61` z heurystyką
+„mtime < 24h" jest NIETKNIĘTY; (b) wczoraj CC-Win przypadkiem przełamał
+zamrożenie ręcznym `--only fetch`, więc dzisiejsza zmiana może być echem
+tamtej interwencji, a nie dowodem zdrowia. Właściwy test to 23.08 — jeśli
+jutro ranking znowu stanie w miejscu, hipoteza się potwierdza i fix jest
+konieczny. Osobno: skoku 46.7→68.6 NIE czytać jako „rynek eksplodował" —
+wczorajsze liczby były stęchłe (stan z 20.08), więc dzisiejsza wartość
+obejmuje dwa dni zmian naraz.
+**PAPER TRADING — rebalanse z 21.08 zaczęły się zwracać.** Equity $52 724 →
+$53 328 (+$604). Fee-flow przyspieszył kilkukrotnie po re-centrowaniu:
+mainnet-030 $8.76 → $21.63 (dobę wcześniej przyrost wynosił $3.67),
+base-030 $8.57 → $28.29. To jest odpowiedź na wczorajsze „rebalans dał netto
+tylko +$69/+$93/+$87" — koszt zwrócił się w ciągu doby, bo pozycje wróciły
+w zakres. vs HODL −4328 → −4554, czyli pogorszenie tylko o $226 wobec
+−$1736 dobę wcześniej (rynek się uspokoił).
+**NOWA OBSERWACJA do sprawdzenia:** cbBTC ma dziś status `cash ⛔`, ale
+equity urosło $11 079 → $11 357 — a w cash equity powinno stać w miejscu.
+Wczoraj ~11:10 było `REENTRY`. Wygląda na MIGOTANIE bezpiecznika: wyjście →
+wejście → wyjście w niecałą dobę, każdy krok z kosztem. Zlecone CC-Win:
+ogon `paper-events.ndjson` dla tej puli. Jeśli się potwierdzi, to argument
+wprost do agendy 26.08 (pkt 3/5): próg −5%/−2,5% na parze skorelowanej
+oscyluje, a każda oscylacja płaci gaz i poślizg.
