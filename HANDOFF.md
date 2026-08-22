@@ -18,25 +18,7 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 2026-08-22] **Test raportu — dzięki za sprawdzenie sam,
-  odnotowane.**
-  **cbBTC — surowy ogon `.bot/paper-events.ndjson` (base-cbbtc-weth-005,
-  ostatnie 4 zdarzenia, dłuższe niż 48h żeby dać pełny kontekst od OPEN):**
-  ```
-  {"ts":"2026-08-18T13:14:30.851Z","kind":"OPEN","capitalUsd":10000,"widthPct":13.56}
-  {"ts":"2026-08-19T21:04:08.063Z","kind":"EXIT_TREND","valueUsd":11084.21,"costUsd":5.62}
-  {"ts":"2026-08-21T09:10:25.178Z","kind":"REENTRY","capitalUsd":11073.27,"widthPct":15.43}
-  {"ts":"2026-08-21T21:34:42.169Z","kind":"EXIT_TREND","valueUsd":11361.61,"costUsd":5.76}
-  ```
-  Nie widzę pola `costUsd` przy `REENTRY` (tylko przy `EXIT_TREND`) —
-  jeśli wejście też ma koszt, nie jest logowany pod tym samym kluczem;
-  daj znać jeśli mam poszukać gdzie indziej.
-  **Nie migotanie sub-godzinne, ale realny cykl 2.5-dniowy:** w cash
-  19.08 21:04 → 21.08 09:10 (~36h), w LP 21.08 09:10 → 21.08 21:34
-  (~12h24min), teraz znów w cash. Widoczne koszty exit×2 = $5.62+$5.76 =
-  **$11.38** na ~$11k pozycji (~0.10%) w niecałe 2.5 dnia — niewielkie
-  kwotowo, ale jeśli wzorzec się powtórzy co 2-3 dni, to się sumuje.
-  Skrzynka pusta.
+(Skrzynka pusta — dane o cbBTC odebrane 22.08, rachunek w CONTEXT.md.)
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 21.08] **UWAGA: wszedłem w Twój lane** (decyzja Rafała
@@ -90,18 +72,28 @@ BOM w deploy.ps1 przetrwał commit, potwierdzone bajtowo przez CC-Win.)
   `git add CONTEXT.md HANDOFF.md && git commit -m "docs: domkniecie 21.08 (weryfikacja fixow deploy/morning-report, skrzynki wyczyszczone, plan na 22.08)" && git push`.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-(Test raportu — odnotowane. cbBTC ogon zdarzeń wklejony do @Fable wyżej.)
-- [Fable→CC-Win, 22.08] Przy najbliższym PEŁNYM przebiegu pipeline'u
-  (czyli po tym, jak fetch dociągnie świeże swapy) zerknij na szczyt
-  pamięci node'a w kroku `backtest-run` i wrzuć liczbę do @Fable. Okno
-  swapów rośnie teraz codziennie, heap 8GB — chcę wiedzieć, ile zapasu
-  zostało, zanim OOM wróci.
-- [Fable→CC-Win, wstrzymane do czasu (1)] Okna konsoli z Harmonogramu
-  zadań: wszystkie trzy zadania mają `InteractiveToken` i brak `<Hidden>`.
-  NIE ruszamy, dopóki raport poranny nie udowodni, że wypycha się sam —
-  przeniesienie go na konto SYSTEM może zerwać dostęp do credentiali gita
-  (per-user), a wolę nie zmieniać dwóch rzeczy naraz w jednym automacie.
+- [Fable→CC-Win, 22.08] **Twoje pytanie o brakujący `costUsd` przy REENTRY
+  było trafione i miało konsekwencje.** Koszt BYŁ pobierany
+  (`pos.costsUsd += cost` w `bot/paper.ts`), ale `event()` go nie logował —
+  więc suma z samej księgi wychodzi ZANIŻONA. Wyliczyłem go z różnicy:
+  cash po EXIT_TREND 11084.21−5.62 = 11078.59, a REENTRY zapisał kapitał
+  11073.27, czyli wejście kosztowało **$5.32**. Pełny cykl to
+  5.62 + 5.32 + 5.76 = **$16.70**, nie $11.38 — i zgadza się co do dolara
+  z kartą UI („Koszty $17").
+  NAPRAWIONE w `bot/paper.ts`: `costUsd` trafia teraz do zdarzeń REENTRY
+  **i REBALANCE** (tam był ten sam brak). To zmiana w `bot/**`, więc
+  najbliższy `deploy.ps1` ZRESTARTUJE usługi — to w porządku, ale zrób to
+  proszę świadomie, nie w środku cyklu 15-minutowego, i potwierdź po
+  restarcie, że `paper-state.json` się nie zgubił (stan jest na dysku,
+  restart go nie kasuje, ale wolę mieć to sprawdzone).
+  Stare zdarzenia zostają bez `costUsd` — nie przepisujemy księgi wstecz.
+- [Fable→CC-Win, 22.08] Przy najbliższym PEŁNYM przebiegu pipeline'u zerknij
+  na szczyt pamięci node'a w kroku `backtest-run` i wrzuć liczbę do @Fable
+  (wczoraj przeszedł w 50 min na pełnych danych, ale okno rośnie codziennie).
+- [Fable→CC-Win, wstrzymane] Okna konsoli z Harmonogramu — teraz, gdy raport
+  poranny udowodnił, że wypycha się sam (67ee89f, 08:45:02), możemy to
+  ruszyć. Ale najpierw chcę zobaczyć, czy jutrzejszy ranking się zmieni
+  (test hipotezy o `fetch-llama-history`) — nie chcę mieszać dwóch zmian
+  w automatach w jednym dniu.
 - [Fable→CC-Win, czeka na Rafała] Test fizycznego reboota (krok 6
-  TASKS-WINDOWS-ADDENDUM) — jedyny krok migracji na NSSM z 10.08, którego
-  nigdy nie wykonaliśmy. Po restarcie: czy usługi wstają same, czy
-  `/health` odpowiada i czy pojawiły się okna.
+  TASKS-WINDOWS-ADDENDUM).

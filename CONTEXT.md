@@ -2140,3 +2140,25 @@ wejście → wyjście w niecałą dobę, każdy krok z kosztem. Zlecone CC-Win:
 ogon `paper-events.ndjson` dla tej puli. Jeśli się potwierdzi, to argument
 wprost do agendy 26.08 (pkt 3/5): próg −5%/−2,5% na parze skorelowanej
 oscyluje, a każda oscylacja płaci gaz i poślizg.
+
+**cbBTC — rachunek cyklu bezpiecznika (dane CC-Wina z `paper-events.ndjson`,
+22.08).** Korekta mojego wczorajszego słowa „migotanie": to NIE jest
+oscylacja sub-godzinna, tylko cykl 2,5-dniowy — CC-Win ma rację co do tempa.
+Oś czasu od startu paper (18.08 13:14): LP 31,8h → cash 36,1h (19.08 21:04 →
+21.08 09:10) → LP 12,4h → cash od 21.08 21:34. Razem **44,2h w LP i 47,8h
+w gotówce, czyli 52% czasu poza rynkiem** w okresie, w którym rynek rósł.
+KOSZTY — i tu korekta w drugą stronę, na niekorzyść: księga pokazuje tylko
+$11.38 (dwa EXIT_TREND), bo `costUsd` NIE był logowany przy REENTRY.
+Wyliczony z różnicy: cash po pierwszym wyjściu 11084.21−5.62 = 11078.59,
+REENTRY zapisał kapitał 11073.27 → wejście kosztowało **$5.32**. Pełny cykl
+= **$16.70**, co zgadza się z kartą UI („Koszty $17"). Gdyby wzorzec trwał:
+$4.36/dobę na $11k = **~14,5% rocznie samego dryfu kosztowego**.
+PROPORCJE, żeby nie stracić skali: te $17 to szum przy −$1028 straty vs HODL
+na tej puli. Prawdziwym kosztem bezpiecznika nie są opłaty transakcyjne,
+tylko **52% czasu poza rosnącym rynkiem**. Koszty transakcyjne są dodatkiem,
+który psuje i tak już złą arytmetykę.
+NAPRAWIONE przy okazji (`bot/paper.ts`): `costUsd` trafia teraz do zdarzeń
+REENTRY i REBALANCE — ten sam brak dotyczył obu. Bez tego księga zdarzeń
+zaniża koszty, a dokładnie taka księga ma być fundamentem rozliczeń
+podatkowych (UI-VISION.md). Stare wpisy zostają bez pola, nie przepisujemy
+historii wstecz.

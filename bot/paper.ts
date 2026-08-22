@@ -134,7 +134,14 @@ const hodlValueUsd = (pos: PaperPosition, pr: LegPrices): number =>
   pos.hodl ? pos.hodl.a0 * pr.px0 + pos.hodl.a1 * pr.px1 : CAPITAL_USD;
 
 /** otwarcie pozycji LP w zakresie sugestii przy bieżącej cenie */
-function openPosition(pos: PaperPosition, p: BotPool, pr: LegPrices, stats: PoolStats, capital: number, why: string, ctx: PaperCtx) {
+/** `costUsd` (dodane 22.08): koszt wejścia BYŁ pobierany (`pos.costsUsd += cost`
+ *  przy REENTRY i REBALANCE), ale NIE trafiał do księgi zdarzeń — `event()`
+ *  logował tylko zakres i kapitał. Zauważył to CC-Win, czytając ogon
+ *  `paper-events.ndjson`: przy EXIT_TREND widać `costUsd`, przy REENTRY nie.
+ *  Skutek: sumując koszty z samej księgi dostaje się WARTOŚĆ ZANIŻONĄ (dla
+ *  cbBTC $11.38 zamiast $16.70). To samo przemilczenie zabolałoby w księdze
+ *  pod rozliczenia podatkowe, gdzie każdy koszt musi być jawny. */
+function openPosition(pos: PaperPosition, p: BotPool, pr: LegPrices, stats: PoolStats, capital: number, why: string, ctx: PaperCtx, costUsd?: number) {
   const sug = suggestRange(stats, p.feeBps as any, p.d0, p.d1, { ...ADVISOR_PARAMS, k: p.advisorK ?? ADVISOR_PARAMS.k });
   const pa = tickToHuman(sug.tickLower, p.d0, p.d1), pb = tickToHuman(sug.tickUpper, p.d0, p.d1);
   const per = amountsPerL(pr.human, pa, pb);
@@ -153,7 +160,13 @@ function openPosition(pos: PaperPosition, p: BotPool, pr: LegPrices, stats: Pool
     // benchmark zamrożony przy PIERWSZYM otwarciu: 50/50 USD po obu nogach
     pos.hodl = { a0: capital / 2 / pr.px0, a1: capital / 2 / pr.px1 };
   }
-  event(pos.poolId, why, { tickLower: sug.tickLower, tickUpper: sug.tickUpper, capitalUsd: capital, widthPct: sug.widthPct });
+  event(pos.poolId, why, {
+    tickLower: sug.tickLower,
+    tickUpper: sug.tickUpper,
+    capitalUsd: capital,
+    widthPct: sug.widthPct,
+    ...(costUsd !== undefined ? { costUsd } : {}),
+  });
 }
 
 /** jeden przebieg paper-tradingu — wołać po cyklu statystyk observera (15 min) */
@@ -251,7 +264,7 @@ export function paperTick(ctx: PaperCtx) {
         const capital = pos.cashUsd ?? pos.capitalUsd;
         const cost = rebalanceCostUsd(p, capital);
         pos.costsUsd += cost;
-        openPosition(pos, p, pr, lv.stats, capital - cost, 'REENTRY', ctx);
+        openPosition(pos, p, pr, lv.stats, capital - cost, 'REENTRY', ctx, cost);
         const m = `📊 PAPER: REENTRY ${p.id} — sygnał zgasł, otwieram ponownie $${(capital - cost).toFixed(0)}`;
         ctx.log(m); notes.push(m);
       }
@@ -273,7 +286,7 @@ export function paperTick(ctx: PaperCtx) {
             pos.costsUsd += cost;
             pos.feesSinceRebalanceUsd = 0;
             pos.rebalances += 1;
-            openPosition(pos, p, pr, lv.stats, capital, 'REBALANCE', ctx);
+            openPosition(pos, p, pr, lv.stats, capital, 'REBALANCE', ctx, cost);
             const m = `📊 PAPER: REBALANS ${p.id} (#${pos.rebalances}) — nowy zakres, kapitał $${capital.toFixed(0)}, koszt $${cost.toFixed(2)}, payback ~${a.paybackDays?.toFixed(1)}d`;
             ctx.log(m); notes.push(m);
           }
