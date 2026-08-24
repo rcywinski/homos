@@ -35,6 +35,10 @@ const RANKING_POLL_MS = 30 * 60_000;
 // Partia 10) — próbki co ~5 min, ten sam interwał pollingu co paper.
 const POSITIONS_HISTORY_POLL_MS = 5 * 60_000;
 const POSITIONS_HISTORY_HOURS = 168; // 7 dni, jak paper
+// Werdykty walidacji kandydatów (bot/candidates.ts, TASKS-UI.md Partia 12) —
+// zmieniają się raz na dobę (nocny lejek) — poll RZADKI, osobny stan, NIE
+// ruszamy istniejących pollerów.
+const CANDIDATES_POLL_MS = 60 * 60_000;
 
 export interface BotProposal {
   id: string;
@@ -268,6 +272,27 @@ export interface PositionHistoryPoint {
 // paper/ranking i na wypadek przyszłej zmiany serwera.
 export type PositionsHistoryStatus = 'loading' | 'ok' | 'not-started' | 'error';
 
+// Werdykty walidacji kandydatów — GET /api/candidates (bot/candidates.ts,
+// HANDOFF Fable→Sonnet 24.08, TASKS-UI.md Partia 12). Kształt 1:1 z
+// `CandidateVerdict` w bot/candidates.ts (poza zakresem edycji tej sesji UI).
+// Dopasowanie do wierszy rankingu po `llamaPool` (uuid) === `RankingRow.llamaUuid`.
+export interface CandidateVerdict {
+  llamaPool: string;
+  chain: string;
+  symbol: string;
+  feeTier: string;
+  verdict: 'PASS' | 'FAIL' | 'QUEUED' | 'UNMAPPED';
+  winPct?: number;
+  worst?: number;
+  testedAt?: string;
+  note?: string;
+}
+
+// Endpoint zawsze zwraca 200 + tablicę (seed w kodzie, nigdy 503) — 'error'
+// tylko na sieć/token. Werdykty to wzbogacenie rankingu, nie zależność
+// krytyczna — brak danych NIE ma prawa czerwienić tabeli.
+export type CandidatesStatus = 'loading' | 'ok' | 'error';
+
 export interface UseBotApi {
   state: BotStateShape | null;
   status: BotStatus;
@@ -284,6 +309,8 @@ export interface UseBotApi {
   rankingStatus: RankingStatus;
   positionsHistory: PositionHistoryPoint[] | null;
   positionsHistoryStatus: PositionsHistoryStatus;
+  candidates: CandidateVerdict[] | null;
+  candidatesStatus: CandidatesStatus;
 }
 
 const readLocal = (key: string, fallback: string): string => {
@@ -307,6 +334,8 @@ export function useBotApi(): UseBotApi {
   const [rankingStatus, setRankingStatus] = useState<RankingStatus>('loading');
   const [positionsHistory, setPositionsHistory] = useState<PositionHistoryPoint[] | null>(null);
   const [positionsHistoryStatus, setPositionsHistoryStatus] = useState<PositionsHistoryStatus>('loading');
+  const [candidates, setCandidates] = useState<CandidateVerdict[] | null>(null);
+  const [candidatesStatus, setCandidatesStatus] = useState<CandidatesStatus>('loading');
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
@@ -435,6 +464,34 @@ export function useBotApi(): UseBotApi {
     return () => clearInterval(id);
   }, [fetchPositionsHistory, tick]);
 
+  const fetchCandidates = useCallback(async () => {
+    try {
+      const headers: Record<string, string> = {};
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+      const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/candidates`, { headers });
+      if (!res.ok) {
+        setCandidates(null);
+        setCandidatesStatus('error');
+        return;
+      }
+      const data: CandidateVerdict[] = await res.json();
+      setCandidates(data);
+      setCandidatesStatus('ok');
+    } catch {
+      // sieć niedostępna — jak przy /api/state/paper, cicho (werdykty to
+      // wzbogacenie, nie zależność krytyczna — TopRankingPanel po prostu
+      // nie pokaże badge'y)
+      setCandidates(null);
+      setCandidatesStatus('error');
+    }
+  }, [apiBase, apiToken]);
+
+  useEffect(() => {
+    fetchCandidates();
+    const id = setInterval(fetchCandidates, CANDIDATES_POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchCandidates, tick]);
+
   const dismissProposal = useCallback(
     async (id: string) => {
       try {
@@ -488,5 +545,7 @@ export function useBotApi(): UseBotApi {
     rankingStatus,
     positionsHistory,
     positionsHistoryStatus,
+    candidates,
+    candidatesStatus,
   };
 }

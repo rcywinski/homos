@@ -2003,6 +2003,24 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   font-weight: 600;
   white-space: nowrap;
 }
+/* Werdykty walidacji (Partia 12, 24.08) — prawdziwy status per pula
+   zamiast mylącego "poza konfiguracją". */
+.topranking-status-fail {
+  color: #c62828;
+  white-space: nowrap;
+}
+.topranking-status-queued {
+  color: #8a6d00;
+  white-space: nowrap;
+}
+.topranking-status-unmapped {
+  color: #8a6d00;
+  white-space: nowrap;
+}
+.topranking-status-validated {
+  color: #1b7a3d;
+  white-space: nowrap;
+}
 .topranking-disclaimer {
   font-size: 11px;
   margin-top: 10px;
