@@ -2226,6 +2226,21 @@ architektura seed-w-kodzie + runtime `.bot/candidate-verdicts.json`,
 pipeline.log) + `GET /api/candidates` w bot/server.ts. UI = TASKS-UI
 PARTIA 12 (Sonnet): 5 stanów z legendą (gra w bocie / odrzucona z
 tooltipem winPct/worst / w kolejce / zwalidowana-nie-gra / niebadana),
-degradacja łagodna przy braku endpointu. Wymaga restartu homos-bot
-u CC-Win. Sam lejek (candidate-funnel.ts + krok pipeline): Fable, po
-potwierdzeniu fixu llama (ranking 25.08).
+degradacja łagodna przy braku endpointu. Sam lejek (candidate-funnel.ts
++ krok pipeline): Fable, po potwierdzeniu fixu llama (ranking 25.08).
+
+DOMKNIĘCIE DNIA 24.08: (1) fix llama POTWIERDZONY NA ŻYWO przez CC-Win
+(272/272 pul, apyBase 90.00→134.01, resume po dacie działa; formalne
+domknięcie = ranking 25.08 różny od 24.08). (2) Partia 12 wdrożona
+E2E TEGO SAMEGO DNIA: backend+UI scommitowane (fb8a71f/13a63a9),
+build+restart na Windows, screenshot Rafała potwierdza: #4 ⛔ z
+tooltipem, #3/#5 🔬, reszta „niebadana". KOREKTA po drodze (słuszna
+uwaga CC-Wina): endpoint+bundle serwuje `homos-server`, NIE homos-bot
+— mój wpis kazał restartować złą usługę; server tylko czyta .bot/,
+więc jego restart nie wymaga czekania na cykl 15-min. (3) Degradacja
+łagodna przetestowana mimochodem na produkcji: stary server bez
+endpointu → wszystkie badge „niebadana", zero błędu — zgodnie z
+projektem. (4) CC-Win dołożył instrumentację Peak RSS do backtest/run.ts
+(realizacja mojego wpisu z 22.08; pierwszy pomiar w raporcie 25.08).
+NA JUTRO: brief odbiera ranking (≠ 24.08?) + Peak RSS; potem
+candidate-funnel.ts. Decyzje: przegląd 26.08 (σ → k → hUp → kapitał).

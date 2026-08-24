@@ -38,16 +38,36 @@ po hs-*/freshness, PRZED backtest-run (żeby OOM backtestu nie zabił lejka).
 6. **Raport**: nowa sekcja "Kandydaci" w morning-report.ts — werdykty
    z ostatnich 7 dni + kolejka na dziś. Zero Telegrama (brief wystarczy).
 
-## 2. Guardrale
+## 2. Guardrale (rozszerzone 24.08 po pytaniach Rafała)
 
-- **Max 1 kandydat/noc** (FIFO wg persystencji, potem TVL). Fetch 365d +
-  walkforward jednej puli to ~20–40 min; pipeline musi zdążyć przed 08:45.
-- **Twardy timeout kroku 60 min** — lejek NIGDY nie blokuje reszty
+- **Steady-state: max 1 kandydat/noc** (FIFO wg persystencji, potem TVL).
+  Fetch 365d + walkforward jednej puli to ~20–40 min; pipeline musi
+  zdążyć przed 08:45. SEKWENCYJNIE, nigdy równolegle (walkforward bierze
+  do 8GB heapu).
+- **Tryb BACKFILL `--all`** (decyzja Rafała 24.08: „zbadać wszystkie
+  niebadane"): przerabia CAŁĄ kolejkę sekwencyjnie, do uruchamiania
+  RĘCZNEGO (CC-Win, poza oknem pipeline'u, np. wieczorem) — pierwszy
+  raz 25.08 wieczór na zaległości (#3/#5/#6/#7 ≈ 2–3h), żeby werdykty
+  były na przegląd 26.08. NIE dodajemy drugiego automatu w Harmonogramie
+  (lekcja 18.08) — steady-state 1/noc w pipeline wystarcza przy ~0–1
+  nowych kandydatach dziennie.
+- **Twardy timeout 60 min/pula** — lejek NIGDY nie blokuje reszty
   pipeline'u (withRetry 1 podejście, porażka = wpis w raporcie, nie fail).
-- **Werdykt jest trwały** — nie retestujemy odrzuconych automatycznie.
-  Retest tylko ręcznie (usunięcie wpisu z verdicts.json). USDC-WETH 0.01%
-  i WETH-USDT 0.01% mainnet dostają wpisy FAIL od razu przy wdrożeniu
-  (seed z wyników 17/19.08), żeby lejek ich nie liczył od nowa.
+- **Werdykt trwały + `algoVersion`** (decyzja 24.08): BEZ retestu
+  kalendarzowego (3/7 dni nowych danych to ~1–2% okna 365d — wynik się
+  nie zmieni, odrzucenia 0.01% są strukturalne). Właściwy trigger
+  retestu = zmiana algorytmu: każdy werdykt niesie `algoVersion`
+  ('v1.2' dziś); po zmianie wersji (np. σ/k po 26.08) werdykty ze starą
+  wersją są traktowane jako nieważne i kolejka przerabia się od nowa.
+  Retest ręczny = usunięcie wpisu. Seed: USDC-WETH 0.01% i WETH-USDT
+  0.01% mainnet FAIL z 17/19.08 (żeby nie liczyć ich od nowa).
+- **Kwalifikacja poza APY** (decyzja 24.08): dodatkowo (a) wiek puli
+  ≥180 dni danych — młodsza nie ma sensownego okna walkforward, test
+  byłby fikcją → werdykt odroczony, nie FAIL; (b) ranking kwalifikacyjny
+  po MEDIANIE 7d apyBase zamiast średniej (jednodniowy spike nie wciąga
+  puli). Miara OPŁACALNOŚCI pozostaje jedna: bramka walkforward vsHODL
+  po kosztach — APY tylko wybiera, kogo testujemy. Temat filtra majors
+  (koszt ~23–31 pkt fee-APR) zostaje na agendzie 26.08, nie tu.
 - **Wykluczenia**: pary bez ETH/BTC-nogi ani stable (egzotyka) → UNMAPPED;
   po ewentualnej decyzji 26.08 (agenda pkt 4) dojdzie filtr mainnet-001.
 - **PASS ≠ auto-dodanie.** Werdykt PASS ląduje w briefie jako rekomendacja;
@@ -71,10 +91,11 @@ Semantyka wprost od Rafała 24.08: obecna etykieta sugerowała, że
    bot/server.ts. tsc czysty. UI = TASKS-UI PARTIA 12 (Sonnet).
 2. Fable (po potwierdzeniu fixu llama): `scripts/candidate-funnel.ts` +
    krok w pipeline.ts + sekcja "Kandydaci" w morning-report.ts.
-3. CC-Mac: commit/push. CC-Win: pull + restart homos-bot (nowy endpoint)
-   + ręczny test tego samego dnia: `npm run pipeline -- --only candidates`
-   na WETH-CBBTC 0.3% @ Base (#5 rankingu, jedyny żywy kandydat z ≥3d).
-4. Pierwszy pełny automat: werdykt WETH-CBBTC w briefie następnego ranka.
+3. CC-Mac: commit/push. CC-Win: pull; test tego samego dnia = BACKFILL
+   `--all` wieczorem 25.08 (kolejka: #3 WETH-USDT 0.3% ETH, #5 WETH-CBBTC
+   0.3% Base, #6 WETH-USDC 0.05% Base, #7 WETH-USDT 0.05% ETH; ~2–3h,
+   sekwencyjnie) — werdykty gotowe na przegląd 26.08 rano.
+4. Steady-state od nocy 26/27.08: krok w pipeline 05:30, 1 kandydat/noc.
 
 ## 5. Poza zakresem (świadomie)
 

@@ -18,35 +18,10 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 24.08] **Test resume-po-dacie-kalendarzowej: fix
-  POTWIERDZONY na żywo.** PRZED: `d632293f…` i `ae6e650d…` mtime 23.08,
-  ostatni wpis `series` 2026-08-23T05:02:15Z (apyBase 90.00 / 48.80) —
-  mimo przebiegu automatu 24.08 05:31, dowód zamrożenia. Odpaliłem
-  `npm run pipeline -- --only fetch`: fetch-llama pobrał 272/272 pul
-  (07:38:51→07:49:39Z, ~10m48s), zero pominięć w logu, exit 0; reszta
-  kroków (hs-*) exit 0, świeżość swap cache OK=[20] BRAKI=[]. PO: oba
-  pliki mtime 24.08, nowy wpis `series` 2026-08-24T07:02:29Z z INNYM
-  apyBase (134.01 / 41.88) — resume po dacie kalendarzowej działa,
-  zamrożenie zniknęło. Selektor NIE odpalony ręcznie (zgodnie z
-  instrukcją) — potwierdzenie zmiany rankingu zostawiam automatowi
-  jutro 06:0x. Skrzynka pusta.
-- [CC-Win→Fable, 24.08 druga paczka] **Wdrożone, ALE instrukcja wskazywała
-  złą usługę — zgłaszam do poprawki w HANDOFF-owych wpisach na przyszłość.**
-  `npx webpack --mode production` OK (~22s, tylko preexisting warningi
-  rozmiaru bundla). Po świeżym zapisie `paper-state.json` (08:07:35 UTC)
-  zrobiłem `nssm restart homos-bot` — ALE `homos-bot` to `bot/observer.ts`
-  (paper trading), nie serwuje API ani `bundle.js`. `/api/candidates`
-  dalej zwracał `Cannot GET` po tym restarcie. Sprawdziłem `nssm list`:
-  jest osobna usługa **`homos-server`** → `bot/server.ts` (API + statyk),
-  właśnie ta serwuje `/api/candidates` i `public/bundle.js`. Zrestartowałem
-  ją też (za zgodą Rafała, osobne potwierdzenie). Sanity PO obu restartach:
-  `/health` fresh (08:10:26Z), `GET /api/candidates` z tokenem → 4 werdykty
-  zgodnie z oczekiwaniem (2 FAIL: WETH-USDT 0.01%, USDC-WETH 0.01%; 2
-  QUEUED: WETH-CBBTC@Base 0.3%, WETH-USDT@ETH 0.3%), `paper-state.json`
-  przetrwał oba restarty (3539 B, mtime 08:09 UTC). UI nie sprawdzałem
-  (brak przeglądarki w tej sesji) — zerknij sam albo poproś Sonneta.
-  **Na przyszłość: gdy zmiana dotyczy `bot/server.ts`/API/bundla, wpis
-  powinien mówić `nssm restart homos-server`, nie `homos-bot`.**
+(Skrzynka pusta — oba raporty CC-Win z 24.08 odebrane: fix llama
+potwierdzony na żywo 272/272; druga paczka wdrożona, sanity zielone,
+UI potwierdzone screenshotem Rafała. Uwaga homos-server vs homos-bot
+wciągnięta do CONTEXT i do praktyki wpisów.)
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 21.08] **UWAGA: wszedłem w Twój lane** (decyzja Rafała
@@ -93,23 +68,13 @@
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-- [Fable→CC-Mac, 24.08 druga paczka] `git add bot/candidates.ts
-  bot/server.ts TASKS-FUNNEL.md TASKS-UI.md CONTEXT.md HANDOFF.md &&
-  git commit -m "feat(bot): /api/candidates — werdykty walidacji
-  kandydatow (seed 2xFAIL + 2xQUEUED); docs: spec auto-lejka
-  (TASKS-FUNNEL) + TASKS-UI Partia 12" && git push`. Potem ping CC-Win.
-- [Sonnet→CC-Mac, 24.08] **PARTIA 12 zrobiona, do commita.** Zmienione:
-  `src/hooks/useBotApi.ts` (fetch `/api/candidates`, poller godzinny,
-  typy `CandidateVerdict`/`CandidatesStatus`), `src/components/
-  TopRankingPanel.tsx` (5 stanów walidacji per wiersz + legenda),
-  `src/styles.css` (4 nowe klasy `.topranking-status-*`), `TASKS-UI.md`
-  (checklisty odhaczone + notatka ZROBIONE), `HANDOFF.md` (ten wpis).
-  `npx tsc --noEmit` i `webpack --mode production` czyste (jedyne błędy:
-  pre-existing w `bot/observer.ts`/vendor, niezwiązane z tą zmianą).
-  bot/** nietknięty. `git add src/hooks/useBotApi.ts
-  src/components/TopRankingPanel.tsx src/styles.css TASKS-UI.md
-  HANDOFF.md && git commit -m "feat(ui): Partia 12 — prawdziwy status
-  walidacji per wiersz Rankingu dnia" && git push`.
+- [Fable→CC-Mac, 24.08 domknięcie] Ostatni commit dnia:
+  `git add CONTEXT.md HANDOFF.md TASKS-FUNNEL.md DECYZJE-2026-08-26.md
+  && git commit -m "docs: domkniecie 24.08 (fix llama potwierdzony,
+  Partia 12 E2E, lejek: backfill+algoVersion+kryteria, on-ramp: trasa
+  SEPA EUR)" && git push`.
+  (Wcześniejsze wpisy z 24.08 wykonane i skasowane: druga paczka
+  fb8a71f, Partia 12 Sonneta 13a63a9, merge 51a5f10.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
 - [Fable→CC-Win, 22.08] Przy najbliższym PEŁNYM przebiegu pipeline'u zerknij
