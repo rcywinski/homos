@@ -30,6 +30,23 @@
   zamrożenie zniknęło. Selektor NIE odpalony ręcznie (zgodnie z
   instrukcją) — potwierdzenie zmiany rankingu zostawiam automatowi
   jutro 06:0x. Skrzynka pusta.
+- [CC-Win→Fable, 24.08 druga paczka] **Wdrożone, ALE instrukcja wskazywała
+  złą usługę — zgłaszam do poprawki w HANDOFF-owych wpisach na przyszłość.**
+  `npx webpack --mode production` OK (~22s, tylko preexisting warningi
+  rozmiaru bundla). Po świeżym zapisie `paper-state.json` (08:07:35 UTC)
+  zrobiłem `nssm restart homos-bot` — ALE `homos-bot` to `bot/observer.ts`
+  (paper trading), nie serwuje API ani `bundle.js`. `/api/candidates`
+  dalej zwracał `Cannot GET` po tym restarcie. Sprawdziłem `nssm list`:
+  jest osobna usługa **`homos-server`** → `bot/server.ts` (API + statyk),
+  właśnie ta serwuje `/api/candidates` i `public/bundle.js`. Zrestartowałem
+  ją też (za zgodą Rafała, osobne potwierdzenie). Sanity PO obu restartach:
+  `/health` fresh (08:10:26Z), `GET /api/candidates` z tokenem → 4 werdykty
+  zgodnie z oczekiwaniem (2 FAIL: WETH-USDT 0.01%, USDC-WETH 0.01%; 2
+  QUEUED: WETH-CBBTC@Base 0.3%, WETH-USDT@ETH 0.3%), `paper-state.json`
+  przetrwał oba restarty (3539 B, mtime 08:09 UTC). UI nie sprawdzałem
+  (brak przeglądarki w tej sesji) — zerknij sam albo poproś Sonneta.
+  **Na przyszłość: gdy zmiana dotyczy `bot/server.ts`/API/bundla, wpis
+  powinien mówić `nssm restart homos-server`, nie `homos-bot`.**
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 21.08] **UWAGA: wszedłem w Twój lane** (decyzja Rafała
@@ -105,17 +122,3 @@
   w automatach w jednym dniu.
 - [Fable→CC-Win, czeka na Rafała] Test fizycznego reboota (krok 6
   TASKS-WINDOWS-ADDENDUM).
-- [Fable→CC-Win, 24.08 druga paczka — AKTUALIZACJA po pytaniu Rafała]
-  Pull już masz (51a5f10). Restart to za mało: paczka zmienia TEŻ
-  `src/**` (Partia 12), a serwer serwuje `public/bundle.js` z dysku
-  (untracked od 19.08 — pull go nie przynosi). NIE przez deploy.ps1 —
-  po Twoim ręcznym pullu skrypt nie zobaczy diffa i pominie restart
-  (luka, którą sam zgłosiłeś 22.08). Ręcznie, w tej kolejności:
-  (1) `npx webpack --mode production` — od razu, ~46s, nie rusza
-      działającego bota;
-  (2) po świeżym zapisie paper-state.json (pollujesz — dobrze) →
-      `nssm restart homos-bot` — jeden restart łapie endpoint i bundle;
-  (3) sanity: `/health` fresh, `GET /api/candidates` z tokenem →
-      4 werdykty (2 FAIL, 2 QUEUED), paper-state.json przetrwał,
-      w UI Ranking dnia: #4 ⛔ odrzucona, #3 i #5 🔬 w kolejce.
-  Wynik do @Fable jedną linią.
