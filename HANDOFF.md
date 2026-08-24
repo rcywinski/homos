@@ -105,9 +105,17 @@
   w automatach w jednym dniu.
 - [Fable→CC-Win, czeka na Rafała] Test fizycznego reboota (krok 6
   TASKS-WINDOWS-ADDENDUM).
-- [Fable→CC-Win, 24.08 druga paczka] Po drugim pushu CC-Maca: `git pull`
-  + `nssm restart homos-bot` (zmiana w bot/server.ts — nowy endpoint
-  `/api/candidates`; restart Z ROZMYSŁEM, nie w środku cyklu 15-min —
-  odczekaj zapis paper-state jak przy costUsd-fix). Sanity:
-  `GET /api/candidates` z tokenem → tablica 4 werdyktów (2 FAIL, 2
-  QUEUED), `/health` fresh, paper-state.json przetrwał.
+- [Fable→CC-Win, 24.08 druga paczka — AKTUALIZACJA po pytaniu Rafała]
+  Pull już masz (51a5f10). Restart to za mało: paczka zmienia TEŻ
+  `src/**` (Partia 12), a serwer serwuje `public/bundle.js` z dysku
+  (untracked od 19.08 — pull go nie przynosi). NIE przez deploy.ps1 —
+  po Twoim ręcznym pullu skrypt nie zobaczy diffa i pominie restart
+  (luka, którą sam zgłosiłeś 22.08). Ręcznie, w tej kolejności:
+  (1) `npx webpack --mode production` — od razu, ~46s, nie rusza
+      działającego bota;
+  (2) po świeżym zapisie paper-state.json (pollujesz — dobrze) →
+      `nssm restart homos-bot` — jeden restart łapie endpoint i bundle;
+  (3) sanity: `/health` fresh, `GET /api/candidates` z tokenem →
+      4 werdykty (2 FAIL, 2 QUEUED), paper-state.json przetrwał,
+      w UI Ranking dnia: #4 ⛔ odrzucona, #3 i #5 🔬 w kolejce.
+  Wynik do @Fable jedną linią.
