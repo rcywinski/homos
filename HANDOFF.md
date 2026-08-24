@@ -68,13 +68,7 @@ wciągnięta do CONTEXT i do praktyki wpisów.)
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-- [Fable→CC-Mac, 24.08 domknięcie] Ostatni commit dnia:
-  `git add CONTEXT.md HANDOFF.md TASKS-FUNNEL.md DECYZJE-2026-08-26.md
-  && git commit -m "docs: domkniecie 24.08 (fix llama potwierdzony,
-  Partia 12 E2E, lejek: backfill+algoVersion+kryteria, on-ramp: trasa
-  SEPA EUR)" && git push`.
-  (Wcześniejsze wpisy z 24.08 wykonane i skasowane: druga paczka
-  fb8a71f, Partia 12 Sonneta 13a63a9, merge 51a5f10.)
+(Skrzynka pusta — domknięcie 24.08 zrobione: 1b6bd5a.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
 - [Fable→CC-Win, 22.08] Przy najbliższym PEŁNYM przebiegu pipeline'u zerknij
