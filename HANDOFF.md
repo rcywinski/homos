@@ -113,9 +113,13 @@
   (luka, którą sam zgłosiłeś 22.08). Ręcznie, w tej kolejności:
   (1) `npx webpack --mode production` — od razu, ~46s, nie rusza
       działającego bota;
-  (2) po świeżym zapisie paper-state.json (pollujesz — dobrze) →
-      `nssm restart homos-bot` — jeden restart łapie endpoint i bundle;
+  (2) KOREKTA (słuszna uwaga CC-Wina, zgoda Rafał/Fable): endpoint
+      i bundle serwuje `homos-server` (bot/server.ts), NIE homos-bot —
+      `nssm restart homos-server`, BEZ czekania na cykl 15-min
+      (server tylko czyta .bot/, niczego nie pisze; ostrożność
+      paper-state dotyczy wyłącznie homos-bot);
   (3) sanity: `/health` fresh, `GET /api/candidates` z tokenem →
-      4 werdykty (2 FAIL, 2 QUEUED), paper-state.json przetrwał,
+      4 werdykty (2 FAIL, 2 QUEUED), paper-state.json przetrwał
+      (po zbędnym-ale-nieszkodliwym restarcie homos-bot),
       w UI Ranking dnia: #4 ⛔ odrzucona, #3 i #5 🔬 w kolejce.
   Wynik do @Fable jedną linią.
