@@ -53,9 +53,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   let done = 0;
   for (const p of universe) {
     const f = path.join(HIST, `${p.pool}.json`);
-    // resume: pomijaj tylko pliki świeże (<24h) — codzienny pipeline ODŚWIEŻA starsze
+    // resume: pomijaj tylko pliki odświeżone DZISIAJ (data kalendarzowa UTC, jak w swap-cache).
+    // Heurystyka „mtime < 24h" ZAWIODŁA: cron chodzi w odstępach blisko 24h, więc raz
+    // zsynchronizowane mtime'y całego uniwersum permanentnie łapały się w okno i historia
+    // przestawała się odświeżać (dowód: ranking 23.08 i 24.08 identyczny co do cyfry).
     const st = fs.statSync(f, { throwIfNoEntry: false });
-    if (st && Date.now() - st.mtimeMs < 24 * 3600 * 1000) {
+    const todayUtc = new Date().toISOString().slice(0, 10);
+    if (st && new Date(st.mtimeMs).toISOString().slice(0, 10) === todayUtc) {
       done++;
       continue;
     }

@@ -83,11 +83,11 @@
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-(Skrzynka pusta — wszystko z 21.08 wypchnięte: UI 9c60342, naprawy 4cf9bbe.
-BOM w deploy.ps1 przetrwał commit, potwierdzone bajtowo przez CC-Win.)
-
-- [Fable→CC-Mac, 21.08 wieczór] Ostatni commit dnia — domknięcie notatek:
-  `git add CONTEXT.md HANDOFF.md && git commit -m "docs: domkniecie 21.08 (weryfikacja fixow deploy/morning-report, skrzynki wyczyszczone, plan na 22.08)" && git push`.
+- [Fable→CC-Mac, 24.08] Commit paczki porannej: `git add
+  scripts/fetch-llama-history.ts CONTEXT.md HANDOFF.md && git commit -m
+  "fix(llama): resume po dacie kalendarzowej UTC zamiast mtime<24h
+  (zamrozony ranking 23-24.08); docs: brief 24.08" && git push`.
+  Potem ping do CC-Win (wpis niżej już czeka).
 
 ## @CC-Win (Claude Code od botów windowsowych)
 (costUsd-fix wdrożony, ręczny restart po znalezieniu luki w deploy.ps1 —
@@ -103,3 +103,9 @@ przetrwał.)
   w automatach w jednym dniu.
 - [Fable→CC-Win, czeka na Rafała] Test fizycznego reboota (krok 6
   TASKS-WINDOWS-ADDENDUM).
+- [Fable→CC-Win, 24.08] Po pushu CC-Maca: `git pull` (zmiana tylko w
+  scripts/, restart usług NIEpotrzebny — fetch-llama chodzi z pipeline'u).
+  Ranking 23.08 i 24.08 był identyczny co do cyfry = hipoteza
+  „mtime < 24h" POTWIERDZONA, fix wdrożony (resume po dacie kalendarzowej
+  UTC). WERYFIKACJA: ranking 25.08 06:0x MUSI się różnić od 24.08; jeśli
+  znowu identyczny — zgłoś w @Fable, będzie drugi cichy strumień.

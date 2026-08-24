@@ -2162,3 +2162,41 @@ REENTRY i REBALANCE — ten sam brak dotyczył obu. Bez tego księga zdarzeń
 zaniża koszty, a dokładnie taka księga ma być fundamentem rozliczeń
 podatkowych (UI-VISION.md). Stare wpisy zostają bez pola, nie przepisujemy
 historii wstecz.
+
+### 2026-08-24 — Poranny brief po weekendzie (Fable) — ranking ZAMROŻONY po raz drugi (hipoteza potwierdzona, fix wdrożony), FOMO-check paper tradingu
+Odbiór raportów 23–24.08 (nikt ich wcześniej nie analizował):
+PIPELINE: oba dni w pełni zielone (20/20 hs-*, BRAKI=[], backtest-run
+~54 min exit 0, selection/sweep OK) — trzeci i czwarty czysty automat
+z rzędu. Trend-state żywy (lastTs z bieżącego ranka), WSZYSTKIE pule
+down:false — cbBTC wrócił do LP (equity $11 569, fees od powrotu $2.17).
+KLUCZOWE — TEST ROZSTRZYGAJĄCY Z 22.08 DAŁ WYNIK POZYTYWNY: ranking
+24.08 06:06 jest CO DO CYFRY identyczny z 23.08 (99.5 / 97.3 / 67.0 /
+53.5 / 46.8) przy universe.json 1.2h. Hipoteza o `fetch-llama-history.ts`
+POTWIERDZONA: heurystyka „mtime < 24h" + cron co ~24h = raz
+zsynchronizowane mtime'y całego uniwersum permanentnie łapią się w okno
+i historia zamarza. FIX WDROŻONY (Fable, na dysku): porównanie daty
+kalendarzowej UTC zamiast okna 24h (wzorzec ze swap-cache); resume w
+obrębie tego samego dnia nadal działa. tsc czysty (poza preexisting).
+Commit u CC-Mac, weryfikacja: ranking 25.08 MUSI się różnić od 24.08.
+KONSEKWENCJA do czasu wdrożenia: dzisiejszy top (WETH-USDC@Base 99.5%)
+to stan z 23.08 — propozycji OPEN (WETH-CBBTC 0.3% @ Base, wisi od
+22.08) nie otwierać na zamrożonych danych.
+FOMO-CHECK (na pytanie Rafała o paper trading, który „w 5 dni dużo
+zarobił"): equity $50 000 → $53 806 (+7.6% w 6 dni), ALE vs HODL
+−$4 500 — HODL 50/50 zrobiłby w tym samym oknie ~+16.6%. CAŁY zysk to
+beta rynku (ETH ~1898→~2400+); strategia na reżimie pompy PRZEGRAŁA z
+niereobieniem niczego o $4.5k. To oczekiwane (LP = short gamma), ale
+znaczy: (a) wynik paper NIE jest dowodem edge'a — bramka wymaga bicia
+HODL na ≥2 reżimach, a widzieliśmy dopiero jeden (trend UP); (b) FOMO
+nieuzasadnione — wejście teraz to wejście PO pompie, dokładnie
+scenariusz, przed którym ostrzega werdykt hUp48 („nie kupuj szczytu").
+LUKA WEEKENDOWA — ROZWIĄZANA (odpowiedź Rafała): „krytyczne błędy
+Opusa" to dwie usterki JUŻ udokumentowane we wpisie 21.08 wieczór
+(BOM w deploy.ps1 — nawrót z 10.08; data/pipeline.log blokujący
+auto-push raportu). Obie scommitowane 21.08 (4cf9bbe) i zdeployowane;
+weekend był ich testem bojowym: raporty 23–24.08 wypchnęły się same
+o 08:45 jako JEDYNE commity. Produkcja = repo, żadnego nieznanego kodu.
+KRAKEN: test $200 wysłany przed weekendem, jeszcze nie zaksięgowany —
+zgodne z SLA SWIFT 1–5 dni rob. (wysłane pt → oczekiwać wt–czw).
+Po zaksięgowaniu: USDC → wypłata na Rabby (Arbitrum/Base, 2 USDC),
+whitelist + 2FA, zanotować realny koszt trasy (agenda pkt 8).
