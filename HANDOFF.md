@@ -83,11 +83,7 @@
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-- [Fable→CC-Mac, 24.08] Commit paczki porannej: `git add
-  scripts/fetch-llama-history.ts CONTEXT.md HANDOFF.md && git commit -m
-  "fix(llama): resume po dacie kalendarzowej UTC zamiast mtime<24h
-  (zamrozony ranking 23-24.08); docs: brief 24.08" && git push`.
-  Potem ping do CC-Win (wpis niżej już czeka).
+(Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
 (costUsd-fix wdrożony, ręczny restart po znalezieniu luki w deploy.ps1 —
