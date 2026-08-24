@@ -894,3 +894,59 @@ identycznie jak zdrowa.
       trzeba dociągnąć cenę, inaczej „Wartość łączna" znów zaniży.
       Hooki `useBalance` wypisane jawnie (3 sieci × 3 tokeny), nie w pętli —
       liczba hooków musi być stała, patrz dwa dzisiejsze crashe.
+
+## PARTIA 12 — Ranking dnia: PRAWDZIWY status walidacji per pula (zlecone przez Fable 24.08, prośba Rafała)
+
+**Problem (wprost od Rafała):** obecna etykieta „✅ w konfiguracji bota /
+poza konfiguracją" sugeruje, że config = zwalidowana, a reszta = odrzucona.
+NIEPRAWDA: „poza konfiguracją" to w większości pule NIEBADANE, dwie są
+twardo ODRZUCONE bramką walkforward, a niektóre czekają w kolejce walidacji.
+
+**Backend już jest (Fable, 24.08, w tej samej paczce):**
+`GET /api/candidates` (bot/server.ts) → tablica `CandidateVerdict`
+(typ w `bot/candidates.ts`): `{ llamaPool, chain, symbol, feeTier,
+verdict: 'PASS'|'FAIL'|'QUEUED'|'UNMAPPED', winPct?, worst?, testedAt?,
+note? }`. Dopasowanie do wierszy rankingu PO `llamaPool` (uuid — wiersze
+/api/ranking go mają). Autoryzacja jak inne /api/* (Bearer token).
+
+**Zakres (TopRankingPanel + useBotApi):**
+- [x] `useBotApi`: pobranie `/api/candidates` (poll rzadki — raz na
+      godzinę wystarczy, werdykty zmieniają się raz na dobę; osobny stan,
+      NIE ruszać istniejących pollerów), typ `CandidateVerdict` 1:1 z
+      bot/candidates.ts.
+- [x] Wiersz rankingu pokazuje JEDEN z pięciu stanów (priorytet z góry):
+      1. ✅ **gra w bocie** — pula w BOT_POOLS (obecna logika „w
+         konfiguracji" zostaje jako ten stan, zmienia się tylko etykieta);
+      2. ⛔ **odrzucona** — verdict FAIL; tooltip: `winPct`/`worst`/
+         `testedAt`/`note` (np. „55% wygr., worst −18.0, 19.08”);
+      3. 🔬 **w kolejce walidacji** — verdict QUEUED;
+      4. ❔ **wymaga ręcznego mapowania** — verdict UNMAPPED (na razie
+         nie wystąpi, lejek dopiero powstaje — obsłużyć, żeby nie
+         wybuchło później);
+      5. — **niebadana** — brak werdyktu i nie w BOT_POOLS (wyszarzona
+         etykieta zamiast obecnego mylącego „poza konfiguracją").
+      Werdykt PASS poza BOT_POOLS → osobny stan „✔ zwalidowana (nie gra)"
+      — zielony tekst, nie pełne ✅, żeby odróżnić od grających.
+- [x] Legenda stanów pod tabelą (wzorzec `.status-legend` z P-ikon 21.08).
+- [x] Stany brzegowe: błąd/offline z /api/candidates → `candidates===null`,
+      mapa werdyktów pusta, tabela działa jak dziś (wiersze spadają do
+      „gra w bocie"/„niebadana"), ŻADNEGO czerwonego błędu.
+- [x] ZAKRES TWARDY: tylko src/** (`useBotApi.ts`, `TopRankingPanel.tsx`,
+      `styles.css`). bot/** nietknięty (tylko odczyt typu). Semantyka
+      stanów NIE zmieniona względem specu.
+
+**Kontekst:** TASKS-FUNNEL.md (auto-lejek — docelowo werdykty będzie
+pisał nocny krok pipeline'u; do tego czasu endpoint serwuje seed z kodu:
+2×FAIL z walidacji 17/19.08 + 2×QUEUED wiszące propozycje OPEN).
+
+**ZROBIONE (Sonnet, 24.08):** `useBotApi.ts` — `CandidateVerdict`/
+`CandidatesStatus`, `candidates`/`candidatesStatus`, poller godzinny
+(`fetchCandidates`, `CANDIDATES_POLL_MS`). `TopRankingPanel.tsx` —
+`candidateStatus()` dopasowuje werdykt po `llamaUuid`→`llamaPool`,
+priorytet: botPoolId → FAIL → QUEUED → UNMAPPED → PASS(„zwalidowana,
+nie gra") → niebadana; tooltip `title=` z winPct/worst/testedAt/note;
+legenda `.status-legend` pod nagłówkiem tabeli. `styles.css` — 4 nowe
+klasy `.topranking-status-{fail,queued,unmapped,validated}`.
+`npx tsc --noEmit` czysty na tych plikach (2 błędy pre-existing w
+`bot/observer.ts`/vendor, niezwiązane), `webpack --mode production`
+kompiluje bez błędów.

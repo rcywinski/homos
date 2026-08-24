@@ -19,6 +19,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import express from 'express';
 import { STATE_DIR } from './config';
+import { readVerdicts } from './candidates';
 
 const DIR = path.join(__dirname, '..', STATE_DIR);
 const STATE_PATH = path.join(DIR, 'state.json');
@@ -107,6 +108,13 @@ app.get('/api/ranking', (_req, res) => {
   const r = readJson(path.join(DIR, 'selector-ranking.json'));
   if (!r) return res.status(503).json({ error: 'ranking not generated yet (selector runs daily after 8:00)' });
   res.json(r);
+});
+
+// Werdykty walidacji kandydatów (TASKS-FUNNEL.md): seed w kodzie +
+// runtime .bot/candidate-verdicts.json (pisze nocny lejek). UI dopasowuje
+// po llamaPool do wierszy rankingu → badge PASS/FAIL/QUEUED.
+app.get('/api/candidates', (_req, res) => {
+  res.json(readVerdicts(DIR));
 });
 
 // Paper trading (bot/paper.ts): stan wirtualnego portfela + próbki equity

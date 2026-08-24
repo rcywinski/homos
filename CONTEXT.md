@@ -2207,3 +2207,25 @@ KRAKEN: test $200 wysłany przed weekendem, jeszcze nie zaksięgowany —
 zgodne z SLA SWIFT 1–5 dni rob. (wysłane pt → oczekiwać wt–czw).
 Po zaksięgowaniu: USDC → wypłata na Rabby (Arbitrum/Base, 2 USDC),
 whitelist + 2FA, zanotować realny koszt trasy (agenda pkt 8).
+
+DOGRYWKA ~1x:xx — AUTO-LEJEK KANDYDATÓW rozpisany (decyzja Rafała po
+pytaniu o top10: „dodać pule spoza configu / automatyzować dodawanie?").
+Odpowiedź: automatyzujemy LEJEK (fetch 365d → walkforward → werdykt
+bramki w briefie), NIE decyzję — 2/2 kandydatów z topu headline APY
+odrzuciła bramka (#4 dzisiejszego top10 to odrzucona 19.08 USDC-WETH
+0.01%!), więc auto-dodawanie do BOT_POOLS grałoby pulami, o których
+wiemy że są złe. Spec: `TASKS-FUNNEL.md` (krok w istniejącym pipeline
+05:30, max 1 kandydat/noc, werdykty trwałe w data/candidates/
+verdicts, seed 2×FAIL z 17/19.08). Przy okazji sprostowana semantyka
+badge w UI: „poza konfiguracją" NIE znaczy odrzucona. WARSTWA DANYCH
+ZROBIONA OD RĘKI (Fable, tsc czysty): `bot/candidates.ts` (typ
+CandidateVerdict + SEED_VERDICTS: FAIL WETH-USDT 0.01% i USDC-WETH
+0.01% mainnet, QUEUED WETH-CBBTC 0.3% Base i WETH-USDT 0.3% ETH;
+architektura seed-w-kodzie + runtime `.bot/candidate-verdicts.json`,
+żeby lejek nie brudził trackowanego drzewa na produkcji — lekcja
+pipeline.log) + `GET /api/candidates` w bot/server.ts. UI = TASKS-UI
+PARTIA 12 (Sonnet): 5 stanów z legendą (gra w bocie / odrzucona z
+tooltipem winPct/worst / w kolejce / zwalidowana-nie-gra / niebadana),
+degradacja łagodna przy braku endpointu. Wymaga restartu homos-bot
+u CC-Win. Sam lejek (candidate-funnel.ts + krok pipeline): Fable, po
+potwierdzeniu fixu llama (ranking 25.08).

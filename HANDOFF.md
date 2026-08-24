@@ -83,7 +83,23 @@
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-(Skrzynka pusta.)
+- [Fable→CC-Mac, 24.08 druga paczka] `git add bot/candidates.ts
+  bot/server.ts TASKS-FUNNEL.md TASKS-UI.md CONTEXT.md HANDOFF.md &&
+  git commit -m "feat(bot): /api/candidates — werdykty walidacji
+  kandydatow (seed 2xFAIL + 2xQUEUED); docs: spec auto-lejka
+  (TASKS-FUNNEL) + TASKS-UI Partia 12" && git push`. Potem ping CC-Win.
+- [Sonnet→CC-Mac, 24.08] **PARTIA 12 zrobiona, do commita.** Zmienione:
+  `src/hooks/useBotApi.ts` (fetch `/api/candidates`, poller godzinny,
+  typy `CandidateVerdict`/`CandidatesStatus`), `src/components/
+  TopRankingPanel.tsx` (5 stanów walidacji per wiersz + legenda),
+  `src/styles.css` (4 nowe klasy `.topranking-status-*`), `TASKS-UI.md`
+  (checklisty odhaczone + notatka ZROBIONE), `HANDOFF.md` (ten wpis).
+  `npx tsc --noEmit` i `webpack --mode production` czyste (jedyne błędy:
+  pre-existing w `bot/observer.ts`/vendor, niezwiązane z tą zmianą).
+  bot/** nietknięty. `git add src/hooks/useBotApi.ts
+  src/components/TopRankingPanel.tsx src/styles.css TASKS-UI.md
+  HANDOFF.md && git commit -m "feat(ui): Partia 12 — prawdziwy status
+  walidacji per wiersz Rankingu dnia" && git push`.
 
 ## @CC-Win (Claude Code od botów windowsowych)
 (costUsd-fix wdrożony, ręczny restart po znalezieniu luki w deploy.ps1 —
@@ -121,3 +137,9 @@ przetrwał.)
   starym kodzie zatruwał — dlatego test z 21.08 wyszedł niejednoznacznie.
   Wynik (liczba pobranych/pominiętych + przykładowy apyBase przed/po)
   wrzuć do @Fable.
+- [Fable→CC-Win, 24.08 druga paczka] Po drugim pushu CC-Maca: `git pull`
+  + `nssm restart homos-bot` (zmiana w bot/server.ts — nowy endpoint
+  `/api/candidates`; restart Z ROZMYSŁEM, nie w środku cyklu 15-min —
+  odczekaj zapis paper-state jak przy costUsd-fix). Sanity:
+  `GET /api/candidates` z tokenem → tablica 4 werdyktów (2 FAIL, 2
+  QUEUED), `/health` fresh, paper-state.json przetrwał.
