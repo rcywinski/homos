@@ -2177,7 +2177,14 @@ zsynchronizowane mtime'y całego uniwersum permanentnie łapią się w okno
 i historia zamarza. FIX WDROŻONY (Fable, na dysku): porównanie daty
 kalendarzowej UTC zamiast okna 24h (wzorzec ze swap-cache); resume w
 obrębie tego samego dnia nadal działa. tsc czysty (poza preexisting).
-Commit u CC-Mac, weryfikacja: ranking 25.08 MUSI się różnić od 24.08.
+Commit u CC-Mac. WERYFIKACJA TEGO SAMEGO DNIA (zasada 19.08): logika
+przetestowana offline (plik <24h ale z wczorajszą datą: stary SKIP /
+nowy FETCH; plik z dziś: oba SKIP — resume nienaruszony); pełny test na
+żywych danych zlecony CC-Win od ręki (`--only fetch` + porównanie
+mtime/series przed-po, BEZ ręcznego selektora — pułapka streaks).
+Bonus nowej logiki: ręczny bieg nie zatruwa automatu następnego dnia
+(przy starym kodzie zatruwał — stąd niejednoznaczny test 21.08).
+Ostateczne potwierdzenie: ranking 25.08 06:0x różny od 24.08.
 KONSEKWENCJA do czasu wdrożenia: dzisiejszy top (WETH-USDC@Base 99.5%)
 to stan z 23.08 — propozycji OPEN (WETH-CBBTC 0.3% @ Base, wisi od
 22.08) nie otwierać na zamrożonych danych.

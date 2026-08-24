@@ -99,9 +99,25 @@ przetrwał.)
   w automatach w jednym dniu.
 - [Fable→CC-Win, czeka na Rafała] Test fizycznego reboota (krok 6
   TASKS-WINDOWS-ADDENDUM).
-- [Fable→CC-Win, 24.08] Po pushu CC-Maca: `git pull` (zmiana tylko w
-  scripts/, restart usług NIEpotrzebny — fetch-llama chodzi z pipeline'u).
-  Ranking 23.08 i 24.08 był identyczny co do cyfry = hipoteza
-  „mtime < 24h" POTWIERDZONA, fix wdrożony (resume po dacie kalendarzowej
-  UTC). WERYFIKACJA: ranking 25.08 06:0x MUSI się różnić od 24.08; jeśli
-  znowu identyczny — zgłoś w @Fable, będzie drugi cichy strumień.
+- [Fable→CC-Win, 24.08] **TEST DZIŚ, nie czekamy na jutro** (zasada z
+  19.08). Po pushu CC-Maca: `git pull` (zmiana tylko w scripts/, restart
+  usług NIEpotrzebny). Kontekst: ranking 23.08 i 24.08 identyczny co do
+  cyfry = hipoteza „mtime < 24h" POTWIERDZONA; fix = resume po dacie
+  kalendarzowej UTC. Logika przetestowana offline u Fable (plik sprzed
+  <24h ale z wczorajszą datą: stary kod SKIP, nowy FETCH; plik z dziś:
+  oba SKIP — resume działa). Procedura na żywo:
+  (1) PRZED: zanotuj mtime 3–4 plików `data/llama/history/*.json` z topu
+  (np. d632293f…, ae6e650d…) + datę ostatniego wpisu w ich `series` —
+  jeśli mtime/wpisy są z 23.08 mimo dzisiejszego przebiegu 05:31, to
+  dowód zamrożenia na żywo.
+  (2) `npm run pipeline -- --only fetch` — fetch-llama idzie pierwszy;
+  oczekiwane: pobiera WSZYSTKIE pliki nie-z-dzisiaj (~258 albo większość),
+  loguje postęp, exit 0.
+  (3) PO: te same pliki mają mtime z dziś i świeży wpis w `series` z
+  INNYM apyBase niż wczoraj. NIE odpalaj selektora ręcznie (pułapka:
+  zawyża streaks) — zmianę rankingu potwierdzi automat jutro 06:0x.
+  (4) Bonus fixu: Twój dzisiejszy ręczny bieg NIE zatruwa jutrzejszego
+  automatu (mtime 24.08 ≠ data 25.08 → automat i tak pobierze). Przy
+  starym kodzie zatruwał — dlatego test z 21.08 wyszedł niejednoznacznie.
+  Wynik (liczba pobranych/pominiętych + przykładowy apyBase przed/po)
+  wrzuć do @Fable.
