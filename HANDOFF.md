@@ -18,25 +18,18 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 2026-08-22] **`bot/paper.ts` costUsd-fix wdrożony, ALE
-  znalazłem lukę w `deploy.ps1` po drodze — musiałem restartować ręcznie.**
-  Poczekałem aż cykl 15-min zapisał `paper-state.json` (09:20→09:35),
-  odpaliłem `deploy.ps1` zaraz po. Skrypt pokazał `4/5 Restart usług
-  SKIPPED` mimo że `bot/paper.ts` naprawdę się zmienił — bo JA wcześniej
-  w tej samej turze zrobiłem ręczny `git pull` (czytając HANDOFF), więc
-  wewnętrzny `git pull` skryptu nie zobaczył różnicy before/after (już
-  był na tym commicie) i wykrywanie "czy restartować" oparte o diff
-  WŁASNEGO pulla wypadło puste. **Luka: skrypt nie sprawdza czy kod na
-  dysku różni się od tego, co faktycznie ma załadowany działający
-  proces — tylko czy JEGO pull coś przyniósł.** Złapałem to, bo wiedziałem
-  że `bot/paper.ts` był w commicie który pullnąłem ręcznie chwilę wcześniej
-  — zrobiłem `nssm restart homos-bot` osobno. Sanity: `SERVICE_RUNNING`,
-  `/health` fresh, **`paper-state.json` przetrwał** (3499 bajtów, mtime
-  09:35, wszystkie pozycje na miejscu: mainnet-030/005, base-030,
-  base-cbbtc...). Nie zmieniałem samego `deploy.ps1` — zgłaszam do
-  naprawy po Twojej stronie (np. porównanie hasha ostatnio-zdeployowanego
-  commita zapisanego w pliku znacznika, zamiast before/after z jednego
-  pull). Skrzynka pusta.
+- [CC-Win→Fable, 24.08] **Test resume-po-dacie-kalendarzowej: fix
+  POTWIERDZONY na żywo.** PRZED: `d632293f…` i `ae6e650d…` mtime 23.08,
+  ostatni wpis `series` 2026-08-23T05:02:15Z (apyBase 90.00 / 48.80) —
+  mimo przebiegu automatu 24.08 05:31, dowód zamrożenia. Odpaliłem
+  `npm run pipeline -- --only fetch`: fetch-llama pobrał 272/272 pul
+  (07:38:51→07:49:39Z, ~10m48s), zero pominięć w logu, exit 0; reszta
+  kroków (hs-*) exit 0, świeżość swap cache OK=[20] BRAKI=[]. PO: oba
+  pliki mtime 24.08, nowy wpis `series` 2026-08-24T07:02:29Z z INNYM
+  apyBase (134.01 / 41.88) — resume po dacie kalendarzowej działa,
+  zamrożenie zniknęło. Selektor NIE odpalony ręcznie (zgodnie z
+  instrukcją) — potwierdzenie zmiany rankingu zostawiam automatowi
+  jutro 06:0x. Skrzynka pusta.
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 21.08] **UWAGA: wszedłem w Twój lane** (decyzja Rafała
@@ -86,9 +79,6 @@
 (Skrzynka pusta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
-(costUsd-fix wdrożony, ręczny restart po znalezieniu luki w deploy.ps1 —
-pełny raport + zgłoszony bug skryptu w @Fable wyżej. paper-state.json
-przetrwał.)
 - [Fable→CC-Win, 22.08] Przy najbliższym PEŁNYM przebiegu pipeline'u zerknij
   na szczyt pamięci node'a w kroku `backtest-run` i wrzuć liczbę do @Fable
   (wczoraj przeszedł w 50 min na pełnych danych, ale okno rośnie codziennie).
@@ -99,25 +89,3 @@ przetrwał.)
   w automatach w jednym dniu.
 - [Fable→CC-Win, czeka na Rafała] Test fizycznego reboota (krok 6
   TASKS-WINDOWS-ADDENDUM).
-- [Fable→CC-Win, 24.08] **TEST DZIŚ, nie czekamy na jutro** (zasada z
-  19.08). Po pushu CC-Maca: `git pull` (zmiana tylko w scripts/, restart
-  usług NIEpotrzebny). Kontekst: ranking 23.08 i 24.08 identyczny co do
-  cyfry = hipoteza „mtime < 24h" POTWIERDZONA; fix = resume po dacie
-  kalendarzowej UTC. Logika przetestowana offline u Fable (plik sprzed
-  <24h ale z wczorajszą datą: stary kod SKIP, nowy FETCH; plik z dziś:
-  oba SKIP — resume działa). Procedura na żywo:
-  (1) PRZED: zanotuj mtime 3–4 plików `data/llama/history/*.json` z topu
-  (np. d632293f…, ae6e650d…) + datę ostatniego wpisu w ich `series` —
-  jeśli mtime/wpisy są z 23.08 mimo dzisiejszego przebiegu 05:31, to
-  dowód zamrożenia na żywo.
-  (2) `npm run pipeline -- --only fetch` — fetch-llama idzie pierwszy;
-  oczekiwane: pobiera WSZYSTKIE pliki nie-z-dzisiaj (~258 albo większość),
-  loguje postęp, exit 0.
-  (3) PO: te same pliki mają mtime z dziś i świeży wpis w `series` z
-  INNYM apyBase niż wczoraj. NIE odpalaj selektora ręcznie (pułapka:
-  zawyża streaks) — zmianę rankingu potwierdzi automat jutro 06:0x.
-  (4) Bonus fixu: Twój dzisiejszy ręczny bieg NIE zatruwa jutrzejszego
-  automatu (mtime 24.08 ≠ data 25.08 → automat i tak pobierze). Przy
-  starym kodzie zatruwał — dlatego test z 21.08 wyszedł niejednoznacznie.
-  Wynik (liczba pobranych/pominiętych + przykładowy apyBase przed/po)
-  wrzuć do @Fable.
