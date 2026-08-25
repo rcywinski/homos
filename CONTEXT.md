@@ -2267,12 +2267,57 @@ Pytanie Rafała o **Kraken+** (sub 49,99 €/rok): to NIE jest Kraken Pro —
 znosi tylko opłaty prostego Buy/Sell/Convert (do $10k/mies.), NIE znosi
 spreadu i NIE obejmuje spotu na Pro → bezużyteczny dla trasy on-ramp;
 ew. wartość: darmowy raport podatkowy Koinly do 800 tx (trial 30 dni).
-(2) GODZINA RAPORTU — decyzja Rafała: schtask 08:45 → **07:30**. Powód:
-Rafał siada do komputera ~08:00, raport ma czekać gotowy. Dane są dużo
-wcześniej (backtest kończy ~06:23, ranking selektora ~06:06), 08:45 było
-arbitralnym zapasem. Zadanie u CC-Win (HANDOFF). Do sprawdzenia przy
-okazji: co steruje godziną wysyłki propozycji Telegram (dziś przyszły
-tuż po 08:00) i czy też da się wcześniej.
+(2) GODZINA RAPORTU — decyzja Rafała: raport ma czekać gotowy, gdy siada
+~08:00. KOREKTA (~08:4x, po słusznej uwadze Rafała "sprawdź co idzie
+wcześniej"): mój pierwotny plan "tylko raport na 07:30" był BŁĘDNY —
+przeoczenie stref czasowych. Logi pipeline są w UTC, schtaski lokalnie:
+realna oś to pipeline 07:30–08:25 PL (nie 05:30–06:30!), selektor ma
+twardą bramkę RUN_AFTER_HOUR=8 w bot/selector.ts (to stąd Telegram
+"zaraz po 8:00", zagadka rozwiązana), raport 08:45 miał ledwo ~20 min
+zapasu po backteście. Sam raport na 07:30 wysłałby WCZORAJSZE dane.
+PLAN WŁAŚCIWY — cały łańcuch ~2h wcześniej: HomosPipeline 07:30→05:30,
+selektor RUN_AFTER_HOUR 8→6, HomosMorningReport 08:45→07:30 (zapas
+rośnie z ~20 do ~50 min). Zmiany kodu (Fable, tsc czysty poza
+preexisting): selector.ts — stała + NOWA bramka świeżości: universe.json
+musi mieć dzisiejszą datę UTC (wzorzec fixu llama), inaczej selektor
+NIE znaczy dnia tylko czeka na kolejny cykl (dotąd limit 26h przepuściłby
+wczorajszy plik, gdyby pipeline jeszcze biegł/padł — przy godz. 8 to nie
+strzelało, przy 6 by strzeliło); server.ts — komunikat 503. Schtaski +
+wdrożenie: CC-Win (HANDOFF). Ryzyko znane: rosnące okno backtestu —
+pilnować czasu przy pomiarach Peak RSS.
+(2b) Ranking 25.08 odczytany na żywo z /api/ranking (06:09Z): 135.5 /
+126.5 / 87.0 / 64.0 / 59.6 — RÓŻNY od 24.08 (99.5/97.3/…) → **fix
+fetch-llama-history FORMALNIE DOMKNIĘTY** (ostatni warunek z 24.08).
+Raport 25.08 Rafał pobrał ręcznie z CC-Win; Peak RSS do odebrania.
+Odblokowane: candidate-funnel.ts (następna robota Fable).
+
+~10:xx — AUTO-LEJEK KANDYDATÓW ZBUDOWANY (Fable, wg TASKS-FUNNEL.md;
+tsc czysty poza preexisting, smoke test --dry-run w kontenerze OK).
+Nowe: `scripts/candidate-funnel.ts` (kwalifikacja: top10 po MEDIANIE 7d
+apyBase + streak≥3 ze stanu selektora LUB otwarta propozycja OPEN spoza
+BOT_POOLS; minus BOT_POOLS i ważne werdykty; wiek <180d historii =
+odroczenie QUEUED z notą; mapowanie llama→on-chain przez słownik majors
++ factory.getPool + SANITY token0/token1 — niezgodność=UNMAPPED, nigdy
+ciche złe dane; fetch 365d przez hypersync `--cfg`; walkforward 30/15
+WF_SET=funnel heap 8GB; bramka winPct≥65 AND worst>−3 na profilu pary:
+ETH/stable=v1.1 re>EMA, BTC-noga=cbBTC k=2; werdykt trwały z algoVersion
+do .bot/candidate-verdicts.json + snapshot .bot/candidate-queue.json;
+timeout 60 min/krok, taskkill /T na win32; steady-state 1/noc, --all =
+backfill ręczny). Zmiany towarzyszące: fetch-swaps-hypersync `--cfg
+<json>` (cfg spoza POOLS, ekstra pola idą do meta); walkforward
+WF_SET=funnel (3 strategie — szybciej); load.ts czyta `cfg.quoteRefId`
+z meta (dynamiczna referencja USD dla cand-* kwotowanych w WETH — mapy
+statyczne nie znają tych id); pipeline.ts krok `candidate-funnel` (po
+fetch, PRZED backtest-run, `--only funnel` działa); morning-report.ts
+sekcja "Kandydaci" (werdykty 7d + kolejka); bot/candidates.ts — pola
+algoVersion/candId/poolAddress/strategy + seedy FAIL z algoVersion
+v1.2. Smoke (--dry-run, stęchłe dane Maca): kolejka 4 = WETH-USDT 0.3%
+ETH, WETH-USDC 0.05% Base, WETH-USDT 0.05% ETH, WBTC-USDT 0.05% ETH.
+UWAGA wdrożeniowa: adresy tokenów w słowniku TOKENS pisane z pamięci —
+pierwszy backfill u CC-Win MUSI zweryfikować logi mapowania (resolved
+address vs Uniswap/DefiLlama); sanity-check zamienia błąd w UNMAPPED,
+więc ryzyko to brak werdyktu, nie zły werdykt. Wdrożenie i backfill
+--all wieczorem: HANDOFF (paczka hurtowa, Rafał wysyła na koniec dnia).
 (3) Raport 25.08 o 08:15 jeszcze nie istniał — NIE awaria, schtask
 wciąż na 08:45 (dziś ostatni raz). Odbiór rankingu (≠24.08? = formalne
 domknięcie fixu llama) + Peak RSS po jego przyjściu.

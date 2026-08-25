@@ -106,7 +106,7 @@ app.get('/api/positions-history', (req, res) => {
 // pisze bot/selector.ts raz dziennie po 8:00.
 app.get('/api/ranking', (_req, res) => {
   const r = readJson(path.join(DIR, 'selector-ranking.json'));
-  if (!r) return res.status(503).json({ error: 'ranking not generated yet (selector runs daily after 8:00)' });
+  if (!r) return res.status(503).json({ error: 'ranking not generated yet (selector runs daily after 6:00)' });
   res.json(r);
 });
 

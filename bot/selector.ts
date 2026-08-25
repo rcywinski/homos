@@ -39,7 +39,7 @@ const gasCycleUsd = (key: string): number => {
   for (const [chain, usd] of Object.entries(GAS_CYCLE_USD)) if (k.includes(chain) || (chain === 'mainnet' && k.includes('ethereum'))) return usd;
   return 1; // nieznana sieć: ostrożny domyślny
 };
-const RUN_AFTER_HOUR = 8; // lokalna godzina, po pipeline 07:30
+const RUN_AFTER_HOUR = 6; // lokalna godzina, po pipeline 05:30 (25.08: cały łańcuch przesunięty ~2h wcześniej, decyzja Rafała)
 const MAX_DATA_AGE_H = 26; // nie proponuj ze stęchłych danych
 const REPROPOSE_COOLDOWN_D = 7; // odrzucona propozycja nie wraca przez tydzień
 const MAX_OPEN_PROPOSALS_PER_DAY = 2;
@@ -197,7 +197,15 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
     saveSelState(state);
     return;
   }
+  // Universe musi być z DZISIAJ (data UTC, wzorzec jak fix fetch-llama 24.08):
+  // sam limit 26h przepuściłby wczorajszy plik, gdy pipeline jeszcze biegnie /
+  // padł — wtedy NIE znaczymy dnia, tylko czekamy na kolejny cykl (do 26h).
+  const mtimeDay = new Date(st.mtimeMs).toISOString().slice(0, 10);
   const ageH = (Date.now() - st.mtimeMs) / 3_600_000;
+  if (mtimeDay !== today() && ageH <= MAX_DATA_AGE_H) {
+    ctx.log(`selector: universe.json z ${mtimeDay} (nie z dziś) — czekam na dzisiejszy pipeline, spróbuję w kolejnym cyklu`);
+    return; // bez lastRunDate — retry aż pipeline zbiegnie albo dane przekroczą 26h
+  }
   if (ageH > MAX_DATA_AGE_H) {
     ctx.log(`selector: dane DefiLlamy mają ${ageH.toFixed(1)}h (>${MAX_DATA_AGE_H}h) — nie proponuję ze stęchłych danych`);
     state.lastRunDate = today();
