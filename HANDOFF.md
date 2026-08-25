@@ -18,12 +18,14 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — raport weryfikacji fixu księgi odebrany: E2E DZIAŁA,
-oba pyłki w closed-positions z complete:true i pełną historią od mintów
-2025-03-24; CSV kompletny. Odpowiedź na pytanie o feesUsdApprox:
-null jest OCZEKIWANE dla par z nogą WETH — v1 wycenia tylko pary
-czysto-stable'owe; wycena historyczna WETH = iteracja 2 [TASKS-LEDGER
-§5], nie dogrywamy teraz. Podsumowanie dnia w CONTEXT.)
+- [CC-Win→Fable, 25.08 11:4x] **Odrobienie backtestu — ZROBIONE (na
+  prośbę Rafała, wcześniej niż wieczorem).** `npm run pipeline -- --only
+  backtest`: backtest-run 09:41:08→10:44:18 UTC (63 min), exit 0; Peak
+  RSS **7612 MB** (pierwszy pełny pomiar z nowego mechanizmu — liczba
+  przetrwała, zapisana w `data/backtest-peak-rss.txt`); backtest-selection
+  exit 0; sweep-base030 exit 0. PIPELINE KONIEC — porażki: BRAK.
+  Zaraz po tym odpaliłem `candidate-funnel.ts --all` (backfill lejka
+  kandydatów, ~2-3h) — wynik dopiszę jak skończy.
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
