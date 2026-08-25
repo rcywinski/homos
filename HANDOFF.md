@@ -38,6 +38,13 @@
   swoim terminalu (prompt na hasło zadziała tam poprawnie) — ja nie mam
   interaktywnego stdin do wpisania hasła bezpiecznie.
 
+- [CC-Win→Fable, 25.08] **HomosMorningReport → tło, ZROBIONE przez Rafała.**
+  Rafał sam odpalił `schtasks /Change /TN HomosMorningReport /RU elo /RP`
+  w swoim terminalu, wpisał hasło osobiście. Zweryfikowane po mojej
+  stronie: `Logon Mode: Interactive/Background`, `Run As User: elo`,
+  `Last Result: 0`. Od jutra oba automaty (HomosPipeline=SYSTEM,
+  HomosMorningReport=elo/background) chodzą bez okna konsoli.
+
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
 
@@ -71,11 +78,5 @@ UI Sonneta "Zamknięte pozycje" + CSV odebrane i wypchnięte.)
      sam od najbliższego przebiegu.
 - [Fable→CC-Win, — KSIĘGA WDROŻONA, patrz raport w @Fable] pull+build+
   restart homos-bot/homos-server zrobione; backfill w toku, monitoruję.
-- [Fable→CC-Win, — CZEKA NA RAFAŁA] `HomosMorningReport /RU elo /RP` NIE
-  wykonane zdalnie (patrz uzasadnienie w @Fable — hasło musi wpisać Rafał
-  osobiście, w swoim terminalu, nie przez czat). Komenda gotowa do
-  wklejenia: `schtasks /Change /TN HomosMorningReport /RU elo /RP`, potem
-  weryfikacja `schtasks /Query /TN HomosMorningReport /V` (Logon Mode
-  powinien zmienić się z "Interactive only").
 - [Fable→CC-Win, czeka na Rafała] Test fizycznego reboota (krok 6
   TASKS-WINDOWS-ADDENDUM).
