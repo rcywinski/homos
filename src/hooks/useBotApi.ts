@@ -39,6 +39,13 @@ const POSITIONS_HISTORY_HOURS = 168; // 7 dni, jak paper
 // zmieniają się raz na dobę (nocny lejek) — poll RZADKI, osobny stan, NIE
 // ruszamy istniejących pollerów.
 const CANDIDATES_POLL_MS = 60 * 60_000;
+// Księga transakcji + zamknięte pozycje (bot/ledger.ts, TASKS-LEDGER.md §3) —
+// observer dociąga nowe zdarzenia co cykl (~5 min), ale z perspektywy
+// użytkownika zmienia się rzadko (kolejna transakcja/zamknięcie pozycji) —
+// poll wolniejszy niż paper/positions, szybszy niż candidates (raz na dobę),
+// żeby świeżo zamknięta pozycja pojawiła się bez ręcznego odświeżania strony.
+const LEDGER_POLL_MS = 15 * 60_000;
+const LEDGER_DAYS = 90;
 
 export interface BotProposal {
   id: string;
@@ -293,6 +300,58 @@ export interface CandidateVerdict {
 // krytyczna — brak danych NIE ma prawa czerwienić tabeli.
 export type CandidatesStatus = 'loading' | 'ok' | 'error';
 
+// Księga transakcji + zamknięte pozycje — GET /api/ledger?days=N i
+// GET /api/closed-positions (bot/ledger.ts, TASKS-LEDGER.md §3, HANDOFF
+// Fable→Sonnet 25.08). Kształty 1:1 z bot/ledger.ts (poza zakresem edycji
+// tej sesji UI, tylko odczyt typu) — KAŻDE pole liczbowe może być `null`
+// (brak metadanych spalonego NFT albo noga niewyceniana w USD) — renderować
+// "—", NIGDY 0 (0 to realna wartość, null to "nie wiemy").
+export type LedgerKind = 'MINT' | 'INCREASE' | 'DECREASE' | 'COLLECT' | 'BURN' | 'TRANSFER_IN' | 'TRANSFER_OUT';
+
+export interface LedgerEntry {
+  ts: string;
+  chain: string;
+  chainId: number;
+  block: number;
+  txHash: string;
+  logIndex: number;
+  tokenId: string;
+  kind: LedgerKind;
+  amount0: string;
+  amount1: string;
+  a0h: number | null;
+  a1h: number | null;
+  sym0: string;
+  sym1: string;
+  usd: number | null;
+}
+
+export interface ClosedPosition {
+  chain: string;
+  tokenId: string;
+  sym0: string;
+  sym1: string;
+  openedAt: string | null;
+  closedAt: string | null;
+  in0: number | null;
+  in1: number | null;
+  out0: number | null;
+  out1: number | null;
+  fees0: number | null;
+  fees1: number | null;
+  inUsd: number | null;
+  outUsd: number | null;
+  feesUsdApprox: number | null;
+  txCount: number;
+}
+
+// Oba endpointy zawsze zwracają 200 (array, ewentualnie pusty — server.ts
+// nie ma dla nich 503 jak paper/ranking), więc 'not-started' nie jest tu
+// spodziewane, ale trzymane dla spójności (na wypadek 404 przed wdrożeniem
+// dzisiejszej wieczornej paczki na serwer — patrz HANDOFF: "degradacja
+// łagodna, 404/błąd → spokojna notka, nie error").
+export type LedgerStatus = 'loading' | 'ok' | 'not-started' | 'error';
+
 export interface UseBotApi {
   state: BotStateShape | null;
   status: BotStatus;
@@ -311,6 +370,10 @@ export interface UseBotApi {
   positionsHistoryStatus: PositionsHistoryStatus;
   candidates: CandidateVerdict[] | null;
   candidatesStatus: CandidatesStatus;
+  closedPositions: ClosedPosition[] | null;
+  closedPositionsStatus: LedgerStatus;
+  ledger: LedgerEntry[] | null;
+  ledgerStatus: LedgerStatus;
 }
 
 const readLocal = (key: string, fallback: string): string => {
@@ -336,6 +399,10 @@ export function useBotApi(): UseBotApi {
   const [positionsHistoryStatus, setPositionsHistoryStatus] = useState<PositionsHistoryStatus>('loading');
   const [candidates, setCandidates] = useState<CandidateVerdict[] | null>(null);
   const [candidatesStatus, setCandidatesStatus] = useState<CandidatesStatus>('loading');
+  const [closedPositions, setClosedPositions] = useState<ClosedPosition[] | null>(null);
+  const [closedPositionsStatus, setClosedPositionsStatus] = useState<LedgerStatus>('loading');
+  const [ledger, setLedger] = useState<LedgerEntry[] | null>(null);
+  const [ledgerStatus, setLedgerStatus] = useState<LedgerStatus>('loading');
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
@@ -492,6 +559,68 @@ export function useBotApi(): UseBotApi {
     return () => clearInterval(id);
   }, [fetchCandidates, tick]);
 
+  const fetchClosedPositions = useCallback(async () => {
+    try {
+      const headers: Record<string, string> = {};
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+      const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/closed-positions`, { headers });
+      if (res.status === 404) {
+        // serwer jeszcze bez wdrożenia dzisiejszej paczki (TASKS-LEDGER.md) —
+        // spokojny stan, nie error (HANDOFF: "degradacja łagodna")
+        setClosedPositions(null);
+        setClosedPositionsStatus('not-started');
+        return;
+      }
+      if (!res.ok) {
+        setClosedPositions(null);
+        setClosedPositionsStatus('error');
+        return;
+      }
+      const data: ClosedPosition[] = await res.json();
+      setClosedPositions(data);
+      setClosedPositionsStatus('ok');
+    } catch {
+      setClosedPositions(null);
+      setClosedPositionsStatus('error');
+    }
+  }, [apiBase, apiToken]);
+
+  useEffect(() => {
+    fetchClosedPositions();
+    const id = setInterval(fetchClosedPositions, LEDGER_POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchClosedPositions, tick]);
+
+  const fetchLedger = useCallback(async () => {
+    try {
+      const headers: Record<string, string> = {};
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+      const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/ledger?days=${LEDGER_DAYS}`, { headers });
+      if (res.status === 404) {
+        setLedger(null);
+        setLedgerStatus('not-started');
+        return;
+      }
+      if (!res.ok) {
+        setLedger(null);
+        setLedgerStatus('error');
+        return;
+      }
+      const data: { days: number; count: number; entries: LedgerEntry[] } = await res.json();
+      setLedger(data.entries);
+      setLedgerStatus('ok');
+    } catch {
+      setLedger(null);
+      setLedgerStatus('error');
+    }
+  }, [apiBase, apiToken]);
+
+  useEffect(() => {
+    fetchLedger();
+    const id = setInterval(fetchLedger, LEDGER_POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchLedger, tick]);
+
   const dismissProposal = useCallback(
     async (id: string) => {
       try {
@@ -547,5 +676,9 @@ export function useBotApi(): UseBotApi {
     positionsHistoryStatus,
     candidates,
     candidatesStatus,
+    closedPositions,
+    closedPositionsStatus,
+    ledger,
+    ledgerStatus,
   };
 }

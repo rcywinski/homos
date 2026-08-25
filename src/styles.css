@@ -2194,3 +2194,61 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   .wallet-chains { flex-direction: column; }
   .wallet-chain + .wallet-chain { border-left: none; padding-left: 0; border-top: 1px solid #e9ecef; padding-top: 8px; }
 }
+
+/* --- ClosedPositionsPanel.tsx (TASKS-LEDGER.md §3, 25.08) — reużywa
+   .cockpit-position-card jako bazę karty, dokłada tylko layout treści. --- */
+.closed-positions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.closed-position-header {
+  font-weight: 600;
+}
+.closed-position-period {
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.closed-position-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 4px 12px;
+  font-size: 12px;
+}
+.closed-position-footer {
+  margin-top: 8px;
+  font-size: 11px;
+}
+.closed-position-net-pos {
+  color: #1b7a3d;
+  font-weight: 600;
+}
+.closed-position-net-neg {
+  color: #c62828;
+  font-weight: 600;
+}
+.closed-positions-csv-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px dashed #ddd;
+}
+.closed-positions-csv-row .action-button {
+  flex: none;
+  width: auto;
+  padding: 6px 14px;
+  font-size: 12px;
+}
+.closed-positions-csv-error {
+  font-size: 11px;
+}
+.closed-positions-csv-note {
+  font-size: 11px;
+  margin-top: 6px;
+}
+@media (max-width: 480px) {
+  .closed-position-grid { grid-template-columns: 1fr; }
+}

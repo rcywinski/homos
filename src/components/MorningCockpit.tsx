@@ -38,6 +38,7 @@ import RotateSequenceModal from './RotateSequenceModal';
 import HedgeConfirmModal from './HedgeConfirmModal';
 import PaperTradingPanel from './PaperTradingPanel';
 import TopRankingPanel from './TopRankingPanel';
+import ClosedPositionsPanel from './ClosedPositionsPanel';
 import ExpandableSection from './ExpandableSection';
 
 const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -803,6 +804,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           <ForecastPanel bot={bot} />
           <ObservationAnalysis bot={bot} />
           <TopRankingPanel bot={bot} />
+          <ClosedPositionsPanel bot={bot} />
       </div>
 
       {proposalModal?.type === 'close' && (
