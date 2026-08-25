@@ -996,3 +996,45 @@ rzędu przycisków). Przy okazji dodane też brakujące `.close-button`,
 `CockpitPositionActions.tsx` poza modalem), też bez żadnego CSS.
 Sprawdzone po jednym wystąpieniu w każdym z 6 modali (grep, nie tylko
 screenshot). `webpack --mode production` czysty.
+
+## FIX (25.08 wieczór): UX sekwencji [⏹ Zamknij] + toast na złej karcie
+(zgłoszenie Rafała po 1. bojowym zamknięciu pozycji #953427 przez apkę —
+SUKCES, ale "na ślepo")
+
+**Problem 1:** `CloseModal` pokazywał tylko "Przetwarzanie…" przez ~30s
+między 2 podpisami w Rabby (decrease → collect) — brak widoczności, na
+którym kroku jesteśmy. **Problem 2 (bug, screen Rafała):** toast "Pozycja
+#953427 zamknięta w 100% ✓" wyrenderował się NA KARCIE INNEJ pozycji
+(#953465) po zniknięciu zamkniętej karty — `actions.message` to JEDEN
+stan współdzielony przez wszystkie karty (jeden `useCockpitActions()` w
+`MorningCockpit`, przekazywany jako prop), a warunek renderu sprawdzał
+tylko `actions.message &&`, bez dopasowania do pozycji.
+
+**ZROBIONE (Sonnet, 25.08):** `useCockpitActions.ts` — `CockpitMessage`
+dostał pole `key` (=`posKey(chainId, tokenId)`), wszystkie 3 miejsca
+wołające `setMessage` (collectFees/closePosition/openPositionAtRange) go
+teraz ustawiają; auto-dismiss `message` po 10s (`useEffect`+`setTimeout`)
+niezależnie od dopasowania klucza. Nowy stan `closeStatus: Record<string,
+CloseStepStatus>` (per pozycja, `{step: 1|2, hash1?, hash2?, done,
+error?}`) — `closePosition` aktualizuje go w 5 punktach sekwencji (start
+kroku 1 → hash1 wysłany → krok 2 → hash2 wysłany → done/error), błąd w
+środku NIE gubi już osiągniętego postępu (hash1 zostaje widoczny).
+Nowa stała `EXPLORER_TX_URL`/`explorerTxUrl()` (1/8453/42161 →
+etherscan/basescan/arbiscan) — świadomie NIE reużywa binarnego
+mainnet/Sepolia helpera z `TransactionHistory.tsx` (ten plik poza
+zakresem edycji, i tak ma nieaktualny dług sprzed usunięcia Sepolii 21.08).
+`CockpitPositionActions.tsx` — nowy komponent `CloseSteps` (wzorzec
+`.sequence-step*` z `RebalanceSequenceModal.tsx`, Partia 4b): 2 stałe
+kroki ze statusem (○/⏳/✓/⚠️), link do eksploratora po wysłaniu hasha,
+notka o „Simulation failed" w Rabby przy kroku 2 (TYLKO gdy krok faktycznie
+czeka na podpis, nie przy realnym błędzie). `message` render dostał
+warunek `actions.message.key === posKey tej karty` (fix bugu #2) — sam
+komponent, sama linijka co dawniej, tylko z dopasowaniem. `CloseModal`
+zablokowany (suwak/chipy/slippage) po starcie sekwencji, przycisk
+"Ponów (krok N/2)" po błędzie, "Zamknij okno" po `done`. Oba call site'y
+(`CockpitPositionActions.tsx` wewnętrzny + `MorningCockpit.tsx` modal
+propozycji ROTATE) przekazują `status={actions.closeStatus[posKey]}`.
+SPRAWDZONE przy okazji (prośba z wpisu): karty pozycji już mają
+`key={`${chainId}-${tokenId}`}` w `MorningCockpit.tsx` — NIE index, więc
+druga część zgłoszenia („przy okazji sprawdź") była już OK, zero zmian
+tam potrzebnych. `npx tsc --noEmit` i `webpack --mode production` czyste.

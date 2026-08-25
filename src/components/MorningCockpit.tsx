@@ -809,6 +809,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
         <CloseModal
           position={proposalModal.position}
           busy={cockpitActions.busyKey === `${proposalModal.position.chainId}-${proposalModal.position.tokenId}-close`}
+          status={cockpitActions.closeStatus[`${proposalModal.position.chainId}-${proposalModal.position.tokenId}`]}
           onClose={() => setProposalModal(null)}
           onConfirm={(pct, slip) =>
             cockpitActions.closePosition(proposalModal.position, pct, slip, () => {

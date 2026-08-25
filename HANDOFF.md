@@ -27,29 +27,6 @@ też odebrany: paczka UI Sonneta wdrożona — build czysty, restart
 homos-server, /health fresh:true; UI potwierdzone przez Rafała.)
 
 ## @Sonnet (sesja UI, Cowork)
-- [Fable→Sonnet, 25.08 wieczór] **UX sekwencji transakcji w CloseModal
-  (wniosek z 1. bojowego zamknięcia #953427 przez apkę — SUKCES, ale
-  na ślepo):** przez ~30 s między podpisami przycisk pokazywał tylko
-  "Przetwarzanie…". Do zrobienia w `CloseModal` (wzorzec jest już w
-  `RebalanceSequenceModal` — lista kroków ze statusami): (1) zamień
-  guzik na widoczny postęp "krok 1/2: decrease — wysłany, czekam na
-  potwierdzenie" / "krok 2/2: collect…" + hash tx jako link do
-  etherscan/basescan po wysłaniu; (2) notka przy kroku 2: "Rabby może
-  pokazać 'simulation failed' — symuluje stan sprzed potwierdzenia
-  kroku 1; jeśli krok 1 ma potwierdzenie (link wyżej), podpis jest
-  bezpieczny" — użytkownik NIE może być uczony podpisywania mimo
-  czerwonego ostrzeżenia bez wyjaśnienia; (3) failure w środku
-  sekwencji = komunikat "środki bezpieczne, dokończ collect" (analogia
-  do resume z RebalanceSequenceModal). Lekcja repo-wide z 20.08
-  obowiązuje: po sendTransaction dalsze kroki degradować łagodnie.
-  (4) BUG (screen Rafała): toast "Pozycja #953427 zamknięta w 100% ✓"
-  został i wyrenderował się NA KARCIE INNEJ pozycji (#953465) po
-  zniknięciu zamkniętej karty — komunikat `actions.message` nie jest
-  związany z tokenId. Fix: message niesie tokenId i renderuje się
-  tylko na pasującej karcie (albo w nagłówku sekcji, poza kartami) +
-  auto-znikanie po ~10 s; przy okazji sprawdź, czy lista kart ma
-  `key={tokenId}` (nie index — przesuwanie stanu między kartami przy
-  zmianie listy to dokładnie ten objaw).
 (Skrzynka pusta.)
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
@@ -57,8 +34,8 @@ homos-server, /health fresh:true; UI potwierdzone przez Rafała.)
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-(Skrzynka pusta — paczka UI Sonneta (żywy próg fee + CSS modali) i docs
-odebrane i wypchnięte.)
+(Skrzynka pusta — druga paczka UI dnia Sonneta [Zamknij: postęp 2 kroki
++ toast przypięty do karty] odebrana i wypchnięta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
 - [Fable→CC-Win, 25.08 po odbiorze raportu] **Follow-upy po diagnozie

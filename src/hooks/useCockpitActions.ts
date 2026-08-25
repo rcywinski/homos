@@ -71,6 +71,25 @@ export interface RebalanceTarget {
 
 const CHAIN_LABEL: Record<number, string> = { 1: 'Ethereum', 8453: 'Base', 42161: 'Arbitrum' };
 
+// Klucz spójny z `busyKey` (bez sufiksu akcji) — łączy CockpitMessage/
+// CloseStepStatus z konkretną pozycją, żeby karta X nigdy nie pokazała
+// wyniku akcji z karty Y (FIX 25.08, zgłoszenie Rafała: toast zamknięcia
+// #953427 wyrenderował się na karcie #953465 po zniknięciu zamkniętej
+// karty — `message` było jedną globalną wartością współdzieloną przez
+// WSZYSTKIE karty, bez sprawdzania, do której pozycji należy).
+const posKey = (chainId: number, tokenId: string): string => `${chainId}-${tokenId}`;
+
+// Link do eksploratora bloków per sieć (Partia: widoczny postęp CloseModal,
+// 25.08) — TransactionHistory.tsx ma podobny, ale binarny mainnet/Sepolia
+// (Sepolia usunięta 21.08, plik poza zakresem tej sesji) — świadomie NIE
+// reużywany, osobna mała stała tutaj zamiast dziedziczenia tamtego długu.
+const EXPLORER_TX_URL: Record<number, string> = {
+  1: 'https://etherscan.io/tx/',
+  8453: 'https://basescan.org/tx/',
+  42161: 'https://arbiscan.io/tx/',
+};
+export const explorerTxUrl = (chainId: number, hash: string): string => `${EXPLORER_TX_URL[chainId] ?? EXPLORER_TX_URL[1]}${hash}`;
+
 // Przybliżony koszt gazu w USD per sieć — powielone z prywatnej (nieeksportowanej)
 // stałej GAS_USD w utils/advisor.ts. Ten plik jest poza twardym zakresem tej
 // sesji UI (nie wolno go edytować, nawet żeby dodać export), więc liczby są
@@ -178,6 +197,28 @@ export const previewClose = (p: PortfolioPosition, percentage: number, slippageP
 export interface CockpitMessage {
   kind: 'ok' | 'err';
   text: string;
+  /** posKey(chainId, tokenId) źródłowej pozycji (FIX 25.08) — konsument
+   *  (CockpitPositionActions.tsx) renderuje wiadomość TYLKO na karcie
+   *  z pasującym kluczem, więc nie "przeskakuje" na inną kartę, gdy
+   *  źródłowa karta zniknie (np. pozycja zamknięta w 100%). */
+  key: string;
+}
+
+/** Postęp sekwencji [⏹ Zamknij] (2 transakcje: decrease → collect) — osobny
+ *  od `message` (który jest tylko końcowym podsumowaniem ok/err), żeby
+ *  CloseModal mógł pokazać KROK PO KROKU co się dzieje zamiast jednego
+ *  gubionego "Przetwarzanie…" (zgłoszenie Rafała po 1. bojowym zamknięciu
+ *  #953427 25.08 wieczorem: 2 podpisy w Rabby w odstępie ~30s, użytkownik
+ *  nie wiedział, na którym jest kroku). Trzymane w Record per pozycja
+ *  (posKey) — tak jak `message` może dotyczyć wielu kart naraz w teorii
+ *  (choć w praktyce modal jest jeden na raz), więc klucz zapobiega temu
+ *  samemu przeciekowi między kartami co przy `message`. */
+export interface CloseStepStatus {
+  step: 1 | 2; // aktualny/ostatni krok w toku
+  hash1?: string; // decrease — ustawiane od razu po wysłaniu, przed potwierdzeniem
+  hash2?: string; // collect
+  done: boolean;
+  error?: string;
 }
 
 export function useCockpitActions() {
@@ -192,9 +233,20 @@ export function useCockpitActions() {
 
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [message, setMessage] = useState<CockpitMessage | null>(null);
+  // Krok CloseModal per pozycja (FIX 25.08) — patrz docstring CloseStepStatus.
+  const [closeStatus, setCloseStatus] = useState<Record<string, CloseStepStatus>>({});
   // Żywa cena gazu per sieć (FIX 25.08) — poll niezależny od `clients` (obiekt
   // odtwarzany co render), dep na trzech konkretnych referencjach z wagmi.
   const [gasPriceWei, setGasPriceWei] = useState<Partial<Record<number, bigint>>>({});
+
+  // Auto-znikanie toasta po ~10s (FIX 25.08, zgłoszenie Rafała) — niezależnie
+  // od przeskakiwania między kartami (patrz `posKey`/`CockpitMessage.key`),
+  // stary komunikat nie ma prawa wisieć w nieskończoność.
+  useEffect(() => {
+    if (!message) return;
+    const id = setTimeout(() => setMessage(null), 10_000);
+    return () => clearTimeout(id);
+  }, [message]);
 
   useEffect(() => {
     let cancelled = false;
@@ -290,9 +342,13 @@ export function useCockpitActions() {
         const hash = await wc.sendTransaction({ to: p.positionManager, data, account: address, chain: wc.chain });
         await client.waitForTransactionReceipt({ hash });
         addTransaction(address, hash, p.chainId, `Zbierz fee #${p.tokenId} (kokpit)`);
-        setMessage({ kind: 'ok', text: `Fee zebrane z pozycji #${p.tokenId} ✓` });
+        setMessage({ kind: 'ok', text: `Fee zebrane z pozycji #${p.tokenId} ✓`, key: posKey(p.chainId, p.tokenId) });
       } catch (e) {
-        setMessage({ kind: 'err', text: `Zbieranie fee nieudane: ${e instanceof Error ? e.message.slice(0, 160) : String(e)}` });
+        setMessage({
+          kind: 'err',
+          text: `Zbieranie fee nieudane: ${e instanceof Error ? e.message.slice(0, 160) : String(e)}`,
+          key: posKey(p.chainId, p.tokenId),
+        });
       } finally {
         setBusyKey(null);
       }
@@ -304,8 +360,10 @@ export function useCockpitActions() {
     async (p: PortfolioPosition, percentage: number, slippagePercent: number, onDone?: () => void) => {
       if (!address || !p.pool) return;
       const key = `${p.chainId}-${p.tokenId}-close`;
+      const sKey = posKey(p.chainId, p.tokenId);
       setBusyKey(key);
       setMessage(null);
+      setCloseStatus((prev) => ({ ...prev, [sKey]: { step: 1, done: false } }));
       try {
         const wc = await freshWalletClient(p.chainId);
         const client = clients[p.chainId];
@@ -316,8 +374,11 @@ export function useCockpitActions() {
 
         // Krok 1/2: decreaseLiquidity — dokładnie ta sama funkcja co
         // MyPositions.tsx (utils/liquidityManagement.ts), z pełnym Pool do
-        // wyliczenia min-po-slippage.
-        setMessage({ kind: 'ok', text: 'Krok 1/2: wycofywanie płynności…' });
+        // wyliczenia min-po-slippage. Postęp teraz w `closeStatus` (FIX 25.08,
+        // zgłoszenie po 1. bojowym zamknięciu #953427: samo "Przetwarzanie…"
+        // przez ~30s między 2 podpisami w Rabby nie mówiło, na czym stoimy) —
+        // CloseModal czyta ten stan i renderuje listę kroków z linkiem do
+        // eksploratora, `message` zostaje tylko na końcowe podsumowanie ok/err.
         const decreaseTx = await prepareRemoveLiquidityTransaction(
           p.tokenId,
           liquidityToRemove.toString(),
@@ -333,29 +394,41 @@ export function useCockpitActions() {
           value: BigInt(decreaseTx.value || '0'),
           chain: wc.chain,
         });
+        setCloseStatus((prev) => ({ ...prev, [sKey]: { step: 1, hash1, done: false } }));
         await client.waitForTransactionReceipt({ hash: hash1 });
         addTransaction(address, hash1, p.chainId, `Zamknij ${percentage}% #${p.tokenId} — krok 1/2 (decrease)`);
 
         // Krok 2/2: collect — odbiera wycofany kapitał ORAZ narosłe fee w
-        // jednej transakcji (amount0Max/1Max = MAX_UINT128).
-        setMessage({ kind: 'ok', text: 'Krok 2/2: odbieranie środków…' });
+        // jednej transakcji (amount0Max/1Max = MAX_UINT128). Krok 1 ma już
+        // potwierdzenie w tym momencie — Rabby czasem pokazuje "Simulation
+        // failed" przy TYM podpisie (symuluje na stanie chwilę sprzed
+        // potwierdzenia kroku 1), CloseModal tłumaczy to przy hash1.
+        setCloseStatus((prev) => ({ ...prev, [sKey]: { ...prev[sKey], step: 2 } }));
         const collectData = encodeFunctionData({
           abi: COLLECT_ABI,
           functionName: 'collect',
           args: [{ tokenId: BigInt(p.tokenId), recipient: address, amount0Max: MAX_UINT128, amount1Max: MAX_UINT128 }],
         });
         const hash2 = await wc.sendTransaction({ to: p.positionManager, data: collectData, account: address, chain: wc.chain });
+        setCloseStatus((prev) => ({ ...prev, [sKey]: { ...prev[sKey], step: 2, hash2 } }));
         await client.waitForTransactionReceipt({ hash: hash2 });
         addTransaction(address, hash2, p.chainId, `Zamknij ${percentage}% #${p.tokenId} — krok 2/2 (collect)`);
 
-        setMessage({ kind: 'ok', text: `Pozycja #${p.tokenId} zamknięta w ${percentage}% ✓` });
+        setCloseStatus((prev) => ({ ...prev, [sKey]: { ...prev[sKey], step: 2, done: true } }));
+        setMessage({ kind: 'ok', text: `Pozycja #${p.tokenId} zamknięta w ${percentage}% ✓`, key: sKey });
         onDone?.();
       } catch (e) {
+        const errText = e instanceof Error ? e.message.slice(0, 160) : String(e);
+        // Awaria w środku sekwencji NIE oznacza utraty środków — decreaseLiquidity
+        // (krok 1, jeśli potwierdzony) przenosi wypłatę do tokensOwed na pozycji,
+        // odzyskiwalną w każdej chwili przez [💰 Zbierz fees]. `closeStatus`
+        // zostaje z krokiem, na którym stanęło (hash1/step widoczne dalej w
+        // modalu — user widzi które podpisy przeszły), tylko dopisujemy błąd.
+        setCloseStatus((prev) => ({ ...prev, [sKey]: { ...(prev[sKey] ?? { step: 1, done: false }), error: errText } }));
         setMessage({
           kind: 'err',
-          text: `Zamykanie nieudane — środki bezpieczne (spróbuj ponownie albo zbierz fee ręcznie): ${
-            e instanceof Error ? e.message.slice(0, 160) : String(e)
-          }`,
+          text: `Zamykanie nieudane — środki bezpieczne (spróbuj ponownie albo zbierz fee ręcznie): ${errText}`,
+          key: sKey,
         });
       } finally {
         setBusyKey(null);
@@ -399,10 +472,14 @@ export function useCockpitActions() {
         });
         await client.waitForTransactionReceipt({ hash });
         addTransaction(address, hash, p.chainId, `Rebalans ręczny (nowa pozycja) ${p.poolLabel}`);
-        setMessage({ kind: 'ok', text: 'Nowa pozycja otwarta ✓' });
+        setMessage({ kind: 'ok', text: 'Nowa pozycja otwarta ✓', key: posKey(p.chainId, p.tokenId) });
         onDone?.();
       } catch (e) {
-        setMessage({ kind: 'err', text: `Otwarcie pozycji nieudane: ${e instanceof Error ? e.message.slice(0, 200) : String(e)}` });
+        setMessage({
+          kind: 'err',
+          text: `Otwarcie pozycji nieudane: ${e instanceof Error ? e.message.slice(0, 200) : String(e)}`,
+          key: posKey(p.chainId, p.tokenId),
+        });
       } finally {
         setBusyKey(null);
       }
@@ -496,6 +573,7 @@ export function useCockpitActions() {
     setMessage,
     collectFees,
     closePosition,
+    closeStatus,
     openPositionAtRange,
     readBalanceAndAllowance,
     approveToken,

@@ -17,7 +17,7 @@ import { nearestUsableTick, TICK_SPACINGS } from '@uniswap/v3-sdk';
 import { calculateOptimalAmounts } from '../utils/liquidityManagement';
 import { humanPriceToTick } from '../utils/v3math';
 import { PortfolioPosition } from '../hooks/usePortfolio';
-import { useCockpitActions, previewClose, RebalanceTarget } from '../hooks/useCockpitActions';
+import { useCockpitActions, previewClose, explorerTxUrl, RebalanceTarget, CloseStepStatus } from '../hooks/useCockpitActions';
 import { findBotPoolByAddress } from '../config/botPools';
 import { UseBotApi } from '../hooks/useBotApi';
 
@@ -112,6 +112,7 @@ const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bo
         <CloseModal
           position={p}
           busy={busyClose}
+          status={actions.closeStatus[`${p.chainId}-${p.tokenId}`]}
           onClose={() => setCloseOpen(false)}
           onConfirm={(pct, slip) =>
             actions.closePosition(p, pct, slip, () => {
@@ -136,7 +137,13 @@ const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bo
         />
       )}
 
-      {actions.message && (
+      {/* FIX 25.08 (zgłoszenie Rafała): message.key === posKey tej karty — bez
+          tego sprawdzenia toast z JUŻ ZAMKNIĘTEJ (i zniknietej z listy) karty
+          renderował się na następnej karcie w kolejności, bo `actions` (a
+          więc i `message`) jest jednym stanem współdzielonym przez wszystkie
+          karty. Auto-znika po 10s (useCockpitActions.ts), więc nawet gdyby
+          klucz się kiedyś nie zgodził, nic nie wisi tu bez końca. */}
+      {actions.message && actions.message.key === `${p.chainId}-${p.tokenId}` && (
         <div className={`message ${actions.message.kind === 'ok' ? 'success' : 'error'} cockpit-action-message`}>{actions.message.text}</div>
       )}
     </div>
@@ -147,25 +154,88 @@ const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bo
 // Exported: reused directly by MorningCockpit.tsx for ROTATE proposal cards'
 // [1. Zamknij starą →] step (Partia 4) — same modal, matched to a held
 // PortfolioPosition by tokenId, no changes needed to the modal itself.
+// Skrót hasha do wyświetlenia — jak formatTxHash w TransactionHistory.tsx,
+// świadomie NIE reużywany stamtąd (ten plik poza zakresem tej sesji poza
+// odczytem, patrz komentarz przy EXPLORER_TX_URL w useCockpitActions.ts).
+const shortHash = (h: string) => `${h.slice(0, 6)}…${h.slice(-4)}`;
+
+/** Lista kroków [⏹ Zamknij] (FIX 25.08, zgłoszenie Rafała po 1. bojowym
+ *  zamknięciu #953427 — sam guzik "Przetwarzanie…" przez ~30s między 2
+ *  podpisami w Rabby nie mówił nic o tym, na którym jest kroku). Wzorzec
+ *  `.sequence-step*` z RebalanceSequenceModal.tsx (Partia 4b) — tu tylko 2
+ *  stałe kroki zamiast dynamicznej listy z RebalancePlan. */
+const CloseSteps: FC<{ chainId: number; status: CloseStepStatus }> = ({ chainId, status }) => {
+  const step1Done = status.step > 1 || status.done;
+  const step1Active = status.step === 1 && !status.done;
+  const step2Done = status.done;
+  const step2Active = status.step === 2 && !status.done;
+  const icon = (done: boolean, active: boolean) => (done ? '✓' : active && status.error ? '⚠️' : active ? '⏳' : '○');
+
+  return (
+    <div className="sequence-steps">
+      <div className={`sequence-step ${step1Done ? 'sequence-step-done' : ''} ${step1Active ? 'sequence-step-active' : ''}`}>
+        <div className="sequence-step-label">
+          {icon(step1Done, step1Active)} Krok 1/2: wycofanie płynności (decrease)
+        </div>
+        {status.hash1 && (
+          <div className="sequence-step-detail muted">
+            <a href={explorerTxUrl(chainId, status.hash1)} target="_blank" rel="noopener noreferrer">
+              {shortHash(status.hash1)} ↗
+            </a>
+            {step1Done ? ' — potwierdzona' : ' — czekam na potwierdzenie…'}
+          </div>
+        )}
+      </div>
+      <div className={`sequence-step ${step2Done ? 'sequence-step-done' : ''} ${step2Active ? 'sequence-step-active' : ''}`}>
+        <div className="sequence-step-label">
+          {icon(step2Done, step2Active)} Krok 2/2: odbiór środków + fee (collect)
+        </div>
+        {status.hash2 ? (
+          <div className="sequence-step-detail muted">
+            <a href={explorerTxUrl(chainId, status.hash2)} target="_blank" rel="noopener noreferrer">
+              {shortHash(status.hash2)} ↗
+            </a>
+            {step2Done ? ' — potwierdzona' : ' — czekam na potwierdzenie…'}
+          </div>
+        ) : (
+          // Notka TYLKO gdy krok faktycznie czeka na podpis (nie po realnym
+          // błędzie — status.error dostaje własny, prawdziwy komunikat niżej,
+          // podszywanie się reassurance pod prawdziwą awarię byłoby mylące).
+          step2Active &&
+          !status.error && (
+            <div className="sequence-step-detail muted">
+              Rabby może pokazać „Simulation failed" przy TYM podpisie — to symulacja na stanie sprzed
+              potwierdzenia kroku 1. Krok 1 ma potwierdzenie (link wyżej) — podpis jest bezpieczny.
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+};
+
 export const CloseModal: FC<{
   position: PortfolioPosition;
   busy: boolean;
+  status?: CloseStepStatus;
   onClose: () => void;
   onConfirm: (percentage: number, slippagePercent: number) => void;
-}> = ({ position: p, busy, onClose, onConfirm }) => {
+}> = ({ position: p, busy, status, onClose, onConfirm }) => {
   const [pct, setPct] = useState(100);
   const [slippage, setSlippage] = useState(1);
 
   const preview = previewClose(p, pct, slippage);
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay" onClick={busy ? undefined : onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h3>Zamknij pozycję #{p.tokenId}</h3>
-          <button className="close-button" onClick={onClose}>
-            ×
-          </button>
+          {!busy && (
+            <button className="close-button" onClick={onClose}>
+              ×
+            </button>
+          )}
         </div>
         <div className="modal-body">
           <p className="muted">{p.poolLabel}</p>
@@ -173,12 +243,12 @@ export const CloseModal: FC<{
           <div className="remove-percentage">
             <label>Procent do zamknięcia:</label>
             <div className="percentage-slider-container">
-              <input type="range" min="1" max="100" value={pct} onChange={(e) => setPct(parseInt(e.target.value, 10))} />
+              <input type="range" min="1" max="100" value={pct} onChange={(e) => setPct(parseInt(e.target.value, 10))} disabled={!!status} />
               <span>{pct}%</span>
             </div>
             <div className="slippage-row">
               {[25, 50, 100].map((v) => (
-                <button key={v} className={`chip ${pct === v ? 'selected' : ''}`} onClick={() => setPct(v)}>
+                <button key={v} className={`chip ${pct === v ? 'selected' : ''}`} onClick={() => setPct(v)} disabled={!!status}>
                   {v}%
                 </button>
               ))}
@@ -188,7 +258,15 @@ export const CloseModal: FC<{
           <div className="slippage-settings">
             <label>Slippage tolerance:</label>
             <div className="slippage-input-container">
-              <input type="number" min="0.1" max="10" step="0.1" value={slippage} onChange={(e) => setSlippage(parseFloat(e.target.value))} />
+              <input
+                type="number"
+                min="0.1"
+                max="10"
+                step="0.1"
+                value={slippage}
+                onChange={(e) => setSlippage(parseFloat(e.target.value))}
+                disabled={!!status}
+              />
               <span>%</span>
             </div>
           </div>
@@ -218,13 +296,28 @@ export const CloseModal: FC<{
             )}
           </div>
 
+          {/* Postęp renderuje się dopiero po pierwszym kliknięciu [Zamknij] —
+              status jest undefined, dopóki onConfirm nie ruszy sekwencję. */}
+          {status && <CloseSteps chainId={p.chainId} status={status} />}
+          {status?.error && (
+            <div className="message error">
+              Zamykanie nieudane — środki bezpieczne (spróbuj ponownie albo zbierz fee ręcznie przyciskiem [💰 Zbierz fees]): {status.error}
+            </div>
+          )}
+
           <div className="modal-actions">
             <button className="secondary-button" onClick={onClose} disabled={busy}>
-              Anuluj
+              {status?.done ? 'Zamknij okno' : 'Anuluj'}
             </button>
-            <button className="primary-button" disabled={busy} onClick={() => onConfirm(pct, slippage)}>
-              {busy ? 'Przetwarzanie…' : `Zamknij ${pct}% (2 podpisy w Rabby)`}
-            </button>
+            {!status?.done && (
+              <button className="primary-button" disabled={busy} onClick={() => onConfirm(pct, slippage)}>
+                {busy
+                  ? `Przetwarzanie… (krok ${status?.step ?? 1}/2)`
+                  : status?.error
+                  ? `Ponów (krok ${status.step}/2)`
+                  : `Zamknij ${pct}% (2 podpisy w Rabby)`}
+              </button>
+            )}
           </div>
         </div>
       </div>
