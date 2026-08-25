@@ -2485,6 +2485,23 @@ WETH-CBBTC 0.3% wisi od 22.08), a otwarcie zawsze idzie przez naszą
 apkę + podpisy Rabby ([Otwórz →] dla pul z BOT_POOLS z sugestią
 zakresu; pula spoza configu wymaga najpierw diffu BOT_POOLS — Fable
 przygotuje po decyzji).
+~noc — DWA ZGŁOSZENIA RAFAŁA PO WIECZORNYCH ZMIANACH: (1) "top10 bez
+zmian" — OCZEKIWANE: snapshot rankingu liczył się 06:09 starym kodem,
+nowy kształt jutro 06:00 (CC-Win dostał instrukcję wymuszenia dziś
+przez cofnięcie lastRunDate). (2) REALNY BUG ODZIEDZICZONY, obnażony
+przez dzisiejszą awarię RPC: paper "poza zakresem" mimo ceny w
+zakresie — inRange liczył się ze stats.lastTick (swapy 24h przez RPC,
+cykl 15 min; przy awarii stats ZAMARZAJĄ i lastTick pokazuje stan
+sprzed godzin), a cena na kartach idzie świeżym slot0 — sprzeczność
+gwarantowana przy każdej dłuższej awarii getLogs. FIX (Fable, tsc
+czysty): getPool przekazuje świeży tick ze slot0 (60 s), paper liczy
+inRange z curTick = lv.tick ?? stats.lastTick. LEKCJA: status pozycji
+nigdy nie może zależeć od cięższej/awaryjniejszej ścieżki danych niż
+cena, którą pokazujemy obok. NADTO wariant upExitThresh (symetryczny
+bezpiecznik trendu — pomysł Rafała "LP tylko bez trendu w OBIE
+strony") dopisany do strategies.ts + 3 warianty upX=5% w y2; CC-Win
+przelicza WSZYSTKIE 4 pule 720d nocą (11 strategii) — wyniki na
+przegląd.
 BILANS DNIA: łańcuch poranny 2h wcześniej (3 automaty
 bez okien, przeżyły reboot), auto-lejek zbudowany+backfill zaliczony,
 księga transakcji od zera do zweryfikowanej E2E (2 iteracje fixów),

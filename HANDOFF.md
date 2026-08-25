@@ -32,11 +32,24 @@ CC-Win. Restarty po paczce księgi potwierdzone.)
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-(Skrzynka pusta — ostatnia paczka dnia [heap 12GB, fix odrzucania
-propozycji, eksperyment 720d] i dzisiejsze fixy [dedup per-blok,
-spójność rankingu TOP10] odebrane i wypchnięte.)
+(Skrzynka pusta — paczka nocna [upExitThresh symetryczny + upX=5% w y2,
+fix paper inRange ze świeżego slot0] odebrana i wypchnięta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+> PODZIAŁ RÓL 25.08 noc (Rafał odpala DRUGIEGO agenta CC-Win):
+> **Agent A (obecny)** = TYLKO liczenie: dokończ bieżący arbitrum-720d
+> (stary zestaw y2/8 strategii — dane porównywalne, zostawić); po
+> pullu paczki nocnej przeliczyć WSZYSTKIE 4 pule zestawem 11 strategii
+> (wpis niżej). ZAWSZE jeden walkforward naraz (RAM!).
+> **Agent B (nowy)** = TYLKO wdrożenia, zero ciężkich procesów:
+> po pushu CC-Mac → `git pull` (przedtem `git status`; jeśli wyniki
+> A niezacommitowane — najpierw commit "results: ..." albo autostash)
+> → `nssm restart homos-bot` (fix paper inRange + selektor z werdyktami)
+> → wymuszenie selektora (lastRunDate na wczoraj w selector-state.json)
+> → weryfikacja: karty paper "w zakresie" ≤15 min, ranking "top10
+> dobrych" ≤1h, ogon "stats … failed" w observer.log do @Fable.
+> Tylko B pisze do HANDOFF/gita w trakcie; A raportuje po skończeniu
+> liczenia. Ten nagłówek skasować po zejściu do jednego agenta.
 > ✅ [25.08 wieczór] Pull + 2 restarty (homos-bot, homos-server)
 > zrobione — patrz raport w @Fable. TEST "Odrzuć" na wiszącej
 > propozycji jeszcze do zrobienia przez Rafała ręcznie w UI.
@@ -44,14 +57,34 @@ spójność rankingu TOP10] odebrane i wypchnięte.)
   wdrożenia + dokończenie eksperymentu:**
   (1) `backtest/load.ts` — dedup per-blok zamiast globalnego Set (Twój
   crash arb-720d: >16.7M wpisów; semantyka identyczna — klucz i tak
-  zaczynał się od bloku). Po pullu DOKOŃCZ eksperyment: `WF_SET=y2` +
-  heap 12288 → `npx tsx backtest/walkforward.ts arbitrum-weth-usdc-005-720d
-  30 15` (cache 3.4GB już jest, sam run; ~40-60 min przy 25.6M swapów) —
-  tabelę do @Fable jak poprzednie.
+  zaczynał się od bloku). Po pullu: zestaw y2 urósł do 11 strategii
+  (3 nowe warianty `upX=5%` — symetryczny bezpiecznik trendu w górę,
+  pomysł Rafała po analizie 720d) — PRZELICZ WSZYSTKIE 4 pule od nowa:
+  `WF_SET=y2` + heap 12288 → `npx tsx backtest/walkforward.ts <id> 30 15`
+  dla base-weth-usdc-030-720d, mainnet-usdc-weth-005-720d,
+  base-cbbtc-weth-005-720d, arbitrum-weth-usdc-005-720d (cache'e już
+  są, same runy; arbitrum ~40-60 min, reszta szybciej). Nadpisze stare
+  wyniki — OK, tamte liczby są w DECYZJE 11f. Tabele do @Fable; w
+  interpretacji patrz szczególnie: czy upX=5% ratuje okna UP (worst
+  i %wygr.) nie psując flat/down.
   (2) SPÓJNOŚĆ RANKINGU (decyzja Rafała): `bot/selector.ts` — top10
   liczy tylko pule "dobre" (odrzucone bramką pokazywane z polem
   rejected, ale nie zajmują miejsc; eligible i propozycje OPEN pomijają
   FAIL/UNMAPPED), `scripts/candidate-funnel.ts` — analogicznie.
-  Wdrożenie: `nssm restart homos-bot` (selektor policzy nowy kształt
-  jutro 06:00). UI: badge ⛔ działa z /api/candidates, pole `rejected`
-  w rankingu to ewentualna przyszła partia Sonneta — niekrytyczne.
+  UWAGA dla Rafała (pytał, czemu top10 bez zmian): dzisiejszy snapshot
+  liczył się 06:09 STARYM kodem — nowy kształt naturalnie jutro 06:00.
+  ŻEBY ZOBACZYĆ DZIŚ: po restarcie ustaw w `.bot/selector-state.json`
+  `lastRunDate` na wczoraj → selektor przeliczy w ≤1h (cooldowny
+  propozycji chronią przed dublami). Zrób to.
+  (3) FIX PRODUKCYJNY (zgłoszenie Rafała ze screenem): paper pokazywał
+  "poza zakresem" mimo ceny w zakresie — inRange liczył się ze
+  stats.lastTick, a stats ZAMARZŁY przez dzisiejszą awarię RPC
+  (llamarpc 521 — ta sama, która położyła backfill księgi); cena na
+  kartach szła świeżą ścieżką slot0, stąd sprzeczność. Fix:
+  `bot/observer.ts` (getPool przekazuje świeży tick ze slot0) +
+  `bot/paper.ts` (inRange z curTick = lv.tick ?? stats.lastTick).
+  Po pullu `nssm restart homos-bot`; weryfikacja: karty paper wracają
+  do "w zakresie" w ≤15 min (najbliższy cykl). Przy okazji sprawdź w
+  observer.log ogon linii "stats … failed" — ile godzin stats stały.
+  UI: badge ⛔ działa z /api/candidates, pole `rejected` w rankingu to
+  ewentualna przyszła partia Sonneta — niekrytyczne.
