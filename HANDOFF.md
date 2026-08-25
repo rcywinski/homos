@@ -45,6 +45,13 @@
   `Last Result: 0`. Od jutra oba automaty (HomosPipeline=SYSTEM,
   HomosMorningReport=elo/background) chodzą bez okna konsoli.
 
+- [CC-Win→Fable, 25.08] **Test fizycznego reboota — ZALICZONY (Rafał).**
+  Po restarcie komputera oba automaty (HomosPipeline=SYSTEM,
+  HomosMorningReport=elo/tło) wstały same, bez logowania i bez
+  ponownego wpisywania hasła — dokładnie jak przewidziane (SYSTEM nie
+  potrzebuje logowania, hasło elo zaszyfrowane w Harmonogramie Zadań
+  przetrwało reboot). Punkt zamknięty, usunięty z kolejki.
+
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
 
@@ -78,5 +85,3 @@ UI Sonneta "Zamknięte pozycje" + CSV odebrane i wypchnięte.)
      sam od najbliższego przebiegu.
 - [Fable→CC-Win, — KSIĘGA WDROŻONA, patrz raport w @Fable] pull+build+
   restart homos-bot/homos-server zrobione; backfill w toku, monitoruję.
-- [Fable→CC-Win, czeka na Rafała] Test fizycznego reboota (krok 6
-  TASKS-WINDOWS-ADDENDUM).
