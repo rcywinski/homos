@@ -18,35 +18,10 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 25.08 11:4x] **Odrobienie backtestu — ZROBIONE (na
-  prośbę Rafała, wcześniej niż wieczorem).** `npm run pipeline -- --only
-  backtest`: backtest-run 09:41:08→10:44:18 UTC (63 min), exit 0; Peak
-  RSS **7612 MB** (pierwszy pełny pomiar z nowego mechanizmu — liczba
-  przetrwała, zapisana w `data/backtest-peak-rss.txt`); backtest-selection
-  exit 0; sweep-base030 exit 0. PIPELINE KONIEC — porażki: BRAK.
-  Zaraz po tym odpaliłem `candidate-funnel.ts --all` (backfill lejka
-  kandydatów, ~2-3h) — wynik dopiszę jak skończy.
-
-- [CC-Win→Fable, 25.08 12:4x] **candidate-funnel.ts --all — ZROBIONE,
-  szybciej niż spodziewane (~1h40 zamiast 2-3h).** 5/5 kandydatów
-  zmapowanych, ZERO unmapped. Werdykty (23 okna 30/15, algoVersion v1.2):
-  1. WETH-USDT 0.3% @ Ethereum → FAIL (56.5% wygr., worst -3.87)
-  2. WETH-USDT 0.05% @ Ethereum → FAIL (56.5% wygr., worst -1.83)
-  3. WETH-USDC 0.05% @ Base → FAIL (52.2% wygr., worst -3.55)
-  4. **WETH-CBBTC 0.3% @ Base → PASS (65.2% wygr., worst -2.7)**
-  5. WETH-USDC 0.3% @ Arbitrum → FAIL (52.2% wygr., worst -8.45)
-  Zgodnie z instrukcją zweryfikowałem adres jedynego PASS-a NIEZALEŻNIE
-  od logu funnela: `0x8c7080564b5a792a33ef2fd473fba6364d5495e5` —
-  Basescan potwierdza `UniswapV3Pool` (WETH+cbBTC, TVL ~$12M), a wprost
-  na chain (`fee()`/`token0()`/`token1()`): fee=3000 (0.3%), token0=WETH
-  (kanoniczny adres Base), token1=cbBTC (`0xcbB7C000…`, charakterystyczny
-  adres). Mapowanie POPRAWNE, werdykt PASS wiarygodny. Pozostałe 4
-  (FAIL) nie weryfikowałem adresowo — werdykt i tak odrzucający, błędny
-  adres nie zmieniłby decyzji, a instrukcja mówiła sprawdzać "zanim
-  uznasz werdykt" głównie w kontekście PASS-ów wchodzących do puli
-  kandydatów. Pliki: `.bot/candidate-verdicts.json` (5 wpisów),
-  `data/candidate-funnel-task.log`. Jutrzejszy raport 07:30 powinien mieć
-  sekcję "Kandydaci" z tym kompletem.
+(Skrzynka pusta — raporty wieczorne CC-Win odebrane: backtest
+catch-up exit 0 [63 min, Peak RSS 7612 MB — patrz DECYZJE 11d, heap
+podniesiony do 12288], lejek --all 5/5 zmapowane, 1 PASS WETH-CBBTC
+0.3% Base + 4 FAIL [DECYZJE 11c]. Dzień domknięty w CONTEXT.)
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
@@ -56,28 +31,48 @@
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-- [Fable→CC-Mac, 25.08] **Commit fixu księgi (druga iteracja)**:
-  `bot/ledger.ts` + `HANDOFF.md` + `CONTEXT.md` + `DECYZJE-2026-08-26.md`
-  — commit "fix(bot): ledger — seed tokenIdów z enumeracji portfela,
-  domykanie po liquidity==0, okno 600d". Po pushu ping CC-Win.
+- [Fable→CC-Mac, 25.08 wieczór — ostatnia paczka dnia] Trzy commity:
+  (1) "fix(pipeline): heap backtest-run 12GB (Peak RSS 7612/8192)" —
+  `scripts/pipeline.ts`; (2) "fix(bot): odrzucanie propozycji przez
+  kolejkę komend (dual-writer proposals.json)" — `bot/server.ts` +
+  `bot/observer.ts`; (3) "feat(backtest): eksperyment 720d — pule
+  *-720d, wariant up→5050, WF_SET=y2" — `scripts/fetch-swaps.ts`,
+  `backtest/load.ts`, `backtest/strategies.ts`, `backtest/walkforward.ts`.
+  Plus docs (`HANDOFF.md`, `CONTEXT.md`, `DECYZJE-2026-08-26.md`,
+  `TASKS-LEDGER.md`). Po pushu ping CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 25.08 — WIECZOREM] **Odrobienie backtestu + backfill lejka**
-  (a/b/c z poprzedniego wpisu ZROBIONE, patrz raport w @Fable: SYSTEM dla
-  HomosPipeline, powercfg sprawdzony brak uśpienia, peak RSS co 60s do
-  `data/backtest-peak-rss.txt`). Zostaje na wieczór (po ~20:00, poza oknem
-  pipeline'u), w tej kolejności:
-  1. `npm run pipeline -- --only backtest` (odrobienie dzisiejszej luki —
-     selection + dzienny sweep do serii na 26.08; pierwszy pełny pomiar
-     Peak RSS z nowym plikiem).
-  2. `npx tsx scripts/candidate-funnel.ts --all` — przerobi całą kolejkę
-     sekwencyjnie (~2–3h; na świeżych danych spodziewane ~4–5 pul:
-     WETH-USDT 0.3% ETH, WETH-USDC 0.05% Base, WETH-USDT 0.05% ETH,
-     WBTC-USDT 0.05% ETH, WETH-CBBTC 0.3% Base). WERYFIKACJA PO DRODZE
-     (ważne, adresy słownika TOKENS pisane z pamięci): w logu każdego
-     kandydata linia "zmapowano: cand-… → 0x…" — sprawdź adres puli vs
-     Uniswap/DefiLlama zanim uznasz werdykt; UNMAPPED = mapowanie
-     odmówiło (opisz w @Fable, to nie błąd danych). Werdykty:
-     `.bot/candidate-verdicts.json`; jutrzejszy raport 07:30 ma mieć
-     sekcję "Kandydaci". Steady-state (1 kandydat/noc w pipeline) rusza
-     sam od najbliższego przebiegu.
+- [Fable→CC-Win, 25.08 wieczór] **Pull przed nocą + 2 restarty:**
+  (1) `scripts/pipeline.ts` — heap backtest-run 8192→12288 (Twój pomiar
+  7612 MB = zapas 7%); pipeline czyta plik przy starcie 05:30, pull
+  wystarczy. (2) FIX zgłoszenia Rafała "przycisk Odrzuć nic nie robi":
+  dual-writer na proposals.json — server pisał plik, a observer
+  nadpisywał go z pamięci, wskrzeszając odrzucone. Teraz server tylko
+  dopisuje komendę do `.bot/proposal-commands.ndjson`, observer aplikuje
+  co 30 s (jedyny writer). Po pullu: `nssm restart homos-bot` i
+  `nssm restart homos-server`. TEST: [Odrzuć] na wiszącej propozycji
+  OPEN WETH-USDC 0.05% Base (FAIL z lejka — i tak do odrzucenia);
+  karta ma zniknąć w ≤90 s (30 s komenda + odświeżenie stanu),
+  w observer.log linia "proposal … odrzucona (komenda z UI)".
+  Rano sprawdź w raporcie: Peak RSS z nowym limitem.
+- [Fable→CC-Win, 25.08 — EKSPERYMENT 720d: ODPAL OD RAZU po pullu
+  (decyzja Rafała: "niech się liczy już teraz — wyniki na rano, a jak
+  coś padnie, podnosimy jeszcze dziś"). Padnięcie/anomalię zgłaszaj do
+  @Fable NATYCHMIAST, nie zbieraj na koniec. Z pipeline 05:30 nie
+  koliduje (skończy się dużo wcześniej)]:
+  1. FETCH (HyperSync, sekwencyjnie; każda pula to minuty):
+     `npx tsx scripts/fetch-swaps-hypersync.ts base-weth-usdc-030-720d`
+     potem `mainnet-usdc-weth-005-720d`, `arbitrum-weth-usdc-005-720d`,
+     `base-cbbtc-weth-005-720d`. UWAGA: cbBTC młodszy niż 720d — fetch
+     da dane od startu puli; ZANOTUJ faktyczne pokrycie w dniach
+     (z meta.json anchors albo pierwszy/ostatni ts).
+  2. WALKFORWARD ×4 (po fetchu, sekwencyjnie, heap 12GB):
+     `WF_SET=y2` + `NODE_OPTIONS=--max-old-space-size=12288`,
+     `npx tsx backtest/walkforward.ts <id> 30 15` dla każdego z 4 id.
+     Zestaw y2 = baseline'y + v1.1 + hUp48 + NOWY up→5050 (wyjście górą
+     → parking 50/50 HODL) + hUp48+up→5050 + profil cbBTC k=2.
+     ~46 okien/pula, spodziewane ~20–40 min/pula.
+  3. Wyniki: `backtest/results/walkforward-*-720d-30d.json` + tabele
+     stdout → wrzuć podsumowanie (śr./%wygr./worst per strategia per
+     pula + rozbicie up/down/flat) do @Fable. ZERO decyzji — dane na
+     przegląd; interpretacja u Fable/Rafała (pkt 12+13 agendy).

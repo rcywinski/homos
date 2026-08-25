@@ -2420,6 +2420,56 @@ WETH; wycena historyczna = iteracja 2). TASKS-LEDGER §2+§3+§4 (pyłki)
 DOMKNIĘTE w jeden dzień od pytania Rafała "czy powinniśmy mieć
 historię?". Zostało z §4: ręczny wpis hedge GMX $15 (osobny kontrakt)
 — nisko priorytetowe.
+
+~12:4x — ZAMKNIĘCIE DNIA 25.08 (wieczorne okno CC-Win wykonane
+wcześniej, na prośbę Rafała): (1) BACKTEST CATCH-UP exit 0 w 63 min,
+seria sweep na 26.08 bez dziury; **pierwszy pomiar Peak RSS: 7612 MB
+przy limicie 8192** — zapas 7%, heap podniesiony 8192→12288 w
+pipeline.ts od ręki (DECYZJE 11d; CC-Win robi pull przed nocą).
+(2) LEJEK --all: 5/5 zmapowanych, ZERO UNMAPPED (słownik TOKENS
+trafiony w 100%), ~1h40. **PIERWSZY PASS w historii lejka: WETH-CBBTC
+0.3% @ Base (65.2% wygr., worst −2.7)** — adres puli zweryfikowany
+niezależnie na chainie przez CC-Win; 4×FAIL (w tym dzisiejsza
+propozycja OPEN WETH-USDC 0.05% Base 52.2/−3.55 → do odrzucenia
+w UI). Komplet w DECYZJE 11c na przegląd. Obserwacja: 6/7 zbadanych
+kandydatów topu APY odpada — bramka robi dokładnie tę robotę, dla
+której powstała. DOGRYWKA po zamknięciu: zgłoszenie Rafała "[Odrzuć] nic nie robi" —
+BUG DUAL-WRITER na proposals.json: server zapisywał dismissed do
+pliku, ale observer trzyma propozycje W PAMIĘCI (wczytane raz na
+starcie), karmi state.json z pamięci i przy własnym zapisie nadpisywał
+plik, wskrzeszając odrzucone — przycisk "działał" na plik, którego
+nikt nie słuchał. Prawdopodobnie ZAWSZE tak było (propozycje znikały
+dotąd przez expiry, nie dismissal). FIX (Fable, tsc czysty): jedyny
+writer proposals.json = observer; server dopisuje komendę do
+`.bot/proposal-commands.ndjson` (append-only), observer konsumuje co
+30 s (czyta→kasuje→aplikuje→saveProposals+saveState). LEKCJA
+repo-wide: plik stanu ma JEDNEGO właściciela; drugi proces komunikuje
+się kolejką komend, nie współdzieloną mutacją (druga odsłona tej
+klasy po trend-state 19.08). Wdrożenie: restart obu usług u CC-Win,
+test na propozycji WETH-USDC 0.05% Base (FAIL z lejka).
+DOGRYWKA 2 — EKSPERYMENT 720d ZBUDOWANY (decyzja Rafała: pkt 12+13
+agendy przyspieszone, dane mają być na jutro): (1) `backtest/
+strategies.ts` — nowa opcja `upFallback:'5050'` w volAdaptiveTrend
+(wyjście z zakresu GÓRĄ → po 1h potwierdzenia swap do 50/50 HODL
+[łapiemy betę zamiast stać 100% w quote], powrót do LP po pełnym hUp
+liczonym od wyjścia z zakresu; bezpiecznik DOWN nadpisuje parking;
+tylko mode:'exit'; nazwa strategii dostaje ",up→5050"); (2) 4 pule
+`*-720d` w fetch-swaps.ts (base-030/mainnet-005/arb-005/cbBTC-005;
+kopie adresów -365d, days:720; cbBTC młodszy → dane od startu puli,
+pokrycie notować) + QUOTE_WETH_REF dla cbBTC-720d; (3) WF_SET=y2
+w walkforward.ts (8 strategii: hodl, passiveWide, volAdaptive k3,
+v1.1, hUp48, up→5050, hUp48+up→5050, cbBTC k2). tsc czysty. CC-Win:
+fetch (HyperSync, minuty) + 4× walkforward (heap 12GB, ~20-40 min/
+pula) w nocy; wyniki na przegląd. Zamrożenie v1.2 NIENARUSZONE —
+eksperyment to dane do decyzji, nie zmiana.
+BILANS DNIA: łańcuch poranny 2h wcześniej (3 automaty
+bez okien, przeżyły reboot), auto-lejek zbudowany+backfill zaliczony,
+księga transakcji od zera do zweryfikowanej E2E (2 iteracje fixów),
+oba pyłki mainnet zamknięte przez apkę (2×bojowy test CloseModal),
+5 partii UI Sonneta wdrożonych, on-ramp: €100 test zaliczony, €5k
+SEPA w drodze, SWIFT zmierzony ($200→$179). Jutro 07:30: pierwszy
+raport w pełnym nowym reżimie (sekcja Kandydaci, Peak RSS z nowym
+limitem); 08:00 Rafał siada do przeglądu DECYZJE-2026-08-26.
 Fałszywy alarm: "luka observer.log 19→25.08" — żywy log ma komplet
 wpisów; myląca sekcja raportu czytała snapshot, a moje porównanie
 oparło się o nią (katalog .bot-live-backup z 17.08 to stary zrzut).
