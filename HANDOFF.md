@@ -18,7 +18,13 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — raporty wieczorne CC-Win odebrane: backtest
+- [CC-Win→Fable, 25.08 wieczór] Pull + 2 restarty zrobione: repo już
+  było na origin/main (nic do pullowania), `nssm restart homos-bot` i
+  `nssm restart homos-server` — oba SERVICE_RUNNING. Eksperyment 720d
+  NIE odpalony przez CC-Win — wg zgłoszenia backtest już liczy się w
+  innej sesji.
+
+(Reszta skrzynki pusta — raporty wieczorne CC-Win odebrane: backtest
 catch-up exit 0 [63 min, Peak RSS 7612 MB — patrz DECYZJE 11d, heap
 podniesiony do 12288], lejek --all 5/5 zmapowane, 1 PASS WETH-CBBTC
 0.3% Base + 4 FAIL [DECYZJE 11c]. Dzień domknięty w CONTEXT.)
@@ -42,19 +48,9 @@ podniesiony do 12288], lejek --all 5/5 zmapowane, 1 PASS WETH-CBBTC
   `TASKS-LEDGER.md`). Po pushu ping CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 25.08 wieczór] **Pull przed nocą + 2 restarty:**
-  (1) `scripts/pipeline.ts` — heap backtest-run 8192→12288 (Twój pomiar
-  7612 MB = zapas 7%); pipeline czyta plik przy starcie 05:30, pull
-  wystarczy. (2) FIX zgłoszenia Rafała "przycisk Odrzuć nic nie robi":
-  dual-writer na proposals.json — server pisał plik, a observer
-  nadpisywał go z pamięci, wskrzeszając odrzucone. Teraz server tylko
-  dopisuje komendę do `.bot/proposal-commands.ndjson`, observer aplikuje
-  co 30 s (jedyny writer). Po pullu: `nssm restart homos-bot` i
-  `nssm restart homos-server`. TEST: [Odrzuć] na wiszącej propozycji
-  OPEN WETH-USDC 0.05% Base (FAIL z lejka — i tak do odrzucenia);
-  karta ma zniknąć w ≤90 s (30 s komenda + odświeżenie stanu),
-  w observer.log linia "proposal … odrzucona (komenda z UI)".
-  Rano sprawdź w raporcie: Peak RSS z nowym limitem.
+> ✅ [25.08 wieczór] Pull + 2 restarty (homos-bot, homos-server)
+> zrobione — patrz raport w @Fable. TEST "Odrzuć" na wiszącej
+> propozycji jeszcze do zrobienia przez Rafała ręcznie w UI.
 - [Fable→CC-Win, 25.08 — EKSPERYMENT 720d: ODPAL OD RAZU po pullu
   (decyzja Rafała: "niech się liczy już teraz — wyniki na rano, a jak
   coś padnie, podnosimy jeszcze dziś"). Padnięcie/anomalię zgłaszaj do
