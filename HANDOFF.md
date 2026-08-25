@@ -18,45 +18,11 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 25.08] **Raport z kolejki (schtasks+pull+restart+diagnoza
-  backtest-run):**
-  (1) Harmonogram przesunięty: `HomosPipeline` 07:30->05:30, `HomosMorningReport`
-  08:45->07:30 (lokalny czas Windows; zweryfikowane `schtasks /Query`).
-  UWAGA techniczna: run-as haslo puste (ostrzezenie SCHTASKS przy /Change,
-  preexisting, nie moja zmiana) - do sprawdzenia czy to nie problem przy
-  najblizszym uruchomieniu.
-  (2) `git pull` (a287d5d->2536519) + restart `homos-bot`/`homos-server` (NSSM,
-  za zgoda Rafala - auto-mode classifier zablokowal restart uslug bez pytania).
-  Zero zmian w `src/`, wiec bez rebuildu. `/health` po restarcie: `fresh:true`.
-  (3) **DIAGNOZA backtest-run z dzisiejszej nocy (STARY harmonogram, przed
-  moja zmiana)**: pipeline wystartowal 05:30:02 UTC, wszystkie kroki fetch
-  (hs-*) zielone do 05:42:23 UTC, `backtest-run` wystartowal 05:42:23 UTC -
-  i UMARL CICHO ~06:28:17 UTC (ostatni zapis do logu), ~46 min dzialania,
-  zdazyl policzyc tylko 4 z ~20 pul (mainnet-tbtc-wbtc-001, usdc-usdt-001,
-  usdc-weth-001-365d, i zaczal usdc-weth-005-365d). BRAK linii "krok
-  backtest-run: exit" w pipeline.log, BRAK "Peak RSS" (moj dzisiejszy fix
-  loguje peak RSS dopiero na koncu - jesli proces ginie w trakcie, liczba
-  ginie z nim; do poprawy: okresowy zapis peak RSS do pliku, nie tylko na
-  koncu). Nie proces OOM w sensie klasycznym - Event Viewer (System log)
-  pokazuje o 08:28:07-09 czasu lokalnego (=06:28 UTC, dokladnie w momencie
-  smierci procesu) zdarzenia `UserModePowerService` Id 12 + DWM "zarejestrowal
-  port sesji" + Service Control Manager 7040 - wyglada na wybudzenie ze
-  snu/zmiane sesji Windows, co moglo ubic proces konsolowy zadania
-  harmonogramu. Brak wpisu APPCRASH dla node.exe w Application log (jedyne
-  APPCRASH w tym oknie to niepowiazany OVRServer_x64.exe/Oculus). Hipoteza
-  robocza: komputer usnal/wybudzil sie w trakcie backtestu - do potwierdzenia
-  z Rafalem (czy laptop/PC mial w tym oknie usypianie/wybudzenie), warto
-  rozwazyc wylaczenie uspienia na czas okna pipeline'u albo ustawienie zadania
-  na "wake to run" + "stop if on battery" wylaczone.
-  (4) **Luka w observer.log 19->25.08**: NIE POTWIERDZONA - `.bot/observer.log`
-  (zywy plik) ma ciagle wpisy selektora kazdego dnia 19-25.08 bez przerwy
-  (19.08 06:41, 20.08 06:02, 21.08 06:23, 22.08 06:18, 23.08 06:06, 24.08
-  06:06, 25.08 06:09). Podejrzewam, ze pytanie dotyczylo `.bot-live-backup/
-  observer.log` (osobny, nieaktualizowany katalog backupu - ostatni wpis
-  17.08 16:39) - to stary snapshot, nie zywy log, brak akcji potrzebnej.
-  (5) Auto-lejek: restart uslug zrobiony (punkt 2); `candidate-funnel.ts --all`
-  SWIADOMIE NIE odpalony teraz (09:4x rano, w oknie pipeline'u) - zgodnie z
-  poleceniem "WIECZOREM (poza oknem pipeline'u)", zostaje na dzis wieczor.
+(Skrzynka pusta — raport CC-Win z 25.08 odebrany w całości: schtaski
+przesunięte ✓, pull+restarty ✓, diagnoza śmierci backtest-run 08:28
+lokalnie = zmiana sesji/wybudzenie, luka observer.log to fałszywy alarm
+[.bot-live-backup], backfill lejka świadomie zostawiony na wieczór.
+Podsumowanie i follow-upy w CONTEXT + skrzynka CC-Win.)
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
@@ -70,6 +36,32 @@
 odebrane i wypchnięte.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 25.08 po odbiorze raportu] **Follow-upy po diagnozie
+  śmierci backtest-run (zmiana sesji 08:28):**
+  (a) ROOT CAUSE POTWIERDZONY PRZEZ RAFAŁA: zalogował się 08:28 i ZAMKNĄŁ
+  czarne puste okno konsoli — to było okno schtaska z liczącym się
+  backtestem. Zadania MUSZĄ chodzić bez okna (decyzja Rafała: "powinno
+  chodzić w tle"). `schtasks /Query /V` dla obu zadań i przestaw:
+  - **HomosPipeline** → `/RU SYSTEM` (jak rejestracja 10.08 — bez okna,
+    odporny na sesje; nie potrzebuje gita, SYSTEM wystarczy);
+  - **HomosMorningReport** → "Run whether user is logged on or not" na
+    koncie elo (background, bez okna; potrzebuje gita/credentiali konta,
+    więc NIE SYSTEM). UWAGA: ten tryb wymaga zapisanego hasła konta —
+    ostrzeżenie "puste hasło" przy /Change sugeruje, że konto elo może
+    nie mieć hasła (dlatego stało na interactive). Jeśli tak: ustalcie z
+    Rafałem hasło dla elo i zapisz w zadaniu (/RP), ALBO przenieś push
+    raportu na deploy-key/credential dostępny dla SYSTEM. Wybór opisz
+    w @Fable. Po zmianie: test `schtasks /Run` obu zadań (raport z
+    REPORT_PUSH=0 najpierw) — bez okna, exit 0.
+  (b) Zasilanie: potwierdź, że maszyna nie usypia w oknie 05:00–08:00
+  (powercfg); jeśli usypia — "wake to run" na HomosPipeline.
+  (c) Peak RSS: Twój pomysł z okresowym zapisem — zrób: zrzut peak RSS
+  co ~60s do data/backtest-peak-rss.txt (nadpisywany), żeby liczba
+  przeżywała śmierć procesu.
+  (d) WIECZOREM, kolejność: NAJPIERW `npm run pipeline -- --only backtest`
+  (odrobienie dzisiejszej luki — selection + dzienny sweep do serii na
+  26.08; przy okazji pierwszy pełny pomiar Peak RSS), POTEM backfill
+  lejka wg wpisu niżej.
 - [Fable→CC-Win, 25.08 — CZĘŚCIOWO ZROBIONE, patrz raport w @Fable]
   **AUTO-LEJEK: BACKFILL wieczorem.** Pull + restart usług już zrobione
   (patrz @Fable). Zostaje: WIECZOREM (poza oknem pipeline'u, po ~20:00)

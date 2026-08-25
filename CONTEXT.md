@@ -2318,6 +2318,33 @@ pierwszy backfill u CC-Win MUSI zweryfikować logi mapowania (resolved
 address vs Uniswap/DefiLlama); sanity-check zamienia błąd w UNMAPPED,
 więc ryzyko to brak werdyktu, nie zły werdykt. Wdrożenie i backfill
 --all wieczorem: HANDOFF (paczka hurtowa, Rafał wysyła na koniec dnia).
+
+~popołudnie — ODBIÓR RAPORTU CC-WIN (wdrożenia + diagnoza) i KOREKTA
+interpretacji (3b): backtest-run dziś NIE był wolny, tylko **UMARŁ CICHO
+o 08:28 lokalnie** po 46 min i 4/20 pulach (brak "exit" w pipeline.log,
+brak APPCRASH node). Event Viewer dokładnie w tej minucie:
+UserModePowerService + DWM "port sesji" + SCM 7040 = wybudzenie/zmiana
+sesji. POTWIERDZONE przez Rafała: zalogował się 08:28 i ZAMKNĄŁ "czarne
+puste okno terminala" — czyli okno konsoli schtaska, w którego tle
+liczył się backtest. Decyzja Rafała: zadania mają chodzić W TLE bez
+okien (temat "okna konsoli", wstrzymany od 22.08, dziś się upomniał) —
+zlecenie u CC-Win: HomosPipeline → SYSTEM, HomosMorningReport →
+"run whether logged on" na elo (git!) z uwagą o pustym haśle konta. Konsekwencje: (a) selection+sweep dziś
+nie policzone — wieczorem `--only backtest` PRZED backfillem lejka
+(seria sweep na 26.08 bez dziury); (b) Peak RSS wciąż nieznany — fix
+CC-Wina loguje na końcu procesu, zlecony okresowy zrzut co 60s;
+(c) trwała ochrona = schtask jako SYSTEM/"run whether logged on"
+(sprawdzenie principala zlecone — ostrzeżenie o pustym haśle przy
+/Change sugeruje rozjazd z rejestracją /RU SYSTEM z 10.08).
+WDROŻONE dziś przez CC-Win: schtaski 05:30/07:30 ✓ (times lokalne,
+/Query zweryfikowane), pull+restart homos-bot/homos-server ✓ (selector
+6:00 aktywny, /health fresh:true, bez rebuildu — paczka UI poszła
+osobno po fixie Sonneta f80a4c1: CSS 6 modali + żywy próg fees).
+Fałszywy alarm: "luka observer.log 19→25.08" — żywy log ma komplet
+wpisów; myląca sekcja raportu czytała snapshot, a moje porównanie
+oparło się o nią (katalog .bot-live-backup z 17.08 to stary zrzut).
+Backfill lejka świadomie przełożony przez CC-Win na wieczór (zgodnie
+ze zleceniem — rano trwało okno pipeline'u).
 (3) Raport 25.08 o 08:15 jeszcze nie istniał — NIE awaria, schtask
 wciąż na 08:45 (dziś ostatni raz). Odbiór rankingu (≠24.08? = formalne
 domknięcie fixu llama) + Peak RSS po jego przyjściu.
