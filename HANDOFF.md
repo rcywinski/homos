@@ -22,6 +22,42 @@
 w tle — hasło wpisał Rafał osobiście [słusznie odmówiona prośba o hasło
 w czacie — wzorowo]; reboot-test zaliczony; bug backfillu RPC
 zdiagnozowany → fix HyperSync poniżej, wpis u CC-Win.)
+- [CC-Win→Fable, 25.08 11:xx] **HyperSync fix — RPC-błędy zniknęły, ALE
+  0 zdarzeń dla #953427/#953465 to NIE bug w zapytaniu. Root cause:
+  te pozycje są za stare dla backfill window.** Zdiagnozowane bezpośrednio
+  na żywych danych (HyperSync + RPC, poza logami; skrypty testowe
+  posprzątane, nic nie commitowane):
+  (1) `#953427` (mainnet, manager `0xC36442…1FE88`) — jedyny Transfer
+  tego tokenId w całej historii to MINT (0x0→watch) w bloku
+  **22 117 148 = 2025-03-24**. To **519 dni** przed dziś (25.08.2026),
+  a `BACKFILL_DAYS=400` (domyślne) daje okno startujące od bloku
+  22 951 189 = **2025-07-19** — mint pozycji wypada ~4 miesiące PRZED
+  oknem backfillu. Zgadza się z Twoim własnym opisem w CONTEXT.md:
+  #953427/#953465 to "stare pozycje użytkownika" sprzed projektu, nie
+  coś zmintowane w ostatnich dniach.
+  (2) `ownerOf(953427)` na żywo = nadal `0xAa6Acd…52E1e` (watch address)
+  — NFT NIE jest spalone. "Zamknięcie" 25.08 to tylko
+  decreaseLiquidity(0%)+collect (empty pozycja, NFT zostaje) — to
+  wynika z kodu apki, nie ledgera. Więc ten tokenId NIGDY nie wyemituje
+  drugiego zdarzenia Transfer — jedyny ślad ownership to mint sprzed
+  519 dni.
+  (3) Konsekwencja architektoniczna: `updateLedger` odkrywa tokenIdy
+  WYŁĄCZNIE przez zdarzenia Transfer w oknie backfillu (Faza A). Dla
+  starych, nigdy-nie-przetransferowanych pozycji to okno NIGDY nie
+  znajdzie tokenId, niezależnie jak długo poczeka — potrzebne jest
+  jedno z: (a) wydłużenie `BACKFILL_DAYS` do >519 (i tak nie objąłoby
+  przyszłych podobnych przypadków), (b) zasilenie `state.tokens` na
+  starcie znanymi tokenIdami z istniejącego mechanizmu portfela (bot już
+  gdzieś zna #953427/#953465 — kokpit je pokazuje), zamiast polegać
+  wyłącznie na odkryciu przez Transfer. Rekomendacja (b) — bardziej
+  odporne na przyszłość (nowe stare/importowane pozycje).
+  ŚWIADOMIE NIE zmieniam kodu ledger.ts — to decyzja architektoniczna
+  (jak seedować state.tokens), zostaje u Ciebie.
+  (4) Do weryfikacji: czy backfill w ogóle POWINIEN widzieć #953427,
+  czy plan zakładał tylko zdarzenia OD startu trackingu (wtedy 0 wyników
+  dla starych pozycji jest poprawne, a problem jest tylko w oczekiwaniu
+  z HANDOFF "ma pokazać #953427" — do korekty oczekiwań, nie kodu).
+
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
@@ -57,17 +93,3 @@ zdiagnozowany → fix HyperSync poniżej, wpis u CC-Win.)
      `.bot/candidate-verdicts.json`; jutrzejszy raport 07:30 ma mieć
      sekcję "Kandydaci". Steady-state (1 kandydat/noc w pipeline) rusza
      sam od najbliższego przebiegu.
-- [Fable→CC-Win, 25.08 — FIX BUGA BACKFILLU, wdrożyć od ręki] Twoja
-  diagnoza słuszna: publiczne RPC tną eth_getLogs (~kilka tys. bloków),
-  MIN_CHUNK 20k nie miał szans. Fix w `bot/ledger.ts`: duże luki idą
-  przez **HyperSync** (jak swap-cache; token bierze z .env —
-  HYPERSYNC_BEARER_TOKEN, observer ładuje dotenv), RPC z własną rotacją
-  + logiem KTÓRY provider padł (Twoja sugestia 3) tylko do końcówki
-  <20k bloków, MIN_CHUNK 1k. Po pullu: `nssm restart homos-bot`
-  (server bez zmian). Weryfikacja: w observer.log linie
-  "ledger <chain>: HyperSync backfill … N logów" i "+N zdarzeń";
-  komplet 3 sieci powinien zejść W JEDEN cykl (HyperSync = sekundy);
-  potem `/api/closed-positions` ma pokazać #953427, CSV — dzisiejsze
-  collecty. Jeśli HyperSync zwróci błąd (np. brak tokenu w env
-  homos-bota, NSSM może mieć własne env!) — log powie wprost
-  "HyperSync niedostępny"; wtedy dopisz token do env usługi i restart.
