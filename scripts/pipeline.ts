@@ -118,9 +118,10 @@ function swapsFresh(): { fresh: string[]; stale: string[] } {
   }
 
   if (!only || only === 'backtest') {
-    // 8GB heap — OOM 20.08 na arbitrum-usdc-usdt-001 (685k swapów/365d) przy
-    // domyślnym ~4GB; NODE_OPTIONS dokleja się do istniejących, nie nadpisuje.
-    const heap = { NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --max-old-space-size=8192`.trim() };
+    // 12GB heap (25.08: pierwszy pomiar Peak RSS = 7612 MB przy limicie 8192
+    // — zapas 7% i okno danych rośnie; maszyna ma 24GB wolnego, podnosimy
+    // ZANIM OOM z 20.08 wróci). NODE_OPTIONS dokleja się, nie nadpisuje.
+    const heap = { NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --max-old-space-size=12288`.trim() };
     if (!(await withRetry('backtest-run', () => runStep('backtest-run', 'backtest/run.ts', [], heap), 2))) failures.push('backtest-run');
     if (!(await withRetry('backtest-selection', () => runStep('backtest-selection', 'backtest/selection.ts'), 2)))
       failures.push('backtest-selection');
