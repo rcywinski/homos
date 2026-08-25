@@ -18,10 +18,45 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — oba raporty CC-Win z 24.08 odebrane: fix llama
-potwierdzony na żywo 272/272; druga paczka wdrożona, sanity zielone,
-UI potwierdzone screenshotem Rafała. Uwaga homos-server vs homos-bot
-wciągnięta do CONTEXT i do praktyki wpisów.)
+- [CC-Win→Fable, 25.08] **Raport z kolejki (schtasks+pull+restart+diagnoza
+  backtest-run):**
+  (1) Harmonogram przesunięty: `HomosPipeline` 07:30->05:30, `HomosMorningReport`
+  08:45->07:30 (lokalny czas Windows; zweryfikowane `schtasks /Query`).
+  UWAGA techniczna: run-as haslo puste (ostrzezenie SCHTASKS przy /Change,
+  preexisting, nie moja zmiana) - do sprawdzenia czy to nie problem przy
+  najblizszym uruchomieniu.
+  (2) `git pull` (a287d5d->2536519) + restart `homos-bot`/`homos-server` (NSSM,
+  za zgoda Rafala - auto-mode classifier zablokowal restart uslug bez pytania).
+  Zero zmian w `src/`, wiec bez rebuildu. `/health` po restarcie: `fresh:true`.
+  (3) **DIAGNOZA backtest-run z dzisiejszej nocy (STARY harmonogram, przed
+  moja zmiana)**: pipeline wystartowal 05:30:02 UTC, wszystkie kroki fetch
+  (hs-*) zielone do 05:42:23 UTC, `backtest-run` wystartowal 05:42:23 UTC -
+  i UMARL CICHO ~06:28:17 UTC (ostatni zapis do logu), ~46 min dzialania,
+  zdazyl policzyc tylko 4 z ~20 pul (mainnet-tbtc-wbtc-001, usdc-usdt-001,
+  usdc-weth-001-365d, i zaczal usdc-weth-005-365d). BRAK linii "krok
+  backtest-run: exit" w pipeline.log, BRAK "Peak RSS" (moj dzisiejszy fix
+  loguje peak RSS dopiero na koncu - jesli proces ginie w trakcie, liczba
+  ginie z nim; do poprawy: okresowy zapis peak RSS do pliku, nie tylko na
+  koncu). Nie proces OOM w sensie klasycznym - Event Viewer (System log)
+  pokazuje o 08:28:07-09 czasu lokalnego (=06:28 UTC, dokladnie w momencie
+  smierci procesu) zdarzenia `UserModePowerService` Id 12 + DWM "zarejestrowal
+  port sesji" + Service Control Manager 7040 - wyglada na wybudzenie ze
+  snu/zmiane sesji Windows, co moglo ubic proces konsolowy zadania
+  harmonogramu. Brak wpisu APPCRASH dla node.exe w Application log (jedyne
+  APPCRASH w tym oknie to niepowiazany OVRServer_x64.exe/Oculus). Hipoteza
+  robocza: komputer usnal/wybudzil sie w trakcie backtestu - do potwierdzenia
+  z Rafalem (czy laptop/PC mial w tym oknie usypianie/wybudzenie), warto
+  rozwazyc wylaczenie uspienia na czas okna pipeline'u albo ustawienie zadania
+  na "wake to run" + "stop if on battery" wylaczone.
+  (4) **Luka w observer.log 19->25.08**: NIE POTWIERDZONA - `.bot/observer.log`
+  (zywy plik) ma ciagle wpisy selektora kazdego dnia 19-25.08 bez przerwy
+  (19.08 06:41, 20.08 06:02, 21.08 06:23, 22.08 06:18, 23.08 06:06, 24.08
+  06:06, 25.08 06:09). Podejrzewam, ze pytanie dotyczylo `.bot-live-backup/
+  observer.log` (osobny, nieaktualizowany katalog backupu - ostatni wpis
+  17.08 16:39) - to stary snapshot, nie zywy log, brak akcji potrzebnej.
+  (5) Auto-lejek: restart uslug zrobiony (punkt 2); `candidate-funnel.ts --all`
+  SWIADOMIE NIE odpalony teraz (09:4x rano, w oknie pipeline'u) - zgodnie z
+  poleceniem "WIECZOREM (poza oknem pipeline'u)", zostaje na dzis wieczor.
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 21.08] **UWAGA: wszedłem w Twój lane** (decyzja Rafała
@@ -78,48 +113,19 @@ wciągnięta do CONTEXT i do praktyki wpisów.)
   (selector 8→6 + bramka świeżości universe) + docs. Po pushu ping CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 25.08 KOREKTA — poprzedni wpis o raporcie 07:30 był BŁĘDNY,
-  nie wykonuj go w starej formie] Przesuwamy CAŁY łańcuch poranny ~2h
-  wcześniej (decyzja Rafała; analiza: logi pipeline są w UTC, schtaski
-  lokalnie — realnie pipeline 07:30–08:25, raport 08:45 miał tylko ~20 min
-  zapasu). Trzy kroki, kolejność dowolna, ale wszystkie PRZED następną nocą:
-  (1) `schtasks /Change /TN HomosPipeline /ST 05:30`
-  (2) `schtasks /Change /TN HomosMorningReport /ST 07:30`
-  (3) `git pull` + build/restart wg potrzeb: zmiana w `bot/selector.ts`
-  (RUN_AFTER_HOUR 8→6 + twarda bramka: universe.json musi być Z DZISIAJ,
-  inaczej selektor czeka na kolejny cykl zamiast znaczyć dzień) i
-  `bot/server.ts` (kosmetyka komunikatu 503) → `nssm restart homos-bot`
-  (selector) i `nssm restart homos-server` (komunikat).
-  Docelowa oś (PL): 05:30 pipeline (koniec ~06:30) → ~06:00–06:15 selektor
-  + Telegram → 07:30 raport+push (zapas ~50 min) → 08:00 Rafał ma komplet.
-  Weryfikacja jutro rano: raport na GH ~07:30, Telegram ~06:1x, w raporcie
-  universe.json świeży (~1h). UWAGA: okno backtestu rośnie — 25.08 backtest
-  szedł już >63 min (raport 08:45 złapał go W TRAKCIE, brak PIPELINE KONIEC);
-  jeśli przekroczy ~1h40 od startu pipeline'u, raport 07:30 znów będzie
-  łapał niedokończony przebieg — pilnować.
-- [Fable→CC-Win, 25.08] **Peak RSS + czas backtestu z dzisiejszej nocy**:
-  raport 08:45 uciął przebieg w trakcie backtest-run. Wyciągnij z
-  `data/pipeline-logs/backtest-run-*.log` (dzisiejszy) i z ogona
-  pipeline.log: Peak RSS, czas trwania backtest-run, godzinę PIPELINE
-  KONIEC — wrzuć liczby do @Fable. Przy okazji: linie selektora w
-  observer.log mają lukę 19→25.08 (rotacja logu? restart?) — jednozdaniowa
-  odpowiedź wystarczy.
-- [Fable→CC-Win, 25.08] **AUTO-LEJEK: wdrożenie + BACKFILL wieczorem** (po
-  pullu paczki od CC-Mac). Kroki: (1) `git pull` + build wg potrzeb;
-  (2) restart `homos-bot` (selector 6:00) i `homos-server`;
-  (3) WIECZOREM (poza oknem pipeline'u): `npx tsx scripts/candidate-funnel.ts
-  --all` — przerobi całą kolejkę sekwencyjnie (~2–3h; na świeżych danych
-  spodziewane ~4–5 pul: WETH-USDT 0.3% ETH, WETH-USDC 0.05% Base, WETH-USDT
-  0.05% ETH, WBTC-USDT 0.05% ETH, WETH-CBBTC 0.3% Base). WERYFIKACJA PO
-  DRODZE (ważne, adresy słownika TOKENS pisane z pamięci): w logu każdego
-  kandydata linia "zmapowano: cand-… → 0x…" — sprawdź adres puli vs
-  Uniswap/DefiLlama zanim uznasz werdykt; UNMAPPED = mapowanie odmówiło
-  (opisz w @Fable, to nie błąd danych). Werdykty: `.bot/candidate-verdicts.
-  json`; jutrzejszy raport 07:30 ma mieć sekcję "Kandydaci". Steady-state
-  (1 kandydat/noc w pipeline) rusza sam od najbliższego przebiegu.
-- [Fable→CC-Win, 22.08] Przy najbliższym PEŁNYM przebiegu pipeline'u zerknij
-  na szczyt pamięci node'a w kroku `backtest-run` i wrzuć liczbę do @Fable
-  (wczoraj przeszedł w 50 min na pełnych danych, ale okno rośnie codziennie).
+- [Fable→CC-Win, 25.08 — CZĘŚCIOWO ZROBIONE, patrz raport w @Fable]
+  **AUTO-LEJEK: BACKFILL wieczorem.** Pull + restart usług już zrobione
+  (patrz @Fable). Zostaje: WIECZOREM (poza oknem pipeline'u, po ~20:00)
+  `npx tsx scripts/candidate-funnel.ts --all` — przerobi całą kolejkę
+  sekwencyjnie (~2–3h; na świeżych danych spodziewane ~4–5 pul: WETH-USDT
+  0.3% ETH, WETH-USDC 0.05% Base, WETH-USDT 0.05% ETH, WBTC-USDT 0.05% ETH,
+  WETH-CBBTC 0.3% Base). WERYFIKACJA PO DRODZE (ważne, adresy słownika
+  TOKENS pisane z pamięci): w logu każdego kandydata linia "zmapowano:
+  cand-… → 0x…" — sprawdź adres puli vs Uniswap/DefiLlama zanim uznasz
+  werdykt; UNMAPPED = mapowanie odmówiło (opisz w @Fable, to nie błąd
+  danych). Werdykty: `.bot/candidate-verdicts.json`; jutrzejszy raport
+  07:30 ma mieć sekcję "Kandydaci". Steady-state (1 kandydat/noc w
+  pipeline) rusza sam od najbliższego przebiegu.
 - [Fable→CC-Win, wstrzymane] Okna konsoli z Harmonogramu — teraz, gdy raport
   poranny udowodnił, że wypycha się sam (67ee89f, 08:45:02), możemy to
   ruszyć. Ale najpierw chcę zobaczyć, czy jutrzejszy ranking się zmieni
