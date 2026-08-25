@@ -108,6 +108,15 @@ function swapsFresh(): { fresh: string[]; stale: string[] } {
     log(`świeżość swap cache: OK=[${fresh.join(', ')}] BRAKI=[${stale.join(', ')}]`);
   }
 
+  if (!only || only === 'funnel') {
+    // Auto-lejek kandydatów (TASKS-FUNNEL.md): PO fetchu (świeże universe),
+    // PRZED backtest-run (OOM backtestu nie może zabić lejka). 1 podejście,
+    // steady-state max 1 kandydat/noc; porażka = wpis w raporcie, lecimy dalej.
+    // Heap 8GB dla walkforwardu lejek ustawia sam (NODE_OPTIONS w spawnie).
+    if (!(await withRetry('candidate-funnel', () => runStep('candidate-funnel', 'scripts/candidate-funnel.ts'), 1)))
+      failures.push('candidate-funnel');
+  }
+
   if (!only || only === 'backtest') {
     // 8GB heap — OOM 20.08 na arbitrum-usdc-usdt-001 (685k swapów/365d) przy
     // domyślnym ~4GB; NODE_OPTIONS dokleja się do istniejących, nie nadpisuje.

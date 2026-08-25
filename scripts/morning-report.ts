@@ -105,6 +105,32 @@ if (props) {
   } catch { sections.push('## propozycje\nproposals.json NIEPARSOWALNY'); }
 } else sections.push('## propozycje\nBRAK .bot/proposals.json');
 
+// --- kandydaci: werdykty auto-lejka (ostatnie 7 dni) + kolejka na dziś ---
+try {
+  const verd = readSafe(path.join(BOT, 'candidate-verdicts.json'));
+  const queue = readSafe(path.join(BOT, 'candidate-queue.json'));
+  const lines: string[] = [];
+  if (verd) {
+    const cutoff = Date.now() - 7 * 24 * 3600e3;
+    const recent = (JSON.parse(verd) as any[]).filter((v) => v.testedAt && Date.parse(v.testedAt) > cutoff);
+    if (recent.length) {
+      lines.push('| werdykt | pula | wygr.% | worst | data | nota |', '|---|---|---|---|---|---|');
+      for (const v of recent) {
+        const icon = v.verdict === 'PASS' ? '✅ PASS' : v.verdict === 'FAIL' ? '⛔ FAIL' : v.verdict;
+        lines.push(`| ${icon} | ${v.symbol} ${v.feeTier} @ ${v.chain} | ${v.winPct ?? '—'} | ${v.worst ?? '—'} | ${v.testedAt} | ${(v.note || '').slice(0, 90)} |`);
+      }
+    } else lines.push('brak werdyktów z ostatnich 7 dni');
+  } else lines.push('BRAK .bot/candidate-verdicts.json (lejek jeszcze nie biegł)');
+  if (queue) {
+    const q = JSON.parse(queue);
+    const items = (q.queue ?? []).map((i: any) => `${i.symbol} ${i.feeTier} @ ${i.chain} (streak ${i.streak})`).join(' · ') || 'pusta';
+    lines.push(`\nkolejka (${(q.generatedAt || '').slice(0, 16)}): ${items}`);
+    const def = (q.deferred ?? []).map((i: any) => `${i.symbol} ${i.feeTier} @ ${i.chain}`).join(' · ');
+    if (def) lines.push(`odroczone (<180d historii): ${def}`);
+  }
+  sections.push('## Kandydaci (auto-lejek)\n\n' + lines.join('\n'));
+} catch { sections.push('## Kandydaci (auto-lejek)\npliki lejka nieparsowalne'); }
+
 // --- stany ---
 for (const f of ['selector-state.json', 'trend-state.json']) {
   const s = readSafe(path.join(BOT, f));

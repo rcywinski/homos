@@ -73,9 +73,15 @@ function decodeSwap(dataHex: string) {
   const writeJson = (p: string, data: unknown) => {
     if (!dryRun) fs.writeFileSync(p, typeof data === 'string' ? data : JSON.stringify(data, null, 2));
   };
-  const cfg: PoolCfg | undefined = POOLS.find((p: PoolCfg) => p.id === id);
+  // --cfg <ścieżka.json>: PoolCfg spoza POOLS (kandydaci auto-lejka,
+  // candidate-funnel.ts pisze cfg do data/candidates/). Dodatkowe pola w JSON
+  // (np. quoteRefId) przechodzą do meta.json — czyta je backtest/load.ts.
+  const cfgFlag = process.argv.indexOf('--cfg');
+  const cfg: PoolCfg | undefined = cfgFlag > -1
+    ? (JSON.parse(fs.readFileSync(path.resolve(process.argv[cfgFlag + 1]), 'utf8')) as PoolCfg)
+    : POOLS.find((p: PoolCfg) => p.id === id);
   if (!cfg) {
-    console.error(`Nieznana pula "${id}". Dostępne: ${POOLS.map((p: PoolCfg) => p.id).join(', ')}`);
+    console.error(`Nieznana pula "${id}". Dostępne: ${POOLS.map((p: PoolCfg) => p.id).join(', ')} (albo --cfg <plik.json>)`);
     process.exit(1);
   }
   if (!cfg.address) {

@@ -86,9 +86,20 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       volAdaptiveTrend({ ...cb, hysteresisUpSec: 12 * 3600 }),
     ];
   };
+  // 'funnel' (auto-lejek kandydatów, TASKS-FUNNEL.md): tylko benchmark +
+  // dwa ZAMROŻONE profile v1.2 (ETH/stable = v1.1 re>EMA; cbBTC = k=2 czysty
+  // exit) — bramkę liczy candidate-funnel.ts z summary po nazwie strategii.
+  // Mały zestaw = szybszy przebieg (kandydat ma zdążyć w oknie pipeline'u).
+  const mkFunnel = (): Strategy[] => [
+    hodl5050,
+    volAdaptiveTrend({ ...trendBase, mode: 'exit', reentryAboveEma: true }),
+    volAdaptiveTrend({ ...trendBase, k: 2, mode: 'exit' }),
+  ];
   const mkStrategies = (): Strategy[] =>
     process.env.WF_SET === 'hedge'
       ? mkHedge()
+      : process.env.WF_SET === 'funnel'
+      ? mkFunnel()
       : process.env.WF_SET === 'hup'
       ? mkHup()
       : process.env.WF_SET === 'trend-sweep'

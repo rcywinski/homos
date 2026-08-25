@@ -23,6 +23,11 @@ export type CandidateVerdict = {
   worst?: number; // najgorsze okno vsHODL (bramka: >−3)
   testedAt?: string; // ISO data walidacji
   note?: string;
+  // pola auto-lejka (25.08, TASKS-FUNNEL.md):
+  algoVersion?: string; // wersja ALGORITHM.md werdyktu — inna niż bieżąca = werdykt nieważny, lejek retestuje
+  candId?: string; // id cache'u `cand-*` (data/cache) i wyniku walkforward
+  poolAddress?: string; // adres puli z factory.getPool (zweryfikowany token0/token1)
+  strategy?: string; // nazwa strategii profilu, na której policzono bramkę
 };
 
 // Werdykty ręcznych walidacji sprzed lejka (źródła: SELECTOR-LOG.md,
@@ -32,14 +37,14 @@ export const SEED_VERDICTS: CandidateVerdict[] = [
   {
     llamaPool: '3a2f2faf-6423-4569-ad93-821c54cbe702',
     chain: 'Ethereum', symbol: 'WETH-USDT', feeTier: '0.01%',
-    verdict: 'FAIL', worst: -12,
+    verdict: 'FAIL', worst: -12, algoVersion: 'v1.2',
     testedAt: '2026-08-17',
     note: 'walkforward 365d/22 okna: wszystkie strategie ujemne vs HODL, worst −10…−12',
   },
   {
     llamaPool: '8b3ed515-5e6f-449a-9b64-25113cda7a29',
     chain: 'Ethereum', symbol: 'USDC-WETH', feeTier: '0.01%',
-    verdict: 'FAIL', winPct: 55, worst: -18.0,
+    verdict: 'FAIL', winPct: 55, worst: -18.0, algoVersion: 'v1.2',
     testedAt: '2026-08-19',
     note: 'walkforward 365d/22 okna (135a155): 55% wygr. vs próg ≥65, worst −18 vs próg >−3; warianty z bezpiecznikiem 0% wygr. Wzorzec jak WETH-USDT 0.01%',
   },

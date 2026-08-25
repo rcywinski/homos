@@ -137,6 +137,13 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
     // silnikowo to samo co quote:'WETH' — zewnętrzna referencja USD nogi kwotującej
     spec.quote = 'WETH';
     spec.usdPerEth = await loadUsdRef(QUOTE_REF_EXT[id].ref, QUOTE_REF_EXT[id].assetIsToken0);
+  } else if (cfg.quoteRefId) {
+    // DYNAMICZNA referencja z meta.cfg (kandydaci auto-lejka: candidate-funnel
+    // wpisuje quoteRefId do cfg, fetch-swaps-hypersync przenosi do meta.json) —
+    // statyczne mapy wyżej nie znają id `cand-*`. Refy to USDC/WETH, więc
+    // domyślna orientacja (cfg.ethIsToken0 referencji) jest poprawna.
+    spec.quote = 'WETH';
+    spec.usdPerEth = await loadUsdRef(cfg.quoteRefId);
   }
 
   const swaps: SwapEv[] = [];
