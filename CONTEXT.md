@@ -2321,3 +2321,23 @@ więc ryzyko to brak werdyktu, nie zły werdykt. Wdrożenie i backfill
 (3) Raport 25.08 o 08:15 jeszcze nie istniał — NIE awaria, schtask
 wciąż na 08:45 (dziś ostatni raz). Odbiór rankingu (≠24.08? = formalne
 domknięcie fixu llama) + Peak RSS po jego przyjściu.
+(3b) ODBIÓR RAPORTU 25.08 (~11:xx, po ręcznym pullu Rafała): fetch
+20/20 OK BRAKI=[] w 12 min (07:30→07:42 lokal), ALE raport 08:45
+złapał pipeline W TRAKCIE — backtest-run start 07:42:23, po 63+ min
+wciąż się liczył (brak PIPELINE KONIEC w raporcie). Backtest urósł
+~50→>63 min (20 pul, w tym nowe -365d). **Peak RSS NIE odebrany** —
+instrumentacja drukuje na końcu przebiegu; liczba jest w data/
+pipeline-logs/backtest-run-*.log na Windows (zadanie u CC-Win).
+Wnioski: (a) dzisiejsze 08:45 już NIE wystarczało — przesunięcie
+łańcucha na 05:30 tym bardziej zasadne; (b) rachunek zapasu po
+przesunięciu: koniec backtestu ~06:50-07:00, raport 07:30 = zapas
+~30-40 min i MALEJE z oknem danych — pilnować czasu backtestu w
+każdym briefie; w noc z aktywnym kandydatem lejka (krok przed
+backtestem, do ~60 min) raport może znów złapać backtest w trakcie —
+akceptowalne (ranking/paper/werdykty już są), ale odnotowywać.
+(c) Selektor 06:09Z wystawił dziś propozycję OPEN: WETH-USDC 0.05%
+@ Base (59.6%, 12d w topie, spoza BOT_POOLS) — pula jest też w
+kolejce lejka, wieczorny backfill da jej werdykt bramki PRZED
+ewentualną decyzją o otwarciu. (d) observer.log ma lukę linii
+selektora 19→25.08 (rotacja/restart logu?) — niekrytyczne, spytać
+CC-Win przy okazji.

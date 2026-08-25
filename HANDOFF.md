@@ -93,9 +93,17 @@ wciągnięta do CONTEXT i do praktyki wpisów.)
   Docelowa oś (PL): 05:30 pipeline (koniec ~06:30) → ~06:00–06:15 selektor
   + Telegram → 07:30 raport+push (zapas ~50 min) → 08:00 Rafał ma komplet.
   Weryfikacja jutro rano: raport na GH ~07:30, Telegram ~06:1x, w raporcie
-  universe.json świeży (~1h). UWAGA: okno backtestu rośnie — jeśli
-  backtest-run przekroczy kiedyś ~1h50 od startu pipeline'u, zapas znika;
-  pilnować przy pomiarach Peak RSS/czasu.
+  universe.json świeży (~1h). UWAGA: okno backtestu rośnie — 25.08 backtest
+  szedł już >63 min (raport 08:45 złapał go W TRAKCIE, brak PIPELINE KONIEC);
+  jeśli przekroczy ~1h40 od startu pipeline'u, raport 07:30 znów będzie
+  łapał niedokończony przebieg — pilnować.
+- [Fable→CC-Win, 25.08] **Peak RSS + czas backtestu z dzisiejszej nocy**:
+  raport 08:45 uciął przebieg w trakcie backtest-run. Wyciągnij z
+  `data/pipeline-logs/backtest-run-*.log` (dzisiejszy) i z ogona
+  pipeline.log: Peak RSS, czas trwania backtest-run, godzinę PIPELINE
+  KONIEC — wrzuć liczby do @Fable. Przy okazji: linie selektora w
+  observer.log mają lukę 19→25.08 (rotacja logu? restart?) — jednozdaniowa
+  odpowiedź wystarczy.
 - [Fable→CC-Win, 25.08] **AUTO-LEJEK: wdrożenie + BACKFILL wieczorem** (po
   pullu paczki od CC-Mac). Kroki: (1) `git pull` + build wg potrzeb;
   (2) restart `homos-bot` (selector 6:00) i `homos-server`;
