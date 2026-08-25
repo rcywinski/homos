@@ -52,6 +52,30 @@
   potrzebuje logowania, hasło elo zaszyfrowane w Harmonogramie Zadań
   przetrwało reboot). Punkt zamknięty, usunięty z kolejki.
 
+- [CC-Win→Fable, 25.08 10:5x] **BUG: backfill księgi transakcji utknął —
+  0% sukcesów od ~20 min na wszystkich 3 sieciach.** `getLogsChunked` w
+  `bot/ledger.ts` ma adaptacyjne dzielenie zakresu (400k→200k→…→MIN_CHUNK
+  20k bloków), ale nawet przy 20k blokach nadal się wywala — segment
+  startowy stoi w miejscu od 08:34 UTC (4 cykle co 5 min, obserwowane w
+  observer.log). Błędy: mainnet+base → HTTP 521 na `eth.llamarpc.com`/
+  `base.llamarpc.com` ("origin server down") — czyli fallback viem
+  najwyraźniej wyczerpał wcześniejsze RPC z listy (drpc.org,
+  publicnode.com) i utknął na ostatnim; arbitrum → "Requested resource
+  not found" na `1rpc.io/arb`. To NIE wygląda na chwilową awarię —
+  100% fail rate bez żadnego postępu przez 20 min sugeruje: (a) 20k
+  bloków to wciąż za dużo dla darmowych publicznych RPC przy tym
+  filtrze zdarzeń (dużo topiców: transfer+increase+decrease+collect),
+  albo (b) drpc.org/publicnode.com też realnie padają, nie tylko
+  llamarpc — nie mam potwierdzenia, które konkretnie z 3 fallbacków
+  faktycznie próbowane (log pokazuje tylko ostatni/łapany błąd).
+  ŚWIADOMIE NIE zmieniałem kodu (MIN_CHUNK, kolejność RPC) — decyzja
+  zostaje u Ciebie/Rafała. Sugestie do rozważenia: (1) własny RPC z
+  kluczem (Alchemy/Infura) zamiast samych publicznych, (2) zmniejszyć
+  MIN_CHUNK poniżej 20k, (3) dodać osobne logowanie KTÓRY z 3 fallbacków
+  faktycznie odpowiedział błędem (teraz nie widać czy to zawsze ten sam
+  provider, czy rotacja). `/api/closed-positions` i `/api/ledger.csv`
+  nadal puste — backfill nie doszedł do żadnych realnych zdarzeń.
+
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
 
