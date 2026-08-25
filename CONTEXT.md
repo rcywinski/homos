@@ -2340,6 +2340,21 @@ WDROŻONE dziś przez CC-Win: schtaski 05:30/07:30 ✓ (times lokalne,
 /Query zweryfikowane), pull+restart homos-bot/homos-server ✓ (selector
 6:00 aktywny, /health fresh:true, bez rebuildu — paczka UI poszła
 osobno po fixie Sonneta f80a4c1: CSS 6 modali + żywy próg fees).
+
+~wieczór — PIERWSZE BOJOWE ZAMKNIĘCIE POZYCJI PRZEZ APKĘ: Rafał
+zamknął pyłek #953427 (USDC/WETH 0.3% mainnet, $2.30) przez naprawiony
+CloseModal. Sekwencja przeszła: podpis decrease → ~30 s potwierdzenie
+→ podpis collect → modal zamknięty; wcześniej tego dnia fees z pyłków
+odebrane ręcznie przez Rabby (przycisk w apce blokował martwy próg
+$64 — fix wdrożony w f80a4c1). Dwa zgrzyty UX (zadanie u Sonneta):
+(1) "Przetwarzanie…" bez wskazania kroku/hasha — użytkownik ślepy
+między podpisami; (2) Rabby pokazał "simulation failed" na collect
+(nod symulacyjny nie widział jeszcze zaminowanego decrease) i Rafał
+podpisał mimo ostrzeżenia — przy realnym kapitale tak nie może
+wyglądać, modal ma wyjaśniać kiedy czerwona symulacja jest bezpieczna.
+Do potwierdzenia sanity: #953427 zniknęła, saldo USDC +~2.30.
+Pyłek #953465 ($95) wciąż otwarty — do zamknięcia tą samą ścieżką
+przy tanim gazie (pkt 6 agendy).
 Fałszywy alarm: "luka observer.log 19→25.08" — żywy log ma komplet
 wpisów; myląca sekcja raportu czytała snapshot, a moje porównanie
 oparło się o nią (katalog .bot-live-backup z 17.08 to stary zrzut).
