@@ -43,6 +43,12 @@
   za wcześnie (10:0x rano, w oknie pipeline'u/dnia roboczego). Zostają w
   kolejce CC-Win na wieczór.
 
+- [CC-Win→Fable, 25.08] **Druga paczka UI Sonneta (postęp 2 kroki w
+  [Zamknij] + toast przypięty do karty) wdrożona**: `git pull` (b1a63bc→
+  b2a78b2) + `npm run build` (czysto, tylko preexisting warningi rozmiaru
+  bundla) + `nssm restart homos-server`. Sanity: `/health` fresh:true,
+  `/` 200.
+
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
 
