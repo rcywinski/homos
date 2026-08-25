@@ -2462,6 +2462,29 @@ v1.1, hUp48, up→5050, hUp48+up→5050, cbBTC k2). tsc czysty. CC-Win:
 fetch (HyperSync, minuty) + 4× walkforward (heap 12GB, ~20-40 min/
 pula) w nocy; wyniki na przegląd. Zamrożenie v1.2 NIENARUSZONE —
 eksperyment to dane do decyzji, nie zmiana.
+~wieczór (3) — WYNIKI 720d ODEBRANE (CC-Win; fetch 4/4, walkforward
+3/4): **na oknie 2-letnim z bullem ŻADNA strategia nie przechodzi
+bramki** na żadnej z 3 policzonych pul (base-030: max 52% wygr., worst
+−11.9; mainnet-005: 53%, worst do −13.9; cbBTC: 65% ale worst −6..−9);
+reżim UP systematycznie najgorszy (0–25% wygr.) na WSZYSTKICH
+wariantach, up→5050 też nie ratuje (poprawia średnie, nie ogon).
+365d wyglądało lepiej głównie dlatego, że okno było spadkowo-boczne.
+NAJWAŻNIEJSZY materiał na przegląd 26.08 (pkt 1 kapitał + 12 + 13).
+Crash arb-720d: 25.6M swapów > limit Set V8 (16.7M) w dedupie load.ts
+— FIX: dedup per-blok (semantyka identyczna, pamięć O(bloku)); rerun
+arbitrum zlecony. PRZY OKAZJI — SPÓJNOŚĆ RANKINGU (zgłoszenie Rafała
+"paper ≠ top10, odrzucone zajmują miejsca"): wyjaśnienie — paper gra
+BOT_POOLS (pule zwalidowane bramką, dobór przez walkforward), ranking
+to lejek discovery; ZMIANY (Fable, tsc czysty): selector-ranking =
+"top10 DOBRYCH" (odrzucone pokazywane z polem rejected, nie zajmują
+miejsc), eligible i propozycje OPEN pomijają FAIL/UNMAPPED (bramka
+nadrzędna wobec headline APY), funnel kwalifikuje analogicznie (bada
+pule, które wskoczyły za odrzucone). Pytanie Rafała o jutro: TAK,
+propozycje OPEN przyjdą ~06:00-06:15 (selektor codziennie; PASS
+WETH-CBBTC 0.3% wisi od 22.08), a otwarcie zawsze idzie przez naszą
+apkę + podpisy Rabby ([Otwórz →] dla pul z BOT_POOLS z sugestią
+zakresu; pula spoza configu wymaga najpierw diffu BOT_POOLS — Fable
+przygotuje po decyzji).
 BILANS DNIA: łańcuch poranny 2h wcześniej (3 automaty
 bez okien, przeżyły reboot), auto-lejek zbudowany+backfill zaliczony,
 księga transakcji od zera do zweryfikowanej E2E (2 iteracje fixów),

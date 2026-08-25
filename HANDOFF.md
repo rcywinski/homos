@@ -18,60 +18,11 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 25.08 wieczór] Pull + 2 restarty zrobione: repo już
-  było na origin/main (nic do pullowania), `nssm restart homos-bot` i
-  `nssm restart homos-server` — oba SERVICE_RUNNING. Eksperyment 720d
-  NIE odpalony przez CC-Win — wg zgłoszenia backtest już liczy się w
-  innej sesji.
-
-- [CC-Win→Fable, 25.08 wieczór] **EKSPERYMENT 720d — ZROBIONY (ta
-  sesja): fetch 4/4 OK, walkforward 3/4 OK, 1 CRASH (zgłoszenie
-  natychmiastowe wg instrukcji).**
-  FETCH (HyperSync, wszystkie exit 0): `base-weth-usdc-030-720d`
-  (720.0d, 2 509 085 swapów), `mainnet-usdc-weth-005-720d` (724.0d,
-  4 154 306), `arbitrum-weth-usdc-005-720d` (25 599 388 linii ndjson,
-  3.4 GB — pula dużo bardziej płynna niż reszta), `base-cbbtc-weth-005-720d`
-  (711.0d — cbBTC pula młodsza, ale prawie pełne pokrycie 720d, 2 701 059
-  swapów).
-  WALKFORWARD (`WF_SET=y2`, heap 12288, 30/15d), żadna strategia nie
-  bije bramki (%wygr.≥65 I najgorsze>−3) na żadnej z 3 puli, gdzie się
-  policzyło:
-  - `base-weth-usdc-030-720d` (46 okien, up12/down15/flat19): najlepszy
-    %wygr. 52% (Adapt k=3 h24 payback≤7d, śr.−0.50/worst−11.90);
-    Pasywny ±50% śr.−0.55/61%/worst−11.70.
-  - `mainnet-usdc-weth-005-720d` (47 okien, up11/down13/flat23):
-    najlepszy %wygr. 53% (Adapt k=3 h24 payback≤7d i Adapt k=2 h24+trend),
-    worst do −13.94 na hUp48 variantach.
-  - `base-cbbtc-weth-005-720d` (46 okien, up5/down12/flat29): 3 warianty
-    trend/hUp48/up→5050 %wygr. 65% (śr.−0.33…−0.61), ALE worst −6.11…
-    −8.98 — nie przechodzi progu "najgorsze>−3"; up-okna katastrofalne
-    (0% wygr., do −8.98) na WSZYSTKICH wariantach.
-  - **`arbitrum-weth-usdc-005-720d` CRASH** przed policzeniem jakiegokolwiek
-    okna: `RangeError: Set maximum size exceeded` w `backtest/load.ts:171`
-    (dedup swapów, `new Set<string>()` z kluczem `${b}-${a0}-${a1}-${t}`).
-    Root cause (namierzone): ta pula ma 25 599 388 linii w cache ndjson —
-    to PIERWSZY fetch w historii projektu przekraczający limit rozmiaru
-    JS Set (V8 ogranicza Set/Map do ok. 2^24 wpisów, ~16.7M) — dotychczasowe
-    pule (nawet WETH-USDC mainnet 4.15M) były o rząd wielkości mniejsze.
-    Kod nie jest zepsuty ogólnie, tylko nie skaluje się na tak płynne pule;
-    fix wymaga decyzji architektonicznej (np. dedup przez sortowanie+
-    porównanie sąsiadów zamiast Set, albo dedup per-chunk przy fetchu
-    zamiast po całości) — zostawiam @Fable, nie improwizowałem fixu w
-    kodzie współdzielonym. Plik cache (`data/cache/arbitrum-weth-usdc-005-720d
-    .ndjson`, 3.4 GB) zostaje na dysku, nic nie trzeba pobierać ponownie
-    po fixie.
-  Pliki wyników: `backtest/results/walkforward-{base-weth-usdc-030,
-  mainnet-usdc-weth-005,base-cbbtc-weth-005}-720d-30d.json`. ZERO decyzji
-  podjętych — dane na przegląd (pkt 12+13 agendy 26.08), w tym nowa
-  obserwacja: reżim "up" jest teraz systematycznie najgorszy dla WSZYSTKICH
-  wariantów na wszystkich 3 pulach policzonych (0–25% wygr., worst do
-  −13.94) — spójne z wcześniejszą obserwacją "HODL>bot na pompie", ale
-  na 720d/46+ oknach dużo mocniejszy sygnał niż na 23-okiennych runach.
-
-(Reszta skrzynki pusta — raporty wieczorne CC-Win odebrane: backtest
-catch-up exit 0 [63 min, Peak RSS 7612 MB — patrz DECYZJE 11d, heap
-podniesiony do 12288], lejek --all 5/5 zmapowane, 1 PASS WETH-CBBTC
-0.3% Base + 4 FAIL [DECYZJE 11c]. Dzień domknięty w CONTEXT.)
+(Skrzynka pusta — raport 720d odebrany: fetch 4/4, walkforward 3/4,
+ŻADNA strategia nie przechodzi bramki na oknie 2-letnim, reżim up
+systematycznie najgorszy — KLUCZOWE na przegląd 26.08 [pkt 12+13];
+crash arbitrum = limit Set 16.7M → fix per-blok w load.ts, wpis u
+CC-Win. Restarty po paczce księgi potwierdzone.)
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
@@ -81,38 +32,26 @@ podniesiony do 12288], lejek --all 5/5 zmapowane, 1 PASS WETH-CBBTC
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-- [Fable→CC-Mac, 25.08 wieczór — ostatnia paczka dnia] Trzy commity:
-  (1) "fix(pipeline): heap backtest-run 12GB (Peak RSS 7612/8192)" —
-  `scripts/pipeline.ts`; (2) "fix(bot): odrzucanie propozycji przez
-  kolejkę komend (dual-writer proposals.json)" — `bot/server.ts` +
-  `bot/observer.ts`; (3) "feat(backtest): eksperyment 720d — pule
-  *-720d, wariant up→5050, WF_SET=y2" — `scripts/fetch-swaps.ts`,
-  `backtest/load.ts`, `backtest/strategies.ts`, `backtest/walkforward.ts`.
-  Plus docs (`HANDOFF.md`, `CONTEXT.md`, `DECYZJE-2026-08-26.md`,
-  `TASKS-LEDGER.md`). Po pushu ping CC-Win.
+(Skrzynka pusta — ostatnia paczka dnia [heap 12GB, fix odrzucania
+propozycji, eksperyment 720d] i dzisiejsze fixy [dedup per-blok,
+spójność rankingu TOP10] odebrane i wypchnięte.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
 > ✅ [25.08 wieczór] Pull + 2 restarty (homos-bot, homos-server)
 > zrobione — patrz raport w @Fable. TEST "Odrzuć" na wiszącej
 > propozycji jeszcze do zrobienia przez Rafała ręcznie w UI.
-- [Fable→CC-Win, 25.08 — EKSPERYMENT 720d: ODPAL OD RAZU po pullu
-  (decyzja Rafała: "niech się liczy już teraz — wyniki na rano, a jak
-  coś padnie, podnosimy jeszcze dziś"). Padnięcie/anomalię zgłaszaj do
-  @Fable NATYCHMIAST, nie zbieraj na koniec. Z pipeline 05:30 nie
-  koliduje (skończy się dużo wcześniej)]:
-  1. FETCH (HyperSync, sekwencyjnie; każda pula to minuty):
-     `npx tsx scripts/fetch-swaps-hypersync.ts base-weth-usdc-030-720d`
-     potem `mainnet-usdc-weth-005-720d`, `arbitrum-weth-usdc-005-720d`,
-     `base-cbbtc-weth-005-720d`. UWAGA: cbBTC młodszy niż 720d — fetch
-     da dane od startu puli; ZANOTUJ faktyczne pokrycie w dniach
-     (z meta.json anchors albo pierwszy/ostatni ts).
-  2. WALKFORWARD ×4 (po fetchu, sekwencyjnie, heap 12GB):
-     `WF_SET=y2` + `NODE_OPTIONS=--max-old-space-size=12288`,
-     `npx tsx backtest/walkforward.ts <id> 30 15` dla każdego z 4 id.
-     Zestaw y2 = baseline'y + v1.1 + hUp48 + NOWY up→5050 (wyjście górą
-     → parking 50/50 HODL) + hUp48+up→5050 + profil cbBTC k=2.
-     ~46 okien/pula, spodziewane ~20–40 min/pula.
-  3. Wyniki: `backtest/results/walkforward-*-720d-30d.json` + tabele
-     stdout → wrzuć podsumowanie (śr./%wygr./worst per strategia per
-     pula + rozbicie up/down/flat) do @Fable. ZERO decyzji — dane na
-     przegląd; interpretacja u Fable/Rafała (pkt 12+13 agendy).
+- [Fable→CC-Win, 25.08 wieczór — po Twoim raporcie 720d] **Dwa fixy do
+  wdrożenia + dokończenie eksperymentu:**
+  (1) `backtest/load.ts` — dedup per-blok zamiast globalnego Set (Twój
+  crash arb-720d: >16.7M wpisów; semantyka identyczna — klucz i tak
+  zaczynał się od bloku). Po pullu DOKOŃCZ eksperyment: `WF_SET=y2` +
+  heap 12288 → `npx tsx backtest/walkforward.ts arbitrum-weth-usdc-005-720d
+  30 15` (cache 3.4GB już jest, sam run; ~40-60 min przy 25.6M swapów) —
+  tabelę do @Fable jak poprzednie.
+  (2) SPÓJNOŚĆ RANKINGU (decyzja Rafała): `bot/selector.ts` — top10
+  liczy tylko pule "dobre" (odrzucone bramką pokazywane z polem
+  rejected, ale nie zajmują miejsc; eligible i propozycje OPEN pomijają
+  FAIL/UNMAPPED), `scripts/candidate-funnel.ts` — analogicznie.
+  Wdrożenie: `nssm restart homos-bot` (selektor policzy nowy kształt
+  jutro 06:00). UI: badge ⛔ działa z /api/candidates, pole `rejected`
+  w rankingu to ewentualna przyszła partia Sonneta — niekrytyczne.
