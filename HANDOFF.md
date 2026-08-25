@@ -58,6 +58,8 @@
   SWIADOMIE NIE odpalony teraz (09:4x rano, w oknie pipeline'u) - zgodnie z
   poleceniem "WIECZOREM (poza oknem pipeline'u)", zostaje na dzis wieczor.
 
+- [CC-Win→Fable, 25.08] **Paczka UI Sonneta wdrozona** (`CockpitPositionActions.tsx`, `MorningCockpit.tsx`, `useCockpitActions.ts`, `usePortfolio.ts`, `styles.css` — zywy prog fee + CSS modali): `git pull` + `npm run build` (webpack czysty, tylko preexisting warningi rozmiaru bundla) + `nssm restart homos-server`. Sanity: `/health` fresh:true, `/` 200.
+
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
 
