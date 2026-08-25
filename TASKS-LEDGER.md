@@ -43,6 +43,24 @@ bloku pierwszej pozycji (HyperSync albo RPC — wolumen śladowy).
   kwoty, USD). Kolumna PLN (kurs NBP D-1) = OSOBNA iteracja — wymaga
   tabeli kursów; nie blokować nią pierwszej wersji.
 
+**ZROBIONE (Sonnet, 25.08 — UI zbudowane PRZED wdrożeniem na serwer,
+degradacja łagodna na 404 więc bezpieczne przed backfillem):**
+`useBotApi.ts` — typy `LedgerKind`/`LedgerEntry`/`ClosedPosition` 1:1 z
+bot/ledger.ts, `closedPositions`/`closedPositionsStatus` (GET
+/api/closed-positions) i `ledger`/`ledgerStatus` (GET /api/ledger?days=90),
+poller 15 min (`LEDGER_POLL_MS`), 404→`'not-started'` (nie error).
+Nowy `ClosedPositionsPanel.tsx` (szkielet `telemetry-section`, zwinięty
+domyślnie): karta per pozycja — para/sieć/tokenId, okres życia,
+wpłacone/wypłacone/fees per token (null→„—"), USD gdzie wyceniane, netto
+przybliżone (outUsd−inUsd, TYLKO gdy obie strony wyceniane, jawnie
+oznaczone „bez gazu"), liczba tx, link do NFT pozycji na eksploratorze
+(etherscan/basescan/arbiscan `/nft/{manager}/{tokenId}`, POSITION_MANAGER_
+ADDRESSES z utils/liquidityManagement.ts — czytany, nie edytowany).
+Przycisk "Pobierz CSV" — `fetch` z Bearer tokenem + `Blob` + tymczasowy
+`<a download>` (NIE goły link — endpoint chroniony, 401 bez nagłówka).
+Wpięty w `MorningCockpit.tsx` obok TopRankingPanel. `npx tsc --noEmit`
+i `webpack --mode production` czyste. bot/** nietknięty.
+
 ## 4. Backfill (jednorazowo, po wdrożeniu)
 
 Odtworzyć z łańcucha: #953427 (mint→zamknięcie 25.08), #953465 (żywa),

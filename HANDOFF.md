@@ -18,30 +18,11 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 25.08 10:0x] **Follow-upy po diagnozie backtest-run — raport:**
-  (a) HomosPipeline → RU SYSTEM zrobione (za zgodą Rafała; node jest w
-  systemowym PATH, pipeline nie potrzebuje gita) — zweryfikowane
-  `schtasks /Query`: Run As User=SYSTEM, Logon Mode=Interactive/Background.
-  ŚWIADOMIE NIE odpalony testowo teraz (10:0x rano) — pełny przebieg
-  trwałby godzinami i kolidowałby z wieczornym odrobieniem backtestu (punkt
-  d); weryfikacja naturalnie jutro o 05:30 (SYSTEM, bez okna).
-  HomosMorningReport ZOSTAWIONY interactive (potrzebuje gita/push, konto elo
-  bez zapisanego hasła — nie zmieniam hasła konta bez wiedzy Rafała).
-  Decyzja do Ciebie/Rafała: albo hasło dla elo + `/RP`, albo przenieść push
-  raportu na inny mechanizm dostępny dla SYSTEM (np. deploy key). Zostaje w
-  kolejce.
-  (b) Zasilanie: `powercfg /query` — AC (podłączony do prądu) ma
-  STANDBYIDLE=0 (nigdy nie usypia). Maszyna NIE usypia w oknie 05:00–08:00
-  na zasilaniu sieciowym — potwierdza to wersję Rafała (zamknięte okno
-  konsoli, nie sen) jako jedyną przyczynę.
-  (c) Peak RSS: `backtest/run.ts` — nowy `PEAK_RSS_FILE` =
-  `data/backtest-peak-rss.txt`, nadpisywany co 60s w trakcie + raz na końcu
-  (znacznik "w trakcie"/"zakończone" + ISO timestamp), więc liczba przeżyje
-  śmierć procesu. tsc czysty (poza preexisting observer.ts). Commit
-  osobno, patrz historia gita.
-  (d) WIECZORNE kroki (backtest catch-up + funnel backfill) NIE odpalone —
-  za wcześnie (10:0x rano, w oknie pipeline'u/dnia roboczego). Zostają w
-  kolejce CC-Win na wieczór.
+(Skrzynka pusta — raport follow-upów CC-Win z 25.08 10:0x odebrany:
+HomosPipeline jako SYSTEM ✓, powercfg bez uśpień ✓ [przyczyną było
+tylko zamknięte okno], peak RSS co 60 s do pliku ✓. Otwarta decyzja
+Rafała: HomosMorningReport w tle wymaga hasła konta elo + /RP ALBO
+deploy-key dla SYSTEM — do rozstrzygnięcia, wpis został u CC-Win.)
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
@@ -51,8 +32,8 @@
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-(Skrzynka pusta — druga paczka UI dnia Sonneta [Zamknij: postęp 2 kroki
-+ toast przypięty do karty] odebrana i wypchnięta.)
+(Skrzynka pusta — backend księgi transakcji [bot/ledger.ts] i paczka
+UI Sonneta "Zamknięte pozycje" + CSV odebrane i wypchnięte.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
 - [Fable→CC-Win, 25.08 — WIECZOREM] **Odrobienie backtestu + backfill lejka**
@@ -74,10 +55,24 @@
      `.bot/candidate-verdicts.json`; jutrzejszy raport 07:30 ma mieć
      sekcję "Kandydaci". Steady-state (1 kandydat/noc w pipeline) rusza
      sam od najbliższego przebiegu.
-- [Fable→CC-Win, wstrzymane] Okna konsoli z Harmonogramu — teraz, gdy raport
-  poranny udowodnił, że wypycha się sam (67ee89f, 08:45:02), możemy to
-  ruszyć. Ale najpierw chcę zobaczyć, czy jutrzejszy ranking się zmieni
-  (test hipotezy o `fetch-llama-history`) — nie chcę mieszać dwóch zmian
-  w automatach w jednym dniu.
+  3. W wieczornej paczce od CC-Mac jest też KSIĘGA TRANSAKCJI (nowy
+     `bot/ledger.ts` + wpięcie w observer i server — TASKS-LEDGER.md):
+     po pullu restart homos-bot ORAZ homos-server. Weryfikacja: w
+     observer.log linie `ledger …`; backfill 400d idzie segmentami po
+     60 s/cykl (5 min) — komplet może zająć kilka–kilkanaście cykli,
+     to normalne. Po dojściu: `GET /api/closed-positions` ma pokazać
+     #953427 (mainnet, zamknięta 25.08), `GET /api/ledger.csv` zwrócić
+     zdarzenia (m.in. dzisiejsze collecty z Rabby). Segmenty ponawiają
+     się same — pisz do @Fable tylko, gdy jedna sieć stoi >1h.
+- [Fable→CC-Win, 25.08 — DECYZJA RAFAŁA] Konto elo MA hasło (cały czas
+  miało — wcześniejsze wnioskowanie z ostrzeżenia schtasks było błędne).
+  Przestaw HomosMorningReport na "run whether user is logged on or not":
+  `schtasks /Change /TN HomosMorningReport /RU elo /RP` — hasło przy
+  prompcie WPISUJE RAFAŁ (nie zapisujemy go w żadnym pliku/logu/skrypcie).
+  Po zmianie test: `schtasks /Run /TN HomosMorningReport` z REPORT_PUSH=0
+  w env zadania NIE zadziała (env jest w skrypcie) — zamiast tego po
+  prostu sprawdź, że zadanie kończy z LastTaskResult=0 i commit raportu
+  powstał (dzisiejszy plik już istnieje, więc "nic do commitowania" =
+  też sukces). Od jutra oba automaty bez okien.
 - [Fable→CC-Win, czeka na Rafała] Test fizycznego reboota (krok 6
   TASKS-WINDOWS-ADDENDUM).

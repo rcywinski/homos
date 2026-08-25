@@ -2355,6 +2355,25 @@ wyglądać, modal ma wyjaśniać kiedy czerwona symulacja jest bezpieczna.
 Do potwierdzenia sanity: #953427 zniknęła, saldo USDC +~2.30.
 Pyłek #953465 ($95) wciąż otwarty — do zamknięcia tą samą ścieżką
 przy tanim gazie (pkt 6 agendy).
+
+~wieczór — KSIĘGA TRANSAKCJI ZBUDOWANA (decyzja Rafała "nie czekajmy
+do jutra"; realizacja TASKS-LEDGER.md §2+§3, tsc czysty poza
+preexisting): NOWY `bot/ledger.ts` — indeks zdarzeń NFT managera
+(Transfer/Increase/Decrease/Collect) dla tokenIdów WATCH_ADDRESS,
+3 sieci; topichy keccak w runtime (nie z pamięci); eth_getLogs z
+adaptacyjnym dzieleniem zakresu; backfill 400d (LEDGER_BACKFILL_DAYS)
+wznawialny segmentami z budżetem 60 s/cykl; metadane tokenIdów przez
+positions() z fallbackiem na blok historyczny (spalone NFT);
+`.bot/tx-ledger.ndjson` (append-only, czytelnicy deduplikują po
+txHash+logIndex) + `.bot/closed-positions.json` (podsumowania: in/out/
+fees=collect−decrease per noga, daty, txCount). Wycena USD v1 =
+stable 1:1 + WETH×kurs z chwili INDEKSOWANIA (backfill → usd:null,
+uczciwie; kurs historyczny + PLN/NBP = iteracja 2). Wpięcie:
+observer co 5 min (runLedger, nigdy nie kładzie cyklu), server —
+GET /api/ledger?days, /api/closed-positions, /api/ledger.csv
+(eksport pod podatki). UI "Zamknięte pozycje" = przyszła partia
+Sonneta (TASKS-LEDGER §3). Werdykt sanity po wdrożeniu: #953427 ma
+się pojawić w closed-positions z dzisiejszą datą zamknięcia.
 Fałszywy alarm: "luka observer.log 19→25.08" — żywy log ma komplet
 wpisów; myląca sekcja raportu czytała snapshot, a moje porównanie
 oparło się o nią (katalog .bot-live-backup z 17.08 to stary zrzut).
