@@ -2244,3 +2244,35 @@ projektem. (4) CC-Win dołożył instrumentację Peak RSS do backtest/run.ts
 (realizacja mojego wpisu z 22.08; pierwszy pomiar w raporcie 25.08).
 NA JUTRO: brief odbiera ranking (≠ 24.08?) + Peak RSS; potem
 candidate-funnel.ts. Decyzje: przegląd 26.08 (σ → k → hUp → kapitał).
+
+### 2026-08-25 08:1x — Brief poranny (Fable) — on-ramp Kraken ZALICZONY E2E; raport przesunięty 08:45→07:30
+(1) ON-RAMP DOMKNIĘTY (zgłoszenie Rafała + screeny Kraken/Rabby): pełna
+trasa przetestowana żywcem 24.08 — konto PL EUR → **SEPA** (nie SWIFT,
+korekta wpisu 24.08; kwota testu 100 €, nie $200) → Kraken → USDC →
+wypłata na Base → Rabby. LICZBY: SEPA 0 zł po stronie banku, wysłany
+i zaksięgowany TEGO SAMEGO dnia (24.08 16:23, parę godzin). Zakup
+„Kup teraz" 20:12: 100,00 € → 113,72 USDC @ 0,8706 €/USDC, opłata
+Kraken 0,99 € wliczona. UWAGA: „bez prowizji" z odczucia Rafała nie
+potwierdza się — przy EURUSD ~1,1658 fair było ~116,58 USDC, dostał
+113,72 → koszt zakupu **~2,45%** (0,85% opłata + ~1,6% spread w cenie
+Kup-teraz). Wypłata Base: 113,72 − 1,00 opłaty = **112,72 USDC doszło**
+na Rabby (tx 0x638e4c…). RAZEM trasa: 100 € (≈116,58 USD) → 112,72 USDC
+= **~3,3% na kwocie testowej** (vs wcześniejsza estymata 0,6–0,8%).
+Struktura kosztu: 1 USDC stałej opłaty wypłaty znika przy $5–25k, ale
+~2,45% Kup-teraz NIE — WNIOSEK do agendy 26.08 pkt 8: właściwy zakup
+przez **Kraken Pro spot EUR/USDC** (darmowy tryb; maker 0,25% / taker
+0,40% na starcie) zamiast Kup teraz; wtedy trasa ~0,3–0,5%. Zrobić
+drugi mały test przez Pro przed przelewem właściwego kapitału.
+Pytanie Rafała o **Kraken+** (sub 49,99 €/rok): to NIE jest Kraken Pro —
+znosi tylko opłaty prostego Buy/Sell/Convert (do $10k/mies.), NIE znosi
+spreadu i NIE obejmuje spotu na Pro → bezużyteczny dla trasy on-ramp;
+ew. wartość: darmowy raport podatkowy Koinly do 800 tx (trial 30 dni).
+(2) GODZINA RAPORTU — decyzja Rafała: schtask 08:45 → **07:30**. Powód:
+Rafał siada do komputera ~08:00, raport ma czekać gotowy. Dane są dużo
+wcześniej (backtest kończy ~06:23, ranking selektora ~06:06), 08:45 było
+arbitralnym zapasem. Zadanie u CC-Win (HANDOFF). Do sprawdzenia przy
+okazji: co steruje godziną wysyłki propozycji Telegram (dziś przyszły
+tuż po 08:00) i czy też da się wcześniej.
+(3) Raport 25.08 o 08:15 jeszcze nie istniał — NIE awaria, schtask
+wciąż na 08:45 (dziś ostatni raz). Odbiór rankingu (≠24.08? = formalne
+domknięcie fixu llama) + Peak RSS po jego przyjściu.

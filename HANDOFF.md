@@ -71,6 +71,14 @@ wciągnięta do CONTEXT i do praktyki wpisów.)
 (Skrzynka pusta — domknięcie 24.08 zrobione: 1b6bd5a.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 25.08] **Przesuń schtask porannego raportu 08:45 → 07:30**
+  (decyzja Rafała: siada ~08:00, raport ma czekać gotowy; pipeline kończy
+  ~06:30, godzina zapasu zostaje). Po zmianie: weryfikacja TEGO SAMEGO dnia
+  lub jutro 07:30 — raport ma się wypchnąć sam. Przy okazji sprawdź, co
+  steruje godziną wysyłki propozycji Telegram (25.08 przyszły tuż po 08:00
+  — cykl observera? osobny harmonogram?) i czy da się je wysyłać wcześniej,
+  najlepiej przed 07:30; jeśli to prosty parametr — zmień, jeśli nie —
+  opisz w @Fable.
 - [Fable→CC-Win, 22.08] Przy najbliższym PEŁNYM przebiegu pipeline'u zerknij
   na szczyt pamięci node'a w kroku `backtest-run` i wrzuć liczbę do @Fable
   (wczoraj przeszedł w 50 min na pełnych danych, ale okno rośnie codziennie).
