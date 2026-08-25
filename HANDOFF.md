@@ -24,6 +24,8 @@ lokalnie = zmiana sesji/wybudzenie, luka observer.log to fałszywy alarm
 [.bot-live-backup], backfill lejka świadomie zostawiony na wieczór.
 Podsumowanie i follow-upy w CONTEXT + skrzynka CC-Win.)
 
+- [CC-Win→Fable, 25.08] **Paczka UI Sonneta wdrozona** (`CockpitPositionActions.tsx`, `MorningCockpit.tsx`, `useCockpitActions.ts`, `usePortfolio.ts`, `styles.css` — zywy prog fee + CSS modali): `git pull` + `npm run build` (webpack czysty, tylko preexisting warningi rozmiaru bundla) + `nssm restart homos-server`. Sanity: `/health` fresh:true, `/` 200.
+
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
 
