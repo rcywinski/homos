@@ -18,11 +18,10 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — raport 720d odebrany: fetch 4/4, walkforward 3/4,
-ŻADNA strategia nie przechodzi bramki na oknie 2-letnim, reżim up
-systematycznie najgorszy — KLUCZOWE na przegląd 26.08 [pkt 12+13];
-crash arbitrum = limit Set 16.7M → fix per-blok w load.ts, wpis u
-CC-Win. Restarty po paczce księgi potwierdzone.)
+(Skrzynka pusta — raport Agenta B odebrany: paczka nocna wdrożona i
+zweryfikowana [paper inRange OK, ranking top10-dobrych przeliczony z
+rejected:true, stats zamarzały CICHO bez linii błędu — potwierdza
+diagnozę]. Czekamy tylko na Agenta A: y2/11 strategii × 4 pule 720d.)
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
@@ -37,10 +36,19 @@ fix paper inRange ze świeżego slot0] odebrana i wypchnięta.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
 > PODZIAŁ RÓL 25.08 noc (Rafał odpala DRUGIEGO agenta CC-Win):
-> **Agent A (obecny)** = TYLKO liczenie: dokończ bieżący arbitrum-720d
-> (stary zestaw y2/8 strategii — dane porównywalne, zostawić); po
-> pullu paczki nocnej przeliczyć WSZYSTKIE 4 pule zestawem 11 strategii
-> (wpis niżej). ZAWSZE jeden walkforward naraz (RAM!).
+> **Agent A (obecny)** = TYLKO liczenie, W PEŁNI AUTOMATYCZNIE (bez
+> pytania Rafała o zgodę między krokami): dokończ bieżący
+> arbitrum-720d (stary zestaw — dane porównywalne, zostawić), a potem
+> OD RAZU, jeden po drugim: `WF_SET=y2` + `NODE_OPTIONS=
+> --max-old-space-size=12288` → `npx tsx backtest/walkforward.ts <id>
+> 30 15` dla base-weth-usdc-030-720d → mainnet-usdc-weth-005-720d →
+> base-cbbtc-weth-005-720d → arbitrum-weth-usdc-005-720d (zestaw 11
+> strategii z upX=5% JEST już na dysku — pull zrobił B [47770f8], NIE
+> rób własnego pulla, git należy do B). ZAWSZE jeden walkforward naraz
+> (RAM!). Na koniec: zbiorczy raport tabel (śr./%wygr./worst per
+> strategia per pula + rozbicie up/down/flat; szczególnie czy upX
+> ratuje okna UP nie psując flat/down) do @Fable — commit raportu
+> zrób dopiero, gdy B nie jest w trakcie operacji gitowych.
 > **Agent B (nowy)** = TYLKO wdrożenia, zero ciężkich procesów:
 > po pushu CC-Mac → `git pull` (przedtem `git status`; jeśli wyniki
 > A niezacommitowane — najpierw commit "results: ..." albo autostash)

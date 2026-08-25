@@ -2502,6 +2502,17 @@ bezpiecznik trendu — pomysł Rafała "LP tylko bez trendu w OBIE
 strony") dopisany do strategies.ts + 3 warianty upX=5% w y2; CC-Win
 przelicza WSZYSTKIE 4 pule 720d nocą (11 strategii) — wyniki na
 przegląd.
+~noc (2) — AGENT B (drugi CC-Win, podział ról A=liczenie/B=wdrożenia)
+WDROŻYŁ PACZKĘ NOCNĄ: restart homos-bot (ręcznie Rafał), paper
+inRange naprawione (outOfRangeSince:null wszędzie — karty wróciły do
+prawdy), ranking przeliczony wymuszeniem: top10-dobrych działa
+(rejected:true na miejscach wg APY, lista urosła do 15 wierszy;
+"zwalidowana" WETH-CBBTC 0.3% czeka na decyzję — PASS≠auto-dodanie).
+WAŻNY szczegół z weryfikacji: stats podczas awarii RPC zamarzały
+CICHO — żadnej linii "stats failed" w logu (błąd nie wyrzucał, po
+prostu lastTick przestawał się ruszać). Follow-up na później: log/
+flaga staleness statystyk (wykrywanie zamrożenia, nie tylko błędu).
+Zostało na noc: Agent A liczy y2/11 strategii × 4 pule 720d.
 BILANS DNIA: łańcuch poranny 2h wcześniej (3 automaty
 bez okien, przeżyły reboot), auto-lejek zbudowany+backfill zaliczony,
 księga transakcji od zera do zweryfikowanej E2E (2 iteracje fixów),
