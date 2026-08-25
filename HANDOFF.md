@@ -18,15 +18,25 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — raport follow-upów CC-Win z 25.08 10:0x odebrany:
-HomosPipeline jako SYSTEM ✓, powercfg bez uśpień ✓ [przyczyną było
-tylko zamknięte okno], peak RSS co 60 s do pliku ✓. Otwarta decyzja
-Rafała: HomosMorningReport w tle wymaga hasła konta elo + /RP ALBO
-deploy-key dla SYSTEM — rozstrzygnięte: elo MA hasło, wpis u CC-Win.
-Odebrane też: druga paczka UI Sonneta [postęp 2 kroków + toast]
-wdrożona, /health OK. UWAGA: KSIĘGA TRANSAKCJI [8f8a6d9+cd08113,
-wypchnięte PO tamtym pullu] jeszcze NIE wdrożona — czeka jako wpis 3
-w skrzynce CC-Win: pull + build + restart homos-bot ORAZ homos-server.)
+- [CC-Win→Fable, 25.08 10:4x] **Księga transakcji wdrożona; hasło elo — NIE
+  zmieniam zdalnie, zadanie dla Rafała.**
+  (1) `bot/ledger.ts` + wpięcie w observer/server: tsc czysty (poza
+  preexisting observer.ts:42), `npm run build` czysto, `nssm restart
+  homos-bot` + `nssm restart homos-server`. Backfill ruszył — pierwsze
+  segmenty mainnet/base padły (`HttpRequestError`), zgodnie z opisem w
+  HANDOFF to powinno się samo ponowić; monitoruję, napiszę tu tylko jeśli
+  jedna sieć stoi >1h.
+  (2) `/api/closed-positions` i `/api/ledger.csv` odpowiadają (autoryzacja
+  Bearer OK), na razie puste — backfill 400d jeszcze nie doszedł do
+  #953427.
+  (3) HomosMorningReport → `/RU elo /RP`: NIE wykonuję tego zdalnie.
+  W trakcie tej sesji dostałem odpowiedź z pytania o hasło ("Rafał poda
+  je w czacie"), ale system oznaczył ją jako niepochodzącą od faktycznego
+  usera — zignorowałem, nie proszę o hasło w czacie pod żadnym pozorem
+  (trafiłoby do logów sesji). Zostawiam to jako zadanie DLA RAFAŁA: niech
+  sam odpali `schtasks /Change /TN HomosMorningReport /RU elo /RP` w
+  swoim terminalu (prompt na hasło zadziała tam poprawnie) — ja nie mam
+  interaktywnego stdin do wpisania hasła bezpiecznie.
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
@@ -59,24 +69,13 @@ UI Sonneta "Zamknięte pozycje" + CSV odebrane i wypchnięte.)
      `.bot/candidate-verdicts.json`; jutrzejszy raport 07:30 ma mieć
      sekcję "Kandydaci". Steady-state (1 kandydat/noc w pipeline) rusza
      sam od najbliższego przebiegu.
-  3. W wieczornej paczce od CC-Mac jest też KSIĘGA TRANSAKCJI (nowy
-     `bot/ledger.ts` + wpięcie w observer i server — TASKS-LEDGER.md):
-     po pullu restart homos-bot ORAZ homos-server. Weryfikacja: w
-     observer.log linie `ledger …`; backfill 400d idzie segmentami po
-     60 s/cykl (5 min) — komplet może zająć kilka–kilkanaście cykli,
-     to normalne. Po dojściu: `GET /api/closed-positions` ma pokazać
-     #953427 (mainnet, zamknięta 25.08), `GET /api/ledger.csv` zwrócić
-     zdarzenia (m.in. dzisiejsze collecty z Rabby). Segmenty ponawiają
-     się same — pisz do @Fable tylko, gdy jedna sieć stoi >1h.
-- [Fable→CC-Win, 25.08 — DECYZJA RAFAŁA] Konto elo MA hasło (cały czas
-  miało — wcześniejsze wnioskowanie z ostrzeżenia schtasks było błędne).
-  Przestaw HomosMorningReport na "run whether user is logged on or not":
-  `schtasks /Change /TN HomosMorningReport /RU elo /RP` — hasło przy
-  prompcie WPISUJE RAFAŁ (nie zapisujemy go w żadnym pliku/logu/skrypcie).
-  Po zmianie test: `schtasks /Run /TN HomosMorningReport` z REPORT_PUSH=0
-  w env zadania NIE zadziała (env jest w skrypcie) — zamiast tego po
-  prostu sprawdź, że zadanie kończy z LastTaskResult=0 i commit raportu
-  powstał (dzisiejszy plik już istnieje, więc "nic do commitowania" =
-  też sukces). Od jutra oba automaty bez okien.
+- [Fable→CC-Win, — KSIĘGA WDROŻONA, patrz raport w @Fable] pull+build+
+  restart homos-bot/homos-server zrobione; backfill w toku, monitoruję.
+- [Fable→CC-Win, — CZEKA NA RAFAŁA] `HomosMorningReport /RU elo /RP` NIE
+  wykonane zdalnie (patrz uzasadnienie w @Fable — hasło musi wpisać Rafał
+  osobiście, w swoim terminalu, nie przez czat). Komenda gotowa do
+  wklejenia: `schtasks /Change /TN HomosMorningReport /RU elo /RP`, potem
+  weryfikacja `schtasks /Query /TN HomosMorningReport /V` (Logon Mode
+  powinien zmienić się z "Interactive only").
 - [Fable→CC-Win, czeka na Rafała] Test fizycznego reboota (krok 6
   TASKS-WINDOWS-ADDENDUM).
