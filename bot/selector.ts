@@ -18,6 +18,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { BOT_POOLS, BotPool, STATE_DIR } from './config';
+import { readVerdicts } from './candidates';
 
 const ROOT = path.join(__dirname, '..');
 const LLAMA = path.join(ROOT, 'data', 'llama');
@@ -229,7 +230,17 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
     return;
   }
 
-  const eligible = ranking.filter((p) => p.streak >= PERSIST_DAYS).slice(0, TOP_N);
+  // Werdykty lejka (spójność rankingu — decyzja Rafała 25.08): pula z
+  // werdyktem FAIL/UNMAPPED nie zajmuje miejsca w topie, nie jest eligible
+  // i nie dostaje propozycji OPEN — bramka walkforward jest nadrzędna wobec
+  // headline APY (6/7 zbadanych kandydatów topu odpadło).
+  const verdictBy = new Map(readVerdicts(path.join(ROOT, STATE_DIR)).map((v) => [v.llamaPool, v.verdict]));
+  const isRejected = (uuid: string) => {
+    const v = verdictBy.get(uuid);
+    return v === 'FAIL' || v === 'UNMAPPED';
+  };
+
+  const eligible = ranking.filter((p) => p.streak >= PERSIST_DAYS && !isRejected(p.pool)).slice(0, TOP_N);
 
   // TOP 10 dnia → .bot/selector-ranking.json (sekcja "obserwowane do wejścia"
   // w UI + przyszły import do SQLite selector_ranking; decyzja Rafała 18.08).
@@ -240,15 +251,29 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
         day: today(),
         generatedAt: new Date().toISOString(),
         criteria: { window: `${RANK_WINDOW_D}d śr. apyBase`, persistDays: PERSIST_DAYS, minTvlUsd: MIN_TVL, filter: 'uniswap-v3, majors, ETH/Base/Arb' },
-        rows: ranking.slice(0, 10).map((p, i) => ({
-          rank: i + 1,
-          symbol: p.symbol, chain: p.chain, poolMeta: p.poolMeta,
-          apy7d: +p.apy7d.toFixed(2), streak: p.streak,
-          eligible: p.streak >= PERSIST_DAYS,
-          tvlUsd: Math.round(p.tvlUsd),
-          botPoolId: p.botPool?.id ?? null, // w konfiguracji bota = wykonywalna od ręki
-          llamaUuid: p.pool,
-        })),
+        rows: (() => {
+          // "TOP10 DOBRYCH" (Rafał 25.08): odrzucone bramką są pokazywane
+          // na swoich miejscach wg APY (badge ⛔ w UI), ale NIE zajmują puli
+          // dziesięciu — lista rośnie, aż uzbiera 10 pul o statusie
+          // niezbadana / zwalidowana / gra-w-bocie.
+          const shown: RankedPool[] = [];
+          let good = 0;
+          for (const p of ranking) {
+            shown.push(p);
+            if (!isRejected(p.pool)) good++;
+            if (good >= 10) break;
+          }
+          return shown.map((p, i) => ({
+            rank: i + 1,
+            symbol: p.symbol, chain: p.chain, poolMeta: p.poolMeta,
+            apy7d: +p.apy7d.toFixed(2), streak: p.streak,
+            eligible: p.streak >= PERSIST_DAYS && !isRejected(p.pool),
+            rejected: isRejected(p.pool),
+            tvlUsd: Math.round(p.tvlUsd),
+            botPoolId: p.botPool?.id ?? null, // w konfiguracji bota = wykonywalna od ręki
+            llamaUuid: p.pool,
+          }));
+        })(),
       }, null, 2)
     );
   } catch (e) {

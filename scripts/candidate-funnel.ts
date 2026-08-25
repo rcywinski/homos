@@ -228,7 +228,21 @@ function buildQueue(): { queue: QueueItem[]; deferred: QueueItem[]; universeAgeH
     } else queue.push(item);
   };
 
-  for (const p of ranked.slice(0, TOP_N)) if ((streaks[p.pool] || 0) >= PERSIST_DAYS) consider(p, `top${TOP_N} mediany 7d (streak ${streaks[p.pool]})`);
+  // "TOP10 DOBRYCH" (Rafał 25.08): odrzucone werdyktem nie zajmują miejsc —
+  // skanujemy ranking, aż zbierze się TOP_N pul bez FAIL/UNMAPPED (lejek
+  // bada więc też pule, które wskoczyły w miejsce odrzuconych).
+  const rejected = (uuid: string): boolean => {
+    const v = byId.get(uuid);
+    return !!v && (v.verdict === 'FAIL' || v.verdict === 'UNMAPPED') && (!v.algoVersion || v.algoVersion === ALGO_VERSION);
+  };
+  let good = 0;
+  for (const p of ranked) {
+    if (!rejected(p.pool)) {
+      good++;
+      if ((streaks[p.pool] || 0) >= PERSIST_DAYS) consider(p, `top${TOP_N} dobrych wg mediany 7d (streak ${streaks[p.pool]})`);
+    }
+    if (good >= TOP_N) break;
+  }
   for (const p of ranked) if (openProposals.has(p.pool)) consider(p, 'propozycja OPEN spoza BOT_POOLS');
 
   // FIFO wg persystencji, potem TVL (TASKS-FUNNEL §2)
