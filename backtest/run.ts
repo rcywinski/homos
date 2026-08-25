@@ -43,6 +43,11 @@ function svgChart(results: RunResult[], w = 900, h = 320): string {
 }
 
 (async () => {
+  let peakRssMb = 0;
+  const memTimer = setInterval(() => {
+    peakRssMb = Math.max(peakRssMb, process.memoryUsage().rss / 1024 / 1024);
+  }, 2000);
+
   fs.mkdirSync(OUT, { recursive: true });
   const only = process.argv[2];
   const ids = fs
@@ -117,4 +122,8 @@ function svgChart(results: RunResult[], w = 900, h = 320): string {
   html += '</body></html>';
   fs.writeFileSync(path.join(OUT, 'report.html'), html);
   console.log(`\nRaport: backtest/results/report.html`);
+
+  clearInterval(memTimer);
+  peakRssMb = Math.max(peakRssMb, process.memoryUsage().rss / 1024 / 1024);
+  console.log(`Peak RSS: ${peakRssMb.toFixed(0)} MB`);
 })();
