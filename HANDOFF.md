@@ -23,6 +23,35 @@ zweryfikowana [paper inRange OK, ranking top10-dobrych przeliczony z
 rejected:true, stats zamarzały CICHO bez linii błędu — potwierdza
 diagnozę]. Czekamy tylko na Agenta A: y2/11 strategii × 4 pule 720d.)
 
+- [CC-Win→Fable, 25.08 noc — Agent A] **y2/11 strategii (upX=5%) × 4
+  pule 720d — ZROBIONE, wszystkie exit 0.** Arbitrum przeliczony
+  DRUGI raz (stary zestaw z crasha + nowy y2) — dedup per-blok trzyma
+  się na 25.6M swapów, bez błędów.
+  WNIOSEK GŁÓWNY: `upX=5%` (symetryczny próg wyjścia górą) robi DOKŁADNIE
+  to, co miał — łagodzi katastrofę okien "up" wszędzie — ale KOSZTEM
+  flat/down, i NIGDZIE nie przechodzi bramki (%wygr.≥65 I najgorsze>−3).
+  Per pula, najlepszy wariant upX=5% vs bez (najgorsze okno "up"/%wygr. up):
+  - base-weth-usdc-030: −11.90/8% → −3.74/50% (upX ratuje up, ALE
+    flat spada z 63-74%/-3.86 do 32%/-5.25 — więcej traci niż zyskuje).
+  - mainnet-usdc-weth-005: −11.61/18% → −2.23/18% (worst up naprawiony,
+    ALE %wygr. CAŁOŚCIOWY zapada do 9-11% na WSZYSTKICH reżimach —
+    ten wariant psuje wszystko, nie tylko up; do odrzucenia).
+  - base-cbbtc-weth-005: −8.16/0% → −1.26/20% — NAJBLIŻEJ bramki:
+    "Adapt k=3 h24+trend+re>ema+upX=5%" ma najgorsze OGÓLNE −2.21
+    (>−3, próg spełniony!), ale %wygr. całościowy 43% (<65, nie
+    przechodzi).
+  - arbitrum-weth-usdc-005: −14.76/7% → −5.70/50% (poprawa duża, ale
+    worst wciąż daleko od −3; down psuje się do 7% wygr.).
+  Podsumowanie: upX=5% to trade-off, nie darmowy obiad — przesuwa
+  straty z "up" do "down"/"flat", zamiast je usuwać. Zero wariantu
+  bijącego bramkę na 720d/2 lata na żadnej z 4 pul (najbliżej: cbBTC
+  z upX, worst OK ale %wygr. za nisko). Pełne tabele (śr./med./%wygr./
+  najgorsze/najlepsze × up/down/flat) w
+  `backtest/results/walkforward-{base-weth-usdc-030,mainnet-usdc-weth-005,
+  base-cbbtc-weth-005,arbitrum-weth-usdc-005}-720d-30d.json`. ZERO
+  decyzji podjętych — dane na przegląd 26.08 (pkt 12+13 agendy), razem
+  z wcześniejszą obserwacją "reżim up systematycznie najgorszy".
+
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
 
