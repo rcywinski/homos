@@ -516,7 +516,10 @@ async function refreshStats() {
         const p = BOT_POOLS.find((b) => b.id === poolId);
         const lv = p ? live[poolId] : undefined;
         if (!p || !lv) return null;
-        return { stats: lv.stats, prices: legPrices(p), trendDown: lv.trendDown ?? false };
+        // tick ze slot0 (60 s, refreshPrices) OSOBNO od stats: fix 25.08 —
+        // przy awarii RPC stats zamarzały i paper widział "poza zakresem"
+        // ze starego lastTick, mimo świeżej ceny w zakresie
+        return { stats: lv.stats, tick: typeof lv.tick === 'number' ? lv.tick : null, prices: legPrices(p), trendDown: lv.trendDown ?? false };
       },
     });
   } catch (e) {

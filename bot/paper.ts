@@ -103,7 +103,7 @@ export interface PaperCtx {
   log: (m: string) => void;
   telegram: (m: string) => Promise<void> | void;
   /** bieżące dane puli: statystyki doradcy + ceny nóg + sygnał trendu */
-  getPool: (poolId: string) => { stats: PoolStats | null; prices: LegPrices | null; trendDown: boolean } | null;
+  getPool: (poolId: string) => { stats: PoolStats | null; tick?: number | null; prices: LegPrices | null; trendDown: boolean } | null;
 }
 
 const load = (): PaperState => {
@@ -200,8 +200,13 @@ export function paperTick(ctx: PaperCtx) {
         continue;
       }
 
-      const inRange = pos.status === 'open' && lv.stats
-        ? lv.stats.lastTick >= pos.tickLower! && lv.stats.lastTick < pos.tickUpper!
+      // FIX 25.08 (zgłoszenie Rafała: "poza zakresem mimo że w zakresie"):
+      // źródłem prawdy o zakresie jest ŚWIEŻY tick ze slot0 (60 s), nie
+      // stats.lastTick — stats przy awarii RPC (llamarpc 521, 25.08)
+      // zamarzają na godziny i inRange kłamał ze starego ticka.
+      const curTick = lv.tick ?? lv.stats?.lastTick ?? null;
+      const inRange = pos.status === 'open' && curTick !== null
+        ? curTick >= pos.tickLower! && curTick < pos.tickUpper!
         : false;
 
       // FEES: akrecja za miniony cykl (tylko w zakresie) — formuła doradcy
