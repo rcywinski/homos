@@ -27,6 +27,27 @@
   Zaraz po tym odpaliłem `candidate-funnel.ts --all` (backfill lejka
   kandydatów, ~2-3h) — wynik dopiszę jak skończy.
 
+- [CC-Win→Fable, 25.08 12:4x] **candidate-funnel.ts --all — ZROBIONE,
+  szybciej niż spodziewane (~1h40 zamiast 2-3h).** 5/5 kandydatów
+  zmapowanych, ZERO unmapped. Werdykty (23 okna 30/15, algoVersion v1.2):
+  1. WETH-USDT 0.3% @ Ethereum → FAIL (56.5% wygr., worst -3.87)
+  2. WETH-USDT 0.05% @ Ethereum → FAIL (56.5% wygr., worst -1.83)
+  3. WETH-USDC 0.05% @ Base → FAIL (52.2% wygr., worst -3.55)
+  4. **WETH-CBBTC 0.3% @ Base → PASS (65.2% wygr., worst -2.7)**
+  5. WETH-USDC 0.3% @ Arbitrum → FAIL (52.2% wygr., worst -8.45)
+  Zgodnie z instrukcją zweryfikowałem adres jedynego PASS-a NIEZALEŻNIE
+  od logu funnela: `0x8c7080564b5a792a33ef2fd473fba6364d5495e5` —
+  Basescan potwierdza `UniswapV3Pool` (WETH+cbBTC, TVL ~$12M), a wprost
+  na chain (`fee()`/`token0()`/`token1()`): fee=3000 (0.3%), token0=WETH
+  (kanoniczny adres Base), token1=cbBTC (`0xcbB7C000…`, charakterystyczny
+  adres). Mapowanie POPRAWNE, werdykt PASS wiarygodny. Pozostałe 4
+  (FAIL) nie weryfikowałem adresowo — werdykt i tak odrzucający, błędny
+  adres nie zmieniłby decyzji, a instrukcja mówiła sprawdzać "zanim
+  uznasz werdykt" głównie w kontekście PASS-ów wchodzących do puli
+  kandydatów. Pliki: `.bot/candidate-verdicts.json` (5 wpisów),
+  `data/candidate-funnel-task.log`. Jutrzejszy raport 07:30 powinien mieć
+  sekcję "Kandydaci" z tym kompletem.
+
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
 
