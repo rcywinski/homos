@@ -22,6 +22,7 @@ export const GAS_USD: Record<string, number> = { mainnet: 8, base: 0.08, arbitru
 export const QUOTE_WETH_REF: Record<string, string> = {
   'base-cbbtc-weth-005': 'base-weth-usdc-030',
   'base-cbbtc-weth-005-365d': 'base-weth-usdc-030-365d',
+  'base-cbbtc-weth-005-720d': 'base-weth-usdc-030-720d', // eksperyment 720d (25.08)
   'mainnet-wtao-weth-100': 'mainnet-usdc-weth-005',
   'mainnet-wsteth-weth-001': 'mainnet-usdc-weth-005-365d', // F.B: LST, token1=WETH
 };

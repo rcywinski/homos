@@ -167,8 +167,16 @@ export const volAdaptiveTrend = (opts: {
   /** drugi próg BEZWARUNKOWY (grind spadkowy bez vol-spike'a): sygnał DOWN
    *  także gdy gap < −trendThresh2, niezależnie od bramki vol */
   trendThresh2?: number;
+  /** UP-FALLBACK (pkt 12 DECYZJE-2026-08-26, pomysł Rafała 25.08; tylko
+   *  mode:'exit'): wyjście z zakresu GÓRĄ zostawia LP w 100% quote (bazę
+   *  sprzedał po drodze) — zamiast czekać całą histerezę bez ekspozycji,
+   *  po 1h potwierdzenia przechodzimy na 50/50 HODL (łapiemy betę trendu),
+   *  a do LP wracamy po pełnym hUp od WYJŚCIA z zakresu (mechanizm
+   *  "nie kupuj szczytu" z hUp48 zostaje nienaruszony). */
+  upFallback?: '5050';
 }): Strategy => {
   let outSince: number | null = null;
+  let upCashSince: number | null = null; // czas WYJŚCIA górą, gdy parkujemy 50/50
   let ema: number | null = null;
   let lastTs: number | null = null;
   let down = false;
@@ -238,7 +246,7 @@ export const volAdaptiveTrend = (opts: {
   };
 
   return {
-    name: `Adapt k=${opts.k} h=${(opts.hysteresisSec / 3600).toFixed(0)}h${opts.hysteresisUpSec !== undefined ? `/hUp=${(opts.hysteresisUpSec / 3600).toFixed(0)}h` : ''} + trend(${opts.mode},HL${opts.trendHLDays}d,${(opts.trendThresh * 100).toFixed(0)}%${opts.volGateRatio ? `,vg${opts.volGateRatio}` : ''}${opts.trendThresh2 !== undefined ? `,t2=${(opts.trendThresh2 * 100).toFixed(0)}%` : ''}${opts.reentryAboveEma ? ',re>ema' : ''})`,
+    name: `Adapt k=${opts.k} h=${(opts.hysteresisSec / 3600).toFixed(0)}h${opts.hysteresisUpSec !== undefined ? `/hUp=${(opts.hysteresisUpSec / 3600).toFixed(0)}h` : ''} + trend(${opts.mode},HL${opts.trendHLDays}d,${(opts.trendThresh * 100).toFixed(0)}%${opts.volGateRatio ? `,vg${opts.volGateRatio}` : ''}${opts.trendThresh2 !== undefined ? `,t2=${(opts.trendThresh2 * 100).toFixed(0)}%` : ''}${opts.reentryAboveEma ? ',re>ema' : ''}${opts.upFallback ? ',up→5050' : ''})`,
     init: (ctx) => {
       updateTrend(ctx);
       ctx.openPosition(...rangeAround(ctx, width(ctx)));
@@ -252,9 +260,17 @@ export const volAdaptiveTrend = (opts: {
           exitToHalfHalf(ctx);
           ctx.state.rebalances++;
           outSince = null;
+          upCashSince = null; // bezpiecznik DOWN nadpisuje parking UP
           return;
         }
         if (!down && !p) {
+          // powrót z parkingu 50/50 po wyjściu górą: pełna histereza hUp
+          // liczona od wyjścia z zakresu (jak w wariancie bez fallbacku)
+          if (upCashSince !== null) {
+            const hUp = opts.hysteresisUpSec ?? opts.hysteresisSec;
+            if (ctx.ev.ts - upCashSince < hUp) return;
+            upCashSince = null;
+          }
           enter(ctx);
           ctx.state.rebalances++;
           return;
@@ -271,6 +287,18 @@ export const volAdaptiveTrend = (opts: {
       if (outSince === null) outSince = ctx.ev.ts;
       const outUp = ctx.spec.ethIsToken0 ? ctx.ev.t >= p.hi : ctx.ev.t < p.lo;
       const hSec = outUp ? opts.hysteresisUpSec ?? opts.hysteresisSec : opts.hysteresisSec;
+
+      // UP-FALLBACK: po 1h potwierdzenia wyjścia górą → 50/50 HODL (patrz
+      // opis opcji); powrót do LP obsługuje gałąź mode:'exit' wyżej.
+      if (opts.upFallback && opts.mode === 'exit' && outUp) {
+        if (ctx.ev.ts - outSince >= 3600) {
+          upCashSince = outSince; // hUp liczone od wyjścia z zakresu, nie od swapa
+          exitToHalfHalf(ctx);
+          ctx.state.rebalances++;
+          outSince = null;
+        }
+        return; // w oknie potwierdzenia (<1h) nie robimy nic
+      }
       if (ctx.ev.ts - outSince < hSec) return;
 
       const w = width(ctx);

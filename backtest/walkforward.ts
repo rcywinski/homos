@@ -95,9 +95,27 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
     volAdaptiveTrend({ ...trendBase, mode: 'exit', reentryAboveEma: true }),
     volAdaptiveTrend({ ...trendBase, k: 2, mode: 'exit' }),
   ];
+  // 'y2' (eksperyment 720d, 25.08 — DECYZJE pkt 12+13): baseline'y + zamrożone
+  // profile + kandydat hUp48 + NOWY up→5050 (wyjście górą → parking 50/50
+  // HODL zamiast 100% quote) w obu odmianach. Cel: te same strategie na
+  // oknie z DWOMA dużymi reżimami (bull 24-25 + spadki 25-26).
+  const mkY2 = (): Strategy[] => {
+    const v11 = { ...trendBase, mode: 'exit' as const, reentryAboveEma: true };
+    return [
+      hodl5050, passiveWide,
+      volAdaptive({ k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
+      volAdaptiveTrend(v11), // zamrożony v1.1
+      volAdaptiveTrend({ ...v11, hysteresisUpSec: 48 * 3600 }), // kandydat v1.3 (hUp48)
+      volAdaptiveTrend({ ...v11, upFallback: '5050' }), // pkt 12: up→50/50
+      volAdaptiveTrend({ ...v11, hysteresisUpSec: 48 * 3600, upFallback: '5050' }), // hUp48 + up→50/50
+      volAdaptiveTrend({ ...trendBase, k: 2, mode: 'exit' }), // zamrożony profil cbBTC
+    ];
+  };
   const mkStrategies = (): Strategy[] =>
     process.env.WF_SET === 'hedge'
       ? mkHedge()
+      : process.env.WF_SET === 'y2'
+      ? mkY2()
       : process.env.WF_SET === 'funnel'
       ? mkFunnel()
       : process.env.WF_SET === 'hup'

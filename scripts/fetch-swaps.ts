@@ -172,6 +172,35 @@ export const POOLS: PoolCfg[] = [
     address: '0xe0554a476a092703abdb3ef35c80e0d76d32939f',
     feeBps: 100, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365, // token0=USDC, token1=WETH — zweryfikowane on-chain (getPool z factory)
   },
+  // --- EKSPERYMENT 720d (25.08, decyzja Rafała — DECYZJE pkt 12+13): dwa
+  // duże reżimy (bull 2024-25 + spadki 2025-26) dla pul rdzenia; adresy =
+  // kopie wpisów -365d (te same pule on-chain, szersze okno). Pula młodsza
+  // niż 720d (cbBTC, start ~X.2024) da dane OD POCZĄTKU życia — w raporcie
+  // ZAWSZE podawać faktyczne pokrycie w dniach.
+  {
+    id: 'base-weth-usdc-030-720d',
+    chain: 'base',
+    address: '0x6c561B446416E1A00E8E93E221854d6eA4171372',
+    feeBps: 3000, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 720,
+  },
+  {
+    id: 'mainnet-usdc-weth-005-720d',
+    chain: 'mainnet',
+    address: '0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640',
+    feeBps: 500, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 720,
+  },
+  {
+    id: 'arbitrum-weth-usdc-005-720d',
+    chain: 'arbitrum',
+    address: '0xC6962004f452bE9203591991D15f6b388e09E8D0',
+    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 720,
+  },
+  {
+    id: 'base-cbbtc-weth-005-720d',
+    chain: 'base',
+    address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1',
+    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 8, days: 720, // token0=WETH(d18), token1=cbBTC(d8)
+  },
 ];
 
 // Kolejność ma znaczenie: najpierw endpointy z dostępem do pełnej historii.
