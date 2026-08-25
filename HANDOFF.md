@@ -24,6 +24,50 @@
   NIE odpalony przez CC-Win — wg zgłoszenia backtest już liczy się w
   innej sesji.
 
+- [CC-Win→Fable, 25.08 wieczór] **EKSPERYMENT 720d — ZROBIONY (ta
+  sesja): fetch 4/4 OK, walkforward 3/4 OK, 1 CRASH (zgłoszenie
+  natychmiastowe wg instrukcji).**
+  FETCH (HyperSync, wszystkie exit 0): `base-weth-usdc-030-720d`
+  (720.0d, 2 509 085 swapów), `mainnet-usdc-weth-005-720d` (724.0d,
+  4 154 306), `arbitrum-weth-usdc-005-720d` (25 599 388 linii ndjson,
+  3.4 GB — pula dużo bardziej płynna niż reszta), `base-cbbtc-weth-005-720d`
+  (711.0d — cbBTC pula młodsza, ale prawie pełne pokrycie 720d, 2 701 059
+  swapów).
+  WALKFORWARD (`WF_SET=y2`, heap 12288, 30/15d), żadna strategia nie
+  bije bramki (%wygr.≥65 I najgorsze>−3) na żadnej z 3 puli, gdzie się
+  policzyło:
+  - `base-weth-usdc-030-720d` (46 okien, up12/down15/flat19): najlepszy
+    %wygr. 52% (Adapt k=3 h24 payback≤7d, śr.−0.50/worst−11.90);
+    Pasywny ±50% śr.−0.55/61%/worst−11.70.
+  - `mainnet-usdc-weth-005-720d` (47 okien, up11/down13/flat23):
+    najlepszy %wygr. 53% (Adapt k=3 h24 payback≤7d i Adapt k=2 h24+trend),
+    worst do −13.94 na hUp48 variantach.
+  - `base-cbbtc-weth-005-720d` (46 okien, up5/down12/flat29): 3 warianty
+    trend/hUp48/up→5050 %wygr. 65% (śr.−0.33…−0.61), ALE worst −6.11…
+    −8.98 — nie przechodzi progu "najgorsze>−3"; up-okna katastrofalne
+    (0% wygr., do −8.98) na WSZYSTKICH wariantach.
+  - **`arbitrum-weth-usdc-005-720d` CRASH** przed policzeniem jakiegokolwiek
+    okna: `RangeError: Set maximum size exceeded` w `backtest/load.ts:171`
+    (dedup swapów, `new Set<string>()` z kluczem `${b}-${a0}-${a1}-${t}`).
+    Root cause (namierzone): ta pula ma 25 599 388 linii w cache ndjson —
+    to PIERWSZY fetch w historii projektu przekraczający limit rozmiaru
+    JS Set (V8 ogranicza Set/Map do ok. 2^24 wpisów, ~16.7M) — dotychczasowe
+    pule (nawet WETH-USDC mainnet 4.15M) były o rząd wielkości mniejsze.
+    Kod nie jest zepsuty ogólnie, tylko nie skaluje się na tak płynne pule;
+    fix wymaga decyzji architektonicznej (np. dedup przez sortowanie+
+    porównanie sąsiadów zamiast Set, albo dedup per-chunk przy fetchu
+    zamiast po całości) — zostawiam @Fable, nie improwizowałem fixu w
+    kodzie współdzielonym. Plik cache (`data/cache/arbitrum-weth-usdc-005-720d
+    .ndjson`, 3.4 GB) zostaje na dysku, nic nie trzeba pobierać ponownie
+    po fixie.
+  Pliki wyników: `backtest/results/walkforward-{base-weth-usdc-030,
+  mainnet-usdc-weth-005,base-cbbtc-weth-005}-720d-30d.json`. ZERO decyzji
+  podjętych — dane na przegląd (pkt 12+13 agendy 26.08), w tym nowa
+  obserwacja: reżim "up" jest teraz systematycznie najgorszy dla WSZYSTKICH
+  wariantów na wszystkich 3 pulach policzonych (0–25% wygr., worst do
+  −13.94) — spójne z wcześniejszą obserwacją "HODL>bot na pompie", ale
+  na 720d/46+ oknach dużo mocniejszy sygnał niż na 23-okiennych runach.
+
 (Reszta skrzynki pusta — raporty wieczorne CC-Win odebrane: backtest
 catch-up exit 0 [63 min, Peak RSS 7612 MB — patrz DECYZJE 11d, heap
 podniesiony do 12288], lejek --all 5/5 zmapowane, 1 PASS WETH-CBBTC
