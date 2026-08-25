@@ -12,6 +12,7 @@ import { loadPool } from './load'; // wspólny loader (obsługuje też pary quot
 
 const CACHE = path.join(__dirname, '..', 'data', 'cache');
 const OUT = path.join(__dirname, 'results');
+const PEAK_RSS_FILE = path.join(__dirname, '..', 'data', 'backtest-peak-rss.txt');
 
 const START_CAPITAL_USD = 10_000;
 
@@ -47,6 +48,12 @@ function svgChart(results: RunResult[], w = 900, h = 320): string {
   const memTimer = setInterval(() => {
     peakRssMb = Math.max(peakRssMb, process.memoryUsage().rss / 1024 / 1024);
   }, 2000);
+  const peakRssWriteTimer = setInterval(() => {
+    try {
+      fs.writeFileSync(PEAK_RSS_FILE, `${peakRssMb.toFixed(0)} MB (w trakcie, ${new Date().toISOString()})
+`);
+    } catch {}
+  }, 60_000);
 
   fs.mkdirSync(OUT, { recursive: true });
   const only = process.argv[2];
@@ -124,6 +131,11 @@ function svgChart(results: RunResult[], w = 900, h = 320): string {
   console.log(`\nRaport: backtest/results/report.html`);
 
   clearInterval(memTimer);
+  clearInterval(peakRssWriteTimer);
   peakRssMb = Math.max(peakRssMb, process.memoryUsage().rss / 1024 / 1024);
   console.log(`Peak RSS: ${peakRssMb.toFixed(0)} MB`);
+  try {
+    fs.writeFileSync(PEAK_RSS_FILE, `${peakRssMb.toFixed(0)} MB (zakończone, ${new Date().toISOString()})
+`);
+  } catch {}
 })();
