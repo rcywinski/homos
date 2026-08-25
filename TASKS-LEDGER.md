@@ -68,6 +68,14 @@ pyłkowe collecty z Rabby 25.08, hedge GMX $15 open/close 20.08 (osobny
 kontrakt — GMX poza NFT managerem; w pierwszej wersji ręczny wpis z
 hashy z CONTEXT, automatyczny indeks GMX dopiero przy realnym hedge).
 
+**UWAGA do v1 (zweryfikowane na żywo 25.08):** kolumna USD wycenia
+ilości tokenów po kursie ETH Z CHWILI INDEKSOWANIA, nie zdarzenia —
+dla zdarzeń z backfillu (np. minty 2025-03) oznacza to dzisiejszy kurs.
+Dla "netto" w UI to spójne (obie strony tym samym kursem = czysty
+przyrost ilości w dzisiejszych cenach), dla PODATKÓW nie — iteracja 2
+(kursy historyczne per zdarzenie + PLN/NBP) jest twardym wymogiem przed
+rozliczeniem. Ilości tokenów w CSV są dokładne co do wei — baza jest.
+
 ## 5. Poza zakresem pierwszej wersji
 
 Wycena PLN/NBP, klasyfikacja podatkowa zdarzeń (interpretacje), auto-import

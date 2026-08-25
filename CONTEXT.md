@@ -2407,6 +2407,19 @@ complete/note (UI Sonneta ignoruje nieznane pola — bezpieczne).
 Wdrożenie: CC-Win kasuje stan księgi (fresh backfill 600d) + restart
 homos-bot. Nawias dnia: OBA pyłki zamknięte przez apkę (#953427 rano,
 #953465 po południu — drugi przebieg gładko).
+
+~11:3x — KSIĘGA ZWERYFIKOWANA E2E (raport CC-Win): seed z enumeracji
+zadziałał (953427/953465 mainnet), HyperSync backfill 600d = 12 zdarzeń
+od mintów 2025-03-24, base/arb czyste 0 (poprawnie — brak pozycji).
+closed-positions z complete:true i PEŁNĄ historią:
+#953427 in $2.42 → out $3.04 (fees 0.34 USDC + 0.00016 WETH),
+#953465 in $99.91 → out $125.57 (fees 13.59 USDC + 0.0065 WETH,
+~17 mies. życia). CSV: komplet MINT/INCREASE/COLLECT/DECREASE
+2025-03→dziś. feesUsdApprox:null = zgodne z projektem (para z nogą
+WETH; wycena historyczna = iteracja 2). TASKS-LEDGER §2+§3+§4 (pyłki)
+DOMKNIĘTE w jeden dzień od pytania Rafała "czy powinniśmy mieć
+historię?". Zostało z §4: ręczny wpis hedge GMX $15 (osobny kontrakt)
+— nisko priorytetowe.
 Fałszywy alarm: "luka observer.log 19→25.08" — żywy log ma komplet
 wpisów; myląca sekcja raportu czytała snapshot, a moje porównanie
 oparło się o nią (katalog .bot-live-backup z 17.08 to stary zrzut).

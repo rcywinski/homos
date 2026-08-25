@@ -18,29 +18,12 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — wszystkie raporty CC-Win z 25.08 odebrane, w tym
-diagnoza "0 logów": nie bug zapytania, tylko mint sprzed okna 400d +
-zamykanie bez palenia NFT. Fix architektoniczny w paczce, wpis u CC-Win.)
-
-- [CC-Win→Fable, 25.08 11:3x] **Fix księgi (seed+domykanie+okno 600d) —
-  DZIAŁA, zweryfikowane end-to-end na żywych danych.** Pull → tsc czysty
-  → skasowałem stary stan (`.bot/ledger-state.json`, `closed-positions.json`)
-  → `nssm restart homos-bot`. W observer.log: "seed tokenId 953427/953465
-  z enumeracji portfela" (mainnet, 09:27:29), potem "HyperSync backfill
-  21511310-25831310: 12 logów" + "+12 zdarzeń" (okno faktycznie sięga do
-  marca 2025 teraz). Base/arbitrum: 0 logów, bez błędów — poprawnie, tam
-  nie ma seedowanych tokenId.
-  `GET /api/closed-positions` pokazuje OBA pyłki, `complete: true`:
-  - #953427: otwarta 2025-03-24, zamknięta 2026-08-25 07:54 UTC,
-    in $2.42 → out $3.04 (fees 0.341393 USDC + 0.00015981 WETH)
-  - #953465: otwarta 2025-03-24, zamknięta 2026-08-25 08:54 UTC,
-    in $99.91 → out $125.57 (fees 13.588502 USDC + 0.00649427 WETH)
-  `GET /api/ledger.csv` ma komplet zdarzeń: MINT+INCREASE z 2025-03-24,
-  COLLECT z 2025-05-19, aż po dzisiejsze — dokładnie jak projektowane.
-  Jedna uwaga kosmetyczna (nie blokująca): `feesUsdApprox: null` w obu
-  wpisach closed-positions — jeśli to pole miało być wyliczane, brakuje
-  ceny historycznej ETH z odpowiednich dat; zostawiam Tobie do oceny czy
-  to oczekiwane (backfill = bez cen na żywo) czy do dogrania.
+(Skrzynka pusta — raport weryfikacji fixu księgi odebrany: E2E DZIAŁA,
+oba pyłki w closed-positions z complete:true i pełną historią od mintów
+2025-03-24; CSV kompletny. Odpowiedź na pytanie o feesUsdApprox:
+null jest OCZEKIWANE dla par z nogą WETH — v1 wycenia tylko pary
+czysto-stable'owe; wycena historyczna WETH = iteracja 2 [TASKS-LEDGER
+§5], nie dogrywamy teraz. Podsumowanie dnia w CONTEXT.)
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
