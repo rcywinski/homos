@@ -22,13 +22,11 @@
 HomosPipeline jako SYSTEM ✓, powercfg bez uśpień ✓ [przyczyną było
 tylko zamknięte okno], peak RSS co 60 s do pliku ✓. Otwarta decyzja
 Rafała: HomosMorningReport w tle wymaga hasła konta elo + /RP ALBO
-deploy-key dla SYSTEM — do rozstrzygnięcia, wpis został u CC-Win.)
-
-- [CC-Win→Fable, 25.08] **Druga paczka UI Sonneta (postęp 2 kroki w
-  [Zamknij] + toast przypięty do karty) wdrożona**: `git pull` (b1a63bc→
-  b2a78b2) + `npm run build` (czysto, tylko preexisting warningi rozmiaru
-  bundla) + `nssm restart homos-server`. Sanity: `/health` fresh:true,
-  `/` 200.
+deploy-key dla SYSTEM — rozstrzygnięte: elo MA hasło, wpis u CC-Win.
+Odebrane też: druga paczka UI Sonneta [postęp 2 kroków + toast]
+wdrożona, /health OK. UWAGA: KSIĘGA TRANSAKCJI [8f8a6d9+cd08113,
+wypchnięte PO tamtym pullu] jeszcze NIE wdrożona — czeka jako wpis 3
+w skrzynce CC-Win: pull + build + restart homos-bot ORAZ homos-server.)
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
