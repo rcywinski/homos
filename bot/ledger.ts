@@ -19,10 +19,13 @@
  *                          z księgi po każdej aktualizacji).
  *
  * Backfill: pierwsze uruchomienie startuje LEDGER_BACKFILL_DAYS (domyślnie
- * 400) dni wstecz i idzie segmentami z budżetem czasu na cykl — kursor
- * zapisywany po każdym segmencie, więc kolejne cykle DOCIĄGAJĄ resztę
- * (wzorzec wznawialności jak fetch-swaps). eth_getLogs z filtrem topics
- * (tokenId indeksowany) = odpowiedzi malutkie nawet na wielkich zakresach.
+ * 400) dni wstecz. Duże luki (>HS_THRESHOLD bloków) idą przez HYPERSYNC
+ * (jak swap-cache; wymaga HYPERSYNC_BEARER_TOKEN w env homos-bota) —
+ * lekcja z 25.08: darmowe publiczne RPC tną eth_getLogs do kilku tys.
+ * bloków i backfill po RPC stał w miejscu. RPC (własna rotacja z logiem
+ * providera) obsługuje tylko bieżącą końcówkę między cyklami. Kursor
+ * per sieć zapisywany po udanym przebiegu — wznawialne, a duplikaty po
+ * crashu deduplikują czytelnicy.
  *
  * Wycena USD (v1, świadome uproszczenie): stable = 1:1, WETH × kurs z
  * żywych cen observera (ctx.ethUsd — cena z chwili INDEKSOWANIA, nie
@@ -34,7 +37,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { keccak256, toBytes } from 'viem';
-import { NFT_MANAGER, WATCH_ADDRESS, STATE_DIR } from './config';
+import { NFT_MANAGER, WATCH_ADDRESS, STATE_DIR, RPC } from './config';
 
 const DIR = path.join(__dirname, '..', STATE_DIR);
 const LEDGER_PATH = path.join(DIR, 'tx-ledger.ndjson');
@@ -45,8 +48,17 @@ const BACKFILL_DAYS = Number(process.env.LEDGER_BACKFILL_DAYS || 400);
 const CYCLE_BUDGET_MS = 60_000; // ledger nie może zjadać cyklu observera
 const BLOCK_TIME: Record<string, number> = { mainnet: 12, base: 2, arbitrum: 0.25 };
 const CHAIN_IDS: Record<string, number> = { mainnet: 1, base: 8453, arbitrum: 42161 };
-const MAX_CHUNK: Record<string, number> = { mainnet: 400_000, base: 1_000_000, arbitrum: 2_000_000 };
-const MIN_CHUNK = 20_000;
+// RPC tylko do BIEŻĄCEJ końcówki (małe zakresy) — darmowe publiczne RPC tną
+// eth_getLogs do kilku tys. bloków (bug 25.08: backfill stał przy 20k).
+// Backfill DUŻYCH zakresów idzie HyperSyncem (patrz niżej), jak swap-cache.
+const MAX_CHUNK: Record<string, number> = { mainnet: 5_000, base: 5_000, arbitrum: 5_000 };
+const MIN_CHUNK = 1_000;
+const HS_THRESHOLD = 20_000; // luka > tylu bloków → HyperSync zamiast RPC
+const HYPERSYNC_URL: Record<string, string> = {
+  mainnet: 'https://eth.hypersync.xyz',
+  base: 'https://base.hypersync.xyz',
+  arbitrum: 'https://arbitrum.hypersync.xyz',
+};
 const ZERO = '0x0000000000000000000000000000000000000000';
 
 // topichy liczone w runtime (nie z pamięci — zero ryzyka literówki w hashu)
@@ -91,26 +103,104 @@ const padTopic = (addrOrId: string | bigint): string =>
 const topicToAddr = (t: string): string => '0x' + t.slice(-40).toLowerCase();
 const word = (data: string, i: number): bigint => BigInt('0x' + (data.replace(/^0x/, '').slice(i * 64, (i + 1) * 64) || '0'));
 
-/** eth_getLogs z adaptacyjnym dzieleniem zakresu (publiczne RPC różnie limitują). */
-async function getLogsChunked(client: any, chain: string, address: string, topics: (string | string[] | null)[], from: number, to: number): Promise<any[]> {
-  const out: any[] = [];
+/** znormalizowany log — wspólny kształt dla ścieżki RPC i HyperSync */
+interface NormLog { blockNumber: number; logIndex: number; txHash: string; data: string; topics: string[] }
+
+/** eth_getLogs własnym fetchem z ROTACJĄ po liście RPC + logiem, KTÓRY
+ *  provider padł (uwaga CC-Win 25.08: viem fallback zjadał tę informację).
+ *  Adaptacyjne dzielenie zakresu; do MAŁYCH zakresów (końcówka) — backfill
+ *  dużych idzie HyperSyncem. */
+async function rpcGetLogs(chain: string, address: string, topics: (string | string[] | null)[], from: number, to: number, log: (m: string) => void): Promise<NormLog[]> {
+  const urls = RPC[chain] ?? [];
+  const out: NormLog[] = [];
   let cursor = from;
-  let chunk = Math.min(MAX_CHUNK[chain] ?? 500_000, to - from + 1);
+  let chunk = Math.min(MAX_CHUNK[chain] ?? 5_000, to - from + 1);
   while (cursor <= to) {
     const end = Math.min(cursor + chunk - 1, to);
-    try {
-      const logs = await client.request({
-        method: 'eth_getLogs',
-        params: [{ address, topics, fromBlock: '0x' + cursor.toString(16), toBlock: '0x' + end.toString(16) }],
-      });
-      out.push(...(logs ?? []));
-      cursor = end + 1;
-    } catch (e) {
-      if (chunk <= MIN_CHUNK) throw e; // nie zgadujemy dalej — cykl ponowi
-      chunk = Math.max(MIN_CHUNK, Math.floor(chunk / 2));
+    let ok = false;
+    let lastErr = '';
+    for (const url of urls) {
+      try {
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getLogs', params: [{ address, topics, fromBlock: '0x' + cursor.toString(16), toBlock: '0x' + end.toString(16) }] }),
+          signal: AbortSignal.timeout(20_000),
+        });
+        const j: any = await r.json();
+        if (j.error) throw new Error(`${j.error.code}: ${String(j.error.message).slice(0, 80)}`);
+        for (const lg of j.result ?? []) out.push({ blockNumber: Number(lg.blockNumber), logIndex: Number(lg.logIndex), txHash: lg.transactionHash, data: lg.data, topics: lg.topics });
+        ok = true;
+        break;
+      } catch (e) {
+        lastErr = `${new URL(url).host}: ${String(e).slice(0, 100)}`;
+      }
     }
+    if (ok) { cursor = end + 1; continue; }
+    if (chunk <= MIN_CHUNK) throw new Error(`getLogs ${chain} [${cursor}-${end}] padł na WSZYSTKICH RPC, ostatni: ${lastErr}`);
+    chunk = Math.max(MIN_CHUNK, Math.floor(chunk / 2));
+    log(`ledger ${chain}: zwężam zakres getLogs do ${chunk} bl (ostatni błąd: ${lastErr})`);
   }
   return out;
+}
+
+/** BACKFILL przez HyperSync (jak swap-cache): historyczne logi z filtrem
+ *  topiców w sekundy zamiast tysięcy zapytań RPC. Dwie fazy: (A) transfery
+ *  z/do WATCH → odkrycie tokenIdów, (B) zdarzenia płynności znanych
+ *  tokenIdów. Zwraca logi + timestampy bloków (HyperSync daje je od ręki).
+ *  Brak tokenu/pakietu → null (wołający spada na RPC albo czeka). */
+async function hypersyncLogs(chain: string, from: number, to: number, tokenTopics: () => string[], onTransferLog: (lg: NormLog) => Promise<void>, log: (m: string) => void): Promise<{ logs: NormLog[]; tsByBlock: Map<number, number> } | null> {
+  const token = process.env.HYPERSYNC_BEARER_TOKEN || process.env.ENVIO_API_TOKEN;
+  if (!token || !HYPERSYNC_URL[chain]) return null;
+  let HypersyncClient: any;
+  try { ({ HypersyncClient } = await import('@envio-dev/hypersync-client')); } catch { return null; }
+  const clientCfg = { url: HYPERSYNC_URL[chain], apiToken: token, bearerToken: token };
+  const hs = typeof HypersyncClient?.new === 'function' ? HypersyncClient.new(clientCfg) : new HypersyncClient(clientCfg);
+  const manager = NFT_MANAGER[CHAIN_IDS[chain]];
+  const watchTopic = padTopic(WATCH_ADDRESS);
+  const fieldSelection = {
+    log: ['BlockNumber', 'LogIndex', 'TransactionHash', 'Data', 'Topic0', 'Topic1', 'Topic2', 'Topic3'],
+    block: ['Number', 'Timestamp'],
+  };
+  const tsByBlock = new Map<number, number>();
+  const norm = (lg: any): NormLog => ({
+    blockNumber: Number(lg.blockNumber ?? lg.block_number),
+    logIndex: Number(lg.logIndex ?? lg.log_index ?? 0),
+    txHash: lg.transactionHash ?? lg.transaction_hash,
+    data: lg.data ?? '0x',
+    topics: (lg.topics ?? [lg.topic0, lg.topic1, lg.topic2, lg.topic3]).filter((t: unknown) => !!t),
+  });
+  const runQuery = async (selections: any[], sink: (lg: NormLog) => Promise<void> | void) => {
+    let query: any = { fromBlock: from, toBlock: to + 1, logs: selections, fieldSelection };
+    while (true) {
+      const res = await hs.get(query);
+      for (const b of res?.data?.blocks ?? []) {
+        const num = Number(b.number ?? b.blockNumber);
+        const ts = typeof b.timestamp === 'string' ? Number(BigInt(b.timestamp)) : Number(b.timestamp);
+        if (Number.isFinite(num) && Number.isFinite(ts)) tsByBlock.set(num, ts);
+      }
+      for (const lg of res?.data?.logs ?? []) await sink(norm(lg));
+      const next = Number(res?.nextBlock ?? 0);
+      if (!next || next <= query.fromBlock) throw new Error(`HyperSync ${chain}: nextBlock nie postępuje (${next})`);
+      query.fromBlock = next;
+      if (next > to) break;
+    }
+  };
+  const all: NormLog[] = [];
+  // Faza A: transfery (odkrycie tokenIdów przez sink wołającego)
+  await runQuery(
+    [
+      { address: [manager], topics: [[T.transfer], [], [watchTopic]] },
+      { address: [manager], topics: [[T.transfer], [watchTopic]] },
+    ],
+    async (lg) => { all.push(lg); await onTransferLog(lg); }
+  );
+  // Faza B: zdarzenia płynności znanych tokenIdów (komplet PO fazie A —
+  // zdarzenia nie mogą poprzedzać mintu, więc pełny zakres jest bezpieczny)
+  const ids = tokenTopics();
+  if (ids.length) await runQuery([{ address: [manager], topics: [[T.increase, T.decrease, T.collect], ids] }], (lg) => { all.push(lg); });
+  log(`ledger ${chain}: HyperSync backfill ${from}-${to}: ${all.length} logów`);
+  return { logs: all, tsByBlock };
 }
 
 const ERC20_ABI = [
@@ -162,94 +252,103 @@ function legUsd(sym: string, human: number | null, ethUsd: number | null): numbe
 
 export interface LedgerCtx { log: (m: string) => void; ethUsd: () => number | null }
 
-/** jeden przebieg aktualizacji (wołany z cyklu observera; wznawialny). */
+/** jeden przebieg aktualizacji (wołany z cyklu observera; wznawialny).
+ *  Duża luka (backfill) → HyperSync; mała końcówka → RPC z rotacją. */
 export async function updateLedger(clients: Record<string, any>, ctx: LedgerCtx): Promise<void> {
   const t0 = Date.now();
   const state = loadState();
-  const manager = (chain: string) => NFT_MANAGER[CHAIN_IDS[chain]];
   const watchTopic = padTopic(WATCH_ADDRESS);
-  const newEntries: LedgerEntry[] = [];
 
   for (const chain of Object.keys(CHAIN_IDS)) {
     if (Date.now() - t0 > CYCLE_BUDGET_MS) break; // reszta w kolejnym cyklu
     const client = clients[chain];
     if (!client) continue;
+    const manager = NFT_MANAGER[CHAIN_IDS[chain]];
     let latest: number;
     try { latest = Number(await client.getBlockNumber()); } catch (e) { ctx.log(`ledger ${chain}: getBlockNumber padł: ${String(e).slice(0, 80)}`); continue; }
     const st = state.chains[chain] ?? { nextBlock: Math.max(1, latest - Math.floor((BACKFILL_DAYS * 86400) / BLOCK_TIME[chain])) };
     state.chains[chain] = st;
+    if (st.nextBlock > latest) continue;
 
-    while (st.nextBlock <= latest && Date.now() - t0 < CYCLE_BUDGET_MS) {
-      const segTo = Math.min(st.nextBlock + (MAX_CHUNK[chain] ?? 500_000) - 1, latest);
-      try {
-        // 1) transfery z/do WATCH — odkrywanie tokenIdów + wpisy MINT/BURN/TRANSFER
+    // odkrywanie tokenIdów z transferów (wspólne dla obu ścieżek)
+    const discover = async (lg: NormLog) => {
+      const tokenId = BigInt(lg.topics[3]).toString();
+      const key = `${chain}:${tokenId}`;
+      if (!(key in state.tokens)) state.tokens[key] = await fetchTokenMeta(client, chain, BigInt(tokenId), lg.blockNumber, ctx.log);
+    };
+    const idTopics = () => Object.keys(state.tokens).filter((k) => k.startsWith(chain + ':')).map((k) => padTopic(BigInt(k.split(':')[1])));
+
+    try {
+      let logs: NormLog[];
+      let tsByBlock: Map<number, number>;
+      const gap = latest - st.nextBlock;
+      if (gap > HS_THRESHOLD) {
+        const hs = await hypersyncLogs(chain, st.nextBlock, latest, idTopics, discover, ctx.log);
+        if (!hs) {
+          ctx.log(`ledger ${chain}: luka ${gap} bl > ${HS_THRESHOLD}, a HyperSync niedostępny (token/pakiet) — backfill czeka; sprawdź HYPERSYNC_BEARER_TOKEN w env homos-bota`);
+          continue;
+        }
+        ({ logs, tsByBlock } = hs);
+      } else {
         const [tin, tout] = await Promise.all([
-          getLogsChunked(client, chain, manager(chain), [T.transfer, null, watchTopic], st.nextBlock, segTo),
-          getLogsChunked(client, chain, manager(chain), [T.transfer, watchTopic, null], st.nextBlock, segTo),
+          rpcGetLogs(chain, manager, [T.transfer, null, watchTopic], st.nextBlock, latest, ctx.log),
+          rpcGetLogs(chain, manager, [T.transfer, watchTopic, null], st.nextBlock, latest, ctx.log),
         ]);
-        for (const lg of [...tin, ...tout]) {
-          const tokenId = BigInt(lg.topics[3]).toString();
-          const key = `${chain}:${tokenId}`;
-          if (!(key in state.tokens)) state.tokens[key] = await fetchTokenMeta(client, chain, BigInt(tokenId), Number(lg.blockNumber), ctx.log);
-        }
-        // 2) zdarzenia płynności znanych tokenIdów tej sieci (topics OR)
-        const ids = Object.keys(state.tokens).filter((k) => k.startsWith(chain + ':')).map((k) => k.split(':')[1]);
-        const evLogs = ids.length
-          ? await getLogsChunked(client, chain, manager(chain), [[T.increase, T.decrease, T.collect], ids.map((id) => padTopic(BigInt(id)))], st.nextBlock, segTo)
-          : [];
-
-        // 3) dekodowanie + timestampy bloków (cache per segment)
-        const all = [...tin, ...tout, ...evLogs].sort((a, b) => Number(a.blockNumber) - Number(b.blockNumber) || Number(a.logIndex) - Number(b.logIndex));
-        const tsCache = new Map<number, number>();
-        const blockTs = async (bn: number): Promise<number> => {
-          if (!tsCache.has(bn)) {
-            const b = await client.getBlock({ blockNumber: BigInt(bn) });
-            tsCache.set(bn, Number(b.timestamp));
-          }
-          return tsCache.get(bn)!;
-        };
-        const ethUsd = ctx.ethUsd();
-        for (const lg of all) {
-          const bn = Number(lg.blockNumber);
-          const topic0 = lg.topics[0];
-          const tokenId = BigInt(topic0 === T.transfer ? lg.topics[3] : lg.topics[1]).toString();
-          const meta = state.tokens[`${chain}:${tokenId}`] ?? null;
-          let kind: LedgerKind;
-          let amount0 = 0n;
-          let amount1 = 0n;
-          if (topic0 === T.transfer) {
-            const from = topicToAddr(lg.topics[1]);
-            const to = topicToAddr(lg.topics[2]);
-            kind = from === ZERO ? 'MINT' : to === ZERO ? 'BURN' : to === WATCH_ADDRESS.toLowerCase() ? 'TRANSFER_IN' : 'TRANSFER_OUT';
-          } else if (topic0 === T.increase) { kind = 'INCREASE'; amount0 = word(lg.data, 1); amount1 = word(lg.data, 2); }
-          else if (topic0 === T.decrease) { kind = 'DECREASE'; amount0 = word(lg.data, 1); amount1 = word(lg.data, 2); }
-          else { kind = 'COLLECT'; amount0 = word(lg.data, 1); amount1 = word(lg.data, 2); }
-          const a0h = meta ? Number(amount0) / 10 ** meta.d0 : null;
-          const a1h = meta ? Number(amount1) / 10 ** meta.d1 : null;
-          const u0 = meta ? legUsd(meta.sym0, a0h, ethUsd) : null;
-          const u1 = meta ? legUsd(meta.sym1, a1h, ethUsd) : null;
-          newEntries.push({
-            ts: new Date((await blockTs(bn)) * 1000).toISOString(),
-            chain, chainId: CHAIN_IDS[chain], block: bn,
-            txHash: lg.transactionHash, logIndex: Number(lg.logIndex), tokenId, kind,
-            amount0: amount0.toString(), amount1: amount1.toString(), a0h, a1h,
-            sym0: meta?.sym0 ?? '?', sym1: meta?.sym1 ?? '?',
-            usd: kind === 'INCREASE' || kind === 'DECREASE' || kind === 'COLLECT'
-              ? (u0 !== null && u1 !== null ? +(u0 + u1).toFixed(2) : null)
-              : null,
-          });
-        }
-        // 4) append + kursor (stan po segmencie — wznawialność)
-        if (newEntries.length) {
-          fs.mkdirSync(DIR, { recursive: true });
-          fs.appendFileSync(LEDGER_PATH, newEntries.splice(0).map((e) => JSON.stringify(e)).join('\n') + '\n');
-        }
-        st.nextBlock = segTo + 1;
-        saveState(state);
-      } catch (e) {
-        ctx.log(`ledger ${chain}: segment ${st.nextBlock}-${segTo} padł (${String(e).slice(0, 100)}) — ponowię w kolejnym cyklu`);
-        break; // kursor nie ruszony — bez dziur
+        for (const lg of [...tin, ...tout]) await discover(lg);
+        const ids = idTopics();
+        const evs = ids.length ? await rpcGetLogs(chain, manager, [[T.increase, T.decrease, T.collect], ids], st.nextBlock, latest, ctx.log) : [];
+        logs = [...tin, ...tout, ...evs];
+        tsByBlock = new Map();
       }
+
+      logs.sort((a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex);
+      const blockTs = async (bn: number): Promise<number> => {
+        if (!tsByBlock.has(bn)) {
+          const b = await client.getBlock({ blockNumber: BigInt(bn) });
+          tsByBlock.set(bn, Number(b.timestamp));
+        }
+        return tsByBlock.get(bn)!;
+      };
+      const ethUsd = ctx.ethUsd();
+      const entries: LedgerEntry[] = [];
+      for (const lg of logs) {
+        const topic0 = lg.topics[0];
+        const tokenId = BigInt(topic0 === T.transfer ? lg.topics[3] : lg.topics[1]).toString();
+        const meta = state.tokens[`${chain}:${tokenId}`] ?? null;
+        let kind: LedgerKind;
+        let amount0 = 0n;
+        let amount1 = 0n;
+        if (topic0 === T.transfer) {
+          const from = topicToAddr(lg.topics[1]);
+          const to = topicToAddr(lg.topics[2]);
+          kind = from === ZERO ? 'MINT' : to === ZERO ? 'BURN' : to === WATCH_ADDRESS.toLowerCase() ? 'TRANSFER_IN' : 'TRANSFER_OUT';
+        } else if (topic0 === T.increase) { kind = 'INCREASE'; amount0 = word(lg.data, 1); amount1 = word(lg.data, 2); }
+        else if (topic0 === T.decrease) { kind = 'DECREASE'; amount0 = word(lg.data, 1); amount1 = word(lg.data, 2); }
+        else { kind = 'COLLECT'; amount0 = word(lg.data, 1); amount1 = word(lg.data, 2); }
+        const a0h = meta ? Number(amount0) / 10 ** meta.d0 : null;
+        const a1h = meta ? Number(amount1) / 10 ** meta.d1 : null;
+        const u0 = meta ? legUsd(meta.sym0, a0h, ethUsd) : null;
+        const u1 = meta ? legUsd(meta.sym1, a1h, ethUsd) : null;
+        entries.push({
+          ts: new Date((await blockTs(lg.blockNumber)) * 1000).toISOString(),
+          chain, chainId: CHAIN_IDS[chain], block: lg.blockNumber,
+          txHash: lg.txHash, logIndex: lg.logIndex, tokenId, kind,
+          amount0: amount0.toString(), amount1: amount1.toString(), a0h, a1h,
+          sym0: meta?.sym0 ?? '?', sym1: meta?.sym1 ?? '?',
+          usd: kind === 'INCREASE' || kind === 'DECREASE' || kind === 'COLLECT'
+            ? (u0 !== null && u1 !== null ? +(u0 + u1).toFixed(2) : null)
+            : null,
+        });
+      }
+      if (entries.length) {
+        fs.mkdirSync(DIR, { recursive: true });
+        fs.appendFileSync(LEDGER_PATH, entries.map((e) => JSON.stringify(e)).join('\n') + '\n');
+      }
+      st.nextBlock = latest + 1;
+      saveState(state);
+      if (entries.length) ctx.log(`ledger ${chain}: +${entries.length} zdarzeń (kursor ${st.nextBlock})`);
+    } catch (e) {
+      ctx.log(`ledger ${chain}: przebieg padł (${String(e).slice(0, 140)}) — ponowię w kolejnym cyklu`);
     }
   }
   rebuildClosedPositions(ctx.log);

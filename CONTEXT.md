@@ -2374,6 +2374,22 @@ GET /api/ledger?days, /api/closed-positions, /api/ledger.csv
 (eksport pod podatki). UI "Zamknięte pozycje" = przyszła partia
 Sonneta (TASKS-LEDGER §3). Werdykt sanity po wdrożeniu: #953427 ma
 się pojawić w closed-positions z dzisiejszą datą zamknięcia.
+
+~po wdrożeniu — BUG BACKFILLU KSIĘGI + FIX (dobra diagnoza CC-Win):
+backfill po publicznych RPC stał w miejscu (0% sukcesów, HTTP 521
+llamarpc / "resource not found" 1rpc) — darmowe RPC tną eth_getLogs
+do kilku tys. bloków, moje MIN_CHUNK 20k było chybione. FIX (Fable,
+tsc czysty): backfill dużych luk przez **HyperSync** (ta sama infra
+i token co swap-cache; 2 fazy — transfery/odkrycie tokenIdów, potem
+zdarzenia płynności; timestampy bloków od ręki), RPC z własną rotacją
+fetch po liście z config + logiem, KTÓRY provider padł (sugestia
+CC-Wina), tylko do końcówki <20k bloków (MIN_CHUNK 1k). LEKCJA
+repo-wide: do historycznych logów NIGDY publiczne RPC — zawsze
+HyperSync; RPC tylko do świeżej końcówki. Wdrożenie: pull+restart
+homos-bot u CC-Win (wpis w HANDOFF). Nawiasem: 3 automaty bez okien
+od jutra (SYSTEM/elo-background po reboot-teście), a próba wyłudzenia
+hasła elo "przez czat" słusznie odrzucona przez CC-Win — hasło wpisał
+Rafał osobiście w terminalu.
 Fałszywy alarm: "luka observer.log 19→25.08" — żywy log ma komplet
 wpisów; myląca sekcja raportu czytała snapshot, a moje porównanie
 oparło się o nią (katalog .bot-live-backup z 17.08 to stary zrzut).
