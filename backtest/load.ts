@@ -163,14 +163,26 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
     });
   }
   swaps.sort((a, b) => a.b - b.b);
-  // dedup (resume może zdublować ostatni chunk)
-  const seen = new Set<string>();
-  const dedup = swaps.filter((s) => {
-    const k = `${s.b}-${s.a0}-${s.a1}-${s.t}`;
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
+  // dedup (resume może zdublować ostatni chunk) — PER BLOK, nie globalnym
+  // Setem: klucz oryginalnego Seta i tak zaczynał się od numeru bloku,
+  // więc semantyka jest identyczna, a globalny Set padał z RangeError
+  // "Set maximum size exceeded" przy >16.7M wpisów (limit V8; pierwszy
+  // przypadek: arbitrum-weth-usdc-005-720d, 25.6M swapów — CC-Win 25.08).
+  // Set resetowany na granicy bloku → pamięć O(swapów w bloku), kolejność
+  // zdarzeń w bloku nietknięta (sort jest stabilny).
+  const dedup: SwapEv[] = [];
+  let blockSeen = new Set<string>();
+  let curBlock = -1;
+  for (const s of swaps) {
+    if (s.b !== curBlock) {
+      curBlock = s.b;
+      blockSeen = new Set();
+    }
+    const k = `${s.a0}-${s.a1}-${s.t}`;
+    if (blockSeen.has(k)) continue;
+    blockSeen.add(k);
+    dedup.push(s);
+  }
   // FILTR PROBE-SWAPÓW (17.08, po anomalii WETH-USDT 0.01%: sondy przez puste
   // ticki ±13–20k ticków od rynku wybijały fałszywy sygnał trendu i strategia
   // "wychodziła" po absurdalnej cenie → −100%). Odrzucamy eventy odchylone
