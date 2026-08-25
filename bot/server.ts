@@ -58,12 +58,17 @@ app.get('/api/state', (_req, res) => {
 });
 
 app.post('/api/proposals/:id/dismiss', (req, res) => {
+  // NIE piszemy do proposals.json (bug 25.08: dual-writer — observer trzyma
+  // propozycje w pamięci i nadpisywał plik, wskrzeszając odrzucone; jedynym
+  // writerem pliku jest observer). Komenda idzie kolejką append-only,
+  // observer aplikuje ją w ≤30 s i wtedy znika też z /api/state.
   const props = readJson(PROPOSALS_PATH) || [];
-  const p = props.find((x: any) => x.id === req.params.id);
-  if (!p) return res.status(404).json({ error: 'not found' });
-  p.status = 'dismissed';
-  fs.writeFileSync(PROPOSALS_PATH, JSON.stringify(props, null, 2));
-  res.json({ ok: true });
+  if (!props.find((x: any) => x.id === req.params.id)) return res.status(404).json({ error: 'not found' });
+  fs.appendFileSync(
+    path.join(DIR, 'proposal-commands.ndjson'),
+    JSON.stringify({ id: req.params.id, action: 'dismiss', ts: new Date().toISOString() }) + '\n'
+  );
+  res.json({ ok: true, applied: 'queued' });
 });
 
 // Historia snapshotów bota (dashboard "Analiza obserwacji" w UI).

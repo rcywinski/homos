@@ -222,6 +222,36 @@ const saveState = () => {
 };
 const saveProposals = () => fs.writeFileSync(PROPOSALS_PATH, JSON.stringify(proposals, bigintReplacer, 2));
 
+// Komendy z UI (server tylko kolejkuje — fix dual-writer 25.08: wcześniej
+// server pisał do proposals.json, a observer nadpisywał go z pamięci i
+// odrzucenia ginęły). Konsumpcja: przeczytaj → skasuj plik → zastosuj.
+const COMMANDS_PATH = path.join(DIR, 'proposal-commands.ndjson');
+function applyProposalCommands() {
+  try {
+    if (!fs.existsSync(COMMANDS_PATH)) return;
+    const raw = fs.readFileSync(COMMANDS_PATH, 'utf8');
+    fs.unlinkSync(COMMANDS_PATH);
+    let changed = false;
+    for (const line of raw.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        const c = JSON.parse(line);
+        if (c.action === 'dismiss') {
+          const p = proposals.find((x) => x.id === c.id);
+          if (p && p.status === 'open') {
+            p.status = 'dismissed';
+            changed = true;
+            log(`proposal ${c.id}: odrzucona (komenda z UI)`);
+          }
+        }
+      } catch { /* uszkodzona linia — pomiń */ }
+    }
+    if (changed) { saveProposals(); saveState(); }
+  } catch (e) {
+    log(`proposal-commands: ${String(e).slice(0, 100)}`);
+  }
+}
+
 // TTL propozycji selektora (dodane 17.08 po analizie OBSERWUJ): OPEN/ROTATE
 // opierają się na dziennym rankingu — po 48h ranking jest nieaktualny i wisząca
 // propozycja wprowadza w błąd (widzieliśmy wpisy z 10.08 żywe 17.08).
@@ -764,6 +794,8 @@ async function runLedger() {
   setInterval(runSelector, 60 * 60 * 1000); // co godzinę sprawdza, czy dziś już był
   expireStaleProposals();
   setInterval(expireStaleProposals, 60 * 60 * 1000);
+  applyProposalCommands();
+  setInterval(applyProposalCommands, 30 * 1000); // komendy z UI (odrzucenia) w ≤30 s
   setInterval(flushTelegram, TG_FLUSH_MS); // zbiorcza wiadomość TG co 15 min
   log('pętle uruchomione (60s ceny / 15min statystyki / 5min pozycje / selektor 1×dziennie po 8:00)');
 })();
