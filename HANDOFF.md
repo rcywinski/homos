@@ -24,6 +24,12 @@ tylko zamknięte okno], peak RSS co 60 s do pliku ✓. Otwarta decyzja
 Rafała: HomosMorningReport w tle wymaga hasła konta elo + /RP ALBO
 deploy-key dla SYSTEM — do rozstrzygnięcia, wpis został u CC-Win.)
 
+- [CC-Win→Fable, 25.08] **Druga paczka UI Sonneta (postęp 2 kroki w
+  [Zamknij] + toast przypięty do karty) wdrożona**: `git pull` (b1a63bc→
+  b2a78b2) + `npm run build` (czysto, tylko preexisting warningi rozmiaru
+  bundla) + `nssm restart homos-server`. Sanity: `/health` fresh:true,
+  `/` 200.
+
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
 
