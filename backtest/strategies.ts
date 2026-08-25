@@ -174,9 +174,17 @@ export const volAdaptiveTrend = (opts: {
    *  a do LP wracamy po pełnym hUp od WYJŚCIA z zakresu (mechanizm
    *  "nie kupuj szczytu" z hUp48 zostaje nienaruszony). */
   upFallback?: '5050';
+  /** SYMETRYCZNY BEZPIECZNIK UP (pomysł Rafała 25.08 noc, po analizie 720d;
+   *  tylko mode:'exit'): sygnał UP gdy gap = logP − EMA > próg → wyjście
+   *  z LP do 50/50 (HODL łapie betę trendu); sygnał gaśnie przy gap <
+   *  próg/2; do LP wracamy, gdy OBA sygnały (down i up) zgaszone = "LP
+   *  tylko gdy rynek nie trenduje". Różnica vs upFallback: reaguje na
+   *  TREND (wcześnie), nie na wypadnięcie z zakresu (późno). */
+  upExitThresh?: number;
 }): Strategy => {
   let outSince: number | null = null;
   let upCashSince: number | null = null; // czas WYJŚCIA górą, gdy parkujemy 50/50
+  let upSig = false; // symetryczny sygnał trendu wzrostowego (upExitThresh)
   let ema: number | null = null;
   let lastTs: number | null = null;
   let down = false;
@@ -216,6 +224,10 @@ export const volAdaptiveTrend = (opts: {
       const backAt = opts.reentryAboveEma ? 0 : -opts.trendThresh / 2;
       if (gap > backAt) down = false;
     }
+    if (opts.upExitThresh !== undefined) {
+      if (!upSig && gap > opts.upExitThresh) upSig = true;
+      else if (upSig && gap < opts.upExitThresh / 2) upSig = false; // histereza jak w down
+    }
   };
 
   /** uczciwe wyjście do cash 50/50: ½ gazu cyklu + koszt swapu wyrównującego */
@@ -246,7 +258,7 @@ export const volAdaptiveTrend = (opts: {
   };
 
   return {
-    name: `Adapt k=${opts.k} h=${(opts.hysteresisSec / 3600).toFixed(0)}h${opts.hysteresisUpSec !== undefined ? `/hUp=${(opts.hysteresisUpSec / 3600).toFixed(0)}h` : ''} + trend(${opts.mode},HL${opts.trendHLDays}d,${(opts.trendThresh * 100).toFixed(0)}%${opts.volGateRatio ? `,vg${opts.volGateRatio}` : ''}${opts.trendThresh2 !== undefined ? `,t2=${(opts.trendThresh2 * 100).toFixed(0)}%` : ''}${opts.reentryAboveEma ? ',re>ema' : ''}${opts.upFallback ? ',up→5050' : ''})`,
+    name: `Adapt k=${opts.k} h=${(opts.hysteresisSec / 3600).toFixed(0)}h${opts.hysteresisUpSec !== undefined ? `/hUp=${(opts.hysteresisUpSec / 3600).toFixed(0)}h` : ''} + trend(${opts.mode},HL${opts.trendHLDays}d,${(opts.trendThresh * 100).toFixed(0)}%${opts.volGateRatio ? `,vg${opts.volGateRatio}` : ''}${opts.trendThresh2 !== undefined ? `,t2=${(opts.trendThresh2 * 100).toFixed(0)}%` : ''}${opts.reentryAboveEma ? ',re>ema' : ''}${opts.upFallback ? ',up→5050' : ''}${opts.upExitThresh !== undefined ? `,upX=${(opts.upExitThresh * 100).toFixed(0)}%` : ''})`,
     init: (ctx) => {
       updateTrend(ctx);
       ctx.openPosition(...rangeAround(ctx, width(ctx)));
@@ -256,14 +268,14 @@ export const volAdaptiveTrend = (opts: {
       const p = ctx.state.pos;
 
       if (opts.mode === 'exit') {
-        if (down && p) {
-          exitToHalfHalf(ctx);
+        if ((down || upSig) && p) {
+          exitToHalfHalf(ctx); // 50/50: w dół neutralnie, w górę łapie betę
           ctx.state.rebalances++;
           outSince = null;
-          upCashSince = null; // bezpiecznik DOWN nadpisuje parking UP
+          upCashSince = null; // bezpiecznik trendu nadpisuje parking z zakresu
           return;
         }
-        if (!down && !p) {
+        if (!down && !upSig && !p) {
           // powrót z parkingu 50/50 po wyjściu górą: pełna histereza hUp
           // liczona od wyjścia z zakresu (jak w wariancie bez fallbacku)
           if (upCashSince !== null) {

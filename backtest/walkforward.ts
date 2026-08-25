@@ -109,6 +109,13 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       volAdaptiveTrend({ ...v11, upFallback: '5050' }), // pkt 12: up→50/50
       volAdaptiveTrend({ ...v11, hysteresisUpSec: 48 * 3600, upFallback: '5050' }), // hUp48 + up→50/50
       volAdaptiveTrend({ ...trendBase, k: 2, mode: 'exit' }), // zamrożony profil cbBTC
+      // "LP tylko gdy rynek nie trenduje" (Rafał 25.08 noc, po analizie 720d):
+      // SYMETRYCZNY bezpiecznik — trend w GÓRĘ też wyrzuca do 50/50 (HODL
+      // łapie betę), powrót po ostygnięciu gapu; reakcja na SYGNAŁ trendu,
+      // nie na wypadnięcie z zakresu (za późno — lekcja z up→5050)
+      volAdaptiveTrend({ ...v11, upExitThresh: 0.05 }),
+      volAdaptiveTrend({ ...v11, hysteresisUpSec: 48 * 3600, upExitThresh: 0.05 }),
+      volAdaptiveTrend({ ...trendBase, k: 2, mode: 'exit', upExitThresh: 0.05 }), // profil cbBTC + upX
     ];
   };
   const mkStrategies = (): Strategy[] =>
