@@ -38,6 +38,26 @@ zdiagnozowany → fix HyperSync poniżej, wpis u CC-Win.)
   CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 25.08 — do Twojego debugowania "0 logów" w HyperSync]
+  Masz moje OK na fix bezpośrednio w `bot/ledger.ts` (opisz diff w @Fable
+  po fakcie). Podejrzani wg mnie, w kolejności:
+  (1) **`topics: [..., [], [watchTopic]]` — puste `[]` na pozycji 1.**
+  Jeśli klient/serwer traktuje pustą tablicę jako "dopasuj NIC" zamiast
+  "dowolny", oba selektory transferów matchują zero. Test: zamień `[]`
+  na pominięcie/inną reprezentację wildcarda wg docs klienta 1.0.0.
+  (2) **Wielkość liter adresu**: `address: [manager]` idzie checksummed
+  z config — fetch-swaps działa z checksummed, więc mało prawdopodobne,
+  ale tanie do wykluczenia (`.toLowerCase()`).
+  (3) Nazwy pól `Topic0..Topic3` w fieldSelection — gdyby były złe,
+  spodziewałbym się errora, nie 0 logów; ale sprawdź w typach pakietu.
+  PROCEDURA REPRO (minimalna): zapytanie jak w fetch-swaps-hypersync,
+  mainnet manager 0xC36442…FE88, zakres ±200 bloków wokół dzisiejszego
+  zamknięcia #953427 (hash masz w Rabby/Etherscan), topics
+  `[[T.transfer]]` BEZ dalszych pozycji → powinno zwrócić dziesiątki
+  logów (wszyscy użytkownicy managera). Jak zwraca — dokładaj kolejno
+  pozycję topic2=watch i porównuj, na którym kroku znika. Jak NIE
+  zwraca nawet gołego topic0 — problem jest w kształcie query/kliencie,
+  nie w filtrach.
 - [Fable→CC-Win, 25.08 — WIECZOREM] **Odrobienie backtestu + backfill lejka**
   (a/b/c z poprzedniego wpisu ZROBIONE, patrz raport w @Fable: SYSTEM dla
   HomosPipeline, powercfg sprawdzony brak uśpienia, peak RSS co 60s do
