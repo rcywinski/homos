@@ -20,6 +20,7 @@ import * as path from 'path';
 import express from 'express';
 import { STATE_DIR } from './config';
 import { readVerdicts } from './candidates';
+import { readLedger } from './ledger';
 
 const DIR = path.join(__dirname, '..', STATE_DIR);
 const STATE_PATH = path.join(DIR, 'state.json');
@@ -149,6 +150,32 @@ app.get('/api/results/:name', (req, res) => {
   if (!fs.existsSync(p)) return res.status(404).json({ error: 'not found' });
   res.setHeader('Last-Modified', fs.statSync(p).mtime.toUTCString());
   res.json(JSON.parse(fs.readFileSync(p, 'utf8')));
+});
+
+// --- księga transakcji on-chain (TASKS-LEDGER.md §3) ---
+app.get('/api/ledger', (req, res) => {
+  const days = Math.max(1, Math.min(3650, Number(req.query.days) || 90));
+  const cutoff = Date.now() - days * 24 * 3600e3;
+  const entries = readLedger().filter((e) => Date.parse(e.ts) > cutoff);
+  res.json({ days, count: entries.length, entries });
+});
+
+app.get('/api/closed-positions', (_req, res) => {
+  res.json(readJson(path.join(DIR, 'closed-positions.json')) ?? []);
+});
+
+// CSV: 1 wiersz = 1 zdarzenie on-chain (pod rozliczenia; PLN/NBP = iteracja 2)
+app.get('/api/ledger.csv', (_req, res) => {
+  const esc = (v: unknown) => {
+    const s = v === null || v === undefined ? '' : String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const cols = ['ts', 'chain', 'chainId', 'block', 'txHash', 'logIndex', 'tokenId', 'kind', 'sym0', 'amount0', 'a0h', 'sym1', 'amount1', 'a1h', 'usd'] as const;
+  const rows = [cols.join(',')];
+  for (const e of readLedger()) rows.push(cols.map((c) => esc((e as any)[c])).join(','));
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="homos-ledger.csv"');
+  res.send(rows.join('\n') + '\n');
 });
 
 app.get('/health', (_req, res) => {

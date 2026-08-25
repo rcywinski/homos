@@ -20,6 +20,7 @@ import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, PoolStats
 import { getAmountsForLiquidity, sqrtPriceX96ToHumanPrice } from '../src/utils/v3math';
 import { runSelectorIfDue, SelectorProposal } from './selector';
 import { paperTick, LegPrices } from './paper';
+import { updateLedger } from './ledger';
 
 const ROOT = path.join(__dirname, '..');
 const DIR = path.join(ROOT, STATE_DIR);
@@ -722,6 +723,32 @@ function runSelector() {
   }
 }
 
+// --- księga transakcji (TASKS-LEDGER.md; ndjson w .bot/, wznawialny backfill) ---
+let ledgerBusy = false;
+async function runLedger() {
+  if (ledgerBusy) return; // backfill może przeciągnąć cykl — bez nakładania
+  ledgerBusy = true;
+  try {
+    await updateLedger(clients as unknown as Record<string, any>, {
+      log,
+      // kurs ETH z żywych cen pul kwotowanych w USD (patrz nagłówek ledger.ts:
+      // wycena z chwili indeksowania — dla backfillu updateLedger da usd:null)
+      ethUsd: () => {
+        for (const p of BOT_POOLS) {
+          if ((p.quote ?? 'USD') !== 'USD') continue;
+          const lv = live[p.id];
+          if (lv?.ethUsd) return lv.ethUsd;
+        }
+        return null;
+      },
+    });
+  } catch (e) {
+    log(`ledger crashed: ${String(e).slice(0, 160)}`); // nigdy nie kładzie cyklu
+  } finally {
+    ledgerBusy = false;
+  }
+}
+
 // --- start ---
 (async () => {
   log(`observer start — watch=${WATCH_ADDRESS}, pools=${BOT_POOLS.map((p) => p.id).join(', ')}, tryb=OBSERWUJ`);
@@ -732,6 +759,8 @@ function runSelector() {
   setInterval(refreshPrices, INTERVALS.priceSec * 1000);
   setInterval(refreshStats, INTERVALS.statsSec * 1000);
   setInterval(refreshPositions, INTERVALS.positionsSec * 1000);
+  runLedger();
+  setInterval(runLedger, INTERVALS.positionsSec * 1000); // księga: ten sam takt co pozycje
   setInterval(runSelector, 60 * 60 * 1000); // co godzinę sprawdza, czy dziś już był
   expireStaleProposals();
   setInterval(expireStaleProposals, 60 * 60 * 1000);
