@@ -28,7 +28,7 @@
  * hook value captured at click time — that hook only updates on the next
  * render, which would otherwise risk signing against the pre-switch chain.
  */
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAccount, usePublicClient, useWalletClient, useChainId, useSwitchChain } from 'wagmi';
 import { getWalletClient } from 'wagmi/actions';
 import { Pool, Position } from '@uniswap/v3-sdk';
@@ -80,6 +80,13 @@ const CHAIN_LABEL: Record<number, string> = { 1: 'Ethereum', 8453: 'Base', 42161
 // żeby zachować "jedną prawdę" z backtestami. Poprzednio 0.15 (zgrubny
 // szacunek L2, advisor.ts nadal nie ma osobnej wartości dla tego chainId —
 // fallback tam to `?? 5`).
+// FIX 25.08 (HANDOFF Fable→Sonnet): te stałe okazały się fałszywie wysokie
+// na mainnecie przy niskim gazie — realny koszt collectu $0.27 (0.75 Gwei)
+// vs próg liczony z tej stałej: $64. Od teraz GAS_USD to WYŁĄCZNIE fallback,
+// używany gdy `getGasPrice()` padnie albo kurs ETH jest nieznany (patrz
+// `collectThresholdUsdLive` niżej) — sama stała i próg oparty na niej
+// (`collectThresholdUsd`/`isCollectWorthwhile`) zostają nietknięte, żeby
+// zachować deterministyczny fallback.
 const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08, 42161: 0.1 };
 // UX-COCKPIT.md §1.A.3 mówił o progu "50x gaz" (~$400 na mainnecie, ~$4 na
 // Base) — w praktyce prawie nigdy nieosiągalne dla zwykłych pozycji, więc
@@ -88,12 +95,22 @@ const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08, 42161: 0.1 };
 // blokuje realistycznych kwot fee. Zgłoszone przez użytkownika 2026-08-10.
 export const COLLECT_THRESHOLD_MULT = 8;
 
+// Fallback (stała) — używane tylko wewnątrz `*Live` poniżej, gdy żywy odczyt
+// nie jest dostępny. Zostają eksportowane na wypadek innych call site'ów.
 export const isCollectWorthwhile = (p: PortfolioPosition): boolean => {
   const gas = GAS_USD[p.chainId] ?? 5;
   return p.feesUsd > gas * COLLECT_THRESHOLD_MULT;
 };
 
 export const collectThresholdUsd = (chainId: number): number => (GAS_USD[chainId] ?? 5) * COLLECT_THRESHOLD_MULT;
+
+// Gaz zużywany przez jedno wywołanie collect() (NonfungiblePositionManager) —
+// zgrubne, stabilne dla tego jednego typu wywołania (bez pętli/swapów).
+const COLLECT_GAS_UNITS = 150_000n;
+// Cena gazu zmienia się szybko, ale to tylko brama do przycisku (nie krytyczny
+// odczyt przed podpisem — sama transakcja i tak płaci aktualny gaz w portfelu),
+// więc odświeżanie co 2 min wystarcza i nie zasypuje RPC.
+const GAS_PRICE_POLL_MS = 2 * 60_000;
 
 const COLLECT_ABI = [
   {
@@ -175,6 +192,72 @@ export function useCockpitActions() {
 
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [message, setMessage] = useState<CockpitMessage | null>(null);
+  // Żywa cena gazu per sieć (FIX 25.08) — poll niezależny od `clients` (obiekt
+  // odtwarzany co render), dep na trzech konkretnych referencjach z wagmi.
+  const [gasPriceWei, setGasPriceWei] = useState<Partial<Record<number, bigint>>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchGasPrices = async () => {
+      const chainClients: [number, typeof clientMainnet][] = [
+        [1, clientMainnet],
+        [8453, clientBase],
+        [42161, clientArbitrum],
+      ];
+      const results = await Promise.all(
+        chainClients.map(async ([chainId, client]) => {
+          if (!client) return null;
+          try {
+            return [chainId, await client.getGasPrice()] as const;
+          } catch {
+            // odczyt padł (RPC/sieć) — collectThresholdUsdLive spadnie na fallback GAS_USD
+            return null;
+          }
+        })
+      );
+      if (cancelled) return;
+      setGasPriceWei((prev) => {
+        const next = { ...prev };
+        for (const r of results) if (r) next[r[0]] = r[1];
+        return next;
+      });
+    };
+    fetchGasPrices();
+    const id = setInterval(fetchGasPrices, GAS_PRICE_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [clientMainnet, clientBase, clientArbitrum]);
+
+  // Żywy koszt jednego collect() w USD — null gdy brakuje odczytu gazu LUB
+  // kursu ETH (ethUsd z usePortfolio.ts, pochodny z puli stable/ETH
+  // użytkownika — może nie istnieć, gdy nie ma takiej pozycji).
+  const liveGasCostUsd = useCallback(
+    (chainId: number, ethUsd: number | null): number | null => {
+      const priceWei = gasPriceWei[chainId];
+      if (priceWei === undefined || ethUsd === null) return null;
+      return (Number(priceWei * COLLECT_GAS_UNITS) / 1e18) * ethUsd;
+    },
+    [gasPriceWei]
+  );
+
+  // Próg [Zbierz fees] liczony z żywego gazu (FIX 25.08) — spada na stałą
+  // GAS_USD tylko gdy `liveGasCostUsd` zwróci null (odczyt padł / brak kursu
+  // ETH). Mnożnik zostaje ten sam (COLLECT_THRESHOLD_MULT=8), sensowny
+  // dopiero przy urealnionej podstawie.
+  const collectThresholdUsdLive = useCallback(
+    (chainId: number, ethUsd: number | null): number => {
+      const live = liveGasCostUsd(chainId, ethUsd);
+      return (live ?? GAS_USD[chainId] ?? 5) * COLLECT_THRESHOLD_MULT;
+    },
+    [liveGasCostUsd]
+  );
+
+  const isCollectWorthwhileLive = useCallback(
+    (p: PortfolioPosition, ethUsd: number | null): boolean => p.feesUsd > collectThresholdUsdLive(p.chainId, ethUsd),
+    [collectThresholdUsdLive]
+  );
 
   // Switches the wallet's active chain if needed, then returns a FRESH wallet
   // client for that chain — see module docstring for why this beats reusing
@@ -417,5 +500,7 @@ export function useCockpitActions() {
     readBalanceAndAllowance,
     approveToken,
     resolveBotPool,
+    collectThresholdUsdLive,
+    isCollectWorthwhileLive,
   };
 }

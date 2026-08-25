@@ -950,3 +950,49 @@ klasy `.topranking-status-{fail,queued,unmapped,validated}`.
 `npx tsc --noEmit` czysty na tych plikach (2 błędy pre-existing w
 `bot/observer.ts`/vendor, niezwiązane), `webpack --mode production`
 kompiluje bez błędów.
+
+## FIX (25.08): próg [Zbierz fees] z żywego gazu (zgłoszenie Fable/Rafał)
+
+**Problem:** mainnet, realny koszt collectu $0.27 (0.75 Gwei), przycisk
+zablokowany progiem $64 (`GAS_USD[1]=8 × COLLECT_THRESHOLD_MULT=8`, stała).
+
+**ZROBIONE (Sonnet, 25.08):** `useCockpitActions.ts` — nowy poller
+(`GAS_PRICE_POLL_MS=2min`, `getGasPrice()` przez 3 istniejące
+`usePublicClient`, dep na referencjach klientów nie na `clients` żeby
+uniknąć re-fetchu co render), `liveGasCostUsd(chainId, ethUsd)` =
+gasPriceWei × `COLLECT_GAS_UNITS=150_000n` × kurs ETH,
+`collectThresholdUsdLive`/`isCollectWorthwhileLive` — spadają na starą
+stałą `GAS_USD` TYLKO gdy brak odczytu gazu lub `ethUsd===null` (stare
+`isCollectWorthwhile`/`collectThresholdUsd` nietknięte, zostają jako ten
+fallback). Kurs ETH: `usePortfolio.ts` dostał nowe pole `ethUsd` w
+`PortfolioSummary` (już liczone wewnętrznie z puli stable/ETH
+użytkownika — zero nowych odczytów RPC). `CockpitPositionActions.tsx` —
+nowy prop `ethUsd`, użycie `actions.isCollectWorthwhileLive`/
+`collectThresholdUsdLive` zamiast starych czystych funkcji; tooltip
+pokazuje żywy próg. `MorningCockpit.tsx` — przekazuje `portfolio.ethUsd`.
+Mnożnik `COLLECT_THRESHOLD_MULT=8` nietknięty. `advisor.ts` (koszt
+rebalansu) NIE ruszany — lane analityczny. `npx tsc --noEmit` i
+`webpack --mode production` czyste.
+
+## FIX (25.08): brakujący CSS modali (bug produkcyjny, zgłoszenie Rafała)
+
+**Problem:** klasy `modal-overlay`/`modal-content`/`modal-header`/
+`modal-body`/`modal-actions` (używane przez 6 modali: CockpitPositionActions
+×2, BotTelemetry, HedgeConfirmModal, RebalanceSequenceModal,
+RotateSequenceModal) nie miały ŻADNYCH reguł w `styles.css` — modal
+renderował się przezroczysty, bez tła, przycisk potwierdzenia poza
+zasięgiem (`.app { text-align: center }` globalnie kaskadowało w głąb).
+
+**ZROBIONE (Sonnet, 25.08):** dodane w `styles.css` (przed
+`.telemetry-json-modal`, który je rozszerza): `.modal-overlay` (fixed,
+inset 0, półprzezroczyste tło, `z-index: 1000` — dotychczasowe max w
+pliku to 5 przy `.cockpit-menu-dropdown`), `.modal-content` (biała karta,
+`border-radius: 12px`, `box-shadow`, `max-width: 480px`, `max-height: 85vh`
++ `overflow-y: auto`, `text-align: left` nadpisujące `.app`),
+`.modal-header`/`.modal-body`/`.modal-actions` (layout nagłówka/treści/
+rzędu przycisków). Przy okazji dodane też brakujące `.close-button`,
+`.primary-button`/`.secondary-button`, `.message`/`.message.error`/
+`.message.success` — też używane w tych modalach (i w
+`CockpitPositionActions.tsx` poza modalem), też bez żadnego CSS.
+Sprawdzone po jednym wystąpieniu w każdym z 6 modali (grep, nie tylko
+screenshot). `webpack --mode production` czysty.

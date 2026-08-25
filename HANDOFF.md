@@ -24,58 +24,15 @@ UI potwierdzone screenshotem Rafała. Uwaga homos-server vs homos-bot
 wciągnięta do CONTEXT i do praktyki wpisów.)
 
 ## @Sonnet (sesja UI, Cowork)
-- [Fable→Sonnet, 21.08] **UWAGA: wszedłem w Twój lane** (decyzja Rafała
-  „zrób ty", zmiana była mała). Zmienione: `PaperTradingPanel.tsx`,
-  `MorningCockpit.tsx`, `styles.css` — ikony stanu pozycji.
-  Co dokładnie: (1) pozycja OTWARTA, ale poza zakresem, ma teraz ⚠️
-  zamiast 🟢 (podmiana ikony, nie drugi znaczek — jedna ikona = jeden
-  stan); (2) sekcja „Pozycje — akcje" dostała ten sam język ikon (wcześniej
-  miała tylko ADVICE_ICON, bez statusu); ✅ IN_RANGE_HOLD nie jest już
-  pokazywane, bo 🟢 mówi to samo — rada bota zostaje jako drugi znaczek
-  tylko dla 🔄/⏳; (3) `title=` (tooltipy) na wszystkich ikonach;
-  (4) nowa klasa `.status-legend` + legenda w obu sekcjach.
-  (5) DOKŁADKA (druga prośba Rafała): licznik „ile już poza zakresem".
-  W paper z `outOfRangeSince` (pole było w JSON, brakowało w typie — dodane)
-  + odliczanie do progu 24h. W realnych pozycjach `outOfRangeSince` NIE
-  istnieje, więc liczę z próbek `positionsHistory` (funkcja
-  `outOfRangeSinceFromHistory`, dokładność ~15 min) i zamiast odliczania
-  pokazuję, na co pozycja czeka — bo realne pozycje NIE mają histerezy 24h.
-  Nowe klasy: `.status-legend`, `.out-of-range-timer`, `.out-of-range-elapsed`.
-  Wspólny `formatDuration` w `src/utils/formatters.ts`.
-  (6) 21.08 wieczorem, dalej w Twoim lane: `TopRankingPanel` przerobiony na
-  ten sam szkielet co Telemetria/Prognoza/Analiza (`telemetry-section` >
-  `telemetry-header` > `telemetry-body`, własny `useState` zamiast
-  `ExpandableSection` w rodzicu), 🏆 usunięty, kryteria zeszły z tytułu do
-  `.topranking-criteria-line`. Plus `MorningCockpit` bez portfela pokazuje
-  komunikat zamiast `null` (po usunięciu sekcji „Zarządzaj" była tam
-  całkiem pusta strona).
-  (7) Nagłówek portfela: usunięta Sepolia (przełącznik, faucet, stałe,
-  wpis w NETWORKS, sieć w wagmi config). Przy okazji BŁĄD: etykieta sieci
-  i adresy tokenów były binarne „mainnet albo Sepolia", więc na Base i
-  Arbitrum nagłówek pisał „Sepolia" i pokazywał 0 sald. Teraz tokeny idą
-  z `NETWORKS` per sieć — na Arbitrum od razu pokazało USDC: 152.78.
-  (8) Przełącznik sieci usunięty (zbędny: portfolio czyta 3 sieci naraz,
-  a akcje same robią switchChainAsync przed podpisem) — zamiast niego trzy
-  kolumny sieci obok siebie. Przy okazji drugi błąd: `usePortfolio` liczył
-  `walletUsd` TYLKO z mainnetu, więc „Wartość łączna" zaniżała portfel
-  o wszystko na L2 ($160.98 → $321.12 po poprawce).
-  Dane były gotowe (`position.inRange`, `PaperHistoryPoint.inRange`) — zero
-  zmian w bocie. Jeśli chcesz to przerobić wizualnie (np. kolor karty
-  zamiast emoji), śmiało — semantyka jest opisana wyżej.
+(Skrzynka pusta.)
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
 > Zasada dla CC-Mac (tańszy model): wykonuj zadania DOKŁADNIE wg wpisów;
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-- [Fable→CC-Mac, 25.08] **Commit+push paczki dnia** (Rafał wysyła hurtowo —
-  wykonać dopiero po jego pingu). Pliki: `bot/selector.ts`, `bot/server.ts`,
-  `bot/candidates.ts`, `scripts/candidate-funnel.ts` (NOWY),
-  `scripts/fetch-swaps-hypersync.ts`, `scripts/pipeline.ts`,
-  `scripts/morning-report.ts`, `backtest/walkforward.ts`, `backtest/load.ts`,
-  `CONTEXT.md`, `HANDOFF.md`. Sugerowane 2 commity: (1) feat: auto-lejek
-  kandydatów (funnel+towarzyszące), (2) feat: łańcuch poranny 2h wcześniej
-  (selector 8→6 + bramka świeżości universe) + docs. Po pushu ping CC-Win.
+(Skrzynka pusta — paczka UI Sonneta (żywy próg fee + CSS modali) i docs
+odebrane i wypchnięte.)
 
 ## @CC-Win (Claude Code od botów windowsowych)
 - [Fable→CC-Win, 25.08 KOREKTA — poprzedni wpis o raporcie 07:30 był BŁĘDNY,

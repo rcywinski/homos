@@ -17,7 +17,7 @@ import { nearestUsableTick, TICK_SPACINGS } from '@uniswap/v3-sdk';
 import { calculateOptimalAmounts } from '../utils/liquidityManagement';
 import { humanPriceToTick } from '../utils/v3math';
 import { PortfolioPosition } from '../hooks/usePortfolio';
-import { useCockpitActions, isCollectWorthwhile, collectThresholdUsd, previewClose, RebalanceTarget } from '../hooks/useCockpitActions';
+import { useCockpitActions, previewClose, RebalanceTarget } from '../hooks/useCockpitActions';
 import { findBotPoolByAddress } from '../config/botPools';
 import { UseBotApi } from '../hooks/useBotApi';
 
@@ -29,17 +29,22 @@ interface Props {
    *  P3) — opcjonalne, MorningCockpit zawsze je przekazuje z tego samego
    *  useBotApi(), zero nowych zapytań. */
   bot?: UseBotApi;
+  /** Kurs ETH/USD z usePortfolio.ts (FIX 25.08: żywy próg [Zbierz fees]) —
+   *  null, gdy portfel nie ma pozycji w puli stable/ETH, z której dałoby się
+   *  go wyprowadzić. `actions.collectThresholdUsdLive`/`isCollectWorthwhileLive`
+   *  wtedy same spadają na stałą GAS_USD (patrz useCockpitActions.ts). */
+  ethUsd: number | null;
 }
 
 const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bot }) => {
+const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bot, ethUsd }) => {
   const [closeOpen, setCloseOpen] = useState(false);
   const [rebalanceOpen, setRebalanceOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const worthwhile = isCollectWorthwhile(p);
+  const worthwhile = actions.isCollectWorthwhileLive(p, ethUsd);
   const busyCollect = actions.busyKey === `${p.chainId}-${p.tokenId}-collect`;
   const busyClose = actions.busyKey === `${p.chainId}-${p.tokenId}-close`;
   const busyRebalance = actions.busyKey === `${p.chainId}-${p.tokenId}-rebalance`;
@@ -72,7 +77,7 @@ const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bo
           <button
             className="cockpit-menu-item"
             disabled={!worthwhile || busyCollect}
-            title={worthwhile ? undefined : `nieopłacalne: fee ${fmtUsd(p.feesUsd)} < próg ${fmtUsd(collectThresholdUsd(p.chainId))}`}
+            title={worthwhile ? undefined : `nieopłacalne: fee ${fmtUsd(p.feesUsd)} < próg ${fmtUsd(actions.collectThresholdUsdLive(p.chainId, ethUsd))}`}
             onClick={() => {
               setMenuOpen(false);
               actions.collectFees(p).then(onChanged);

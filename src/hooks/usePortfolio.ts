@@ -151,6 +151,12 @@ export interface PortfolioSummary {
   hasUnknownValue: boolean;
   positions: PortfolioPosition[];
   refresh: () => void;
+  /** Referencyjny kurs ETH/USD wyprowadzony z pierwszej napotkanej puli
+   *  stable/ETH wśród pozycji (patrz `derivedEthUsd` niżej) — null, gdy
+   *  użytkownik nie ma żadnej takiej pozycji. Reużywany przez
+   *  useCockpitActions.ts (Fix 25.08: żywy próg [Zbierz fees]) zamiast
+   *  osobnego odczytu kursu. */
+  ethUsd: number | null;
 }
 
 const knownTokenMap = (chainId: number): Map<string, { symbol: string; decimals: number }> => {
@@ -469,5 +475,6 @@ export function usePortfolio(): PortfolioSummary {
     hasUnknownValue,
     positions,
     refresh,
+    ethUsd,
   };
 }

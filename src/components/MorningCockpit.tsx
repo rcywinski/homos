@@ -725,7 +725,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
 
                 return (
                   <div key={`${p.chainId}-${p.tokenId}`} className="cockpit-position-card">
-                    <CockpitPositionActions position={p} actions={cockpitActions} onChanged={portfolio.refresh} bot={bot} />
+                    <CockpitPositionActions position={p} actions={cockpitActions} onChanged={portfolio.refresh} bot={bot} ethUsd={portfolio.ethUsd} />
                     <div className="cockpit-position-card-header">
                       <span>
                         {/* status pozycji NAJPIERW (zarabia / nie zarabia), rada bota
