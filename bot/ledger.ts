@@ -44,7 +44,11 @@ const LEDGER_PATH = path.join(DIR, 'tx-ledger.ndjson');
 const STATE_PATH = path.join(DIR, 'ledger-state.json');
 const CLOSED_PATH = path.join(DIR, 'closed-positions.json');
 
-const BACKFILL_DAYS = Number(process.env.LEDGER_BACKFILL_DAYS || 400);
+// 600d (nie 400): pyłki #953427/#953465 mintowane 519 dni przed 25.08 —
+// okno ma objąć ich pełną historię (INCREASE z mintu), inaczej księga
+// pokazuje "wpłacone 0" (diagnoza CC-Win 25.08). HyperSync i tak liczy to
+// w sekundy, koszt szerszego okna pomijalny.
+const BACKFILL_DAYS = Number(process.env.LEDGER_BACKFILL_DAYS || 600);
 const CYCLE_BUDGET_MS = 60_000; // ledger nie może zjadać cyklu observera
 const BLOCK_TIME: Record<string, number> = { mainnet: 12, base: 2, arbitrum: 0.25 };
 const CHAIN_IDS: Record<string, number> = { mainnet: 1, base: 8453, arbitrum: 42161 };
@@ -88,7 +92,15 @@ export interface LedgerEntry {
   usd: number | null; // patrz nagłówek — null zamiast zgadywania
 }
 interface TokenMeta { token0: string; token1: string; fee: number; sym0: string; sym1: string; d0: number; d1: number }
-interface LedgerState { chains: Record<string, { nextBlock: number }>; tokens: Record<string, TokenMeta | null> }
+interface LedgerState {
+  chains: Record<string, { nextBlock: number }>;
+  tokens: Record<string, TokenMeta | null>;
+  /** bieżąca płynność per chain:tokenId (raw string; '0' też dla spalonych) —
+   *  potrzebna do domykania pozycji, których NFT NIE jest palone: nasza apka
+   *  "zamyka" przez decrease+collect i NFT zostaje w portfelu (CC-Win 25.08),
+   *  więc BURN/TRANSFER_OUT nigdy nie nadejdzie. */
+  liq?: Record<string, string>;
+}
 
 const loadState = (): LedgerState => {
   try { return JSON.parse(fs.readFileSync(STATE_PATH, 'utf8')); } catch { return { chains: {}, tokens: {} }; }
@@ -207,6 +219,10 @@ const ERC20_ABI = [
   { name: 'symbol', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'string' }] },
   { name: 'decimals', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint8' }] },
 ] as const;
+const ENUM_ABI = [
+  { name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ name: 'owner', type: 'address' }], outputs: [{ type: 'uint256' }] },
+  { name: 'tokenOfOwnerByIndex', type: 'function', stateMutability: 'view', inputs: [{ name: 'owner', type: 'address' }, { name: 'index', type: 'uint256' }], outputs: [{ type: 'uint256' }] },
+] as const;
 const POSITIONS_ABI = [{
   name: 'positions', type: 'function', stateMutability: 'view',
   inputs: [{ name: 'tokenId', type: 'uint256' }],
@@ -276,6 +292,23 @@ export async function updateLedger(clients: Record<string, any>, ctx: LedgerCtx)
       const key = `${chain}:${tokenId}`;
       if (!(key in state.tokens)) state.tokens[key] = await fetchTokenMeta(client, chain, BigInt(tokenId), lg.blockNumber, ctx.log);
     };
+    // SEED z żywej enumeracji portfela (diagnoza CC-Win 25.08): stare pozycje
+    // (mint sprzed okna backfillu, zero transferów) NIGDY nie wpadną przez
+    // Fazę A — bierzemy je wprost z balanceOf/tokenOfOwnerByIndex. Łapie też
+    // przyszłe pozycje importowane/kupione dowolną drogą.
+    try {
+      const n = Number(await client.readContract({ address: manager, abi: ENUM_ABI, functionName: 'balanceOf', args: [WATCH_ADDRESS] }));
+      for (let i = 0; i < n; i++) {
+        const tid = (await client.readContract({ address: manager, abi: ENUM_ABI, functionName: 'tokenOfOwnerByIndex', args: [WATCH_ADDRESS, BigInt(i)] })) as bigint;
+        const key = `${chain}:${tid.toString()}`;
+        if (!(key in state.tokens)) {
+          state.tokens[key] = await fetchTokenMeta(client, chain, tid, null, ctx.log);
+          ctx.log(`ledger ${chain}: seed tokenId ${tid} z enumeracji portfela`);
+        }
+      }
+    } catch (e) {
+      ctx.log(`ledger ${chain}: enumeracja portfela padła (${String(e).slice(0, 80)}) — seed w kolejnym cyklu`);
+    }
     const idTopics = () => Object.keys(state.tokens).filter((k) => k.startsWith(chain + ':')).map((k) => padTopic(BigInt(k.split(':')[1])));
 
     try {
@@ -345,13 +378,22 @@ export async function updateLedger(clients: Record<string, any>, ctx: LedgerCtx)
         fs.appendFileSync(LEDGER_PATH, entries.map((e) => JSON.stringify(e)).join('\n') + '\n');
       }
       st.nextBlock = latest + 1;
+      // snapshot płynności znanych tokenIdów — pozycje "zamknięte" bez
+      // palenia NFT (decrease+collect) domykamy po liquidity==0
+      state.liq ??= {};
+      for (const key of Object.keys(state.tokens).filter((k) => k.startsWith(chain + ':'))) {
+        try {
+          const p = (await client.readContract({ address: manager, abi: POSITIONS_ABI, functionName: 'positions', args: [BigInt(key.split(':')[1])] })) as any[];
+          state.liq[key] = String(p[7]);
+        } catch { state.liq[key] = '0'; } // revert = NFT spalony
+      }
       saveState(state);
       if (entries.length) ctx.log(`ledger ${chain}: +${entries.length} zdarzeń (kursor ${st.nextBlock})`);
     } catch (e) {
       ctx.log(`ledger ${chain}: przebieg padł (${String(e).slice(0, 140)}) — ponowię w kolejnym cyklu`);
     }
   }
-  rebuildClosedPositions(ctx.log);
+  rebuildClosedPositions(ctx.log, state);
 }
 
 /** czytelnicy deduplikują (patrz nagłówek) */
@@ -381,9 +423,13 @@ export interface ClosedPosition {
   fees0: number | null; fees1: number | null; // COLLECT − DECREASE (≥0)
   inUsd: number | null; outUsd: number | null; feesUsdApprox: number | null;
   txCount: number;
+  /** czy księga ma PEŁNĄ historię pozycji (MINT w oknie backfillu);
+   *  false = wpłaty sprzed okna → in* celowo null, patrz note */
+  complete: boolean;
+  note?: string;
 }
 
-function rebuildClosedPositions(log: (m: string) => void): void {
+function rebuildClosedPositions(log: (m: string) => void, state?: LedgerState): void {
   try {
     const entries = readLedger();
     const byToken = new Map<string, LedgerEntry[]>();
@@ -394,7 +440,10 @@ function rebuildClosedPositions(log: (m: string) => void): void {
     const closed: ClosedPosition[] = [];
     for (const [key, evs] of byToken) {
       const end = evs.find((e) => e.kind === 'BURN' || e.kind === 'TRANSFER_OUT');
-      if (!end) continue; // pozycja żywa — nie do tego pliku
+      // domknięcie bez palenia NFT: liquidity==0 na łańcuchu + był DECREASE
+      // (nasza apka zamyka przez decrease+collect, NFT zostaje — CC-Win 25.08)
+      const emptied = !end && state?.liq?.[key] === '0' && evs.some((e) => e.kind === 'DECREASE');
+      if (!end && !emptied) continue; // pozycja żywa — nie do tego pliku
       const sum = (kinds: LedgerKind[], leg: 0 | 1): number | null => {
         let s = 0;
         for (const e of evs.filter((x) => kinds.includes(x.kind))) {
@@ -412,18 +461,25 @@ function rebuildClosedPositions(log: (m: string) => void): void {
         }
         return +s.toFixed(2);
       };
-      const in0 = sum(['INCREASE'], 0), in1 = sum(['INCREASE'], 1);
+      const complete = evs.some((e) => e.kind === 'MINT');
+      // bez MINT-u w oknie wpłaty są niekompletne → null (nie "0", które
+      // kłamałoby, że cały out to zysk)
+      const in0 = complete ? sum(['INCREASE'], 0) : null;
+      const in1 = complete ? sum(['INCREASE'], 1) : null;
       const out0 = sum(['COLLECT'], 0), out1 = sum(['COLLECT'], 1);
       const dec0 = sum(['DECREASE'], 0), dec1 = sum(['DECREASE'], 1);
       const first = evs[0];
+      const lastFlow = [...evs].reverse().find((e) => e.kind === 'COLLECT' || e.kind === 'DECREASE');
       closed.push({
         chain: first.chain, tokenId: first.tokenId, sym0: first.sym0, sym1: first.sym1,
-        openedAt: evs.find((e) => e.kind === 'MINT' || e.kind === 'TRANSFER_IN')?.ts ?? first.ts,
-        closedAt: end.ts,
+        openedAt: complete ? evs.find((e) => e.kind === 'MINT')!.ts : null,
+        closedAt: end?.ts ?? lastFlow?.ts ?? null,
+        complete,
+        note: complete ? undefined : `historia od ${first.ts.slice(0, 10)} (mint sprzed okna backfillu)`,
         in0, in1, out0, out1,
         fees0: out0 !== null && dec0 !== null ? +Math.max(0, out0 - dec0).toFixed(8) : null,
         fees1: out1 !== null && dec1 !== null ? +Math.max(0, out1 - dec1).toFixed(8) : null,
-        inUsd: sumUsd(['INCREASE']), outUsd: sumUsd(['COLLECT']),
+        inUsd: complete ? sumUsd(['INCREASE']) : null, outUsd: sumUsd(['COLLECT']),
         // fees USD: tylko gdy obie nogi wyceniane (stable/WETH) — inaczej null
         feesUsdApprox: null,
         txCount: new Set(evs.map((e) => e.txHash)).size,

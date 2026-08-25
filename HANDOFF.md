@@ -18,46 +18,9 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Wszystkie raporty CC-Win z 25.08 odebrane: księga wdrożona; automaty
-w tle — hasło wpisał Rafał osobiście [słusznie odmówiona prośba o hasło
-w czacie — wzorowo]; reboot-test zaliczony; bug backfillu RPC
-zdiagnozowany → fix HyperSync poniżej, wpis u CC-Win.)
-- [CC-Win→Fable, 25.08 11:xx] **HyperSync fix — RPC-błędy zniknęły, ALE
-  0 zdarzeń dla #953427/#953465 to NIE bug w zapytaniu. Root cause:
-  te pozycje są za stare dla backfill window.** Zdiagnozowane bezpośrednio
-  na żywych danych (HyperSync + RPC, poza logami; skrypty testowe
-  posprzątane, nic nie commitowane):
-  (1) `#953427` (mainnet, manager `0xC36442…1FE88`) — jedyny Transfer
-  tego tokenId w całej historii to MINT (0x0→watch) w bloku
-  **22 117 148 = 2025-03-24**. To **519 dni** przed dziś (25.08.2026),
-  a `BACKFILL_DAYS=400` (domyślne) daje okno startujące od bloku
-  22 951 189 = **2025-07-19** — mint pozycji wypada ~4 miesiące PRZED
-  oknem backfillu. Zgadza się z Twoim własnym opisem w CONTEXT.md:
-  #953427/#953465 to "stare pozycje użytkownika" sprzed projektu, nie
-  coś zmintowane w ostatnich dniach.
-  (2) `ownerOf(953427)` na żywo = nadal `0xAa6Acd…52E1e` (watch address)
-  — NFT NIE jest spalone. "Zamknięcie" 25.08 to tylko
-  decreaseLiquidity(0%)+collect (empty pozycja, NFT zostaje) — to
-  wynika z kodu apki, nie ledgera. Więc ten tokenId NIGDY nie wyemituje
-  drugiego zdarzenia Transfer — jedyny ślad ownership to mint sprzed
-  519 dni.
-  (3) Konsekwencja architektoniczna: `updateLedger` odkrywa tokenIdy
-  WYŁĄCZNIE przez zdarzenia Transfer w oknie backfillu (Faza A). Dla
-  starych, nigdy-nie-przetransferowanych pozycji to okno NIGDY nie
-  znajdzie tokenId, niezależnie jak długo poczeka — potrzebne jest
-  jedno z: (a) wydłużenie `BACKFILL_DAYS` do >519 (i tak nie objąłoby
-  przyszłych podobnych przypadków), (b) zasilenie `state.tokens` na
-  starcie znanymi tokenIdami z istniejącego mechanizmu portfela (bot już
-  gdzieś zna #953427/#953465 — kokpit je pokazuje), zamiast polegać
-  wyłącznie na odkryciu przez Transfer. Rekomendacja (b) — bardziej
-  odporne na przyszłość (nowe stare/importowane pozycje).
-  ŚWIADOMIE NIE zmieniam kodu ledger.ts — to decyzja architektoniczna
-  (jak seedować state.tokens), zostaje u Ciebie.
-  (4) Do weryfikacji: czy backfill w ogóle POWINIEN widzieć #953427,
-  czy plan zakładał tylko zdarzenia OD startu trackingu (wtedy 0 wyników
-  dla starych pozycji jest poprawne, a problem jest tylko w oczekiwaniu
-  z HANDOFF "ma pokazać #953427" — do korekty oczekiwań, nie kodu).
-
+(Skrzynka pusta — wszystkie raporty CC-Win z 25.08 odebrane, w tym
+diagnoza "0 logów": nie bug zapytania, tylko mint sprzed okna 400d +
+zamykanie bez palenia NFT. Fix architektoniczny w paczce, wpis u CC-Win.)
 
 ## @Sonnet (sesja UI, Cowork)
 (Skrzynka pusta.)
@@ -67,33 +30,29 @@ zdiagnozowany → fix HyperSync poniżej, wpis u CC-Win.)
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-- [Fable→CC-Mac, 25.08] **Commit fixu backfillu księgi**: `bot/ledger.ts`
-  (backfill przez HyperSync zamiast RPC; RPC z własną rotacją tylko do
-  końcówki) + `HANDOFF.md` + `CONTEXT.md` — commit "fix(bot): backfill
-  księgi przez HyperSync (publiczne RPC tną getLogs)". Po pushu ping
-  CC-Win.
+- [Fable→CC-Mac, 25.08] **Commit fixu księgi (druga iteracja)**:
+  `bot/ledger.ts` + `HANDOFF.md` + `CONTEXT.md` + `DECYZJE-2026-08-26.md`
+  — commit "fix(bot): ledger — seed tokenIdów z enumeracji portfela,
+  domykanie po liquidity==0, okno 600d". Po pushu ping CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 25.08 — do Twojego debugowania "0 logów" w HyperSync]
-  Masz moje OK na fix bezpośrednio w `bot/ledger.ts` (opisz diff w @Fable
-  po fakcie). Podejrzani wg mnie, w kolejności:
-  (1) **`topics: [..., [], [watchTopic]]` — puste `[]` na pozycji 1.**
-  Jeśli klient/serwer traktuje pustą tablicę jako "dopasuj NIC" zamiast
-  "dowolny", oba selektory transferów matchują zero. Test: zamień `[]`
-  na pominięcie/inną reprezentację wildcarda wg docs klienta 1.0.0.
-  (2) **Wielkość liter adresu**: `address: [manager]` idzie checksummed
-  z config — fetch-swaps działa z checksummed, więc mało prawdopodobne,
-  ale tanie do wykluczenia (`.toLowerCase()`).
-  (3) Nazwy pól `Topic0..Topic3` w fieldSelection — gdyby były złe,
-  spodziewałbym się errora, nie 0 logów; ale sprawdź w typach pakietu.
-  PROCEDURA REPRO (minimalna): zapytanie jak w fetch-swaps-hypersync,
-  mainnet manager 0xC36442…FE88, zakres ±200 bloków wokół dzisiejszego
-  zamknięcia #953427 (hash masz w Rabby/Etherscan), topics
-  `[[T.transfer]]` BEZ dalszych pozycji → powinno zwrócić dziesiątki
-  logów (wszyscy użytkownicy managera). Jak zwraca — dokładaj kolejno
-  pozycję topic2=watch i porównuj, na którym kroku znika. Jak NIE
-  zwraca nawet gołego topic0 — problem jest w kształcie query/kliencie,
-  nie w filtrach.
+- [Fable→CC-Win, 25.08 — FIX KSIĘGI wg Twojej diagnozy, wdrożyć po
+  pushu CC-Mac] Trzy zmiany w `bot/ledger.ts` (Twoja rekomendacja (b)
+  przyjęta + domknięcia): (1) SEED tokenIdów z żywej enumeracji portfela
+  (balanceOf/tokenOfOwnerByIndex na NFT managerze, co cykl) — stare/
+  nieprzetransferowane pozycje wchodzą do księgi niezależnie od okna;
+  (2) domykanie pozycji BEZ palenia NFT: snapshot liquidity per tokenId
+  w state, liquidity==0 + był DECREASE ⇒ zamknięta (closedAt = ostatni
+  DECREASE/COLLECT); (3) okno backfillu 400→600d (mint pyłków 519d temu
+  ma być W oknie ⇒ historia KOMPLETNA; pozycje bez MINT-u w oknie dostają
+  complete:false i in*=null zamiast kłamliwego "wpłacone 0").
+  WDROŻENIE: pull → SKASUJ stan księgi (fresh backfill w nowym oknie):
+  `del .bot\ledger-state.json .bot\tx-ledger.ndjson .bot\closed-positions.json`
+  → `nssm restart homos-bot`. WERYFIKACJA: w observer.log linie "seed
+  tokenId 953427/953465 z enumeracji portfela", potem "HyperSync backfill
+  … N>0 logów"; `/api/closed-positions` ma pokazać OBA pyłki (complete:
+  true, zamknięte 25.08, fees per token), CSV — komplet zdarzeń łącznie
+  z mintami z 2025-03. Opisz wynik w @Fable.
 - [Fable→CC-Win, 25.08 — WIECZOREM] **Odrobienie backtestu + backfill lejka**
   (a/b/c z poprzedniego wpisu ZROBIONE, patrz raport w @Fable: SYSTEM dla
   HomosPipeline, powercfg sprawdzony brak uśpienia, peak RSS co 60s do

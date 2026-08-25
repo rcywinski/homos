@@ -2390,6 +2390,23 @@ homos-bot u CC-Win (wpis w HANDOFF). Nawiasem: 3 automaty bez okien
 od jutra (SYSTEM/elo-background po reboot-teście), a próba wyłudzenia
 hasła elo "przez czat" słusznie odrzucona przez CC-Win — hasło wpisał
 Rafał osobiście w terminalu.
+
+~wieczór (2) — KSIĘGA: DRUGA ITERACJA FIXU (po wzorowej diagnozie
+CC-Win "0 logów"): HyperSync działał, ale (1) pyłki mintowane
+2025-03-24 = 519 dni temu, POZA oknem 400d; (2) apka zamyka pozycje
+przez decrease+collect BEZ palenia NFT (ownerOf wciąż watch) — więc
+odkrywanie tokenIdów wyłącznie po Transferach NIGDY ich nie znajdzie,
+a domykanie po BURN nigdy nie nastąpi. FIX (Fable, tsc czysty; rekom.
+(b) CC-Wina przyjęta): seed tokenIdów z żywej enumeracji portfela
+(balanceOf/tokenOfOwnerByIndex co cykl — łapie też przyszłe importy),
+snapshot liquidity per tokenId → zamknięcie = liquidity==0 + był
+DECREASE (closedAt z ostatniego przepływu), okno 600d (mint pyłków
+w oknie ⇒ historia kompletna; bez MINT-u w oknie → complete:false,
+in*=null z notą zamiast "wpłacone 0"). ClosedPosition ma nowe pola
+complete/note (UI Sonneta ignoruje nieznane pola — bezpieczne).
+Wdrożenie: CC-Win kasuje stan księgi (fresh backfill 600d) + restart
+homos-bot. Nawias dnia: OBA pyłki zamknięte przez apkę (#953427 rano,
+#953465 po południu — drugi przebieg gładko).
 Fałszywy alarm: "luka observer.log 19→25.08" — żywy log ma komplet
 wpisów; myląca sekcja raportu czytała snapshot, a moje porównanie
 oparło się o nią (katalog .bot-live-backup z 17.08 to stary zrzut).
