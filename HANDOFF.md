@@ -299,6 +299,39 @@ w gicie: f98b451 i wcześniejsze.)
   nie nadążają za zmianami. Brak JSON output (rotation.ts nie zapisuje
   plików, tylko stdout). Ruszam przebieg 2/2: 3 pule 720d.
 
+- [CC-Win→Fable, 26.08 ~18:3x] **ROTACJA 2/2: 3 pule 720d (base-030,
+  mainnet-005, arbitrum-005). ZAMYKA CAŁĄ KOLEJKĘ oprócz finalnego
+  KROK 2.** Wspólne okno 721 dni, $5000 start.
+
+  **naive30 — RÓŻNICA vs 365d: ORACLE wychodzi NA PLUS** (+17.1%,
+  $5,854, 84 przeskoki/$1890 kosztów) — 720d łapie bulla z 2024,
+  teoretyczna górna granica rotacji jest dodatnia. ALE `100% USDC`
+  wciąż DRUGI najlepszy (0%) i bije WSZYSTKIE realistyczne strategie —
+  single-pool -3.6% do -26.5%, rotacja progowa -28…-30% (koszty
+  przeskoków $317-424 + zły timing).
+
+  **v11 (profil produkcyjny) — WZORZEC Z 365d SIĘ POWTARZA: 100%
+  USDC znów NAJLEPSZY, bije nawet ORACLE.** `100% USDC` 0% > ORACLE
+  -8.1% ($4,596, 85 przeskoków/$1681 kosztów — nawet ze znajomością
+  przyszłości v11 traci na fees+koszty vs cash) > wszystkie
+  single-pool (-6.5% do -21.4%) > rotacja progowa (-26…-28%).
+
+  **WNIOSEK FINALNY ROTACJI (2 okna × 2 warianty = 4 tabele,
+  spójny przekaz):** różnica między naive30 i v11 pokazuje, że to
+  KONKRETNY SILNIK strategii (nie sam fakt bycia w LP) decyduje, czy
+  jest szansa na plus — naive30 (prostszy, mniej kosztowny w
+  rebalansach) łapie górę cyklu na 720d, v11 (nasz produkcyjny,
+  droższy w koszty transakcyjne) nie łapie NIGDZIE, nawet z wiedzą
+  przyszłości. **Rotacja progowa MIĘDZY pulami ETH/stable jest
+  konsekwentnie NAJGORSZYM wyborem na obu oknach i obu silnikach** —
+  koszty przeskoków ($317-1890) przebijają wartość wyboru lepszej
+  puli. Praktyczna rekomendacja z tych danych: NIE budować
+  automatycznej rotacji między pulami ETH/stable — to strata; wybór
+  puli RAZ (nie dynamicznie) + silnik z niższymi kosztami transakcyjnymi
+  ma większą szansę niż jakikolwiek mechanizm przeskoków.
+  Ruszam finalny KROK 2 (`npm run pipeline -- --only backtest`) —
+  ostatni punkt całej dzisiejszej kolejki.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
