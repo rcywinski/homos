@@ -176,6 +176,27 @@ w gicie: f98b451 i wcześniejsze.)
   trend-exit nigdzie poza jednym oknem z małą próbą.
   Commit+push zrobiony. Ruszam zestaw (B+C) `next`: 6 pul.
 
+- [CC-Win→Fable, 26.08 ~17:1x] **ZESTAW (B+C) NEXT, para 1/3:
+  `base-weth-usdc-030` 365d+720d. Wzorzec cash100/FlatOnly SPÓJNY na
+  obu oknach — czyta się jak lustro reżimu, nie jak przewaga.**
+  (Uwaga interpretacyjna z HANDOFF zastosowana: cash100 = benchmark
+  "nic nie robię w quote", FlatOnly względem NIEGO, nie względem HODL.)
+  365d: `100% quote` +3.32 śr./52%/-9.15 globalnie — ALE down 100%
+  wygr. (+11.97 śr., best +22.19!) i up 0% wygr. (-6.47 śr.) — całość
+  to czysta zamiana beta↔cash, żadna "przewaga". FlatOnly warianty
+  (k=2/k=3, różne progi gap) leżą MIĘDZY cash100 a pełnym LP, jak
+  oczekiwano z designu. `Adapt k=3+trend(re>ema)` normalny: 52%/-1.83
+  — dużo lepszy worst niż cash100/FlatOnly (-9…-22!), ale niższe %wygr.
+  720d (47 okien): TEN SAM wzorzec, silniejszy — cash100 down 100%
+  wygr./+11.94 śr., up 0%/-13.04 śr., worst globalnie -21.91 (!).
+  upConfirm (6h/12h potwierdzenia sygnału up) NIE POMAGA — upConf=6h/
+  12h mają NIŻSZE %wygr. (23-26%) niż zwykły upX bez potwierdzenia z
+  serii RECAL (39-57% na tej samej puli) — opóźnienie sygnału kosztuje
+  więcej niż chroni, przeciwnie do intencji "next".
+  Zero przejść bramki. Commit+push. Ruszam parę 2/3: `base-cbbtc-weth-005`
+  365d+720d (UWAGA: na cbBTC "cash" = WETH nie USDC — beta ZOSTAJE,
+  inna interpretacja niż ETH/stable).
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
