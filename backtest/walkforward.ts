@@ -118,9 +118,37 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       volAdaptiveTrend({ ...trendBase, k: 2, mode: 'exit', upExitThresh: 0.05 }), // profil cbBTC + upX
     ];
   };
+  // 'recal' (paczka rekalibracyjna, decyzje przeglądu 26.08 — TASKS-RECAL §5):
+  // odpalać z SIGMA_MODE=grid15 (σ z zamknięć kubełków 15-min)! Cel: sweep k
+  // na NAPRAWIONEJ σ (stare k są w jednostkach zepsutego estymatora — DECYZJE
+  // 11/11a), rozstrzygnięcie cbBTC k2/k3, kandydat hUp48/h48 i warianty
+  // "LP tylko bez trendu" (upX — teza Rafała o rynku bocznym; upX=8% =
+  // łagodniejszy sygnał UP z 11f.d). Histereza wciąż stara (udział czasu =
+  // §2, osobny krok) — jedna zmienna naraz.
+  const mkRecal = (): Strategy[] => {
+    const v11 = { ...trendBase, mode: 'exit' as const, reentryAboveEma: true };
+    return [
+      hodl5050,
+      passiveWide, // ±50% — dotychczasowy "lider" 720d; na grid15 σ zobaczymy, czy adapt go dogania
+      fixedNaive(0.3), // referencja sweepu base-030 ("Sztywny ±30%")
+      volAdaptive({ k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
+      volAdaptiveTrend({ ...v11, k: 2 }),
+      volAdaptiveTrend({ ...v11, k: 2.5 }),
+      volAdaptiveTrend(v11), // k=3, referencja v1.1
+      volAdaptiveTrend({ ...v11, k: 4 }),
+      volAdaptiveTrend({ ...v11, hysteresisSec: 48 * 3600 }), // h=48 (kierunek ze sweepu)
+      volAdaptiveTrend({ ...v11, hysteresisUpSec: 48 * 3600 }), // kandydat v1.3 (hUp48)
+      volAdaptiveTrend({ ...trendBase, k: 2, mode: 'exit' }), // zamrożony profil cbBTC (k=2)
+      volAdaptiveTrend({ ...trendBase, k: 3, mode: 'exit' }), // cbBTC k=3 (pkt 3 agendy)
+      volAdaptiveTrend({ ...v11, upExitThresh: 0.05 }), // "LP tylko bez trendu" (upX=5%)
+      volAdaptiveTrend({ ...v11, upExitThresh: 0.08 }), // upX=8% — mniej nerwowy (11f.d)
+    ];
+  };
   const mkStrategies = (): Strategy[] =>
     process.env.WF_SET === 'hedge'
       ? mkHedge()
+      : process.env.WF_SET === 'recal'
+      ? mkRecal()
       : process.env.WF_SET === 'y2'
       ? mkY2()
       : process.env.WF_SET === 'funnel'

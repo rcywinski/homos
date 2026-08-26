@@ -44,6 +44,37 @@ const clients: Record<string, PublicClient> = {
   arbitrum: createPublicClient({ chain: arbitrum, transport: fallback(RPC.arbitrum.map((u) => http(u))) }),
 };
 
+// --- żywy gaz (decyzja przeglądu 26.08 — DECYZJE 6a / TASKS-RECAL §4) ---
+// Stała $8 na mainnet karała payback 4-8× przy realnym gazie 0.3-1.4 Gwei
+// (potwierdzone bojowo 25.08: collect $0.27 przy progu liczonym ze stałej).
+// Koszt cyklu = eth_gasPrice × GAS_UNITS_CYCLE × kurs ETH; podłoga chroni
+// przed zaniżeniem na L2 (opłata L1-data niewidoczna w gasPrice egzekucji),
+// stara stała zostaje WYŁĄCZNIE jako fallback przed pierwszym odczytem.
+// Backtest/paper celowo NIE ruszane — koszt per-reżim wchodzi w paczce
+// rekalibracyjnej (rekalibracja = podbicie algoVersion).
+const GAS_UNITS_CYCLE = 800_000; // decrease+collect+swap+mint+approvals (~zgodne z pomiarem $1-2 przy 0.3-1.4 Gwei)
+const GAS_FLOOR_USD: Record<string, number> = { mainnet: 0.5, base: 0.08, arbitrum: 0.1 };
+const GAS_STATIC_USD: Record<string, number> = { mainnet: 8, base: 0.08, arbitrum: 0.1 };
+const gasUsdLive: Record<string, number> = {};
+const gasUsdFor = (chain: BotPool['chain']): number => gasUsdLive[chain] ?? GAS_STATIC_USD[chain] ?? 5;
+async function refreshGas() {
+  // kurs ETH z pierwszej żywej puli kwotowanej w USD (bez własnego zapytania)
+  const ethUsd = BOT_POOLS
+    .filter((p) => (p.quote ?? 'USD') === 'USD')
+    .map((p) => live[p.id]?.ethUsd)
+    .find((v): v is number => typeof v === 'number' && v > 0);
+  if (!ethUsd) return; // przed pierwszym odczytem cen — spróbujemy za 5 min
+  for (const chain of [...new Set(BOT_POOLS.map((p) => p.chain))]) {
+    try {
+      const wei = await clients[chain].getGasPrice();
+      const usd = (Number(wei) / 1e18) * GAS_UNITS_CYCLE * ethUsd;
+      gasUsdLive[chain] = Math.max(usd, GAS_FLOOR_USD[chain] ?? 0.05);
+    } catch {
+      /* zostaje ostatni znany / fallback statyczny — awaria RPC nie kładzie cyklu */
+    }
+  }
+}
+
 const SLOT0_ABI = [
   {
     inputs: [], name: 'slot0', stateMutability: 'view', type: 'function',
@@ -215,7 +246,7 @@ const saveState = () => {
   fs.writeFileSync(
     STATE_PATH,
     JSON.stringify(
-      { updatedAt: new Date().toISOString(), mode: 'OBSERVE', watch: WATCH_ADDRESS, pools: Object.values(live), positions, hedge: hedgeLive, proposals: proposals.filter((p) => p.status === 'open') },
+      { updatedAt: new Date().toISOString(), mode: 'OBSERVE', watch: WATCH_ADDRESS, pools: Object.values(live), positions, hedge: hedgeLive, gasUsd: gasUsdLive, proposals: proposals.filter((p) => p.status === 'open') },
       bigintReplacer, 2
     )
   );
@@ -571,7 +602,8 @@ async function refreshPositions() {
         if (lv.stats) {
           const a = assessPosition(
             { tickLower: Number(lo), tickUpper: Number(hi), valueUsd },
-            lv.stats, chainId, match.feeBps as any, match.feeBps / 1_000_000, match.d0, match.d1
+            lv.stats, chainId, match.feeBps as any, match.feeBps / 1_000_000, match.d0, match.d1,
+            ADVISOR_PARAMS, gasUsdFor(match.chain) // żywy gaz (26.08) zamiast stałej $8
           );
           advice = a.action;
           payback = a.paybackDays;
@@ -750,6 +782,7 @@ function runSelector() {
         const [usdLo, usdHi] = [toUsd(lv.suggestion.tickLower), toUsd(lv.suggestion.tickUpper)].sort((x, y) => x - y);
         return { tickLower: lv.suggestion.tickLower, tickUpper: lv.suggestion.tickUpper, usdLo, usdHi };
       },
+      getGasUsd: (chain: string) => gasUsdLive[chain] ?? null, // żywy gaz (26.08)
     });
   } catch (e) {
     log(`selector crashed: ${String(e).slice(0, 160)}`);
@@ -787,9 +820,11 @@ async function runLedger() {
   log(`observer start — watch=${WATCH_ADDRESS}, pools=${BOT_POOLS.map((p) => p.id).join(', ')}, tryb=OBSERWUJ`);
   await refreshPrices();
   await refreshStats();
+  await refreshGas(); // żywy gaz PRZED pierwszą oceną pozycji (payback)
   await refreshPositions();
   runSelector();
   setInterval(refreshPrices, INTERVALS.priceSec * 1000);
+  setInterval(refreshGas, 5 * 60 * 1000); // żywy gaz co 5 min (takt pozycji)
   setInterval(refreshStats, INTERVALS.statsSec * 1000);
   setInterval(refreshPositions, INTERVALS.positionsSec * 1000);
   runLedger();

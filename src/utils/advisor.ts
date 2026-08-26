@@ -113,19 +113,54 @@ export function computeStats(
   if (swaps.length < 10) return null;
   const bt = BLOCK_TIME[chainId] || 12;
 
+  // --- σ: tryb 'grid15' za flagą SIGMA_MODE (TASKS-RECAL §1, przegląd 26.08).
+  // Estymator swap-po-swapie mierzy mikrostrukturę puli (DECYZJE 11: rozrzut
+  // 4.5× na tym samym ETH); 'grid15' liczy zwroty między zamknięciami
+  // kubełków 15-min (czas z delty bloków). Default 'swap' — produkcja/paper
+  // bez zmian do decyzji po paczce rekalibracyjnej (podbicie algoVersion).
+  // Guard typeof: plik trafia też do bundla przeglądarki (webpack).
+  const sigmaGrid15 =
+    typeof process !== 'undefined' && (process as { env?: Record<string, string | undefined> }).env?.SIGMA_MODE === 'grid15';
+  const GRID_SEC = 900;
+  let gridCurBucket = -1;
+  let gridCurLast = 0;
+  let gridCloseP = 0;
+  let gridCloseBucket = -1;
+
   let volVar = 0.03 * 0.03;
   let feeYield = 0;
   let lastP: number | null = null;
   let lastBlock = swaps[0].block;
+  const block0 = swaps[0].block;
 
   for (const s of swaps) {
     const p = sqrtPriceX96ToHumanPrice(s.sqrtPriceX96, d0, d1);
     const dt = Math.max(Number(s.block - lastBlock) * bt, bt);
-    if (lastP !== null && p > 0 && lastP > 0) {
-      const r = Math.log(p / lastP);
-      const perDay = (r * r * 86400) / dt;
-      const a = 1 - Math.exp(-dt / (43200 / Math.LN2)); // half-life 12h
-      volVar = (1 - a) * volVar + a * perDay;
+    if (!sigmaGrid15) {
+      if (lastP !== null && p > 0 && lastP > 0) {
+        const r = Math.log(p / lastP);
+        const perDay = (r * r * 86400) / dt;
+        const a = 1 - Math.exp(-dt / (43200 / Math.LN2)); // half-life 12h
+        volVar = (1 - a) * volVar + a * perDay;
+      }
+    } else if (p > 0) {
+      const tSec = Number(s.block - block0) * bt;
+      const bucket = Math.floor(tSec / GRID_SEC);
+      if (bucket !== gridCurBucket) {
+        if (gridCurBucket >= 0 && gridCurLast > 0) {
+          if (gridCloseP > 0 && gridCloseBucket >= 0) {
+            const dtg = (gridCurBucket - gridCloseBucket) * GRID_SEC;
+            const r = Math.log(gridCurLast / gridCloseP);
+            const perDay = (r * r * 86400) / dtg;
+            const a = 1 - Math.exp(-dtg / (43200 / Math.LN2)); // half-life 12h
+            volVar = (1 - a) * volVar + a * perDay;
+          }
+          gridCloseP = gridCurLast;
+          gridCloseBucket = gridCurBucket;
+        }
+        gridCurBucket = bucket;
+      }
+      gridCurLast = p;
     }
     // fee yield aktywnego pasma ±1 spacing
     const sp = Number(s.sqrtPriceX96) / 2 ** 96;
@@ -185,7 +220,11 @@ export function assessPosition(
   feeRate: number,
   d0: number,
   d1: number,
-  params = ADVISOR_PARAMS
+  params = ADVISOR_PARAMS,
+  /** żywy koszt gazu pełnego cyklu w USD (decyzja przeglądu 26.08, DECYZJE
+   *  6a): observer podaje wartość z eth_gasPrice; bez niej fallback na
+   *  statyczną tabelę GAS_USD (UI/backtest do czasu paczki rekalibracyjnej). */
+  gasUsd?: number | null
 ): RebalanceAssessment {
   const suggestion = suggestRange(stats, feeAmount, d0, d1, params);
   const inRange = stats.lastTick >= pos.tickLower && stats.lastTick < pos.tickUpper;
@@ -194,7 +233,7 @@ export function assessPosition(
   const ourTicks = Math.max(suggestion.tickUpper - suggestion.tickLower, 2 * spacing);
   const ourYieldDaily = stats.feeYieldDaily * ((2 * spacing) / ourTicks);
   const expectedDailyFeesUsd = pos.valueUsd * ourYieldDaily;
-  const costUsd = (GAS_USD[chainId] ?? 5) + pos.valueUsd * 0.5 * (feeRate + params.slippageBps / 10_000);
+  const costUsd = (gasUsd ?? GAS_USD[chainId] ?? 5) + pos.valueUsd * 0.5 * (feeRate + params.slippageBps / 10_000);
   const paybackDays = expectedDailyFeesUsd > 0 ? costUsd / expectedDailyFeesUsd : null;
 
   if (inRange) return { action: 'IN_RANGE_HOLD', paybackDays, expectedDailyFeesUsd, costUsd, suggestion };

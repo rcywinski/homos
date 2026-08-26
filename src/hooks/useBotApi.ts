@@ -8,7 +8,7 @@
  * server running, or server unreachable): failures land in `status`/`error`
  * for the UI to render, not in the console.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const BASE_KEY = 'homos_api_base';
 const TOKEN_KEY = 'homos_api_token';
@@ -361,6 +361,9 @@ export interface UseBotApi {
   setApiBase: (v: string) => void;
   setApiToken: (v: string) => void;
   dismissProposal: (id: string) => Promise<void>;
+  /** Komunikat po akcji na propozycji (np. nieudane odrzucenie) — do
+   *  pokazania przy liście propozycji; null gdy ostatnia akcja OK. */
+  actionNotice: string | null;
   refresh: () => void;
   paper: PaperData | null;
   paperStatus: PaperStatus;
@@ -403,6 +406,13 @@ export function useBotApi(): UseBotApi {
   const [closedPositionsStatus, setClosedPositionsStatus] = useState<LedgerStatus>('loading');
   const [ledger, setLedger] = useState<LedgerEntry[] | null>(null);
   const [ledgerStatus, setLedgerStatus] = useState<LedgerStatus>('loading');
+  // Odrzucenia zastosowane optymistycznie po stronie UI (fix 26.08: server
+  // tylko KOLEJKUJE komendę, observer aplikuje ją w ≤30 s, a poll stanu idzie
+  // co 60 s — bez tego propozycja wisiała do ~90 s po kliknięciu i przycisk
+  // wyglądał na zepsuty). Wpis żyje, dopóki propozycja nie zniknie z
+  // fetchowanego stanu (wtedy reconciliation ją czyści).
+  const [locallyDismissed, setLocallyDismissed] = useState<string[]>([]);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
@@ -419,6 +429,12 @@ export function useBotApi(): UseBotApi {
       }
       const data: BotStateShape = await res.json();
       setState(data);
+      // reconciliation optymistycznych odrzuceń: gdy observer zastosował
+      // komendę, propozycja znika ze stanu — wpis lokalny przestaje być
+      // potrzebny (i nie rośnie w nieskończoność).
+      setLocallyDismissed((prev) =>
+        prev.length ? prev.filter((id) => (data.proposals ?? []).some((p) => p.id === id)) : prev
+      );
       setError(null);
       const fresh = data.updatedAt && Date.now() - new Date(data.updatedAt).getTime() < STALE_MS;
       setStatus(fresh ? 'online' : 'stale');
@@ -626,9 +642,30 @@ export function useBotApi(): UseBotApi {
       try {
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
-        await fetch(`${apiBase.replace(/\/$/, '')}/api/proposals/${id}/dismiss`, { method: 'POST', headers });
+        const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/proposals/${id}/dismiss`, {
+          method: 'POST',
+          headers,
+        });
+        if (!res.ok) {
+          // Fix 26.08: dotąd błąd był POŁYKANY (catch bez treści) i przycisk
+          // "nic nie robił" bez śladu. 401 = zły token, 404 = propozycja już
+          // nie istnieje po stronie bota (np. wygasła) — pokazujemy wprost.
+          setActionNotice(
+            res.status === 401
+              ? 'Odrzucenie nieprzyjęte: zły token dostępu (ustawienia API).'
+              : res.status === 404
+                ? 'Ta propozycja już nie istnieje po stronie bota — odświeżam stan.'
+                : `Odrzucenie nieprzyjęte: HTTP ${res.status}.`
+          );
+          refresh();
+          return;
+        }
+        // Sukces = komenda ZAKOLEJKOWANA (observer aplikuje w ≤30 s) —
+        // ukrywamy propozycję od razu, żeby przycisk działał "na oko".
+        setActionNotice(null);
+        setLocallyDismissed((prev) => (prev.includes(id) ? prev : [...prev, id]));
       } catch {
-        // ignored — next poll will reconcile state either way
+        setActionNotice('Odrzucenie nie doszło do serwera (sieć/adres API) — spróbuj ponownie.');
       }
       refresh();
     },
@@ -658,8 +695,15 @@ export function useBotApi(): UseBotApi {
     setApiTokenState(v);
   }, []);
 
+  // Stan widoczny dla UI: propozycje odrzucone optymistycznie są ukryte od
+  // razu (observer i tak zdejmie je ze stanu w ≤30 s — patrz dismissProposal).
+  const visibleState = useMemo<BotStateShape | null>(() => {
+    if (!state || !locallyDismissed.length) return state;
+    return { ...state, proposals: (state.proposals ?? []).filter((p) => !locallyDismissed.includes(p.id)) };
+  }, [state, locallyDismissed]);
+
   return {
-    state,
+    state: visibleState,
     status,
     error,
     apiBase,
@@ -667,6 +711,7 @@ export function useBotApi(): UseBotApi {
     setApiBase,
     setApiToken,
     dismissProposal,
+    actionNotice,
     refresh,
     paper,
     paperStatus,

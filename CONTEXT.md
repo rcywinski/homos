@@ -32,6 +32,7 @@
 | 2026-08-26 | KAPITAŁ: transza 1 (6 092 USDC, Base) **CZEKA W USDC** do wyników rekalibracji i eksperymentu "LP tylko we flat"; bez parkingu Aave | Wejście w wąski LP na kalibracji, którą sami uznaliśmy za zepsutą, bez sensu; 720d=0/21; horyzont czekania 1–2 tyg. |
 | 2026-08-26 | hUp48 → tylko paper; histereza ujednolicona na "udział czasu w oknie" (3 miejsca); cbBTC k2/k3 i GAS_USD-backtest w paczce; WETH-CBBTC 0.3% Base → BOT_POOLS (paper); żywy gaz w observerze od razu | Decyzje Rafała na przeglądzie 26.08 — szczegóły i uzasadnienia w DECYZJE-2026-08-26 |
 | 2026-08-26 | Godziny operacyjne: podpisy 9–20 pn–pt, **EXIT_TREND alarm 24/7 również w weekend**; pomiar kosztu zwłoki od 1. dnia | Tryb PROPONUJ nic nie wykonuje sam; zwłoka podpisu = jedyne ryzyko (noc ~13h, weekend ~61h); przegląd pomiaru po 2 tyg. |
+| 2026-08-26 ~10:3x | REWIZJA kapitału: zamiast "czeka" — **wejście warunkowe TEGO SAMEGO dnia**, jeśli pula przejdzie bramkę 720d+recent90 na przebiegach recal (grid15); wejście = jednoczesne przełączenie bota na grid15+nowe k (algoVersion) | Decyzja Rafała: rynek boczny (potwierdzony przez bota), mała stawka $6k, wartość eksperymentu operacyjnego; pełny zapis z notatką FOMO w DECYZJE-2026-08-26 pkt 8-REWIZJA |
 
 ## 3. Rzeczy do zweryfikowania na aktualnych danych (nie z pamięci AI)
 
@@ -57,6 +58,41 @@ EXIT_TREND alarm 24/7, żywy gaz w observerze od razu (backtest w paczce),
 lifecycle=spec teraz/budowa po paczce, eksperymenty LP-only-flat + mniej
 nerwowy sygnał UP w paczce, mainnet-001 odroczone (brak 3. kandydata),
 PROPONUJ bez odchyleń (przegląd ~1.09), pkt 6/8/11b odhaczone.
+~10:3x — REWIZJA DECYZJI KAPITAŁOWEJ (Rafał) + PLAN "WYNIKI DZIŚ":
+pkt 8 wyniku przeglądu zmieniony świadomie (pełny zapis z uczciwą
+notatką FOMO w DECYZJE): teza rynku bocznego (spójna z botem: down:false
+5/5, pule w zakresie), $6k mała stawka, kapitał ma zacząć pracować.
+Sekwencja: manualne przebiegi WF_SET=recal + SIGMA_MODE=grid15 DZIŚ
+u CC-Win (Base najpierw, raporty po każdej parze okien, warunek recent90
+liczony z JSON), przegląd wieczorem, wejście przez apkę tego samego dnia
+JEŚLI bramka 720d+recent90 przejdzie, wraz z przełączeniem bota na
+grid15 + nowe k (zakres pozycji z tej samej kalibracji, która przeszła
+bramkę; podbicie algoVersion). Zestaw recal dopisany do walkforward.ts
+(14 strategii: baseline'y + sweep k=2/2.5/3/4 + h48 + hUp48 + cbBTC
+k2/k3 + upX=5/8%), smoke test w kontenerze OK.
+
+REALIZACJA ~09:xx–10:xx (Fable, tsc czysty poza preexisting):
+(1) §4 TASKS-RECAL ZROBIONE — żywy gaz w observerze (refreshGas co
+5 min: eth_gasPrice × 800k × kurs ETH, podłogi per sieć, fallback
+stała; wpięty w assessPosition, selektor przez ctx.getGasUsd, state
+`gasUsd`); (2) §1 ZROBIONE ZA FLAGĄ — σ grid15 (zamknięcia kubełków
+15-min) w backtest/engine.ts i computeStats advisora, SIGMA_MODE
+default 'swap' (produkcja bez zmian do decyzji po paczce); test
+syntetyczny: GBM 3%→3.02/2.88 zgodne, chop ±0.1% bez ruchu → swap
+8.18% fantomu vs grid15 1.52% — siatka usuwa wadę z DECYZJE 11.
+(3) „Odrzuć" — zgłoszenie Rafała "nadal nie działa": audyt pełnej
+ścieżki (server kolejkuje → observer konsumuje co 30 s → poll 60 s)
+nie znalazł błędu logiki, ALE UX była zepsuta NA PEWNO: klik nie
+dawał żadnego śladu przez ≤90 s (brak optymistycznego ukrycia,
+fetch z połykanym catch). Fix w useBotApi (locallyDismissed +
+reconciliation + actionNotice 401/404/sieć) + komunikat w kokpicie.
+Test żywej ścieżki bot-side zlecony CC-Win przy wdrożeniu paczki.
+(4) base-weth-cbbtc-030 w BOT_POOLS (adres CREATE2 policzony
+niezależnie, zgodny z weryfikacją CC-Win) + meta UI. Crash nocnego
+backtest-run zdiagnozowany przez CC-Win samodzielnie (0257a7a:
+spread Math.min/max na milionach punktów w svgChart — LEKCJA:
+na seriach zawsze pętla/reduce); ponowienie przebiegu zlecone.
+
 ODBIÓR NOCY: raport 07:30 na czas, fetch 29/29 BRAKI=[], funnel/selection/
 sweep OK; Agent A doliczył y2/11×4 pule 720d (raport w HANDOFF odebrany
 wcześniej przez Fable, zweryfikowany). JEDYNA USTERKA: **backtest-run

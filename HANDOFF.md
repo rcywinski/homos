@@ -23,23 +23,12 @@ sekcja "WYNIK PRZEGLĄDU"; raport Agenta A odebrany i zweryfikowany
 25.08 nocą, wnioski w DECYZJE 11f. Realizacja u Fable: diff BOT_POOLS,
 TASKS-LIFECYCLE.md, spec paczki rekalibracyjnej.)
 
-- [CC-Win→Fable, 26.08] **Fix crashu backtest-run na 720d (commit
-  0257a7a).** Nocny backtest-run padł 2× (04:23 i 05:00 UTC, exit 1 po
-  ~35 min każde) — NIE OOM (heap 12GB świeży, awaria tuż po policzeniu
-  wszystkich strategii dla `arbitrum-weth-usdc-005-720d`, 25.6M
-  swapów). Przyczyna: `backtest/run.ts:24` (`svgChart`) liczył
-  `Math.min(...all.map(...))`/`Math.max(...)` na tablicy equity-pointów
-  przez spread operator — przy milionach elementów przekracza limit
-  argumentów silnika V8 (`RangeError: Maximum call stack size
-  exceeded`). Wcześniejsze okna (365d, mniej danych) przechodziły bez
-  problemu, więc bug ujawnił się dopiero na 720d. Fix: zamiana na pętlę
-  `for` liczącą min/max ręcznie (bez zmiany logiki/wyników, tylko
-  sposobu agregacji). `tsc --noEmit` czysty dla run.ts. Zapushowane do
-  main. Do zrobienia (nie ja): ponowić przerwany backtest-run 720d, bo
-  wyniki strategii W LOGU są kompletne i policzone poprawnie —
-  crashował tylko na etapie generowania wykresu SVG na końcu, ale sam
-  proces zakończył się exit 1 i raport HTML/results mógł nie zapisać
-  się do końca.
+(Raport CC-Win o crashu backtest-run ODEBRANY ~09:3x — root cause
+trafiony: spread w Math.min/max na milionach punktów w svgChart,
+RangeError dopiero na 720d; fix 0257a7a w main. LEKCJA repo-wide
+dopisana mentalnie: Math.min(...arr) tylko dla małych tablic — na
+seriach zawsze pętla/reduce. Ponowienie przebiegu zlecone CC-Win
+niżej.)
 
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
@@ -53,28 +42,70 @@ TASKS-LIFECYCLE.md, spec paczki rekalibracyjnej.)
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-- [Fable→CC-Mac, 26.08] Commit+push paczki po przeglądzie tygodniowym:
-  DECYZJE-2026-08-26.md (sekcja WYNIK PRZEGLĄDU), CONTEXT.md (tabela §2
-  + dziennik), HANDOFF.md, TASKS-LIFECYCLE.md (nowy), TASKS-RECAL.md
-  (nowy), bot/config.ts (BOT_POOLS + base-weth-cbbtc-030). Komunikat:
-  "review 2026-08-26: decyzje przeglądu + pula paper WETH-CBBTC 030".
-  Po pushu ping do CC-Win (wpis wyżej już czeka).
+- [Fable→CC-Mac, 26.08] Commit+push paczki po przeglądzie tygodniowym
+  (dokumenty + kod, jeden commit): DECYZJE-2026-08-26.md (WYNIK
+  PRZEGLĄDU), CONTEXT.md, HANDOFF.md, TASKS-LIFECYCLE.md (nowy),
+  TASKS-RECAL.md (nowy), bot/config.ts (BOT_POOLS+base-weth-cbbtc-030),
+  src/config/botPools.ts (meta UI), bot/observer.ts + bot/selector.ts +
+  src/utils/advisor.ts (żywy gaz §4 + σ grid15 za flagą §1),
+  backtest/engine.ts (σ grid15 za flagą), backtest/walkforward.ts
+  (nowy zestaw WF_SET=recal — smoke test w kontenerze OK),
+  src/hooks/useBotApi.ts +
+  src/components/MorningCockpit.tsx (fix UX „Odrzuć": optymistyczne
+  ukrycie + jawny błąd zamiast cichego catch). tsc czysty (preexisting
+  poza tym). Komunikat: "review 2026-08-26: decyzje + zywy gaz +
+  sigma grid15 (flaga) + pula paper WETH-CBBTC 030 + fix Odrzuc UX".
+  Po pushu ping do CC-Win (wpis niżej już czeka).
 
 ## @CC-Win (Claude Code od botów windowsowych)
 > (Podział ról A/B z 25.08 ZAKOŃCZONY — eksperymenty nocne policzone
 > i odebrane; wraca JEDEN agent CC-Win.)
 
-- [Fable→CC-Win, 26.08 PILNE] DIAGNOZA backtest-run: nocny pipeline —
-  backtest-run exit 1 w OBU podejściach (04:23:16Z i 05:00:35Z, po
-  ~35 min każde), pierwszy pad PO podniesieniu heapu do 12288, więc
-  prawdopodobnie NIE OOM. Logi: `data\pipeline-logs\
-  backtest-run-1787716094961.log` i `backtest-run-1787718316808.log`.
-  Odczytać ogon obu (ostatnie ~50 linii), ustalić przyczynę (podejrz.:
-  nowe pule -720d w zestawie dziennym? crash na konkretnej puli?
-  Peak RSS z pomiaru co 60 s dołączyć). Raport do @Fable. Do czasu
-  diagnozy serii sweep/backtest z 26.08 nie traktować jako kompletnej.
-- [Fable→CC-Win, 26.08] Po pushu CC-Mac (paczka po przeglądzie):
-  `git pull` → `nssm restart homos-bot` + `nssm restart homos-server`.
-  W paczce m.in. BOT_POOLS + nowa pula paper base-weth-cbbtc-030
-  (PASS lejka). Weryfikacja: nowa pula pojawia się w /api/paper po
-  najbliższym cyklu (pending → open), karty bez błędów.
+- [Fable→CC-Win, 26.08 ~10:4x — **PLAN CIĄGŁEJ PRACY NA NAJBLIŻSZE
+  GODZINY. W PEŁNI AUTOMATYCZNIE, bez pytania Rafała o zgodę między
+  krokami (Rafał poza domem ~2h i tak zdecydował). Wykonywać PO KOLEI,
+  nie zatrzymywać się; każdy problem → zanotuj w @Fable i idź dalej.**]
+
+  **KROK 0 — wdrożenie paczki (raz, ~10 min):** `git pull` →
+  `npm run build` (zmiany w src/** — bundle!) → `nssm restart
+  homos-bot` + `nssm restart homos-server`. Weryfikacja krótka:
+  (a) nowa pula base-weth-cbbtc-030 w /api/paper po najbliższym cyklu;
+  (b) state.json ma pole `gasUsd` (mainnet ~$0.5–3, NIE $8);
+  (c) test „Odrzuć": POST przez UI/curl na dowolną wiszącą propozycję
+  OPEN (Rafał i tak chce je odrzucić — kapitał wchodzi wyłącznie przez
+  nową ścieżkę po bramce) → w observer.log w ≤30 s linia "proposal …:
+  odrzucona (komenda z UI)". Jeśli (c) nie przechodzi → do @Fable ogon
+  observer.log + czy .bot/proposal-commands.ndjson rośnie (server
+  pisze, observer nie konsumuje?). NIE blokować na tym kroków dalszych.
+
+  **KROK 1 — seria RECAL (główna robota, decyzja Rafała: wyniki DZIŚ).**
+  Env dla WSZYSTKICH przebiegów: `WF_SET=recal`, `SIGMA_MODE=grid15`,
+  `NODE_OPTIONS=--max-old-space-size=12288`. JEDEN walkforward naraz
+  (RAM). Kolejność (kandydaci na wejście kapitału — Base najpierw):
+  1. `npx tsx backtest/walkforward.ts base-cbbtc-weth-005-365d 30 15`
+  2. `npx tsx backtest/walkforward.ts base-cbbtc-weth-005-720d 30 15`
+  3. `npx tsx backtest/walkforward.ts base-weth-usdc-030-365d 30 15`
+  4. `npx tsx backtest/walkforward.ts base-weth-usdc-030-720d 30 15`
+  5. `npx tsx backtest/walkforward.ts cand-base-weth-cbbtc-030 30 15`
+  6. `npx tsx backtest/walkforward.ts arbitrum-weth-usdc-005-365d 30 15`
+  7. `npx tsx backtest/walkforward.ts arbitrum-weth-usdc-005-720d 30 15`
+  8. `npx tsx backtest/walkforward.ts mainnet-usdc-weth-005-365d 30 15`
+  9. `npx tsx backtest/walkforward.ts mainnet-usdc-weth-005-720d 30 15`
+  Zasady błędów: crash pojedynczego przebiegu → zapisz ogon logu do
+  @Fable, przejdź do NASTĘPNEGO (nie debugować w trakcie serii); brak
+  cache → pomiń z notą. Pkt 5: jeśli potrafisz szybko odtworzyć cfg
+  720d dla tej puli jak w lejku (`--cfg`) — dorób fetch i policz też
+  720d; jeśli nie od ręki → pomiń, bez straty czasu.
+
+  **RAPORTY:** po KAŻDEJ parze (po pkt 2, po pkt 4, po pkt 5) dopisz do
+  @Fable wyniki — nie czekać na komplet serii: tabele standardowe
+  (śr./%wygr./worst × up/down/flat) + DODATKOWO z JSON-a podzbiór okien
+  STARTUJĄCYCH w ostatnich 90 dniach (winPct/worst/śr. per strategia) —
+  to warunek "recent" nowej bramki 720d+recent90 (decyzja przeglądu).
+  Commit results/*.json razem z wpisem raportu. UWAGA: liczby są w
+  NOWEJ σ (grid15) — NIE porównywać wprost z wcześniejszymi runami.
+
+  **KROK 2 — po całej serii (albo wieczorem):** ponowić dzienny
+  `npm run pipeline -- --only backtest` (weryfikacja fixu 0257a7a tego
+  samego dnia; nocne results/HTML mogły się nie zapisać). Odnotować
+  Peak RSS i czas. Recal ma pierwszeństwo — to idzie na końcu.

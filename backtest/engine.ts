@@ -194,6 +194,20 @@ export function runStrategy(
   };
 
   let volDaily = 0.03; // start prior 3%/dzień
+  // --- σ w siatce 15 min (TASKS-RECAL §1, decyzja przeglądu 26.08) ---
+  // Estymator swap-po-swapie mierzy mikrostrukturę puli, nie zmienność
+  // aktywa (CONTEXT/DECYZJE 11: to samo ETH, ta sama doba, rozrzut σ 4.5×
+  // między pulami; w siatce czasu 1.4×). Tryb 'grid15': zwrot liczony
+  // między CENAMI ZAMKNIĘCIA kubełków 15-min, EMA jak dotąd (HL 12h).
+  // Default 'swap' = zachowanie sprzed zmiany — v1.2 zamrożony; przebiegi
+  // rekalibracyjne odpala się z SIGMA_MODE=grid15 (env), a przełączenie
+  // defaultu = decyzja Rafała po paczce + podbicie algoVersion.
+  const SIGMA_GRID15 = process.env.SIGMA_MODE === 'grid15';
+  const GRID_SEC = 900;
+  let gridCurBucket = -1; // kubełek, w którym właśnie jesteśmy
+  let gridCurLast = 0; // ostatnia cena widziana w bieżącym kubełku
+  let gridCloseP = 0; // cena zamknięcia poprzedniego zamkniętego kubełka
+  let gridCloseBucket = -1;
   let lastTs = s0.ts;
   let lastP = ethUsd(s0.sqrtP, spec);
   let prevTick = s0.t; // tick sprzed bieżącego swapu (do ścieżki fee)
@@ -286,11 +300,33 @@ export function runStrategy(
     // vol/zakresów/IL; wycena USD idzie wyłącznie przez unitPrices.
     const P = ethUsd(ev.sqrtP, spec);
     const dt = Math.max(ev.ts - lastTs, 1);
-    if (P > 0 && lastP > 0 && dt > 0) {
-      const r = Math.log(P / lastP);
-      const perDay = (r * r * 86400) / dt; // wariancja przeskalowana na dzień
-      const alpha = 1 - Math.exp(-dt / (43200 / Math.LN2));
-      volDaily = Math.sqrt((1 - alpha) * volDaily * volDaily + alpha * perDay);
+    if (!SIGMA_GRID15) {
+      // tryb 'swap' (historyczny): EWMA kwadratów zwrotów swap-po-swapie
+      if (P > 0 && lastP > 0 && dt > 0) {
+        const r = Math.log(P / lastP);
+        const perDay = (r * r * 86400) / dt; // wariancja przeskalowana na dzień
+        const alpha = 1 - Math.exp(-dt / (43200 / Math.LN2));
+        volDaily = Math.sqrt((1 - alpha) * volDaily * volDaily + alpha * perDay);
+      }
+    } else if (P > 0) {
+      // tryb 'grid15': zwrot między zamknięciami kubełków 15-min
+      const bucket = Math.floor(ev.ts / GRID_SEC);
+      if (bucket !== gridCurBucket) {
+        if (gridCurBucket >= 0 && gridCurLast > 0) {
+          // kubełek gridCurBucket właśnie się zamknął ceną gridCurLast
+          if (gridCloseP > 0 && gridCloseBucket >= 0) {
+            const dtg = (gridCurBucket - gridCloseBucket) * GRID_SEC;
+            const r = Math.log(gridCurLast / gridCloseP);
+            const perDay = (r * r * 86400) / dtg;
+            const alpha = 1 - Math.exp(-dtg / (43200 / Math.LN2));
+            volDaily = Math.sqrt((1 - alpha) * volDaily * volDaily + alpha * perDay);
+          }
+          gridCloseP = gridCurLast;
+          gridCloseBucket = gridCurBucket;
+        }
+        gridCurBucket = bucket;
+      }
+      gridCurLast = P;
     }
 
     // 2. trailing fee yield puli: fee wolumenu / wartość aktywnej płynności

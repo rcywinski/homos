@@ -33,12 +33,19 @@ const MAJORS = /ETH|BTC|USDC|USDT|DAI|USDS/;
 const SWITCH_COST_PCT = 0.3; // wyjście+wejście, % kapitału (2× 0.15 z selection.ts)
 const MAX_PAYBACK_DAYS = 10; // przewaga musi pokryć koszt przejścia w ≤10 dni
 const MIN_ROTATE_USD = 25; // pozycje-pyłki: koszt stały gazu > wartość, nie proponujemy rotacji
-// gaz za PEŁNY cykl (zamknięcie+otwarcie) per sieć — te same założenia co backtest/engine.ts
+// gaz za PEŁNY cykl (zamknięcie+otwarcie) per sieć — fallback statyczny;
+// od 26.08 (decyzja przeglądu, DECYZJE 6a) observer podaje ŻYWY koszt przez
+// ctx.getGasUsd i statyczna tabela gra tylko przed pierwszym odczytem.
 const GAS_CYCLE_USD: Record<string, number> = { mainnet: 8, base: 0.1, arbitrum: 0.2 };
-const gasCycleUsd = (key: string): number => {
+const chainOf = (key: string): string | null => {
   const k = key.toLowerCase();
-  for (const [chain, usd] of Object.entries(GAS_CYCLE_USD)) if (k.includes(chain) || (chain === 'mainnet' && k.includes('ethereum'))) return usd;
-  return 1; // nieznana sieć: ostrożny domyślny
+  for (const chain of Object.keys(GAS_CYCLE_USD)) if (k.includes(chain) || (chain === 'mainnet' && k.includes('ethereum'))) return chain;
+  return null;
+};
+const gasCycleUsd = (key: string, ctx?: SelectorCtx): number => {
+  const chain = chainOf(key);
+  if (!chain) return 1; // nieznana sieć: ostrożny domyślny
+  return ctx?.getGasUsd?.(chain) ?? GAS_CYCLE_USD[chain];
 };
 const RUN_AFTER_HOUR = 6; // lokalna godzina, po pipeline 05:30 (25.08: cały łańcuch przesunięty ~2h wcześniej, decyzja Rafała)
 const MAX_DATA_AGE_H = 26; // nie proponuj ze stęchłych danych
@@ -172,6 +179,9 @@ export interface SelectorCtx {
   addProposal: (p: SelectorProposal) => void; // observer dopisuje do proposals.json + state
   getPositions: () => Array<{ tokenId: string; poolId: string; valueUsd: number }>;
   getSuggestion: (poolId: string) => { tickLower: number; tickUpper: number; usdLo: number; usdHi: number } | null;
+  /** żywy koszt gazu pełnego cyklu w USD per chain ('mainnet'|'base'|'arbitrum');
+   *  null/undefined → fallback na statyczny GAS_CYCLE_USD (26.08, DECYZJE 6a) */
+  getGasUsd?: (chain: string) => number | null;
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -348,8 +358,8 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
         const posUsd = weakest.pos.valueUsd;
         const costUsd =
           posUsd * (SWITCH_COST_PCT / 100) +
-          gasCycleUsd(weakest.pos.poolId) / 2 +
-          gasCycleUsd(bestCand.botPool?.id ?? bestCand.chain ?? '') / 2;
+          gasCycleUsd(weakest.pos.poolId, ctx) / 2 +
+          gasCycleUsd(bestCand.botPool?.id ?? bestCand.chain ?? '', ctx) / 2;
         const edgeUsdPerDay = posUsd * (edge / 100) / 365;
         const breakEvenDays = edgeUsdPerDay > 0 ? costUsd / edgeUsdPerDay : Infinity;
         if (breakEvenDays <= MAX_PAYBACK_DAYS) {

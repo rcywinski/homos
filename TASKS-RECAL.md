@@ -8,15 +8,22 @@
 
 ## §1 σ — siatka 15 min (fundament; wszystko poniżej liczy się na niej)
 
-- [ ] Pomiar σ z ceny próbkowanej co 15 min zamiast swap-po-swapie:
-  - backtest: `load.ts`/`strategies.ts` — seria 15-min z swapów (ostatnia
-    cena w kubełku), σ = std logarytmicznych zmian kubełkowych,
-    anualizacja jak dotąd; estymator swapowy zostaje ZA FLAGĄ
-    (`SIGMA_MODE=swap|grid15`) do porównań A/B.
-  - bot: `computeStats` w observerze — ta sama definicja (cykl statystyk
-    już jest 15-min, więc głównie zmiana agregacji).
-  - `scripts/vol-estimator-check.ts` — siatka 1h jako stała referencja
-    diagnostyczna (sanity: |ruch netto|/√Σr² bliskie 1 na trendzie).
+- [x] **ZROBIONE 26.08 (Fable):** pomiar σ z zamknięć kubełków 15-min za
+  flagą `SIGMA_MODE=swap|grid15` w OBU miejscach naraz:
+  - `backtest/engine.ts` — zwrot między zamknięciami kubełków (ev.ts),
+    EMA bez zmian (HL 12h);
+  - `src/utils/advisor.ts` `computeStats` (bot+UI) — to samo, czas z
+    delty bloków; guard `typeof process` (plik idzie do bundla).
+  - **DEFAULT = 'swap'** (produkcja/paper BEZ zmian — v1.2 zamrożony);
+    przebiegi rekalibracyjne odpalać z `SIGMA_MODE=grid15` w env;
+    przełączenie defaultu = decyzja po paczce + podbicie algoVersion.
+  - Test syntetyczny (kontener): GBM σ=3%/d → swap 3.02% / grid15 2.88%
+    (zgodne); czysty chop ±0.1%/swap bez ruchu netto → swap **8.18%**
+    (fantom) / grid15 1.52% (sam zanikający prior) — siatka usuwa
+    dokładnie tę wadę, którą mierzy DECYZJE 11.
+- [ ] `scripts/vol-estimator-check.ts` — siatka 1h jako stała referencja
+  diagnostyczna (narzędzie już liczy siatki; ew. dopisać kolumnę grid15
+  przy pierwszym użyciu w paczce).
 - [ ] Półtrwanie σ (pkt 11b agendy, wątek "otwieramy najszersze zakresy
   po wystrzale"): policzyć wariant HL 6h vs 12h na siatce 15-min —
   tylko jako kolumna w wynikach, bez zmiany domyślnej.
@@ -46,8 +53,14 @@
 
 ## §4 Gaz — koniec stałej $8 na mainnet
 
-- [ ] Observer/payback: żywy `eth_gasPrice` (fallback: ostatni znany;
-  nigdy stała) — wchodzi OD RAZU, niezależnie od reszty paczki.
+- [x] **ZROBIONE 26.08 (Fable):** observer liczy żywy koszt cyklu:
+  `eth_gasPrice × 800k gazu × kurs ETH` co 5 min per sieć
+  (`refreshGas` w observer.ts), podłogi mainnet $0.5 / base $0.08 /
+  arb $0.1 (L1-data na L2), stara stała tylko jako fallback przed
+  pierwszym odczytem; awaria RPC → zostaje ostatni znany. Wpięte w
+  `assessPosition` (payback propozycji REBALANCE), w selektor
+  (`ctx.getGasUsd` — koszt ROTATE) i wystawione w state.json jako
+  `gasUsd` (UI może pokazać). Wymaga restartu homos-bot u CC-Win.
 - [ ] Backtest: stała per-reżim (up/down/flat) albo percentyl
   historyczny gazu — jedna liczba $8 znika; kalibracja przy przebiegach.
 

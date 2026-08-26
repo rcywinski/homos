@@ -479,6 +479,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           )}
 
           <div className="morning-section-title">Propozycje bota</div>
+          {bot.actionNotice && <div className="morning-bot-offline">⚠️ {bot.actionNotice}</div>}
           {bot.status === 'offline' ? (
             <div className="morning-bot-offline">
               Bot offline — uruchom usługę homos-bot na serwerze (⚙ żeby ustawić adres/token).
