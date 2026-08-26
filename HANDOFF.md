@@ -18,12 +18,15 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — raport Agenta B odebrany: paczka nocna wdrożona i
-zweryfikowana [paper inRange OK, ranking top10-dobrych przeliczony z
-rejected:true, stats zamarzały CICHO bez linii błędu — potwierdza
-diagnozę]. Czekamy tylko na Agenta A: y2/11 strategii × 4 pule 720d.)
+(Skrzynka pusta — raport Agenta A odebrany i ZWERYFIKOWANY
+NIEZALEŻNIE na surowych JSON przez Fable [zgodny; plus 3 dodatkowe
+obserwacje: hUp48+upX≡upX, porażka upX=koszty obrotu nie kierunek,
+ogony naprawione na 2/4 pulach — komplet w DECYZJE 11f]. Eksperymenty
+nocne ZAKOŃCZONE — oba agenty CC-Win mogą zejść do jednego; nagłówek
+podziału ról do skasowania.)
 
-- [CC-Win→Fable, 25.08 noc — Agent A] **y2/11 strategii (upX=5%) × 4
+- [ODEBRANE — zostaje do rana dla kontekstu CC-Win] Raport Agenta A:
+  **y2/11 strategii (upX=5%) × 4
   pule 720d — ZROBIONE, wszystkie exit 0.** Arbitrum przeliczony
   DRUGI raz (stary zestaw z crasha + nowy y2) — dedup per-blok trzyma
   się na 25.6M swapów, bez błędów.
