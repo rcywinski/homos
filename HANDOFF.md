@@ -406,6 +406,57 @@ w gicie: f98b451 i wcześniejsze.)
   Commit+push. Ruszam OSTATNIĄ parę walkforward 4/4: `base-cbbtc-weth-005`
   365d+720d — po niej podsumowanie 8/8 i start fullperiodów.
 
+- [CC-Win→Fable, 26.08 ~22:0x] **RUNDA FINAŁOWA, para 4/4 (OSTATNIA):
+  `base-cbbtc-weth-005` 365d+720d — NAJLEPSZA pula dla FlatOnly-HODL,
+  jedyny przypadek flat≥65%.** ZAMYKA 8/8 WALKFORWARDÓW.
+  365d: **FlatOnly k=2 |gap|<2%/12h flat winPct = 74%** — JEDYNY
+  wariant/pula w całej rundzie, który przekracza próg flat≥65%!
+  Globalny worst -2.09 (✓>-3). ALE up/down dla tego wariantu: mean
+  -1.22/-1.72 (WYRAŹNIE ujemne, nie "blisko zera" — nie remis).
+  720d: flat winPct spada do 43-59% (nie utrzymuje przewagi z 365d),
+  worst -1.72…-2.48 (✓>-3).
+
+  ═══ **PODSUMOWANIE WSZYSTKICH 8/8 WALKFORWARDÓW RUNDY FINAŁOWEJ**
+  (4 pule × 2 okna, WF_SET=final SIGMA_MODE=grid15) ═══
+
+  **1. WORST>-3: PRZECHODZI NA 8/8 PRZEBIEGÓW (100%!).** Cała rodzina
+  FlatOnly-HODL trzyma worst w paśmie -1.05…-2.82 na WSZYSTKICH 4
+  pulach i obu oknach — to NAJBARDZIEJ SPÓJNY wynik "worst>-3" w
+  całej dzisiejszej pracy (dla porównania: seria RECAL miała worst
+  -6…-15 wszędzie). Baza HODL 50/50 zamiast 100% cash naprawdę
+  ogranicza ogon.
+
+  **2. FLAT≥65%: PRZECHODZI TYLKO 1/8 (cbBTC-365d, jeden wariant,
+  flat 74%).** Ranking najlepszego wariantu per pula (flat winPct):
+  cbBTC-365d 74% > base-030-365d 60% ≈ cbBTC-720d 59% > base-030-720d
+  58% > arbitrum-365d 55% > arbitrum-720d 47% > mainnet-720d 31% >
+  mainnet-365d 30%. **Mainnet systematycznie najgorszy dla tej
+  rodziny** (spójne z wcześniejszym zestawem next — mainnet ma
+  najbardziej ekstremalne okna down).
+
+  **3. UP/DOWN REMIS: NIEJEDNOZNACZNE.** Na base-030/arbitrum średnie
+  vsHODL w up/down są blisko zera (-0.06…-0.9) — bliżej "remis". Na
+  cbBTC/mainnet średnie są wyraźniej ujemne (-0.4…-1.7) — dalej od
+  remis, mimo lepszego (cbBTC) lub gorszego (mainnet) wyniku na flat.
+  Brak jednego wariantu, który łączy WSZYSTKIE 3 kryteria naraz.
+
+  **4. WERDYKT KOŃCOWY: FlatOnly-HODL NIE PRZECHODZI PEŁNEGO
+  KRYTERIUM na żadnej z 8 kombinacji pula×okno — ale jest NAJBLIŻEJ
+  ze wszystkiego przetestowanego dzisiaj.** Worst jest rozwiązany
+  (bezpiecznik działa), pozostaje %wygr. we flat (poza cbBTC-365d) i
+  spójność up/down. Jeśli szukać kierunku do dalszego strojenia:
+  cbBTC-365d pokazuje, że to OSIĄGALNE w zasadzie — pytanie czy
+  utrzyma się przy dostrojeniu progu gap/HL na innych pulach.
+
+  **5. passiveW (Pasywny ±40/50/60%): worst KONSEKWENTNIE zły
+  wszędzie** (-6.79 do -17.40, najgorszy na mainnet-365d i
+  arbitrum-720d) — globalny %wygr. wysoki (60-78%) ale to ten sam
+  "agregat mylący" wzorzec co Pasywny ±50% w serii RECAL. Ocena
+  właściwa dopiero z fullperiod (poniżej).
+
+  Commit+push (results cbBTC 365d+720d). Ruszam fullperiody FP_SET=final
+  (4×): `base-weth-usdc-030-720d` pierwszy.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
