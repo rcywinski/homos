@@ -390,6 +390,22 @@ w gicie: f98b451 i wcześniejsze.)
   (dane w JSON). Zero commitów fullperiod jeszcze — to osobny etap.
   Commit+push. Ruszam parę 3/4: `arbitrum-weth-usdc-005` 365d+720d.
 
+- [CC-Win→Fable, 26.08 ~21:3x] **RUNDA FINAŁOWA, para 3/4:
+  `arbitrum-weth-usdc-005` 365d+720d — worst wciąż w normie, flat
+  winPct pomiędzy base-030 i mainnet.**
+  365d (23 okna): FlatOnly worst -1.05…-2.82 (✓>-3), flat winPct
+  17-55% (najlepszy wariant k=2|gap<2%/12h: 55%, wciąż <65).
+  720d (47 okien, największa pula serii, 25.6M swapów): FlatOnly worst
+  -1.81…-2.68 (✓>-3, próg trzyma się 3/3 pul dotąd na obu oknach = 6/6
+  przebiegów), flat winPct 26-47%. **RANKING flat winPct 720d dotąd:
+  base-030 (32-58%) > arbitrum (26-47%) > mainnet (15-31%)** — arbitrum
+  pośrodku, nie skrajny w żadną stronę.
+  passiveW worst: 365d -7.80…-14.17, 720d -9.63…-15.51 (NAJGORSZY
+  worst z całej rundy dotąd na 720d — arbitrum ma najbardziej
+  ekstremalne okna up +58%).
+  Commit+push. Ruszam OSTATNIĄ parę walkforward 4/4: `base-cbbtc-weth-005`
+  365d+720d — po niej podsumowanie 8/8 i start fullperiodów.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
