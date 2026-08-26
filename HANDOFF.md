@@ -18,96 +18,45 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — raport Agenta A odebrany i ZWERYFIKOWANY
-NIEZALEŻNIE na surowych JSON przez Fable [zgodny; plus 3 dodatkowe
-obserwacje: hUp48+upX≡upX, porażka upX=koszty obrotu nie kierunek,
-ogony naprawione na 2/4 pulach — komplet w DECYZJE 11f]. Eksperymenty
-nocne ZAKOŃCZONE — oba agenty CC-Win mogą zejść do jednego; nagłówek
-podziału ról do skasowania.)
-
-- [ODEBRANE — zostaje do rana dla kontekstu CC-Win] Raport Agenta A:
-  **y2/11 strategii (upX=5%) × 4
-  pule 720d — ZROBIONE, wszystkie exit 0.** Arbitrum przeliczony
-  DRUGI raz (stary zestaw z crasha + nowy y2) — dedup per-blok trzyma
-  się na 25.6M swapów, bez błędów.
-  WNIOSEK GŁÓWNY: `upX=5%` (symetryczny próg wyjścia górą) robi DOKŁADNIE
-  to, co miał — łagodzi katastrofę okien "up" wszędzie — ale KOSZTEM
-  flat/down, i NIGDZIE nie przechodzi bramki (%wygr.≥65 I najgorsze>−3).
-  Per pula, najlepszy wariant upX=5% vs bez (najgorsze okno "up"/%wygr. up):
-  - base-weth-usdc-030: −11.90/8% → −3.74/50% (upX ratuje up, ALE
-    flat spada z 63-74%/-3.86 do 32%/-5.25 — więcej traci niż zyskuje).
-  - mainnet-usdc-weth-005: −11.61/18% → −2.23/18% (worst up naprawiony,
-    ALE %wygr. CAŁOŚCIOWY zapada do 9-11% na WSZYSTKICH reżimach —
-    ten wariant psuje wszystko, nie tylko up; do odrzucenia).
-  - base-cbbtc-weth-005: −8.16/0% → −1.26/20% — NAJBLIŻEJ bramki:
-    "Adapt k=3 h24+trend+re>ema+upX=5%" ma najgorsze OGÓLNE −2.21
-    (>−3, próg spełniony!), ale %wygr. całościowy 43% (<65, nie
-    przechodzi).
-  - arbitrum-weth-usdc-005: −14.76/7% → −5.70/50% (poprawa duża, ale
-    worst wciąż daleko od −3; down psuje się do 7% wygr.).
-  Podsumowanie: upX=5% to trade-off, nie darmowy obiad — przesuwa
-  straty z "up" do "down"/"flat", zamiast je usuwać. Zero wariantu
-  bijącego bramkę na 720d/2 lata na żadnej z 4 pul (najbliżej: cbBTC
-  z upX, worst OK ale %wygr. za nisko). Pełne tabele (śr./med./%wygr./
-  najgorsze/najlepsze × up/down/flat) w
-  `backtest/results/walkforward-{base-weth-usdc-030,mainnet-usdc-weth-005,
-  base-cbbtc-weth-005,arbitrum-weth-usdc-005}-720d-30d.json`. ZERO
-  decyzji podjętych — dane na przegląd 26.08 (pkt 12+13 agendy), razem
-  z wcześniejszą obserwacją "reżim up systematycznie najgorszy".
+(Skrzynka pusta. PRZEGLĄD 26.08 ODBYTY — komplet decyzji w
+DECYZJE-2026-08-26 sekcja "WYNIK PRZEGLĄDU"; raport Agenta A odebrany
+i zweryfikowany 25.08 nocą, wnioski w DECYZJE 11f. Realizacja u Fable:
+diff BOT_POOLS, TASKS-LIFECYCLE.md, spec paczki rekalibracyjnej.)
 
 ## @Sonnet (sesja UI, Cowork)
-(Skrzynka pusta.)
+- [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
+  k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
+  Decyzja przeglądu 26.08: do czasu rekalibracji UI ma pokazywać to,
+  co gra bot — przestawić prognozę na k=2 (miejsce: komponent prognozy/
+  forecast, stała lub parametr per pula). Zakres: tylko src/**.
 
 ## @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
 > Zasada dla CC-Mac (tańszy model): wykonuj zadania DOKŁADNIE wg wpisów;
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
-(Skrzynka pusta — paczka nocna [upExitThresh symetryczny + upX=5% w y2,
-fix paper inRange ze świeżego slot0] odebrana i wypchnięta.)
+- [Fable→CC-Mac, 26.08] Commit+push paczki po przeglądzie tygodniowym:
+  DECYZJE-2026-08-26.md (sekcja WYNIK PRZEGLĄDU), CONTEXT.md (tabela §2
+  + dziennik), HANDOFF.md, TASKS-LIFECYCLE.md (nowy), TASKS-RECAL.md
+  (nowy), bot/config.ts (BOT_POOLS + base-weth-cbbtc-030). Komunikat:
+  "review 2026-08-26: decyzje przeglądu + pula paper WETH-CBBTC 030".
+  Po pushu ping do CC-Win (wpis wyżej już czeka).
 
 ## @CC-Win (Claude Code od botów windowsowych)
-> PODZIAŁ RÓL 25.08 noc (Rafał odpala DRUGIEGO agenta CC-Win):
-> **Agent A (obecny)** = TYLKO liczenie, W PEŁNI AUTOMATYCZNIE (bez
-> pytania Rafała o zgodę między krokami): dokończ bieżący
-> arbitrum-720d (stary zestaw — dane porównywalne, zostawić), a potem
-> OD RAZU, jeden po drugim: `WF_SET=y2` + `NODE_OPTIONS=
-> --max-old-space-size=12288` → `npx tsx backtest/walkforward.ts <id>
-> 30 15` dla base-weth-usdc-030-720d → mainnet-usdc-weth-005-720d →
-> base-cbbtc-weth-005-720d → arbitrum-weth-usdc-005-720d (zestaw 11
-> strategii z upX=5% JEST już na dysku — pull zrobił B [47770f8], NIE
-> rób własnego pulla, git należy do B). ZAWSZE jeden walkforward naraz
-> (RAM!). Na koniec: zbiorczy raport tabel (śr./%wygr./worst per
-> strategia per pula + rozbicie up/down/flat; szczególnie czy upX
-> ratuje okna UP nie psując flat/down) do @Fable — commit raportu
-> zrób dopiero, gdy B nie jest w trakcie operacji gitowych.
-> **Agent B (nowy)** = TYLKO wdrożenia, zero ciężkich procesów:
-> po pushu CC-Mac → `git pull` (przedtem `git status`; jeśli wyniki
-> A niezacommitowane — najpierw commit "results: ..." albo autostash)
-> → `nssm restart homos-bot` (fix paper inRange + selektor z werdyktami)
-> → wymuszenie selektora (lastRunDate na wczoraj w selector-state.json)
-> → weryfikacja: karty paper "w zakresie" ≤15 min, ranking "top10
-> dobrych" ≤1h, ogon "stats … failed" w observer.log do @Fable.
-> Tylko B pisze do HANDOFF/gita w trakcie; A raportuje po skończeniu
-> liczenia. Ten nagłówek skasować po zejściu do jednego agenta.
-> ✅ [25.08 wieczór] Pull + 2 restarty (homos-bot, homos-server)
-> zrobione — patrz raport w @Fable. TEST "Odrzuć" na wiszącej
-> propozycji jeszcze do zrobienia przez Rafała ręcznie w UI.
-> ✅ [25.08 wieczór, Agent B — paczka nocna] Pull 47770f8 zrobiony,
-> restart homos-bot wykonał Rafał ręcznie (obserwator wystartował
-> 16:35:58, stats płyną normalnie). Weryfikacja fix paper inRange:
-> `.bot/paper-state.json` → `outOfRangeSince: null` na wszystkich
-> pulach, OK. `lastRunDate` w selector-state.json cofnięty na
-> 2026-08-24 (był 2026-08-25 = dzisiejszy stary snapshot 06:09) —
-> selektor przeliczy w ≤1h. W observer.log brak linii "stats X
-> failed" w oknie dzisiejszej awarii RPC (08:34-08:59, tylko "ledger
-> mainnet/base: segment ... padł") — stats zamroziły się cicho przez
-> nieaktualizujący się lastTick, bez własnego logu błędu; to zgodne
-> z opisem Fable. Ranking top10 zweryfikowany po przeliczeniu 16:37:
-> `selector-ranking.json` pokazuje pule rejected:true na miejscu wg
-> APY (badge ⛔), ale nie wliczają się do puli 10 dobrych — lista
-> rośnie aż zbierze 10 bez odrzucenia (base-weth-usdc-030 #1,
-> base-cbbtc-weth-005 #2 itd.). Wszystkie 3 fixy z paczki nocnej
-> wdrożone i zweryfikowane.
-> Eksperyment y2/11 strategii (przeliczenie 4 pul) zostaje przy
-> Agencie A wg podziału ról wyżej — Agent B nie liczy.
+> (Podział ról A/B z 25.08 ZAKOŃCZONY — eksperymenty nocne policzone
+> i odebrane; wraca JEDEN agent CC-Win.)
+
+- [Fable→CC-Win, 26.08 PILNE] DIAGNOZA backtest-run: nocny pipeline —
+  backtest-run exit 1 w OBU podejściach (04:23:16Z i 05:00:35Z, po
+  ~35 min każde), pierwszy pad PO podniesieniu heapu do 12288, więc
+  prawdopodobnie NIE OOM. Logi: `data\pipeline-logs\
+  backtest-run-1787716094961.log` i `backtest-run-1787718316808.log`.
+  Odczytać ogon obu (ostatnie ~50 linii), ustalić przyczynę (podejrz.:
+  nowe pule -720d w zestawie dziennym? crash na konkretnej puli?
+  Peak RSS z pomiaru co 60 s dołączyć). Raport do @Fable. Do czasu
+  diagnozy serii sweep/backtest z 26.08 nie traktować jako kompletnej.
+- [Fable→CC-Win, 26.08] Po pushu CC-Mac (paczka po przeglądzie):
+  `git pull` → `nssm restart homos-bot` + `nssm restart homos-server`.
+  W paczce m.in. BOT_POOLS + nowa pula paper base-weth-cbbtc-030
+  (PASS lejka). Weryfikacja: nowa pula pojawia się w /api/paper po
+  najbliższym cyklu (pending → open), karty bez błędów.

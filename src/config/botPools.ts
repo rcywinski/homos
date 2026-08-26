@@ -31,6 +31,9 @@ export const BOT_POOL_META: BotPoolMeta[] = [
   // cbBTC/WETH Base 0.05% — dopisane 2026-08-11 razem z wpisem w bot/config.ts
   // (pula kwotowana w WETH; bot liczy USD przez kurs z base-weth-usdc-030)
   { id: 'base-cbbtc-weth-005', chainId: 8453, address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1', feeBps: 500, sym0: 'WETH', sym1: 'cbBTC' },
+  // WETH/cbBTC Base 0.3% — dopisane 2026-08-26 (przegląd: pierwszy PASS
+  // auto-lejka → BOT_POOLS jako paper) razem z wpisem w bot/config.ts
+  { id: 'base-weth-cbbtc-030', chainId: 8453, address: '0x8c7080564B5A792A33Ef2FD473fbA6364d5495e5', feeBps: 3000, sym0: 'WETH', sym1: 'cbBTC' },
   // Arbitrum WETH/USDC 0.05% — dopisane 2026-08-11 razem z wpisem w bot/config.ts
   // (walk-forward pass; USDC natywny 0xaf88…5831)
   { id: 'arbitrum-weth-usdc-005', chainId: 42161, address: '0xC6962004f452bE9203591991D15f6b388e09E8D0', feeBps: 500, sym0: 'WETH', sym1: 'USDC' },

@@ -27,6 +27,11 @@
 | 2026-08-19 | `public/bundle.js` → untracked (`git rm --cached`); build artefakt żyje tylko na dysku | Tracked bundle (stary eb1c772, mimo .gitignore) blokował auto-push porannego raportu na Windows po każdym buildzie (3× pad 19.08) |
 | 2026-08-19 | Po KAŻDEJ naprawie pipeline'u: ręczna weryfikacja TEGO SAMEGO DNIA (`npm run pipeline -- --only fetch` na Windows, iterować aż przejdzie) — automat 07:30 to rutyna, nie jedyny test | 3 dni z rzędu pipeline padał na czymś innym (ENOENT → shell:true → brak node_modules); debug raz na dobę przez poranny automat = za wolna pętla |
 | 2026-08-19 | `@envio-dev/hypersync-client` PIN **1.0.0** repo-wide (dokładny, bez karetki) | Envio nie publikuje binarki win32 po 1.0.0 (^1.4.0 = wrapper bez natywki → twardy throw na Windows); darwin idzie do 1.4.0, stąd działało na Macu. API używane przez nas identyczne w 1.0.0 (diff CC-Win); zweryfikowane w npm registry przez Fable. Wspólny lockfile > nieużywane helpery 1.x |
+| 2026-08-26 | PRZEGLĄD TYGODNIOWY — σ w siatce 15 min + pełna rekalibracja k (paczka 365d+720d), wyniki wracają na przegląd | Estymator swapowy mierzy mikrostrukturę puli, nie aktywo (rozrzut σ 4.5×→1.4× na tym samym ETH); kalibracje k robione w jednostkach zepsutej σ — naprawy nie wolno rozdzielić od rekalibracji. Komplet: DECYZJE-2026-08-26 "WYNIK PRZEGLĄDU" |
+| 2026-08-26 | Bramka walidacyjna: okno **720d + drugi warunek recent ~90d** (zamiast 365d) | 365d (rok spadkowo-boczny) schlebiało strategii — na 720d 0/21 kombinacji przez bramkę; recent-warunek, żeby stare turbulencje nie skazywały puli latami |
+| 2026-08-26 | KAPITAŁ: transza 1 (6 092 USDC, Base) **CZEKA W USDC** do wyników rekalibracji i eksperymentu "LP tylko we flat"; bez parkingu Aave | Wejście w wąski LP na kalibracji, którą sami uznaliśmy za zepsutą, bez sensu; 720d=0/21; horyzont czekania 1–2 tyg. |
+| 2026-08-26 | hUp48 → tylko paper; histereza ujednolicona na "udział czasu w oknie" (3 miejsca); cbBTC k2/k3 i GAS_USD-backtest w paczce; WETH-CBBTC 0.3% Base → BOT_POOLS (paper); żywy gaz w observerze od razu | Decyzje Rafała na przeglądzie 26.08 — szczegóły i uzasadnienia w DECYZJE-2026-08-26 |
+| 2026-08-26 | Godziny operacyjne: podpisy 9–20 pn–pt, **EXIT_TREND alarm 24/7 również w weekend**; pomiar kosztu zwłoki od 1. dnia | Tryb PROPONUJ nic nie wykonuje sam; zwłoka podpisu = jedyne ryzyko (noc ~13h, weekend ~61h); przegląd pomiaru po 2 tyg. |
 
 ## 3. Rzeczy do zweryfikowania na aktualnych danych (nie z pamięci AI)
 
@@ -37,6 +42,32 @@
 - [ ] Istniejące otwarte pozycje użytkownika w Uniswap (podpiąć w F2 jako pierwsze dane żywe)
 
 ## 4. Dziennik sesji
+
+### 2026-08-26 ~08:1x–09:0x — PRZEGLĄD TYGODNIOWY (Fable + Rafał) — komplet decyzji z DECYZJE-2026-08-26
+Brief poranny + pełny przegląd agendy, punkt po punkcie (AskUserQuestion),
+w kolejności 11a: σ → k → hUp → kapitał. WSZYSTKIE decyzje podjęte —
+komplet z uzasadnieniami w sekcji "WYNIK PRZEGLĄDU" na górze
+DECYZJE-2026-08-26.md; nagłówki: σ=siatka 15 min, rekalibracja k=pełna
+paczka 365d+720d (wyniki wracają na przegląd, v1.2 zamrożony do tego
+czasu), bramka=720d+recent 90d, hUp48=tylko paper (+w zestawie paczki),
+histereza=udział czasu w oknie (3 miejsca), cbBTC k2/k3=w paczce (UI
+tymczasem na k2 — zadanie Sonnet), PASS WETH-CBBTC 0.3%→BOT_POOLS jako
+paper, KAPITAŁ CZEKA W USDC (bez Aave), godziny operacyjne 9–20 +
+EXIT_TREND alarm 24/7, żywy gaz w observerze od razu (backtest w paczce),
+lifecycle=spec teraz/budowa po paczce, eksperymenty LP-only-flat + mniej
+nerwowy sygnał UP w paczce, mainnet-001 odroczone (brak 3. kandydata),
+PROPONUJ bez odchyleń (przegląd ~1.09), pkt 6/8/11b odhaczone.
+ODBIÓR NOCY: raport 07:30 na czas, fetch 29/29 BRAKI=[], funnel/selection/
+sweep OK; Agent A doliczył y2/11×4 pule 720d (raport w HANDOFF odebrany
+wcześniej przez Fable, zweryfikowany). JEDYNA USTERKA: **backtest-run
+2× exit 1** (04:23 i 05:00Z, po ~35 min) — pierwsza porażka PO podniesieniu
+heapu do 12288, więc raczej nie OOM z 20.08; diagnoza zlecona CC-Win
+(HANDOFF). Nowy werdykt lejka: USDC-CBBTC 0.3% Base FAIL (43.5/−2.06) —
+7/8 kandydatów topu APY odpada. Paper dzień 8: $54 041 (+8.1%), vs HODL
+−$4 491 — wniosek FOMO-check bez zmian. Realizacja po przeglądzie (Fable):
+wpisy DECYZJE/CONTEXT/HANDOFF, diff BOT_POOLS, TASKS-LIFECYCLE.md,
+spec paczki rekalibracyjnej (TASKS-RECAL.md). Podział ról A/B CC-Win
+zakończony — wraca jeden agent.
 
 ### 2026-08-20 — Sesja analityczna (Fable) — odbiór nocy: PIERWSZY CZYSTY AUTOMAT + fix OOM
 Noc 20.08 = potwierdzenie wczorajszej roboty: pipeline 07:30 **19/19 kroków

@@ -83,6 +83,21 @@ export const BOT_POOLS: BotPool[] = [
     advisorK: 2, trendReentry: 'half',
   },
   {
+    // WETH/cbBTC 0.3% Base — dodane 2026-08-26 decyzją przeglądu (DECYZJE
+    // 11c): PIERWSZY PASS auto-lejka (65.2% wygr., worst −2.7; 23 okna
+    // 30/15, profil "Adapt k=2 h=24h + trend(exit,HL7d,5%)"). PAPER ONLY —
+    // PASS ≠ kapitał; werdykt odnowi się po rekalibracji σ/k. Adres CREATE2
+    // zweryfikowany 2×: on-chain przez CC-Win (25.08) i deterministycznie
+    // przez Fable (26.08). Profil jak base-cbbtc-weth-005 (para skorelowana).
+    id: 'base-weth-cbbtc-030',
+    chainId: 8453, chain: 'base',
+    address: '0x8c7080564B5A792A33Ef2FD473fbA6364d5495e5',
+    feeBps: 3000, ethIsToken0: true, d0: 18, d1: 8, sym0: 'WETH', sym1: 'cbBTC',
+    t0: '0x4200000000000000000000000000000000000006', t1: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',
+    quote: 'WETH', usdRefPoolId: 'base-weth-usdc-030',
+    advisorK: 2, trendReentry: 'half',
+  },
+  {
     // Arbitrum — dodane 2026-08-11 po zaliczonym walk-forwardzie 365d
     // (re>EMA 73% wygr — rekord projektu; CONTEXT ~16:15). Kolejność tokenów:
     // WETH 0x82aF… < USDC 0xaf88… ⇒ token0=WETH (zgodne z meta fetcha 365d).
