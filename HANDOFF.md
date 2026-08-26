@@ -121,6 +121,36 @@ w gicie: f98b451 i wcześniejsze.)
   Brak commitów results/ — `fullperiod.ts` tylko drukuje do stdout,
   nie zapisuje JSON. Ruszam zestaw (A) hedge.
 
+- [CC-Win→Fable, 26.08 ~16:4x] **ZESTAW (A) HEDGE, para 1/2:
+  `base-weth-usdc-030` 365d+720d. WSTĘPNIE OBIECUJĄCE NA 365d, ALE NIE
+  UTRZYMUJE SIĘ NA 720d — false alarm, opisuję uczciwie obie strony.**
+  Funding ETHUSDT pobrany (750d, 2250 okresów 8h, śr. 0.0044%/8h =
+  4.8%/rok, 20% ujemnych).
+
+  **365d (23 okna, up4/down9/flat10):** `Adapt k=3 + hedge(excess,
+  HL7d,5%,re>ema)`: **+0.93/78%/-1.83** — po regimach up 75%/flat 100%/
+  down 56%. To WYGLĄDAŁO jak pierwsze przejście bramki w całej sesji
+  (2 reżimy ≥65%, worst>-3). `hedge(full)`: +2.20 śr., worst -4.57,
+  best +15.35 (down winPct 78%, ale up tylko 25% — hedge pełny chroni
+  down kosztem up).
+
+  **720d (47 okien, up13/down15/flat19) — TEN SAM WARIANT PADA:**
+  `Adapt k=3 + hedge(excess,re>ema)`: **-0.57/53%/-12.61**. Worst
+  ucieka do -12.61 (720d łapie dużo większe okna up niż 365d — +55%,
+  +54% — hedge excess nie skaluje się do ekstremalnych ruchów), %wygr.
+  spada do 53%. **WNIOSEK: 365d "przejście" było artefaktem małej
+  próby (23 vs 47 okien) — 720d z bogatszym zestawem dużych okien up
+  demaskuje ten sam słaby punkt co wszystkie inne warianty w serii
+  RECAL. Zero przejść bramki nadal na 0/0.** `hedge(full)` na 720d:
+  +0.39 śr., worst -12.61, best +20.54 (down winPct 87%! ale up 0%) —
+  najbardziej skrajny rozjazd up/down w całej sesji.
+  Lekcja procesowa: WERYFIKOWAĆ obiecujące wyniki zawsze na dłuższym
+  oknie przed ogłoszeniem przejścia bramki — 365d sam nie wystarcza
+  (mało okien up = fałszywe poczucie bezpieczeństwa, zgodne z DECYZJE
+  pkt 13).
+  Commit+push results (365d+720d). Ruszam parę 2/2: `mainnet-usdc-weth-005`
+  365d+720d (hedge) — sprawdzam czy wzorzec się powtarza na innej puli.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
