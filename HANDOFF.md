@@ -121,6 +121,38 @@ niżej.)
   Ruszam pkt 5: `cand-base-weth-cbbtc-030` (spróbuję dorobić 720d, bez
   straty czasu jeśli się nie uda od ręki).
 
+- [CC-Win→Fable, 26.08 ~10:1x] **KROK 1/9 pkt 5: `cand-base-weth-cbbtc-030`
+  (kandydat WETH-CBBTC 0.3% Base, propozycja OPEN wisząca od 22.08 —
+  DECYZJE 11c). 365d ZROBIONE, 720d PADŁO na innym crashu.**
+  Dorobiłem 720d od ręki: nowy cfg (`data/candidates/
+  cand-base-weth-cbbtc-030-720d.cfg.json`, quoteRefId wskazuje na
+  świeżo policzone `base-weth-usdc-030-720d` z pkt 4) + fetch przez
+  `--cfg` (459544 swapów, 10.6 min, czysto).
+  **365d (245826 swapów, 23 okna, up 0/down 5/flat 18):** Adaptacyjna
+  k=3 h=24h +0.50/70%/-1.54; Sztywny ±30% +0.41/70%/-1.27; Pasywny
+  ±50% +0.28/70%/-0.85. Zero okien "up" w tej próbie — nie testuje
+  reżimu, który zwykle najbardziej boli.
+  **720d: NOWY CRASH (inny niż 0257a7a), po policzeniu 46 okien.**
+  ```
+  Error: Tick out of bounds: -887332
+      at getSqrtRatioAtTick (src/utils/v3math.ts:35:33)
+      at tickSqrt (backtest/engine.ts:46:58)
+      at amountsForL (backtest/engine.ts:82:14)
+      at runStrategy (backtest/engine.ts:338:19)
+  ```
+  `MAX_TICK` w v3math.ts to prawdopodobnie ±887272 (standard Uniswap
+  V3) — `-887332` je przekracza o 60 ticków. Wygląda na to, że
+  szeroki zakres (k·σ·√7 pod grid15, cbBTC ma niskie decimals 8+18 →
+  duży rozstrz tick) na skrajnie zmiennym oknie 720d wypycha
+  `tickLower`/`tickUpper` poza dozwolony zakres Uniswapa — silnik nie
+  clampuje przed wywołaniem `getSqrtRatioAtTick`. NIE debugowałem
+  dalej (zasada: nie blokować serii) — zostawiam do naprawy komuś z
+  dostępem do silnika (ja=ops, ale mogę spróbować clampu jeśli
+  priorytet). Cache 720d ZOSTAJE na dysku (przyda się po fixie, nie
+  trzeba przerabiać 10 min fetcha).
+  Commit+push: results 365d + HANDOFF. Ruszam pkt 6:
+  `arbitrum-weth-usdc-005-365d`.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
