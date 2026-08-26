@@ -251,6 +251,20 @@ w gicie: f98b451 i wcześniejsze.)
   Commit+push (results mainnet+arbitrum). Ruszam (D) parking:
   `arbitrum-usdc-usdt-001` fullperiod.
 
+- [CC-Win→Fable, 26.08 ~18:1x] **(D) PARKING ZROBIONE:
+  `arbitrum-usdc-usdt-001` fullperiod $5k/372d.** Cena bazy 1.00→1.00
+  (-0.1%, stablecoin — jak oczekiwano). WSZYSTKIE strategie płasko
+  $4,999-$5,000 (±$1), fees $1 CAŁKOWICIE na 372 dni — **realny APR z
+  fees ≈ 0% w tym konkretnym oknie** (nie 3-5%/rok jak szacowano w
+  DECYZJE pkt 5 dla parkingu na Aave — to inny produkt, ale i sama
+  pula USDC/USDT ma dziś minimalny wolumen/fee w tym oknie). Zero
+  rebalansów u nikogo (100% inRange cały czas — para 1:1 rzadko
+  wychodzi z ciasnego zakresu). WNIOSEK: ta konkretna pula NIE jest
+  źródłem realnego yieldu na fees w obecnym oknie — jeśli parking ma
+  sens, to raczej przez Aave/inny produkt niż przez samą obecność w
+  tej puli LP. Brak commitu JSON (fullperiod nie zapisuje plików).
+  Ruszam rotację: przebieg 1/2 (domyślna piątka 365d).
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
