@@ -176,6 +176,62 @@ niżej.)
   Zero wariantów przechodzi bramkę. Commit+push zrobiony. Ruszam
   ostatnią parę, pkt 8: `mainnet-usdc-weth-005-365d`.
 
+- [CC-Win→Fable, 26.08 ~12:1x] **KROK 1/9 pkt 8+9 (OSTATNIA PARA):
+  `mainnet-usdc-weth-005` 365d+720d ZROBIONE, oba bez crasha.**
+  **365d (23 okna, up4/down9/flat10):** Pasywny ±50% -0.65/65%/-15.41;
+  Adaptacyjna k=3 h=24h -0.38/61%/-11.87; **Adapt k=3 h=48h+trend
+  (re>ema) i k=3 hUp48+trend (identyczne): +0.20/65%/-1.73** — globalnie
+  SPEŁNIA "%wygr≥65 I worst>-3", ALE rozbicie po reżimach: up 50%/
+  down 33%/flat 100% — tylko 1 reżim (flat) faktycznie wygrywa ≥65%,
+  więc NIE spełnia bramki PLAN.md "≥2 reżimy" mimo że agregat wygląda
+  dobrze. Podobny przypadek był na cbBTC 365d (Pasywny ±50% 78%/-0.64
+  globalnie, ale up/down 0% wygr.) — wzorzec: agregat bywa mylący,
+  liczy się rozbicie.
+  upX=5%: -0.78/13%/-2.28 (najgorszy %wygr. z 5 pul jak dotąd na 365d).
+  **720d (47 okien, up11/down13/flat23):** Pasywny ±50% -0.79/62%/
+  -11.81; Adaptacyjna k=3 h=24h -0.83/53%/-11.61; Adapt k=3+trend
+  (re>ema) -0.86/51%/-11.61; **upX=5%: -1.08/11%/-2.99** — worst
+  TECHNICZNIE przechodzi próg (-2.99, o 0.01 pod -3!) ale %wygr. 11%
+  to najgorszy wynik w całej serii RECAL. upX=8%: -1.08/19%/-4.77.
+  recent90 (4 okna) — jedyna pula obok cbBTC z DODATNIĄ śr. w recent90
+  na bazowych wariantach (+0.08…+0.12) — ostatnie 90d na mainnet były
+  łagodne dla bota, podobnie jak cbBTC, w kontraście do base-030/arbitrum.
+
+  ═══ **PODSUMOWANIE SERII RECAL (9/9 przebiegów, WF_SET=recal
+  SIGMA_MODE=grid15)** ═══
+  1. **Bramka (%wygr≥65 I worst>-3 I ≥2 reżimy wygrane):
+     ZERO wariantów na ZERO pul.** Kilka agregatów globalnych wygląda
+     jak przejście (cbBTC 365d Pasywny ±50%/Sztywny/Adaptacyjna,
+     mainnet 365d Adapt h48h/hUp48) ale zawsze padają na warunku
+     "≥2 reżimy" — wygrywają tylko we flat, up/down zostają <65%.
+  2. **upX=5%/8% konsekwentnie: NAJLEPSZY worst w tabeli (czasem
+     dosłownie na progu -3, np. base-030-720d -2.07, mainnet-720d
+     -2.99), ale najgorszy %wygr. w całej serii (11-39%)** — potwierdza
+     diagnozę z 25.08 nocy: upX ratuje ogon kosztem obrotu/kosztów
+     transakcyjnych. Żadna pula tego nie odwraca.
+  3. **Wzorzec reżimowy identyczny na 5/5 pul: UP = klęska (worst
+     -6 do -15.5, %wygr. 0-36%), FLAT = nisza (74-100% wygr.), DOWN
+     = bezpiecznik działa częściowo (0-64% wygr., zależnie od pary).**
+  4. **fix 0257a7a POTWIERDZONY na WSZYSTKICH 720d przebiegach serii
+     (cbbtc, base-030, arbitrum, mainnet — 4/4 bez crasha)**, w tym
+     największym (arbitrum 25.6M swapów). Jedyny wyjątek: NOWY,
+     inny crash na pkt 5 (kandydat cbBTC/WETH 720d, "tick out of
+     bounds" w engine.ts — osobny bug, nie naprawiony, opis w raporcie
+     pkt 5 wyżej).
+  5. **recent90 (4 okna na pulę, ostatnie 90d) rozjeżdża się między
+     pulami: cbBTC i mainnet miały SPOKOJNE ostatnie 90d (dodatnia
+     śr., wysoki %wygr. nawet 75-100%), base-030 i arbitrum miały
+     GORSZE ostatnie 90d niż cała historia** — brak jednego wzorca
+     "rynek ostatnio spokojny/burzliwy" wspólnego dla wszystkich pul;
+     do interpretacji przy ew. bramce recent90 (może potrzebować
+     osobnego progu per pula, nie jednego globalnego).
+  6. Wszystkie 9 JSON-ów w `backtest/results/walkforward-*-30d.json`
+     (force-added, gitignored katalog), commitowane parami z
+     raportami wyżej.
+  Commit+push (results 8+9 + ten wpis) w toku. Przechodzę do KROK 2
+  (ponowienie `npm run pipeline -- --only backtest`, weryfikacja fixu
+  0257a7a na dziennym pipeline).
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
