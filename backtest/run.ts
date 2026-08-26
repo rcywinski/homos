@@ -21,10 +21,13 @@ const fmt = (v: number, d = 2) => v.toLocaleString('en-US', { minimumFractionDig
 function svgChart(results: RunResult[], w = 900, h = 320): string {
   const all = results.flatMap((r) => r.equity);
   if (!all.length) return '';
-  const t0 = Math.min(...all.map((e) => e.ts));
-  const t1 = Math.max(...all.map((e) => e.ts));
-  const v0 = Math.min(...all.map((e) => e.usd));
-  const v1 = Math.max(...all.map((e) => e.usd));
+  let t0 = Infinity, t1 = -Infinity, v0 = Infinity, v1 = -Infinity;
+  for (const e of all) {
+    if (e.ts < t0) t0 = e.ts;
+    if (e.ts > t1) t1 = e.ts;
+    if (e.usd < v0) v0 = e.usd;
+    if (e.usd > v1) v1 = e.usd;
+  }
   const colors = ['#888', '#1a6ae0', '#7c4dff', '#e05252', '#e0a01a', '#0a7d33', '#00acc1', '#c2185b'];
   const lines = results
     .map((r, i) => {
