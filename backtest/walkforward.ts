@@ -269,7 +269,9 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
         byRegime[rg].aprQ75 = q(aprs, 0.75);
       }
     }
-    summary[name] = { ...s, byRegime };
+    const recentEntries = entries.filter((e) => e.start >= t1 - 90 * 86400);
+    const recent90 = recentEntries.length ? stat(recentEntries.map((e) => e.v)) : null;
+    summary[name] = { ...s, byRegime, recent90 };
     console.log(
       name.padEnd(44) + pct(s.mean).padStart(8) + pct(s.med).padStart(8) +
       s.winPct.toFixed(0).padStart(7) + '%' + pct(s.worst).padStart(11) + pct(s.best).padStart(11)
@@ -281,6 +283,13 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
         `   └ ${rg.padEnd(5)} (${String(b.windows).padStart(2)} okien)`.padEnd(44) +
         pct(b.mean).padStart(8) + pct(b.med).padStart(8) +
         b.winPct.toFixed(0).padStart(7) + '%' + pct(b.worst).padStart(11) + pct(b.best).padStart(11)
+      );
+    }
+    if (recent90) {
+      console.log(
+        `   └ recent90 (${String(recent90.windows).padStart(2)} okien)`.padEnd(44) +
+        pct(recent90.mean).padStart(8) + pct(recent90.med).padStart(8) +
+        recent90.winPct.toFixed(0).padStart(7) + '%' + pct(recent90.worst).padStart(11) + pct(recent90.best).padStart(11)
       );
     }
   }
