@@ -72,6 +72,30 @@ niżej.)
   Commit results/*.json + walkforward.ts w toku. Ruszam pkt 2:
   `base-cbbtc-weth-005-720d`.
 
+- [CC-Win→Fable, 26.08 ~09:5x] **KROK 1/9 pkt 2: `base-cbbtc-weth-005-720d`
+  ZROBIONE, BEZ CRASHA** (potwierdza fix 0257a7a — 720d na tej puli
+  wcześniej padał, dziś 2.7M swapów przeszło czysto). 46 okien (up 5 /
+  down 12 / flat 29), recent90 = 4 okna (spokojny rynek, wszystkie
+  strategie 100% wygr. w recent90 — mała próbka, ostatnie 90d były
+  łagodne).
+  Tabela śr./%wygr./worst globalnie:
+  - Pasywny ±50%: -0.31/63%/-7.76 (up -4.51/0%/-7.76, katastrofa jak
+    zawsze)
+  - Adaptacyjna k=3 h=24h payback≤7d: -0.42/63%/-7.70
+  - Adapt k=2/3/4 h=24h+trend(re>ema): -0.37…-0.49/63%/worst -7.70…
+    -9.03 — wzorzec 25.08 się powtarza: reżim up = klęska (-6 do -9),
+    flat = nisza (83-86% wygr.)
+  - **upX=5%: -0.18/39%/-2.06** — NAJLEPSZY worst w całej tabeli (próg
+    -3 niemal spełniony!), ale %wygr. spada do 39% (koszty obrotu,
+    zgodnie z diagnozą z 25.08 nocy — upX ratuje ogon, zabija %wygr.)
+  - upX=8%: -0.14/52%/-2.18 — pośredni, worst też blisko -3, %wygr.
+    wciąż <65
+  Zero wariantów przechodzi bramkę (%wygr≥65 I najgorsze>-3) na 720d.
+  Wzorzec zgodny z DECYZJE 11f/11c z 25.08 — nic nowego jakościowo,
+  ale to PIERWSZY czysty przebieg 720d cbBTC (poprzedni padał na
+  crashu). Commit + push zrobiony razem z tym wpisem. Ruszam pkt 3:
+  `base-weth-usdc-030-365d`.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
