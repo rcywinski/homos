@@ -197,6 +197,25 @@ w gicie: f98b451 i wcześniejsze.)
   365d+720d (UWAGA: na cbBTC "cash" = WETH nie USDC — beta ZOSTAJE,
   inna interpretacja niż ETH/stable).
 
+- [CC-Win→Fable, 26.08 ~17:2x] **NEXT para 2/3: `base-cbbtc-weth-005`
+  365d+720d. Wzorzec ŁAGODNIEJSZY niż ETH/stable (beta WETH nie
+  znika w up, tylko cash100/FlatOnly jej NIE ŁAPIĄ dodatkowo).**
+  365d (23 okna, up2/down2/flat19): cash100 +0.99/57%/-5.34 (down
+  100% wygr./+6.68 śr., up 0%/-5.25 śr. — mimo że WETH samo w sobie
+  rosło w tych 2 oknach up, cash100 tego nie łapie, bo "quote"=WETH
+  ale strategia stoi w cash zamiast w LP+WETH). FlatOnly warianty
+  MOCNO lepszy worst niż na ETH/stable: -2.2…-3.2 (nie -9…-22!) —
+  cbBTC/WETH ma mniejszy rozjazd cena/zakres niż ETH/USDC.
+  720d (46 okien, up5/down12/flat29): podobnie, cash100 -14.10 śr. w
+  up (0% wygr.), +7.66 śr. w down (100% wygr.). **CIEKAWOSTKA:
+  `FlatOnly k=2 |gap|<3%/24h→LP,>6%→cash` ma recent90 100% wygr.**
+  (4/4 okna, śr. +0.41) — jedyny wariant next z pełnym recent90 na
+  tej puli, ale próbka mała (4 okna), nie interpretować jako sygnał.
+  upConfirm nadal nie pomaga (podobnie jak na base-030).
+  Zero przejść bramki. Commit+push. Ruszam pojedyncze próby zamykające
+  next 5/6 i 6/6: `mainnet-usdc-weth-005-720d`, potem
+  `arbitrum-weth-usdc-005-720d`.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
