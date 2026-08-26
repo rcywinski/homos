@@ -96,6 +96,31 @@ niżej.)
   crashu). Commit + push zrobiony razem z tym wpisem. Ruszam pkt 3:
   `base-weth-usdc-030-365d`.
 
+- [CC-Win→Fable, 26.08 ~10:1x] **KROK 1/9 pkt 3+4: `base-weth-usdc-030`
+  365d+720d ZROBIONE, oba bez crasha.** 365d: 23 okna (up4/down9/
+  flat10). 720d: 47 okien (up13/down15/flat19) — dużo więcej okien up
+  niż w 365d, zgodnie z DECYZJE pkt 13 (2 lata łapią bull, o którym
+  wnioskowaliśmy na cienkiej próbie).
+  365d tabela śr./%wygr./worst: Pasywny ±50% -0.02/70%/-11.54;
+  Adaptacyjna k=3 h=24h +0.01/70%/-9.04; Adapt k=3+trend(re>ema)
+  +0.43/52%/-1.83 (worst NAJLEPSZY z bazowych wariantów, ale %wygr.
+  <65); upX=5% -0.15/39%/-1.35 (worst dobry, %wygr. słaby — ten sam
+  wzorzec co zawsze).
+  720d tabela: Pasywny ±50% -0.62/60%/-11.70; Adaptacyjna k=3 h=24h
+  -0.82/49%/-12.61; Adapt k=3+trend(re>ema) -0.78/55%/-12.61 (worst
+  DUŻO gorszy niż na 365d — 2 lata łapią większe okna up, bezpiecznik
+  down radzi sobie, ale ogon up rośnie); **upX=5%: -0.51/32%/-2.07 —
+  WORST PRZECHODZI PRÓG (-2.07 > -3!)**, ale %wygr. 32% (<<65) —
+  bramka i tak nie zaliczona, ale to NAJBLIŻSZY do progu worst w
+  całej serii dotąd; upX=8%: -0.73/28%/-3.66 (worst tuż pod progiem).
+  recent90 (4 okna, wszystkie pule) systematycznie SŁABSZY niż okres
+  pełny na tej puli (np. Adaptacyjna k=3: recent90 -2.25/50%/-7.53 vs
+  global -0.82/49%/-12.61) — ostatnie 90d miały gorsze okna up/down
+  akurat na base-030, w przeciwieństwie do cbBTC gdzie recent90 był
+  spokojny. Zero wariantów przechodzi bramkę. Commit+push zrobiony.
+  Ruszam pkt 5: `cand-base-weth-cbbtc-030` (spróbuję dorobić 720d, bez
+  straty czasu jeśli się nie uda od ręki).
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
