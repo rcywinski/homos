@@ -42,6 +42,23 @@ niżej.)
 > gdy coś niejednoznaczne — nie improwizuj, opisz problem w @Fable i idź
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
+- [Fable→CC-Mac, 26.08 ~11:xx, rozszerzona ~13:xx — PACZKA #2]
+  NAJPIERW `git pull` (na origin jest raport recal CC-Win — przy
+  konflikcie HANDOFF zachować OBIE strony: raport CC-Win i wpisy
+  Fable). Potem commit+push: bot/server.ts (filtr widoku /api/state
+  o kolejkę komend — fix "odrzucone wracają po odświeżeniu"),
+  src/hooks/useBotApi.ts (persist odrzuceń w localStorage TTL 15 min),
+  backtest/engine.ts (clamp ticków do MIN/MAX_TICK — fix crasha
+  "Tick out of bounds: -887332" z przebiegu cand-base-weth-cbbtc-030-
+  720d), backtest/fullperiod.ts (NOWY — symulacja pełnookresowa $5k),
+  backtest/strategies.ts (NOWE: cash100, flatOnlyLP, opcje
+  hysteresisShare/upConfirmSec w volAdaptiveTrend),
+  backtest/walkforward.ts (NOWY zestaw WF_SET=next — smoke OK),
+  TASKS-ROTATION.md (NOWY — spec backtestu dynamicznej rotacji),
+  HANDOFF.md, CONTEXT.md, DECYZJE-2026-08-26.md. Komunikat:
+  "fix: dismissed-view + tick clamp; feat: fullperiod, flat-only,
+  share-hysteresis, upConfirm, rotation spec".
+
 - [Fable→CC-Mac, 26.08] Commit+push paczki po przeglądzie tygodniowym
   (dokumenty + kod, jeden commit): DECYZJE-2026-08-26.md (WYNIK
   PRZEGLĄDU), CONTEXT.md, HANDOFF.md, TASKS-LIFECYCLE.md (nowy),
@@ -105,7 +122,74 @@ niżej.)
   Commit results/*.json razem z wpisem raportu. UWAGA: liczby są w
   NOWEJ σ (grid15) — NIE porównywać wprost z wcześniejszymi runami.
 
+  **KROK 1b — dopisane ~11:xx (paczka #2, NIE przerywać biegnącego
+  walkforwardu):** między przebiegami serii: `git pull` →
+  `nssm restart homos-server` (fix "odrzucone wracają po odświeżeniu" —
+  zmiana tylko w server.ts, restart servera wystarczy; rebuild bundla
+  może poczekać do wieczora, zmiana w useBotApi to pas-i-szelki).
+  RAZEM z tym: sprawdź w observer.log, czy po dzisiejszych klikach
+  Rafała (~10:4x–11:0x) są linie "proposal …: odrzucona (komenda z
+  UI)". SĄ → konsument działa, temat zamknięty. NIE MA → realny bug
+  backendu: przyślij do @Fable ogon observer.log (ostatnie 100 linii),
+  zawartość .bot/proposal-commands.ndjson (czy rośnie) i status/uptime
+  homos-bot — czy pull z krokiem 0 na pewno objął fix dual-writer
+  i czy usługa faktycznie zrestartowana z nowym kodem.
+
   **KROK 2 — po całej serii (albo wieczorem):** ponowić dzienny
   `npm run pipeline -- --only backtest` (weryfikacja fixu 0257a7a tego
   samego dnia; nocne results/HTML mogły się nie zapisać). Odnotować
   Peak RSS i czas. Recal ma pierwszeństwo — to idzie na końcu.
+
+- [Fable→CC-Win, 26.08 ~13:xx — po paczce #2] SERIA RECAL ODEBRANA
+  (podsumowanie u Rafała; niezależna weryfikacja JSON-ów u Fable po
+  syncu repo na Macu). Crash "Tick out of bounds: -887332" NAPRAWIONY
+  w engine.ts (clamp zakresów pozycji i pasma fee do MIN/MAX_TICK —
+  anomalne ticki z początku życia puli; v3math celowo dalej rzuca,
+  granice pilnuje engine). Po pullu paczki #2 DOLICZYĆ brakujący
+  przebieg: `WF_SET=recal SIGMA_MODE=grid15
+  NODE_OPTIONS=--max-old-space-size=12288 npx tsx
+  backtest/walkforward.ts cand-base-weth-cbbtc-030-720d 30 15`
+  (cache 720d już na dysku) + raport z recent90 jak przy pozostałych.
+
+- [Fable→CC-Win, 26.08 ~13:xx] **SYMULACJE PEŁNOOKRESOWE $5k** (pytanie
+  Rafała "co by się stało z $5k przez 2 lata") — nowy skrypt
+  `backtest/fullperiod.ts` (w paczce #2): jedna pozycja od początku
+  serii, procent składany; tabela koniec$/PnL/fees/koszty/rebalanse/
+  vsHODL + odniesienie 100% USDC. Odpalić po serii recal (szybkie,
+  ~połowa czasu walkforwardu), dla KAŻDEGO id:
+  `SIGMA_MODE=grid15 NODE_OPTIONS=--max-old-space-size=12288 npx tsx
+  backtest/fullperiod.ts <id> 5000` — ids: base-cbbtc-weth-005-720d,
+  base-weth-usdc-030-720d, arbitrum-weth-usdc-005-720d,
+  mainnet-usdc-weth-005-720d, cand-base-weth-cbbtc-030-720d (po fixie
+  clampa). Wyjścia (stdout) wkleić do raportu w @Fable — tabela dla
+  Rafała wprost, NIE do bramki. Smoke Fable na Macu (stary cache
+  cbBTC-365d): HODL pary −51.5%, wszystkie warianty ≈ HODL ± $230,
+  100% USDC wygrywa o $2.5k — działa i uczciwie pokazuje betę.
+
+- [Fable→CC-Win, 26.08 ~14:xx — DECYZJA RAFAŁA "testujemy wszystkie 4
+  kierunki". Po pullu paczki #2 dołożyć do kolejki, PO serii recal,
+  w tej kolejności; wszystko automatycznie:]
+  **(A) HEDGE / delta-neutral na grid15:**
+  1. `npx tsx scripts/fetch-funding.ts ETHUSDT 750` (dane funding 720d)
+  2. `WF_SET=hedge SIGMA_MODE=grid15 NODE_OPTIONS=--max-old-space-size=12288`
+     → walkforward dla: base-weth-usdc-030-365d, base-weth-usdc-030-720d,
+     mainnet-usdc-weth-005-365d, mainnet-usdc-weth-005-720d (tylko
+     ETH/stable — hedge nie gra na cbBTC).
+  **(B+C) Zestaw `next` (flat-only default-cash + histereza share +
+  upConfirm; NOWY kod w paczce #2):**
+  `WF_SET=next SIGMA_MODE=grid15 ...` → walkforward dla:
+  base-weth-usdc-030-365d, base-weth-usdc-030-720d,
+  base-cbbtc-weth-005-365d, base-cbbtc-weth-005-720d,
+  mainnet-usdc-weth-005-720d, arbitrum-weth-usdc-005-720d.
+  UWAGA interpretacyjna do raportu: rodzinę FlatOnly i cash100 czytać
+  względem SIEBIE (cash100 = benchmark "nic nie robię w quote"), nie
+  względem HODL; na pulach cbBTC "cash" = WETH (beta zostaje).
+  **(D) Parking bez bety:** `SIGMA_MODE=grid15 npx tsx
+  backtest/fullperiod.ts arbitrum-usdc-usdt-001 5000` (realny APR fees
+  stable/stable — 1 przebieg, szybki).
+  Raporty jak przy recal (tabele + recent90 dla walkforwardów) do
+  @Fable, commit results parami. Kolejność ogólna: dokończ recal →
+  fullperiody → (A) → (B+C) → (D) → KROK 2 (--only backtest). Nocny
+  automat 05:30 i tak przeliczy swoje — nie kolidować (jeden proces
+  ciężki naraz; jak przebiegi wejdą w okno 05:30-08:25, wstrzymać się
+  do końca pipeline'u).

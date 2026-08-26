@@ -21,7 +21,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { runStrategy, Strategy, ethUsd } from './engine';
-import { hodl5050, passiveWide, fixedNaive, volAdaptive, volAdaptiveTrend, volAdaptiveHedge } from './strategies';
+import { hodl5050, cash100, flatOnlyLP, passiveWide, fixedNaive, volAdaptive, volAdaptiveTrend, volAdaptiveHedge } from './strategies';
 import { loadPool, loadFunding } from './load'; // wspólny loader (obsługuje też pary quote:'WETH')
 
 const OUT = path.join(__dirname, 'results');
@@ -144,9 +144,34 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       volAdaptiveTrend({ ...v11, upExitThresh: 0.08 }), // upX=8% — mniej nerwowy (11f.d)
     ];
   };
+  // 'next' (26.08 popołudnie, decyzja Rafała "testujemy wszystko"):
+  // (B) rodzina FLAT-ONLY — domyślnie cash, LP tylko w potwierdzonym flat,
+  // wyjście na trend w OBIE strony; benchmark = cash100, NIE HODL!
+  // (C) histereza share (DECYZJE pkt 10) + upConfirm (mniej nerwowy upX).
+  // Odpalać z SIGMA_MODE=grid15.
+  const mkNext = (): Strategy[] => {
+    const v11 = { ...trendBase, mode: 'exit' as const, reentryAboveEma: true };
+    const flatBase = { horizonDays: 7, trendHLDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 };
+    return [
+      hodl5050,
+      cash100, // benchmark rodziny flat-only
+      flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600 }),
+      flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600 }),
+      flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600 }),
+      flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.03, exitThresh: 0.06, confirmSec: 24 * 3600 }),
+      volAdaptiveTrend(v11), // referencja
+      volAdaptiveTrend({ ...v11, hysteresisShare: 0.8 }),
+      volAdaptiveTrend({ ...v11, hysteresisUpSec: 48 * 3600, hysteresisShare: 0.8 }),
+      volAdaptiveTrend({ ...v11, upExitThresh: 0.05, upConfirmSec: 6 * 3600 }),
+      volAdaptiveTrend({ ...v11, upExitThresh: 0.05, upConfirmSec: 12 * 3600 }),
+      volAdaptiveTrend({ ...v11, upExitThresh: 0.08, upConfirmSec: 12 * 3600 }),
+    ];
+  };
   const mkStrategies = (): Strategy[] =>
     process.env.WF_SET === 'hedge'
       ? mkHedge()
+      : process.env.WF_SET === 'next'
+      ? mkNext()
       : process.env.WF_SET === 'recal'
       ? mkRecal()
       : process.env.WF_SET === 'y2'

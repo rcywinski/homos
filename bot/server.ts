@@ -54,6 +54,23 @@ const readJson = (p: string) => (fs.existsSync(p) ? JSON.parse(fs.readFileSync(p
 app.get('/api/state', (_req, res) => {
   const s = readJson(STATE_PATH);
   if (!s) return res.status(503).json({ error: 'bot not running (no state file)' });
+  // Fix 26.08 (zgłoszenie Rafała: "po odświeżeniu strony wracają"): odrzucenie
+  // czeka w kolejce komend do ≤30 s zanim observer je zastosuje i przepisze
+  // state.json — w tym oknie świeżo załadowana strona widziała propozycję
+  // znowu. Server NADAL nie pisze do proposals.json (jedyny writer =
+  // observer, lekcja dual-writer 25.08) — filtruje wyłącznie WIDOK stanu
+  // o idki z własnej kolejki. Gdy observer skonsumuje plik, filtr znika sam.
+  try {
+    const cmdPath = path.join(DIR, 'proposal-commands.ndjson');
+    if (fs.existsSync(cmdPath) && Array.isArray(s.proposals)) {
+      const pending = new Set(
+        fs.readFileSync(cmdPath, 'utf8').split('\n').filter((l) => l.trim()).map((l) => {
+          try { const c = JSON.parse(l); return c.action === 'dismiss' ? c.id : null; } catch { return null; }
+        }).filter((x): x is string => !!x)
+      );
+      if (pending.size) s.proposals = s.proposals.filter((p: { id: string }) => !pending.has(p.id));
+    }
+  } catch { /* filtr jest kosmetyką widoku — jego awaria nie kładzie endpointu */ }
   res.json(s);
 });
 

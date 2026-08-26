@@ -241,6 +241,13 @@ export function runStrategy(
     },
     openPosition: (lo: number, hi: number) => {
       if (state.pos) throw new Error('position already open');
+      // clamp do domeny v3 (fix 26.08 po crashu "Tick out of bounds: -887332"
+      // na cand-base-weth-cbbtc-030-720d): anomalne ticki z początku życia
+      // puli potrafią zepchnąć zakres poza MIN/MAX_TICK — v3math celowo
+      // rzuca (ma być bit-exact z Uniswapem), więc granice pilnujemy tutaj.
+      lo = Math.max(lo, MIN_TICK);
+      hi = Math.min(hi, MAX_TICK);
+      if (hi <= lo) hi = Math.min(lo + spec.tickSpacing, MAX_TICK);
       const { px0, px1 } = unitPrices(ev.sqrtP, spec);
       const totalUsd = state.cash0 * px0 + state.cash1 * px1;
       // docelowe proporcje dla zakresu
@@ -335,7 +342,14 @@ export function runStrategy(
       const feeUsd = (ev.a0 > 0 ? ev.a0 * px0 : ev.a1 * px1) * spec.feeRate;
       // wartość aktywnej płynności w wąskim paśmie: przybliżenie ±1 tickSpacing
       const t = ev.t;
-      const act = amountsForL(ev.L, t - spec.tickSpacing, t + spec.tickSpacing, ev.sqrtP, spec);
+      // clamp pasma do domeny v3 (fix 26.08 — crash "Tick out of bounds":
+      // swap z tickiem przy samym MIN/MAX_TICK dawał t±spacing poza domeną)
+      const act = amountsForL(
+        ev.L,
+        Math.max(t - spec.tickSpacing, MIN_TICK),
+        Math.min(t + spec.tickSpacing, MAX_TICK),
+        ev.sqrtP, spec
+      );
       const actUsd = act.a0 * px0 + act.a1 * px1;
       if (actUsd > 0 && feeUsd >= 0) {
         const instDaily = (feeUsd / actUsd) * (86400 / dt);

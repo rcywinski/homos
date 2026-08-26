@@ -411,7 +411,27 @@ export function useBotApi(): UseBotApi {
   // co 60 s — bez tego propozycja wisiała do ~90 s po kliknięciu i przycisk
   // wyglądał na zepsuty). Wpis żyje, dopóki propozycja nie zniknie z
   // fetchowanego stanu (wtedy reconciliation ją czyści).
-  const [locallyDismissed, setLocallyDismissed] = useState<string[]>([]);
+  // Fix 26.08(2) — zgłoszenie Rafała "po odświeżeniu wracają": lista jest
+  // dodatkowo trzymana w localStorage z TTL 15 min, żeby przeżyła reload
+  // strony w oknie zanim observer zastosuje komendę (server też filtruje
+  // widok /api/state o kolejkę komend — to pas i szelki).
+  const DISMISSED_LS_KEY = 'homos.dismissedProposals';
+  const DISMISSED_TTL_MS = 15 * 60 * 1000;
+  const [locallyDismissed, setLocallyDismissed] = useState<string[]>(() => {
+    try {
+      const raw: Array<{ id: string; ts: number }> = JSON.parse(localStorage.getItem(DISMISSED_LS_KEY) ?? '[]');
+      return raw.filter((e) => Date.now() - e.ts < DISMISSED_TTL_MS).map((e) => e.id);
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem(DISMISSED_LS_KEY, JSON.stringify(locallyDismissed.map((id) => ({ id, ts: Date.now() }))));
+    } catch {
+      /* localStorage niedostępny — zostaje wersja in-memory */
+    }
+  }, [locallyDismissed]);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);

@@ -58,6 +58,58 @@ EXIT_TREND alarm 24/7, żywy gaz w observerze od razu (backtest w paczce),
 lifecycle=spec teraz/budowa po paczce, eksperymenty LP-only-flat + mniej
 nerwowy sygnał UP w paczce, mainnet-001 odroczone (brak 3. kandydata),
 PROPONUJ bez odchyleń (przegląd ~1.09), pkt 6/8/11b odhaczone.
+~14:xx — DECYZJA "TESTUJEMY WSZYSTKIE 4 KIERUNKI" + KOD (Fable, tsc
+czysty, smoke OK): po pytaniu Rafała "co dalej po −50%?" cztery rodziny
+postury wobec bety: (A) delta-neutral LP+hedge GMX (WF_SET=hedge na
+grid15, funding 750d — zlecenie), (B) FLAT-ONLY default-CASH — NOWA
+strategia `flatOnlyLP` (wejście |gap|<próg przez confirmSec, wyjście
+|gap|>próg w obie strony, benchmark NOWY `cash100`, nie HODL),
+(C) histereza jako UDZIAŁ CZASU (opts.hysteresisShare — EMA wskaźnika
+poza-zakresem, dotknięcie osłabia zamiast zerować; realizacja DECYZJE
+pkt 10 po stronie backtestu) + `upConfirmSec` (potwierdzenie czasowe
+sygnału upX — 11f.d), zestaw WF_SET=next (12 strategii);
+(D) rotacja (TASKS-ROTATION.md) + parking stable/stable (fullperiod
+arb-usdc-usdt-001). Zlecenia u CC-Win z kolejnością i regułą
+niekolidowania z automatem 05:30. Silnik rotacji multi-pool = następna
+robota Fable po syncu repo.
+
+~13:xx — SERIA RECAL ODEBRANA + PYTANIE O BRAMKĘ + KIERUNEK "ROTACJA":
+(1) Raport CC-Win 9/9: ZERO wariantów przez pełną bramkę (zawsze pada
+"≥2 reżimy" — wygrane tylko FLAT); upX ratuje ogon kosztem %wygr.
+(11–39%) — spójne z 25.08; recent90 bez wspólnego wzorca (cbBTC/mainnet
+spokojne, base-030/arb gorsze). Fix 0257a7a potwierdzony 4/4 na 720d.
+DECYZJA RAFAŁA (kapitał): "dostrajamy algorytm aż przejdzie bramki" —
+USDC czeka, wejście LP off do skutku. (2) NOWY CRASH z serii ("Tick
+out of bounds: -887332", cand-cbbtc-030-720d) NAPRAWIONY: clamp
+zakresów pozycji i pasma fee do MIN/MAX_TICK w engine.ts (anomalne
+ticki z początku życia puli; v3math celowo dalej rzuca). Doliczenie
+przebiegu zlecone. (3) Pytanie Rafała "czy bramka zakłada kapitał
+zamrożony 2 lata?" → wyjaśnione (46 okien 30d = 46 momentów wejścia,
+odporność na timing) + NOWE NARZĘDZIE `backtest/fullperiod.ts`:
+symulacja "wrzucam $5k raz, trzymam strategię cały okres" — realne
+kwoty, fees, koszty, vs HODL i vs 100% USDC. Smoke na starym cache
+cbBTC-365d: HODL pary −51.5%, warianty ≈ HODL ± $230, USDC wygrywa
+o $2.5k — beta dominuje, fees to dodatek (zgodne z całą serią 720d).
+Przebiegi 720d zlecone CC-Win. (4) DYREKTYWA RAFAŁA: trading ma być
+DYNAMICZNY (ciągły przegląd rynku, przeskoki między parami przy
+jałowości/zysku/stracie, nie strojenie jednej pary latami) — spisana
+jako TASKS-ROTATION.md: backtest multi-pool rotacji po trailing
+fee-yield z kosztami przeskoku, benchmarki single-pool/HODL/USDC/
+oracle; z uczciwą ramą "rotacja zmienia silnik fees, nie ucieka od
+bety". Budowa: Fable (po syncu repo), liczenie: CC-Win.
+
+~11:xx — „ODRZUĆ" RUNDA 2 (zgłoszenie Rafała po wdrożeniu paczki:
+"znikają, ale po odświeżeniu strony wracają"): optymistyczne ukrycie
+działało, ale żyło w pamięci karty, a stan bota ma komendę zastosowaną
+dopiero po ≤30 s (okno, w którym reload pokazywał propozycję znowu).
+Fix dwustronny (Fable, tsc czysty): (1) bot/server.ts — /api/state
+filtruje widok o idki z własnej kolejki proposal-commands (server DALEJ
+nie pisze do proposals.json — filtr znika sam po konsumpcji przez
+observer); (2) useBotApi — locallyDismissed w localStorage z TTL 15 min.
+KROK 1b u CC-Win: restart homos-server między przebiegami + weryfikacja
+w observer.log linii "odrzucona (komenda z UI)" — jej brak po dzisiejszych
+klikach = realny bug konsumenta, procedura zgłoszenia w HANDOFF.
+
 ~10:3x — REWIZJA DECYZJI KAPITAŁOWEJ (Rafał) + PLAN "WYNIKI DZIŚ":
 pkt 8 wyniku przeglądu zmieniony świadomie (pełny zapis z uczciwą
 notatką FOMO w DECYZJE): teza rynku bocznego (spójna z botem: down:false

@@ -23,6 +23,140 @@ export const hodl5050: Strategy = {
   onEvent: () => {},
 };
 
+/** Swap całego cash do nogi QUOTE (dla ETH/stable = stable, czyli prawdziwy
+ *  cash bez bety; UWAGA: dla pul kwotowanych w WETH, np. cbBTC/WETH, quote
+ *  to WETH — beta vs USD zostaje). Koszt: fee tieru + slippage od obrotu. */
+const toQuoteAll = (ctx: Ctx) => {
+  const { px0, px1 } = unitPrices(ctx.ev.sqrtP, ctx.spec);
+  const ethIs0 = ctx.spec.ethIsToken0;
+  const amt = ethIs0 ? ctx.state.cash0 : ctx.state.cash1; // noga bazowa do sprzedania
+  if (amt <= 0) return;
+  const usd = amt * (ethIs0 ? px0 : px1);
+  const cost = usd * (ctx.spec.feeRate + ctx.spec.slippageBps / 10_000);
+  ctx.state.swapCostUsd += cost;
+  if (ethIs0) {
+    ctx.state.cash0 = 0;
+    ctx.state.cash1 += Math.max(usd - cost, 0) / px1;
+  } else {
+    ctx.state.cash1 = 0;
+    ctx.state.cash0 += Math.max(usd - cost, 0) / px0;
+  }
+};
+
+/** 1b. 100% quote (cash) — baseline dla strategii z domyślną pozycją POZA
+ *  rynkiem (rodzina flat-only, 26.08). Na ETH/stable ≈ "trzymam USDC". */
+export const cash100: Strategy = {
+  name: '100% quote (cash, bez LP)',
+  init: (ctx) => toQuoteAll(ctx),
+  onEvent: () => {},
+};
+
+/**
+ * 1c. FLAT-ONLY LP (26.08, kierunek z przeglądu + teza Rafała o rynku
+ * bocznym): DOMYŚLNIE CASH (100% quote — zero bety na ETH/stable), wejście
+ * do LP dopiero gdy detektor mówi "bocznie" (|gap do EMA| < enterThresh
+ * NIEPRZERWANIE przez confirmSec), wyjście do cash na trend w DOWOLNĄ
+ * stronę (|gap| > exitThresh). W trakcie LP normalne re-centrowanie
+ * zakresu (histereza + payback jak w volAdaptive). Benchmark: cash100,
+ * nie HODL — pytanie brzmi "ile fees dokładam do gotówki, nie ryzykując
+ * ogona", a nie "czy biję trzymanie pary".
+ */
+export const flatOnlyLP = (opts: {
+  k: number;
+  horizonDays: number;
+  enterThresh: number; // |gap| < tego przez confirmSec → flat → wejście
+  exitThresh: number; // |gap| > tego → trend → wyjście do cash
+  confirmSec: number;
+  hysteresisSec: number;
+  maxPaybackDays: number;
+  trendHLDays: number;
+  minWidth?: number;
+  maxWidth?: number;
+}): Strategy => {
+  let ema: number | null = null;
+  let lastTs: number | null = null;
+  let flatSince: number | null = null;
+  let outSince: number | null = null;
+  const tau = (opts.trendHLDays * 86400) / Math.LN2;
+  const width = (ctx: Ctx) =>
+    Math.min(Math.max(opts.k * ctx.volDaily * Math.sqrt(opts.horizonDays), opts.minWidth ?? 0.01), opts.maxWidth ?? 0.6);
+  const halfGas = (ctx: Ctx) => {
+    const { px0, px1 } = unitPrices(ctx.ev.sqrtP, ctx.spec);
+    const g = ctx.spec.gasUsdPerRebalance / 2;
+    ctx.state.gasUsd += g;
+    if (ctx.state.cash0 * px0 >= g) ctx.state.cash0 -= g / px0;
+    else ctx.state.cash1 -= g / px1;
+  };
+  return {
+    name: `FlatOnly k=${opts.k} |gap|<${(opts.enterThresh * 100).toFixed(0)}%/${(opts.confirmSec / 3600).toFixed(0)}h→LP, >${(opts.exitThresh * 100).toFixed(0)}%→cash (HL${opts.trendHLDays}d)`,
+    init: (ctx) => {
+      toQuoteAll(ctx); // start POZA rynkiem
+      ema = Math.log(ethUsd(ctx.ev.sqrtP, ctx.spec));
+      lastTs = ctx.ev.ts;
+    },
+    onEvent: (ctx) => {
+      const logP = Math.log(ethUsd(ctx.ev.sqrtP, ctx.spec));
+      if (ema === null || lastTs === null) {
+        ema = logP;
+        lastTs = ctx.ev.ts;
+        return;
+      }
+      const dt = Math.max(ctx.ev.ts - lastTs, 1);
+      const a = 1 - Math.exp(-dt / tau);
+      ema = (1 - a) * ema + a * logP;
+      lastTs = ctx.ev.ts;
+      const gap = Math.abs(logP - ema);
+      const p = ctx.state.pos;
+
+      if (p) {
+        // trend w dowolną stronę → wyjście do cash
+        if (gap > opts.exitThresh) {
+          ctx.closePosition();
+          halfGas(ctx);
+          toQuoteAll(ctx);
+          ctx.state.rebalances++;
+          flatSince = null;
+          outSince = null;
+          return;
+        }
+        // normalne re-centrowanie zakresu (histereza + payback)
+        const out = ctx.ev.t < p.lo || ctx.ev.t >= p.hi;
+        if (!out) {
+          outSince = null;
+          return;
+        }
+        if (outSince === null) outSince = ctx.ev.ts;
+        if (ctx.ev.ts - outSince < opts.hysteresisSec) return;
+        const w = width(ctx);
+        const valueUsd = ctx.valueUsd();
+        const costUsd =
+          ctx.spec.gasUsdPerRebalance + valueUsd * 0.5 * (ctx.spec.feeRate + ctx.spec.slippageBps / 10_000);
+        const bandTicks = 2 * ctx.spec.tickSpacing;
+        const ourTicks = Math.max(widthToTicks(w) * 2, bandTicks);
+        const expectedDailyFees = valueUsd * ctx.poolFeeYieldDaily * (bandTicks / ourTicks);
+        if (Number.isFinite(opts.maxPaybackDays) && expectedDailyFees > 0 && costUsd / expectedDailyFees > opts.maxPaybackDays) return;
+        ctx.rebalance(...rangeAround(ctx, w));
+        outSince = null;
+        return;
+      }
+
+      // poza rynkiem: czekamy na potwierdzony flat
+      if (gap < opts.enterThresh) {
+        if (flatSince === null) flatSince = ctx.ev.ts;
+        if (ctx.ev.ts - flatSince >= opts.confirmSec) {
+          halfGas(ctx);
+          ctx.openPosition(...rangeAround(ctx, width(ctx)));
+          ctx.state.rebalances++;
+          flatSince = null;
+          outSince = null;
+        }
+      } else {
+        flatSince = null;
+      }
+    },
+  };
+};
+
 /** 2. Pasywny full-range (jak v2). */
 export const fullRange: Strategy = {
   name: 'Pasywny full-range',
@@ -181,10 +315,25 @@ export const volAdaptiveTrend = (opts: {
    *  tylko gdy rynek nie trenduje". Różnica vs upFallback: reaguje na
    *  TREND (wcześnie), nie na wypadnięcie z zakresu (późno). */
   upExitThresh?: number;
+  /** (26.08, DECYZJE pkt 10) histereza jako UDZIAŁ CZASU poza zakresem:
+   *  zamiast "24h nieprzerwanie, dotknięcie zeruje" — EMA wskaźnika
+   *  poza-zakresem ze stałą czasową hysteresisSec (hUp dla wyjścia górą);
+   *  rebalans gdy udział > hysteresisShare (np. 0.8). Odporne na
+   *  częstotliwość próbkowania — ta sama semantyka wdrażalna w paper
+   *  (15 min) i observerze. */
+  hysteresisShare?: number;
+  /** (26.08, 11f.d — "mniej nerwowy sygnał UP") upExitThresh strzela
+   *  dopiero, gdy gap>próg utrzyma się NIEPRZERWANIE przez upConfirmSec
+   *  (spadek poniżej progu przed potwierdzeniem zeruje licznik). */
+  upConfirmSec?: number;
 }): Strategy => {
   let outSince: number | null = null;
   let upCashSince: number | null = null; // czas WYJŚCIA górą, gdy parkujemy 50/50
   let upSig = false; // symetryczny sygnał trendu wzrostowego (upExitThresh)
+  let upGapSince: number | null = null; // od kiedy gap>próg (dla upConfirmSec)
+  let fracOut = 0; // EMA wskaźnika poza-zakresem (hysteresisShare)
+  let prevOutTs: number | null = null;
+  let prevOut = false;
   let ema: number | null = null;
   let lastTs: number | null = null;
   let down = false;
@@ -225,8 +374,20 @@ export const volAdaptiveTrend = (opts: {
       if (gap > backAt) down = false;
     }
     if (opts.upExitThresh !== undefined) {
-      if (!upSig && gap > opts.upExitThresh) upSig = true;
-      else if (upSig && gap < opts.upExitThresh / 2) upSig = false; // histereza jak w down
+      if (!upSig) {
+        if (gap > opts.upExitThresh) {
+          if (opts.upConfirmSec === undefined) upSig = true;
+          else {
+            if (upGapSince === null) upGapSince = ctx.ev.ts;
+            if (ctx.ev.ts - upGapSince >= opts.upConfirmSec) upSig = true;
+          }
+        } else {
+          upGapSince = null; // przerwanie ciągłości przed potwierdzeniem
+        }
+      } else if (gap < opts.upExitThresh / 2) {
+        upSig = false; // histereza jak w down
+        upGapSince = null;
+      }
     }
   };
 
@@ -258,7 +419,7 @@ export const volAdaptiveTrend = (opts: {
   };
 
   return {
-    name: `Adapt k=${opts.k} h=${(opts.hysteresisSec / 3600).toFixed(0)}h${opts.hysteresisUpSec !== undefined ? `/hUp=${(opts.hysteresisUpSec / 3600).toFixed(0)}h` : ''} + trend(${opts.mode},HL${opts.trendHLDays}d,${(opts.trendThresh * 100).toFixed(0)}%${opts.volGateRatio ? `,vg${opts.volGateRatio}` : ''}${opts.trendThresh2 !== undefined ? `,t2=${(opts.trendThresh2 * 100).toFixed(0)}%` : ''}${opts.reentryAboveEma ? ',re>ema' : ''}${opts.upFallback ? ',up→5050' : ''}${opts.upExitThresh !== undefined ? `,upX=${(opts.upExitThresh * 100).toFixed(0)}%` : ''})`,
+    name: `Adapt k=${opts.k} h=${(opts.hysteresisSec / 3600).toFixed(0)}h${opts.hysteresisUpSec !== undefined ? `/hUp=${(opts.hysteresisUpSec / 3600).toFixed(0)}h` : ''} + trend(${opts.mode},HL${opts.trendHLDays}d,${(opts.trendThresh * 100).toFixed(0)}%${opts.volGateRatio ? `,vg${opts.volGateRatio}` : ''}${opts.trendThresh2 !== undefined ? `,t2=${(opts.trendThresh2 * 100).toFixed(0)}%` : ''}${opts.reentryAboveEma ? ',re>ema' : ''}${opts.upFallback ? ',up→5050' : ''}${opts.upExitThresh !== undefined ? `,upX=${(opts.upExitThresh * 100).toFixed(0)}%` : ''}${opts.upConfirmSec !== undefined ? `,upConf=${(opts.upConfirmSec / 3600).toFixed(0)}h` : ''}${opts.hysteresisShare !== undefined ? `,share=${(opts.hysteresisShare * 100).toFixed(0)}%` : ''})`,
     init: (ctx) => {
       updateTrend(ctx);
       ctx.openPosition(...rangeAround(ctx, width(ctx)));
@@ -273,6 +434,8 @@ export const volAdaptiveTrend = (opts: {
           ctx.state.rebalances++;
           outSince = null;
           upCashSince = null; // bezpiecznik trendu nadpisuje parking z zakresu
+          fracOut = 0;
+          prevOut = false;
           return;
         }
         if (!down && !upSig && !p) {
@@ -291,6 +454,20 @@ export const volAdaptiveTrend = (opts: {
       if (!p) return;
 
       const out = ctx.ev.t < p.lo || ctx.ev.t >= p.hi;
+      // hysteresisShare: EMA wskaźnika poza-zakresem aktualizowana na KAŻDYM
+      // swapie (w zakresie zanika ku 0 — dotknięcie zakresu już nie ZERUJE
+      // licznika, tylko go osłabia proporcjonalnie do czasu w zakresie)
+      if (opts.hysteresisShare !== undefined) {
+        if (prevOutTs !== null) {
+          const dtOut = Math.max(ctx.ev.ts - prevOutTs, 1);
+          const upNow = out && (ctx.spec.ethIsToken0 ? ctx.ev.t >= p.hi : ctx.ev.t < p.lo);
+          const tauH = upNow ? opts.hysteresisUpSec ?? opts.hysteresisSec : opts.hysteresisSec;
+          const ah = 1 - Math.exp(-dtOut / tauH);
+          fracOut = (1 - ah) * fracOut + ah * (prevOut ? 1 : 0);
+        }
+        prevOut = out;
+        prevOutTs = ctx.ev.ts;
+      }
       if (!out) {
         outSince = null;
         return;
@@ -311,7 +488,9 @@ export const volAdaptiveTrend = (opts: {
         }
         return; // w oknie potwierdzenia (<1h) nie robimy nic
       }
-      if (ctx.ev.ts - outSince < hSec) return;
+      // histereza: klasyczna (nieprzerwanie poza, dotknięcie zeruje) ALBO
+      // udział czasu w oknie (share, DECYZJE pkt 10 — 26.08)
+      if (opts.hysteresisShare !== undefined ? fracOut < opts.hysteresisShare : ctx.ev.ts - outSince < hSec) return;
 
       const w = width(ctx);
       const valueUsd = ctx.valueUsd();
@@ -331,6 +510,8 @@ export const volAdaptiveTrend = (opts: {
       }
       ctx.rebalance(...rangeAround(ctx, w));
       outSince = null;
+      fracOut = 0;
+      prevOut = false;
     },
   };
 };
