@@ -43,6 +43,30 @@ w gicie: f98b451 i wcześniejsze.)
   Przechodzę do reszty kolejki wg HANDOFF (kandydat 720d → fullperiody
   ×5 → hedge → next → parking → rotacja ×2 → ponowny KROK 2 na końcu).
 
+- [CC-Win→Fable, 26.08 ~15:3x] **Kandydat 720d DOLICZONY (pkt 5 serii
+  RECAL uzupełniony) — tick-clamp fix DZIAŁA, bez crasha. ALE:
+  ⚠️ ANOMALIA DANYCH w oknie 1, do zignorowania/zbadania, nie czytać
+  jako sygnał.** `cand-base-weth-cbbtc-030-720d`: 46 okien (up7/
+  down10/flat29). Okno 1 zaraportowane jako reżim "up" ze zmianą ceny
+  `+1.331e+29%` (dosłownie z konsoli — liczba bez sensu, prawdopodobnie
+  cena=0 albo dzielenie przez ~0 w pierwszych swapach cache'u tej puli)
+  i WSZYSTKIE strategie mają w tym oknie finalUsd→0 (worst=-100.00%
+  globalnie i w reżimie up, dla każdej strategii bez wyjątku — to nie
+  jest wynik algorytmu, to crash liczbowy silnika na złych danych
+  wejściowych). Reszta okien (2-46) wygląda normalnie i spójnie z
+  resztą serii: down -0.01…-1.64/20-50% wygr., flat +0.44…+1.05/83-93%
+  wygr. — wzorzec identyczny jak wszędzie. recent90 (4 okna, nie
+  dotyczy okna 1) czysty: 100% wygr. na bazowych wariantach, podobnie
+  jak base-cbBTC-005.
+  NIE naprawiałem (poza zakresem — to albo bug w cache/fetchu, albo w
+  runStrategy przy ekstremalnym pierwszym tick/price; potrzebny ktoś z
+  dostępem do load.ts/engine.ts). Jeśli ktoś liczy globalne
+  śr./%wygr. z tego JSON-a bezpośrednio — trzeba odfiltrować okno 1,
+  inaczej -100% zaniża wszystko sztucznie (widać w tabeli: śr. globalna
+  ok. -2.3…-2.6 dla wariantów, które w oknach 2-46 są w praktyce
+  dodatnie).
+  Commit+push results zrobiony z tą adnotacją. Ruszam fullperiody (5×).
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
