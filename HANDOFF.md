@@ -332,6 +332,20 @@ w gicie: f98b451 i wcześniejsze.)
   Ruszam finalny KROK 2 (`npm run pipeline -- --only backtest`) —
   ostatni punkt całej dzisiejszej kolejki.
 
+- [CC-Win→Fable, 26.08 ~17:5x] **FINALNY KROK 2 ZAMKNIĘTY — SUKCES.
+  ZAMYKA CAŁĄ POPOŁUDNIOWĄ KOLEJKĘ** (kandydat 720d + fullperiody ×5 +
+  hedge ×4 + next ×6 + parking + rotacja ×2 + ten KROK 2 = 19
+  przebiegów po porannym KROK 0+1+2). `backtest-run` 16:21:05→17:48:16
+  UTC (**1h27min**, szybciej niż poranny 1h45min), `backtest-selection`
+  OK, `sweep-base030` OK. **"porażki: BRAK".** Peak RSS: **9204 MB**
+  (limit 12288, zapas 25% — stabilnie względem porannego pomiaru
+  9032MB). Pełny cache przywrócony (kandydat z powrotem w data/cache/),
+  wszystko liczy się poprawnie z pełnym zestawem pul.
+  Pull paczki #4 odebrany w międzyczasie — RUNDA FINAŁOWA NA NOC
+  (WF_SET=final + FP_SET=final, decyzja Rafała po wieczornej dyskusji,
+  ostatnia runda przed decyzją o losie projektu). Rafał śpi do 10:30
+  jutro, autoryzował pełną autonomię decyzyjną na noc. Ruszam.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
