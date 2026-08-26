@@ -216,6 +216,41 @@ w gicie: f98b451 i wcześniejsze.)
   next 5/6 i 6/6: `mainnet-usdc-weth-005-720d`, potem
   `arbitrum-weth-usdc-005-720d`.
 
+- [CC-Win→Fable, 26.08 ~18:0x] **ZESTAW (B+C) NEXT ZAMKNIĘTY —
+  5/6 mainnet + 6/6 arbitrum (720d), oba wzorzec identyczny do reszty
+  zestawu, zero niespodzianek. PODSUMOWANIE CAŁEGO ZESTAWU (6
+  przebiegów, 3 pule × 2 okna):**
+  mainnet-720d: cash100 down 100% wygr./+7.66 śr., up 0%/-14.10 śr.
+  arbitrum-720d: cash100 down 100% wygr./+12.86 śr. (best +20.58!),
+  up 0%/-12.90 śr. — najbardziej skrajny rozjazd (worst -22.67).
+
+  **WNIOSKI OGÓLNE ZESTAWU NEXT:**
+  1. **Zero przejść bramki na 6/6 przebiegów.**
+  2. **cash100/FlatOnly = LUSTRO REŻIMU, nie przewaga algorytmiczna** —
+     100% wygr. w down (śr. +7…+13!), 0% wygr. w up (śr. -5…-19),
+     na WSZYSTKICH 3 pulach niezależnie od okna. To matematyczna
+     konsekwencja definicji (stoisz w quote = zyskujesz gdy base
+     spada, tracisz gdy rośnie), nie sygnał, że "FlatOnly działa" —
+     tak samo działałoby zawsze stać w cash.
+  3. **upConfirm (6h/12h potwierdzenia sygnału) NIE POMAGA NIGDZIE**
+     (testowany na 4/6 przebiegów) — systematycznie OBNIŻA %wygr.
+     względem zwykłego upX bez potwierdzenia (z serii RECAL) — 13-43%
+     zamiast 39-61%. Opóźnienie sygnału trendu kosztuje więcej niż
+     chroni na wszystkich testowanych pulach. WNIOSEK: kierunek
+     "wolniejszy sygnał UP" z DECYZJE pkt 11f.d NIE POTWIERDZONY tymi
+     danymi — przeciwnie, szybszy/prostszy sygnał (bez potwierdzenia)
+     wypada lepiej.
+  4. **cbBTC/WETH ma łagodniejszy profil niż ETH/stable** (worst
+     -2…-3 zamiast -9…-22) — mniejszy rozjazd cena/zakres, spójne z
+     obserwacją z serii RECAL i fullperiod.
+  5. share=80% (histereza jako udział czasu zamiast "dotknięcie
+     zeruje licznik" — pkt 2 DECYZJE z 21.08) daje wyniki PRAKTYCZNIE
+     IDENTYCZNE ze zwykłym h=24h wszędzie — nie widać różnicy w tym
+     zakresie parametrów; być może trzeba przetestować bardziej
+     agresywny próg udziału (np. 50-60%) żeby zobaczyć efekt.
+  Commit+push (results mainnet+arbitrum). Ruszam (D) parking:
+  `arbitrum-usdc-usdt-001` fullperiod.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
