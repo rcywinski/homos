@@ -58,6 +58,30 @@ EXIT_TREND alarm 24/7, żywy gaz w observerze od razu (backtest w paczce),
 lifecycle=spec teraz/budowa po paczce, eksperymenty LP-only-flat + mniej
 nerwowy sygnał UP w paczce, mainnet-001 odroczone (brak 3. kandydata),
 PROPONUJ bez odchyleń (przegląd ~1.09), pkt 6/8/11b odhaczone.
+~19:xx–20:xx — WERDYKT DNIA + DYSKUSJA + RUNDA FINAŁOWA: komplet 4
+rodzin odebrany od CC-Win (hedge: jedyne pełne przejście bramki w
+historii [base-030-365d 78%/−1.83, up75+flat100] ZDEMASKOWANE na 720d
+[53%/−12.61, up 8%] — artefakt małej próby; flat-only-cash: lustro
+reżimu; upConfirm OBALONY — opóźnienie sygnału pogarsza; parking
+usdc/usdt: fees $1/rok — martwy; ROTACJA: na silniku v1.1 nawet
+ORACLE przegrywa z USDC na OBU oknach — nie budować; fullperiod:
+Pasywny ±50% wygrywa 4/4 [+$603…+$2574 vsHODL], v1.1 na mainnet/arb
+poniżej startowych $5k). Spot-check Fable na JSON-ach zgodny. PRÓG
+PORZUCENIA formalnie osiągnięty. DYSKUSJA Rafał/Fable + research
+literatury (~50% LP przegrywa z HODL — nasze wyniki zgodne z rynkiem;
+full-range najlepszy wg badań = nasz wynik; ML/RL bez przełomu w
+literaturze; backtest z bullem i bessą to feature, nie bug — 365d bez
+bulla dawało fałszywy optymizm). DECYZJA: JEDNA runda finałowa zamiast
+zamrożenia — (1) wide-passive "HODL z yieldem" (±40/50/60, passiveW),
+(2) FLATONLY-HODL wg pomysłu Rafała (flatOnlyLP idle:'hodl' — baza
+50/50 zawsze, LP w potwierdzonym flat; w trendach remis z HODL zamiast
+przegranej). WF_SET=final + FP_SET=final zaimplementowane (tsc czysty,
+smoke OK), CC-Win liczy nocą 8×walkforward + 4×fullperiod; kryteria
+odczytu w HANDOFF (remis ±1 p.p. NIE jest przegraną). Po rundzie:
+produkt-albo-zamrożenie, bez kolejnych eksperymentów. Kapitał w USDC.
+Anomalia danych: cache cand-*-720d ma zepsuty 1. punkt cenowy (okno
+1 = +1.3e29%) — hardening load.ts na liście, niekrytyczne.
+
 ~16:xx — SILNIK ROTACJI ZBUDOWANY (backtest/rotation.ts, TASKS-ROTATION
 v1; decyzja Rafała po uczciwym zastrzeżeniu Fable "rotacja to
 optymalizacja fees, nie ucieczka od bety — realny zysk testują A/B"):

@@ -72,6 +72,11 @@ export const flatOnlyLP = (opts: {
   trendHLDays: number;
   minWidth?: number;
   maxWidth?: number;
+  /** postura POZA LP (26.08 wieczór, pomysł Rafała): 'quote' [default] =
+   *  cash bez bety; 'hodl' = 50/50 — w trendzie jedziesz Z RYNKIEM
+   *  (vs HODL ≈ remis zamiast przegranej), we flat dokładasz fees.
+   *  Benchmark dla 'hodl' to HODL 50/50, dla 'quote' — cash100. */
+  idle?: 'quote' | 'hodl';
 }): Strategy => {
   let ema: number | null = null;
   let lastTs: number | null = null;
@@ -87,10 +92,23 @@ export const flatOnlyLP = (opts: {
     if (ctx.state.cash0 * px0 >= g) ctx.state.cash0 -= g / px0;
     else ctx.state.cash1 -= g / px1;
   };
+  // postura idle: cash w quote albo 50/50 (z kosztem swapu wyrównującego)
+  const toIdle = (ctx: Ctx) => {
+    if ((opts.idle ?? 'quote') === 'quote') return toQuoteAll(ctx);
+    const { px0, px1 } = unitPrices(ctx.ev.sqrtP, ctx.spec);
+    const total = ctx.state.cash0 * px0 + ctx.state.cash1 * px1;
+    const turnover = Math.abs(ctx.state.cash0 * px0 - total / 2);
+    const cost = turnover * (ctx.spec.feeRate + ctx.spec.slippageBps / 10_000);
+    ctx.state.swapCostUsd += cost;
+    const eff = total > 0 ? Math.max(total - cost, 0) / total : 0;
+    ctx.state.cash0 = ((total / 2) * eff) / px0;
+    ctx.state.cash1 = ((total / 2) * eff) / px1;
+  };
+  const idleName = (opts.idle ?? 'quote') === 'quote' ? 'cash' : 'HODL50/50';
   return {
-    name: `FlatOnly k=${opts.k} |gap|<${(opts.enterThresh * 100).toFixed(0)}%/${(opts.confirmSec / 3600).toFixed(0)}h→LP, >${(opts.exitThresh * 100).toFixed(0)}%→cash (HL${opts.trendHLDays}d)`,
+    name: `FlatOnly k=${opts.k} |gap|<${(opts.enterThresh * 100).toFixed(0)}%/${(opts.confirmSec / 3600).toFixed(0)}h→LP, >${(opts.exitThresh * 100).toFixed(0)}%→${idleName} (HL${opts.trendHLDays}d)`,
     init: (ctx) => {
-      toQuoteAll(ctx); // start POZA rynkiem
+      toIdle(ctx); // start POZA rynkiem w posturze idle
       ema = Math.log(ethUsd(ctx.ev.sqrtP, ctx.spec));
       lastTs = ctx.ev.ts;
     },
@@ -113,7 +131,7 @@ export const flatOnlyLP = (opts: {
         if (gap > opts.exitThresh) {
           ctx.closePosition();
           halfGas(ctx);
-          toQuoteAll(ctx);
+          toIdle(ctx);
           ctx.state.rebalances++;
           flatSince = null;
           outSince = null;
@@ -177,6 +195,15 @@ export const passiveWide: Strategy = {
   },
   onEvent: () => {},
 };
+
+/** Pasywny ±w% — otwórz raz, nigdy nie dotykaj (rodzina "HODL z yieldem",
+ *  26.08 wieczór: jedyna rodzina wygrywająca w fullperiod 4/4 i spójna z
+ *  literaturą — szeroki zakres minimalizuje divergence loss i koszty). */
+export const passiveW = (w: number): Strategy => ({
+  name: `Pasywny ±${(w * 100).toFixed(0)}%`,
+  init: (ctx) => ctx.openPosition(...rangeAround(ctx, w)),
+  onEvent: () => {},
+});
 
 /** 4. Sztywny ±w% z naiwnym rebalansem natychmiast po wyjściu z zakresu. */
 export const fixedNaive = (w: number): Strategy => ({

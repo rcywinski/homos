@@ -346,6 +346,14 @@ w gicie: f98b451 i wcześniejsze.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 26.08 ~20:xx — PACZKA #4 (runda finałowa)] Commit+push:
+  backtest/strategies.ts (passiveW ±w%; flatOnlyLP z opcją idle:'hodl' —
+  wariant Rafała "baza HODL 50/50, LP tylko we flat"),
+  backtest/walkforward.ts (WF_SET=final — smoke OK),
+  backtest/fullperiod.ts (FP_SET=final), HANDOFF.md, CONTEXT.md,
+  DECYZJE-2026-08-26.md. Komunikat: "feat(backtest): final round —
+  flatOnly-HODL + wide-passive family". Po pushu ping CC-Win.
+
 - [Fable→CC-Mac, 26.08 ~15:xx — PACZKA #3] Commit+push:
   backtest/run.ts (wykluczenie `cand-*` z dziennego skanu cache —
   odpowiedź na incydent CC-Win z KROK 2; jawne `--only cand-...`
@@ -374,6 +382,26 @@ w gicie: f98b451 i wcześniejsze.)
   następnego wpisu: (a) `state.json.gasUsd` wypełnione liczbami
   (mainnet ~$0.5–3)? (b) test "Odrzuć" — po kliku Rafała w UI linia
   "proposal …: odrzucona (komenda z UI)" w observer.log w ≤30 s.
+- [Fable→CC-Win, 26.08 ~20:xx — **RUNDA FINAŁOWA NA NOC** (po pullu
+  paczki #4; decyzja Rafała po wieczornej dyskusji — to OSTATNIA runda
+  eksperymentów przed decyzją o losie projektu; wszystko automatycznie,
+  jeden proces naraz, NIE kolidować z oknem automatu 05:30–08:25):]
+  Env: `WF_SET=final SIGMA_MODE=grid15
+  NODE_OPTIONS=--max-old-space-size=12288`. Zestaw = wide-passive
+  (±40/50/60 + naiwny ±50) + FlatOnly z bazą HODL 50/50 (4 warianty)
+  + referencje hodl/v1.1.
+  1–8. walkforward 30/15 dla: base-weth-usdc-030-{365d,720d},
+     mainnet-usdc-weth-005-{365d,720d}, arbitrum-weth-usdc-005-{365d,
+     720d}, base-cbbtc-weth-005-{365d,720d}.
+  9–12. `FP_SET=final SIGMA_MODE=grid15 npx tsx backtest/fullperiod.ts
+     <id> 5000` dla czterech pul *-720d.
+  KRYTERIA ODCZYTU (do raportu): FlatOnly-HODL — we flat ≥65% wygr.
+  vsHODL, w up/down REMIS (±1 p.p. traktować jako remis, nie
+  przegraną!), worst > −3, fullperiod ≥ HODL. Wide-passive —
+  fullperiod ≥ HODL na 4/4, w oknach worst > −3 vs HODL, maxDD ≈ HODL.
+  Raporty parami jak dziś + recent90; commit results. To zamyka
+  kolejkę — po tym tylko nocny automat.
+
 - [Fable→CC-Win, 26.08 ~16:xx — ROTACJA (po pullu paczki #3), dopisać
   NA KONIEC kolejki, po (D)]: `backtest/rotation.ts` — rotacja między
   pulami ETH/stable (ta sama beta — test czystej wartości wyboru puli).

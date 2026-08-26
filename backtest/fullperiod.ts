@@ -15,7 +15,7 @@
  *   SIGMA_MODE=grid15 npx tsx backtest/fullperiod.ts base-cbbtc-weth-005-720d 5000
  */
 import { runStrategy, ethUsd, Strategy, RunResult } from './engine';
-import { hodl5050, passiveWide, fixedNaive, volAdaptive, volAdaptiveTrend } from './strategies';
+import { hodl5050, cash100, passiveWide, passiveW, fixedNaive, flatOnlyLP, volAdaptive, volAdaptiveTrend } from './strategies';
 import { loadPool } from './load';
 
 const id = process.argv[2];
@@ -36,10 +36,25 @@ const days = (t1 - t0) / 86400;
 const p0 = ethUsd(swaps[0].sqrtP, spec);
 const p1 = ethUsd(swaps[swaps.length - 1].sqrtP, spec);
 
-// ten sam zestaw co WF_SET=recal (walkforward.ts) — trzymać w synchronie ręcznie
+// zestawy: default = jak WF_SET=recal; FP_SET=final = runda finałowa 26.08
+// (wide-passive + flatOnly-HODL) — trzymać w synchronie z walkforward.ts ręcznie
 const trendBase = { k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, trendHLDays: 7, trendThresh: 0.05 } as const;
 const v11 = { ...trendBase, mode: 'exit' as const, reentryAboveEma: true };
-const strategies: Strategy[] = [
+const flatBase = { horizonDays: 7, trendHLDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, idle: 'hodl' as const };
+const finalSet: Strategy[] = [
+  hodl5050,
+  cash100,
+  passiveW(0.4),
+  passiveWide,
+  passiveW(0.6),
+  fixedNaive(0.5),
+  flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600 }),
+  flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600 }),
+  flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600 }),
+  flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.03, exitThresh: 0.06, confirmSec: 24 * 3600 }),
+  volAdaptiveTrend(v11),
+];
+const recalSet: Strategy[] = [
   hodl5050,
   passiveWide,
   fixedNaive(0.3),
@@ -55,6 +70,7 @@ const strategies: Strategy[] = [
   volAdaptiveTrend({ ...v11, upExitThresh: 0.05 }),
   volAdaptiveTrend({ ...v11, upExitThresh: 0.08 }),
 ];
+const strategies: Strategy[] = process.env.FP_SET === 'final' ? finalSet : recalSet;
 
 console.log(
   `${id}: ${swaps.length} swapów, ${days.toFixed(0)} dni · start $${startUsd} · ` +

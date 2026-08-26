@@ -21,7 +21,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { runStrategy, Strategy, ethUsd } from './engine';
-import { hodl5050, cash100, flatOnlyLP, passiveWide, fixedNaive, volAdaptive, volAdaptiveTrend, volAdaptiveHedge } from './strategies';
+import { hodl5050, cash100, flatOnlyLP, passiveWide, passiveW, fixedNaive, volAdaptive, volAdaptiveTrend, volAdaptiveHedge } from './strategies';
 import { loadPool, loadFunding } from './load'; // wspólny loader (obsługuje też pary quote:'WETH')
 
 const OUT = path.join(__dirname, 'results');
@@ -167,9 +167,35 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       volAdaptiveTrend({ ...v11, upExitThresh: 0.08, upConfirmSec: 12 * 3600 }),
     ];
   };
+  // 'final' (26.08 wieczór — OSTATNIA runda przed decyzją o projekcie):
+  // dwa kandydaty na produkt po dyskusji Rafał/Fable i researchu literatury:
+  // (1) WIDE-PASSIVE "HODL z yieldem" — jedyna rodzina wygrywająca w
+  //     fullperiod 4/4 (+$603…+$2574 vsHODL) i spójna z badaniami
+  //     (szeroki zakres minimalizuje divergence loss + koszty≈0);
+  // (2) FLATONLY-HODL (pomysł Rafała) — baza 50/50 ZAWSZE (w trendzie
+  //     remis z HODL zamiast przegranej), wąski LP tylko w POTWIERDZONYM
+  //     flat (nasza nisza 74-100% wygr.). Kryteria: flat ≥65% vsHODL,
+  //     up/down remis (±1 p.p.), worst>-3, fullperiod ≥ HODL.
+  const mkFinal = (): Strategy[] => {
+    const flatBase = { horizonDays: 7, trendHLDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, idle: 'hodl' as const };
+    return [
+      hodl5050,
+      passiveW(0.4),
+      passiveWide, // ±50%
+      passiveW(0.6),
+      fixedNaive(0.5), // re-centrowanie tylko po wyjściu z pasma (rzadkie)
+      flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600 }),
+      flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600 }),
+      flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600 }),
+      flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.03, exitThresh: 0.06, confirmSec: 24 * 3600 }),
+      volAdaptiveTrend({ ...trendBase, mode: 'exit', reentryAboveEma: true }), // referencja v1.1
+    ];
+  };
   const mkStrategies = (): Strategy[] =>
     process.env.WF_SET === 'hedge'
       ? mkHedge()
+      : process.env.WF_SET === 'final'
+      ? mkFinal()
       : process.env.WF_SET === 'next'
       ? mkNext()
       : process.env.WF_SET === 'recal'
