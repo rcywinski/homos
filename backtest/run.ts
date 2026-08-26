@@ -64,7 +64,11 @@ function svgChart(results: RunResult[], w = 900, h = 320): string {
     .readdirSync(CACHE)
     .filter((f) => f.endsWith('.meta.json'))
     .map((f) => f.replace('.meta.json', ''))
-    .filter((id) => !only || id === only);
+    // cand-* = robocze cache lejka/walkforwardów (kandydaci przed bramką) —
+    // NIE wchodzą do dziennego raportu produkcyjnego (incydent 26.08:
+    // eksploracyjny cache cand-*-720d wpadł do pipeline'u i 2× go położył;
+    // jawne `--only cand-...` nadal działa dla pracy ręcznej)
+    .filter((id) => (only ? id === only : !id.startsWith('cand-')));
 
   let html = `<html><head><meta charset="utf-8"><title>HOMOS backtest</title>
   <style>body{font-family:system-ui;margin:24px;max-width:1000px}table{border-collapse:collapse;width:100%;font-size:13px}

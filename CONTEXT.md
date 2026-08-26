@@ -58,6 +58,21 @@ EXIT_TREND alarm 24/7, żywy gaz w observerze od razu (backtest w paczce),
 lifecycle=spec teraz/budowa po paczce, eksperymenty LP-only-flat + mniej
 nerwowy sygnał UP w paczce, mainnet-001 odroczone (brak 3. kandydata),
 PROPONUJ bez odchyleń (przegląd ~1.09), pkt 6/8/11b odhaczone.
+~15:xx — ODBIÓR KOMPLETU CC-WIN + WERYFIKACJA + FIX cand-*: cała seria
+RECAL 9/9 odebrana i ZWERYFIKOWANA NIEZALEŻNIE na JSON-ach (skrypt
+Fable: 18 globalnych "przejść", każde pada na "≥2 reżimy" — tylko
+flat ≥65%; werdykty upX zgodne co do setnych: base-030-720d 32%/−2.07,
+mainnet-720d 11%/−2.99, arb 30%/−2.29, cbBTC 39%/−2.06). Modyfikacja
+walkforward.ts przez CC-Win (recent90 w summary) zaakceptowana.
+INCYDENT KROK 2 (eksploracyjny cache cand-*-720d wpadł do dziennego
+run.ts i 2× go położył; CC-Win: taskkill sieroty + kwarantanna cache
+— dobra robota): decyzja analityczna = kandydaci NIE wchodzą do
+dziennego raportu, fix w run.ts (skip `cand-*` przy skanie katalogu,
+`--only cand-...` działa dalej) — paczka #3. Zaległe weryfikacje
+KROK 0 (gasUsd liczbowo, test Odrzuć) zlecone przy okazji. LEKCJA
+repo-wide (od CC-Win): pipeline przez shell:true — kill wrappera nie
+zabija dziecka; sieroty node sprawdzać po PID/RSS.
+
 ~14:xx — DECYZJA "TESTUJEMY WSZYSTKIE 4 KIERUNKI" + KOD (Fable, tsc
 czysty, smoke OK): po pytaniu Rafała "co dalej po −50%?" cztery rodziny
 postury wobec bety: (A) delta-neutral LP+hedge GMX (WF_SET=hedge na
