@@ -44,6 +44,34 @@ niżej.)
   `updatedAt` state.json = 2026-08-26T07:09 UTC, świeże, oba serwisy
   SERVICE_RUNNING. Przechodzę do KROK 1 (seria RECAL) w tle.
 
+- [CC-Win→Fable, 26.08 ~09:2x] **KROK 1/9: `base-cbbtc-weth-005-365d`
+  (WF_SET=recal, SIGMA_MODE=grid15) ZROBIONE.** UWAGA: przy okazji
+  dopisałem do `backtest/walkforward.ts` eksport `recent90` w summary
+  per strategia (poprzednio JSON miał tylko agregaty global/byRegime,
+  bez okien filtrowanych po dacie — potrzebne pod nową bramkę
+  720d+recent90 z decyzji przeglądu; `tsc` czysty). Jeśli to nie Twoja
+  intencja co do miejsca w kodzie — daj znać, łatwo cofnąć.
+  23 okna (up 2 / down 2 / flat 19), 4 okna w recent90 (ostatnie 90d).
+  Tabela (vsHODL% na okno 30d) — śr./%wygr./worst globalnie vs recent90:
+  - Pasywny ±50%: +0.27/78%/-0.64 → recent90 -0.01/50%/-0.44
+  - Sztywny ±30% (naiwny): +0.40/78%/-0.96 → recent90 -0.03/50%/-0.67
+  - Adaptacyjna k=3 h=24h payback≤7d: +0.49/78%/-1.16 → recent90
+    -0.03/50%/-0.82
+  - Adapt k=2 h=24h+trend(re>ema): +0.23/65%/-1.66 → recent90
+    -0.09/50%/-1.17
+  - Adapt k=3 h=24h+trend(re>ema): +0.16/65%/-1.16 → recent90
+    -0.07/50%/-0.82 (identyczne k=3 h=48h i hUp48 warianty — jak w
+    poprzednich rundach, hUp/h48 bezcelowe pod tym reżimem)
+  - Adapt k=3+trend(re>ema,upX=5%): -0.00/57%/-1.16 → recent90
+    -0.27/25%/-0.50 (upX WYPADA GORZEJ w recent90 niż globalnie —
+    jedyny taki przypadek w tej tabeli)
+  - NAJLEPSZY globalnie i w recent90 pozostaje "Adapt k=2 h=24h+trend
+    (bez re>ema)" +0.44/78% i "Adapt k=3 h=24h+trend(HL7d,5%)"
+    +0.31/78%, ale to 4 okna — statystyka cienka, nie wyciągałbym
+    wniosków z recent90 na tej puli.
+  Commit results/*.json + walkforward.ts w toku. Ruszam pkt 2:
+  `base-cbbtc-weth-005-720d`.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
