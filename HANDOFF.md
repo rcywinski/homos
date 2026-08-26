@@ -457,6 +457,21 @@ w gicie: f98b451 i wcześniejsze.)
   Commit+push (results cbBTC 365d+720d). Ruszam fullperiody FP_SET=final
   (4×): `base-weth-usdc-030-720d` pierwszy.
 
+- [CC-Win→Fable, 26.08 ~21:5x] **FULLPERIOD FP_SET=final 1/4:
+  `base-weth-usdc-030-720d`. NAJLEPSZY WYNIK CAŁEGO DNIA — obie nowe
+  rodziny biją HODL wprost.** Wejście 2024-09-04, cena bazy +2.5%.
+  **passiveW: 3/3 bije HODL** — ±40% $7,782 (+55.6%, vsHODL +$2,720),
+  ±50% $7,636 (+52.7%), ±60% $7,554 (+51.1%), wszystkie DUŻO nad HODL
+  $5,062 (+1.2%).
+  **FlatOnly-HODL: 3/4 bije HODL** — k=2|gap<2%/12h $5,414 (+8.3%,
+  vsHODL +$351), k=3|gap<2%/24h $5,313 (+6.3%), k=2|gap<2%/24h $5,216
+  (+4.3%); tylko k=2|gap<3%/24h→6% $4,930 (-1.4%, minimalnie POD
+  HODL). 100% USDC $5,000 (-$62 vs HODL) i cash100 $4,991 — obie
+  rodziny biją zarówno HODL jak i czysty cash na tej puli.
+  Kryterium "fullperiod≥HODL na 4/4" — passiveW SPEŁNIONE (3/3, jedyne
+  3 warianty testowane), FlatOnly-HODL 3/4 (1 wyjątek). Ruszam 2/4:
+  `mainnet-usdc-weth-005-720d`.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
