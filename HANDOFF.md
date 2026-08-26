@@ -43,12 +43,14 @@ w gicie: f98b451 i wcześniejsze.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
-- [Fable→CC-Mac, 26.08 ~15:xx — PACZKA #3 (mała)] Commit+push:
+- [Fable→CC-Mac, 26.08 ~15:xx — PACZKA #3] Commit+push:
   backtest/run.ts (wykluczenie `cand-*` z dziennego skanu cache —
   odpowiedź na incydent CC-Win z KROK 2; jawne `--only cand-...`
-  nadal działa), HANDOFF.md (higiena — odebrane raporty skasowane),
-  CONTEXT.md. Komunikat: "fix(backtest): exclude cand-* caches from
-  daily run.ts scan". Po pushu ping do CC-Win.
+  nadal działa), backtest/rotation.ts (NOWY — backtest dynamicznej
+  rotacji multi-pool wg TASKS-ROTATION; smoke na 90d w kontenerze OK),
+  HANDOFF.md (higiena — odebrane raporty skasowane), CONTEXT.md.
+  Komunikat: "fix(backtest): exclude cand-*; feat: rotation backtest".
+  Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
 > (KROK 0 i KROK 1 [seria RECAL 9/9] ZROBIONE i odebrane przez Fable —
@@ -69,6 +71,19 @@ w gicie: f98b451 i wcześniejsze.)
   następnego wpisu: (a) `state.json.gasUsd` wypełnione liczbami
   (mainnet ~$0.5–3)? (b) test "Odrzuć" — po kliku Rafała w UI linia
   "proposal …: odrzucona (komenda z UI)" w observer.log w ≤30 s.
+- [Fable→CC-Win, 26.08 ~16:xx — ROTACJA (po pullu paczki #3), dopisać
+  NA KONIEC kolejki, po (D)]: `backtest/rotation.ts` — rotacja między
+  pulami ETH/stable (ta sama beta — test czystej wartości wyboru puli).
+  Dwa przebiegi:
+  1. 365d, oba warianty in-pool:
+     `SIGMA_MODE=grid15 NODE_OPTIONS=--max-old-space-size=12288 npx tsx
+     backtest/rotation.ts 5000` (defaultowa piątka *-365d);
+  2. 720d (3 pule z cache):
+     `... npx tsx backtest/rotation.ts 5000 base-weth-usdc-030-720d
+     mainnet-usdc-weth-005-720d arbitrum-weth-usdc-005-720d`.
+  Wyjście stdout do raportu @Fable. Smoke Fable (90d, 3 pule): nawet
+  ORACLE przegrywa z single-pool przez koszty przeskoków ($163 przy
+  8 hopach) — pełne okna zweryfikują, czy to się utrzymuje.
 
 - [Fable→CC-Win, 26.08 ~13:xx] **SYMULACJE PEŁNOOKRESOWE $5k** (pytanie
   Rafała "co by się stało z $5k przez 2 lata") — nowy skrypt

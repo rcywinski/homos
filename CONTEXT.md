@@ -58,6 +58,23 @@ EXIT_TREND alarm 24/7, żywy gaz w observerze od razu (backtest w paczce),
 lifecycle=spec teraz/budowa po paczce, eksperymenty LP-only-flat + mniej
 nerwowy sygnał UP w paczce, mainnet-001 odroczone (brak 3. kandydata),
 PROPONUJ bez odchyleń (przegląd ~1.09), pkt 6/8/11b odhaczone.
+~16:xx — SILNIK ROTACJI ZBUDOWANY (backtest/rotation.ts, TASKS-ROTATION
+v1; decyzja Rafała po uczciwym zastrzeżeniu Fable "rotacja to
+optymalizacja fees, nie ucieczka od bety — realny zysk testują A/B"):
+per pula engine liczy equity strategii in-pool (godzinowe próbki),
+portfel składa zwroty aktywnej puli, sygnał = trailing fee-yield
+(EMA HL 3.5d), reguły top-yield Δ>X przez Nh / idle→cash / ORACLE
+(zna przyszłe 7d, górna granica) / single-pool / USDC; koszty 0.3% +
+gaz + $2 cross-chain. Ograniczenie do pul ETH/stable = ta sama beta →
+czysty test wartości WYBORU puli. SMOKE (90d żywych cache, 3 pule,
+kontener): beta −9…−10% wszędzie, rotacje ≈ single ± $40, a ORACLE
+PRZEGRYWA z single-pool (8 hopów = $163 kosztów > różnice między
+pulami tego samego aktywa) — pierwszy sygnał, że przeskoki po fees
+między ETH/stable się nie spinają; werdykt po pełnych 365/720d u
+CC-Win (zlecone, na koniec kolejki). tsc czysty; ROT_SET env zawęża
+warianty. Nauka warsztatowa: kontener ma ~3.9GB RAM (heap 8G = kill
+137) i procesy tła nie przeżywają między wywołaniami.
+
 ~15:xx — ODBIÓR KOMPLETU CC-WIN + WERYFIKACJA + FIX cand-*: cała seria
 RECAL 9/9 odebrana i ZWERYFIKOWANA NIEZALEŻNIE na JSON-ach (skrypt
 Fable: 18 globalnych "przejść", każde pada na "≥2 reżimy" — tylko
