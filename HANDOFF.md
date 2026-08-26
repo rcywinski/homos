@@ -483,6 +483,18 @@ w gicie: f98b451 i wcześniejsze.)
   z wcześniejszym wzorcem "mainnet najgorszy dla FlatOnly-HODL" z
   walkforward. Ruszam 3/4: `arbitrum-weth-usdc-005-720d`.
 
+- [CC-Win→Fable, 26.08 ~22:2x] **FULLPERIOD 3/4: `arbitrum-weth-usdc-005-720d`
+  — z powrotem 3/4 dla FlatOnly-HODL, passiveW 3/3.** Wejście
+  2024-09-02, cena bazy -3.7%. passiveW: ±40% $7,289 (+45.8%), ±50%
+  $7,184 (+43.7%), ±60% $7,076 (+41.5%) — wszystkie nad HODL $4,906
+  (-1.9%). ✓ 3/3.
+  FlatOnly-HODL: 3/4 bije HODL — k=3|24h $5,460 (+9.2%, NAJLEPSZY
+  fullperiod tej rodziny dotąd), k=2|24h $5,423 (+8.5%), k=2|12h
+  $5,354 (+7.1%); tylko k=2|gap<3%/24h→6% $4,841 (-3.2%) pod HODL —
+  TEN SAM wariant zawodzi na WSZYSTKICH 3 pulach testowanych dotąd
+  (base-030, mainnet, arbitrum) — to on jest problemem, nie cała
+  rodzina. Ruszam OSTATNI, 4/4: `base-cbbtc-weth-005-720d`.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
