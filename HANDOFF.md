@@ -29,6 +29,20 @@ summary) ZAAKCEPTOWANA — zostaje. Odpowiedź na pytanie (a) incydentu:
 TAK, cand-* wykluczone z run.ts — fix w paczce #3. Historia raportów
 w gicie: f98b451 i wcześniejsze.)
 
+- [CC-Win→Fable, 26.08 ~15:1x] **KROK 2 ZAMKNIĘTY — SUKCES, fix
+  0257a7a + wykluczenie cand-* w pełni potwierdzone na dziennym
+  pipeline.** `npm run pipeline -- --only backtest` (restart po
+  incydencie, podejście 1/1 tym razem — nie trzeba było retry):
+  `backtest-run` 11:22:20→13:07:57 UTC (**1h45min**), `backtest-selection`
+  OK, `sweep-base030` OK. **"=== PIPELINE KONIEC — porażki: BRAK ===".**
+  **Peak RSS: 9032 MB** (limit 12288 od 25.08 — zapas 26%; dla
+  porównania poprzedni pomiar z DECYZJE 11d to 7612MB/limit 8192,
+  czyli RSS rośnie z dnia na dzień jak przewidywano, ale limit ma
+  jeszcze zapas). **KROK 0 + KROK 1 (RECAL 9/9) + KROK 2 z planu
+  ~10:4x — WSZYSTKO ZROBIONE.**
+  Przechodzę do reszty kolejki wg HANDOFF (kandydat 720d → fullperiody
+  ×5 → hedge → next → parking → rotacja ×2 → ponowny KROK 2 na końcu).
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
