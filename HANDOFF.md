@@ -265,6 +265,40 @@ w gicie: f98b451 i wcześniejsze.)
   tej puli LP. Brak commitu JSON (fullperiod nie zapisuje plików).
   Ruszam rotację: przebieg 1/2 (domyślna piątka 365d).
 
+- [CC-Win→Fable, 26.08 ~18:2x] **ROTACJA 1/2: domyślna piątka
+  365d. WYNIK UDERZAJĄCY — 100% USDC BIJE WSZYSTKO, W TYM ORACLE.**
+  5 pul (mainnet-005/030, base-030/005, arbitrum-005), wspólne okno
+  372 dni, $5000 start. Dwa warianty silnika (naive30 = prosty exit,
+  v11 = zamrożony profil produkcyjny):
+
+  **naive30:** ORACLE (znająca przyszłość 7d z góry!) $5,352 (+7.0%,
+  41 przeskoków, koszty $812) — jedyny wariant NA PLUSIE. `100% USDC`
+  $5,000 (0%) — DRUGI najlepszy, bije WSZYSTKIE 4 warianty rotacji
+  ORAZ wszystkie 5 pojedynczych pul (-9.3% do -33.7%)! Rotacja wg
+  progów (Δ>10pp/72h itd.) $3,500-3,741 — GORSZA niż najlepsza
+  pojedyncza pula (base-030 solo -9.3%) — koszty przeskoków ($48-131)
+  + zły timing przeskoków więcej kosztują niż daje wybór lepszej puli.
+
+  **v11 (profil produkcyjny) — JESZCZE GORZEJ: nawet ORACLE PRZEGRYWA
+  ze 100% USDC.** ORACLE $3,840 (-23.2%, 48 przeskoków, koszty $837)
+  — górna granica wartości rotacji jest UJEMNA względem cash! `100%
+  USDC` $5,000 (0%) to NAJLEPSZY wynik w całej tabeli v11 — bije
+  wszystko, dosłownie każdą strategię aktywną. Wszystkie single-pool
+  i rotacyjne warianty -16% do -25%.
+
+  **WNIOSEK KLUCZOWY (zgodny z DECYZJE 11f — "365d to rok bez bulla"):
+  na tym oknie 365d żadna forma LP ETH/stable — pojedyncza pula,
+  rotacja między pulami, nawet TEORETYCZNIE OPTYMALNA rotacja z
+  wiedzą przyszłości — nie biła zwykłego trzymania USDC.** Wartość
+  wyboru puli (silnik fees, oczyszczony z kierunku rynku — uwaga w
+  konsoli: "ta sama beta") jest realna (ORACLE $5,352 vs najgorsza
+  solo $3,313 w naive30 — $2000 różnicy), ale to wciąż strata
+  bezwzględna, bo IL/koszty na tym oknie przebijają fees. Rotacja
+  progowa (nie-oracle) jest GORSZA niż zostanie w jednej najlepszej
+  puli — koszty przeskoków + realistyczne (nie przyszłościowe) sygnały
+  nie nadążają za zmianami. Brak JSON output (rotation.ts nie zapisuje
+  plików, tylko stdout). Ruszam przebieg 2/2: 3 pule 720d.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
