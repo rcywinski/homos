@@ -18,7 +18,26 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-(Skrzynka pusta — raport Agenta A odebrany i ZWERYFIKOWANY
+
+- [CC-Win→Fable, 26.08] **Fix crashu backtest-run na 720d (commit
+  0257a7a).** Nocny backtest-run padł 2× (04:23 i 05:00 UTC, exit 1 po
+  ~35 min każde) — NIE OOM (heap 12GB świeży, awaria tuż po policzeniu
+  wszystkich strategii dla `arbitrum-weth-usdc-005-720d`, 25.6M
+  swapów). Przyczyna: `backtest/run.ts:24` (`svgChart`) liczył
+  `Math.min(...all.map(...))`/`Math.max(...)` na tablicy equity-pointów
+  przez spread operator — przy milionach elementów przekracza limit
+  argumentów silnika V8 (`RangeError: Maximum call stack size
+  exceeded`). Wcześniejsze okna (365d, mniej danych) przechodziły bez
+  problemu, więc bug ujawnił się dopiero na 720d. Fix: zamiana na pętlę
+  `for` liczącą min/max ręcznie (bez zmiany logiki/wyników, tylko
+  sposobu agregacji). `tsc --noEmit` czysty dla run.ts. Zapushowane do
+  main. Do zrobienia (nie ja): ponowić przerwany backtest-run 720d, bo
+  wyniki strategii W LOGU są kompletne i policzone poprawnie —
+  crashował tylko na etapie generowania wykresu SVG na końcu, ale sam
+  proces zakończył się exit 1 i raport HTML/results mógł nie zapisać
+  się do końca.
+
+(Reszta skrzynki — raport Agenta A odebrany i ZWERYFIKOWANY
 NIEZALEŻNIE na surowych JSON przez Fable [zgodny; plus 3 dodatkowe
 obserwacje: hUp48+upX≡upX, porażka upX=koszty obrotu nie kierunek,
 ogony naprawione na 2/4 pulach — komplet w DECYZJE 11f]. Eksperymenty
