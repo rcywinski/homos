@@ -67,6 +67,60 @@ w gicie: f98b451 i wcześniejsze.)
   dodatnie).
   Commit+push results zrobiony z tą adnotacją. Ruszam fullperiody (5×).
 
+- [CC-Win→Fable, 26.08 ~16:2x] **FULLPERIOD $5k ×5 ZROBIONE.** Tabela
+  dla Rafała, NIE bramka (jeden punkt wejścia, procent składany):
+
+  **base-cbbtc-weth-005-720d** (wejście 2024-09-13, cena bazy -23.1%):
+  Pasywny ±50% $6,626 (+32.5%, vsHODL +$603) > HODL $6,023 (+20.5%) >
+  Adapt k=2+trend $5,954 ≈ HODL. Reszta adaptacyjnych 5,046-5,825
+  (dodatnie, ale poniżej HODL). 100% USDC $5,000 (najgorszy, -$1,023
+  vs HODL) — beta cbBTC złapana przez wszystkie warianty.
+
+  **base-weth-usdc-030-720d** (wejście 2024-09-04, cena bazy +2.5%):
+  Pasywny ±50% $7,636 (+52.7%, vsHODL +$2,574) — DOMINUJE. HODL $5,062
+  (+1.2%). WSZYSTKIE adaptacyjne warianty $5,046-$5,954 — dodatnie,
+  ale daleko za Pasywnym ±50% i ledwo nad HODL.
+
+  **arbitrum-weth-usdc-005-720d** (wejście 2024-09-04, cena bazy -3.7%):
+  Pasywny ±50% $7,636 (+52.7% — sic, ten sam wynik co base-030, bo to
+  ta sama para ETH/USDC z podobnym oknem) DOMINUJE. HODL $5,062
+  (+1.2%). **WZORZEC ZMIANY: tu WIĘKSZOŚĆ adaptacyjnych PRZEGRYWA z
+  HODL i z 100% USDC** ($4,275-$5,100 — 8/11 wariantów pod $5,000
+  startowym!). Tylko upX=5% i Adaptacyjna k=3 h=24h nieznacznie nad
+  HODL.
+
+  **mainnet-usdc-weth-005-720d** (wejście 2024-08-31, cena bazy -2.5%):
+  Pasywny ±50% $6,999 (+40.0%) DOMINUJE. HODL $4,938 (-1.2%). **WZORZEC
+  JESZCZE WYRAŹNIEJSZY: WSZYSTKIE 11 wariantów adaptacyjnych KOŃCZĄ
+  PONIŻEJ $5,000 startowego ($3,582-$4,162) — przegrywają nawet ze
+  100% USDC.** Najgorszy: Sztywny ±30% -28.4%.
+
+  ⚠️ **cand-base-weth-cbbtc-030-720d: WYNIK BEZUŻYTECZNY, TA SAMA
+  ANOMALIA CO W WALKFORWARD.** Konsola: "cena bazy 0.00 → 0.03
+  (1.06e+29%)" — pierwsza cena w cache tej puli jest efektywnie zerem.
+  Skutek: WSZYSTKIE strategie poza HODL i 100% USDC kończą na
+  DOKŁADNIE $0 (-100.0%, maxDD -100.0%). HODL sam −47.5% (osobny bug —
+  prawdopodobnie liczy się od dobrej ceny referencyjnej, nie od
+  zepsutej pierwszej), 100% USDC $5,000 płasko. NIE UŻYWAĆ tej tabeli
+  do niczego — cache `cand-base-weth-cbbtc-030-720d` ma zepsuty
+  pierwszy punkt cenowy (ten sam mechanizm co okno 1 w walkforward,
+  zgłoszony wyżej). Ktoś z dostępem do `load.ts`/fetchu powinien to
+  zbadać niezależnie od reszty kolejki.
+
+  **WZORZEC CROSS-POOL (3 czyste ETH/stable pule + cbBTC, do
+  interpretacji, NIE bramka):** Na TYM KONKRETNYM oknie wejścia
+  (sierpień-wrzesień 2024, ok. 720 dni wstecz) Pasywny ±50% bije
+  wszystko wszędzie (+32% do +53%). Nasze warianty adaptacyjne łapią
+  część bety na cbBTC i base-030, ale na arbitrum-005 i zwłaszcza
+  mainnet-005 WIĘKSZOŚĆ z nich przegrywa nawet ze 100% USDC —
+  aktywne zarządzanie kosztuje więcej niż zarabia w tym oknie na tych
+  2 pulach. To SPÓJNE z wnioskiem z serii RECAL (nasze zakresy są za
+  wąskie, Pasywny ±50% systematycznie najlepszy), ale fullperiod
+  pokazuje SKALĘ w dolarach na jednym realnym scenariuszu wejścia —
+  różnica $2000-2600 vsHODL to nie szum.
+  Brak commitów results/ — `fullperiod.ts` tylko drukuje do stdout,
+  nie zapisuje JSON. Ruszam zestaw (A) hedge.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
