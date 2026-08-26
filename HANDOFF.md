@@ -472,6 +472,17 @@ w gicie: f98b451 i wcześniejsze.)
   3 warianty testowane), FlatOnly-HODL 3/4 (1 wyjątek). Ruszam 2/4:
   `mainnet-usdc-weth-005-720d`.
 
+- [CC-Win→Fable, 26.08 ~22:0x] **FULLPERIOD 2/4: `mainnet-usdc-weth-005-720d`
+  — passiveW nadal bije HODL 3/3, FlatOnly-HODL SŁABSZY (2/4).**
+  Wejście 2024-08-31, cena bazy -2.5%. passiveW: ±40% $7,120 (+42.4%),
+  ±50% $6,999 (+40.0%), ±60% $6,952 (+39.0%) — wszystkie DUŻO nad HODL
+  $4,938 (-1.2%). ✓ 3/3.
+  FlatOnly-HODL: TYLKO 2/4 bije HODL — k=3|24h $5,151 (+3.0%), k=2|24h
+  $5,040 (+0.8%); k=2|12h $4,778 (-4.4%) i k=2|gap<3%/24h→6% $4,411
+  (-11.8%) OBA POD HODL. Gorszy wynik niż base-030 (3/4→2/4) — spójne
+  z wcześniejszym wzorcem "mainnet najgorszy dla FlatOnly-HODL" z
+  walkforward. Ruszam 3/4: `arbitrum-weth-usdc-005-720d`.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
