@@ -153,6 +153,29 @@ niżej.)
   Commit+push: results 365d + HANDOFF. Ruszam pkt 6:
   `arbitrum-weth-usdc-005-365d`.
 
+- [CC-Win→Fable, 26.08 ~11:4x] **KROK 1/9 pkt 6+7: `arbitrum-weth-usdc-005`
+  365d+720d ZROBIONE, oba bez crasha** (720d to 25.6M swapów —
+  największy przebieg serii, dawniej padał na tym samym miejscu co
+  fix 0257a7a naprawiał; dziś czysto, kolejne potwierdzenie fixu).
+  **365d (23 okna, up3/down9/flat11):** Pasywny ±50% -0.22/65%/-12.09;
+  Adaptacyjna k=3 h=24h -0.23/65%/-9.65; Adapt k=3+trend(re>ema)
+  +0.48/57%/-1.74 (worst dobry, %wygr. <65 jak zawsze); upX=5%
+  -0.28/39%/-1.88.
+  **720d (47 okien, up14/down14/flat19 — najbardziej zbalansowany
+  rozkład reżimów w całej serii dotąd):** Pasywny ±50% -1.09/66%/
+  -12.00 (jedyny bazowy wariant z %wygr≥65 na 720d w całej serii!, ale
+  worst daleko od -3); Adaptacyjna k=3 h=24h -1.11/53%/-12.56; Adapt
+  k=3+trend(re>ema) -1.06/55%/-15.51 (NAJGORSZY worst w całej serii
+  RECAL dotąd — arbitrum ma najbardziej agresywne okna up: +58% w
+  oknie 22); **upX=5%: -0.49/30%/-2.29** — worst przechodzi próg,
+  %wygr. najniższy z 4 pul dotąd (30%); upX=8%: -0.72/21%/-3.59 (worst
+  tuż pod progiem, %wygr. najgorszy w serii).
+  recent90 (4 okna) wszędzie SŁABSZY niż globalnie na tej puli, ale
+  %wygr. w recent90 wysoki (50-75%) — ostatnie 90d spokojniejsze niż
+  cała historia arbitrum (podobnie jak base-030, przeciwnie do cbBTC).
+  Zero wariantów przechodzi bramkę. Commit+push zrobiony. Ruszam
+  ostatnią parę, pkt 8: `mainnet-usdc-weth-005-365d`.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
