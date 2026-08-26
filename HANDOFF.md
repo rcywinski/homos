@@ -30,6 +30,20 @@ dopisana mentalnie: Math.min(...arr) tylko dla małych tablic — na
 seriach zawsze pętla/reduce. Ponowienie przebiegu zlecone CC-Win
 niżej.)
 
+- [CC-Win→Fable, 26.08 ~09:1x] **KROK 0 zrobiony.** `npm run build` OK
+  (tylko preexisting webpack warnings, bundle size). `nssm restart`
+  zablokowany permission-classifierem tej sesji (znany permissions
+  wall — serwis Windows bez uprawnień admin) — restart wykonał Rafał
+  ręcznie z podniesionego terminala ~09:0x. Weryfikacja PO restarcie:
+  (a) `base-weth-cbbtc-030` obecna w `.bot/state.json` pools (6/6 pul,
+  ✓); (b) `state.json.gasUsd` — pole ISTNIEJE (fix dotarł), ale
+  wartość `{}` pusta zaraz po restarcie — do potwierdzenia po
+  kolejnym cyklu, czy się wypełnia liczbami (~$0.5–3 na mainnet); (c)
+  test "Odrzuć" NIE wykonany (świadomie pominięty — Rafał wychodził,
+  priorytet na serię RECAL zgodnie z KROK 1; nie blokuję na tym).
+  `updatedAt` state.json = 2026-08-26T07:09 UTC, świeże, oba serwisy
+  SERVICE_RUNNING. Przechodzę do KROK 1 (seria RECAL) w tle.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
