@@ -79,6 +79,85 @@ const CHAIN_LABEL: Record<number, string> = { 1: 'Ethereum', 8453: 'Base', 42161
 // WSZYSTKIE karty, bez sprawdzania, do której pozycji należy).
 const posKey = (chainId: number, tokenId: string): string => `${chainId}-${tokenId}`;
 
+// --- Globalny toast (Partia 13, punkt 3) ---
+// `message` (state poniżej) jest renderowany dziś TYLKO wewnątrz
+// CockpitPositionActions.tsx, keyed po posKey(chainId, tokenId) — działa dla
+// akcji na TRZYMANEJ pozycji (karta z tym tokenId istnieje w drzewie). Ale
+// modal „Otwórz pozycję" wywoływany z karty PROPOZYCJI bota (MorningCockpit.tsx,
+// `proposalModal?.type==='open'`, RebalanceModal z initialUsdRange) dotyczy
+// puli, w której user NIE MA jeszcze pozycji — tokenId==='', więc żadna karta
+// pozycji nigdy nie pasuje kluczem i toast nigdy się nie renderuje. Do tego
+// modal i tak znika natychmiast po sukcesie (onDone→onClose), więc nawet
+// gdyby jakiś toast żył wewnątrz niego, zniknąłby razem z modalem, zanim user
+// zdążyłby go przeczytać — stąd zgłoszenie "modal się zamyka, nie wiadomo czy
+// się udało". Zakres tej sesji to tylko ten plik + CockpitPositionActions.tsx
+// (nie MorningCockpit.tsx), więc zamiast przepychać nowy render-target przez
+// drzewo React, toast montuje się jako mały, samodzielny element na
+// document.body — żyje tak długo jak karta, niezależnie od tego, który modal
+// go wywołał i czy zdążył się już odmontować. Używa tych samych klas CSS co
+// istniejący `.message` (styles.css, poza zakresem tej sesji) — inline tylko
+// pozycjonowanie/z-index, żeby nie dotykać CSS.
+let globalToastEl: HTMLDivElement | null = null;
+let globalToastHideTimer: ReturnType<typeof setTimeout> | null = null;
+
+function showGlobalToast(kind: 'ok' | 'err', text: string) {
+  if (typeof document === 'undefined') return;
+  if (!globalToastEl) {
+    globalToastEl = document.createElement('div');
+    globalToastEl.setAttribute('role', 'status');
+    globalToastEl.style.position = 'fixed';
+    globalToastEl.style.bottom = '24px';
+    globalToastEl.style.right = '24px';
+    globalToastEl.style.zIndex = '9999';
+    globalToastEl.style.maxWidth = '360px';
+    globalToastEl.style.boxShadow = '0 4px 16px rgba(0,0,0,0.18)';
+    globalToastEl.style.transition = 'opacity 0.2s ease';
+    document.body.appendChild(globalToastEl);
+  }
+  globalToastEl.className = `message ${kind === 'ok' ? 'success' : 'error'}`;
+  globalToastEl.style.opacity = '1';
+  globalToastEl.style.display = 'block';
+  globalToastEl.textContent = text;
+  if (globalToastHideTimer) clearTimeout(globalToastHideTimer);
+  // Ten sam czas co auto-znikanie karcianego `message` (10s, FIX 25.08) —
+  // spójne zachowanie, jeden termin do pamiętania.
+  globalToastHideTimer = setTimeout(() => {
+    if (globalToastEl) globalToastEl.style.opacity = '0';
+  }, 10_000);
+}
+
+// Best-effort odczyt potwierdzenia transakcji (Partia 13, punkty 1+3): hash
+// JEST już wysłany w momencie wywołania — sama transakcja żyje na łańcuchu
+// niezależnie od tego, czy `waitForTransactionReceipt` tu zdąży/zdoła ją
+// zobaczyć. Rzucanie w tym miejscu (jak poprzednio) traktowało "RPC nie
+// odpowiedziało w porę" identycznie jak "transakcja się nie udała" — co przy
+// realnym kapitale prowadziło do: (approve) allowance zostaje stare mimo
+// podpisanej zgody, przycisk "wraca"; (otwarcie pozycji) pozycja otwiera się
+// na łańcuchu, ale UI raportuje błąd i modal zostaje otwarty, bo `onDone()`
+// nigdy nie jest wołane. Ta sama klasa fixu co useHedgeExecution (20.08):
+// 2 próby po 5s, a po ich wyczerpaniu ZWRACAMY (nie rzucamy) — wywołujący
+// kontynuuje tak, jakby transakcja przeszła (hash trafi na łańcuch prędzej
+// czy później; kolejny odczyt salda/allowance i tak to pokaże poprawnie).
+async function waitReceiptBestEffort(
+  client: { waitForTransactionReceipt: (args: { hash: `0x${string}` }) => Promise<unknown> },
+  hash: `0x${string}`,
+  retries = 2,
+  delayMs = 5_000
+): Promise<void> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      await client.waitForTransactionReceipt({ hash });
+      return;
+    } catch (e) {
+      if (attempt === retries) {
+        console.warn('waitReceiptBestEffort: receipt nie potwierdzony po retry, kontynuuję (hash wysłany):', hash, e);
+        return;
+      }
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+}
+
 // Link do eksploratora bloków per sieć (Partia: widoczny postęp CloseModal,
 // 25.08) — TransactionHistory.tsx ma podobny, ale binarny mainnet/Sepolia
 // (Sepolia usunięta 21.08, plik poza zakresem tej sesji) — świadomie NIE
@@ -244,6 +323,12 @@ export function useCockpitActions() {
   // stary komunikat nie ma prawa wisieć w nieskończoność.
   useEffect(() => {
     if (!message) return;
+    // Punkt 3 (Partia 13): każdy `message` pokazuje się też jako globalny
+    // toast na document.body — patrz komentarz przy showGlobalToast wyżej.
+    // Nie zastępuje per-kartowego renderu w CockpitPositionActions.tsx (ten
+    // zostaje dla kontekstu przy konkretnej karcie), tylko dokłada wersję,
+    // która przeżywa zamknięcie/odmontowanie dowolnego modala.
+    showGlobalToast(message.kind, message.text);
     const id = setTimeout(() => setMessage(null), 10_000);
     return () => clearTimeout(id);
   }, [message]);
@@ -470,9 +555,19 @@ export function useCockpitActions() {
           account: address,
           chain: wc.chain,
         });
-        await client.waitForTransactionReceipt({ hash });
+        // Punkt 3 (Partia 13): best-effort, NIE throw — sam send już przeszedł
+        // symulację (client.call wyżej) i wysłał hash; poprzednio twardy throw
+        // tutaj (gdy RPC nie zdążyło z receiptem) lądował w catch niżej, mimo że
+        // pozycja otwierała się poprawnie na łańcuchu — user widział błąd, modal
+        // zostawał otwarty (onDone?.() nigdy nie wołane), bo wyjątek przerywał
+        // wykonanie przed tą linią.
+        await waitReceiptBestEffort(client, hash);
         addTransaction(address, hash, p.chainId, `Rebalans ręczny (nowa pozycja) ${p.poolLabel}`);
         setMessage({ kind: 'ok', text: 'Nowa pozycja otwarta ✓', key: posKey(p.chainId, p.tokenId) });
+        // Modal ma się ZAMKNĄĆ po sukcesie (punkt 3) — onDone przekazany przez
+        // wywołującego (RebalanceModal→CockpitPositionActions/MorningCockpit)
+        // zawsze wiąże się z onClose po swojej stronie; toast survives dzięki
+        // showGlobalToast w useEffect powyżej, niezależnie od odmontowania modala.
         onDone?.();
       } catch (e) {
         setMessage({
@@ -512,7 +607,11 @@ export function useCockpitActions() {
       if (!wc || !client || !manager) return;
       const token = which === 0 ? p.token0.address : p.token1.address;
       const hash = await wc.writeContract({ address: token, abi: erc20Abi, functionName: 'approve', args: [manager, amount], account: address, chain: wc.chain });
-      await client.waitForTransactionReceipt({ hash });
+      // Punkt 1 (Partia 13): best-effort, NIE throw — patrz waitReceiptBestEffort.
+      // Hash jest już wysłany; wywołujący (RebalanceModal.approve()) zawsze
+      // odświeża saldo+allowance zaraz po powrocie stąd, więc nawet gdy ten
+      // odczyt nie zdąży, kolejny refreshBalances() i tak pokaże prawdę.
+      await waitReceiptBestEffort(client, hash);
     },
     [address, freshWalletClient, clients]
   );

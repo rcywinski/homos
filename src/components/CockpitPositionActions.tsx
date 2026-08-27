@@ -38,6 +38,20 @@ interface Props {
 
 const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+// Punkt 5 (Partia 13): saldo wyświetlane w modalu NIE może zaokrąglać w górę —
+// `toFixed(dp)` (poprzedni kod) zaokrągla ARYTMETYCZNIE, więc 1827.49x z realnego
+// salda potrafiło pokazać się jako "1827.50", user wpisywał 1827.50 i dostawał
+// "Za mało środków" bez wytłumaczenia skąd brakuje 0.01x. Truncacja na STRINGU z
+// formatUnits (dokładna reprezentacja dziesiętna z viem, bez konwersji przez
+// float) zamiast Math.floor na Number — unika też błędów precyzji float przy
+// dużych saldach. Padded zerami, żeby szerokość pola się nie skakała.
+const floorBalanceStr = (raw: bigint, decimals: number, dp: number): string => {
+  const full = formatUnits(raw, decimals);
+  const [intPart, fracPart = ''] = full.split('.');
+  if (dp <= 0) return intPart;
+  return `${intPart}.${fracPart.slice(0, dp).padEnd(dp, '0')}`;
+};
+
 const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bot, ethUsd }) => {
   const [closeOpen, setCloseOpen] = useState(false);
   const [rebalanceOpen, setRebalanceOpen] = useState(false);
@@ -379,6 +393,10 @@ export const RebalanceModal: FC<{
   const [allow0, setAllow0] = useState<bigint>(0n);
   const [allow1, setAllow1] = useState<bigint>(0n);
   const [approving, setApproving] = useState<0 | 1 | null>(null);
+  // Punkt 2 (Partia 13): fallback ręczny — odczyt przy KAŻDYM otwarciu modala
+  // (mount, effect niżej) już jest, ale gdy RPC akurat nawali w tamtym
+  // momencie, user nie ma innej opcji niż zamknąć i otworzyć modal od nowa.
+  const [refreshing, setRefreshing] = useState(false);
 
   const refreshBalances = async () => {
     const [r0, r1] = await Promise.all([actions.readBalanceAndAllowance(p, 0), actions.readBalanceAndAllowance(p, 1)]);
@@ -391,6 +409,16 @@ export const RebalanceModal: FC<{
     refreshBalances().catch(console.error);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.tokenId]);
+  const manualRefreshBalances = async () => {
+    setRefreshing(true);
+    try {
+      await refreshBalances();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Same USD-orientation logic MyPositions.tsx uses for the advisor line —
   // works directly here since PortfolioPosition already carries token symbols.
@@ -470,6 +498,16 @@ export const RebalanceModal: FC<{
   const needApprove1 = parsed1 > 0n && allow1 < parsed1;
   const insufficient = parsed0 > bal0 || parsed1 > bal1;
 
+  // Punkt 6 (Partia 13): gdy auto-przeliczenie (calculateOptimalAmounts, efekt
+  // wyżej) podniesie kwotę PONAD już zatwierdzone allowance, przycisk Approve
+  // po prostu "wraca" (needApprove* przełącza się z powrotem na true) — bez
+  // wyjaśnienia user myśli, że jego wcześniejszy podpis przepadł. Dopisek przy
+  // przycisku pokazuje, że część allowance NADAL stoi (zatwierdzone > 0), tylko
+  // potrzeba więcej — różnica między "podpis przepadł" a "podpisz jeszcze raz
+  // na wyższą kwotę".
+  const approveNote0 = needApprove0 && allow0 > 0n ? `zatwierdzone: ${formatUnits(allow0, p.token0.decimals)}, potrzebne: ${formatUnits(parsed0, p.token0.decimals)}` : null;
+  const approveNote1 = needApprove1 && allow1 > 0n ? `zatwierdzone: ${formatUnits(allow1, p.token1.decimals)}, potrzebne: ${formatUnits(parsed1, p.token1.decimals)}` : null;
+
   const approve = async (which: 0 | 1) => {
     setApproving(which);
     try {
@@ -543,7 +581,24 @@ export const RebalanceModal: FC<{
             <div className="token-input">
               <label>
                 {p.token0.symbol}{' '}
-                <span className="muted">saldo: {parseFloat(formatUnits(bal0, p.token0.decimals)).toFixed(p.token0.decimals === 6 ? 2 : 6)}</span>
+                <span className="muted" title={`dokładnie: ${formatUnits(bal0, p.token0.decimals)} ${p.token0.symbol}`}>
+                  saldo: {floorBalanceStr(bal0, p.token0.decimals, p.token0.decimals === 6 ? 2 : 6)}
+                </span>{' '}
+                {/* Punkt 4 (Partia 13): MAX wpisuje DOKŁADNE saldo (formatUnits
+                    bez zaokrąglenia) — nie wartość obok, która jest ucięta w
+                    dół do wyświetlenia (punkt 5) i wpisanie jej ręcznie
+                    zostawiałoby resztki tokenu nieużyte. */}
+                <button
+                  type="button"
+                  className="chip"
+                  disabled={bal0 === 0n}
+                  onClick={() => {
+                    setAmount0(formatUnits(bal0, p.token0.decimals));
+                    setLastEdited(0);
+                  }}
+                >
+                  MAX
+                </button>
               </label>
               <input
                 value={amount0}
@@ -557,7 +612,20 @@ export const RebalanceModal: FC<{
             <div className="token-input">
               <label>
                 {p.token1.symbol}{' '}
-                <span className="muted">saldo: {parseFloat(formatUnits(bal1, p.token1.decimals)).toFixed(p.token1.decimals === 6 ? 2 : 6)}</span>
+                <span className="muted" title={`dokładnie: ${formatUnits(bal1, p.token1.decimals)} ${p.token1.symbol}`}>
+                  saldo: {floorBalanceStr(bal1, p.token1.decimals, p.token1.decimals === 6 ? 2 : 6)}
+                </span>{' '}
+                <button
+                  type="button"
+                  className="chip"
+                  disabled={bal1 === 0n}
+                  onClick={() => {
+                    setAmount1(formatUnits(bal1, p.token1.decimals));
+                    setLastEdited(1);
+                  }}
+                >
+                  MAX
+                </button>
               </label>
               <input
                 value={amount1}
@@ -573,18 +641,40 @@ export const RebalanceModal: FC<{
           {insufficient && <div className="message error">Za mało środków na saldzie</div>}
 
           <div className="modal-actions">
+            {/* Punkt 2 (Partia 13): fallback ręczny obok odczytu przy mount —
+                gdyby ten padł cicho na RPC, user nie musi zamykać/otwierać
+                modala od nowa, żeby wymusić świeży odczyt. */}
+            <button type="button" className="secondary-button" onClick={manualRefreshBalances} disabled={refreshing || busy} title="Wymuś ponowny odczyt salda i allowance">
+              {refreshing ? 'Odświeżanie…' : '↻ odśwież salda'}
+            </button>
             <button className="secondary-button" onClick={onClose} disabled={busy}>
               Anuluj
             </button>
             {needApprove0 && (
-              <button className="action-button" disabled={approving !== null} onClick={() => approve(0)}>
-                {approving === 0 ? 'Approving…' : `Approve ${p.token0.symbol}`}
-              </button>
+              // Inline zamiast nowej klasy CSS — styles.css jest poza zakresem
+              // Partii 13 (tylko CockpitPositionActions.tsx + useCockpitActions.ts).
+              <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                <button className="action-button" disabled={approving !== null} onClick={() => approve(0)}>
+                  {approving === 0 ? 'Approving…' : `Approve ${p.token0.symbol}`}
+                </button>
+                {approveNote0 && (
+                  <span className="muted" style={{ fontSize: 11 }}>
+                    {approveNote0}
+                  </span>
+                )}
+              </span>
             )}
             {needApprove1 && (
-              <button className="action-button" disabled={approving !== null} onClick={() => approve(1)}>
-                {approving === 1 ? 'Approving…' : `Approve ${p.token1.symbol}`}
-              </button>
+              <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                <button className="action-button" disabled={approving !== null} onClick={() => approve(1)}>
+                  {approving === 1 ? 'Approving…' : `Approve ${p.token1.symbol}`}
+                </button>
+                {approveNote1 && (
+                  <span className="muted" style={{ fontSize: 11 }}>
+                    {approveNote1}
+                  </span>
+                )}
+              </span>
             )}
             <button
               className="primary-button"

@@ -1038,3 +1038,40 @@ SPRAWDZONE przy okazji (prośba z wpisu): karty pozycji już mają
 `key={`${chainId}-${tokenId}`}` w `MorningCockpit.tsx` — NIE index, więc
 druga część zgłoszenia („przy okazji sprawdź") była już OK, zero zmian
 tam potrzebnych. `npx tsc --noEmit` i `webpack --mode production` czyste.
+
+## PARTIA 13 — PILNA: state control modala „Otwórz pozycję" ✅ wykonana (Sonnet 27.08; zgłoszenie Rafała przy wejściu REALNYM kapitałem)
+Kontekst: pierwsze otwarcie pozycji produktowej przez kokpit wymagało
+3× approve, 2× zamknięcia/otwarcia modala i ręcznego korygowania kwot.
+Pozycja ostatecznie otwarta, ale każdy z poniższych punktów zaobserwowany
+na żywo. Zakres: src/components/CockpitPositionActions.tsx +
+src/hooks/useCockpitActions.ts. NIE zmieniać logiki budowy transakcji.
+
+1. **approveToken: receipt-wait jako best-effort** (ta sama klasa i ten
+   sam fix co useHedgeExecution 20.08): po `writeContract` hash JEST
+   wysłany — `waitForTransactionReceipt` opakować w try/catch z krótkim
+   retry (2×5 s), a po niepowodzeniu NIE rzucać, tylko kontynuować do
+   `refreshBalances()`. Obecnie throw przed refreshem zostawia stale
+   allowance i przyciski Approve „wracają" mimo podpisanych zgód.
+2. **Odświeżanie allowance po approve niezawodnie**: po każdym approve
+   (sukces lub timeout receiptu) ponowny odczyt balance+allowance;
+   dodatkowo odczyt przy KAŻDYM otwarciu modala (mount) — jest — oraz
+   przycisk ręczny „↻ odśwież salda" w stopce modala (fallback).
+3. **Modal ma się ZAMKNĄĆ po sukcesie otwarcia pozycji**: onDone z
+   openPositionAtRange ma wołać onClose (dziś pozycja się otwiera, a
+   modal wisi dalej z aktywnymi polami — user nie wie, czy się udało).
+   Toast „Nowa pozycja otwarta ✓" ma przeżyć zamknięcie modala (globalny
+   message, nie wewnątrz modala).
+4. **Przycisk MAX przy saldzie** obu tokenów: wpisuje DOKŁADNE saldo
+   (formatUnits bez zaokrąglenia), nie wyświetlaną wartość.
+5. **Wyświetlanie salda: NIE zaokrąglać w górę** — toFixed(2) na USDC
+   pokazuje 1827.50 przy realnym 1827.49x i user wpisuje więcej niż ma
+   („Za mało środków" bez wyjaśnienia skąd). Ucinać w dół (floor) i/lub
+   pokazywać pełną precyzję w tooltipie.
+6. **Kwoty po auto-przeliczeniu vs approve**: jeśli przeliczenie
+   podniesie kwotę POWYŻEJ już zatwierdzonego allowance, pokazać
+   dopisek przy przycisku Approve („zatwierdzone: X, potrzebne: Y")
+   zamiast gołego powrotu przycisku — user myśli, że podpis przepadł.
+Weryfikacja: tsc + build + test na sucho (modal na puli bez pozycji,
+konto z małym saldem) — scenariusz: wpisz saldo z zaokrąglenia (błąd
+widoczny z wyjaśnieniem), approve, zmień kwotę w dół (approve nie
+wraca), otwórz (modal zamyka się, toast zostaje).

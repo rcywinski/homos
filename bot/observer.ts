@@ -651,6 +651,27 @@ async function refreshPositions() {
   }
   positions = found;
 
+  // PRODUKT 27.08 (rozstrzygnięcie Rafała po wejściu #5886957): propozycja
+  // OPEN znika automatycznie, gdy w tej puli JEST już nasza pozycja —
+  // wisząca "otwórz" po wejściu to zaproszenie do podwójnego wejścia.
+  // Kolejną pozycję w tej samej puli proponuje selektor (nowa propozycja
+  // następnego dnia, jeśli zasadna) albo otwiera się ręcznie.
+  try {
+    const heldPools = new Set(found.map((x) => x.poolId).filter(Boolean));
+    let autoClosed = 0;
+    for (const pr of proposals) {
+      if (pr.status === 'open' && pr.kind === 'OPEN' && pr.poolId && heldPools.has(pr.poolId)) {
+        pr.status = 'dismissed';
+        pr.note = `${pr.note ? pr.note + ' · ' : ''}zamknięta automatycznie — pozycja w tej puli już otwarta`;
+        autoClosed++;
+        log(`proposal ${pr.id}: zamknięta automatycznie — pozycja w ${pr.poolId} już otwarta`);
+      }
+    }
+    if (autoClosed) saveProposals();
+  } catch (e) {
+    log(`auto-close OPEN: ${String(e).slice(0, 100)}`);
+  }
+
   // --- realny hedge na GMX (Arbitrum) — odczyt Readerem, patrz komentarz przy GMX ---
   try {
     const arb = clients['arbitrum'];

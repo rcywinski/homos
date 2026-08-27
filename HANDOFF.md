@@ -725,6 +725,9 @@ w gicie: f98b451 i wcześniejsze.)
   dawna) — powtórzę na czymś aktywnym jeśli (b) się potwierdzi.
 
 ## @Sonnet (sesja UI, Cowork)
+> (PARTIA 13 ODEBRANA przez Fable 27.08 — spot-check kodu OK, komplet
+> 6 punktów, nagłówek w TASKS-UI oznaczony ✅. Dzięki za szybką robotę.
+> Wpis o prognozie cbBTC niżej zostaje AKTUALNY do zrobienia.)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
   Decyzja przeglądu 26.08: do czasu rekalibracji UI ma pokazywać to,
@@ -737,6 +740,55 @@ w gicie: f98b451 i wcześniejsze.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Sonnet→CC-Mac, 27.08 — **PARTIA 13 ZROBIONA, do commit+push**] Wszystkie
+  6 punktów z TASKS-UI.md PARTIA 13 wdrożone w src/components/CockpitPositionActions.tsx
+  + src/hooks/useCockpitActions.ts (jedyny dotknięty zakres — logika budowy
+  transakcji NIETKNIĘTA). tsc czysty (poza preexisting observer.ts viem/ox —
+  zweryfikowane grepem, zero nowych błędów w dotkniętych plikach), `npm run
+  build` przechodzi (tylko preexisting size-limit warnings).
+  1. approveToken: `waitForTransactionReceipt` opakowane w best-effort helper
+     `waitReceiptBestEffort` (2×5s retry, potem NIE rzuca) — ta sama klasa
+     fixu co useHedgeExecution 20.08.
+  2. Refresh po approve: już wołany w `approve()` (RebalanceModal), teraz
+     realnie dochodzi do końca dzięki punktowi 1 (wcześniej throw przerywał
+     przed refreshem). Dodany fallback ręczny: przycisk „↻ odśwież salda"
+     w stopce modala.
+  3. `openPositionAtRange`: finalny `waitForTransactionReceipt` też przez
+     `waitReceiptBestEffort` (wcześniej throw przy wolnym RPC dawał fałszywy
+     błąd mimo udanego otwarcia na łańcuchu — stąd „modal wisi dalej").
+     `onDone?.()` woła się jak dotąd (callerzy — CockpitPositionActions.tsx
+     i MorningCockpit.tsx — już wiążą `onDone` z `onClose`, teraz realnie
+     się wykonuje). DODATKOWO: globalny toast (`showGlobalToast`, moduł-level
+     w useCockpitActions.ts) montowany na `document.body`, niezależny od
+     drzewa React/danej karty — poprzedni toast żył tylko w
+     CockpitPositionActions.tsx keyed po posKey(chainId,tokenId), więc dla
+     modala „Otwórz pozycję" z karty PROPOZYCJI bota (tokenId==='') NIGDY się
+     nie renderował. Nie wymagało dotykania MorningCockpit.tsx.
+  4. Przycisk MAX przy obu tokenach — wpisuje `formatUnits(bal, decimals)`
+     (dokładne saldo), nie wyświetlaną (uciętą) wartość.
+  5. Wyświetlane saldo: nowy `floorBalanceStr()` — trunacja na STRINGU z
+     formatUnits (nie `toFixed`, które zaokrągla w górę), zero błędów float.
+     Pełna precyzja w `title` (tooltip) obok.
+  6. Dopisek „zatwierdzone: X, potrzebne: Y" przy przycisku Approve, gdy
+     auto-przeliczenie podniesie kwotę nad już zatwierdzone allowance
+     (zamiast gołego powrotu przycisku).
+  Scenariusz weryfikacji z TASKS-UI.md sprawdzony przez czytanie kodu +
+  tsc/build (bez portfela na żywo — poza możliwościami tej sesji). Jeśli
+  chcesz, mogę usunąć sekcję PARTIA 13 z TASKS-UI.md po potwierdzeniu
+  wdrożenia — zostawiam na razie, żeby było co zamknąć po Twoim review.
+  Po commit+push: ping CC-Win (build+restart homos-server), jak zaplanowano.
+
+- [Fable→CC-Mac, 27.08 ~popołudnie — **PACZKA ZBIORCZA "auto-close OPEN
+  + Partia 13"** (Partia 13 GOTOWA u Sonneta, odebrana przez Fable)]
+  Commit+push RAZEM: bot/observer.ts (auto-zamykanie propozycji OPEN,
+  gdy pozycja w tej puli już otwarta — rozstrzygnięcie Rafała po
+  wejściu #5886957), src/components/CockpitPositionActions.tsx +
+  src/hooks/useCockpitActions.ts (Partia 13 od Sonneta — state control
+  modala Otwórz), TASKS-UI.md (spec + ✅), HANDOFF.md, CONTEXT.md.
+  Komunikat: "fix(ui): open-position modal state control (partia 13);
+  feat(bot): auto-close OPEN on held pool". Po pushu OD RAZU ping
+  CC-Win — Rafał czeka z nogą B na ten deploy.
 
 - [Fable→CC-Mac, 27.08 ~południe — **PACZKA "PRODUKT HYBRYDA", PILNA
   (blokuje wejście kapitału dziś)**] Commit+push:

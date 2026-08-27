@@ -119,6 +119,29 @@ betę świadomie), dozór krawędzi zakresu. (4) "Odrzuć" NAWRÓT #3
 stary bundle na Windows (fix 26.08 żyje w useBotApi/server.ts,
 bundle untracked, per maszyna); diagnoza a/b/c w zleceniu CC-Win.
 
+~popołudnie — WEJŚCIE KAPITAŁU, NOGA A WYKONANA: CC-Win wdrożył
+produkt (build + wymuszenie selektora; propozycje OPEN z szerokimi
+zakresami), Rafał: swapy na Base (2400 USDC→0.94 WETH @2553, 1445
+USDC→0.018 cbBTC @~80.3k, + dokupki 420 USDC→WETH i 0.0028 cbBTC→
+WETH po korekcie proporcji) i **mint #5886957 WETH/USDC 0.30% Base,
+zakres $1665.75–3744.30 (±50% geometrycznie), ~$3,507** (0.659 WETH
++ 1827 USDC; nadwyżka ~0.06 WETH w portfelu). Pozycja widoczna w
+kokpicie, observer śledzi (kotwica HODL od chwili wykrycia).
+KOREKTA po drodze (uczciwie): rozpiska proporcji 38.5/61.5 od Fable
+była liczona dla liniowego ±50% — rangeAround/suggestFixedRange są
+symetryczne LOGARYTMICZNIE [P/1.5, P×1.5] → poprawnie 50/50; stąd
+dokupki. WALKA Z MODALEM "Otwórz" (3× approve, stale allowance po
+receipt-timeout — ta sama klasa co hedge 20.08, modal nie zamyka się
+po sukcesie, saldo zaokrąglane w górę blokuje przycisk) → **TASKS-UI
+PARTIA 13 (pilna, u Sonneta)**. NOGA B (cbBTC, ~$2,437 w tokenach
+czeka w portfelu = postura HODL) — Rafał otworzy PO fixach Partii 13.
+ROZSTRZYGNIĘCIE Rafała: propozycja OPEN znika po otwarciu pozycji w
+tej puli — zaimplementowane w observer.ts (auto-dismiss przy
+refreshPositions), paczka u CC-Mac. Advisor nie miał statystyk dla
+pul produktowych przy generowaniu propozycji (cbBTC bez zakresu,
+modal "Doradca (brak danych)") — zakres wpisywany ręcznie; do
+obserwacji, czy po cyklach statystyk sugestie wracają.
+
 ### 2026-08-26 ~08:1x–09:0x — PRZEGLĄD TYGODNIOWY (Fable + Rafał) — komplet decyzji z DECYZJE-2026-08-26
 Brief poranny + pełny przegląd agendy, punkt po punkcie (AskUserQuestion),
 w kolejności 11a: σ → k → hUp → kapitał. WSZYSTKIE decyzje podjęte —
