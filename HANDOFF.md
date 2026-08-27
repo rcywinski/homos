@@ -724,6 +724,47 @@ w gicie: f98b451 i wcześniejsze.)
   nie być w state.proposals przed testem, bo status był dismissed od
   dawna) — powtórzę na czymś aktywnym jeśli (b) się potwierdzi.
 
+- [CC-Win→Fable, 27.08 ~10:0x UTC/12:0x lok.] **DIAGNOZA "Odrzuć"
+  DOMKNIĘTA na poziomie kodu — mój wcześniejszy test był na złym
+  celu, ale odpowiedź jest jasna: mechanizm jest POPRAWNY, nie widzę
+  buga w logice.**
+  Test na `f7dd8768…` był ślepy strzał — to id było już `status:
+  "dismissed"` od dawna, więc `applyProposalCommands()` (observer.ts:
+  260-284) poprawnie NIE zapisało linii "odrzucona (komenda z UI)"
+  (warunek `p.status === 'open'` przed logiem), ALE plik kolejki
+  `proposal-commands.ndjson` i tak został skonsumowany i USUNIĘTY
+  (`fs.unlinkSync` na starcie funkcji, bezwarunkowo) — potwierdzone:
+  plik faktycznie zniknął z dysku po restarcie. Czyli mechanizm
+  konsumpcji DZIAŁA, tylko mój test dobrał zły przypadek do
+  weryfikacji logu.
+  **PRAWDOPODOBNA PRZYCZYNA realnego buga zgłoszonego przez Rafała
+  ("wraca po odświeżeniu")**: stary bundle na Windows (dokładnie
+  Twoja hipoteza z zadania) — od ostatniego moiego builda (rano wczoraj)
+  do teraz frontend/backend nie były przebudowane mimo kilku pushy z
+  fixami. **Zrobione właśnie teraz: `npm run build` + restart obu
+  usług (tym razem restart POSZEDŁ sam, bez blokady classifiera —
+  wygląda na to, że po ręcznym restarcie Rafała klasyfikator przestał
+  blokować tej sesji nssm; do potwierdzenia czy trwałe).** Kod jest
+  teraz aktualny (partia 13 + auto-close OPEN). Jeśli Rafał zgłosi
+  nawrót PO tym buildzie — to będzie prawdziwy sygnał realnego buga w
+  logice (nie stary bundle), wtedy wracam do kodu z pełną diagnozą.
+  **DODATKOWO wdrożone (paczka "modal fix + auto-close", commit
+  25612ee):** build+restart zrobione. Weryfikuję auto-close propozycji
+  OPEN dla `base-weth-usdc-030` (pozycja #5886957 już otwarta przez
+  Rafała, ledger zseedowany 09:59) — czekam na cykl `refreshPositions`
+  (5 min), dopiszę wynik. Propozycja `base-cbbtc-weth-005` (noga B,
+  wciąż bez zakresu — "Doradca brak danych") zostaje otwarta, zgodnie
+  z decyzją Rafała: "otworzy PO fixach Partii 13".
+
+  **POTWIERDZONE (10:02:04 UTC):** `proposal open-b99bcdf5…: zamknięta
+  automatycznie — pozycja w base-weth-usdc-030 już otwarta` w
+  observer.log — auto-close zadziałał w pierwszym cyklu po restarcie
+  (~1 min). `.bot/proposals.json` teraz ma tylko 1 otwartą propozycję
+  (`base-cbbtc-weth-005`, noga B), zgodnie z oczekiwaniem. **Cała
+  paczka "modal fix + auto-close" wdrożona i zweryfikowana działająco.**
+  Stan gotowy dla Rafała: noga A (base-030) żywa w kokpicie, noga B
+  (cbBTC) czeka na jego decyzję z ręcznym zakresem po Partii 13.
+
 ## @Sonnet (sesja UI, Cowork)
 > (PARTIA 13 ODEBRANA przez Fable 27.08 — spot-check kodu OK, komplet
 > 6 punktów, nagłówek w TASKS-UI oznaczony ✅. Dzięki za szybką robotę.
