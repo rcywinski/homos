@@ -428,9 +428,29 @@ export const RebalanceModal: FC<{
     return ethT0 ? raw : 1 / raw;
   };
 
+  // Punkt 2 (Partia 13b): `usdAt` w rzeczywistości liczy cenę "drugiego"
+  // (nie-ETH) tokenu WYRAŻONĄ w tokenie ETH-owym (raw = token1 per token0,
+  // odwrócone gdy ETH jest po stronie token1) — nazwa "usd" jest myląca, ale
+  // matematyka jest poprawna. Dla par ETH/stable "drugi" token JEST USD-em,
+  // więc etykieta "$"/"USD" była trafna. Dla base-cbbtc-weth-005 (WETH/cbBTC,
+  // ŻADEN nie jest stablecoinem) ta sama liczba to "cbBTC za WETH" (~0.031),
+  // a placeholder "Min (USD)"/prefiks "$" pokazywał fałszywą jednostkę —
+  // zgłoszenie Rafała po otwarciu nogi cbBTC 27.08. Etykieta jest teraz
+  // dynamiczna: USD dla par ze stablecoinem, w przeciwnym razie
+  // "{symbol drugiego tokenu} za {symbol ETH-owego tokenu}".
+  const STABLE_SYMBOLS = new Set(['USDC', 'USDT', 'DAI', 'USDBC', 'USDE', 'FRAX', 'LUSD']);
+  const ethSideToken = ethT0 ? p.token0 : p.token1;
+  const otherSideToken = ethT0 ? p.token1 : p.token0;
+  const isStableQuote = STABLE_SYMBOLS.has(otherSideToken.symbol.toUpperCase());
+  const quoteUnitPrefix = isStableQuote ? '$' : '';
+  const quoteUnitSuffix = isStableQuote ? '' : ` ${otherSideToken.symbol}/${ethSideToken.symbol}`;
+  const quoteUnitPlaceholder = isStableQuote ? 'USD' : `${otherSideToken.symbol} za ${ethSideToken.symbol}`;
+  const fmtQuote = (v: number) => `${quoteUnitPrefix}${v.toLocaleString(undefined, { maximumSignificantDigits: 6 })}${quoteUnitSuffix}`;
+
   const spacing = p.pool ? TICK_SPACINGS[p.fee as keyof typeof TICK_SPACINGS] : 60;
   const suggestedUsdLo = advisorTicks ? usdAt(ethT0 ? advisorTicks[0] : advisorTicks[1]) : null;
   const suggestedUsdHi = advisorTicks ? usdAt(ethT0 ? advisorTicks[1] : advisorTicks[0]) : null;
+  const currentQuotePrice = p.pool ? usdAt(p.pool.tickCurrent) : null;
 
   // Domyślne wypełnienie pól "Własny zakres": zakres z propozycji bota, gdy
   // modal otwarto z karty propozycji (initialUsdRange — Partia 4); inaczej
@@ -445,6 +465,20 @@ export const RebalanceModal: FC<{
   }, [p.pool, initialUsdRange]);
   const [customLo, setCustomLo] = useState(defaultCustom.lo);
   const [customHi, setCustomHi] = useState(defaultCustom.hi);
+
+  // Punkt 3 (Partia 13b): przy prefillu z propozycji bota (initialUsdRange —
+  // zawsze trafia do trybu "custom", patrz stan `mode` niżej) pokazać od razu
+  // wyliczoną szerokość ±%, żeby user WIDZIAŁ, że to nie jest produktowe
+  // ±40/50% — zgłoszenie po incydencie 27.08 (modal zassał starą wąską
+  // propozycję ±16% z 25.08 po restarcie bota, wyglądało jak normalny
+  // "Własny zakres" bez żadnego ostrzeżenia o skali).
+  const initialRangeWidthPct = useMemo(() => {
+    if (!initialUsdRange) return null;
+    const { usdLo, usdHi } = initialUsdRange;
+    if (!(usdHi > usdLo) || usdLo <= 0) return null;
+    const mid = (usdLo + usdHi) / 2;
+    return ((usdHi - usdLo) / (2 * mid)) * 100;
+  }, [initialUsdRange]);
 
   const customTicks = useMemo((): [number, number] | null => {
     const lo = parseFloat(customLo);
@@ -553,16 +587,38 @@ export const RebalanceModal: FC<{
             </div>
           )}
 
+          {/* Punkt 3 (Partia 13b): szerokość prefillowanego zakresu z propozycji
+              bota, WIDOCZNA niezależnie od aktualnie wybranego trybu — user ma
+              to zobaczyć od razu, zanim ewentualnie przełączy się na "Doradca"
+              i z powrotem, tracąc kontekst. */}
+          {initialRangeWidthPct !== null && (
+            <div className="morning-note">
+              Zakres z propozycji: <b>±{initialRangeWidthPct.toFixed(1)}%</b> wokół środka
+              {initialRangeWidthPct < 30 ? ' — WĄSKI, to NIE jest produktowe ±40/50% (sprawdź źródło propozycji)' : ''}.
+            </div>
+          )}
+
           {mode === 'suggested' && advisorTicks ? (
             <div className="range-preview">
-              Zakres: <b>${suggestedUsdLo!.toLocaleString()} – ${suggestedUsdHi!.toLocaleString()}</b>{' '}
+              Zakres: <b>{fmtQuote(suggestedUsdLo!)} – {fmtQuote(suggestedUsdHi!)}</b>{' '}
               <span className="muted">(ticki {advisorTicks[0]} … {advisorTicks[1]})</span>
             </div>
           ) : (
-            <div className="custom-range-inputs">
-              <input placeholder="Min (USD)" value={customLo} onChange={(e) => setCustomLo(e.target.value)} />
-              <input placeholder="Max (USD)" value={customHi} onChange={(e) => setCustomHi(e.target.value)} />
-            </div>
+            <>
+              <div className="custom-range-inputs">
+                <input placeholder={`Min (${quoteUnitPlaceholder})`} value={customLo} onChange={(e) => setCustomLo(e.target.value)} />
+                <input placeholder={`Max (${quoteUnitPlaceholder})`} value={customHi} onChange={(e) => setCustomHi(e.target.value)} />
+              </div>
+              {/* Punkt 2 (Partia 13b): podpowiedź bieżącej ceny w tej samej,
+                  dynamicznie dobranej jednostce co placeholdery powyżej —
+                  bez tego "0.031" wyglądało jak literówka, nie jak realna
+                  cena cbBTC-za-WETH. */}
+              {currentQuotePrice !== null && (
+                <div className="muted" style={{ marginTop: -4, marginBottom: 8 }}>
+                  obecna cena: {fmtQuote(currentQuotePrice)}
+                </div>
+              )}
+            </>
           )}
           {mode === 'custom' && !customTicks && <div className="message error">Podaj poprawny zakres (min &lt; max, obie wartości &gt; 0)</div>}
 
@@ -640,19 +696,33 @@ export const RebalanceModal: FC<{
 
           {insufficient && <div className="message error">Za mało środków na saldzie</div>}
 
-          <div className="modal-actions">
-            {/* Punkt 2 (Partia 13): fallback ręczny obok odczytu przy mount —
-                gdyby ten padł cicho na RPC, user nie musi zamykać/otwierać
-                modala od nowa, żeby wymusić świeży odczyt. */}
-            <button type="button" className="secondary-button" onClick={manualRefreshBalances} disabled={refreshing || busy} title="Wymuś ponowny odczyt salda i allowance">
+          {/* Punkt 1 (Partia 13b): przycisk "↻ odśwież salda" wyniesiony z
+              głównego rzędu akcji do własnej, cichej linii — w modal-actions
+              razem z Anuluj/Approve×2(+dopiski)/Otwórz było za ciasno nawet z
+              flex-wrap (screenshot Rafała: rozjeżdżało się nieczytelnie).
+              Punkt 2 (Partia 13) sam fallback zostaje, tylko inne miejsce. */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+            <button
+              type="button"
+              className="secondary-button"
+              style={{ padding: '4px 10px', fontSize: 12 }}
+              onClick={manualRefreshBalances}
+              disabled={refreshing || busy}
+              title="Wymuś ponowny odczyt salda i allowance"
+            >
               {refreshing ? 'Odświeżanie…' : '↻ odśwież salda'}
             </button>
+          </div>
+
+          <div className="modal-actions" style={{ flexWrap: 'wrap', rowGap: 8 }}>
             <button className="secondary-button" onClick={onClose} disabled={busy}>
               Anuluj
             </button>
             {needApprove0 && (
-              // Inline zamiast nowej klasy CSS — styles.css jest poza zakresem
-              // Partii 13 (tylko CockpitPositionActions.tsx + useCockpitActions.ts).
+              // Inline zamiast nowej klasy CSS — patrz uzasadnienie w
+              // useCockpitActions.ts (styles.css poza twardym zakresem Partii
+              // 13/13b, choć .modal-actions dostał flex-wrap inline tutaj i tak
+              // wystarcza bez dotykania pliku CSS).
               <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
                 <button className="action-button" disabled={approving !== null} onClick={() => approve(0)}>
                   {approving === 0 ? 'Approving…' : `Approve ${p.token0.symbol}`}
