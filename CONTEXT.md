@@ -142,6 +142,28 @@ pul produktowych przy generowaniu propozycji (cbBTC bez zakresu,
 modal "Doradca (brak danych)") — zakres wpisywany ręcznie; do
 obserwacji, czy po cyklach statystyk sugestie wracają.
 
+~późne popołudnie — NOGA B OTWARTA, PRODUKT W KOMPLECIE: Sonnet
+dostarczył Partię 13 (odebrana, spot-check OK), CC-Mac paczka
+zbiorcza, CC-Win wdrożył. Rafał otworzył WETH/cbBTC 0.05% Base,
+zakres 0.02236–0.04382 cbBTC/WETH (±40% geometrycznie), ~0.447 WETH
++ 0.01515 cbBTC (~$2,360). Modal PO fixach zadziałał wzorowo (auto-
+odświeżenie, samozamknięcie, toast). PO DRODZE złapane do PARTII 13b
+(TASKS-UI): rozjeżdżająca się stopka modala, fałszywa etykieta
+"(USD)" dla pul kwotowanych w WETH (pola są w cbBTC/WETH!), prefill
+z wąskim zakresem ze STAREJ propozycji z 25.08, która wróciła po
+restarcie (klasa "Odrzuć" — do wyjaśnienia z botem). STAN KOŃCOWY
+DNIA: cała transza 1 pracuje w produkcie hybrydowym — #5886957
+WETH/USDC ±50% (~$3,507) + WETH/cbBTC ±40% (~$2,360), reszta
+(~$150 WETH + kurz) w portfelu jako bufor. Bot w PROPONUJ pilnuje
+obu; zwężenie do wąskich zakresów zaproponuje po potwierdzonym
+flacie (gap dziś ~+14%, realnie ~2-3 tyg.). DO ZBUDOWANIA (następna
+sesja Fable): logika FLAT_ENTER/FLAT_EXIT w observerze (propozycje
+zwężenia/rozszerzenia wg |gap| 2%/5% z confirm), wyciszenie
+EXIT_TREND dla pul produktowych (hybryda świadomie trzyma betę),
+weryfikacja auto-close OPEN po otwarciu nogi B (propozycja miała
+zniknąć ≤5 min — Rafał obserwuje), finał diagnozy "Odrzuć" u CC-Win,
+PARTIA 13b u Sonneta.
+
 ### 2026-08-26 ~08:1x–09:0x — PRZEGLĄD TYGODNIOWY (Fable + Rafał) — komplet decyzji z DECYZJE-2026-08-26
 Brief poranny + pełny przegląd agendy, punkt po punkcie (AskUserQuestion),
 w kolejności 11a: σ → k → hUp → kapitał. WSZYSTKIE decyzje podjęte —

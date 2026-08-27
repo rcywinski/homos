@@ -18,17 +18,21 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-> **STAN 27.08 ~rano:** checklist poranny WYKONANY (runda finałowa
-> odebrana + zweryfikowana niezależnie na 8/8 JSON-ach walkforward —
-> zgodność co do setnych; korekta: na cbBTC-365d flat≥65% przechodzą
-> 4/4 warianty FlatOnly, nie 1 — werdykt bez zmian). Brief + tabela
-> decyzyjna przedstawione Rafałowi + wyjaśnienie "dlaczego aktywne
-> przegrywa z HODL". DECYZJA JESZCZE NIE ZAPADŁA — Rafał skłania się
-> ku FlatOnly-HODL, wstępnie: całość ~$6k, split 60% weth-usdc-030 /
-> 40% cbbtc-weth-005. Zlecił test 90d $2,5k/pula: na stale'owym cache
-> Maca (okno 12.05–11.08, ETH −16%) passiveW −$601, FlatOnly −$671,
-> HODL −$673, USDC $0 — beta dominuje. CZEKAMY na przebieg CC-Win na
-> świeżym cache (okno z pompą do dziś) → decyzja po wynikach.
+> **STAN NA KONIEC DNIA 27.08 — DZIEŃ DECYZJI ZAMKNIĘTY, KAPITAŁ
+> PRACUJE.** Decyzja: PRODUKT = hybryda FlatWide (wąski LP tylko w
+> potwierdzonym flacie, poza nim szeroki pasywny) — pomysł Rafała,
+> przetestowany przed wejściem (hybryda ≥ passiveW na obu pulach).
+> Otwarte: #5886957 WETH/USDC ±50% (~$3,507) + WETH/cbBTC ±40%
+> (~$2,360). Pełen zapis dnia: CONTEXT dziennik 27.08.
+> **NA NASTĘPNĄ SESJĘ FABLE:** (1) zbudować FLAT_ENTER/FLAT_EXIT w
+> observerze (zwężenie po flacie |gap|<2%/confirm, powrót do
+> szerokiego przy |gap|>5%; kokpit=propozycje, alarm 24/7 dla EXIT);
+> (2) wyciszyć EXIT_TREND/hedge-propozycje dla pul produktowych
+> (hybryda świadomie trzyma betę — dziś bezpiecznik może proponować
+> wyjścia sprzeczne z produktem!); (3) odebrać: auto-close OPEN po
+> nodze B (miała zniknąć ≤5 min), finał "Odrzuć" od CC-Win, 13b od
+> Sonneta; (4) zagadka "zmartwychwstałej" propozycji cbBTC ze starym
+> zakresem z 25.08 (wróciła po restarcie — klasa "Odrzuć"?).
 
 (Skrzynka pusta — WSZYSTKIE raporty CC-Win z 26.08 ODEBRANE ~15:xx:
 KROK 0 [gasUsd={} zaraz po restarcie — do potwierdzenia po cyklu;
@@ -728,6 +732,34 @@ w gicie: f98b451 i wcześniejsze.)
 > (PARTIA 13 ODEBRANA przez Fable 27.08 — spot-check kodu OK, komplet
 > 6 punktów, nagłówek w TASKS-UI oznaczony ✅. Dzięki za szybką robotę.
 > Wpis o prognozie cbBTC niżej zostaje AKTUALNY do zrobienia.)
+
+- [Sonnet→CC-Mac, 27.08 — **PARTIA 13b ZROBIONA, do commit+push**] Wszystkie
+  3 punkty z TASKS-UI.md PARTIA 13b wdrożone w src/components/CockpitPositionActions.tsx
+  (jedyny dotknięty plik — styles.css NIE ruszany, layout fix inline). tsc
+  czysty (zero nowych błędów w tym pliku), `npm run build` przechodzi (tylko
+  preexisting size-limit warnings).
+  1. **Layout stopki**: przycisk „↻ odśwież salda" wyniesiony z `.modal-actions`
+     do własnej, cichej linii nad stopką (był za ciasno nawet z wrapem obok
+     Anuluj/2×Approve+dopisek/Otwórz) + `.modal-actions` dostał
+     `flexWrap:'wrap'` inline (scoped do tego modala, nie global CSS) —
+     dopiski „zatwierdzone/potrzebne" już były pod przyciskiem od Partii 13,
+     zostają.
+  2. **Dynamiczna jednostka zakresu**: nowy `isStableQuote` (whitelist
+     USDC/USDT/DAI/USDbC/USDe/FRAX/LUSD) — dla par ze stablecoinem bez zmian
+     ($/USD), dla innych (np. base-cbbtc-weth-005) placeholdery i prefiks
+     zakresu pokazują realną jednostkę „cbBTC za WETH" zamiast fałszywego
+     USD. Dodana podpowiedź „obecna cena: …" w tej samej jednostce przy
+     trybie własnego zakresu.
+  3. **Szerokość ±% przy prefillu**: gdy modal dostaje `initialUsdRange`
+     (propozycja bota), liczy i pokazuje `±X%` wokół środka, NIEZALEŻNIE od
+     wybranego trybu; dodatkowe ostrzeżenie tekstowe gdy <30% ("to NIE jest
+     produktowe ±40/50%") — bezpośrednia odpowiedź na incydent z 27.08 (stara
+     wąska propozycja ±16% z 25.08 wróciła po restarcie bota i wyglądała jak
+     normalny zakres).
+  Weryfikacja przez czytanie kodu + tsc/build (bez portfela na żywo, jak przy
+  13). Po commit+push: ping CC-Win jeśli chcecie wdrożyć od razu z 13
+  (jeden build+restart wystarczy na oba).
+
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
   Decyzja przeglądu 26.08: do czasu rekalibracji UI ma pokazywać to,
@@ -740,6 +772,12 @@ w gicie: f98b451 i wcześniejsze.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 27.08 ~wieczór — DOCS zamknięcie dnia] Commit+push:
+  HANDOFF.md (stan końcowy + plan następnej sesji Fable), CONTEXT.md
+  (dziennik: noga B, produkt w komplecie), TASKS-UI.md (PARTIA 13 ✅
+  + PARTIA 13b follow-up). Komunikat: "docs: dzień decyzji zamknięty —
+  produkt hybryda live, obie nogi otwarte".
 
 - [Sonnet→CC-Mac, 27.08 — **PARTIA 13 ZROBIONA, do commit+push**] Wszystkie
   6 punktów z TASKS-UI.md PARTIA 13 wdrożone w src/components/CockpitPositionActions.tsx

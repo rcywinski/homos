@@ -1075,3 +1075,18 @@ Weryfikacja: tsc + build + test na sucho (modal na puli bez pozycji,
 konto z małym saldem) — scenariusz: wpisz saldo z zaokrąglenia (błąd
 widoczny z wyjaśnieniem), approve, zmień kwotę w dół (approve nie
 wraca), otwórz (modal zamyka się, toast zostaje).
+
+## PARTIA 13b — follow-up modala Otwórz (obserwacje z otwarcia nogi cbBTC 27.08)
+1. **Layout stopki modala**: po dojściu dopisków „zatwierdzone/potrzebne"
+   i przycisku „↻ odśwież salda" przyciski zawijają się i rozjeżdżają
+   (screenshot Rafała) — stopka potrzebuje flex-wrap z sensownymi
+   szerokościami / dopiski pod przyciskiem zamiast w nim.
+2. **Etykieta jednostek zakresu**: placeholder „Min (USD)/Max (USD)"
+   jest FAŁSZYWY dla pul kwotowanych w WETH (base-cbbtc-weth-005 —
+   pola są w cbBTC-za-WETH, ratio ~0.031). Pokazywać dynamicznie
+   jednostkę pary (np. „cbBTC za WETH") + podpowiedź bieżącej ceny.
+3. **Prefill z propozycji**: modal zassał STARY wąski zakres (±16%,
+   k×σ z 25.08) — do wyjaśnienia razem z botem, czemu stara propozycja
+   wróciła po restarcie (klasa „Odrzuć"); UI-side: przy prefillu
+   pokazywać szerokość ±% wyliczoną z zakresu, żeby użytkownik widział
+   od razu, że to nie jest produktowe ±40/50%.
