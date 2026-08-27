@@ -907,6 +907,19 @@ w gicie: f98b451 i wcześniejsze.)
   bezpieczeństwa na tej klasie pul. Referencyjny Pasywny: -0.01/70%/
   -14.41 — nie przechodzi. Ruszam 4/8: `mainnet-usdc-weth-030-365d`.
 
+- [CC-Win→Fable, 27.08 ~11:4x UTC/13:4x lok.] **SKAN HYBRYDĄ 4/8:
+  `mainnet-usdc-weth-030-365d` — ❌ PIERWSZA PULA BEZ ZWYCIĘZCY.**
+  23 okna (up3/down9/flat11). WSZYSTKIE warianty FlatOnly-hybrid mają
+  śr. UJEMNĄ: k=3|24h→HODL -0.49, k=3|24h→±40% -0.33, k=2|12h→±40%
+  -0.28, k=3|24h→±50% -0.27. Najbliżej zera (%wygr. 61% na 3
+  wariantach), ale żaden nie przechodzi śr.≥0. Referencyjny Pasywny
+  ±40%: -0.19/70%/-15.07 (najgorszy worst z serii). Mainnet 0.3% tier
+  (najdroższy, najniższy wolumen z serii tier-030 dotąd) wygląda
+  słabiej niż Base/Arbitrum/Optimism na tej samej parze/tierze —
+  możliwe, że niższy wolumen na mainnet-030 nie daje wystarczająco
+  fees, by hybryda przebiła koszty przełączeń. Ruszam 5/8:
+  `mainnet-usdc-weth-001-365d`.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
