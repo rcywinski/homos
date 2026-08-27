@@ -1,5 +1,14 @@
 # TASKS-ROTATION.md — backtest DYNAMICZNEJ rotacji między pulami (kierunek Rafała 26.08)
 
+> ## ⛔ ZAMKNIĘTY 26.08 wieczór — ROTACJA ODRZUCONA DANYMI.
+> Backtest zbudowany (backtest/rotation.ts) i policzony TEGO SAMEGO dnia
+> (CC-Win: 2 okna × 2 silniki, raporty w gicie 4c54c74/339d3f2). Werdykt:
+> na silniku produkcyjnym v1.1 nawet ORACLE znający przyszłe 7 dni
+> PRZEGRYWA ze 100% USDC na obu oknach; rotacja progowa najgorsza ze
+> wszystkich wariantów (−26…−30%); koszty przeskoków ($317–1890)
+> przebijają wartość wyboru puli. NIE budować automatycznej rotacji
+> między pulami ETH/stable. Plik zostaje jako zapis metody i wyniku.
+
 > Dyrektywa Rafała (26.08 ~13:xx): "trading powinien być bardziej
 > dynamiczny — nie zakładamy trzymania pary 2 lata; cały czas
 > przeglądamy rynek, wchodzimy/wychodzimy; para po dużym zysku /

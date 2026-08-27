@@ -18,6 +18,28 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+> **NA RANO 27.08 (checklist dla porannej sesji — dzień decyzji
+> produkt-albo-zamrożenie):**
+> 1. Odbiór RUNDY FINAŁOWEJ z nocy (raporty CC-Win niżej/w gicie):
+>    WF_SET=final ×8 + FP_SET=final ×4. Kryteria odczytu — DECYZJE
+>    "WERDYKT ~19:xx" i wpis CC-Win ~20:xx: wide-passive = fullperiod
+>    ≥ HODL 4/4 + worst>−3 + maxDD≈HODL; FlatOnly-HODL = flat ≥65%
+>    vsHODL, up/down REMIS (±1 p.p. = remis, nie przegrana!), worst>−3,
+>    fullperiod ≥ HODL. Zweryfikować niezależnie na JSON-ach.
+> 2. Brief + tabela decyzyjna dla Rafała → DECYZJA: produkt (który,
+>    ile kapitału, mechanika wejścia przez apkę) ALBO zamrożenie
+>    (bot→OBSERWUJ, przegląd za miesiąc). USTALENIE TWARDE z 26.08:
+>    bez dopisywania kolejnych eksperymentów po tej rundzie.
+> 3. Zaległe drobiazgi: (a) gasUsd w state.json liczbowo?; (b) test
+>    "Odrzuć" na żywo (klik Rafała → linia w observer.log); (c) nocny
+>    automat 05:30 — pierwszy przebieg z wykluczeniem cand-* (paczka
+>    #3) i po całym dniu ciężkiej pracy maszyny.
+> 4. Kontekst dnia 26.08 W CAŁOŚCI: CONTEXT dziennik (wpisy ~08:1x →
+>    ~20:xx) + DECYZJE-2026-08-26 (WYNIK PRZEGLĄDU + REWIZJA pkt 8 +
+>    WIECZORNY WERDYKT). Statusy TASKS-*: ROTATION=ZAMKNIĘTY
+>    (odrzucona), RECAL=w większości wykonany/wstrzymany (nagłówki
+>    w plikach), LIFECYCLE=czeka na decyzję o losie projektu.
+
 (Skrzynka pusta — WSZYSTKIE raporty CC-Win z 26.08 ODEBRANE ~15:xx:
 KROK 0 [gasUsd={} zaraz po restarcie — do potwierdzenia po cyklu;
 test "Odrzuć" przełożony], cała seria RECAL 9/9 z podsumowaniem
@@ -345,6 +367,13 @@ w gicie: f98b451 i wcześniejsze.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 26.08 ~21:xx — PACZKA #5 (ostatnia dziś, same
+  dokumenty)] Commit+push: HANDOFF.md (checklist NA RANO dla sesji
+  Fable 27.08), CONTEXT.md (skrót stanu na górze §1), TASKS-ROTATION.md
+  (nagłówek ZAMKNIĘTY — odrzucona danymi), TASKS-RECAL.md (nagłówek
+  STATUS — wykonane/wstrzymane). Komunikat: "docs: stan na rano 27.08
+  — checklist decyzji produkt-albo-zamrozenie".
 
 - [Fable→CC-Mac, 26.08 ~20:xx — PACZKA #4 (runda finałowa)] Commit+push:
   backtest/strategies.ts (passiveW ±w%; flatOnlyLP z opcją idle:'hodl' —

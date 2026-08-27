@@ -1,5 +1,14 @@
 # TASKS-RECAL.md — paczka rekalibracyjna po przeglądzie 26.08
 
+> ## STATUS 26.08 wieczór: W WIĘKSZOŚCI WYKONANY JEDNEGO DNIA / RESZTA WSTRZYMANA.
+> §1 σ grid15 ✓ (za flagą), §4 żywy gaz ✓, §5–§6 policzone (seria recal
+> 9/9 + hedge + next + rotacja — wszystko ZERO przejść bramki; raporty
+> w gicie, werdykt w DECYZJE "WIECZORNY WERDYKT"). §2 (histereza
+> czasowa w bot/paper/observer) i §3 (bramka 720d+recent90 w lejku) —
+> WSTRZYMANE do decyzji produkt-albo-zamrożenie 27.08 (runda finałowa
+> WF_SET=final liczy się w nocy 26/27). Nie podejmować prac z tego
+> pliku przed tą decyzją.
+
 > Źródło decyzji: DECYZJE-2026-08-26.md sekcja "WYNIK PRZEGLĄDU".
 > Zasada nadrzędna: v1.2 w produkcie ZAMROŻONY do wyników tej paczki;
 > paczka produkuje DANE + kandydata algoVersion **v2.0-rc**, decyzje o

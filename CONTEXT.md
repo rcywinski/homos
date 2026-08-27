@@ -6,6 +6,16 @@
 
 ## 1. Stan projektu — skrót
 
+- **⚡ STAN NA 27.08 RANO (aktualizacja 26.08 ~21:xx):** projekt w
+  PUNKCIE DECYZJI produkt-albo-zamrożenie. 26.08 = dzień przeglądu +
+  maraton testów (recal/hedge/flat-only/rotacja/parking — WSZYSTKO
+  zero przejść bramki; próg porzucenia formalnie osiągnięty; komplet w
+  DECYZJE-2026-08-26). W nocy 26/27 liczy się RUNDA FINAŁOWA
+  (WF_SET=final: wide-passive "HODL z yieldem" + FlatOnly-HODL wg
+  pomysłu Rafała) — kryteria odczytu i checklist porannej sesji w
+  HANDOFF @Fable. Kapitał (6 092 USDC, Base) czeka w self-custody.
+  Ustalenie twarde: po rundzie finałowej decyzja, bez kolejnych
+  eksperymentów.
 - **Faza:** planowanie zakończone → następna: Faza 0 (fundament matematyczny)
 - **Parametry:** kapitał $5k–$25k · sieć wybrana po backtestingu (kandydaci: Arbitrum, Base, mainnet) · hedging etapami (F4) · egzekucja pół-auto → full-auto
 - **Stary kod:** katalog `src/` = legacy. NIE budować na nim. Powód: matematyka v3 liczona na float (utrata precyzji >2^53, złe wzory liquidity bez aktualnej ceny, mieszanie jednostek raw/human), maskowane slippage 20–25%. Szczegóły: PLAN.md sekcja 2.
