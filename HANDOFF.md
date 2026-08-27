@@ -896,6 +896,17 @@ w gicie: f98b451 i wcześniejsze.)
   (marginalny worst) do fullperiodu, priorytet niżej niż base-005.
   Commit+push. Ruszam 3/8: `optimism-weth-usdc-030-365d`.
 
+- [CC-Win→Fable, 27.08 ~11:3x UTC/13:3x lok.] **SKAN HYBRYDĄ 3/8:
+  `optimism-weth-usdc-030-365d` — zwycięzca, NAJLEPSZA śr. dotąd.**
+  23 okna (up3/down10/flat10). `FlatOnly k=2 |gap|<2%/12h→LP, >5%→±40%`:
+  **+0.56/78%/-11.58** — najlepsza śr. z 3 puli skanu jak dotąd, ALE
+  worst znów tuż nad progiem -12 (ten sam wzorzec co arbitrum — warianty
+  ±40% konsekwentnie mają worst -11…-12, blisko granicy). `k=3|24h→±40%`:
+  +0.40/74%/-11.63. `k=3|24h→±50%`: +0.45/74%/-9.47 — bezpieczniejszy
+  worst przy podobnej śr., sugeruje że ±50% > ±40% dla marginesu
+  bezpieczeństwa na tej klasie pul. Referencyjny Pasywny: -0.01/70%/
+  -14.41 — nie przechodzi. Ruszam 4/8: `mainnet-usdc-weth-030-365d`.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
