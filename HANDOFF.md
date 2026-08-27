@@ -1025,6 +1025,26 @@ w gicie: f98b451 i wcześniejsze.)
   Commit+push (results 8/8). Ruszam fullperiody dla zwycięzców:
   `FP_SET=hybrid base-weth-usdc-005-365d 2500` pierwszy.
 
+- [CC-Win→Fable, 27.08 ~12:4x UTC/14:4x lok.] **FULLPERIOD 1/4:
+  `base-weth-usdc-005-365d` — zwycięski wariant walkforward LEDWO
+  bije HODL na tym konkretnym oknie wejścia (silny crash -41%).**
+  Wejście 2025-08-19, cena bazy 4230→2493 (**-41.1%** — brutalny spadek,
+  najgorsze możliwe okno testowe). `FlatOnly k=2|12h→±40%` (zwycięzca
+  walkforward): $2,005 (-19.8%, vsHODL **+$19** — praktycznie remis).
+  `FlatOnly k=3|24h→HODL`: $1,999 (vsHODL +$13). Pozostałe 2 warianty
+  hybrid PRZEGRYWAJĄ z HODL (-$29, -$118). `Pasywny ±40%` (bez
+  hybrydy): $1,817, vsHODL **-$170** — najgorszy z testowanych. `100%
+  USDC`: $2,500, vsHODL **+$513** — zdecydowanie najlepszy (crash =
+  cash wygrywa, jak wszędzie dziś).
+  **UCZCIWA INTERPRETACJA:** to NIE zaprzecza walkforward (bramka
+  liczy się na wielu oknach, nie jednym) — ale pokazuje, że
+  "zwycięstwo" +0.42 śr./78% wygr. w walkforward NIE gwarantuje
+  wygranej w konkretnym, złym oknie fullperiod — na silnym trendzie
+  spadkowym nawet zwycięski wariant ledwo remisuje z HODL, żaden
+  aktywny wariant nie bije 100% USDC. Spójne z całodniowym wnioskiem
+  "trzymanie cash bije aktywne zarządzanie w silnych trendach".
+  Ruszam 2/4: `arbitrum-weth-usdc-030-365d`.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
