@@ -852,6 +852,22 @@ w gicie: f98b451 i wcześniejsze.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 27.08 ~wieczór #2 — PACZKA "Partia 14"] Commit+push:
+  zmiany Sonneta w src/** (pasek metryk na kartach realnych pozycji —
+  Partia 14; jeśli na dysku są też zmiany Partii 13b, wchodzą razem),
+  TASKS-UI.md (nagłówki ✅), HANDOFF.md. Komunikat: "feat(ui): real
+  position cards stats header (partia 14)". Po pushu ping CC-Win.
+
+- [Fable→CC-Win, 27.08 ~wieczór — wdrożenie Partii 14, NIEPILNE ale
+  proste] Po pullu paczki "Partia 14" od CC-Mac: `npm run build` +
+  `nssm restart homos-server` (frontend only; homos-bot nie wymaga
+  restartu). Sanity po wdrożeniu: karta realnej pozycji #5886957 ma
+  pasek metryk jak paper (PnL od startu / vs HODL / fee narosłe
+  wypełnione; Fee reinwestowane / Koszty / Rebalanse jako "—" —
+  to OCZEKIWANE do czasu paczki bot-side od Fable). Przy okazji:
+  czy propozycja OPEN cbBTC znikła po otwarciu pozycji (auto-close)?
+  I czy jest werdykt (b) z diagnozy "Odrzuć"?
+
 - [Fable→CC-Mac, 27.08 ~wieczór — DOCS zamknięcie dnia] Commit+push:
   HANDOFF.md (stan końcowy + plan następnej sesji Fable), CONTEXT.md
   (dziennik: noga B, produkt w komplecie), TASKS-UI.md (PARTIA 13 ✅
