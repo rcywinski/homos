@@ -394,6 +394,27 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   // on save) — filter defensively anyway in case that ever changes.
   const pendingProposals = (bot.state?.proposals ?? []).filter((p) => p.status === 'open');
 
+  // Partia 15 (punkty 1+3): usePortfolio nie umie wycenić par bez nogi
+  // stable/ETH (np. cbBTC/WETH — patrz "Valuation note" w usePortfolio.ts,
+  // świadomie NIE ruszana w tej sesji, logika liczenia zostaje). Bot LICZY tę
+  // wycenę przez kurs referencyjny (BOT_POOLS.usdRefPoolId) i wystawia ją w
+  // /api/state.positions[].valueUsd — już wczytane w useBotApi.ts, zero
+  // nowych requestów. Mapa tokenId→valueUsd bota, reużywana niżej zarówno w
+  // nagłówku sumy jak i na kartach pozycji (fallback tylko gdy usePortfolio
+  // ma `null` — bot NIGDY nie nadpisuje realnej wyceny usePortfolio, gdy ta
+  // istnieje).
+  const botValueByTokenId = new Map<string, number>((bot.state?.positions ?? []).map((bp) => [bp.tokenId, bp.valueUsd]));
+  const botFallbackUsd = portfolio.positions.reduce((sum, p) => {
+    if (p.valueUsd !== null) return sum;
+    const v = botValueByTokenId.get(p.tokenId);
+    return typeof v === 'number' ? sum + v : sum;
+  }, 0);
+  const adjustedTotalUsd = portfolio.totalUsd + botFallbackUsd;
+  // Punkt 3: nota "*" (i pominięcie z sumy) zostaje TYLKO dla pozycji, których
+  // nie ma ani w wycenie usePortfolio, ani w state bota — nie dla każdej
+  // pozycji bez nogi stable/ETH jak dotąd (cbBTC/WETH ma teraz wycenę bota).
+  const stillUnknownValue = portfolio.positions.some((p) => p.valueUsd === null && !botValueByTokenId.has(p.tokenId));
+
   return (
     <div className="morning-cockpit">
       {/* 21.08 (decyzja Rafała): po usunięciu sekcji „Zarządzaj" kokpit JEST
@@ -437,8 +458,8 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
       <div className="morning-body">
           <div className="morning-summary">
             <div className="morning-stat">
-              <span className="morning-stat-value">{portfolio.loading ? '…' : fmtUsd(portfolio.totalUsd)}</span>
-              <span className="morning-stat-label">Wartość łączna{portfolio.hasUnknownValue ? '*' : ''}</span>
+              <span className="morning-stat-value">{portfolio.loading ? '…' : fmtUsd(adjustedTotalUsd)}</span>
+              <span className="morning-stat-label">Wartość łączna{stillUnknownValue ? '*' : ''}</span>
             </div>
             <div className="morning-stat">
               <span className="morning-stat-value">
@@ -452,9 +473,9 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
             </div>
           </div>
 
-          {portfolio.hasUnknownValue && (
+          {stillUnknownValue && (
             <div className="morning-note">
-              * pomija pozycje bez stabilnej/ETH nogi (np. cbBTC/WETH) — brak wiarygodnej wyceny USD bez dodatkowego feeda
+              * pomija pozycje bez wyceny — ani nogi stabilnej/ETH (usePortfolio), ani danych bota (/api/state) — brak wiarygodnej wyceny USD
             </div>
           )}
           {portfolio.error && <div className="morning-note morning-error">Błąd portfela: {portfolio.error}</div>}
@@ -727,17 +748,30 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                 const firstPosHistPoint = posHistorySorted[0] ?? null;
                 const lastPosHistPoint = posHistorySorted.length > 0 ? posHistorySorted[posHistorySorted.length - 1] : null;
                 const hodlSince = firstPosHistPoint?.ts ?? null;
-                // Partia 14: PnL od startu = valueUsd(teraz) − wartość z kotwicy
-                // (hodlUsd zapisany w PIERWSZEJ próbce — w tamtym momencie
-                // anchor został DOPIERO co zamrożony, więc hodlUsd tej próbki
-                // = a0*px0+a1*px1 policzone przy anchoredAt = rzeczywista
-                // startowa wartość pozycji, patrz bot/observer.ts:626-632).
-                // vs HODL 50/50 = valueUsd(teraz) − hodlUsd ostatniej próbki
-                // (benchmark "gdybyś trzymał te same tokeny bez LP", TASKS-UI
-                // Partia 14). Oba `null`, gdy brak historii/wyceny — pasek
-                // renderuje wtedy "—" zamiast fałszywego zera.
-                const pnlSinceStartUsd = p.valueUsd !== null && firstPosHistPoint ? p.valueUsd - firstPosHistPoint.hodlUsd : null;
-                const vsHodlUsd = p.valueUsd !== null && lastPosHistPoint ? p.valueUsd - lastPosHistPoint.hodlUsd : null;
+                // Punkt 1 (Partia 15): fallback wyceny karty na dane bota, gdy
+                // usePortfolio nie potrafi wycenić pozycji w USD (brak nogi
+                // stable/ETH — np. cbBTC/WETH). Bot liczy USD przez kurs
+                // referencyjny, niezależnie od tego ograniczenia UI.
+                const botLivePos = botValueByTokenId.get(p.tokenId);
+                const cardValueUsd = p.valueUsd ?? botLivePos ?? null;
+                const isBotValuation = p.valueUsd === null && botLivePos !== undefined;
+                // Partia 14/15 (punkt 2): PnL od startu = wartość teraz −
+                // wartość z kotwicy (hodlUsd zapisany w PIERWSZEJ próbce — w
+                // tamtym momencie anchor został DOPIERO co zamrożony, więc
+                // hodlUsd tej próbki = a0*px0+a1*px1 policzone przy anchoredAt
+                // = rzeczywista startowa wartość pozycji, patrz
+                // bot/observer.ts:626-632). vs HODL 50/50 = wartość teraz −
+                // hodlUsd ostatniej próbki (benchmark "gdybyś trzymał te same
+                // tokeny bez LP"). "Wartość teraz" = p.valueUsd, a dla pozycji
+                // bez wyceny usePortfolio (punkt 2, Partia 15) — equityUsd
+                // OSTATNIEJ próbki positions-history (to samo pole co
+                // bot.state.positions[].valueUsd, ta sama liczba z observera,
+                // tylko z próbki zamiast z live state — obie już w USD, bez
+                // dodatkowych requestów). Oba `null`, gdy naprawdę brak
+                // jakiejkolwiek wyceny/historii — pasek renderuje wtedy "—".
+                const nowValueUsdForStats = p.valueUsd ?? lastPosHistPoint?.equityUsd ?? null;
+                const pnlSinceStartUsd = nowValueUsdForStats !== null && firstPosHistPoint ? nowValueUsdForStats - firstPosHistPoint.hodlUsd : null;
+                const vsHodlUsd = nowValueUsdForStats !== null && lastPosHistPoint ? nowValueUsdForStats - lastPosHistPoint.hodlUsd : null;
 
                 return (
                   <div key={`${p.chainId}-${p.tokenId}`} className="cockpit-position-card">
@@ -751,7 +785,17 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                           <span title={ADVICE_TITLE[p.advice] ?? p.advice}> {ADVICE_ICON[p.advice]}</span>
                         )}
                       </span>
-                      <span className="muted">{p.valueUsd !== null ? fmtUsd(p.valueUsd) : '— (bez wyceny)'}</span>
+                      <span className="muted">
+                        {cardValueUsd !== null ? fmtUsd(cardValueUsd) : '— (bez wyceny)'}
+                        {isBotValuation && (
+                          <span
+                            title="usePortfolio nie ma bezpośredniej ścieżki wyceny dla tej pary (brak nogi stabilnej/ETH) — liczba pochodzi z bota, który liczy USD przez kurs referencyjny (BOT_POOLS.usdRefPoolId). Odświeżanie ≤5 min."
+                          >
+                            {' '}
+                            (wycena bota)
+                          </span>
+                        )}
+                      </span>
                     </div>
                     {/* Licznik wypadnięcia dla REALNEJ pozycji (prośba Rafała 21.08).
                         Różnica wobec paper: bot NIE czeka tu 24h — propozycję
