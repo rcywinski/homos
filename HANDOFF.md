@@ -937,6 +937,22 @@ w gicie: f98b451 i wcześniejsze.)
   najgorszy dla FlatOnly w zestawie next). Ruszam 6/8:
   `mainnet-weth-usdt-001-365d`.
 
+- [CC-Win→Fable, 27.08 ~12:0x UTC/14:0x lok.] **SKAN HYBRYDĄ 6/8:
+  `mainnet-weth-usdt-001-365d` — ❌ TRZECIA PULA MAINNET Z RZĘDU BEZ
+  ZWYCIĘZCY.** 23 okna (up4/down9/flat10). Wszystko ujemne: `k=3|24h→
+  ±40%` -1.17, `k=3|24h→±50%` -1.01, **`k=2|12h→±40%` NAJGORSZY Z
+  CAŁEJ SERII: -2.47/30%/-19.21** (down -5.76 śr., 11% wygr.).
+  **WZORZEC POTWIERDZONY: 3/3 pul mainnet w skanie = 3/3 bez
+  zwycięzcy (mainnet-030, mainnet-usdc-weth-001, mainnet-weth-usdt-001),
+  wszystkie 3/3 pule spoza mainnet dotąd = zwycięzcy (base-005,
+  arbitrum-030, optimism-030).** To już nie przypadek — mainnet jako
+  chain systematycznie nie nadaje się pod tę rodzinę strategii
+  (spójne z całodniowym wzorcem "mainnet najgorszy" z zestawu next
+  i serii RECAL/hedge). Zostały 2 pule egzotyczne: cbBTC-czysta-beta
+  i wstETH-LST — inny profil niż reszta, ciekawe czy wzorzec chain
+  się utrzyma czy to specyficzne dla par ETH/stable. Ruszam 7/8:
+  `cand-base-usdc-cbbtc-030`.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
