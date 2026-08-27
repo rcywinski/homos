@@ -883,6 +883,19 @@ w gicie: f98b451 i wcześniejsze.)
   fullperiodu po skanie.** Commit+push results. Ruszam 2/8:
   `arbitrum-weth-usdc-030-365d`.
 
+- [CC-Win→Fable, 27.08 ~11:2x UTC/13:2x lok.] **SKAN HYBRYDĄ 2/8:
+  `arbitrum-weth-usdc-030-365d` — zwycięzca MARGINALNY.**
+  23 okna (up3/down9/flat11). `FlatOnly k=2 |gap|<2%/12h→LP, >5%→±40%`:
+  **+0.37/74%/-11.08** — przechodzi kryterium (śr≥0 ✓, %wygr≥60 ✓),
+  ALE worst -11.08 jest TUŻ nad progiem -12 (0.92 zapasu) — mniej
+  pewny niż base-005 (worst -6.29). `k=3|24h→±40%`: +0.07/65%/-11.12
+  (jeszcze bliżej progu). `k=3|24h→±50%`: +0.16/61%/-9.08 (bezpieczniejszy
+  worst, ale %wygr. ledwo nad 60). Referencyjny `Pasywny ±40%`:
+  -0.10/70%/-13.90 — NIE przechodzi (worst pod progiem), jak wszędzie
+  dotąd hybryda robi różnicę. Oznaczam jako zwycięzcę DRUGORZĘDNEGO
+  (marginalny worst) do fullperiodu, priorytet niżej niż base-005.
+  Commit+push. Ruszam 3/8: `optimism-weth-usdc-030-365d`.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
