@@ -862,6 +862,277 @@ w gicie: f98b451 i wcześniejsze.)
   tylko drukuje stdout, jak fullperiod). Ruszam KOLEJKĘ B: skan
   hybrydą 8 pul, zaczynam od `base-weth-usdc-005-365d`.
 
+- [CC-Win→Fable, 27.08 ~11:1x UTC/13:1x lok.] **SKAN HYBRYDĄ 1/8:
+  `base-weth-usdc-005-365d` — ⭐ ZWYCIĘZCA, PRZECHODZI KRYTERIUM.**
+  (Odniesienie: base-030 śr −0.16/70%/worst −11.0; cbBTC +0.48/65%/
+  −1.14; szukamy śr.≥0, %wygr.≥60, worst≥−12.)
+  23 okna (up4/down10/flat9). Trzy warianty FlatOnly-hybrid PRZECHODZĄ:
+  - **`FlatOnly k=2 |gap|<2%/12h→LP, >5%→±40%` — NAJLEPSZY:
+    +0.42/78%/-6.29** (up +1.09/75%, down -0.54/60%, flat +1.18/100%,
+    recent90 +0.73/75%) — bije REFERENCYJNE base-030 na obu metrykach
+    (śr. i %wygr.), worst gorszy niż cbBTC ale wciąż dobrze pod progiem
+    -12.
+  - `FlatOnly k=3 |gap|<2%/24h→LP, >5%→±50%`: +0.33/65%/-4.48 (worst
+    NAJLEPSZY z trójki zwycięzców).
+  - `FlatOnly k=3 |gap|<2%/24h→LP, >5%→±40%`: +0.28/74%/-6.39.
+  Referencyjny `Pasywny ±40%` (bez hybrydy): -0.20/74%/-13.90 — NIE
+  przechodzi (worst poniżej -12) — to hybryda robi różnicę, nie sam
+  szeroki pasywny na tej puli.
+  **base-weth-usdc-005 (tańszy tier 0.05% siostrzanej pary do naszej
+  realnej base-030 0.3%) WYGLĄDA NA MOCNEGO KANDYDATA — oznaczam do
+  fullperiodu po skanie.** Commit+push results. Ruszam 2/8:
+  `arbitrum-weth-usdc-030-365d`.
+
+- [CC-Win→Fable, 27.08 ~11:2x UTC/13:2x lok.] **SKAN HYBRYDĄ 2/8:
+  `arbitrum-weth-usdc-030-365d` — zwycięzca MARGINALNY.**
+  23 okna (up3/down9/flat11). `FlatOnly k=2 |gap|<2%/12h→LP, >5%→±40%`:
+  **+0.37/74%/-11.08** — przechodzi kryterium (śr≥0 ✓, %wygr≥60 ✓),
+  ALE worst -11.08 jest TUŻ nad progiem -12 (0.92 zapasu) — mniej
+  pewny niż base-005 (worst -6.29). `k=3|24h→±40%`: +0.07/65%/-11.12
+  (jeszcze bliżej progu). `k=3|24h→±50%`: +0.16/61%/-9.08 (bezpieczniejszy
+  worst, ale %wygr. ledwo nad 60). Referencyjny `Pasywny ±40%`:
+  -0.10/70%/-13.90 — NIE przechodzi (worst pod progiem), jak wszędzie
+  dotąd hybryda robi różnicę. Oznaczam jako zwycięzcę DRUGORZĘDNEGO
+  (marginalny worst) do fullperiodu, priorytet niżej niż base-005.
+  Commit+push. Ruszam 3/8: `optimism-weth-usdc-030-365d`.
+
+- [CC-Win→Fable, 27.08 ~11:3x UTC/13:3x lok.] **SKAN HYBRYDĄ 3/8:
+  `optimism-weth-usdc-030-365d` — zwycięzca, NAJLEPSZA śr. dotąd.**
+  23 okna (up3/down10/flat10). `FlatOnly k=2 |gap|<2%/12h→LP, >5%→±40%`:
+  **+0.56/78%/-11.58** — najlepsza śr. z 3 puli skanu jak dotąd, ALE
+  worst znów tuż nad progiem -12 (ten sam wzorzec co arbitrum — warianty
+  ±40% konsekwentnie mają worst -11…-12, blisko granicy). `k=3|24h→±40%`:
+  +0.40/74%/-11.63. `k=3|24h→±50%`: +0.45/74%/-9.47 — bezpieczniejszy
+  worst przy podobnej śr., sugeruje że ±50% > ±40% dla marginesu
+  bezpieczeństwa na tej klasie pul. Referencyjny Pasywny: -0.01/70%/
+  -14.41 — nie przechodzi. Ruszam 4/8: `mainnet-usdc-weth-030-365d`.
+
+- [CC-Win→Fable, 27.08 ~11:4x UTC/13:4x lok.] **SKAN HYBRYDĄ 4/8:
+  `mainnet-usdc-weth-030-365d` — ❌ PIERWSZA PULA BEZ ZWYCIĘZCY.**
+  23 okna (up3/down9/flat11). WSZYSTKIE warianty FlatOnly-hybrid mają
+  śr. UJEMNĄ: k=3|24h→HODL -0.49, k=3|24h→±40% -0.33, k=2|12h→±40%
+  -0.28, k=3|24h→±50% -0.27. Najbliżej zera (%wygr. 61% na 3
+  wariantach), ale żaden nie przechodzi śr.≥0. Referencyjny Pasywny
+  ±40%: -0.19/70%/-15.07 (najgorszy worst z serii). Mainnet 0.3% tier
+  (najdroższy, najniższy wolumen z serii tier-030 dotąd) wygląda
+  słabiej niż Base/Arbitrum/Optimism na tej samej parze/tierze —
+  możliwe, że niższy wolumen na mainnet-030 nie daje wystarczająco
+  fees, by hybryda przebiła koszty przełączeń. Ruszam 5/8:
+  `mainnet-usdc-weth-001-365d`.
+
+- [CC-Win→Fable, 27.08 ~11:5x UTC/13:5x lok.] **SKAN HYBRYDĄ 5/8:
+  `mainnet-usdc-weth-001-365d` — ❌ DRUGA PULA BEZ ZWYCIĘZCY, NAJGORSZY
+  WYNIK SERII.** 23 okna (up3/down9/flat11), 5.77M swapów (0.01% tier
+  — najwyższy wolumen ze wszystkich testowanych dotąd, a mimo to
+  najgorszy wynik). Wszystkie warianty ujemne: `k=3|24h→HODL` -0.11
+  (ale %wygr. 0%!), `k=3|24h→±40%` -0.66, `k=3|24h→±50%` -0.55,
+  **`k=2|12h→±40%` DRAMATYCZNIE ZŁY: -2.32/39%/-15.29** (down regime
+  -4.41 śr., recent90 -2.87 — najgorszy wynik z całego skanu). Down
+  regime na tej puli ma tylko 11% wygr. wszędzie (vs 20-50% na
+  pozostałych) — coś specyficznego w mikrostrukturze 0.01% tier na
+  mainnet sprawia, że hybryda szkodzi zamiast pomagać w trendzie
+  spadkowym. **2/5 dotąd bez zwycięzcy, obie na mainnet** — wzorzec:
+  mainnet (droższy gaz, inna dynamika) systematycznie gorszy dla tej
+  rodziny strategii, spójne z resztą dzisiejszych wniosków (mainnet
+  najgorszy dla FlatOnly w zestawie next). Ruszam 6/8:
+  `mainnet-weth-usdt-001-365d`.
+
+- [CC-Win→Fable, 27.08 ~12:0x UTC/14:0x lok.] **SKAN HYBRYDĄ 6/8:
+  `mainnet-weth-usdt-001-365d` — ❌ TRZECIA PULA MAINNET Z RZĘDU BEZ
+  ZWYCIĘZCY.** 23 okna (up4/down9/flat10). Wszystko ujemne: `k=3|24h→
+  ±40%` -1.17, `k=3|24h→±50%` -1.01, **`k=2|12h→±40%` NAJGORSZY Z
+  CAŁEJ SERII: -2.47/30%/-19.21** (down -5.76 śr., 11% wygr.).
+  **WZORZEC POTWIERDZONY: 3/3 pul mainnet w skanie = 3/3 bez
+  zwycięzcy (mainnet-030, mainnet-usdc-weth-001, mainnet-weth-usdt-001),
+  wszystkie 3/3 pule spoza mainnet dotąd = zwycięzcy (base-005,
+  arbitrum-030, optimism-030).** To już nie przypadek — mainnet jako
+  chain systematycznie nie nadaje się pod tę rodzinę strategii
+  (spójne z całodniowym wzorcem "mainnet najgorszy" z zestawu next
+  i serii RECAL/hedge). Zostały 2 pule egzotyczne: cbBTC-czysta-beta
+  i wstETH-LST — inny profil niż reszta, ciekawe czy wzorzec chain
+  się utrzyma czy to specyficzne dla par ETH/stable. Ruszam 7/8:
+  `cand-base-usdc-cbbtc-030`.
+
+- [CC-Win→Fable, 27.08 ~12:1x UTC/14:1x lok.] **SKAN HYBRYDĄ 7/8:
+  `cand-base-usdc-cbbtc-030` — zwycięzca MARGINALNY (ledwo), ALE
+  CIEKAWOSTKA: to `Pasywny ±40%` (BEZ hybrydy) wygrywa, nie FlatOnly.**
+  23 okna (up3/down7/flat13, kandydat USDC-CBBTC — czysta beta BTC).
+  `Pasywny ±40%` (referencyjny): **+0.01/61%/-3.90** — śr. ledwo nad
+  zerem, %wygr. ledwo nad progiem 60, ALE **najlepszy worst z całego
+  skanu 7/7 pul (-3.90, reszta miała -6…-19)**. Wszystkie 4 warianty
+  FlatOnly-hybrid SĄ GORSZE od gołego Pasywnego tutaj: -0.51 do -0.19
+  śr. — na tej puli zwężanie w flat SZKODZI zamiast pomagać (unikalny
+  wzorzec w całym skanie — wszędzie indziej FlatOnly bije Pasywny).
+  Base bazowa CBBTC-USDC ma dużo mniej ekstremalne okna (worst regime
+  -21% vs -37…-41% na ETH/stable pulach) — łagodniejszy profil jak
+  cbBTC/WETH cały dzień. Ruszam OSTATNI, 8/8: `mainnet-wsteth-weth-001`.
+
+- [CC-Win→Fable, 27.08 ~12:2x UTC/14:2x lok.] **SKAN HYBRYDĄ 8/8
+  (OSTATNI): `mainnet-wsteth-weth-001` — ❌ 4. MAINNET Z RZĘDU BEZ
+  ZWYCIĘZCY, degenerat skrajny.** 23 okna — **WSZYSTKIE 23 sklasyfikowane
+  jako "flat"** (wstETH/WETH nie odchyla się od parytetu >10% praktycznie
+  nigdy — zmiana ceny w oknach -0.04%…-0.39%, śladowa). `Pasywny ±40%`:
+  +0.00/57%/~0 (liczby bez znaczenia — brak realnej bety do złapania).
+  **FlatOnly WSZYSTKIE warianty KATASTROFALNE: -1.11 do -1.30 śr.,
+  0% WYGR. NA WSZYSTKICH 4 WARIANTACH, worst do -10.54** — mimo że
+  pula jest praktycznie zawsze "we flat" z definicji! Detektor gap/HL
+  prawdopodobnie łapie szum mikrostruktury (nie realny trend) i
+  przełącza się bez końca, płacąc koszty przejść bez żadnej korzyści
+  — na tak stabilnej parze LST każde przełączenie to czysta strata.
+  **WAŻNA LEKCJA DLA FLAT_ENTER/FLAT_EXIT: detektor NIE nadaje się do
+  par o strukturalnie niskiej zmienności (LST/LST, stable/stable) —
+  tam "flat" nie jest sygnałem wartym reakcji, to CAŁY CZAS stan
+  bazowy, a przełączanie tylko generuje koszty.**
+
+  ═══ **PODSUMOWANIE CAŁEGO SKANU HYBRYDĄ (8/8 pul, WF_SET=hybrid
+  SIGMA_MODE=grid15)** ═══
+
+  ```
+  #  pula                            werdykt      najlepszy wariant           śr.    %wygr.  worst
+  1  base-weth-usdc-005-365d         ⭐ SILNY     k=2|12h→±40%              +0.42    78%    -6.29
+  2  arbitrum-weth-usdc-030-365d     ✓ marginalny k=2|12h→±40%              +0.37    74%   -11.08
+  3  optimism-weth-usdc-030-365d     ⭐ SILNY     k=2|12h→±40%              +0.56    78%   -11.58
+  4  mainnet-usdc-weth-030-365d      ❌ FAIL      (wszystkie ujemne)         —        —      —
+  5  mainnet-usdc-weth-001-365d      ❌ FAIL      (najgorszy: -2.32/39%)     —        —      —
+  6  mainnet-weth-usdt-001-365d      ❌ FAIL      (najgorszy: -2.47/30%)     —        —      —
+  7  cand-base-usdc-cbbtc-030        ~ marginalny Pasywny ±40% (NIE hybryda) +0.01    61%    -3.90
+  8  mainnet-wsteth-weth-001         ❌❌ KATASTR. (LST, detektor łapie szum)  —        —      —
+  ```
+
+  **WNIOSKI KLUCZOWE:**
+  1. **Chain > para/tier jako predyktor sukcesu: 4/4 pule mainnet
+     ODPADAJĄ (w tym jedna katastrofalnie), 3/3 pule spoza mainnet
+     (Base/Arbitrum/Optimism) WYGRYWAJĄ.** To najsilniejszy wzorzec
+     całego dnia analiz — spójny z zestawem `next` (mainnet najgorszy
+     dla FlatOnly) i seriami RECAL/hedge z wcześniej. Hipoteza: wyższy
+     gaz/inna dynamika mikrostruktury na mainnet szkodzi strategiom z
+     częstym przełączaniem zakresu.
+  2. **Wzorzec `±40%` z `k=2, |gap|<2%, potwierdzenie 12h` wygrywa
+     konsekwentnie na WSZYSTKICH 3 zwycięskich pulach** — ten sam
+     zestaw parametrów (nie różne per pula) daje najlepszy wynik
+     wszędzie, gdzie w ogóle coś wygrywa. To dobry sygnał, że
+     parametry nie są przeoptymalizowane pod jedną pulę.
+  3. **cbBTC-candidate to WYJĄTEK — jedyna pula gdzie FlatOnly-hybrid
+     jest GORSZY niż goły Pasywny** (zwężanie szkodzi). Ma też
+     najlepszy worst całego skanu (-3.90) przez gołego Pasywnego —
+     spójne z resztą dzisiejszej analizy że cbBTC ma łagodniejszy
+     profil ogólnie.
+  4. **LST (wstETH/WETH) to degenerat do wykluczenia z tej rodziny
+     strategii całkowicie** — ostrzeżenie wprost dla Twojego punktu
+     (1) na następną sesję (FLAT_ENTER/FLAT_EXIT w observerze):
+     wyklucz pary o strukturalnie niskiej zmienności z detektora, albo
+     dodaj próg minimalnej zmienności bazowej przed aktywacją.
+  Commit+push (results 8/8). Ruszam fullperiody dla zwycięzców:
+  `FP_SET=hybrid base-weth-usdc-005-365d 2500` pierwszy.
+
+- [CC-Win→Fable, 27.08 ~12:4x UTC/14:4x lok.] **FULLPERIOD 1/4:
+  `base-weth-usdc-005-365d` — zwycięski wariant walkforward LEDWO
+  bije HODL na tym konkretnym oknie wejścia (silny crash -41%).**
+  Wejście 2025-08-19, cena bazy 4230→2493 (**-41.1%** — brutalny spadek,
+  najgorsze możliwe okno testowe). `FlatOnly k=2|12h→±40%` (zwycięzca
+  walkforward): $2,005 (-19.8%, vsHODL **+$19** — praktycznie remis).
+  `FlatOnly k=3|24h→HODL`: $1,999 (vsHODL +$13). Pozostałe 2 warianty
+  hybrid PRZEGRYWAJĄ z HODL (-$29, -$118). `Pasywny ±40%` (bez
+  hybrydy): $1,817, vsHODL **-$170** — najgorszy z testowanych. `100%
+  USDC`: $2,500, vsHODL **+$513** — zdecydowanie najlepszy (crash =
+  cash wygrywa, jak wszędzie dziś).
+  **UCZCIWA INTERPRETACJA:** to NIE zaprzecza walkforward (bramka
+  liczy się na wielu oknach, nie jednym) — ale pokazuje, że
+  "zwycięstwo" +0.42 śr./78% wygr. w walkforward NIE gwarantuje
+  wygranej w konkretnym, złym oknie fullperiod — na silnym trendzie
+  spadkowym nawet zwycięski wariant ledwo remisuje z HODL, żaden
+  aktywny wariant nie bije 100% USDC. Spójne z całodniowym wnioskiem
+  "trzymanie cash bije aktywne zarządzanie w silnych trendach".
+  Ruszam 2/4: `arbitrum-weth-usdc-030-365d`.
+
+- [CC-Win→Fable, 27.08 ~13:0x UTC/15:0x lok.] **FULLPERIOD 2/4:
+  `arbitrum-weth-usdc-030-365d` — IDENTYCZNY WZORZEC co base-005.**
+  Ten sam kalendarz wejścia (2025-08-19, cena bazy -41.1% — dane z
+  różnych chainów dla tej samej pary ETH/USDC dają to samo okno
+  czasowe/cenowe). `FlatOnly k=2|12h→±40%`: $2,036, vsHODL **+$49**
+  (marginalny remis, trochę lepszy niż base-005 +$19). `100% USDC`:
+  +$514 vs HODL, znów zdecydowanie najlepszy. `Pasywny ±40%`: -$154
+  vs HODL, najgorszy. Wzorzec z pkt 1 się powtarza 1:1 — silny crash
+  = cash wygrywa, aktywne warianty ledwo remisują. Ruszam 3/4:
+  `optimism-weth-usdc-030-365d`.
+
+- [CC-Win→Fable, 27.08 ~13:0x UTC/15:0x lok.] **FULLPERIOD 3/4:
+  `optimism-weth-usdc-030-365d` — TRZECI RAZ TEN SAM WZORZEC.**
+  Cena bazy -41.4% (to samo okno kalendarzowe co 1+2). `FlatOnly
+  k=2|12h→±40%`: $2,058, vsHODL **+$75** (najlepszy remis z 3 pul —
+  spójne z tym, że optimism miał też najlepszą śr. w walkforward).
+  `100% USDC`: +$517 vs HODL. Wzorzec 3/3 IDENTYCZNY: zwycięzca
+  walkforward zawsze ledwo bije HODL (+$19/+$49/+$75, rosnąco z
+  śr. walkforward), USDC zawsze najlepszy, Pasywny zawsze najgorszy.
+  Ruszam OSTATNI, 4/4: `cand-base-usdc-cbbtc-030` (uwaga: tu w
+  walkforward wygrywał goły Pasywny, nie hybryda — ciekawe czy się
+  potwierdzi).
+
+- [CC-Win→Fable, 27.08 ~13:1x UTC/15:1x lok.] **FULLPERIOD 4/4
+  (OSTATNI): `cand-base-usdc-cbbtc-030` — NIESPODZIANKA: walkforward
+  "zwycięzca" (Pasywny) TU PRZEGRYWA z HODL.** Wejście 2025-08-26,
+  cena bazy -28.0%. `Pasywny ±40%` (zwycięzca walkforward): $2,110,
+  vsHODL **-$40** — PRZEGRYWA na tym konkretnym oknie! Za to 2
+  warianty FlatOnly-hybrid (które w walkforward BYŁY GORSZE od
+  Pasywnego) tu LEDWO WYGRYWAJĄ: `k=3|24h→±50%` +$8, `k=3|24h→±40%`
+  +$4 — mikroskopijne, ale dodatnie. `100% USDC`: +$351 vs HODL,
+  znów najlepszy. **LEKCJA: to CZWARTY z rzędu przypadek pokazujący,
+  że walkforward-zwycięzca i fullperiod-zwycięzca to RÓŻNE rzeczy na
+  pojedynczym oknie** — bramka wielookienna mierzy uśrednioną
+  odporność, nie gwarantuje wygranej w konkretnym oknie kalendarzowym.
+
+  ═══ **PODSUMOWANIE CAŁEJ SESJI WIECZORNEJ 27.08 (od pull ee21330 do
+  teraz: 3 flatwindows + 8 skan hybrydą + 4 fullperiody = 15
+  przebiegów)** ═══
+
+  **A. FLATWINDOWS 720d:** cbBTC ma 4-5× wyższy ΣEV/rok niż base-030
+  (spójne z decyzją węższego NARROW na cbBTC). **Sweep: CONFIRM_H=12
+  (zamiast 24h) prawie PODWAJA ΣEV** ($297 vs $92, +223%) bez utraty
+  jakości — najsilniejsza rekomendacja parametryczna wieczoru dla
+  Twojego FLAT_ENTER/FLAT_EXIT. HL_D=10 jedyny wariant na minusie —
+  do odrzucenia.
+
+  **B. SKAN HYBRYDĄ (8 pul):** **Chain silniejszym predyktorem niż
+  para/tier** — 4/4 pule mainnet odpadają (jedna katastrofalnie:
+  wstETH/WETH, LST-degenerat gdzie detektor łapie szum przy zerowej
+  zmienności — WAŻNE OSTRZEŻENIE dla FLAT_ENTER: wyklucz pary o
+  strukturalnie niskiej zmienności), wszystkie 3 pule spoza mainnet
+  (base-005, arbitrum-030, optimism-030) wygrywają TYM SAMYM zestawem
+  parametrów (k=2, gap<2%, confirm 12h, →±40%) — dobry znak, że to
+  nie przeoptymalizowanie pod jedną pulę. cbBTC-candidate wyjątkiem:
+  tam Pasywny bije hybrydę (zwężanie szkodzi).
+
+  **C. FULLPERIOD dla zwycięzców (4 przebiegi):** WSZYSTKIE 4 trafiły
+  na okna z silnym trendem spadkowym (-28% do -41.4%) — **za każdym
+  razem 100% USDC wygrywał zdecydowanie (+$351 do +$517 vs HODL), a
+  "zwycięski" wariant walkforward tylko LEDWO remisował z HODL
+  (+$4 do +$75) lub nawet PRZEGRYWAŁ (cbBTC-candidate, -$40).** To
+  NIE unieważnia walkforward (bramka na wielu oknach ma inny cel niż
+  fullperiod jednego okna) — ale pokazuje surowo, że "wygrana w
+  walkforward" ≠ "wygrana w konkretnym oknie fullperiod", zwłaszcza
+  gdy okno akurat trafia na silny trend. Wszystkie 4 fullperiody
+  wylądowały na tym samym niedawnym crashu (~sierpień 2025) — czysty
+  przypadek doboru okna 365d z dzisiejszą datą końcową, nie błąd
+  metody.
+
+  **REKOMENDACJE NA JUTRO:**
+  1. FLAT_ENTER/FLAT_EXIT: rozważ CONFIRM_H=12 (nie 24h) — potwierdzone
+     dwukrotnie (flatwindows sweep + niejawnie przez skan hybrydą,
+     gdzie k=2|12h konsekwentnie bije k=3|24h).
+  2. Wyklucz pary o niskiej zmienności strukturalnej (LST, stable/stable)
+     z FLAT_ENTER detektora — mainnet-wsteth-weth-001 to twardy dowód
+     na katastrofę bez tego zabezpieczenia.
+  3. base-weth-usdc-005 (tańszy tier siostrzanej pary do naszej
+     realnej 030) i optimism-weth-usdc-030 to najmocniejsi kandydaci
+     ROZSZERZENIA produktu z dzisiejszego skanu — oba przeszły
+     walkforward z komfortowym marginesem i tym samym zestawem
+     parametrów co reszta zwycięzców.
+  4. mainnet jako chain do wykluczenia z przyszłych skanów tej
+     rodziny strategii — 4/4 fail dziś, spójne z całodniowym wzorcem.
+  Commit+push (bez JSON — fullperiod nie zapisuje plików). **CAŁA
+  SESJA WIECZORNA ZAMKNIĘTA.** Rafał niedostępny — czekam na dalsze
+  instrukcje lub nowe zadania w HANDOFF.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
