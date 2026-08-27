@@ -212,6 +212,26 @@ export function suggestRange(
   return { tickLower: lo, tickUpper: hi, widthPct: w * 100, priceLower: toPrice(lo), priceUpper: toPrice(hi) };
 }
 
+/** PRODUKT 27.08 (hybryda FlatWide): zakres o STAŁEJ szerokości ±widthPct%
+ *  wokół bieżącej ceny (postura idle = szeroki pasywny LP), zamiast k×σ.
+ *  Ta sama matematyka ticków co suggestRange, w zadane z góry. */
+export function suggestFixedRange(
+  stats: PoolStats,
+  feeAmount: FeeAmount,
+  d0: number,
+  d1: number,
+  widthPct: number
+): RangeSuggestion {
+  const spacing = TICK_SPACINGS[feeAmount];
+  const w = widthPct / 100;
+  const dTicks = Math.round(Math.log(1 + w) / Math.log(1.0001));
+  let lo = nearestUsableTick(stats.lastTick - dTicks, spacing);
+  let hi = nearestUsableTick(stats.lastTick + dTicks, spacing);
+  if (hi <= lo) hi = lo + spacing;
+  const toPrice = (t: number) => Math.pow(1.0001, t) * Math.pow(10, d0 - d1);
+  return { tickLower: lo, tickUpper: hi, widthPct, priceLower: toPrice(lo), priceUpper: toPrice(hi) };
+}
+
 export function assessPosition(
   pos: { tickLower: number; tickUpper: number; valueUsd: number },
   stats: PoolStats,

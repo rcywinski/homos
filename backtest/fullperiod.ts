@@ -82,7 +82,16 @@ const recalSet: Strategy[] = [
   volAdaptiveTrend({ ...v11, upExitThresh: 0.05 }),
   volAdaptiveTrend({ ...v11, upExitThresh: 0.08 }),
 ];
-const strategies: Strategy[] = process.env.FP_SET === 'final' ? finalSet : recalSet;
+const hybridSet: Strategy[] = [
+  hodl5050,
+  passiveW(0.4),
+  flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600 }), // idle:'hodl' z flatBase
+  flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600, idle: 'passive', passiveWidth: 0.4 }),
+  flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600, idle: 'passive', passiveWidth: 0.4 }),
+  flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600, idle: 'passive', passiveWidth: 0.5 }),
+];
+const strategies: Strategy[] =
+  process.env.FP_SET === 'final' ? finalSet : process.env.FP_SET === 'hybrid' ? hybridSet : recalSet;
 
 console.log(
   `${id}: ${swaps.length} swapów, ${days.toFixed(0)} dni · start $${startUsd} · ` +

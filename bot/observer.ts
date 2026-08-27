@@ -16,7 +16,7 @@ import { createPublicClient, http, fallback, PublicClient, formatUnits } from 'v
 import { mainnet, base, arbitrum } from 'viem/chains';
 import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR, TREND } from './config';
 import { ADVISOR_PARAMS } from '../src/utils/advisor';
-import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, PoolStats } from '../src/utils/advisor';
+import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, suggestFixedRange, PoolStats } from '../src/utils/advisor';
 import { getAmountsForLiquidity, sqrtPriceX96ToHumanPrice } from '../src/utils/v3math';
 import { runSelectorIfDue, SelectorProposal } from './selector';
 import { paperTick, LegPrices } from './paper';
@@ -512,10 +512,13 @@ async function refreshStats() {
       const stats = computeStats(swaps, p.chainId, p.d0, p.d1, p.feeBps / 1_000_000, TICK_SPACING[p.feeBps]);
       if (live[p.id] && stats) {
         live[p.id].stats = stats;
-        // k per pula (ALGORITHM v1.1: ETH/stable k=3 domyślne, cbBTC k=2)
-        live[p.id].suggestion = suggestRange(stats, p.feeBps as any, p.d0, p.d1, {
-          ...ADVISOR_PARAMS, k: p.advisorK ?? ADVISOR_PARAMS.k,
-        });
+        // PRODUKT 27.08 (hybryda FlatWide): pula produktowa dostaje STAŁĄ
+        // szerokość ±N% (postura idle); inaczej k per pula (ALGORITHM v1.1)
+        live[p.id].suggestion = p.productIdleWidthPct
+          ? suggestFixedRange(stats, p.feeBps as any, p.d0, p.d1, p.productIdleWidthPct)
+          : suggestRange(stats, p.feeBps as any, p.d0, p.d1, {
+              ...ADVISOR_PARAMS, k: p.advisorK ?? ADVISOR_PARAMS.k,
+            });
         log(`stats ${p.id}: vol=${(stats.volDaily * 100).toFixed(2)}%/d feeYield=${(stats.feeYieldDaily * 100).toFixed(3)}%/d swaps=${stats.swapsAnalyzed}`);
       }
       // snapshot do historii (dashboard "Analiza obserwacji" w UI) — co cykl 15min

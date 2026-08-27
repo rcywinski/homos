@@ -6,16 +6,21 @@
 
 ## 1. Stan projektu — skrót
 
-- **⚡ STAN NA 27.08 RANO (aktualizacja 26.08 ~21:xx):** projekt w
-  PUNKCIE DECYZJI produkt-albo-zamrożenie. 26.08 = dzień przeglądu +
-  maraton testów (recal/hedge/flat-only/rotacja/parking — WSZYSTKO
-  zero przejść bramki; próg porzucenia formalnie osiągnięty; komplet w
-  DECYZJE-2026-08-26). W nocy 26/27 liczy się RUNDA FINAŁOWA
-  (WF_SET=final: wide-passive "HODL z yieldem" + FlatOnly-HODL wg
-  pomysłu Rafała) — kryteria odczytu i checklist porannej sesji w
-  HANDOFF @Fable. Kapitał (6 092 USDC, Base) czeka w self-custody.
-  Ustalenie twarde: po rundzie finałowej decyzja, bez kolejnych
-  eksperymentów.
+- **⚡ STAN NA 27.08 (DECYZJA ~południe, po iteracji z hybrydą):**
+  PRODUKT = **HYBRYDA FlatWide** na obu pulach, cała transza 1
+  (6 092 USDC, Base): wąski LP (k×σ) TYLKO w potwierdzonym flacie
+  (|gap|<2% przez confirm), poza flatem SZEROKI pasywny LP (idle):
+  base-weth-usdc-030 ±50% (60% ≈ $3 655), base-cbbtc-weth-005 ±40%
+  (40% ≈ $2 437). Pomysł Rafała, przetestowany PRZED wejściem
+  (WF_SET=hybrid, 365d×2 pule w kontenerze Fable): hybryda ≥ czysty
+  passiveW na obu pulach; na cbBTC śr. +0.48/65%/worst −1.14 —
+  najbliżej pełnej bramki w historii puli. Dziś gap ≈ +14% (po
+  pompie) → wejście = szerokie zakresy; zwężenie dopiero po
+  potwierdzonym flacie (~3 tyg. przy spokojnym rynku), propozycją
+  w kokpicie. Wejście: DZIŚ przez kokpit (produktowe propozycje OPEN
+  z productIdleWidthPct — kod gotowy, deploy CC-Win + wymuszenie
+  selektora). Świadoma notatka FOMO-odwrotka: wejście po pompie ETH
+  +25%/90d, w dniu kolejnego wybicia.
 - **Faza:** planowanie zakończone → następna: Faza 0 (fundament matematyczny)
 - **Parametry:** kapitał $5k–$25k · sieć wybrana po backtestingu (kandydaci: Arbitrum, Base, mainnet) · hedging etapami (F4) · egzekucja pół-auto → full-auto
 - **Stary kod:** katalog `src/` = legacy. NIE budować na nim. Powód: matematyka v3 liczona na float (utrata precyzji >2^53, złe wzory liquidity bez aktualnej ceny, mieszanie jednostek raw/human), maskowane slippage 20–25%. Szczegóły: PLAN.md sekcja 2.
@@ -81,6 +86,38 @@ fees (+$51/+$25 vs HODL), FlatOnly ≈ HODL. DECYZJA RAFAŁA: przed
 werdyktem zlecić CC-Win ten sam test na świeżym cache (okno z pompą
 18–27.08) — wpis w HANDOFF, blokuje decyzję kapitałową. Paczka
 u CC-Mac (FP_DAYS + docs).
+
+~południe — ŚWIEŻE 90d OD CC-WIN + HYBRYDA + DECYZJA KOŃCOWA:
+(1) Świeże okno (29.05→27.08, ETH +24.7%) ODWRACA werdykt stale'owego:
+wszystko na plusie, USDC najgorszy na obu pulach — 9 dni różnicy
+pomiaru = $500+ różnicy na $2.5k; ranking strategii IDENTYCZNY w obu
+oknach (passiveW ≥ HODL ≥ FlatOnly ≥ aktywne). KOREKTA raportu
+nocnego CC-Win wyłapana przy zestawianiu: "FlatOnly-HODL cbBTC-720d
+4/4 bije HODL" sprzeczne z własnymi liczbami ($5,790–5,937 vs HODL
+$6,023 — pomylone "na plusie" z "bije HODL"); poprawny bilans
+fullperiod FlatOnly = 8/16, nie 12/16. (2) Pytanie Rafała "wąsko
+teraz [flat wg niego], potem passiveW" → korekta danymi: gap dziś
++14% (cena 2496 vs EMA 2166) = NIE-flat wg algorytmu; pomysł
+przekuty w HYBRYDĘ FlatWide (flatOnlyLP idle:'passive'): wąsko w
+potwierdzonym flacie, poza nim szeroki pasywny LP. Zaimplementowana
+i policzona PRZED wejściem (świadome odstępstwo od "bez
+eksperymentów", za zgodą Rafała; WF_SET=hybrid, 365d×2 pule,
+kontener): hybryda ≥ czysty passiveW na OBU pulach (base-030:
+śr. −0.16 vs −0.43, worst −11.0 vs −13.9; cbBTC: +0.48/65%/worst
+−1.14 — najbliżej pełnej bramki w historii projektu). (3) DECYZJA
+KOŃCOWA Rafała: hybryda na obu pulach, wejście DZIŚ przez kokpit
+("ręczny reset i wymuszenie propozycji"). Kod produktu MVP (Fable,
+tsc czysty): suggestFixedRange w advisorze + BotPool.productIdleWidthPct
+(50/40) + observer używa stałej szerokości dla pul produktowych →
+propozycje OPEN w kokpicie dostają zakresy ±50%/±40%. Paczka u
+CC-Mac, wdrożenie+wymuszenie u CC-Win (procedura w HANDOFF).
+Do zbudowania NASTĘPNE (spec w przygotowaniu): FLAT_ENTER/FLAT_EXIT
+(zwężanie po potwierdzonym flacie, powrót do szerokiego przy
+gap>5%), wyciszenie EXIT_TREND dla pul produktowych (hybryda trzyma
+betę świadomie), dozór krawędzi zakresu. (4) "Odrzuć" NAWRÓT #3
+(zgłoszenie Rafała: po odświeżeniu wracają) — główny podejrzany:
+stary bundle na Windows (fix 26.08 żyje w useBotApi/server.ts,
+bundle untracked, per maszyna); diagnoza a/b/c w zleceniu CC-Win.
 
 ### 2026-08-26 ~08:1x–09:0x — PRZEGLĄD TYGODNIOWY (Fable + Rafał) — komplet decyzji z DECYZJE-2026-08-26
 Brief poranny + pełny przegląd agendy, punkt po punkcie (AskUserQuestion),

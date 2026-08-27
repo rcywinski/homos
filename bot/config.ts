@@ -36,6 +36,13 @@ export interface BotPool {
    *  propozycja wyjścia do cash 50/50; 'hedge' [base-030] — propozycja
    *  shorta perp (GMX) na nadwyżkę ETH ponad 50% wartości, LP zostaje */
   trendAction?: 'exit' | 'hedge';
+  /** PRODUKT 27.08 — hybryda FlatWide (decyzja Rafała, dziennik CONTEXT
+   *  27.08): postura idle = SZEROKI pasywny LP o stałej szerokości
+   *  ±N% (zamiast k×σ doradcy). Gdy ustawione: sugestie zakresu
+   *  (OPEN w kokpicie, wykresy) liczą się z tej szerokości. Zwężanie
+   *  do k×σ następuje TYLKO w potwierdzonym flat (|gap|<2% przez
+   *  confirmH godzin — propozycja FLAT_ENTER, osobna logika). */
+  productIdleWidthPct?: number;
 }
 
 /** Bezpiecznik trendu spadkowego (ALGORITHM.md v1.1 §4) — jedna prawda. */
@@ -66,6 +73,7 @@ export const BOT_POOLS: BotPool[] = [
     feeBps: 3000, ethIsToken0: true, d0: 18, d1: 6, sym0: 'WETH', sym1: 'USDC',
     t0: '0x4200000000000000000000000000000000000006', t1: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     trendAction: 'hedge', // ALGORITHM v1.2: hedge-excess (bramka 73%/−2.88 i 81%/−2.74)
+    productIdleWidthPct: 50, // PRODUKT 27.08: hybryda FlatWide, idle ±50%
   },
   {
     // para skorelowana (PAIRS.md: sleeve pasywny ±15%); cena kwotowana w WETH,
@@ -81,6 +89,7 @@ export const BOT_POOLS: BotPool[] = [
     t0: '0x4200000000000000000000000000000000000006', t1: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',
     quote: 'WETH', usdRefPoolId: 'base-weth-usdc-030',
     advisorK: 2, trendReentry: 'half',
+    productIdleWidthPct: 40, // PRODUKT 27.08: hybryda FlatWide, idle ±40%
   },
   {
     // WETH/cbBTC 0.3% Base — dodane 2026-08-26 decyzją przeglądu (DECYZJE

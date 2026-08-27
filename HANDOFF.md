@@ -703,7 +703,18 @@ w gicie: f98b451 i wcześniejsze.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
-- [Fable→CC-Mac, 27.08 ~rano — PACZKA: FP_DAYS + docs] Commit+push:
+- [Fable→CC-Mac, 27.08 ~południe — **PACZKA "PRODUKT HYBRYDA", PILNA
+  (blokuje wejście kapitału dziś)**] Commit+push:
+  backtest/strategies.ts (flatOnlyLP idle:'passive' + passiveWidth —
+  hybryda FlatWide), backtest/walkforward.ts (WF_SET=hybrid),
+  backtest/fullperiod.ts (FP_SET=hybrid), src/utils/advisor.ts
+  (suggestFixedRange — stała szerokość ±N%), bot/config.ts
+  (BotPool.productIdleWidthPct; base-030=50, cbBTC-005=40),
+  bot/observer.ts (suggestion z suggestFixedRange dla pul
+  produktowych), HANDOFF.md, CONTEXT.md. tsc czysty (poza preexisting
+  observer viem/ox). Komunikat: "feat(product): FlatWide hybrid —
+  fixed idle width + WF/FP hybrid sets". NATYCHMIAST po pushu ping
+  CC-Win (ma pilne wdrożenie).
   backtest/fullperiod.ts (nowy env `FP_DAYS=N` — przycięcie serii do
   ostatnich N dni; policzony w kontenerze na obu pulach Base, działa),
   HANDOFF.md (zlecenie świeżych 90d u CC-Win + stan poranka),
@@ -736,7 +747,33 @@ w gicie: f98b451 i wcześniejsze.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 27.08 ~rano — PILNE, blokuje decyzję Rafała o kapitale]
+- [Fable→CC-Win, 27.08 ~południe — **WDROŻENIE PRODUKTU, PILNE (Rafał
+  chce wejść kapitałem DZIŚ przez kokpit)**] Po pullu paczki CC-Mac
+  "produkt hybryda":
+  1. `npm run build` (frontend!) + `nssm restart homos-bot` +
+     `nssm restart homos-server`.
+  2. WYMUSZENIE świeżych propozycji OPEN z produktowymi zakresami:
+     (a) w `.bot/proposals.json` usuń DWA stare wpisy OPEN
+     (`open-b99bcdf5-…` base-weth-usdc-030 i `open-d632293f-…`
+     base-cbbtc-weth-005 — mają wąskie zakresy k×σ z 25.08);
+     (b) w `.bot/selector-state.json` cofnij `lastRunDate` na
+     wczorajszą datę; (c) restart homos-bot — selektor odpala się na
+     starcie i wygeneruje OPEN z NOWYMI zakresami (±50% / ±40% wokół
+     bieżącej ceny — pole `productIdleWidthPct` w BOT_POOLS; sanity:
+     w propozycji base-030 usdLo/usdHi ≈ P×0.5 / P×1.5).
+  3. Zweryfikuj w kokpicie/`/api/state`, że obie propozycje wiszą z
+     szerokimi zakresami, i pingnij Rafała — on podpisuje przez apkę.
+  4. **DIAGNOZA "Odrzuć" (3. nawrót, zgłoszenie Rafała ~południe:
+     "po odświeżeniu strony wracają")**: głównym podejrzanym jest
+     STARY BUNDLE na Windows — fix z 26.08 żyje w useBotApi
+     (frontend) i server.ts; bundle jest untracked i buduje się per
+     maszyna. Sprawdź: (a) czy po ostatnich pullach robiono
+     `npm run build` (jeśli nie — punkt 1 właśnie to załatwił);
+     (b) po kliku Rafała w Odrzuć: linia "odrzucona (komenda z UI)"
+     w observer.log w ≤30 s? (c) czy GET /api/state ZARAZ po POST
+     odrzucenia nie zawiera odrzuconego id (filtr server-side).
+     Wynik (a/b/c) do raportu — jak (b) nie występuje, to realny bug
+     konsumenta komend i wtedy wracam do kodu.
   Po pullu paczki CC-Mac (fullperiod.ts dostał env `FP_DAYS=N` —
   przycięcie serii do ostatnich N dni cache'a) odpal na ŚWIEŻYM cache
   (po dzisiejszym fetchu 07:30, okno kończy się dziś):

@@ -75,8 +75,13 @@ export const flatOnlyLP = (opts: {
   /** postura POZA LP (26.08 wieczór, pomysł Rafała): 'quote' [default] =
    *  cash bez bety; 'hodl' = 50/50 — w trendzie jedziesz Z RYNKIEM
    *  (vs HODL ≈ remis zamiast przegranej), we flat dokładasz fees.
-   *  Benchmark dla 'hodl' to HODL 50/50, dla 'quote' — cash100. */
-  idle?: 'quote' | 'hodl';
+   *  Benchmark dla 'hodl' to HODL 50/50, dla 'quote' — cash100.
+   *  'passive' (27.08, pomysł Rafała #2): poza flat SZEROKI pasywny LP
+   *  (±passiveWidth) zamiast gołego HODL — fees także w trendzie,
+   *  kosztem ogona passiveW. Hybryda FlatWide. */
+  idle?: 'quote' | 'hodl' | 'passive';
+  /** szerokość pasywnego LP dla idle:'passive' (default 0.4 = ±40%) */
+  passiveWidth?: number;
 }): Strategy => {
   let ema: number | null = null;
   let lastTs: number | null = null;
@@ -104,11 +109,20 @@ export const flatOnlyLP = (opts: {
     ctx.state.cash0 = ((total / 2) * eff) / px0;
     ctx.state.cash1 = ((total / 2) * eff) / px1;
   };
-  const idleName = (opts.idle ?? 'quote') === 'quote' ? 'cash' : 'HODL50/50';
+  const idleMode = opts.idle ?? 'quote';
+  const passive = idleMode === 'passive';
+  const pw = opts.passiveWidth ?? 0.4;
+  let inFlat = false; // dla idle:'passive' — czy obecna pozycja to WĄSKI LP
+  const idleName = idleMode === 'quote' ? 'cash' : idleMode === 'hodl' ? 'HODL50/50' : `±${(pw * 100).toFixed(0)}%`;
   return {
     name: `FlatOnly k=${opts.k} |gap|<${(opts.enterThresh * 100).toFixed(0)}%/${(opts.confirmSec / 3600).toFixed(0)}h→LP, >${(opts.exitThresh * 100).toFixed(0)}%→${idleName} (HL${opts.trendHLDays}d)`,
     init: (ctx) => {
-      toIdle(ctx); // start POZA rynkiem w posturze idle
+      if (passive) {
+        ctx.openPosition(...rangeAround(ctx, pw)); // idle = szeroki pasywny LP
+        inFlat = false;
+      } else {
+        toIdle(ctx); // start POZA rynkiem w posturze idle
+      }
       ema = Math.log(ethUsd(ctx.ev.sqrtP, ctx.spec));
       lastTs = ctx.ev.ts;
     },
@@ -126,12 +140,17 @@ export const flatOnlyLP = (opts: {
       const gap = Math.abs(logP - ema);
       const p = ctx.state.pos;
 
-      if (p) {
-        // trend w dowolną stronę → wyjście do cash
+      if (p && (inFlat || !passive)) {
+        // trend w dowolną stronę → wyjście do postury idle
         if (gap > opts.exitThresh) {
           ctx.closePosition();
           halfGas(ctx);
-          toIdle(ctx);
+          if (passive) {
+            ctx.openPosition(...rangeAround(ctx, pw)); // z powrotem szeroki
+            inFlat = false;
+          } else {
+            toIdle(ctx);
+          }
           ctx.state.rebalances++;
           flatSince = null;
           outSince = null;
@@ -158,12 +177,14 @@ export const flatOnlyLP = (opts: {
         return;
       }
 
-      // poza rynkiem: czekamy na potwierdzony flat
+      // postura idle (cash/HODL/szeroki LP): czekamy na potwierdzony flat
       if (gap < opts.enterThresh) {
         if (flatSince === null) flatSince = ctx.ev.ts;
         if (ctx.ev.ts - flatSince >= opts.confirmSec) {
+          if (passive && ctx.state.pos) ctx.closePosition(); // zamknij szeroki
           halfGas(ctx);
           ctx.openPosition(...rangeAround(ctx, width(ctx)));
+          inFlat = true;
           ctx.state.rebalances++;
           flatSince = null;
           outSince = null;

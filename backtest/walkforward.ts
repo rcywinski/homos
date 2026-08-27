@@ -191,9 +191,26 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       volAdaptiveTrend({ ...trendBase, mode: 'exit', reentryAboveEma: true }), // referencja v1.1
     ];
   };
+  // 'hybrid' (27.08, pomysł Rafała #3 — FlatWide): wąski LP we flat,
+  // poza flat SZEROKI pasywny LP (idle:'passive') zamiast HODL. Teza:
+  // FlatOnly-HODL + fees w trendach, kosztem ogona passiveW. Referencje:
+  // hodl, passiveW ±40, FlatOnly-HODL k=3|24h.
+  const mkHybrid = (): Strategy[] => {
+    const flatBase = { horizonDays: 7, trendHLDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 };
+    return [
+      hodl5050,
+      passiveW(0.4),
+      flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600, idle: 'hodl' }),
+      flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600, idle: 'passive', passiveWidth: 0.4 }),
+      flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600, idle: 'passive', passiveWidth: 0.4 }),
+      flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600, idle: 'passive', passiveWidth: 0.5 }),
+    ];
+  };
   const mkStrategies = (): Strategy[] =>
     process.env.WF_SET === 'hedge'
       ? mkHedge()
+      : process.env.WF_SET === 'hybrid'
+      ? mkHybrid()
       : process.env.WF_SET === 'final'
       ? mkFinal()
       : process.env.WF_SET === 'next'
