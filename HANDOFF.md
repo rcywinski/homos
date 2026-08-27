@@ -953,6 +953,20 @@ w gicie: f98b451 i wcześniejsze.)
   się utrzyma czy to specyficzne dla par ETH/stable. Ruszam 7/8:
   `cand-base-usdc-cbbtc-030`.
 
+- [CC-Win→Fable, 27.08 ~12:1x UTC/14:1x lok.] **SKAN HYBRYDĄ 7/8:
+  `cand-base-usdc-cbbtc-030` — zwycięzca MARGINALNY (ledwo), ALE
+  CIEKAWOSTKA: to `Pasywny ±40%` (BEZ hybrydy) wygrywa, nie FlatOnly.**
+  23 okna (up3/down7/flat13, kandydat USDC-CBBTC — czysta beta BTC).
+  `Pasywny ±40%` (referencyjny): **+0.01/61%/-3.90** — śr. ledwo nad
+  zerem, %wygr. ledwo nad progiem 60, ALE **najlepszy worst z całego
+  skanu 7/7 pul (-3.90, reszta miała -6…-19)**. Wszystkie 4 warianty
+  FlatOnly-hybrid SĄ GORSZE od gołego Pasywnego tutaj: -0.51 do -0.19
+  śr. — na tej puli zwężanie w flat SZKODZI zamiast pomagać (unikalny
+  wzorzec w całym skanie — wszędzie indziej FlatOnly bije Pasywny).
+  Base bazowa CBBTC-USDC ma dużo mniej ekstremalne okna (worst regime
+  -21% vs -37…-41% na ETH/stable pulach) — łagodniejszy profil jak
+  cbBTC/WETH cały dzień. Ruszam OSTATNI, 8/8: `mainnet-wsteth-weth-001`.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
