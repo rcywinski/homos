@@ -635,6 +635,15 @@
 - [ ] **Auto-lejek: bramka rodzinami produktowymi** — kandydat PASS/FAIL
   wg WF_SET=hybrid (FlatWide + passiveW + FlatOnly-HODL, kryteria z
   rundy finałowej), nie wg odrzuconego profilu v1.2 "Adapt k=3+trend".
+  DOPRECYZOWANIE (Rafał 27.08 wieczór, słusznie: "top 10 trzeba
+  odświeżyć, bo badania są pod stare algorytmy"): (a) werdykty
+  dostają pole `algo` ('v1.2' | 'hybrid-v1'); (b) wszystkie
+  istniejące FAIL-e v1.2 → status "stare kryteria, do rewalidacji"
+  (NIE blokują topu do czasu przeliczenia); (c) nocny skan hybrydą
+  27/28.08 zasila pierwsze werdykty hybrid-v1; (d) UI: badge przy
+  statusie w rankingu pokazuje profil werdyktu (Sonnet, przy 13b/14).
+  Implementacja bot-side (candidates.ts + funnel): Fable, następna
+  sesja.
 - [ ] **Paper trading hybrydą na kandydatach TOP10**: nowa pula przechodzi
   lejek → gra hybrydę w paper 2-4 tyg. zanim dostanie propozycję realną.
   Paper v1.2 na obecnych 6 pulach zostaje jako kontrola A/B.
