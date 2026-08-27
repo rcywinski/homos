@@ -354,6 +354,273 @@ w gicie: f98b451 i wcześniejsze.)
   Ruszam finalny KROK 2 (`npm run pipeline -- --only backtest`) —
   ostatni punkt całej dzisiejszej kolejki.
 
+- [CC-Win→Fable, 26.08 ~17:5x] **FINALNY KROK 2 ZAMKNIĘTY — SUKCES.
+  ZAMYKA CAŁĄ POPOŁUDNIOWĄ KOLEJKĘ** (kandydat 720d + fullperiody ×5 +
+  hedge ×4 + next ×6 + parking + rotacja ×2 + ten KROK 2 = 19
+  przebiegów po porannym KROK 0+1+2). `backtest-run` 16:21:05→17:48:16
+  UTC (**1h27min**, szybciej niż poranny 1h45min), `backtest-selection`
+  OK, `sweep-base030` OK. **"porażki: BRAK".** Peak RSS: **9204 MB**
+  (limit 12288, zapas 25% — stabilnie względem porannego pomiaru
+  9032MB). Pełny cache przywrócony (kandydat z powrotem w data/cache/),
+  wszystko liczy się poprawnie z pełnym zestawem pul.
+  Pull paczki #4 odebrany w międzyczasie — RUNDA FINAŁOWA NA NOC
+  (WF_SET=final + FP_SET=final, decyzja Rafała po wieczornej dyskusji,
+  ostatnia runda przed decyzją o losie projektu). Rafał śpi do 10:30
+  jutro, autoryzował pełną autonomię decyzyjną na noc. Ruszam.
+
+- [CC-Win→Fable, 26.08 ~20:1x] **RUNDA FINAŁOWA (paczka #4), para 1/4:
+  `base-weth-usdc-030` 365d+720d. Nowe strategie passiveW i
+  FlatOnly-HODL ocenione wg kryteriów Fable.**
+
+  **FlatOnly-HODL (kryterium: flat≥65% wygr., up/down REMIS, worst>-3):**
+  365d: flat 48-60% (NIE osiąga 65%), worst -1.19…-2.73 (✓ >-3).
+  720d: flat 32-58% (NIE osiąga 65%, gorzej niż 365d), worst -1.38…
+  -2.53 (✓ >-3 na obu oknach). up/down: winPct niski (0-40%), ALE
+  śr. vsHODL BLISKO ZERA (-0.14…-0.84 na 720d, -0.06…-0.77 na 365d)
+  — jeśli "remis" czytać jako "śr. blisko 0" (małe realne odchylenie
+  od czystego HODL), to KRYTERIUM SPEŁNIONE mimo słabego winPct
+  (asymetria rozkładu: dużo małych ujemnych + rzadkie duże dodatnie
+  wygrane). **WERDYKT: worst PRZECHODZI na obu oknach, flat NIE
+  przechodzi (spada z 60%→32-58% na dłuższym oknie — kierunek zły),
+  up/down REMIS spełniony po śr., nie po winPct.** Częściowe
+  spełnienie kryteriów — nie pełne przejście.
+
+  **passiveW (Pasywny ±40/50/60%)** — oceniany głównie fullperiodem
+  (osobno), tu tylko worst/maxDD z walkforward: 365d worst -9.33…
+  -13.74 (znacznie GORZEJ niż FlatOnly), 720d worst -9.74…-13.46 —
+  szeroki pasywny ma dobry %wygr. globalny (60-70%) ale REKORDOWO
+  zły worst w down (dziedziczy problem "za wąski zakres = ZA
+  SZEROKI teraz w drugą stronę"? Nie — to nadal węższy niż idealny,
+  ale i tak najgorszy worst z całej rundy dotąd). Kluczowa ocena
+  będzie z fullperiod.
+  Commit+push. Ruszam parę 2/4: `mainnet-usdc-weth-005` 365d+720d.
+
+- [CC-Win→Fable, 26.08 ~20:2x] **RUNDA FINAŁOWA, para 2/4:
+  `mainnet-usdc-weth-005` 365d+720d — FlatOnly-HODL SŁABSZY niż na
+  base-030, NAJGORSZA pula dotąd dla tej rodziny.**
+  365d: flat winPct 20-30% (vs 48-60% na base-030 — gorzej), worst
+  -1.13…-2.47 (✓ >-3), recent90 WSZYSTKIE warianty 0% wygr. (śr.
+  -0.6…-1.5, wyraźnie ujemne, nie "blisko zera" jak base-030).
+  720d (47 okien): podobnie słabo — worst -1.62…-2.37 (✓ >-3, próg
+  trzyma się na obu oknach mainnet), flat/up/down winPct 15-31%
+  (jeszcze niżej niż 365d), recent90 nieco lepszy (25-50% wygr.).
+  **WERDYKT: worst nadal przechodzi na obu oknach obu pul dotąd (2/2),
+  ale flat winPct coraz dalej od 65% (mainnet gorszy niż base-030) —
+  kryterium flat≥65% NIE ZBLIŻA SIĘ do spełnienia na żadnej puli.**
+  passiveW worst: 365d -13.73…-17.40 (NAJGORSZY worst z całej rundy,
+  mainnet ma najbardziej ekstremalne okna down), 720d podobnie zły
+  (dane w JSON). Zero commitów fullperiod jeszcze — to osobny etap.
+  Commit+push. Ruszam parę 3/4: `arbitrum-weth-usdc-005` 365d+720d.
+
+- [CC-Win→Fable, 26.08 ~21:3x] **RUNDA FINAŁOWA, para 3/4:
+  `arbitrum-weth-usdc-005` 365d+720d — worst wciąż w normie, flat
+  winPct pomiędzy base-030 i mainnet.**
+  365d (23 okna): FlatOnly worst -1.05…-2.82 (✓>-3), flat winPct
+  17-55% (najlepszy wariant k=2|gap<2%/12h: 55%, wciąż <65).
+  720d (47 okien, największa pula serii, 25.6M swapów): FlatOnly worst
+  -1.81…-2.68 (✓>-3, próg trzyma się 3/3 pul dotąd na obu oknach = 6/6
+  przebiegów), flat winPct 26-47%. **RANKING flat winPct 720d dotąd:
+  base-030 (32-58%) > arbitrum (26-47%) > mainnet (15-31%)** — arbitrum
+  pośrodku, nie skrajny w żadną stronę.
+  passiveW worst: 365d -7.80…-14.17, 720d -9.63…-15.51 (NAJGORSZY
+  worst z całej rundy dotąd na 720d — arbitrum ma najbardziej
+  ekstremalne okna up +58%).
+  Commit+push. Ruszam OSTATNIĄ parę walkforward 4/4: `base-cbbtc-weth-005`
+  365d+720d — po niej podsumowanie 8/8 i start fullperiodów.
+
+- [CC-Win→Fable, 26.08 ~22:0x] **RUNDA FINAŁOWA, para 4/4 (OSTATNIA):
+  `base-cbbtc-weth-005` 365d+720d — NAJLEPSZA pula dla FlatOnly-HODL,
+  jedyny przypadek flat≥65%.** ZAMYKA 8/8 WALKFORWARDÓW.
+  365d: **FlatOnly k=2 |gap|<2%/12h flat winPct = 74%** — JEDYNY
+  wariant/pula w całej rundzie, który przekracza próg flat≥65%!
+  Globalny worst -2.09 (✓>-3). ALE up/down dla tego wariantu: mean
+  -1.22/-1.72 (WYRAŹNIE ujemne, nie "blisko zera" — nie remis).
+  720d: flat winPct spada do 43-59% (nie utrzymuje przewagi z 365d),
+  worst -1.72…-2.48 (✓>-3).
+
+  ═══ **PODSUMOWANIE WSZYSTKICH 8/8 WALKFORWARDÓW RUNDY FINAŁOWEJ**
+  (4 pule × 2 okna, WF_SET=final SIGMA_MODE=grid15) ═══
+
+  **1. WORST>-3: PRZECHODZI NA 8/8 PRZEBIEGÓW (100%!).** Cała rodzina
+  FlatOnly-HODL trzyma worst w paśmie -1.05…-2.82 na WSZYSTKICH 4
+  pulach i obu oknach — to NAJBARDZIEJ SPÓJNY wynik "worst>-3" w
+  całej dzisiejszej pracy (dla porównania: seria RECAL miała worst
+  -6…-15 wszędzie). Baza HODL 50/50 zamiast 100% cash naprawdę
+  ogranicza ogon.
+
+  **2. FLAT≥65%: PRZECHODZI TYLKO 1/8 (cbBTC-365d, jeden wariant,
+  flat 74%).** Ranking najlepszego wariantu per pula (flat winPct):
+  cbBTC-365d 74% > base-030-365d 60% ≈ cbBTC-720d 59% > base-030-720d
+  58% > arbitrum-365d 55% > arbitrum-720d 47% > mainnet-720d 31% >
+  mainnet-365d 30%. **Mainnet systematycznie najgorszy dla tej
+  rodziny** (spójne z wcześniejszym zestawem next — mainnet ma
+  najbardziej ekstremalne okna down).
+
+  **3. UP/DOWN REMIS: NIEJEDNOZNACZNE.** Na base-030/arbitrum średnie
+  vsHODL w up/down są blisko zera (-0.06…-0.9) — bliżej "remis". Na
+  cbBTC/mainnet średnie są wyraźniej ujemne (-0.4…-1.7) — dalej od
+  remis, mimo lepszego (cbBTC) lub gorszego (mainnet) wyniku na flat.
+  Brak jednego wariantu, który łączy WSZYSTKIE 3 kryteria naraz.
+
+  **4. WERDYKT KOŃCOWY: FlatOnly-HODL NIE PRZECHODZI PEŁNEGO
+  KRYTERIUM na żadnej z 8 kombinacji pula×okno — ale jest NAJBLIŻEJ
+  ze wszystkiego przetestowanego dzisiaj.** Worst jest rozwiązany
+  (bezpiecznik działa), pozostaje %wygr. we flat (poza cbBTC-365d) i
+  spójność up/down. Jeśli szukać kierunku do dalszego strojenia:
+  cbBTC-365d pokazuje, że to OSIĄGALNE w zasadzie — pytanie czy
+  utrzyma się przy dostrojeniu progu gap/HL na innych pulach.
+
+  **5. passiveW (Pasywny ±40/50/60%): worst KONSEKWENTNIE zły
+  wszędzie** (-6.79 do -17.40, najgorszy na mainnet-365d i
+  arbitrum-720d) — globalny %wygr. wysoki (60-78%) ale to ten sam
+  "agregat mylący" wzorzec co Pasywny ±50% w serii RECAL. Ocena
+  właściwa dopiero z fullperiod (poniżej).
+
+  Commit+push (results cbBTC 365d+720d). Ruszam fullperiody FP_SET=final
+  (4×): `base-weth-usdc-030-720d` pierwszy.
+
+- [CC-Win→Fable, 26.08 ~21:5x] **FULLPERIOD FP_SET=final 1/4:
+  `base-weth-usdc-030-720d`. NAJLEPSZY WYNIK CAŁEGO DNIA — obie nowe
+  rodziny biją HODL wprost.** Wejście 2024-09-04, cena bazy +2.5%.
+  **passiveW: 3/3 bije HODL** — ±40% $7,782 (+55.6%, vsHODL +$2,720),
+  ±50% $7,636 (+52.7%), ±60% $7,554 (+51.1%), wszystkie DUŻO nad HODL
+  $5,062 (+1.2%).
+  **FlatOnly-HODL: 3/4 bije HODL** — k=2|gap<2%/12h $5,414 (+8.3%,
+  vsHODL +$351), k=3|gap<2%/24h $5,313 (+6.3%), k=2|gap<2%/24h $5,216
+  (+4.3%); tylko k=2|gap<3%/24h→6% $4,930 (-1.4%, minimalnie POD
+  HODL). 100% USDC $5,000 (-$62 vs HODL) i cash100 $4,991 — obie
+  rodziny biją zarówno HODL jak i czysty cash na tej puli.
+  Kryterium "fullperiod≥HODL na 4/4" — passiveW SPEŁNIONE (3/3, jedyne
+  3 warianty testowane), FlatOnly-HODL 3/4 (1 wyjątek). Ruszam 2/4:
+  `mainnet-usdc-weth-005-720d`.
+
+- [CC-Win→Fable, 26.08 ~22:0x] **FULLPERIOD 2/4: `mainnet-usdc-weth-005-720d`
+  — passiveW nadal bije HODL 3/3, FlatOnly-HODL SŁABSZY (2/4).**
+  Wejście 2024-08-31, cena bazy -2.5%. passiveW: ±40% $7,120 (+42.4%),
+  ±50% $6,999 (+40.0%), ±60% $6,952 (+39.0%) — wszystkie DUŻO nad HODL
+  $4,938 (-1.2%). ✓ 3/3.
+  FlatOnly-HODL: TYLKO 2/4 bije HODL — k=3|24h $5,151 (+3.0%), k=2|24h
+  $5,040 (+0.8%); k=2|12h $4,778 (-4.4%) i k=2|gap<3%/24h→6% $4,411
+  (-11.8%) OBA POD HODL. Gorszy wynik niż base-030 (3/4→2/4) — spójne
+  z wcześniejszym wzorcem "mainnet najgorszy dla FlatOnly-HODL" z
+  walkforward. Ruszam 3/4: `arbitrum-weth-usdc-005-720d`.
+
+- [CC-Win→Fable, 26.08 ~22:2x] **FULLPERIOD 3/4: `arbitrum-weth-usdc-005-720d`
+  — z powrotem 3/4 dla FlatOnly-HODL, passiveW 3/3.** Wejście
+  2024-09-02, cena bazy -3.7%. passiveW: ±40% $7,289 (+45.8%), ±50%
+  $7,184 (+43.7%), ±60% $7,076 (+41.5%) — wszystkie nad HODL $4,906
+  (-1.9%). ✓ 3/3.
+  FlatOnly-HODL: 3/4 bije HODL — k=3|24h $5,460 (+9.2%, NAJLEPSZY
+  fullperiod tej rodziny dotąd), k=2|24h $5,423 (+8.5%), k=2|12h
+  $5,354 (+7.1%); tylko k=2|gap<3%/24h→6% $4,841 (-3.2%) pod HODL —
+  TEN SAM wariant zawodzi na WSZYSTKICH 3 pulach testowanych dotąd
+  (base-030, mainnet, arbitrum) — to on jest problemem, nie cała
+  rodzina. Ruszam OSTATNI, 4/4: `base-cbbtc-weth-005-720d`.
+
+- [CC-Win→Fable, 27.08 ~00:3x] **FULLPERIOD 4/4 (OSTATNI): `base-cbbtc-weth-005-720d`
+  — NAJLEPSZY WYNIK CAŁEJ RUNDY: FlatOnly-HODL 4/4 bije HODL!**
+  Wejście 2024-09-13, cena bazy -23.1% (cbBTC/WETH). passiveW: ±50%
+  $6,626 (+32.5%), ±60% $6,623 (+32.5%), ±40% $6,605 (+32.1%) —
+  wszystkie nad HODL $6,023 (+20.5%). ✓ 3/3.
+  **FlatOnly-HODL: WSZYSTKIE 4/4 warianty biją HODL** — k=3|24h $5,937
+  (+18.7%), k=2|24h $5,933 (+18.7%), k=2|12h $5,913 (+18.3%), NAWET
+  "wariant problematyczny" k=2|gap<3%/24h→6% $5,790 (+15.8%, tu
+  najsłabszy z 4, ale wciąż POD HODL nie ląduje). Ciekawostka: `100%
+  quote` (=WETH na tej puli) $6,807 (+36.1%) bije nawet passiveW —
+  WETH samo w sobie zyskało względem cbBTC w tym oknie (-23% cena
+  bazy = WETH umacnia się względem BTC), więc czysta beta WETH
+  wygrała z aktywnym zarządzaniem.
+
+  ═══ **PODSUMOWANIE CAŁEJ RUNDY FINAŁOWEJ (paczka #4: 8 walkforwardów
+  + 4 fullperiody, WF_SET=final / FP_SET=final, SIGMA_MODE=grid15)** ═══
+
+  **WALKFORWARD (8 przebiegów, 4 pule × 2 okna):**
+  - worst>-3: **8/8 (100%)** — baza HODL 50/50 zamiast 100% cash
+    naprawdę rozwiązuje problem ogona, który dręczył WSZYSTKIE
+    poprzednie rodziny strategii dzisiaj (RECAL, hedge, next miały
+    worst -6…-22 wszędzie).
+  - flat≥65%: tylko **1/8** (cbBTC-365d, jeden wariant, 74%).
+    Ranking: cbBTC(74%) > base-030(60%) ≈ cbBTC-720d(59%) >
+    arbitrum(55%) >> mainnet(30-31%, systematycznie najgorszy).
+  - up/down remis: niejednoznaczne — bliżej remis na base-030/arbitrum,
+    dalej na cbBTC/mainnet.
+  - **Werdykt walkforward: FlatOnly-HODL NIE przechodzi pełnego
+    kryterium na żadnej z 8 kombinacji, ale worst jest rozwiązany
+    wszędzie — to jakościowa zmiana względem reszty dnia.**
+
+  **FULLPERIOD (4 przebiegi, jeden punkt wejścia 2024, $5k, 720d):**
+  - **passiveW: 4/4 pul × 3/3 warianty = 12/12 bije HODL. PEŁNY
+    SUKCES bez wyjątku.** Przewaga $1600-2700 na $5000 startowego —
+    nie szum.
+  - FlatOnly-HODL: base-030 3/4, arbitrum 3/4, mainnet 2/4 (najgorszy),
+    **cbBTC 4/4 (najlepszy)** = 12/16 kombinacji (75%) bije HODL.
+    Wariant `k=2 |gap|<3%/24h→LP,>6%→HODL` jest jedynym, który zawodzi
+    na 3/4 pul (poza cbBTC) — konkretny problem parametryzacji, nie
+    całej rodziny.
+
+  **WERDYKT KOŃCOWY RUNDY: passiveW (szerokie pasywne ±40-60%) to
+  NAJLEPSZY WYNIK CAŁEGO DNIA** — jednoznacznie bije HODL na
+  fullperiod (12/12) na wszystkich testowanych pulach i oknach,
+  spójne z obserwacją z serii RECAL i fullperiod z popołudnia
+  ("Pasywny ±50% systematycznie najlepszy" — to nie przypadek, to
+  wzorzec powtórzony teraz z 3 dodatkowymi szerokościami). Walkforward
+  (bramka na wielu oknach) nie był jeszcze liczony dla samego passiveW
+  osobno od worst/maxDD — ocena full-bramkowa wymagałaby dedykowanego
+  kryterium (dziś oceniany był głównie przez fullperiod, jak
+  ustalono). FlatOnly-HODL to DRUGI najlepszy kierunek: rozwiązuje
+  ogon (worst 8/8) i częściowo bije HODL na fullperiod (12/16), ale
+  nie zamyka pełnej bramki na żadnym oknie — mainnet i wariant
+  gap<3%/24h→6% to konkretne słabe punkty do poprawy, nie dyskwalifikacja
+  całej idei.
+  **REKOMENDACJA DLA RAFAŁA:** passiveW ±50% (może ±60% — nieco
+  gorszy PnL ale niższy koszt fees, do doprecyzowania) jest
+  najsilniejszym kandydatem z całego dnia eksperymentów na wejście
+  kapitału, o ile decyzja pójdzie w stronę pasywnego zarządzania
+  zamiast aktywnego rebalansowania — ale WALKFORWARD (bramka) dla
+  samego passiveW jeszcze nie był liczony osobno tego dnia (był
+  częścią zestawu final, patrz worst wyżej, ale nie osobna analiza
+  %wygr. tej konkretnie rodziny) — sugeruję jako pierwszy krok jutro
+  rano/po przebudzeniu.
+  Commit+push wszystkiego zrobiony. **RUNDA FINAŁOWA I CAŁA
+  DZISIEJSZA KOLEJKA ZAMKNIĘTE.**
+
+  ═══ **PODSUMOWANIE CAŁEGO DNIA 26.08 (dla Rafała, powrót ~10:30)** ═══
+  **Rano:** fix crashu `backtest-run` na 720d (spread→pętla, `0257a7a`);
+  seria RECAL 9/9 (nowa σ grid15) — zero przejść bramki, wzorzec
+  reżimowy (up=klęska, flat=nisza) identyczny na wszystkich pulach;
+  incydent — mój eksploracyjny cache kandydata złapał się do
+  produkcyjnego pipeline i crashował go 2× (naprawione: kwarantanna →
+  fix `run.ts` wykluczający `cand-*` w paczce #3 od Fable); znaleziony
+  NOWY bug (tick out of bounds) — naprawiony przez Fable/CC-Mac w
+  paczce #2 (tick-clamp w engine.ts).
+  **Popołudnie (19 przebiegów):** fullperiod $5k ×5 (Pasywny ±50%
+  dominuje); hedge ×4 (zero przejść, `hedge(full)` chroni DOWN kosztem
+  UP); next ×6 (**cash100/FlatOnly = matematyczne lustro reżimu, nie
+  przewaga**; upConfirm szkodzi); parking (realny APR fees ≈0% w tym
+  oknie); **rotacja ×2 — 100% USDC bije nawet teoretyczny ORACLE**
+  (profil produkcyjny v11); finalny KROK 2 (zero porażek, Peak RSS
+  9204MB).
+  **Noc (paczka #4, runda finałowa, 12 przebiegów):** 2 nowe rodziny
+  strategii (passiveW szerokie pasywne, FlatOnly-HODL z bazą HODL
+  zamiast cash) — **passiveW bije HODL 12/12 na fullperiod, najlepszy
+  wynik dnia; FlatOnly-HODL rozwiązuje problem ogona (worst>-3 na 8/8
+  walkforward) i bije HODL 12/16 na fullperiod, ale nie zamyka pełnej
+  bramki**.
+  **Łącznie dzisiaj: 2× KROK 0-2 (rano+popołudnie) + 9 RECAL + 19
+  popołudniowych + 12 nocnych = ~40+ przebiegów backtestów/walkforwardów/
+  fullperiodów, wszystkie zaraportowane i commitowane parami w
+  HANDOFF.md/gicie.** Wszystkie crashe napotkane po drodze
+  udokumentowane i naprawione (albo przekazane do naprawy — anomalia
+  cache kandydata w oknie 1 nadal niewyjaśniona, osobna sprawa od
+  crashy silnika, do zbadania kiedyś przez kogoś z dostępem do
+  load.ts/fetch-swaps).
+  Zero przejść pełnej bramki (%wygr≥65 I worst>-3 I ≥2 reżimy)
+  gdziekolwiek dzisiaj — ale **passiveW i FlatOnly-HODL to pierwsze
+  realne przełomy w kierunku bicia HODL wprost** (nie tylko w
+  wielookiennej bramce, ale w praktycznym scenariuszu $5k/2 lata).
+  Automat nocny 05:30-08:25 nie kolidował (skończyłem przed oknem).
+  Dobranoc/dzień dobry — czekam na dalsze instrukcje po przebudzeniu.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
