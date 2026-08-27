@@ -32,7 +32,7 @@ import BotTelemetry from './BotTelemetry';
 import ObservationAnalysis from './ObservationAnalysis';
 import ForecastPanel from './ForecastPanel';
 import CockpitPositionActions, { CloseModal, RebalanceModal } from './CockpitPositionActions';
-import { Sparkline, PriceRangeChart, EquityChartPoint } from './PositionCharts';
+import { Sparkline, PriceRangeChart, EquityChartPoint, PositionStatsBar } from './PositionCharts';
 import RebalanceSequenceModal from './RebalanceSequenceModal';
 import RotateSequenceModal from './RotateSequenceModal';
 import HedgeConfirmModal from './HedgeConfirmModal';
@@ -723,7 +723,21 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                 // tokenId — pole anchoredAt nie przychodzi w odpowiedzi API
                 // (patrz TASKS-UI.md Partia 10 pkt 4), więc bierzemy ts
                 // pierwszego snapshotu jako uczciwy podpis "od kiedy liczymy".
-                const hodlSince = posHistory.length > 0 ? [...posHistory].sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))[0].ts : null;
+                const posHistorySorted = posHistory.length > 0 ? [...posHistory].sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts)) : [];
+                const firstPosHistPoint = posHistorySorted[0] ?? null;
+                const lastPosHistPoint = posHistorySorted.length > 0 ? posHistorySorted[posHistorySorted.length - 1] : null;
+                const hodlSince = firstPosHistPoint?.ts ?? null;
+                // Partia 14: PnL od startu = valueUsd(teraz) − wartość z kotwicy
+                // (hodlUsd zapisany w PIERWSZEJ próbce — w tamtym momencie
+                // anchor został DOPIERO co zamrożony, więc hodlUsd tej próbki
+                // = a0*px0+a1*px1 policzone przy anchoredAt = rzeczywista
+                // startowa wartość pozycji, patrz bot/observer.ts:626-632).
+                // vs HODL 50/50 = valueUsd(teraz) − hodlUsd ostatniej próbki
+                // (benchmark "gdybyś trzymał te same tokeny bez LP", TASKS-UI
+                // Partia 14). Oba `null`, gdy brak historii/wyceny — pasek
+                // renderuje wtedy "—" zamiast fałszywego zera.
+                const pnlSinceStartUsd = p.valueUsd !== null && firstPosHistPoint ? p.valueUsd - firstPosHistPoint.hodlUsd : null;
+                const vsHodlUsd = p.valueUsd !== null && lastPosHistPoint ? p.valueUsd - lastPosHistPoint.hodlUsd : null;
 
                 return (
                   <div key={`${p.chainId}-${p.tokenId}`} className="cockpit-position-card">
@@ -775,7 +789,22 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                         <div className="range-bar-marker" style={{ left: `${pct}%` }} />
                       </div>
                     )}
-                    {p.feesUsd > 0.001 && <div className="cockpit-position-fees muted">Nieodebrane fee: {fmtUsd(p.feesUsd)}</div>}
+                    {/* Partia 14: pasek metryk jak w paper (PositionStatsBar,
+                        PositionCharts.tsx) — "Fee narosłe" tu ZASTĘPUJE starą
+                        osobną linię "Nieodebrane fee" (przeniesione do paska,
+                        zgodnie ze spec). Fee reinwestowane/Koszty/Rebalanse
+                        `null` = "—" z tooltipem "w budowie" — czekają na
+                        podpięcie księgi bota (bot/ledger.ts, Fable, patrz
+                        HANDOFF.md). */}
+                    <PositionStatsBar
+                      pnlUsd={pnlSinceStartUsd}
+                      pnlSinceLabel={hodlSince ? new Date(hodlSince).toLocaleDateString('pl-PL') : undefined}
+                      vsHodlUsd={vsHodlUsd}
+                      feesReinvestedUsd={null}
+                      feesAccruedUsd={p.feesUsd}
+                      costsUsd={null}
+                      rebalances={null}
+                    />
 
                     {posHistory.length >= 2 ? (
                       <>

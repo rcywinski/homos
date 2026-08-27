@@ -1090,3 +1090,23 @@ wraca), otwórz (modal zamyka się, toast zostaje).
    wróciła po restarcie (klasa „Odrzuć"); UI-side: przy prefillu
    pokazywać szerokość ±% wyliczoną z zakresu, żeby użytkownik widział
    od razu, że to nie jest produktowe ±40/50%.
+
+## PARTIA 14 — nagłówek statystyk na kartach REALNYCH pozycji jak w paper (prośba Rafała 27.08 wieczór)
+Cel: karta realnej pozycji dostaje ten sam pasek metryk co karta paper:
+PnL od startu · vs HODL 50/50 · Fee reinwestowane · Fee narosłe ·
+Koszty · Rebalanse. Wzorzec wizualny 1:1 z PaperTradingPanel (wspólny
+komponent z Partii 10 — rozszerzyć, nie duplikować).
+DOSTĘPNE DZIŚ (z /api/state + positions-history + kotwic HODL):
+- PnL od startu = valueUsd − wartość z kotwicy (positions-hodl.json;
+  dopisek "od <data kotwicy>" jak przy HODL — dla pozycji sprzed
+  wdrożenia kotwica ≠ otwarcie),
+- vs HODL 50/50 = valueUsd − hodlUsd (ostatni punkt positions-history),
+- Fee narosłe (nieodebrane) = już jest na karcie (przenieść do paska).
+BRAK DANYCH BOT-SIDE (pokazywać "—" z tooltipem "w budowie" do czasu
+paczki Fable; NIE liczyć w UI z niczego przybliżonego):
+- Fee reinwestowane, Koszty (gaz+swapy), Rebalanse — wymagają
+  podpięcia księgi (bot/ledger.ts) per tokenId; zadanie po stronie
+  Fable (observer/server: pola collectedFeesUsd/costsUsd/rebalances
+  w positions w /api/state). UI ma tylko wyrenderować pola, gdy się
+  pojawią (feature-detect po obecności pola, nie po wersji).
+Zakres: src/** (wspólny komponent karty + typy w useBotApi).

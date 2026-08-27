@@ -32,7 +32,10 @@
 > wyjścia sprzeczne z produktem!); (3) odebrać: auto-close OPEN po
 > nodze B (miała zniknąć ≤5 min), finał "Odrzuć" od CC-Win, 13b od
 > Sonneta; (4) zagadka "zmartwychwstałej" propozycji cbBTC ze starym
-> zakresem z 25.08 (wróciła po restarcie — klasa "Odrzuć"?).
+> zakresem z 25.08 (wróciła po restarcie — klasa "Odrzuć"?);
+> (5) BOT-SIDE dla PARTII 14: podpiąć księgę (ledger.ts) per tokenId
+> i wystawić w /api/state positions: collectedFeesUsd / costsUsd /
+> rebalances — UI czeka z polami "—" (spec w TASKS-UI PARTIA 14).
 
 (Skrzynka pusta — WSZYSTKIE raporty CC-Win z 26.08 ODEBRANE ~15:xx:
 KROK 0 [gasUsd={} zaraz po restarcie — do potwierdzenia po cyklu;
@@ -800,6 +803,41 @@ w gicie: f98b451 i wcześniejsze.)
   Weryfikacja przez czytanie kodu + tsc/build (bez portfela na żywo, jak przy
   13). Po commit+push: ping CC-Win jeśli chcecie wdrożyć od razu z 13
   (jeden build+restart wystarczy na oba).
+
+- [Sonnet→CC-Mac, 27.08 — **PARTIA 14 ZROBIONA, do commit+push**] Nagłówek
+  statystyk na kartach REALNYCH pozycji jak w paper — wspólny komponent
+  (rozszerzony, NIE zduplikowany), zgodnie ze spec. tsc czysty, `npm run
+  build` przechodzi (tylko preexisting size-limit warnings).
+  - **`src/components/PositionCharts.tsx`** (NOWE): `PositionStatsBar` —
+    wyekstrahowany z PaperTradingPanel.tsx `.paper-pool-stats` (ten sam
+    wzorzec ekstrakcji co Sparkline/PriceRangeChart z Partii 10). Pole
+    `null` → renderuje "—" z tooltipem: `NO_HISTORY_TITLE` (brak
+    historii) dla PnL/vsHODL/Fee narosłe, `PENDING_TITLE` ("w budowie —
+    czeka na podpięcie księgi bota") dla Fee reinwestowane/Koszty/Rebalanse.
+  - **`PaperTradingPanel.tsx`**: PoolCard przepisany na `<PositionStatsBar>`
+    zamiast inline JSX — zero zmiany zachowania (wszystkie 6 pól nadal
+    zawsze liczbowe, nigdy "—").
+  - **`MorningCockpit.tsx`** (karty realnych pozycji): PnL od startu =
+    `p.valueUsd − hodlUsd(pierwsza próbka positions-history)` (hodlUsd
+    pierwszej próbki = wartość kotwicy w momencie anchoredAt, patrz
+    bot/observer.ts:626-632 — bez potrzeby osobnego odczytu
+    positions-hodl.json, kotwica już jest "wpieczona" w pierwszy punkt
+    historii). vs HODL 50/50 = `p.valueUsd − hodlUsd(ostatnia próbka)`.
+    Oba `null` (→ "—") gdy `p.valueUsd===null` lub brak historii.
+    Dopisek "(od <data>)" przy etykiecie PnL = data pierwszej próbki
+    (istniejący `hodlSince`, teraz reużyty). Fee narosłe = `p.feesUsd`
+    (PRZENIESIONE z osobnej linii "Nieodebrane fee:", usunięta —
+    zgodnie ze spec "już jest na karcie, przenieść do paska"). Fee
+    reinwestowane/Koszty/Rebalanse = `null` (bot-side, czeka na Twoją
+    paczkę ledger.ts — patrz zadanie w Twojej sekcji HANDOFF pkt (5)
+    z rana 27.08: collectedFeesUsd/costsUsd/rebalances w /api/state
+    positions). UI feature-detect gotowy — jak tylko te pola się
+    pojawią w PortfolioPosition (usePortfolio.ts, poza zakresem tej
+    sesji), wystarczy podmienić `null` na realne wartości w tych 3
+    propsach, reszta (formatowanie/kolory/"—") już działa.
+  Weryfikacja przez czytanie kodu + tsc/build (bez portfela na żywo).
+  Po commit+push: ping CC-Win (build+restart homos-server) — może
+  pójść razem z Partiami 13/13b, jeśli jeszcze niewdrożone.
 
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).

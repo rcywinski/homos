@@ -43,7 +43,7 @@
 import React, { FC } from 'react';
 import { UseBotApi, PaperHistoryPoint, PaperEvent, PaperPosition } from '../hooks/useBotApi';
 import { BOT_POOL_META } from '../config/botPools';
-import { Sparkline, PriceRangeChart } from './PositionCharts';
+import { Sparkline, PriceRangeChart, PositionStatsBar } from './PositionCharts';
 import { formatDuration } from '../utils/formatters';
 
 const fmtUsd = (v: number) =>
@@ -162,32 +162,19 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
         </div>
       )}
 
-      <div className="paper-pool-stats">
-        <div className="paper-pool-stat">
-          <span className="muted">PnL od startu</span>
-          <span className={pnl < 0 ? 'forecast-negative' : 'paper-positive'}>{fmtSigned(pnl)}</span>
-        </div>
-        <div className="paper-pool-stat paper-pool-stat-hodl">
-          <span className="muted">vs HODL 50/50</span>
-          <span className={vsHodl < 0 ? 'forecast-negative' : 'paper-positive'}>{fmtSigned(vsHodl)}</span>
-        </div>
-        <div className="paper-pool-stat">
-          <span className="muted">Fee reinwestowane</span>
-          <span>{fmtUsd(Math.max(0, position.feesUsd - (position.feesSinceRebalanceUsd ?? 0)))}</span>
-        </div>
-        <div className="paper-pool-stat">
-          <span className="muted">Fee narosłe (do reinwestycji)</span>
-          <span>{fmtUsd(position.feesSinceRebalanceUsd ?? 0)}</span>
-        </div>
-        <div className="paper-pool-stat">
-          <span className="muted">Koszty</span>
-          <span>{fmtUsd(position.costsUsd)}</span>
-        </div>
-        <div className="paper-pool-stat">
-          <span className="muted">Rebalanse</span>
-          <span>{position.rebalances}</span>
-        </div>
-      </div>
+      {/* Partia 14: pasek metryk wyekstrahowany do PositionCharts.tsx
+          (PositionStatsBar) — reużywany też przez karty REALNYCH pozycji w
+          MorningCockpit.tsx, żeby wzorzec wizualny był 1:1 bez duplikacji.
+          Paper ma wszystkie 6 pól dostępnych od zawsze, więc zachowanie tu
+          bez zmian (żadne pole nigdy nie renderuje "—"). */}
+      <PositionStatsBar
+        pnlUsd={pnl}
+        vsHodlUsd={vsHodl}
+        feesReinvestedUsd={Math.max(0, position.feesUsd - (position.feesSinceRebalanceUsd ?? 0))}
+        feesAccruedUsd={position.feesSinceRebalanceUsd ?? 0}
+        costsUsd={position.costsUsd}
+        rebalances={position.rebalances}
+      />
 
       {position.hedge && (
         <div className="paper-hedge-line muted">

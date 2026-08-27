@@ -282,3 +282,73 @@ export const PriceRangeChart: FC<{ poolId: string; points: EquityChartPoint[]; e
     </div>
   );
 };
+
+// --- Partia 14: pasek metryk karty pozycji, wspólny dla paper i REALNYCH ---
+// Wyekstrahowany z PaperTradingPanel.tsx (PoolCard, `.paper-pool-stats`) —
+// ten sam wzorzec ekstrakcji co Sparkline/PriceRangeChart wyżej (P10):
+// jeden komponent, dwa call site'y (paper ma wszystkie 6 pól zawsze
+// dostępne; karty REALNYCH pozycji w MorningCockpit.tsx dziś tylko 3 z 6 —
+// pozostałe trzy czekają na podpięcie bot/ledger.ts po stronie Fable,
+// TASKS-UI.md Partia 14). `null` na polu = brak danych → myślnik "—" z
+// tooltipem tłumaczącym DLACZEGO (rozróżnienie "w budowie" dla pól
+// bot-side vs zwykły brak historii, żeby nie sugerować usterki tam, gdzie
+// to po prostu jeszcze nie istnieje).
+const statFmtUsd = (v: number) => (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const statFmtSigned = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + statFmtUsd(Math.abs(v));
+
+export interface PositionStatsBarProps {
+  /** PnL od startu = valueUsd(teraz) − wartość z kotwicy (pierwsza próbka
+   *  historii tej pozycji). `null` gdy za mało historii do policzenia. */
+  pnlUsd: number | null;
+  /** Dopisek "od <data kotwicy>" przy etykiecie PnL (TASKS-UI Partia 14: "jak
+   *  przy HODL") — opcjonalny, pomijany gdy data nieznana. */
+  pnlSinceLabel?: string;
+  /** vs HODL 50/50 = valueUsd(teraz) − hodlUsd (ostatnia próbka historii). */
+  vsHodlUsd: number | null;
+  /** `null` = pole bot-side jeszcze niepodłączone (Partia 14: "—" + tooltip "w budowie"). */
+  feesReinvestedUsd: number | null;
+  /** Fee narosłe (nieodebrane) — dostępne DZIŚ dla obu typów kart. */
+  feesAccruedUsd: number | null;
+  /** `null` = pole bot-side jeszcze niepodłączone. */
+  costsUsd: number | null;
+  /** `null` = pole bot-side jeszcze niepodłączone. */
+  rebalances: number | null;
+}
+
+const StatDash: FC<{ title: string }> = ({ title }) => (
+  <span className="muted" title={title}>
+    —
+  </span>
+);
+
+const PENDING_TITLE = 'w budowie — czeka na podpięcie księgi bota (bot/ledger.ts), zadanie po stronie sesji analitycznej (TASKS-UI.md Partia 14)';
+const NO_HISTORY_TITLE = 'brak danych — za mało próbek historii tej pozycji jeszcze zebranych';
+
+export const PositionStatsBar: FC<PositionStatsBarProps> = ({ pnlUsd, pnlSinceLabel, vsHodlUsd, feesReinvestedUsd, feesAccruedUsd, costsUsd, rebalances }) => (
+  <div className="paper-pool-stats">
+    <div className="paper-pool-stat">
+      <span className="muted">PnL od startu{pnlSinceLabel ? ` (od ${pnlSinceLabel})` : ''}</span>
+      {pnlUsd === null ? <StatDash title={NO_HISTORY_TITLE} /> : <span className={pnlUsd < 0 ? 'forecast-negative' : 'paper-positive'}>{statFmtSigned(pnlUsd)}</span>}
+    </div>
+    <div className="paper-pool-stat paper-pool-stat-hodl">
+      <span className="muted">vs HODL 50/50</span>
+      {vsHodlUsd === null ? <StatDash title={NO_HISTORY_TITLE} /> : <span className={vsHodlUsd < 0 ? 'forecast-negative' : 'paper-positive'}>{statFmtSigned(vsHodlUsd)}</span>}
+    </div>
+    <div className="paper-pool-stat">
+      <span className="muted">Fee reinwestowane</span>
+      {feesReinvestedUsd === null ? <StatDash title={PENDING_TITLE} /> : <span>{statFmtUsd(feesReinvestedUsd)}</span>}
+    </div>
+    <div className="paper-pool-stat">
+      <span className="muted">Fee narosłe (do reinwestycji)</span>
+      {feesAccruedUsd === null ? <StatDash title={NO_HISTORY_TITLE} /> : <span>{statFmtUsd(feesAccruedUsd)}</span>}
+    </div>
+    <div className="paper-pool-stat">
+      <span className="muted">Koszty</span>
+      {costsUsd === null ? <StatDash title={PENDING_TITLE} /> : <span>{statFmtUsd(costsUsd)}</span>}
+    </div>
+    <div className="paper-pool-stat">
+      <span className="muted">Rebalanse</span>
+      {rebalances === null ? <StatDash title={PENDING_TITLE} /> : <span>{rebalances}</span>}
+    </div>
+  </div>
+);
