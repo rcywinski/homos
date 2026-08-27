@@ -142,6 +142,25 @@ pul produktowych przy generowaniu propozycji (cbBTC bez zakresu,
 modal "Doradca (brak danych)") — zakres wpisywany ręcznie; do
 obserwacji, czy po cyklach statystyk sugestie wracają.
 
+~wieczór — PLAN BADAŃ E + PIERWSZE WYNIKI E1 (2h robocze Rafała):
+RESEARCH-QUEUE sekcja E (badamy to, czym gramy): E1 wycena FLAT_ENTER
+przed pierwszym podpisem, E2 pomiar żywego produktu, E3 TOP10 →
+HYBRID-SCORE (wide-yield × flat-share × range-survival, obok APY
+przez miesiąc; pomysł Rafała "szukać pul o gorszym APY lepszych dla
+naszego stylu"), E4 przeglądy 1.09/24.09, E5 lista zamkniętych
+falsyfikacji. NOWY SKRYPT backtest/flatwindows.ts (epizody flat wg
+definicji produktu + EV zwężenia z realnym L puli per swap) —
+WYNIKI 365d: base-030 14 epiz./rok, mediana 3.9d, 22% czasu we flat,
+ΣEV zwężania $105/rok na $2.5k, próg ≥2.1d; cbBTC/WETH 14/rok,
+mediana 15.6d, **62% czasu we flat, ΣEV $290/rok (+11.6%/r)**, próg
+≥7d. WNIOSEK: zwężanie to rdzeń wartości hybrydy NA cbBTC; na
+base-030 wybiórczo. CC-Win (wolne moce, decyzja Rafała) dostał dwie
+kolejki na wieczór/noc: (1) SKAN HYBRYDĄ 8 istniejących cache 365d
+(pule odrzucone przy v1.2 mogą przejść nowym stylem — kryteria w
+zleceniu), (2) flatwindows na świeżych 720d + sweep detektora.
+Partia 14 (pasek metryk na kartach realnych) zrobiona przez Sonneta
+i odebrana; PARTIA 13b + bot-side ledger w kolejkach.
+
 ~późne popołudnie — NOGA B OTWARTA, PRODUKT W KOMPLECIE: Sonnet
 dostarczył Partię 13 (odebrana, spot-check OK), CC-Mac paczka
 zbiorcza, CC-Win wdrożył. Rafał otworzył WETH/cbBTC 0.05% Base,

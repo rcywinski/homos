@@ -575,3 +575,82 @@
   v/tvl7d 37.27 — ciekawostka zbieżna z propozycją OPEN selektora z 11.08.
   (c) eth-lst (ogon): dominacja curve-dex $189M TVL — pule v3 do potwierdzenia
   w pełnym wyniku.
+
+## E. PLAN BADAŃ PO WEJŚCIU PRODUKCYJNYM (Fable + Rafał, 27.08 wieczór)
+> Rama: gramy hybrydą FlatWide (szeroki pasywny + zwężenie w potwierdzonym
+> flacie) na 2 pulach Base. Z ~40 przebiegów 26-27.08 wiemy: beta dominuje,
+> różnice strategii to ±2% kapitału, jedyna stabilna przewaga = fees przy
+> szerokim zakresie + potencjalny uplift z flat-zwężenia (nigdy nie grany
+> na żywo). Badania mają służyć TEMU podejściu, nie szukać nowego.
+
+### E1. PRIORYTET: wycena FLAT_ENTER zanim pierwszy raz go podpiszemy (~2-3 tyg.)
+- [x] **Analiza flat-okien historycznych** — skrypt `backtest/flatwindows.ts`
+  (Fable 27.08 wieczór), policzony na 365d (stale cache Maca):
+  base-030: 14 epizodów/rok, mediana 3.9d, 22% czasu we flat;
+  cbBTC/WETH: 14/rok, mediana 15.6d, **62% czasu we flat**.
+  720d + świeży cache → CC-Win (zlecone).
+- [x] **Expected value zwężenia** — w tym samym skrypcie (koszt $6×2,
+  share liczony z realnego L puli per swap): base-030 ΣEV $105/rok na
+  $2.5k (+4.2%/r ekstra), EV>0 w 9/14 epizodów, PRÓG ≥2.1 dnia;
+  cbBTC ΣEV **$290/rok** (+11.6%/r!), PRÓG ≥7 dni (mediana flatu 15.6d
+  i tak wyższa). WNIOSEK OPERACYJNY: zwężanie na cbBTC = rdzeń wartości
+  hybrydy; na base-030 podpisywać wybiórczo (połowa flatów za krótka).
+  Weryfikacja na 720d u CC-Win.
+- [ ] **Sweep parametrów flat-detektora na 720d**: gap enter 2/3%, exit
+  5/6%, confirm 12/24/48h, HL EMA 5/7/10d — WF_SET=hybrid rozszerzony.
+  Jednorazowo, przed pierwszym FLAT_ENTER; potem parametry MROZIMY.
+
+### E2. POMIAR ŻYWEGO PRODUKTU (od dziś, automatycznie)
+- [ ] **Realized vs backtest**: dzienna linia w raporcie porannym per
+  pozycja: fee yield zrealizowany (Δ nieodebranych) vs feeYieldDaily
+  advisora vs założenie z backtestu (~15%/r base-030, ~4%/r cbBTC
+  szeroko). Rozjazd >2× przez tydzień = sygnał do przeglądu.
+- [ ] **Odliczanie do flat**: gap i prognoza dni-do-|gap|<2% (przy
+  stałej cenie) w raporcie porannym dla obu pul produktowych.
+- [ ] **Koszt zwłoki podpisów** (decyzja 26.08): mierzyć od 1. propozycji
+  produktowej (FLAT_ENTER/EXIT) — różnica wyceny moment-propozycji vs
+  moment-podpisu. Przegląd po 2 tyg.
+
+### E3. TOP 10 / SELEKTOR — przestawić na metrykę produktu
+- [ ] **HYBRID-SCORE zamiast headline APY (doprecyzowanie Rafała 27.08:
+  "szukać pul o gorszym APY, które lepiej zarobią naszym stylem").**
+  Ranking = iloczyn trzech składników, wszystkie liczalne nocnym
+  pipeline'em z danych, które już mamy (Llama: fees/TVL/volume/ceny
+  dzienne; swapy dopiero na etapie lejka):
+  1. **wide-yield**: realny yield pasywnego ±50% = fees24h/TVL z
+     korektą na rozkład płynności (nie headline apyBase topu, który
+     premiuje wąskie koncentracje w zmiennych pulach);
+  2. **flat-share**: % czasu w flacie wg definicji PRODUKTU (|gap
+     ceny do EMA HL7d|<2%) na serii dziennej 365d — im więcej flatu,
+     tym większy uplift ze zwężania;
+  3. **range-survival**: czy cena została w ±50% przez ostatnie
+     365/720d (binarnie/karnie) — część passiveW nie może wypadać;
+  plus filtry twarde jak dziś: TVL≥min, persystencja wolumenu (kara
+  za spike'i incentive-farmingu), sieć z tanim gazem.
+  Wdrożenie: liczyć OBOK obecnego rankingu APY przez ~miesiąc
+  (kolumna w selector-ranking + raporcie), porównać listy, potem
+  decyzja Rafała o przepięciu eligible. Kandydat z hybrid-score →
+  lejek (fetch swapów + WF_SET=hybrid) → paper hybrydą → dopiero
+  propozycja realna.
+- [ ] **Auto-lejek: bramka rodzinami produktowymi** — kandydat PASS/FAIL
+  wg WF_SET=hybrid (FlatWide + passiveW + FlatOnly-HODL, kryteria z
+  rundy finałowej), nie wg odrzuconego profilu v1.2 "Adapt k=3+trend".
+- [ ] **Paper trading hybrydą na kandydatach TOP10**: nowa pula przechodzi
+  lejek → gra hybrydę w paper 2-4 tyg. zanim dostanie propozycję realną.
+  Paper v1.2 na obecnych 6 pulach zostaje jako kontrola A/B.
+
+### E4. PRZEGLĄDY (kalendarz)
+- [ ] ~1.09: przegląd PROPONUJ (zaplanowany 26.08) + pierwszy tydzień
+  produktu (realized fees, gap-tracker, incydenty UI).
+- [ ] ~24.09 (miesiąc od wejścia): produkt vs HODL vs USDC na żywo +
+  paper A/B; decyzja o transzy 2 dopiero po ≥1 pełnym cyklu
+  flat→trend→flat.
+
+### E5. ZAMKNIĘTE — NIE wracać bez nowych danych (falsyfikacje 26-27.08)
+rotacja między pulami (przegrywa z single-pool i USDC, nawet ORACLE),
+hedge ciągły full/excess (artefakt małej próby, 720d obala), upConfirm
+/wolniejszy sygnał UP (systematycznie szkodzi), parking USDC/USDT LP
+(fees $1/rok), pegged tBTC/WBTC (teza 3%/tydz. nie istnieje), krótsze
+histerezy hUp 6/12h (szum). Jedyny warunkowy powrót: hedge WŁĄCZANY
+tylko w reżimie down (obserwacja z 26.08, hedge(full) down 66-87% wygr.)
+— ale dopiero gdyby produkt przeżył ≥1 pełną bessę i temat wrócił.

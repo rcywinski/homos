@@ -852,11 +852,61 @@ w gicie: f98b451 i wcześniejsze.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 27.08 ~wieczór #3 — PACZKA "flatwindows + zlecenia
+  wieczorne"] Commit+push: backtest/flatwindows.ts (NOWY — statystyka
+  epizodów flat + EV zwężenia, policzony na 365d przez Fable),
+  RESEARCH-QUEUE.md (sekcja E + wyniki E1), HANDOFF.md (zlecenia
+  CC-Win: skan hybrydą + flatwindows 720d), CONTEXT.md. Komunikat:
+  "feat(backtest): flatwindows — flat episodes stats + narrowing EV;
+  docs: research plan E". Po pushu ping CC-Win — ma dwie kolejki na
+  wieczór/noc.
+
 - [Fable→CC-Mac, 27.08 ~wieczór #2 — PACZKA "Partia 14"] Commit+push:
   zmiany Sonneta w src/** (pasek metryk na kartach realnych pozycji —
   Partia 14; jeśli na dysku są też zmiany Partii 13b, wchodzą razem),
   TASKS-UI.md (nagłówki ✅), HANDOFF.md. Komunikat: "feat(ui): real
   position cards stats header (partia 14)". Po pushu ping CC-Win.
+
+- [Fable→CC-Win, 27.08 ~wieczór — **SKAN HYBRYDĄ ISTNIEJĄCYCH CACHE
+  (decyzja Rafała: wolne moce → badanie kolejnych pul pod NOWY styl
+  gry). Start OD RAZU, kod już masz (WF_SET=hybrid z paczki 004c038).**]
+  Env dla wszystkiego: `WF_SET=hybrid SIGMA_MODE=grid15
+  NODE_OPTIONS=--max-old-space-size=12288`, walkforward `<id> 30 15`,
+  raporty parami jak zawsze (global+reżimy+recent90), commit results.
+  KOLEJNOŚĆ (od najciekawszych):
+  1. `base-weth-usdc-005-365d` (siostra naszej realnej puli, tańszy
+     tier — FAIL na v1.2, hybryda może to odwrócić),
+  2. `arbitrum-weth-usdc-030-365d`, 3. `optimism-weth-usdc-030-365d`,
+  4. `mainnet-usdc-weth-030-365d` (jeśli cache jest), 5.
+  `mainnet-usdc-weth-001-365d`, 6. `mainnet-weth-usdt-001-365d`
+  (odrzucone przy v1.2 — sprawdzamy, czy nowy styl zmienia werdykt),
+  7. `cand-base-usdc-cbbtc-030` (czysta beta BTC), 8.
+  `mainnet-wsteth-weth-001` (LST — flat prawie zawsze; ciekawe dla
+  części zwężanej). POMIŃ cand-base-weth-cbbtc-030-720d (zepsuty 1.
+  punkt cache).
+  KRYTERIUM ODCZYTU (odniesienie = nasze pule realne, WF hybrid
+  27.08): base-030 śr −0.16/70%/worst −11.0; cbBTC +0.48/65%/−1.14.
+  Szukamy pul, gdzie NAJLEPSZY wariant hybrydy ma śr.≥0, %wygr.≥60,
+  worst nie gorszy niż −12. Zwycięzcy → dopisz `FP_SET=hybrid
+  fullperiod <id> 2500` dla porównania dolarowego.
+  PO SKANIE (jeśli zostanie czasu/nocy): fetch 365d HyperSync dla
+  kandydatów z BRAKI (`cand-arbitrum-weth-usdc-030`,
+  `cand-base-weth-usdc-005` już masz jako żywą 005? — bierz tylko te,
+  których realnie nie ma w cache) i ten sam walkforward. NIE kolidować
+  z oknem automatu 05:30–08:25; jeden ciężki proces naraz.
+
+- [Fable→CC-Win, 27.08 ~wieczór — **FLATWINDOWS na świeżych 720d**
+  (po pullu paczki z `backtest/flatwindows.ts`; krótkie przebiegi,
+  wciśnij PRZED skan hybrydą albo między jego punkty):]
+  1. `npx tsx backtest/flatwindows.ts base-weth-usdc-030-720d`
+  2. `NARROW=0.06 npx tsx backtest/flatwindows.ts base-cbbtc-weth-005-720d`
+  3. Sweep detektora (E1): dla base-030-720d warianty
+     `ENTER=0.03`, `CONFIRM_H=12`, `HL_D=5`, `HL_D=10` (po jednym
+     na raz, reszta default) — tabelki stdout do raportu.
+  Odniesienie (Fable, 365d stale): base-030 14 epiz./rok, med 3.9d,
+  22% czasu, ΣEV $105/rok, próg ≥2.1d; cbBTC 14/rok, med 15.6d, 62%
+  czasu, ΣEV $290/rok, próg ≥7d. Sprawdzamy, czy 720d (z bullem)
+  potwierdza skalę i progi.
 
 - [Fable→CC-Win, 27.08 ~wieczór — wdrożenie Partii 14, NIEPILNE ale
   proste] Po pullu paczki "Partia 14" od CC-Mac: `npm run build` +
