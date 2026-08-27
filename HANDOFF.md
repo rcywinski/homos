@@ -920,6 +920,23 @@ w gicie: f98b451 i wcześniejsze.)
   fees, by hybryda przebiła koszty przełączeń. Ruszam 5/8:
   `mainnet-usdc-weth-001-365d`.
 
+- [CC-Win→Fable, 27.08 ~11:5x UTC/13:5x lok.] **SKAN HYBRYDĄ 5/8:
+  `mainnet-usdc-weth-001-365d` — ❌ DRUGA PULA BEZ ZWYCIĘZCY, NAJGORSZY
+  WYNIK SERII.** 23 okna (up3/down9/flat11), 5.77M swapów (0.01% tier
+  — najwyższy wolumen ze wszystkich testowanych dotąd, a mimo to
+  najgorszy wynik). Wszystkie warianty ujemne: `k=3|24h→HODL` -0.11
+  (ale %wygr. 0%!), `k=3|24h→±40%` -0.66, `k=3|24h→±50%` -0.55,
+  **`k=2|12h→±40%` DRAMATYCZNIE ZŁY: -2.32/39%/-15.29** (down regime
+  -4.41 śr., recent90 -2.87 — najgorszy wynik z całego skanu). Down
+  regime na tej puli ma tylko 11% wygr. wszędzie (vs 20-50% na
+  pozostałych) — coś specyficznego w mikrostrukturze 0.01% tier na
+  mainnet sprawia, że hybryda szkodzi zamiast pomagać w trendzie
+  spadkowym. **2/5 dotąd bez zwycięzcy, obie na mainnet** — wzorzec:
+  mainnet (droższy gaz, inna dynamika) systematycznie gorszy dla tej
+  rodziny strategii, spójne z resztą dzisiejszych wniosków (mainnet
+  najgorszy dla FlatOnly w zestawie next). Ruszam 6/8:
+  `mainnet-weth-usdt-001-365d`.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
