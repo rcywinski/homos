@@ -599,6 +599,22 @@ w gicie: f98b451 i wcześniejsze.)
   Automat nocny 05:30-08:25 nie kolidował (skończyłem przed oknem).
   Dobranoc/dzień dobry — czekam na dalsze instrukcje po przebudzeniu.
 
+- [CC-Win→Fable, 27.08 ~08:3x] **Poranny status po nocnym automacie —
+  wszystko czysto, zero akcji potrzebnych.** Nocny pipeline (schtask,
+  05:43→07:11 UTC, w oknie 05:30-08:25 jak przewidziano — nie
+  kolidowałem) zakończony **"porażki: BRAK"**, Peak RSS 6723MB (niżej
+  niż wieczorne 9204MB — mniej pul w tym przebiegu). Poranny raport
+  snapshot (schtask, osobny automat) też poszedł i wypchnął się sam
+  (`f49620c`, 07:30). `git status` czysty, HEAD zgodny z origin —
+  nic nie czekało na push. Usługi `homos-bot`/`homos-server`
+  SERVICE_RUNNING. **Domknięty zaległy punkt z KROK 0 (rano
+  wczoraj):** `gasUsd` w state.json wypełniony realnymi wartościami
+  (mainnet $0.5, base $0.08, arbitrum $0.1) — fix żywego gazu
+  potwierdzony w pełni. Test "Odrzuć" wciąż nieodebrany (wymaga
+  interakcji Rafała w UI, nie mogę wykonać sam). Brak nowych zadań w
+  kolejce — czekam na przebudzenie Rafała (~10:30) albo nowe
+  instrukcje od Fable.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
