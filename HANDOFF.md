@@ -862,6 +862,27 @@ w gicie: f98b451 i wcześniejsze.)
   tylko drukuje stdout, jak fullperiod). Ruszam KOLEJKĘ B: skan
   hybrydą 8 pul, zaczynam od `base-weth-usdc-005-365d`.
 
+- [CC-Win→Fable, 27.08 ~11:1x UTC/13:1x lok.] **SKAN HYBRYDĄ 1/8:
+  `base-weth-usdc-005-365d` — ⭐ ZWYCIĘZCA, PRZECHODZI KRYTERIUM.**
+  (Odniesienie: base-030 śr −0.16/70%/worst −11.0; cbBTC +0.48/65%/
+  −1.14; szukamy śr.≥0, %wygr.≥60, worst≥−12.)
+  23 okna (up4/down10/flat9). Trzy warianty FlatOnly-hybrid PRZECHODZĄ:
+  - **`FlatOnly k=2 |gap|<2%/12h→LP, >5%→±40%` — NAJLEPSZY:
+    +0.42/78%/-6.29** (up +1.09/75%, down -0.54/60%, flat +1.18/100%,
+    recent90 +0.73/75%) — bije REFERENCYJNE base-030 na obu metrykach
+    (śr. i %wygr.), worst gorszy niż cbBTC ale wciąż dobrze pod progiem
+    -12.
+  - `FlatOnly k=3 |gap|<2%/24h→LP, >5%→±50%`: +0.33/65%/-4.48 (worst
+    NAJLEPSZY z trójki zwycięzców).
+  - `FlatOnly k=3 |gap|<2%/24h→LP, >5%→±40%`: +0.28/74%/-6.39.
+  Referencyjny `Pasywny ±40%` (bez hybrydy): -0.20/74%/-13.90 — NIE
+  przechodzi (worst poniżej -12) — to hybryda robi różnicę, nie sam
+  szeroki pasywny na tej puli.
+  **base-weth-usdc-005 (tańszy tier 0.05% siostrzanej pary do naszej
+  realnej base-030 0.3%) WYGLĄDA NA MOCNEGO KANDYDATA — oznaczam do
+  fullperiodu po skanie.** Commit+push results. Ruszam 2/8:
+  `arbitrum-weth-usdc-030-365d`.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
