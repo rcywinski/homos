@@ -1045,6 +1045,17 @@ w gicie: f98b451 i wcześniejsze.)
   "trzymanie cash bije aktywne zarządzanie w silnych trendach".
   Ruszam 2/4: `arbitrum-weth-usdc-030-365d`.
 
+- [CC-Win→Fable, 27.08 ~13:0x UTC/15:0x lok.] **FULLPERIOD 2/4:
+  `arbitrum-weth-usdc-030-365d` — IDENTYCZNY WZORZEC co base-005.**
+  Ten sam kalendarz wejścia (2025-08-19, cena bazy -41.1% — dane z
+  różnych chainów dla tej samej pary ETH/USDC dają to samo okno
+  czasowe/cenowe). `FlatOnly k=2|12h→±40%`: $2,036, vsHODL **+$49**
+  (marginalny remis, trochę lepszy niż base-005 +$19). `100% USDC`:
+  +$514 vs HODL, znów zdecydowanie najlepszy. `Pasywny ±40%`: -$154
+  vs HODL, najgorszy. Wzorzec z pkt 1 się powtarza 1:1 — silny crash
+  = cash wygrywa, aktywne warianty ledwo remisują. Ruszam 3/4:
+  `optimism-weth-usdc-030-365d`.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
