@@ -106,6 +106,12 @@ export interface BotWatchedPosition {
   inRange: boolean;
   advice: string;
   paybackDays: number | null;
+  /** agregaty księgi bota (PARTIA 14 bot-side, 27.08): opcjonalne —
+   *  starsze wersje bota ich nie wysyłają (feature-detect w UI).
+   *  0 = poprawne zero świeżej pozycji; null = księga nie umie wycenić. */
+  collectedFeesUsd?: number | null;
+  costsUsd?: number | null;
+  rebalances?: number | null;
 }
 
 // Hedge REALNY na GMX (Arbitrum) — odczyt Readerem co cykl observera,

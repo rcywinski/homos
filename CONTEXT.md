@@ -161,6 +161,28 @@ zleceniu), (2) flatwindows na świeżych 720d + sweep detektora.
 Partia 14 (pasek metryk na kartach realnych) zrobiona przez Sonneta
 i odebrana; PARTIA 13b + bot-side ledger w kolejkach.
 
+~noc — WIECZORNA SESJA CC-WIN ODEBRANA (15 przebiegów): (1) SKAN
+HYBRYDĄ 8 pul: zwycięzcy base-weth-usdc-005 ⭐ (+0.42/78%/−6.3),
+optimism-weth-usdc-030 ⭐ (+0.56/78%), arbitrum-030 ✓ marginalny —
+WSZYSCY TYM SAMYM zestawem parametrów (k=2, gap<2%, confirm 12h,
+→±40%; dobry znak przeciw przeoptymalizowaniu). MAINNET 4/4 FAIL
+(chain silniejszym predyktorem niż para/tier; wstETH/WETH KATASTROFA
+0% wygr. — detektor flat łapie szum na parach o zerowej zmienności →
+LEKCJA do FLAT_ENTER: próg minimalnej zmienności / wykluczenie
+LST i stable/stable). cbBTC-USDC: wyjątek, goły Pasywny > hybryda.
+(2) FULLPERIODY zwycięzców 4/4: wszystkie trafiły na okno z crashem
+−28…−41% (sierpień 2025) — USDC wygrywa (+$351…+$517), zwycięzcy WF
+ledwo remisują z HODL (+$4…+$75) — kolejne twarde przypomnienie,
+że bramka wielookienna ≠ wygrana w konkretnym oknie i że beta
+dominuje. (3) CONFIRM_H=12 potwierdzone PODWÓJNIE (sweep flatwindows
++ skan: k=2|12h konsekwentnie bije k=3|24h) — kandydat do spec
+FLAT_ENTER; cross-check na cbBTC-720d jeszcze w kolejce CC-Win.
+KANDYDACI ROZSZERZENIA (na przegląd 1.09, NIE na teraz): base-005
+i optimism-030 — z uczciwym zastrzeżeniem Fable: base-005 to TA SAMA
+para co nasza realna 030 (podwojenie ekspozycji, nie dywersyfikacja),
+optimism = nowy chain operacyjnie; transza 2 i tak bramkowana pełnym
+cyklem flat→trend→flat (E4).
+
 ~późne popołudnie — NOGA B OTWARTA, PRODUKT W KOMPLECIE: Sonnet
 dostarczył Partię 13 (odebrana, spot-check OK), CC-Mac paczka
 zbiorcza, CC-Win wdrożył. Rafał otworzył WETH/cbBTC 0.05% Base,

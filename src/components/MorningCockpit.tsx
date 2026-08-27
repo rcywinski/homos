@@ -836,19 +836,25 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                     {/* Partia 14: pasek metryk jak w paper (PositionStatsBar,
                         PositionCharts.tsx) — "Fee narosłe" tu ZASTĘPUJE starą
                         osobną linię "Nieodebrane fee" (przeniesione do paska,
-                        zgodnie ze spec). Fee reinwestowane/Koszty/Rebalanse
-                        `null` = "—" z tooltipem "w budowie" — czekają na
-                        podpięcie księgi bota (bot/ledger.ts, Fable, patrz
-                        HANDOFF.md). */}
-                    <PositionStatsBar
-                      pnlUsd={pnlSinceStartUsd}
-                      pnlSinceLabel={hodlSince ? new Date(hodlSince).toLocaleDateString('pl-PL') : undefined}
-                      vsHodlUsd={vsHodlUsd}
-                      feesReinvestedUsd={null}
-                      feesAccruedUsd={p.feesUsd}
-                      costsUsd={null}
-                      rebalances={null}
-                    />
+                        zgodnie ze spec). Fee reinwestowane/Koszty/Rebalanse:
+                        feature-detect z bot.state.positions (agregaty księgi,
+                        bot-side Partii 14, 27.08 — Fable) — pole nieobecne
+                        (stary bot) albo null (księga nie umie wycenić) = "—";
+                        0 to POPRAWNE zero świeżej pozycji, nie "—". */}
+                    {(() => {
+                      const bp = (bot.state?.positions ?? []).find((x) => x.tokenId === p.tokenId);
+                      return (
+                        <PositionStatsBar
+                          pnlUsd={pnlSinceStartUsd}
+                          pnlSinceLabel={hodlSince ? new Date(hodlSince).toLocaleDateString('pl-PL') : undefined}
+                          vsHodlUsd={vsHodlUsd}
+                          feesReinvestedUsd={bp?.collectedFeesUsd ?? null}
+                          feesAccruedUsd={p.feesUsd}
+                          costsUsd={bp?.costsUsd ?? null}
+                          rebalances={bp?.rebalances ?? null}
+                        />
+                      );
+                    })()}
 
                     {posHistory.length >= 2 ? (
                       <>

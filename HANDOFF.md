@@ -1262,6 +1262,17 @@ w gicie: f98b451 i wcześniejsze.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 27.08 ~noc #2 — HOTFIX UI "dashe zamiast $0"
+  (zgłoszenie Rafała po restarcie bota)] Commit+push:
+  src/hooks/useBotApi.ts (BotWatchedPosition + opcjonalne pola
+  agregatów księgi), src/components/MorningCockpit.tsx (pasek metryk
+  czyta collectedFeesUsd/costsUsd/rebalances z bot.state.positions
+  feature-detectem — było zahardkodowane null z Partii 14), CONTEXT.md,
+  HANDOFF.md. tsc czysty. Komunikat: "fix(ui): wire ledger aggregates
+  into position stats bar". Po pushu ping CC-Win: `npm run build` +
+  `nssm restart homos-server`. Sanity: karty #5886957/#5887690 mają
+  "Fee reinwestowane $0" i "Rebalanse 0" (Koszty zostaje "—").
+
 - [Fable→CC-Mac, 27.08 ~noc — PACZKA "ledger→pozycje (bot-side
   Partii 14)"] Commit+push: bot/observer.ts (agregaty księgi per żywa
   pozycja: `collectedFeesUsd` [COLLECT−DECREASE, null gdy księga nie
