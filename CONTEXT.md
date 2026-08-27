@@ -54,6 +54,34 @@
 
 ## 4. Dziennik sesji
 
+### 2026-08-27 ~rano — SESJA DECYZYJNA (Fable + Rafał) — w toku
+Checklist z HANDOFF wykonany: (1) runda finałowa ODEBRANA i
+ZWERYFIKOWANA niezależnie na 8/8 JSON-ach walkforward — zgodność z
+raportami CC-Win co do setnych; KOREKTA: na cbBTC-365d próg flat≥65%
+przechodzą 4/4 warianty FlatOnly (73.7% + 3×68.4%), nie "1/8" —
+werdykt bez zmian (up/down tam −1.4…−1.7, na 720d flat spada do
+48–59%). Bonus: analiza %wygr. passiveW z walkforwardów (sugestia
+CC-Win "na rano") zrobiona przy weryfikacji — flat 86–100% wszędzie,
+globalnie 60–78%, worst −6.8…−17.4 na 7/8 (wyjątek cbBTC-365d).
+(2) Nocny automat czysty (porażki: BRAK, backtest-run 1h21m exit 0 —
+pierwszy przebieg z wykluczeniem cand-* działa; kosmetyka: 5 starych
+cand-* w BRAKI checku świeżości). Paper dzień 9: $64,347 (+7.2%),
+vs HODL −$4,635. gasUsd/test-Odrzuć dalej u CC-Win. (3) Brief +
+tabela decyzyjna + wyjaśnienia dla Rafała ("jak działają passiveW/
+FlatOnly-HODL", "dlaczego aktywne przegrywa z HODL" — short gamma,
+koszty, spóźnione sygnały, wynik ORACLE). Rafał skłania się ku
+FlatOnly-HODL (wstępnie: całość ~$6k, split 60% base-030 / 40%
+cbBTC), sceptyczny wobec porzucenia dynamicznego zarządzania —
+kontrargument danymi: rotacja/ORACLE. (4) Na pytanie Rafała test
+90d $2.5k/pula: fullperiod.ts dostał env FP_DAYS=N (przycięcie do
+ostatnich N dni), policzone w kontenerze na cache Maca (STALE, koniec
+11.08; okno 12.05–11.08, ETH −16.3%): passiveW $4,399, FlatOnly
+$4,329, HODL $4,327, USDC $5,000 — beta dominuje, passiveW dokłada
+fees (+$51/+$25 vs HODL), FlatOnly ≈ HODL. DECYZJA RAFAŁA: przed
+werdyktem zlecić CC-Win ten sam test na świeżym cache (okno z pompą
+18–27.08) — wpis w HANDOFF, blokuje decyzję kapitałową. Paczka
+u CC-Mac (FP_DAYS + docs).
+
 ### 2026-08-26 ~08:1x–09:0x — PRZEGLĄD TYGODNIOWY (Fable + Rafał) — komplet decyzji z DECYZJE-2026-08-26
 Brief poranny + pełny przegląd agendy, punkt po punkcie (AskUserQuestion),
 w kolejności 11a: σ → k → hUp → kapitał. WSZYSTKIE decyzje podjęte —

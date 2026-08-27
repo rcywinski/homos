@@ -18,27 +18,17 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-> **NA RANO 27.08 (checklist dla porannej sesji — dzień decyzji
-> produkt-albo-zamrożenie):**
-> 1. Odbiór RUNDY FINAŁOWEJ z nocy (raporty CC-Win niżej/w gicie):
->    WF_SET=final ×8 + FP_SET=final ×4. Kryteria odczytu — DECYZJE
->    "WERDYKT ~19:xx" i wpis CC-Win ~20:xx: wide-passive = fullperiod
->    ≥ HODL 4/4 + worst>−3 + maxDD≈HODL; FlatOnly-HODL = flat ≥65%
->    vsHODL, up/down REMIS (±1 p.p. = remis, nie przegrana!), worst>−3,
->    fullperiod ≥ HODL. Zweryfikować niezależnie na JSON-ach.
-> 2. Brief + tabela decyzyjna dla Rafała → DECYZJA: produkt (który,
->    ile kapitału, mechanika wejścia przez apkę) ALBO zamrożenie
->    (bot→OBSERWUJ, przegląd za miesiąc). USTALENIE TWARDE z 26.08:
->    bez dopisywania kolejnych eksperymentów po tej rundzie.
-> 3. Zaległe drobiazgi: (a) gasUsd w state.json liczbowo?; (b) test
->    "Odrzuć" na żywo (klik Rafała → linia w observer.log); (c) nocny
->    automat 05:30 — pierwszy przebieg z wykluczeniem cand-* (paczka
->    #3) i po całym dniu ciężkiej pracy maszyny.
-> 4. Kontekst dnia 26.08 W CAŁOŚCI: CONTEXT dziennik (wpisy ~08:1x →
->    ~20:xx) + DECYZJE-2026-08-26 (WYNIK PRZEGLĄDU + REWIZJA pkt 8 +
->    WIECZORNY WERDYKT). Statusy TASKS-*: ROTATION=ZAMKNIĘTY
->    (odrzucona), RECAL=w większości wykonany/wstrzymany (nagłówki
->    w plikach), LIFECYCLE=czeka na decyzję o losie projektu.
+> **STAN 27.08 ~rano:** checklist poranny WYKONANY (runda finałowa
+> odebrana + zweryfikowana niezależnie na 8/8 JSON-ach walkforward —
+> zgodność co do setnych; korekta: na cbBTC-365d flat≥65% przechodzą
+> 4/4 warianty FlatOnly, nie 1 — werdykt bez zmian). Brief + tabela
+> decyzyjna przedstawione Rafałowi + wyjaśnienie "dlaczego aktywne
+> przegrywa z HODL". DECYZJA JESZCZE NIE ZAPADŁA — Rafał skłania się
+> ku FlatOnly-HODL, wstępnie: całość ~$6k, split 60% weth-usdc-030 /
+> 40% cbbtc-weth-005. Zlecił test 90d $2,5k/pula: na stale'owym cache
+> Maca (okno 12.05–11.08, ETH −16%) passiveW −$601, FlatOnly −$671,
+> HODL −$673, USDC $0 — beta dominuje. CZEKAMY na przebieg CC-Win na
+> świeżym cache (okno z pompą do dziś) → decyzja po wynikach.
 
 (Skrzynka pusta — WSZYSTKIE raporty CC-Win z 26.08 ODEBRANE ~15:xx:
 KROK 0 [gasUsd={} zaraz po restarcie — do potwierdzenia po cyklu;
@@ -635,6 +625,14 @@ w gicie: f98b451 i wcześniejsze.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 27.08 ~rano — PACZKA: FP_DAYS + docs] Commit+push:
+  backtest/fullperiod.ts (nowy env `FP_DAYS=N` — przycięcie serii do
+  ostatnich N dni; policzony w kontenerze na obu pulach Base, działa),
+  HANDOFF.md (zlecenie świeżych 90d u CC-Win + stan poranka),
+  CONTEXT.md (wpis dziennika 27.08). Komunikat: "feat(backtest):
+  FP_DAYS window trim; docs: poranek 27.08". Po pushu ping CC-Win —
+  jego przebieg BLOKUJE decyzję kapitałową Rafała.
+
 - [Fable→CC-Mac, 26.08 ~21:xx — PACZKA #5 (ostatnia dziś, same
   dokumenty)] Commit+push: HANDOFF.md (checklist NA RANO dla sesji
   Fable 27.08), CONTEXT.md (skrót stanu na górze §1), TASKS-ROTATION.md
@@ -660,6 +658,30 @@ w gicie: f98b451 i wcześniejsze.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 27.08 ~rano — PILNE, blokuje decyzję Rafała o kapitale]
+  Po pullu paczki CC-Mac (fullperiod.ts dostał env `FP_DAYS=N` —
+  przycięcie serii do ostatnich N dni cache'a) odpal na ŚWIEŻYM cache
+  (po dzisiejszym fetchu 07:30, okno kończy się dziś):
+  1. `FP_SET=final SIGMA_MODE=grid15 FP_DAYS=90
+     NODE_OPTIONS=--max-old-space-size=12288 npx tsx
+     backtest/fullperiod.ts base-weth-usdc-030-365d 2500`
+  2. to samo dla `base-cbbtc-weth-005-365d 2500`.
+  Kontekst: pytanie Rafała "wchodzę $2,5k/pula — co dałyby obie
+  strategie przez ostatnie 3 miesiące". Fable policzył to na cache
+  Maca (stale, koniec 11.08, ETH −16%): passiveW ±50% $2,347/±40%
+  cbBTC $2,056; FlatOnly k=3|24h $2,296/$2,033; HODL $2,296/$2,031;
+  USDC wygrywa. Wasze okno łapie pompę 18–27.08 — raport z pełnymi
+  tabelami stdout do @Fable, porównamy oba okna. To 2 szybkie
+  przebiegi, bez commitu results (fullperiod nie zapisuje JSON).
+- [Fable→CC-Win, 27.08 ~rano] Przypomnienie zaległych weryfikacji
+  (nie blokują): (a) `state.json.gasUsd` wypełnione liczbami po cyklu
+  observera? (b) test "Odrzuć" — po kliku Rafała linia "odrzucona
+  (komenda z UI)" w observer.log w ≤30 s. Nocny automat 05:30 z 27.08
+  odebrany przez Fable: czysty (porażki: BRAK, backtest-run exit 0
+  1h21m — pierwszy przebieg z wykluczeniem cand-* działa). Kosmetyka
+  niepilna: check świeżości raportuje 5 starych `cand-*` jako BRAKI —
+  do wyciszenia kiedyś w morning-report.
+
 > (KROK 0 i KROK 1 [seria RECAL 9/9] ZROBIONE i odebrane przez Fable —
 > dzięki, wzorowa robota, w tym samodzielny recent90 i dyscyplina
 > "crash → notatka → dalej". KROK 2 w toku po incydencie cand-*.

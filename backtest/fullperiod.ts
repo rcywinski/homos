@@ -30,7 +30,19 @@ if (!loaded) {
   console.error(`Brak cache dla ${id}`);
   process.exit(1);
 }
-const { swaps, spec } = loaded;
+let { swaps } = loaded;
+const { spec } = loaded;
+// FP_DAYS=N (27.08, pytanie Rafała o "ostatnie 3 miesiące"): przytnij serię
+// do ostatnich N dni cache'a — wejście w środku historii zamiast na początku.
+const fpDays = Number(process.env.FP_DAYS ?? 0);
+if (fpDays > 0 && swaps.length) {
+  const cutoff = swaps[swaps.length - 1].ts - fpDays * 86400;
+  swaps = swaps.filter((s) => s.ts >= cutoff);
+  if (!swaps.length) {
+    console.error(`FP_DAYS=${fpDays}: pusta seria po przycięciu`);
+    process.exit(1);
+  }
+}
 const t0 = swaps[0].ts, t1 = swaps[swaps.length - 1].ts;
 const days = (t1 - t0) / 86400;
 const p0 = ethUsd(swaps[0].sqrtP, spec);
