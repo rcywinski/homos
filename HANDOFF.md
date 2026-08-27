@@ -797,6 +797,64 @@ w gicie: f98b451 i wcześniejsze.)
      inaczej niż spec (PnL/vsHODL/Fee narosłe wypełnione, Fee
      reinwestowane/Koszty/Rebalanse jako "—"), zgłoszę tu.
 
+- [CC-Win→Fable, 27.08 ~11:0x UTC/13:0x lok.] **KOLEJKA A (flatwindows
+  720d) ZAMKNIĘTA — 3/3 zrobione, wyniki spójne z Twoim referencyjnym
+  365d, skala podobna mimo dłuższego okna z bullem.**
+
+  **1. `base-weth-usdc-030-720d`** (default ENTER=2%/24h, HL7d,
+  ±50%/±8%): 25 epizodów (12.6/rok — Twoje 365d dało 14/rok, blisko),
+  mediana **2.7d** (Twoje: 3.9d — trochę krótsze epizody na dłuższym
+  oknie), czas we flat **15.9%** (Twoje: 22%), EV>0: 12/25, **ΣEV
+  $91.69/722dni ≈ $46/rok** (Twoje: $105/rok — tego samego rzędu,
+  trochę niżej). Próg praktyczny: epizody EV>0 trwały ≥1.5d (Twoje:
+  ≥2.1d — podobny, trochę niżej).
+
+  **2. `base-cbbtc-weth-005-720d`** (NARROW=6%): 25 epizodów
+  (12.8/rok, Twoje: 14/rok), mediana **7.8d** (Twoje: 15.6d — o
+  połowę krócej na 720d), czas we flat **45.0%** (Twoje: 62%), EV>0:
+  17/25, **ΣEV $400.14/713dni ≈ $205/rok** (Twoje: $290/rok — niżej,
+  ale wciąż wyraźnie dodatnie i większe niż base-030). Próg: ≥4.7d
+  (Twoje: ≥7d).
+  **WNIOSEK PARY 1+2:** 720d POTWIERDZA kierunek z Twojego 365d —
+  cbBTC ma znacznie więcej wartości w zwężeniu (ΣEV/rok ~4-5× wyżej
+  niż base-030, dłuższe epizody, więcej czasu we flat) — spójne z
+  decyzją Rafała dać cbBTC węższy NARROW. Liczby na 720d SYSTEMATYCZNIE
+  niższe niż na Twoim 365d (krótsze mediany, niższe ΣEV/rok, niższe
+  progi) — 720d rozcieńcza flat mocniejszymi trendami z bulla
+  2024/2025, którego 365d stale nie łapało w tym samym stopniu.
+
+  **3. SWEEP DETEKTORA (E1) na `base-weth-usdc-030-720d`** — jeden
+  parametr naraz, reszta default (baseline z pkt 1: 25 epiz./12.6rok,
+  med 2.7d, 15.9% flat, ΣEV $91.69):
+  ```
+  wariant         epizody/rok  mediana  %flat   EV>0   ΣEV($)
+  default (base)     12.6        2.7d   15.9%   12/25    91.69
+  ENTER=0.03          22.3       2.5d   25.3%   23/44   238.40
+  CONFIRM_H=12        22.8       2.4d   26.3%   24/45   297.04
+  HL_D=5              17.7       3.0d   22.5%   20/35   229.65
+  HL_D=10             13.2       2.2d   11.3%    7/26   -47.12
+  ```
+  **NAJWAŻNIEJSZY WYNIK: `CONFIRM_H=12` daje najlepsze ΣEV ($297 vs
+  $92 baseline, +223%)** — połowa czasu potwierdzenia (12h zamiast
+  24h) prawie PODWAJA liczbę złapanych epizodów (45 vs 25) bez
+  psucia jakości (EV>0 rate 24/45=53% vs 12/25=48%, podobne). `ENTER=
+  0.03` (luźniejszy próg wejścia w flat) daje podobny efekt ($238,
+  +160%) tym samym mechanizmem — więcej epizodów łapanych.
+  **`HL_D=10` (wolniejsza EMA) jest WYRAŹNIE GORSZY — jedyny wariant
+  na MINUSIE ($-47)** — dłuższe half-life EMA sprawia, że detektor
+  łapie mniej epizodów (13.2/rok, najmniej z całego sweepu) i te,
+  które łapie, są gorszej jakości (7/26 EV>0 = 27%, najgorszy
+  wskaźnik). `HL_D=5` (szybsza EMA) jest pośredni, wciąż wyraźnie
+  lepszy niż baseline HL_D=7 ($230 vs $92).
+  **REKOMENDACJA do FLAT_ENTER/FLAT_EXIT (Twój punkt (1) na następną
+  sesję):** rozważ CONFIRM_H=12 zamiast 24h i/lub HL_D krótszy niż 7d
+  (5d) — oba kierunki testowanego sweepu poprawiają ΣEV 2-3×
+  względem domyślnych parametrów z dzisiejszej analizy. HL_D=10 do
+  odrzucenia.
+  Commit+push (brak plików wynikowych do commitu — flatwindows.ts
+  tylko drukuje stdout, jak fullperiod). Ruszam KOLEJKĘ B: skan
+  hybrydą 8 pul, zaczynam od `base-weth-usdc-005-365d`.
+
 ## @Sonnet (sesja UI, Cowork)
 > (PARTIA 13 ODEBRANA przez Fable 27.08 — spot-check kodu OK, komplet
 > 6 punktów, nagłówek w TASKS-UI oznaczony ✅. Dzięki za szybką robotę.
