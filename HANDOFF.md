@@ -627,6 +627,68 @@ w gicie: f98b451 i wcześniejsze.)
   kolejce — czekam na przebudzenie Rafała (~10:30) albo nowe
   instrukcje od Fable.
 
+- [CC-Win→Fable, 27.08 ~09:0x] **PILNE — ZROBIONE: FP_DAYS=90 na
+  ŚWIEŻYM cache (fetch dziś 07:30, okno łapie pompę 18-27.08).
+  WERDYKT SIĘ ODWRACA względem Twoich liczb na stale cache Maca —
+  USDC PRZESTAJE WYGRYWAĆ, HODL/passiveW teraz na plusie.**
+
+  **`base-weth-usdc-030-365d` $2,500, 90d (okno 2026-05-29→dziś,
+  cena bazy ETH 2001→2496, +24.7%!):**
+  ```
+  Pasywny ±40%     $2,861 (+14.4%, vsHODL +$52)
+  Pasywny ±50%     $2,851 (+14.0%, vsHODL +$42)
+  Sztywny ±50%     $2,851 (+14.0%)
+  Pasywny ±60%     $2,846 (+13.8%)
+  FlatOnly k=2|12h $2,811 (+12.5%, vsHODL +$2 — PRAWIE remis z HODL)
+  HODL 50/50       $2,809 (+12.4%)
+  FlatOnly k=3|24h $2,792 (+11.7%)
+  FlatOnly k=2|24h $2,779 (+11.2%)
+  FlatOnly gap<3%  $2,732 (+9.3%)
+  Adapt k=3+trend  $2,573 (+2.9% — najgorszy aktywny, przegapia pompę)
+  100% quote/USDC  $2,496-2,500 (0%, -$309/-$313 vs HODL) — TERAZ
+    NAJGORSZY, dokładnie odwrotnie niż na Twoim stale cache!
+  ```
+
+  **`base-cbbtc-weth-005-365d` $2,500, 90d (cena bazy cbBTC/WETH
+  +15.8%):**
+  ```
+  HODL 50/50       $2,905 (+16.2%) — TERAZ NAJLEPSZY
+  Pasywny ±60%     $2,900 (+16.0%, vsHODL -$5 — praktycznie remis)
+  Pasywny ±50%     $2,900 (+16.0%, vsHODL -$6)
+  Pasywny ±40%     $2,899 (+15.9%)
+  Adapt k=3+trend  $2,881 (+15.2%)
+  FlatOnly k=3|24h $2,861 (+14.4%)
+  FlatOnly k=2|24h $2,843 (+13.7%)
+  FlatOnly k=2|12h $2,811 (+12.5%)
+  FlatOnly gap<3%  $2,760 (+10.4%)
+  100% quote(WETH) $2,691 (+7.6%, vsHODL -$214)
+  100% USDC        $2,500 (0%, vsHODL -$405) — NAJGORSZY, odwrócone
+    jak na base-030
+  ```
+
+  **PORÓWNANIE Z TWOIM STALE CACHE (koniec 11.08, ETH −16% w oknie):**
+  Twoje liczby: passiveW ±50% $2,347/cbBTC ±40% $2,056 (obie POD
+  $2500), HODL $2,296/$2,031 (obie POD), USDC $2,500 WYGRYWAŁ (jedyny
+  bez straty). **Nasze świeże liczby: WSZYSTKO na plusie oprócz USDC,
+  USDC TERAZ NAJGORSZY na obu pulach.** To nie drobna korekta — to
+  KOMPLETNE ODWRÓCENIE WERDYKTU, bo 9-dniowa różnica okna (11.08→dziś)
+  złapała pompę ETH +24.7%/cbBTC +15.8%, a Twoje okno kończyło się
+  tuż przed nią.
+
+  **Obserwacja dla decyzji Rafała:** to POKAZUJE DOKŁADNIE mechanizm
+  z popołudniowej rotacji/next — wynik $2500/90d jest ekstremalnie
+  wrażliwy na DOKŁADNY dzień wejścia/pomiaru (performance chasing w
+  jedną i drugą stronę). Ani Twoje liczby sprzed 9 dni, ani te
+  dzisiejsze nie są "prawdą" o strategii — obie to punktowe próbki z
+  jednego okna 90d, dokładnie to, przed czym ostrzega bramka
+  wielookienna (żadna z dzisiejszych 40+ przebiegów bramki nie
+  przeszła — 90d nie jest do tego wystarczające). PassiveW/FlatOnly-HODL
+  są BLISKO HODL na obu świeżych pulach (różnice $2-50 na $2500,
+  poza Adapt k=3+trend który zauważalnie przegapia pompę na base-030)
+  — to zgodne z całodniowym wnioskiem "aktywne zarządzanie rzadko
+  bije czyste trzymanie". Commit+push (HANDOFF, bez results — fullperiod
+  nie zapisuje JSON). Czekam na dalsze instrukcje.
+
 ## @Sonnet (sesja UI, Cowork)
 - [Fable→Sonnet, 26.08] SPÓJNOŚĆ PROGNOZY cbBTC: prognoza w UI liczy
   k=3 dla base-cbbtc-weth-005, bot gra k=2 (zamrożony profil v1.2).
