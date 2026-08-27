@@ -1056,6 +1056,83 @@ w gicie: f98b451 i wcześniejsze.)
   = cash wygrywa, aktywne warianty ledwo remisują. Ruszam 3/4:
   `optimism-weth-usdc-030-365d`.
 
+- [CC-Win→Fable, 27.08 ~13:0x UTC/15:0x lok.] **FULLPERIOD 3/4:
+  `optimism-weth-usdc-030-365d` — TRZECI RAZ TEN SAM WZORZEC.**
+  Cena bazy -41.4% (to samo okno kalendarzowe co 1+2). `FlatOnly
+  k=2|12h→±40%`: $2,058, vsHODL **+$75** (najlepszy remis z 3 pul —
+  spójne z tym, że optimism miał też najlepszą śr. w walkforward).
+  `100% USDC`: +$517 vs HODL. Wzorzec 3/3 IDENTYCZNY: zwycięzca
+  walkforward zawsze ledwo bije HODL (+$19/+$49/+$75, rosnąco z
+  śr. walkforward), USDC zawsze najlepszy, Pasywny zawsze najgorszy.
+  Ruszam OSTATNI, 4/4: `cand-base-usdc-cbbtc-030` (uwaga: tu w
+  walkforward wygrywał goły Pasywny, nie hybryda — ciekawe czy się
+  potwierdzi).
+
+- [CC-Win→Fable, 27.08 ~13:1x UTC/15:1x lok.] **FULLPERIOD 4/4
+  (OSTATNI): `cand-base-usdc-cbbtc-030` — NIESPODZIANKA: walkforward
+  "zwycięzca" (Pasywny) TU PRZEGRYWA z HODL.** Wejście 2025-08-26,
+  cena bazy -28.0%. `Pasywny ±40%` (zwycięzca walkforward): $2,110,
+  vsHODL **-$40** — PRZEGRYWA na tym konkretnym oknie! Za to 2
+  warianty FlatOnly-hybrid (które w walkforward BYŁY GORSZE od
+  Pasywnego) tu LEDWO WYGRYWAJĄ: `k=3|24h→±50%` +$8, `k=3|24h→±40%`
+  +$4 — mikroskopijne, ale dodatnie. `100% USDC`: +$351 vs HODL,
+  znów najlepszy. **LEKCJA: to CZWARTY z rzędu przypadek pokazujący,
+  że walkforward-zwycięzca i fullperiod-zwycięzca to RÓŻNE rzeczy na
+  pojedynczym oknie** — bramka wielookienna mierzy uśrednioną
+  odporność, nie gwarantuje wygranej w konkretnym oknie kalendarzowym.
+
+  ═══ **PODSUMOWANIE CAŁEJ SESJI WIECZORNEJ 27.08 (od pull ee21330 do
+  teraz: 3 flatwindows + 8 skan hybrydą + 4 fullperiody = 15
+  przebiegów)** ═══
+
+  **A. FLATWINDOWS 720d:** cbBTC ma 4-5× wyższy ΣEV/rok niż base-030
+  (spójne z decyzją węższego NARROW na cbBTC). **Sweep: CONFIRM_H=12
+  (zamiast 24h) prawie PODWAJA ΣEV** ($297 vs $92, +223%) bez utraty
+  jakości — najsilniejsza rekomendacja parametryczna wieczoru dla
+  Twojego FLAT_ENTER/FLAT_EXIT. HL_D=10 jedyny wariant na minusie —
+  do odrzucenia.
+
+  **B. SKAN HYBRYDĄ (8 pul):** **Chain silniejszym predyktorem niż
+  para/tier** — 4/4 pule mainnet odpadają (jedna katastrofalnie:
+  wstETH/WETH, LST-degenerat gdzie detektor łapie szum przy zerowej
+  zmienności — WAŻNE OSTRZEŻENIE dla FLAT_ENTER: wyklucz pary o
+  strukturalnie niskiej zmienności), wszystkie 3 pule spoza mainnet
+  (base-005, arbitrum-030, optimism-030) wygrywają TYM SAMYM zestawem
+  parametrów (k=2, gap<2%, confirm 12h, →±40%) — dobry znak, że to
+  nie przeoptymalizowanie pod jedną pulę. cbBTC-candidate wyjątkiem:
+  tam Pasywny bije hybrydę (zwężanie szkodzi).
+
+  **C. FULLPERIOD dla zwycięzców (4 przebiegi):** WSZYSTKIE 4 trafiły
+  na okna z silnym trendem spadkowym (-28% do -41.4%) — **za każdym
+  razem 100% USDC wygrywał zdecydowanie (+$351 do +$517 vs HODL), a
+  "zwycięski" wariant walkforward tylko LEDWO remisował z HODL
+  (+$4 do +$75) lub nawet PRZEGRYWAŁ (cbBTC-candidate, -$40).** To
+  NIE unieważnia walkforward (bramka na wielu oknach ma inny cel niż
+  fullperiod jednego okna) — ale pokazuje surowo, że "wygrana w
+  walkforward" ≠ "wygrana w konkretnym oknie fullperiod", zwłaszcza
+  gdy okno akurat trafia na silny trend. Wszystkie 4 fullperiody
+  wylądowały na tym samym niedawnym crashu (~sierpień 2025) — czysty
+  przypadek doboru okna 365d z dzisiejszą datą końcową, nie błąd
+  metody.
+
+  **REKOMENDACJE NA JUTRO:**
+  1. FLAT_ENTER/FLAT_EXIT: rozważ CONFIRM_H=12 (nie 24h) — potwierdzone
+     dwukrotnie (flatwindows sweep + niejawnie przez skan hybrydą,
+     gdzie k=2|12h konsekwentnie bije k=3|24h).
+  2. Wyklucz pary o niskiej zmienności strukturalnej (LST, stable/stable)
+     z FLAT_ENTER detektora — mainnet-wsteth-weth-001 to twardy dowód
+     na katastrofę bez tego zabezpieczenia.
+  3. base-weth-usdc-005 (tańszy tier siostrzanej pary do naszej
+     realnej 030) i optimism-weth-usdc-030 to najmocniejsi kandydaci
+     ROZSZERZENIA produktu z dzisiejszego skanu — oba przeszły
+     walkforward z komfortowym marginesem i tym samym zestawem
+     parametrów co reszta zwycięzców.
+  4. mainnet jako chain do wykluczenia z przyszłych skanów tej
+     rodziny strategii — 4/4 fail dziś, spójne z całodniowym wzorcem.
+  Commit+push (bez JSON — fullperiod nie zapisuje plików). **CAŁA
+  SESJA WIECZORNA ZAMKNIĘTA.** Rafał niedostępny — czekam na dalsze
+  instrukcje lub nowe zadania w HANDOFF.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
