@@ -20,7 +20,7 @@ import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, suggestFi
 import { getAmountsForLiquidity, sqrtPriceX96ToHumanPrice } from '../src/utils/v3math';
 import { runSelectorIfDue, SelectorProposal } from './selector';
 import { paperTick, LegPrices } from './paper';
-import { updateLedger } from './ledger';
+import { updateLedger, readLedger, LedgerEntry } from './ledger';
 
 const ROOT = path.join(__dirname, '..');
 const DIR = path.join(ROOT, STATE_DIR);
@@ -127,6 +127,13 @@ interface WatchedPosition {
   inRange: boolean;
   advice: string;
   paybackDays: number | null;
+  /** agregaty z księgi (PARTIA 14, 27.08): fees odebrane COLLECT−DECREASE
+   *  w USD (null gdy księga nie umie wycenić — np. noga cbBTC w v1 księgi
+   *  albo backfill bez kursu); rebalanse = liczba DECREASE. costsUsd
+   *  celowo null do czasu indeksowania gazu (TASKS-LEDGER §3). */
+  collectedFeesUsd: number | null;
+  costsUsd: number | null;
+  rebalances: number | null;
 }
 interface Proposal {
   id: string;
@@ -563,8 +570,44 @@ async function refreshStats() {
 }
 
 // --- pętla pozycji (5min) ---
+/** Agregaty księgi per chain:tokenId dla ŻYWYCH pozycji (PARTIA 14).
+ *  fees = COLLECT − DECREASE (obie strony null-guarded: brak metadanych
+ *  albo usd:null w którymkolwiek wpisie → null, nie zgadujemy).
+ *  rebalances = liczba zdarzeń DECREASE (zwężenie/rebalans/partial close). */
+function ledgerAggregates(): Map<string, { feesUsd: number | null; rebalances: number }> {
+  const map = new Map<string, { feesUsd: number | null; rebalances: number }>();
+  try {
+    const byToken = new Map<string, LedgerEntry[]>();
+    for (const e of readLedger()) {
+      const k = `${e.chain}:${e.tokenId}`;
+      (byToken.get(k) ?? byToken.set(k, []).get(k)!).push(e);
+    }
+    for (const [k, evs] of byToken) {
+      const sumUsd = (kind: string): number | null => {
+        let s = 0;
+        for (const e of evs) {
+          if (e.kind !== kind) continue;
+          if (e.usd === null) return null;
+          s += e.usd;
+        }
+        return s;
+      };
+      const col = sumUsd('COLLECT');
+      const dec = sumUsd('DECREASE');
+      map.set(k, {
+        feesUsd: col !== null && dec !== null ? +Math.max(0, col - dec).toFixed(2) : null,
+        rebalances: evs.filter((e) => e.kind === 'DECREASE').length,
+      });
+    }
+  } catch (e) {
+    log(`ledger aggregates: ${String(e).slice(0, 100)}`);
+  }
+  return map;
+}
+
 async function refreshPositions() {
   const found: WatchedPosition[] = [];
+  const ledgerAgg = ledgerAggregates();
   for (const chainId of [...new Set(BOT_POOLS.map((p) => p.chainId))]) {
     const chain = BOT_POOLS.find((p) => p.chainId === chainId)!.chain;
     const pm = NFT_MANAGER[chainId];
@@ -612,12 +655,16 @@ async function refreshPositions() {
           payback = a.paybackDays;
           if (a.action === 'REBALANCE') maybePropose(tokenId.toString(), match, a, valueUsd);
         }
+        const la = ledgerAgg.get(`${match.chain}:${tokenId.toString()}`);
         found.push({
           tokenId: tokenId.toString(), poolId: match.id,
           tickLower: Number(lo), tickUpper: Number(hi),
           amount0: a0, amount1: a1, valueUsd,
           inRange: lv.tick >= Number(lo) && lv.tick < Number(hi),
           advice, paybackDays: payback,
+          collectedFeesUsd: la?.feesUsd ?? null,
+          costsUsd: null, // gaz nieindeksowany (TASKS-LEDGER §3)
+          rebalances: la ? la.rebalances : null,
         });
 
         // próbka equity/HODL realnej pozycji (wzorzec paper-history)

@@ -991,6 +991,18 @@ w gicie: f98b451 i wcześniejsze.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 27.08 ~noc — PACZKA "ledger→pozycje (bot-side
+  Partii 14)"] Commit+push: bot/observer.ts (agregaty księgi per żywa
+  pozycja: `collectedFeesUsd` [COLLECT−DECREASE, null gdy księga nie
+  umie wycenić], `rebalances` [liczba DECREASE], `costsUsd` null do
+  czasu indeksowania gazu — pola w state.positions, UI Partii 14
+  podchwyci je feature-detectem), HANDOFF.md, TASKS-UI.md (PARTIA 15
+  spec), RESEARCH-QUEUE.md (E3b). tsc czysty. Komunikat: "feat(bot):
+  ledger aggregates on live positions (partia 14 bot-side)". Po pushu
+  ping CC-Win: `nssm restart homos-bot` (bot-side, bez builda UI).
+  Sanity: /api/state.positions[].collectedFeesUsd === 0 i rebalances
+  === 0 dla obu świeżych pozycji (żadnych COLLECT/DECREASE jeszcze).
+
 - [Fable→CC-Mac, 27.08 ~wieczór #3 — PACZKA "flatwindows + zlecenia
   wieczorne"] Commit+push: backtest/flatwindows.ts (NOWY — statystyka
   epizodów flat + EV zwężenia, policzony na 365d przez Fable),
