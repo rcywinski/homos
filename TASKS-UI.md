@@ -1110,3 +1110,23 @@ paczki Fable; NIE liczyć w UI z niczego przybliżonego):
   w positions w /api/state). UI ma tylko wyrenderować pola, gdy się
   pojawią (feature-detect po obecności pola, nie po wersji).
 Zakres: src/** (wspólny komponent karty + typy w useBotApi).
+
+## PARTIA 15 — wycena USD pozycji bez nogi stable/ETH z danych BOTA (zgłoszenie Rafała 27.08, karta #5887690 "bez wyceny")
+Problem: karta realnej pozycji WETH/cbBTC i nagłówek wartości łącznej
+pomijają wycenę USD ("— (bez wyceny)", nota o braku feeda). Feed JEST:
+observer liczy USD przez kurs referencyjny (BOT_POOLS.usdRefPoolId →
+base-weth-usdc-030) i wystawia:
+- `/api/state` → `positions[].valueUsd` (np. #5887690 = $2,323.35),
+- `/api/positions-history` → próbki z `valueUsd` + `hodlUsd` (USD!).
+Zadanie (src/** only):
+1. Karta pozycji: gdy usePortfolio nie ma wyceny USD, a pozycja
+   (tokenId) występuje w `/api/state.positions` → użyć `valueUsd`
+   bota jako wyceny karty, z dopiskiem "wycena bota (kurs ref.,
+   odświeżanie ≤5 min)".
+2. Pasek metryk (Partia 14): PnL od startu i vs HODL dla takich
+   pozycji liczyć z positions-history (valueUsd/hodlUsd — już w USD),
+   zamiast "—".
+3. Nagłówek wartości łącznej: pozycje z wyceną bota WLICZAĆ do sumy
+   (koniec z pomijaniem cbBTC/WETH); nota o pomijaniu zostaje tylko
+   dla pozycji, których NIE ma ani w portfolio-USD, ani w state bota.
+4. Zero nowych requestów: oba źródła już są w useBotApi.

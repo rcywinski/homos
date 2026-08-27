@@ -596,9 +596,16 @@
   i tak wyższa). WNIOSEK OPERACYJNY: zwężanie na cbBTC = rdzeń wartości
   hybrydy; na base-030 podpisywać wybiórczo (połowa flatów za krótka).
   Weryfikacja na 720d u CC-Win.
-- [ ] **Sweep parametrów flat-detektora na 720d**: gap enter 2/3%, exit
-  5/6%, confirm 12/24/48h, HL EMA 5/7/10d — WF_SET=hybrid rozszerzony.
-  Jednorazowo, przed pierwszym FLAT_ENTER; potem parametry MROZIMY.
+- [x] **Sweep parametrów flat-detektora** — CC-Win 27.08 na
+  base-030-720d (flatwindows, jeden parametr naraz): CONFIRM_H=12
+  NAJLEPSZY (ΣEV $297 vs $92 baseline, 2× więcej epizodów, jakość
+  bez zmian), ENTER=3% podobnie (+160%), HL_D=5 dobry (+150%),
+  **HL_D=10 jedyny na minusie — odrzucony**. ZASTRZEŻENIE: jedna
+  pula → cross-check CONFIRM_H=12 i HL_D=5 na cbBTC-720d zlecony;
+  jeśli potwierdzi, CONFIRM_H=12 wchodzi do spec FLAT_ENTER
+  (decyzja formalna: przegląd 1.09). Flatwindows 720d ogólnie:
+  kierunek 365d potwierdzony, cbBTC ΣEV ~$205/rok vs base-030
+  ~$46/rok (4-5×).
 
 ### E2. POMIAR ŻYWEGO PRODUKTU (od dziś, automatycznie)
 - [ ] **Realized vs backtest**: dzienna linia w raporcie porannym per
@@ -647,6 +654,17 @@
 - [ ] **Paper trading hybrydą na kandydatach TOP10**: nowa pula przechodzi
   lejek → gra hybrydę w paper 2-4 tyg. zanim dostanie propozycję realną.
   Paper v1.2 na obecnych 6 pulach zostaje jako kontrola A/B.
+
+### E3b. PROCEDURA AWARYJNA (decyzja Rafała 27.08 — "dopiszmy")
+- [ ] **"Czerwony przycisk" w kokpicie + EMERGENCY.md**: przy sygnale
+  DOWN dwie opcje obok siebie z aktualnymi kwotami: (a) hedge GMX
+  1-podpisem (delta-neutral, LP zostaje — preferowany wg danych:
+  hedge tylko-w-down chronił 66-87% okien down), (b) exit do USDC
+  (oznaczony "dane mówią: zwykle nie podpisuj — exit na trendzie
+  średnio pogarsza"). Doc: kiedy co, koszty, kolejność kroków,
+  niuans czujnika (DOWN na cbBTC/WETH = cena względna; krach USD
+  wykrywa sygnał WETH/USDC). Bot-side: Fable; UI: partia u Sonneta
+  po spec.
 
 ### E4. PRZEGLĄDY (kalendarz)
 - [ ] ~1.09: przegląd PROPONUJ (zaplanowany 26.08) + pierwszy tydzień

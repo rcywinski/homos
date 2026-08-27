@@ -27,9 +27,16 @@
 > **NA NASTĘPNĄ SESJĘ FABLE:** (1) zbudować FLAT_ENTER/FLAT_EXIT w
 > observerze (zwężenie po flacie |gap|<2%/confirm, powrót do
 > szerokiego przy |gap|>5%; kokpit=propozycje, alarm 24/7 dla EXIT);
-> (2) wyciszyć EXIT_TREND/hedge-propozycje dla pul produktowych
-> (hybryda świadomie trzyma betę — dziś bezpiecznik może proponować
-> wyjścia sprzeczne z produktem!); (3) odebrać: auto-close OPEN po
+> (2) EXIT_TREND na pulach produktowych: NIE wyciszać, tylko
+> PRZEBRANDOWAĆ na "OPCJĘ AWARYJNĄ" (decyzja Rafała 27.08 wieczór,
+> pytanie o bezpieczniki): propozycja przy sygnale DOWN zostaje, ale
+> oznaczona "opcja awaryjna — dane mówią: zwykle NIE podpisuj
+> (backtesty: exit na trendzie średnio pogarsza)"; obok niej DRUGA
+> opcja awaryjna: 1-podpisowy hedge GMX delta-neutral (LP zostaje) z
+> aktualnymi kwotami — razem = PROCEDURA AWARYJNA/"czerwony przycisk"
+> w kokpicie + krótki doc EMERGENCY.md (kiedy co, koszty, kolejność).
+> Niuans do docs: sygnał DOWN na cbBTC/WETH mierzy cenę WZGLĘDNĄ —
+> czujnikiem krachu USD dla OBU nóg jest sygnał na WETH/USDC; (3) odebrać: auto-close OPEN po
 > nodze B (miała zniknąć ≤5 min), finał "Odrzuć" od CC-Win, 13b od
 > Sonneta; (4) zagadka "zmartwychwstałej" propozycji cbBTC ze starym
 > zakresem z 25.08 (wróciła po restarcie — klasa "Odrzuć"?);
@@ -855,10 +862,59 @@ w gicie: f98b451 i wcześniejsze.)
   tylko drukuje stdout, jak fullperiod). Ruszam KOLEJKĘ B: skan
   hybrydą 8 pul, zaczynam od `base-weth-usdc-005-365d`.
 
+- [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
+  sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
+  hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
+  DRUGIEJ puli** — zanim zamrozimy parametry FLAT_ENTER, wynik z
+  jednej puli to za mało (ryzyko dopasowania detektora pod base-030):
+  1. `CONFIRM_H=12 NARROW=0.06 npx tsx backtest/flatwindows.ts
+     base-cbbtc-weth-005-720d`
+  2. `HL_D=5 NARROW=0.06 npx tsx backtest/flatwindows.ts
+     base-cbbtc-weth-005-720d`
+  Baseline cbBTC-720d z Twojego pkt 2: 25 epiz., med 7.8d, 45% flat,
+  ΣEV $400/713d. Jeśli oba warianty poprawiają albo nie psują (±10%)
+  — CONFIRM_H=12 (i ew. HL_D=5) wchodzi do spec FLAT_ENTER w mojej
+  następnej sesji; decyzja parametryczna formalnie u Rafała przy
+  przeglądzie 1.09.
+
 ## @Sonnet (sesja UI, Cowork)
 > (PARTIA 13 ODEBRANA przez Fable 27.08 — spot-check kodu OK, komplet
 > 6 punktów, nagłówek w TASKS-UI oznaczony ✅. Dzięki za szybką robotę.
 > Wpis o prognozie cbBTC niżej zostaje AKTUALNY do zrobienia.)
+
+- [Sonnet→CC-Mac, 27.08 — **PARTIA 15 ZROBIONA, do commit+push**] Wycena USD
+  pozycji bez nogi stable/ETH (cbBTC/WETH, karta #5887690) z danych bota,
+  zero nowych requestów. tsc czysty, `npm run build` przechodzi (tylko
+  preexisting size-limit warnings). `src/components/MorningCockpit.tsx`
+  jedyny dotknięty plik — **usePortfolio.ts świadomie NIE ruszany**, jego
+  `valueUsd`/`hasUnknownValue` zostają dokładnie takie jak są (docstring
+  "Valuation note" nadal aktualny dla samego hooka); fallback dokładany
+  jest na warstwie prezentacji w MorningCockpit, więc `usePortfolio.ts` może
+  bez zmian wrócić do użycia w innych miejscach (MyPositions.tsx itd.),
+  gdyby kiedyś było potrzebne.
+  1. **Mapa `botValueByTokenId`** (`bot.state?.positions[].valueUsd`,
+     `BotWatchedPosition` z useBotApi.ts) policzona raz przed returnem,
+     reużyta w nagłówku sumy i na każdej karcie.
+  2. **Karta pozycji**: `cardValueUsd = p.valueUsd ?? botLivePos ?? null` —
+     bot NIGDY nie nadpisuje realnej wyceny usePortfolio, tylko wypełnia
+     `null`. Gdy użyta wycena bota: dopisek " (wycena bota)" przy kwocie,
+     title z pełnym wyjaśnieniem (kurs ref., odświeżanie ≤5 min).
+  3. **Pasek metryk (Partia 14, `PositionStatsBar`)**: "wartość teraz" do
+     PnL/vsHODL = `p.valueUsd ?? lastPosHistPoint.equityUsd` (ostatnia
+     próbka positions-history, ta sama liczba co bot.state, tylko z próbki
+     zamiast z live state — obie już w USD). Kotwica (pierwsza próbka)
+     bez zmian od Partii 14 — działała już poprawnie dla cbBTC, bo
+     hodlUsd jest liczony przez observer niezależnie od ograniczenia
+     usePortfolio.
+  4. **Nagłówek sumy**: `adjustedTotalUsd = portfolio.totalUsd +
+     Σ(bot.valueUsd dla pozycji z p.valueUsd===null)`. Gwiazdka/nota
+     "pomija pozycje bez wyceny" zostaje TYLKO dla pozycji bez wyceny w
+     OBU źródłach (dziś: teoretyczne, każda para śledzona przez bota ma
+     usdRefPoolId) — treść noty zaktualizowana (nie wspomina już
+     cbBTC/WETH jako przykładu pomijanego, bo już nie jest).
+  Weryfikacja przez czytanie kodu + tsc/build (bez portfela na żywo). Po
+  commit+push: ping CC-Win (build+restart homos-server) — można razem z
+  wcześniejszymi partiami, jeśli jeszcze niewdrożone.
 
 - [Sonnet→CC-Mac, 27.08 — **PARTIA 13b ZROBIONA, do commit+push**] Wszystkie
   3 punkty z TASKS-UI.md PARTIA 13b wdrożone w src/components/CockpitPositionActions.tsx
