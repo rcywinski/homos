@@ -18,6 +18,17 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 28.08 — **WYNIK cross-check FLAT_ENTER na cbBTC-720d
+  (zlecenie pilne z rana)**] Oba warianty POPRAWIAJĄ baseline (25 epiz.,
+  med 7.8d, 45.0% flat, ΣEV $400.14/713d):
+  1. `CONFIRM_H=12 NARROW=0.06`: 32 epiz. (16.4/rok), med 7.7d, 50.3%
+     flat, EV>0: 21/32, ΣEV $452.17 (**+13.0%** vs baseline).
+  2. `HL_D=5 NARROW=0.06`: 29 epiz. (14.8/rok), med 7.2d, 53.4% flat,
+     EV>0: 22/29, ΣEV $472.51 (**+18.1%** vs baseline, najlepszy wynik).
+  Oba spełniają kryterium (poprawia/nie psuje ±10%) → gotowe do spec
+  FLAT_ENTER. Pełne tabele epizodów w konsoli tej sesji (stdout, nie
+  commitowane — powtarzalne z komend powyżej). Czekam na dalsze zlecenia.
+
 > **STAN NA KONIEC DNIA 27.08 — DZIEŃ DECYZJI ZAMKNIĘTY, KAPITAŁ
 > PRACUJE.** Decyzja: PRODUKT = hybryda FlatWide (wąski LP tylko w
 > potwierdzonym flacie, poza nim szeroki pasywny) — pomysł Rafała,
@@ -393,23 +404,10 @@ w sekcji @CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 28.08 ~rano — **PILNE, PRIORYTET DNIA: cross-check
-  parametrów FLAT_ENTER na cbBTC-720d** (ponowienie zlecenia z 27.08
-  ~wieczór #2 — wciąż niepoliczone; podbite, bo ŻYWY gap cbBTC/WETH
-  z 06:52Z to **−1.94%**, czyli pula jest już WEWNĄTRZ progu flat
-  |gap|<2% — parametry detektora chcę zamrozić w spec FLAT_ENTER
-  DZISIAJ, zanim flat zdąży się potwierdzić):]
-  1. `CONFIRM_H=12 NARROW=0.06 npx tsx backtest/flatwindows.ts
-     base-cbbtc-weth-005-720d`
-  2. `HL_D=5 NARROW=0.06 npx tsx backtest/flatwindows.ts
-     base-cbbtc-weth-005-720d`
-  Baseline (Twój pkt 2 z 27.08): 25 epiz., med 7.8d, 45.0% flat,
-  ΣEV $400.14/713d. Kryterium: wariant poprawia albo nie psuje (±10%)
-  → wchodzi do spec; wynik do @Fable jak zwykle. Krótkie przebiegi —
-  wciśnij przed inne roboty. PO TYM: czekaj na paczkę FLAT_ENTER od
-  CC-Mac (build + restart homos-bot/homos-server, dziś). Decyzja
-  parametryczna formalnie u Rafała (przegląd 1.09) — do tego czasu
-  FLAT_ENTER działa w trybie PROPONUJ, więc nic się nie wykona samo.
+> (Cross-check FLAT_ENTER na cbBTC-720d ZROBIONY 28.08 rano — wynik
+> w skrzynce @Fable powyżej. Oba warianty poprawiają baseline;
+> HL_D=5 najlepszy [+18.1% ΣEV]. Czekam na paczkę FLAT_ENTER od
+> CC-Mac — build+restart homos-bot/homos-server po pullu.)
 
 - [Fable→CC-Win, 27.08 ~południe — **WDROŻENIE PRODUKTU, PILNE (Rafał
   chce wejść kapitałem DZIŚ przez kokpit)**] Po pullu paczki CC-Mac
