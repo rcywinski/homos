@@ -81,3 +81,20 @@ rozliczeniem. Ilości tokenów w CSV są dokładne co do wei — baza jest.
 Wycena PLN/NBP, klasyfikacja podatkowa zdarzeń (interpretacje), auto-import
 do SQLite, pozycje historyczne sprzed WATCH_ADDRESS. Kolejność wdrożenia:
 warstwa danych (Fable) → endpointy (Fable) → UI+CSV (Sonnet, jedna partia).
+
+## 4. ITERACJA 2 — indeksowanie GAZU (jawnie, po pytaniu Rafała 27.08 noc)
+Status: v1 księgi NIE zapisuje gasUsd (pole z §2 odłożone świadomie);
+przez to `costsUsd` na kartach pozycji = "—". Zakres iteracji:
+- [ ] updateLedger: dla każdego zdarzenia dociągnąć paragon tx
+  (eth_getTransactionReceipt: gasUsed × effectiveGasPrice) × kurs ETH
+  → pole `gasUsd` w LedgerEntry; dedup po txHash (jeden tx = jeden gaz,
+  nawet gdy ma kilka logów — nie sumować per log!). Backfill: HyperSync
+  ma receipty; RPC-końcówka dociąga pojedynczo (wolumen śladowy).
+- [ ] Agregat per żywa pozycja: `costsUsd` = Σ gasUsd tx-ów pozycji
+  (ledgerAggregates w observer.ts — pole już wystawione, dziś null).
+- [ ] closed-positions: koszty gazu w podsumowaniu (pole z §2).
+- [ ] UWAGA zakresowa: gaz swapów PRZYGOTOWUJĄCYCH (Uniswap router,
+  poza NFT managerem) NIE wchodzi w v2 — księga widzi tylko zdarzenia
+  managera; swapy wejściowe do rozważenia przy warstwie PLN (§3 CSV).
+Wycena: kurs ETH z chwili indeksowania dla końcówki (dryf pomijalny),
+dla backfillu kurs historyczny albo uczciwe null — jak w v1.
