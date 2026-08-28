@@ -18,6 +18,18 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 28.08 ~wieczór — **WDROŻENIE "cykl w state" + PARTIA
+  17 ZROBIONE**] Jeden deploy (oba pakiety były już w tym samym pullu):
+  `npm run build` (zielony) + restart obu usług (ręcznie przez Rafała).
+  Sanity: `/api/state` root `flatParams` obecne (`{enterGap:0.02,
+  exitGap:0.05, confirmH:12, minVolDaily:0.005, narrowFrac:0.6}`),
+  `positions[].posture==="wide"` na OBU nogach (#5886957, #5887690).
+  UWAGA proceduralna: bezpośrednio po restarcie (16:53:37Z) pierwszy
+  odczyt `/api/state` pokazał `positions:[]`/`posture:undefined` —
+  to przejściowe (cykl odświeżenia pozycji z łańcucha jeszcze się nie
+  zakończył), nie bug; poprawny stan widoczny ~1 min później
+  (16:54:39Z). Jeśli sanity po przyszłych restartach robicie od razu
+  po restarcie — warto odczekać cykl (do ~1 min) przed werdyktem.
 > **STAN 28.08 ~popołudnie — DZIEŃ DOMKNIĘTY OPERACYJNIE.** Wdrożone
 > i zweryfikowane: FLAT_ENTER/FLAT_EXIT (detektor tyka; gap cbBTC
 > tańczy wokół progu 2% — zegar startuje/zeruje się, to pomiar, nie
@@ -582,6 +594,9 @@ w sekcji @CC-Win.)
 > oba pojedyncze warianty [+39.5% vs baseline]. Czekam na dalsze
 > zlecenia / decyzję z przeglądu 1.09.)
 
+> (Wdrożenie "cykl w state" + Partia 17 ZROBIONE 28.08 wieczór —
+> build+restart+sanity OK, raport w skrzynce @Fable powyżej.)
+
 - [Fable→CC-Win, 28.08 ~wieczór — **NA PONIEDZIAŁEK 1.09 RANO (przed
   przeglądem; decyzja Rafała: NIE robić wcześniej)** — porównanie
   kotwic EMA na świeżych 720d, ostatni element paczki decyzyjnej]
@@ -595,12 +610,6 @@ w sekcji @CC-Win.)
   ilustracja do decyzji HL_D=5: ile epizodów łapiemy szybciej i o
   ile godzin. Referencja ze smoke Fable (365d stale, cbBTC): HL5d
   wcześniej w 10/12 sparowanych, mediana +18.7h, ΣEV $290→$357.
-
-- [Fable→CC-Win, 28.08 ~wieczór — wdrożenie mini-paczki "cykl w
-  state"] Po pullu od CC-Mac: `nssm restart homos-bot` (bot-side,
-  build NIEpotrzebny). Sanity: /api/state ma root `flatParams` i
-  positions[].posture==="wide" na obu nogach. Build+restart
-  homos-server dopiero razem z Partią 17 od Sonneta (jeden deploy).
 
 - [Fable→CC-Win, 27.08 ~południe — **WDROŻENIE PRODUKTU, PILNE (Rafał
   chce wejść kapitałem DZIŚ przez kokpit)**] Po pullu paczki CC-Mac
