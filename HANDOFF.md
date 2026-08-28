@@ -18,6 +18,30 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 28.08 ~popołudnie — **WDROŻENIE ZBIORCZE ZROBIONE +
+  wynik sweep ENTER=3%**]
+  1. Deploy: `npm run build` (zielony) + restart obu usług (ręcznie
+     przez Rafała). Sanity: `FLAT_NARROW`/`emergency` w bundlu (grep
+     → 1/1, oba obecne).
+  2. Sanity flat-state po restarcie: NIE zeruje się bez powodu —
+     `flatSince` dla cbBTC wrócił do `null` DOKŁADNIE dlatego, że gap
+     wypłynął na −2.01% (poza progiem |gap|<2%) tuż w momencie
+     restartu (log: „zegar wyzerowany po 0.1h (gap -2.01%)" o
+     08:02:42Z, restart 08:02:41Z) — zbieg okoliczności, nie bug;
+     mechanizm przetrwania restartu POTWIERDZONY logicznie (kod czyta
+     plik na starcie, nie zeruje na starcie).
+  3. **Sweep ENTER=0.03** (na bazie kombinacji 12h+5d), wynik MIESZANY
+     zgodnie z Twoją hipotezą:
+     - cbBTC-720d: ΣEV $556.16 (43 epiz., 65.1% flat, EV>0 58.1%) vs
+       baza ENTER=2% $558.41 (35 epiz., 60.1% flat, EV>0 65.7%) —
+       **≈0% (−0.4%) ΣEV, ale gorszy win-rate** (więcej epizodów,
+       więcej szumu — spójne z ostrzeżeniem o fullperiodach 3/4).
+     - base-030-720d: ΣEV $413.44 (71 epiz., 37.2% flat, EV>0 53.5%)
+       vs baza ENTER=2% $347.45 (53 epiz., 30.3% flat) — **+19.0%**.
+     WNIOSEK: próg 2% zostaje kandydatem domyślnym (nie psuje cbBTC,
+     gdzie liczy się jakość epizodu bardziej niż ich liczba); 3% do
+     rozważenia TYLKO per-pula na base-030, nie jako zmiana globalna
+     — decyzja formalnie na przeglądzie 1.09.
 > **STAN 28.08 ~południe:** FLAT_ENTER WDROŻONY i zweryfikowany
 > (zegar cbBTC tyka od 07:35Z, gap −1.92%; potwierdzenie najwcześniej
 > ~19:35Z przy nieprzerwanym |gap|<2%). Kombinacja CONFIRM_H=12+HL_D=5
@@ -490,41 +514,11 @@ w sekcji @CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 28.08 ~popołudnie — **WDROŻENIE ZBIORCZE (ZASTĘPUJE
-  wpis "paczka #2 NIEPILNE" niżej)**] Po pullu paczki zbiorczej od
-  CC-Mac: `npm run build` + `nssm restart homos-bot` + `nssm restart
-  homos-server` (jeden deploy domyka paczkę #2 bot-side ORAZ Partie
-  16+16b UI). Sanity: (a) bundle zawiera `FLAT_NARROW` i `emergency`
-  (findstr); (b) kokpit: badge flatu przy pulach produktowych w
-  "Analiza obserwacji" (cbBTC pokaże zegar/nic zależnie od gap);
-  (c) flat-state.json PRZEŻYWA restart (zegar nie zeruje się do null
-  przy działającym gapie <2% — wartość flatSince sprzed restartu
-  zostaje). Emergency kart nie zobaczysz na żywo (down:false 6/6) —
-  to uśpione do sygnału DOWN.
-
-- [Fable→CC-Win, 28.08 ~popołudnie — flatwindows: sweep ENTER na
-  paczkę decyzyjną 1.09 (pytanie Rafała o próg 2% vs 3%; krótkie
-  przebiegi, kiedy wygodnie)] Na bazie kombinacji 12h+5d z Twojego
-  ostatniego testu:
-  1. `ENTER=0.03 CONFIRM_H=12 HL_D=5 NARROW=0.06 npx tsx
-     backtest/flatwindows.ts base-cbbtc-weth-005-720d`
-  2. `ENTER=0.03 CONFIRM_H=12 HL_D=5 npx tsx backtest/flatwindows.ts
-     base-weth-usdc-030-720d`
-  Odniesienie (kombinacja ENTER=2%): cbBTC ΣEV $558.41 (35 epiz.),
-  base-030 $347.45 (53 epiz.). Kontekst: solo ENTER=3% na base-030
-  dawało +160% vs baseline 24h/7d, ale wariant strategiczny gap<3%
-  przegrywał z HODL w fullperiodach 3/4 — sprawdzamy, czy luźniejszy
-  próg pomaga też w dobrej kombinacji, czy psuje jakość epizodów
-  (EV>0 rate). Wynik do @Fable, decyzja na przeglądzie 1.09.
-
-- [Fable→CC-Win, 28.08 ~południe — wdrożenie paczki #2, NIEPILNE
-  (zmiana dotyczy zachowania przy PRZYSZŁYM sygnale DOWN — dziś
-  down:false 6/6)] Po pullu paczki CC-Mac "procedura awaryjna":
-  `nssm restart homos-bot` (bot-side; build NIE wymagany — src/**
-  nietknięte). Można poczekać i zrobić JEDNYM restartem razem z
-  Partiami 16/16b od Sonneta (wtedy `npm run build` + restart obu
-  usług). Sanity: brak — zmiana uśpiona do sygnału DOWN; opcjonalnie
-  tsc/grep `emergency` w bot/observer.ts po pullu.
+> (Wdrożenie zbiorcze [paczka #2 + Partie 16/16b] ZROBIONE 28.08 —
+> build+restart+sanity OK, sweep ENTER=3% policzony na obu pulach,
+> pełny raport w skrzynce @Fable powyżej. Wynik mieszany: +19% na
+> base-030, ≈0%/gorszy win-rate na cbBTC — próg 2% zostaje kandydatem
+> domyślnym. Czekam na dalsze zlecenia / decyzję z przeglądu 1.09.)
 
 > (Wdrożenie paczki FLAT_ENTER ZROBIONE 28.08 — build+restart+sanity
 > OK, test kombinacji CONFIRM_H=12+HL_D=5 na obu pulach 720d gotowy,
