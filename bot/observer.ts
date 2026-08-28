@@ -138,6 +138,10 @@ interface WatchedPosition {
   collectedFeesUsd: number | null;
   costsUsd: number | null;
   rebalances: number | null;
+  /** cykl produktu FlatWide (PARTIA 17): 'wide' = postura idle
+   *  (±productIdleWidthPct), 'narrow' = zwężenie flatowe (k×σ);
+   *  null = pula nie-produktowa (cykl nie dotyczy) */
+  posture: 'wide' | 'narrow' | null;
 }
 interface Proposal {
   id: string;
@@ -264,7 +268,11 @@ const saveState = () => {
   fs.writeFileSync(
     STATE_PATH,
     JSON.stringify(
-      { updatedAt: new Date().toISOString(), mode: 'OBSERVE', watch: WATCH_ADDRESS, pools: Object.values(live), positions, hedge: hedgeLive, gasUsd: gasUsdLive, proposals: proposals.filter((p) => p.status === 'open') },
+      // flatParams: żywe parametry detektora flatu dla UI (countdown do
+      // potwierdzenia, progi w opisach) — jedna prawda z bot/config.ts,
+      // UI nie hardkoduje 12h/2%/5% (PARTIA 17; wartości mogą się zmienić
+      // decyzją przeglądu 1.09)
+      { updatedAt: new Date().toISOString(), mode: 'OBSERVE', watch: WATCH_ADDRESS, flatParams: FLAT, pools: Object.values(live), positions, hedge: hedgeLive, gasUsd: gasUsdLive, proposals: proposals.filter((p) => p.status === 'open') },
       bigintReplacer, 2
     )
   );
@@ -870,6 +878,9 @@ async function refreshPositions() {
           collectedFeesUsd: la?.feesUsd ?? null,
           costsUsd: null, // gaz nieindeksowany (TASKS-LEDGER §3)
           rebalances: la ? la.rebalances : null,
+          posture: match.productIdleWidthPct
+            ? (isNarrowPos(match, { tickLower: Number(lo), tickUpper: Number(hi) }) ? 'narrow' : 'wide')
+            : null,
         });
 
         // próbka equity/HODL realnej pozycji (wzorzec paper-history)
