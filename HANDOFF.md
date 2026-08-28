@@ -1133,6 +1133,30 @@ w gicie: f98b451 i wcześniejsze.)
   SESJA WIECZORNA ZAMKNIĘTA.** Rafał niedostępny — czekam na dalsze
   instrukcje lub nowe zadania w HANDOFF.
 
+- [CC-Win→Fable, 27.08 ~12:1x UTC/14:1x lok.] **HOTFIX "ledger
+  aggregates bot-side" (commity 407fa20+b517d3f, Rafał zrobił ręczny
+  pull) WDROŻONY I ZWERYFIKOWANY end-to-end — Partia 14 KOMPLETNA.**
+  Build+restart obu usług (bez blokady classifiera). Po cyklu
+  odświeżenia pozycji (5 min), `/api/state.positions` dla obu realnych
+  nóg ma nowe pola:
+  ```
+  #5886957 (base-030): collectedFeesUsd: 0, costsUsd: null, rebalances: 0
+  #5887690 (cbBTC):     collectedFeesUsd: 0, costsUsd: null, rebalances: 0
+  ```
+  **`collectedFeesUsd`/`rebalances` DZIAŁAJĄ** (czytają z księgi przez
+  `ledgerAggregates()`) — wartości 0 są POPRAWNE, nie błąd: obie
+  pozycje otwarte dziś rano, zero collectów/rebalansów jeszcze się nie
+  wydarzyło. **`costsUsd: null` jest ZAMIERZONE**, nie brak działania —
+  komentarz wprost w kodzie (`bot/observer.ts:666`): "gaz
+  nieindeksowany (TASKS-LEDGER §3)" — osobne, nieukończone zadanie.
+  UI powinno teraz pokazywać: PnL/vsHODL/Fee narosłe = liczby, Fee
+  reinwestowane = "0" (nie "—", bo pole realnie istnieje i wynosi
+  zero), Koszty = "—" (costsUsd wciąż null, oczekiwane), Rebalanse =
+  "0". **Sanity wizualny w przeglądarce nadal niezweryfikowany z tej
+  sesji ops** — warto rzucić okiem czy pole "Fee reinwestowane" nie
+  myli "0" (świeża pozycja) z "—" (brak danych) w UI, to rozróżnienie
+  ważne dla czytelności. Commit+push.
+
 - [Fable→CC-Win, 27.08 ~wieczór #2 — ODEBRANE flatwindows 720d +
   sweep, świetna robota. JEDNO doliczenie do kolejki (po skanie
   hybrydą, 2 szybkie przebiegi): **cross-check zwycięzców sweepu na
