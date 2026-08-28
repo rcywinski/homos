@@ -18,42 +18,19 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 28.08 — **WYNIK cross-check FLAT_ENTER na cbBTC-720d
-  (zlecenie pilne z rana)**] Oba warianty POPRAWIAJĄ baseline (25 epiz.,
-  med 7.8d, 45.0% flat, ΣEV $400.14/713d):
-  1. `CONFIRM_H=12 NARROW=0.06`: 32 epiz. (16.4/rok), med 7.7d, 50.3%
-     flat, EV>0: 21/32, ΣEV $452.17 (**+13.0%** vs baseline).
-  2. `HL_D=5 NARROW=0.06`: 29 epiz. (14.8/rok), med 7.2d, 53.4% flat,
-     EV>0: 22/29, ΣEV $472.51 (**+18.1%** vs baseline, najlepszy wynik).
-  Oba spełniają kryterium (poprawia/nie psuje ±10%) → gotowe do spec
-  FLAT_ENTER. Pełne tabele epizodów w konsoli tej sesji (stdout, nie
-  commitowane — powtarzalne z komend powyżej). Czekam na dalsze zlecenia.
-
-> **STAN NA KONIEC DNIA 27.08 — DZIEŃ DECYZJI ZAMKNIĘTY, KAPITAŁ
-> PRACUJE.** Decyzja: PRODUKT = hybryda FlatWide (wąski LP tylko w
-> potwierdzonym flacie, poza nim szeroki pasywny) — pomysł Rafała,
-> przetestowany przed wejściem (hybryda ≥ passiveW na obu pulach).
-> Otwarte: #5886957 WETH/USDC ±50% (~$3,507) + WETH/cbBTC ±40%
-> (~$2,360). Pełen zapis dnia: CONTEXT dziennik 27.08.
-> **NA NASTĘPNĄ SESJĘ FABLE:** (1) zbudować FLAT_ENTER/FLAT_EXIT w
-> observerze (zwężenie po flacie |gap|<2%/confirm, powrót do
-> szerokiego przy |gap|>5%; kokpit=propozycje, alarm 24/7 dla EXIT);
-> (2) EXIT_TREND na pulach produktowych: NIE wyciszać, tylko
-> PRZEBRANDOWAĆ na "OPCJĘ AWARYJNĄ" (decyzja Rafała 27.08 wieczór,
-> pytanie o bezpieczniki): propozycja przy sygnale DOWN zostaje, ale
-> oznaczona "opcja awaryjna — dane mówią: zwykle NIE podpisuj
-> (backtesty: exit na trendzie średnio pogarsza)"; obok niej DRUGA
-> opcja awaryjna: 1-podpisowy hedge GMX delta-neutral (LP zostaje) z
-> aktualnymi kwotami — razem = PROCEDURA AWARYJNA/"czerwony przycisk"
-> w kokpicie + krótki doc EMERGENCY.md (kiedy co, koszty, kolejność).
-> Niuans do docs: sygnał DOWN na cbBTC/WETH mierzy cenę WZGLĘDNĄ —
-> czujnikiem krachu USD dla OBU nóg jest sygnał na WETH/USDC; (3) odebrać: auto-close OPEN po
-> nodze B (miała zniknąć ≤5 min), finał "Odrzuć" od CC-Win, 13b od
-> Sonneta; (4) zagadka "zmartwychwstałej" propozycji cbBTC ze starym
-> zakresem z 25.08 (wróciła po restarcie — klasa "Odrzuć"?);
-> (5) BOT-SIDE dla PARTII 14: podpiąć księgę (ledger.ts) per tokenId
-> i wystawić w /api/state positions: collectedFeesUsd / costsUsd /
-> rebalances — UI czeka z polami "—" (spec w TASKS-UI PARTIA 14).
+> **STAN 28.08 ~przedpołudnie:** dzień 1 kapitału czysty (vsHODL ~0 na
+> obu nogach); cross-check CC-Win ODEBRANY (CONFIRM_H=12 +13%, HL_D=5
+> +18% ΣEV na cbBTC-720d — oba przechodzą); **FLAT_ENTER/FLAT_EXIT
+> ZBUDOWANY** (decyzje Rafała: confirm 12h, EMA7d reużyta, HL_D=5
+> odroczone do 1.09; paczka u CC-Mac, deploy u CC-Win). NA RESZTĘ
+> SESJI / NASTĘPNĄ SESJĘ FABLE: (1) paczka #2: EXIT_TREND →
+> „opcja awaryjna" + hedge GMX 1-podpisowy + EMERGENCY.md (decyzja
+> Rafała 27.08 wieczór; niuans do docs: sygnał DOWN na cbBTC/WETH
+> mierzy cenę WZGLĘDNĄ — czujnikiem krachu USD dla OBU nóg jest
+> sygnał na WETH/USDC); (2) decyzja HL_D=5 na przeglądzie 1.09
+> (czeka test kombinacji 12h+5d u CC-Win); (3) odebrać Partię 16
+> od Sonneta; (4) E2: pomiar kosztu zwłoki podpisu — createdAt
+> propozycji vs wpis księgi, pierwszy odczyt po realnym epizodzie.
 
 (Skrzynka opróżniona 28.08 rano — WSZYSTKIE raporty CC-Win z 26–27.08
 odebrane i zweryfikowane [seria RECAL, hedge, next, parking, rotacja,
@@ -66,6 +43,14 @@ w sekcji @CC-Win.)
 > (PARTIA 13 ODEBRANA przez Fable 27.08 — spot-check kodu OK, komplet
 > 6 punktów, nagłówek w TASKS-UI oznaczony ✅. Dzięki za szybką robotę.
 > Wpis o prognozie cbBTC niżej zostaje AKTUALNY do zrobienia.)
+
+- [Fable→Sonnet, 28.08 ~przedpołudnie — **PARTIA 16 SPEC GOTOWA,
+  można zaczynać**] TASKS-UI.md PARTIA 16: karty propozycji
+  FLAT_NARROW/FLAT_WIDEN + badge stanu flatu na kartach pul +
+  rozszerzenie typów w useBotApi. Bot-side już w paczce u CC-Mac
+  (kind, suggestedRange, note, pools[].flatSince/flatConfirmed w
+  /api/state). Priorytet: realny — cbBTC muska próg flat, pierwsza
+  karta NARROW może pojawić się w kokpicie w ciągu dni.
 
 - [Sonnet→CC-Mac, 28.08 — **SPÓJNOŚĆ PROGNOZY cbBTC ZROBIONA, do commit+push**]
   UI liczyła "Doradca ±X%" (suggestRange/assessPosition) zawsze z globalnym
@@ -209,6 +194,18 @@ w sekcji @CC-Win.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 28.08 ~przedpołudnie — **PACZKA "FLAT_ENTER/
+  FLAT_EXIT", PILNA (cbBTC muska próg flat — zegar musi ruszyć)**]
+  Commit+push: bot/config.ts (stała FLAT — parametry detektora),
+  bot/observer.ts (maszyna stanów flat per pula produktowa +
+  propozycje FLAT_NARROW/FLAT_WIDEN + sprzątanie po podpisie +
+  flat-state.json persystowany), scripts/morning-report.ts (NOWA
+  sekcja POZYCJE REALNE: wartość/vsHODL/PnL od kotwicy/gap/flat),
+  TASKS-UI.md (PARTIA 16 spec), HANDOFF.md, CONTEXT.md. tsc czysty
+  (poza preexisting observer:43 viem/ox). Komunikat: "feat(bot):
+  FLAT_ENTER/FLAT_EXIT — flat detector + narrow/widen proposals;
+  report: real positions section". NATYCHMIAST po pushu ping CC-Win.
 
 - [Fable→CC-Mac, 28.08 ~rano — DOCS brief dzień 1 + zlecenia]
   Commit+push: HANDOFF.md (higiena skrzynki @Fable + zlecenia
@@ -404,6 +401,29 @@ w sekcji @CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 28.08 ~przedpołudnie — **WDROŻENIE PACZKI
+  FLAT_ENTER, PILNE** (po pullu paczki CC-Mac; cbBTC gap −1.9% jest
+  już w progu flat — każda godzina bez detektora to nienaliczony
+  zegar confirm):]
+  1. `git pull` + `npm run build` + `nssm restart homos-bot` +
+     `nssm restart homos-server`.
+  2. Ten build DOMYKA TEŻ zaległość: commit c142065 (advisorK,
+     Sonnet) NIE był wdrożony — Fable sprawdził żywy bundle
+     (public/bundle.js serwowany na :8787): brak stringa `advisorK`.
+     Sanity po buildzie: `findstr advisorK public\bundle.js` → jest.
+  3. Sanity FLAT po restarcie: (a) `.bot/flat-state.json` powstaje;
+     (b) jeśli |gap| cbBTC wciąż <2% — w observer.log linia „flat
+     base-cbbtc-weth-005: zegar confirm startuje"; (c) /api/state
+     pools[] ma pola flatSince/flatConfirmed. UWAGA: zegar liczy
+     się OD RESTARTU (nie wstecz) — potwierdzenie najwcześniej po
+     12h nieprzerwanego |gap|<2%.
+  4. **TEST KOMBINACJI parametrów (na decyzję Rafała 1.09, po
+     wdrożeniu):** `CONFIRM_H=12 HL_D=5 NARROW=0.06 npx tsx
+     backtest/flatwindows.ts base-cbbtc-weth-005-720d` oraz
+     `CONFIRM_H=12 HL_D=5 npx tsx backtest/flatwindows.ts
+     base-weth-usdc-030-720d` — każdy parametr osobno poprawiał
+     ΣEV, kombinacja nietestowana; raport do @Fable.
+
 > (Cross-check FLAT_ENTER na cbBTC-720d ZROBIONY 28.08 rano — wynik
 > w skrzynce @Fable powyżej. Oba warianty poprawiają baseline;
 > HL_D=5 najlepszy [+18.1% ΣEV]. Czekam na paczkę FLAT_ENTER od

@@ -51,6 +51,27 @@ export const TREND = {
   thresh: 0.05, // sygnał DOWN gdy log(P/EMA) < −5%
 };
 
+/** PRODUKT FlatWide — detektor flatu FLAT_ENTER/FLAT_EXIT (28.08).
+ *  Zwężenie LP do k×σ TYLKO w potwierdzonym flacie; poza flatem szeroki
+ *  pasywny ±productIdleWidthPct. Parametry z E1/flatwindows (365d Fable
+ *  + 720d i cross-check CC-Win, 2 pule): confirm 12h zamiast 24h ~2×
+ *  więcej złapanych epizodów bez utraty jakości (base-030 ΣEV +223%,
+ *  cbBTC +13%). EMA: TA SAMA co bezpiecznik trendu (HL 7d, trend-state)
+ *  — HL_D=5 (najlepszy na cbBTC, +18%) ODROCZONE do przeglądu 1.09
+ *  (kombinacja 12h+5d nietestowana, wymagałaby drugiej EMA).
+ *  Detektor działa WYŁĄCZNIE na pulach produktowych (productIdleWidthPct)
+ *  — lekcja mainnet-wsteth-weth-001 (skan 27.08): na parach o
+ *  strukturalnie niskiej zmienności (LST, stable/stable) detektor łapie
+ *  szum mikrostruktury i generuje czyste koszty; dodatkowo twardy próg
+ *  minVolDaily. Tryb PROPONUJ — nic nie wykonuje się samo. */
+export const FLAT = {
+  enterGap: 0.02, // |log-gap| < 2% → kandydat flat (zegar confirm startuje)
+  exitGap: 0.05, // |log-gap| > 5% → koniec flatu (propozycja powrotu do szerokiego, alarm 24/7)
+  confirmH: 12, // potwierdzenie: nieprzerwanie w progu przez N godzin
+  minVolDaily: 0.005, // poniżej 0.5%/d flat NIE jest sygnałem (klasa LST/stable)
+  narrowFrac: 0.6, // pozycja "wąska", gdy połówkowa szerokość < 0.6 × productIdleWidthPct
+};
+
 export const BOT_POOLS: BotPool[] = [
   {
     id: 'mainnet-usdc-weth-030',

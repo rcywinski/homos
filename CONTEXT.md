@@ -11,7 +11,7 @@
   **żywy gap cbBTC/WETH −1.9% — już wewnątrz progu flat |gap|<2%**,
   a FLAT_ENTER jeszcze nie istnieje → budowa FLAT_ENTER/FLAT_EXIT
   priorytetem sesji 28.08 (kandydat parametrów: CONFIRM_H=12, czeka
-  cross-check CC-Win na cbBTC-720d). ETH/USDC gap +12.9% — bez zmian.
+  cross-check CC-Win na cbBTC-720d). ETH/USDC gap +12.9% — bez zmian. AKTUALIZACJA ~przedpołudnie: FLAT_ENTER/FLAT_EXIT zbudowany (confirm 12h), paczka w drodze na Windows.
 - **⚡ STAN NA 27.08 (DECYZJA ~południe, po iteracji z hybrydą):**
   PRODUKT = **HYBRYDA FlatWide** na obu pulach, cała transza 1
   (6 092 USDC, Base): wąski LP (k×σ) TYLKO w potwierdzonym flacie
@@ -84,6 +84,33 @@ cbBTC-720d (blokuje zamrożenie parametrów), Sonnet przypomnienie
 prognozy k=2 + zapowiedź Partii 16 (karty NARROW/WIDEN po spec),
 CC-Mac commit+push docs. Higiena HANDOFF: skrzynka @Fable
 opróżniona (komplet raportów 26–27.08 odebrany).
+
+~przedpołudnie — ODBIÓR ZLECEŃ + FLAT_ENTER/FLAT_EXIT ZBUDOWANY:
+(1) CC-Win cross-check cbBTC-720d: CONFIRM_H=12 ΣEV $452 (+13%),
+HL_D=5 $472 (+18%) — oba przechodzą kryterium (±10%). (2) Sonnet:
+spójność doradcy k=2 dla cbBTC zrobiona (c142065); ForecastPanel
+czysty (forecast.ts ma k=2 dla cbBTC — sprawdzone). (3) Wątpliwość
+Rafała potwierdzona ŻYWYM bundlem: c142065 NIE był wdrożony (brak
+`advisorK` w bundle.js na :8787) — domknięte jednym buildem z paczką
+FLAT. (4) DECYZJE RAFAŁA (AskUserQuestion): confirm 12h + EMA7d
+reużyta (bez drugiej EMA), HL_D=5 odroczone do 1.09 (kombinacja
+12h+5d nietestowana — test zlecony CC-Win); paczka FLAT osobno,
+opcja awaryjna jako #2. (5) KOD (Fable, tsc czysty poza preexisting):
+bot/config.ts stała FLAT (enter 2%/exit 5%/confirm 12h/minVol
+0.5%/d [lekcja wstETH]/narrowFrac 0.6); bot/observer.ts — maszyna
+stanów per pula produktowa (flat-state.json persystowany, restart
+nie zeruje zegara), propozycje FLAT_NARROW (k×σ, EV zwężenia +
+payback w note) i FLAT_WIDEN (powrót do ±idle, ochronna, alarm),
+histereza enter..exit, auto-dismiss po podpisie i po końcu flatu,
+sweep w refreshPositions domyka restart/pozycje wykryte po
+przejściu; scripts/morning-report.ts — sekcja POZYCJE REALNE
+(wartość/vsHODL/PnL od kotwicy/zakres/gap/flat — luka z briefu
+zamknięta); TASKS-UI PARTIA 16 spec (karty NARROW/WIDEN + badge
+flatu). Logika zweryfikowana testem syntetycznym (klasyfikacja
+szerokości ±50/40/14%, pełny cykl zegara start→reset→confirm→
+histereza→exit). Paczka u CC-Mac, deploy PILNY u CC-Win (zegar
+liczy od restartu). UWAGA na jutro: gap cbBTC balansuje na progu
+2% — spodziewane logi start/reset zegara to nie bug, to pomiar.
 
 ### 2026-08-27 ~rano — SESJA DECYZYJNA (Fable + Rafał) — w toku
 Checklist z HANDOFF wykonany: (1) runda finałowa ODEBRANA i

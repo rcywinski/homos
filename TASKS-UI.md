@@ -1130,3 +1130,37 @@ Zadanie (src/** only):
    (koniec z pomijaniem cbBTC/WETH); nota o pomijaniu zostaje tylko
    dla pozycji, których NIE ma ani w portfolio-USD, ani w state bota.
 4. Zero nowych requestów: oba źródła już są w useBotApi.
+
+## PARTIA 16 — karty propozycji FLAT_NARROW / FLAT_WIDEN (produkt FlatWide; spec Fable 28.08)
+
+Kontekst: observer dostał detektor flatu (FLAT_ENTER/FLAT_EXIT,
+bot/config.ts `FLAT` + bot/observer.ts) — nowe rodzaje propozycji
+`kind: 'FLAT_NARROW'` (zwężenie do k×σ w POTWIERDZONYM flacie) i
+`kind: 'FLAT_WIDEN'` (powrót do szerokiego ±productIdleWidthPct po
+końcu flatu). Obecnie UI renderuje nieznane kind jako szarą notę —
+działa, ale bez akcji. Zakres: TYLKO src/** (typy + karty + modal
+prefill). Stan flatu per pula jest w `state.pools[]`: `flatSince`
+(ISO|null) i `flatConfirmed` (bool).
+
+1. `src/hooks/useBotApi.ts`: rozszerzyć union `BotProposal.kind` o
+   `'FLAT_NARROW' | 'FLAT_WIDEN'`; do typu puli (stan bota) dodać
+   opcjonalne `flatSince?: string | null; flatConfirmed?: boolean`.
+2. Karty propozycji w MorningCockpit: FLAT_NARROW = akcent „🎯 FLAT —
+   zwężenie", FLAT_WIDEN = akcent ostrzegawczy „⚠️ koniec flatu —
+   rozszerzenie" (klasa wizualna jak EXIT_TREND — to propozycja
+   ochronna). Obie pokazują `suggestedRange` (uwaga: jednostka wg
+   `isStableQuote` z Partii 13b — cbBTC/WETH NIE jest w USD),
+   `costUsd`, `paybackDays` (tylko NARROW) i pełną `note`.
+   Przycisk [Modyfikuj/Wykonaj] → istniejący modal rebalansu z
+   prefillem zakresu z propozycji (jak REBALANCE; ostrzeżenie ±% z
+   Partii 13b zadziała samo — NARROW celowo <30%, dopisać wyjątek:
+   gdy kind==='FLAT_NARROW', ostrzeżenie „to NIE jest produktowe
+   ±40/50%" ZAMIENIĆ na neutralne „zwężenie produktowe (flat)").
+3. Badge stanu flatu na kartach pul produktowych (tam gdzie gap/EMA):
+   `flatConfirmed` → „FLAT ✅"; `flatSince && !flatConfirmed` →
+   „flat: zegar od <hh:mm> (potwierdzenie po 12h)"; inaczej nic.
+4. Odrzucenie propozycji: istniejący przepływ Odrzuć działa bez zmian
+   (dedup po stronie bota — odrzucona NARROW nie wróci w tym samym
+   epizodzie flatu; WIDEN może wrócić następnego dnia, jeśli pozycja
+   nadal wąska poza flatem — to celowe).
+5. Zero nowych requestów; wszystko z /api/state.

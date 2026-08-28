@@ -137,6 +137,48 @@ for (const f of ['selector-state.json', 'trend-state.json']) {
   if (s) sections.push(`## ${f}\n\`\`\`json\n${s.trim()}\n\`\`\``);
 }
 
+// --- POZYCJE REALNE (produkt FlatWide, 28.08) — equity vs HODL + stan flatu ---
+// Luka z briefu 28.08: raport nie miał sekcji realnych pozycji, Fable
+// musiał ciągnąć /api/state przez przeglądarkę. Czyta state.json (żywe
+// wartości z observera) + positions-history.ndjson (kotwica HODL =
+// pierwsza próbka per tokenId).
+try {
+  const stRaw = readSafe(path.join(BOT, 'state.json'));
+  if (stRaw) {
+    const st = JSON.parse(stRaw);
+    const poolsById: Record<string, any> = {};
+    for (const pl of st.pools ?? []) poolsById[pl.id] = pl;
+    const first: Record<string, any> = {};
+    const last: Record<string, any> = {};
+    const phRaw = readSafe(path.join(BOT, 'positions-history.ndjson'));
+    if (phRaw) for (const line of phRaw.trimEnd().split('\n')) {
+      try { const r = JSON.parse(line); if (!first[r.tokenId]) first[r.tokenId] = r; last[r.tokenId] = r; } catch { /* pomiń */ }
+    }
+    const fmtUsd = (v: number | null) => (v === null ? '—' : `${v >= 0 ? '+' : ''}$${v.toFixed(2)}`);
+    const rows = [
+      '| pozycja | pula | wartość | vs HODL | PnL od kotwicy | zakres | gap EMA | flat |',
+      '|---|---|---|---|---|---|---|---|',
+    ];
+    for (const pos of st.positions ?? []) {
+      const f = first[pos.tokenId];
+      const l = last[pos.tokenId];
+      const vsHodl = l ? pos.valueUsd - l.hodlUsd : null;
+      const pnl = f ? pos.valueUsd - f.hodlUsd : null; // kotwica: hodlUsd 1. próbki = wartość w chwili zakotwiczenia
+      const pl = poolsById[pos.poolId];
+      const flatTxt = pl?.flatConfirmed
+        ? '✅ POTWIERDZONY'
+        : pl?.flatSince
+          ? `zegar od ${String(pl.flatSince).slice(5, 16)}Z`
+          : '—';
+      rows.push(
+        `| #${pos.tokenId} | ${pos.poolId} | $${pos.valueUsd.toFixed(0)} | ${fmtUsd(vsHodl)} | ${fmtUsd(pnl)}${f ? ` (od ${String(f.ts).slice(0, 10)})` : ''} | ${pos.inRange ? 'w zakresie' : '⚠️ POZA'} | ${typeof pl?.trendGapPct === 'number' ? pl.trendGapPct.toFixed(1) + '%' : '—'} | ${flatTxt} |`
+      );
+    }
+    if ((st.positions ?? []).length) sections.push('## POZYCJE REALNE (produkt FlatWide)\n\n' + rows.join('\n'));
+    else sections.push('## POZYCJE REALNE (produkt FlatWide)\nbrak żywych pozycji w state.json');
+  }
+} catch { sections.push('## POZYCJE REALNE\nstate.json/positions-history nieparsowalne'); }
+
 // --- PAPER TRADING: podsumowanie dnia (stan + PnL vs HODL per pula) ---
 let tgPaperDigest: string | null = null;
 const paperRaw = readSafe(path.join(BOT, 'paper-state.json'));

@@ -14,7 +14,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createPublicClient, http, fallback, PublicClient, formatUnits } from 'viem';
 import { mainnet, base, arbitrum } from 'viem/chains';
-import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR, TREND } from './config';
+import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR, TREND, FLAT } from './config';
 import { ADVISOR_PARAMS } from '../src/utils/advisor';
 import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, suggestFixedRange, PoolStats } from '../src/utils/advisor';
 import { getAmountsForLiquidity, sqrtPriceX96ToHumanPrice } from '../src/utils/v3math';
@@ -115,6 +115,10 @@ interface PoolLive {
   /** bezpiecznik trendu (v1.1): odchylenie log-ceny od EMA7d w % i stan sygnału */
   trendGapPct?: number;
   trendDown?: boolean;
+  /** detektor flatu (produkt FlatWide, 28.08): od kiedy |gap|<enterGap
+   *  nieprzerwanie (ISO, null=zegar nie biegnie) i czy flat potwierdzony */
+  flatSince?: string | null;
+  flatConfirmed?: boolean;
 }
 interface WatchedPosition {
   tokenId: string;
@@ -140,8 +144,10 @@ interface Proposal {
   createdAt: string;
   tokenId: string; // '' dla propozycji OPEN z selektora
   poolId: string; // '' gdy pula spoza BOT_POOLS (selektor → note)
-  /** REBALANCE (doradca) | OPEN/ROTATE (selektor) | EXIT_TREND / HEDGE (bezpiecznik v1.2) */
-  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND' | 'HEDGE';
+  /** REBALANCE (doradca) | OPEN/ROTATE (selektor) | EXIT_TREND / HEDGE
+   *  (bezpiecznik v1.2) | FLAT_NARROW / FLAT_WIDEN (produkt FlatWide 28.08:
+   *  zwężenie w potwierdzonym flacie / powrót do szerokiego po flacie) */
+  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND' | 'HEDGE' | 'FLAT_NARROW' | 'FLAT_WIDEN';
   /** dla kind HEDGE: sugerowany rozmiar shorta (nadwyżka ETH ponad 50% wartości) */
   hedgeSizeEth?: number;
   hedgeNotionalUsd?: number;
@@ -477,6 +483,150 @@ function proposeExitTrend(pool: BotPool, gap: number) {
   }
 }
 
+// --- FLAT_ENTER / FLAT_EXIT (produkt FlatWide — decyzja Rafała 27-28.08) ---
+// Maszyna stanów per pula produktowa: |gap|<enterGap nieprzerwanie przez
+// confirmH godzin → flat POTWIERDZONY → propozycja zwężenia do k×σ
+// (FLAT_NARROW). Koniec flatu: |gap|>exitGap → propozycja powrotu do
+// szerokiego ±productIdleWidthPct (FLAT_WIDEN, alarm 24/7). Strefa środkowa
+// (enter..exit) NIE kończy potwierdzonego flatu (histereza jak w
+// backtest/flatwindows.ts). Stan persystowany — restart nie zeruje zegara
+// confirm (ta sama klasa fixu co trend-state 19.08).
+const FLAT_STATE_PATH = path.join(DIR, 'flat-state.json');
+interface FlatPoolState { flatSince: number | null; confirmed: boolean }
+const flat: Record<string, FlatPoolState> = fs.existsSync(FLAT_STATE_PATH)
+  ? JSON.parse(fs.readFileSync(FLAT_STATE_PATH, 'utf8'))
+  : {};
+const saveFlat = () => fs.writeFileSync(FLAT_STATE_PATH, JSON.stringify(flat, null, 2));
+
+/** połówkowa szerokość pozycji w % (geometrycznie: √(hi/lo)−1) */
+const posHalfWidthPct = (pos: { tickLower: number; tickUpper: number }): number =>
+  (Math.sqrt(Math.pow(1.0001, pos.tickUpper - pos.tickLower)) - 1) * 100;
+const isNarrowPos = (p: BotPool, pos: { tickLower: number; tickUpper: number }): boolean =>
+  p.productIdleWidthPct ? posHalfWidthPct(pos) < FLAT.narrowFrac * p.productIdleWidthPct : false;
+
+/** auto-zamknięcie otwartych propozycji danego rodzaju w puli (stale = błędne) */
+function dismissOpenByKind(kind: Proposal['kind'], poolId: string, why: string) {
+  let changed = false;
+  for (const pr of proposals) {
+    if (pr.status === 'open' && pr.kind === kind && pr.poolId === poolId) {
+      pr.status = 'dismissed';
+      pr.note = `${pr.note ? pr.note + ' · ' : ''}[auto: ${why}]`;
+      changed = true;
+      log(`proposal ${pr.id}: zamknięta automatycznie — ${why}`);
+    }
+  }
+  if (changed) { saveProposals(); saveState(); }
+}
+
+/** aktualizacja detektora flatu (wołana z refreshPrices, co 60 s) */
+function updateFlat(p: BotPool, gapFrac: number, nowMs: number) {
+  if (!p.productIdleWidthPct) return; // tylko pule produktowe
+  const vol = live[p.id]?.stats?.volDaily;
+  if (vol != null && vol < FLAT.minVolDaily) {
+    // guard LST/stable (lekcja wstETH/WETH 27.08): przy martwej zmienności
+    // "flat" to stan bazowy, nie sygnał — detektor wyłączony, stan zerowany
+    if (flat[p.id]?.flatSince != null || flat[p.id]?.confirmed) {
+      flat[p.id] = { flatSince: null, confirmed: false };
+      saveFlat();
+      log(`flat ${p.id}: vol ${(vol * 100).toFixed(2)}%/d < ${FLAT.minVolDaily * 100}%/d — detektor wyłączony (klasa LST/stable)`);
+    }
+    return;
+  }
+  const st = (flat[p.id] ??= { flatSince: null, confirmed: false });
+  const abs = Math.abs(gapFrac);
+  if (st.confirmed) {
+    if (abs > FLAT.exitGap) {
+      st.confirmed = false;
+      st.flatSince = null;
+      saveFlat();
+      const msg = `📉 HOMOS: FLAT ZAKOŃCZONY — ${p.id}, |gap| ${(abs * 100).toFixed(1)}% > ${FLAT.exitGap * 100}%. Jeśli pozycja jest wąska: wróć do szerokiego ±${p.productIdleWidthPct}% (propozycja w kokpicie). [tryb OBSERWUJ — nic nie wykonano]`;
+      log(msg);
+      telegram(msg);
+      dismissOpenByKind('FLAT_NARROW', p.id, 'flat zakończony (|gap|>exitGap)');
+      for (const pos of positions.filter((x) => x.poolId === p.id && isNarrowPos(p, x))) proposeFlatWiden(p, pos);
+    }
+    // strefa enter..exit: potwierdzony flat TRWA (histereza)
+  } else if (abs < FLAT.enterGap) {
+    if (st.flatSince == null) {
+      st.flatSince = nowMs;
+      saveFlat();
+      log(`flat ${p.id}: zegar confirm startuje (gap ${(gapFrac * 100).toFixed(2)}%, próg ${FLAT.confirmH}h)`);
+    } else if (nowMs - st.flatSince >= FLAT.confirmH * 3600e3) {
+      st.confirmed = true;
+      saveFlat();
+      const msg = `🎯 HOMOS: FLAT POTWIERDZONY — ${p.id} (|gap|<${FLAT.enterGap * 100}% nieprzerwanie ≥${FLAT.confirmH}h). Produkt FlatWide: pora rozważyć zwężenie do k×σ — propozycja w kokpicie przy najbliższym cyklu pozycji (≤5 min). [tryb OBSERWUJ — nic nie wykonano]`;
+      log(msg);
+      telegram(msg);
+    }
+  } else if (st.flatSince != null) {
+    log(`flat ${p.id}: zegar wyzerowany po ${((nowMs - st.flatSince) / 3600e3).toFixed(1)}h (gap ${(gapFrac * 100).toFixed(2)}%)`);
+    st.flatSince = null;
+    saveFlat();
+  }
+}
+
+/** FLAT_NARROW: propozycja zwężenia szerokiej pozycji do k×σ w potwierdzonym flacie */
+function proposeFlatNarrow(pool: BotPool, pos: WatchedPosition) {
+  const st = flat[pool.id];
+  const lv = live[pool.id];
+  if (!st?.confirmed || !lv?.stats) return;
+  if (proposals.some((x) => x.kind === 'FLAT_NARROW' && x.tokenId === pos.tokenId && x.status === 'open')) return;
+  const sug = suggestRange(lv.stats, pool.feeBps as any, pool.d0, pool.d1, {
+    ...ADVISOR_PARAMS, k: pool.advisorK ?? ADVISOR_PARAMS.k,
+  });
+  const toUsd = (t: number) => tickToUsd(pool, t);
+  const [usdLo, usdHi] = [toUsd(sug.tickLower), toUsd(sug.tickUpper)].sort((a, b) => a - b);
+  // EV zwężenia: przyrost fee z węższego pasma (skalowanie jak w assessPosition)
+  const spacing = TICK_SPACING[pool.feeBps];
+  const ticksNarrow = Math.max(sug.tickUpper - sug.tickLower, 2 * spacing);
+  const ticksCur = Math.max(pos.tickUpper - pos.tickLower, 2 * spacing);
+  const extraDailyUsd = pos.valueUsd * lv.stats.feeYieldDaily * 2 * spacing * (1 / ticksNarrow - 1 / ticksCur);
+  const costUsd = gasUsdFor(pool.chain) + pos.valueUsd * 0.5 * (pool.feeBps / 1_000_000 + ADVISOR_PARAMS.slippageBps / 10_000);
+  const payback = extraDailyUsd > 0 ? costUsd / extraDailyUsd : null;
+  const prop: Proposal = {
+    id: `flat-narrow-${pos.tokenId}-${st.flatSince ?? Date.now()}`,
+    createdAt: new Date().toISOString(), tokenId: pos.tokenId, poolId: pool.id,
+    kind: 'FLAT_NARROW', action: 'FLAT_NARROW',
+    symbol: `${pool.sym0}-${pool.sym1}`,
+    suggestedRange: { tickLower: sug.tickLower, tickUpper: sug.tickUpper, usdLo, usdHi },
+    costUsd, paybackDays: payback,
+    note: `Produkt FlatWide: flat POTWIERDZONY (|gap|<${FLAT.enterGap * 100}% ≥${FLAT.confirmH}h) — zwężenie z ±${posHalfWidthPct(pos).toFixed(0)}% do k×σ ±${sug.widthPct.toFixed(0)}% (k=${pool.advisorK ?? ADVISOR_PARAMS.k}). Dodatkowe fee ~$${extraDailyUsd.toFixed(2)}/d, koszt ~$${costUsd.toFixed(2)}, payback ~${payback?.toFixed(1) ?? '—'}d. E1: epizod musi potrwać ≥~${pool.id.includes('cbbtc') ? '5' : '2'}d, by zwężenie się opłaciło — mediana epizodów na tej puli za progiem. Powrót do szerokiego zaproponuję przy |gap|>${FLAT.exitGap * 100}%.`,
+    status: 'open',
+  };
+  proposals.push(prop);
+  saveProposals();
+  const msg = `🎯 HOMOS: propozycja ZWĘŻENIA (flat) — ${pool.id} #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}) → zakres $${usdLo.toFixed(usdLo < 1 ? 4 : 0)}–$${usdHi.toFixed(usdHi < 1 ? 4 : 0)} (±${sug.widthPct.toFixed(0)}%), extra fee ~$${extraDailyUsd.toFixed(2)}/d, payback ~${payback?.toFixed(1) ?? '—'}d. [tryb OBSERWUJ — nic nie wykonano]`;
+  log(msg);
+  telegram(msg);
+}
+
+/** FLAT_WIDEN: propozycja powrotu wąskiej pozycji do szerokiego ±idle po końcu flatu */
+function proposeFlatWiden(pool: BotPool, pos: WatchedPosition) {
+  const lv = live[pool.id];
+  if (!lv?.stats || !pool.productIdleWidthPct) return;
+  if (proposals.some((x) => x.kind === 'FLAT_WIDEN' && x.tokenId === pos.tokenId && x.status === 'open')) return;
+  const sug = suggestFixedRange(lv.stats, pool.feeBps as any, pool.d0, pool.d1, pool.productIdleWidthPct);
+  const toUsd = (t: number) => tickToUsd(pool, t);
+  const [usdLo, usdHi] = [toUsd(sug.tickLower), toUsd(sug.tickUpper)].sort((a, b) => a - b);
+  const costUsd = gasUsdFor(pool.chain) + pos.valueUsd * 0.5 * (pool.feeBps / 1_000_000 + ADVISOR_PARAMS.slippageBps / 10_000);
+  const gapNow = (lv.trendGapPct ?? 0).toFixed(1);
+  const prop: Proposal = {
+    id: `flat-widen-${pos.tokenId}-${new Date().toISOString().slice(0, 10)}`,
+    createdAt: new Date().toISOString(), tokenId: pos.tokenId, poolId: pool.id,
+    kind: 'FLAT_WIDEN', action: 'FLAT_WIDEN',
+    symbol: `${pool.sym0}-${pool.sym1}`,
+    suggestedRange: { tickLower: sug.tickLower, tickUpper: sug.tickUpper, usdLo, usdHi },
+    costUsd, paybackDays: null,
+    note: `FLAT_EXIT: |gap| ${gapNow}% > ${FLAT.exitGap * 100}% — flat skończony, wąska pozycja łapie IL na trendzie. Powrót do postury idle: szeroki ±${pool.productIdleWidthPct}%. Koszt ~$${costUsd.toFixed(2)}. To propozycja OCHRONNA (alarm 24/7) — im dłużej wąsko na trendzie, tym większy koszt.`,
+    status: 'open',
+  };
+  proposals.push(prop);
+  saveProposals();
+  const msg = `⚠️ HOMOS: propozycja ROZSZERZENIA (koniec flatu) — ${pool.id} #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): gap ${gapNow}% > ${FLAT.exitGap * 100}%, wróć do ±${pool.productIdleWidthPct}% ($${usdLo.toFixed(usdLo < 1 ? 4 : 0)}–$${usdHi.toFixed(usdHi < 1 ? 4 : 0)}). [tryb OBSERWUJ — nic nie wykonano]`;
+  log(msg);
+  telegram(msg);
+}
+
 // --- pętla cen (60s) ---
 async function refreshPrices() {
   // pule USD najpierw — pule kwotowane w WETH potrzebują ich kursu jako referencji
@@ -502,6 +652,14 @@ async function refreshPrices() {
       };
       live[p.id].trendGapPct = updateTrend(p, trendPrice(p, human), Date.now());
       live[p.id].trendDown = trend[p.id]?.down ?? false;
+      // detektor flatu (produkt FlatWide) — ta sama EMA/gap co bezpiecznik trendu
+      try {
+        updateFlat(p, (live[p.id].trendGapPct ?? 0) / 100, Date.now());
+      } catch (e) {
+        log(`flat ${p.id}: ${String(e).slice(0, 100)}`);
+      }
+      live[p.id].flatSince = flat[p.id]?.flatSince != null ? new Date(flat[p.id].flatSince!).toISOString() : null;
+      live[p.id].flatConfirmed = flat[p.id]?.confirmed ?? false;
     } catch (e) {
       log(`price ${p.id} failed: ${String(e).slice(0, 120)}`);
     }
@@ -717,6 +875,30 @@ async function refreshPositions() {
     if (autoClosed) saveProposals();
   } catch (e) {
     log(`auto-close OPEN: ${String(e).slice(0, 100)}`);
+  }
+
+  // --- produkt FlatWide: propozycje zwężenia/rozszerzenia wg stanu flatu ---
+  // (transition-only w updateFlat by ominął pozycje otwarte/wykryte PO
+  // przejściu i restart w trakcie epizodu — ten sweep domyka oba przypadki;
+  // dedup w propose* gwarantuje brak dubli)
+  try {
+    for (const p of BOT_POOLS) {
+      if (!p.productIdleWidthPct) continue;
+      const st = flat[p.id];
+      const held = found.filter((x) => x.poolId === p.id);
+      if (!held.length) continue;
+      for (const pos of held) {
+        const narrow = isNarrowPos(p, pos);
+        if (st?.confirmed && !narrow) proposeFlatNarrow(p, pos);
+        if (!st?.confirmed && narrow && Math.abs((live[p.id]?.trendGapPct ?? 0) / 100) > FLAT.exitGap)
+          proposeFlatWiden(p, pos);
+      }
+      // sprzątanie po ręcznym podpisie: propozycja zrealizowana = zamknij
+      if (held.some((pos) => isNarrowPos(p, pos))) dismissOpenByKind('FLAT_NARROW', p.id, 'pozycja już wąska');
+      if (held.some((pos) => !isNarrowPos(p, pos))) dismissOpenByKind('FLAT_WIDEN', p.id, 'pozycja już szeroka');
+    }
+  } catch (e) {
+    log(`flat sweep: ${String(e).slice(0, 100)}`);
   }
 
   // --- realny hedge na GMX (Arbitrum) — odczyt Readerem, patrz komentarz przy GMX ---
