@@ -11,7 +11,7 @@
   **żywy gap cbBTC/WETH −1.9% — już wewnątrz progu flat |gap|<2%**,
   a FLAT_ENTER jeszcze nie istnieje → budowa FLAT_ENTER/FLAT_EXIT
   priorytetem sesji 28.08 (kandydat parametrów: CONFIRM_H=12, czeka
-  cross-check CC-Win na cbBTC-720d). ETH/USDC gap +12.9% — bez zmian. AKTUALIZACJA ~przedpołudnie: FLAT_ENTER/FLAT_EXIT zbudowany (confirm 12h), paczka w drodze na Windows.
+  cross-check CC-Win na cbBTC-720d). ETH/USDC gap +12.9% — bez zmian. AKTUALIZACJA ~południe: FLAT_ENTER WDROŻONY — zegar cbBTC tyka od 07:35Z; kombinacja 12h+5d kumuluje się (kandydat 1.09); paczka #2 (procedura awaryjna + EMERGENCY.md) u CC-Mac.
 - **⚡ STAN NA 27.08 (DECYZJA ~południe, po iteracji z hybrydą):**
   PRODUKT = **HYBRYDA FlatWide** na obu pulach, cała transza 1
   (6 092 USDC, Base): wąski LP (k×σ) TYLKO w potwierdzonym flacie
@@ -111,6 +111,50 @@ szerokości ±50/40/14%, pełny cykl zegara start→reset→confirm→
 histereza→exit). Paczka u CC-Mac, deploy PILNY u CC-Win (zegar
 liczy od restartu). UWAGA na jutro: gap cbBTC balansuje na progu
 2% — spodziewane logi start/reset zegara to nie bug, to pomiar.
+
+~południe — DEPLOY #1 POTWIERDZONY + PACZKA #2 (PROCEDURA AWARYJNA):
+(1) CC-Win wdrożył FLAT_ENTER (restart ręcznie Rafał — NSSM poza
+uprawnieniami sesji CC-Win): zegar cbBTC TYKA od 07:35:51Z (gap
+−1.92%), flat-state.json żyje, advisorK w bundlu (zaległość c142065
+domknięta). Potwierdzenie flatu najwcześniej ~19:35Z. (2) TEST
+KOMBINACJI 12h+5d: EFEKTY SIĘ KUMULUJĄ — cbBTC-720d ΣEV $558.41
+(+39.5% vs baseline, +18% vs najlepszego solo), base-030-720d $347.45
+(vs $297 solo CONFIRM_12 z wczorajszego sweepu, +17%) → kandydat na
+przegląd 1.09: CONFIRM_H=12 + HL_D=5 RAZEM. (3) PACZKA #2 (Fable, tsc
+czysty): proposeExitTrend na pulach produktowych emituje DWIE
+propozycje emergency:true — (A) HEDGE delta-neutral PEŁNEJ nogi
+zmiennej (nie excess; WETH/USDC→ETH/USD 1 podpis, cbBTC→BTC/USD
+ręcznie na app.gmx.io), (B) EXIT_TREND z framingiem „dane mówią:
+zwykle NIE podpisuj"; dedup per kind, Telegram 🚨 jedną wiadomością.
+NOWY EMERGENCY.md: który sygnał jest czujnikiem krachu USD (WETH/USDC,
+nie cbBTC/WETH — ten mierzy cenę względną, przykład 19.08), domyślna
+reakcja NIC, opcja A z kosztami (funding +4.8%/r hist.), twarde
+kryteria opcji B (depeg/exploit/decyzja portfelowa), checklist
+czerwonego przycisku, wpis do CONTEXT po każdym użyciu. PARTIA 16b
+spec (czerwone ramki, grupowanie A+B, HEDGE bez buildera dla BTC bez
+przycisku). Deploy #2 niepilny (uśpiony do sygnału DOWN, dziś
+down:false 6/6) — może pójść jednym restartem z Partiami 16/16b.
+
+~popołudnie — PARTIE 16+16b ODEBRANE OD SONNETA (zrobione razem,
+jedna sesja): karty FLAT_NARROW/FLAT_WIDEN + sekcja "Procedura
+awaryjna" (grupowanie A/B per tokenId, HEDGE przed EXIT, czerwone
+ramki, HEDGE-BTC bez przycisku wykonania — link do GMX), badge flatu
+w ObservationAnalysis (feature-detect po flatSince/flatConfirmed —
+bez duplikowania listy pul produktowych), fmtQuoteForPool dla
+jednostek nie-USD, narrowRangeNote podmienia ostrzeżenie ±% dla
+zwężeń produktowych. Dobry refaktor: renderProposalCard zamiast
+duplikacji ~150 linii JSX. SPOT-CHECK Fable na kodzie: wszystkie
+punkty spec potwierdzone grepem, tsc czysty (poza preexisting
+observer:43). Pytanie Rafała o próg 2% vs 3%: odpowiedź danymi
+(2% wygrał walkforward na poziomie strategii; solo ENTER=3% lepszy
+w EV epizodów na base-030, ale wariant strategiczny gap<3%
+przegrywał z HODL 3/4 w fullperiodach) + zlecony CC-Win sweep
+ENTER=3% w kombinacji 12h+5d na obu pulach (komplet na 1.09).
+PACZKA ZBIORCZA u CC-Mac (paczka #2 + Partie 16/16b + EMERGENCY.md,
+.claude/ do .gitignore), wdrożenie zbiorcze u CC-Win (jeden
+build+restart). Fees dzień 1 wyjaśnione Rafałowi: ~$0.4/d base-030
++ ~$0.06/d cbBTC to projektowe tempo postury idle (cienka płynność
+±50/40%), nie usterka — zarobek hybrydy ma przyjść ze zwężeń.
 
 ### 2026-08-27 ~rano — SESJA DECYZYJNA (Fable + Rafał) — w toku
 Checklist z HANDOFF wykonany: (1) runda finałowa ODEBRANA i

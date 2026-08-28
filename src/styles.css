@@ -1309,6 +1309,18 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
 }
 .morning-proposal-card button { flex-shrink: 0; }
 
+/* --- UI session (Partia 16b): sekcja "Procedura awaryjna" — czerwony akcent
+   dla kart emergency + grupowanie A/B obok siebie per pozycja. --- */
+.morning-emergency-groups { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+.morning-emergency-group { display: flex; gap: 10px; flex-wrap: wrap; }
+.morning-emergency-group .morning-proposal-card { flex: 1 1 320px; }
+.morning-proposal-card--emergency {
+  border: 2px solid #d32f2f;
+  background: #fdecea;
+}
+.morning-emergency-heading { font-weight: 700; color: #b71c1c; }
+.morning-emergency-note { font-size: 11px; }
+
 .morning-advice-list { display: flex; flex-direction: column; gap: 6px; }
 .morning-advice-row {
   display: flex;
@@ -1705,6 +1717,9 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
 .observation-pool-title {
   margin-bottom: 4px;
 }
+/* Partia 16 pkt 3: badge stanu flatu przy tytule puli produktowej. */
+.observation-flat-badge { font-size: 12px; font-weight: 500; }
+.observation-flat-badge--confirmed { color: #2e7d32; }
 .observation-section-title {
   margin-top: 20px;
 }

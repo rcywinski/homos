@@ -324,10 +324,29 @@ const ObservationAnalysis: FC<Props> = ({ bot }) => {
               const poolPoints = (points as HistoryPoint[]).filter((p) => p.poolId === meta.id);
               if (poolPoints.length === 0) return null;
               const poolProposals = proposals.filter((p) => p.poolId === meta.id);
+              // Partia 16 pkt 3: badge stanu flatu — TYLKO pule produktowe mają
+              // te pola wypełnione (feature-detect, patrz useBotApi.ts
+              // BotPoolLive.flatSince/flatConfirmed); reszta nie pokazuje nic.
+              const poolLive = bot.state?.pools?.find((pl) => pl.id === meta.id);
+              const flatBadge = poolLive?.flatConfirmed ? (
+                <span className="observation-flat-badge observation-flat-badge--confirmed" title="Flat potwierdzony (≥12h nieprzerwanie) — propozycja zwężenia (FLAT_NARROW) aktywna albo możliwa">
+                  {' '}
+                  FLAT ✅
+                </span>
+              ) : poolLive?.flatSince ? (
+                <span
+                  className="observation-flat-badge muted"
+                  title="Zegar liczy czas nieprzerwanego flatu (|gap|<próg) — potwierdzenie (i propozycja FLAT_NARROW) dopiero po 12h nieprzerwanie"
+                >
+                  {' '}
+                  flat: zegar od {new Date(poolLive.flatSince).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })} (potwierdzenie po 12h)
+                </span>
+              ) : null;
               return (
                 <div key={meta.id} className="observation-pool-block">
                   <div className="morning-section-title observation-pool-title">
                     {meta.sym0}/{meta.sym1} · {(meta.feeBps / 10_000).toFixed(2)}%
+                    {flatBadge}
                   </div>
                   <PoolHistoryChart points={poolPoints} proposals={poolProposals} />
                 </div>

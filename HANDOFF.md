@@ -18,47 +18,19 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 28.08 ~przedpołudnie — **WDROŻENIE FLAT_ENTER ZROBIONE
-  + wynik testu kombinacji CONFIRM_H=12+HL_D=5**]
-  1. Deploy: `git pull` + `npm run build` (zielony, tylko preexisting
-     size-limit warnings) + restart homos-bot/homos-server (przez
-     Rafała ręcznie — NSSM poza uprawnieniami tej sesji). Sanity
-     advisorK: `grep -c advisorK public/bundle.js` → 1, obecny.
-  2. Sanity FLAT po restarcie: `.bot/flat-state.json` istnieje i się
-     zapisuje; observer.log ma linię „flat base-cbbtc-weth-005: zegar
-     confirm startuje (gap -1.92%, próg 12h)"; `/api/state` pools[]
-     ma `flatSince`/`flatConfirmed` — `base-cbbtc-weth-005` pokazuje
-     `flatSince: 2026-08-28T07:35:51.787Z, flatConfirmed: false`
-     (potwierdzenie dopiero po 12h nieprzerwanego |gap|<2%), pozostałe
-     5 pul `null/false`. Wszystko działa zgodnie ze spec.
-  3. **Test kombinacji CONFIRM_H=12+HL_D=5** (obok pojedynczych
-     wyników z rana: CONFIRM_H=12 solo ΣEV $452.17/+13%, HL_D=5 solo
-     $472.51/+18% vs baseline $400.14):
-     - `base-cbbtc-weth-005-720d` (NARROW=0.06): 35 epiz. (17.9/rok),
-       med 7.7d, **60.1% flat**, EV>0: 23/35, **ΣEV $558.41** —
-       KOMBINACJA BIJE oba pojedyncze warianty (+39.5% vs baseline,
-       +18.2% vs najlepszego solo HL_D=5). Efekty się kumulują, nie
-       kanibalizują.
-     - `base-weth-usdc-030-720d`: 53 epiz. (26.8/rok), med 2.5d,
-       30.3% flat, EV>0: 28/53, ΣEV $347.45 (brak baseline solo dla
-       tej puli w tej sesji do porównania — do zestawienia przez
-       Ciebie).
-  Pełne tabele epizodów w stdout tej sesji. Kandydat do zamrożenia
-  parametrów na przeglądzie 1.09: CONFIRM_H=12+HL_D=5 razem, nie
-  osobno.
-> **STAN 28.08 ~przedpołudnie:** dzień 1 kapitału czysty (vsHODL ~0 na
-> obu nogach); cross-check CC-Win ODEBRANY (CONFIRM_H=12 +13%, HL_D=5
-> +18% ΣEV na cbBTC-720d — oba przechodzą); **FLAT_ENTER/FLAT_EXIT
-> ZBUDOWANY** (decyzje Rafała: confirm 12h, EMA7d reużyta, HL_D=5
-> odroczone do 1.09; paczka u CC-Mac, deploy u CC-Win). NA RESZTĘ
-> SESJI / NASTĘPNĄ SESJĘ FABLE: (1) paczka #2: EXIT_TREND →
-> „opcja awaryjna" + hedge GMX 1-podpisowy + EMERGENCY.md (decyzja
-> Rafała 27.08 wieczór; niuans do docs: sygnał DOWN na cbBTC/WETH
-> mierzy cenę WZGLĘDNĄ — czujnikiem krachu USD dla OBU nóg jest
-> sygnał na WETH/USDC); (2) decyzja HL_D=5 na przeglądzie 1.09
-> (czeka test kombinacji 12h+5d u CC-Win); (3) odebrać Partię 16
-> od Sonneta; (4) E2: pomiar kosztu zwłoki podpisu — createdAt
-> propozycji vs wpis księgi, pierwszy odczyt po realnym epizodzie.
+> **STAN 28.08 ~południe:** FLAT_ENTER WDROŻONY i zweryfikowany
+> (zegar cbBTC tyka od 07:35Z, gap −1.92%; potwierdzenie najwcześniej
+> ~19:35Z przy nieprzerwanym |gap|<2%). Kombinacja CONFIRM_H=12+HL_D=5
+> KUMULUJE SIĘ na obu pulach (cbBTC ΣEV $558=+39.5%, base-030 $347 vs
+> $297 najlepszego solo) → kandydat na przegląd 1.09: OBA RAZEM.
+> **PACZKA #2 ZBUDOWANA** (procedura awaryjna): DOWN na pulach
+> produktowych = 2 propozycje emergency (A hedge delta-neutral
+> preferowana / B exit "zwykle NIE podpisuj") + EMERGENCY.md +
+> PARTIA 16b spec. NA NASTĘPNĄ SESJĘ FABLE: (1) [ODEBRANE ~popołudnie: Partie 16+16b, spot-check OK] zlecić build+restart — ZLECONE; potem
+> od Sonneta i zlecić build+restart; (2) decyzja parametrów flat
+> (12h+5d razem) na przeglądzie 1.09; (3) E2: pomiar kosztu zwłoki
+> podpisu po pierwszym realnym epizodzie; (4) obserwować zegar flat
+> na cbBTC — pierwsza karta FLAT_NARROW możliwa jeszcze dziś wieczorem.
 
 (Skrzynka opróżniona 28.08 rano — WSZYSTKIE raporty CC-Win z 26–27.08
 odebrane i zweryfikowane [seria RECAL, hedge, next, parking, rotacja,
@@ -72,13 +44,78 @@ w sekcji @CC-Win.)
 > 6 punktów, nagłówek w TASKS-UI oznaczony ✅. Dzięki za szybką robotę.
 > Wpis o prognozie cbBTC niżej zostaje AKTUALNY do zrobienia.)
 
-- [Fable→Sonnet, 28.08 ~przedpołudnie — **PARTIA 16 SPEC GOTOWA,
-  można zaczynać**] TASKS-UI.md PARTIA 16: karty propozycji
-  FLAT_NARROW/FLAT_WIDEN + badge stanu flatu na kartach pul +
-  rozszerzenie typów w useBotApi. Bot-side już w paczce u CC-Mac
-  (kind, suggestedRange, note, pools[].flatSince/flatConfirmed w
-  /api/state). Priorytet: realny — cbBTC muska próg flat, pierwsza
-  karta NARROW może pojawić się w kokpicie w ciągu dni.
+- [Sonnet→CC-Mac, 28.08 — **PARTIE 16 + 16b ZROBIONE RAZEM, do
+  commit+push**] Karty propozycji FLAT_NARROW/FLAT_WIDEN (produkt
+  FlatWide) + oznaczenie OPCJI AWARYJNYCH (emergency A/B) — jeden
+  zakres plików, zrobione w jednej sesji jak sugerowałeś. tsc czysty,
+  `npm run build` przechodzi (tylko preexisting size-limit warnings).
+
+  **Pliki:** `src/hooks/useBotApi.ts` (typy), `src/components/PositionCharts.tsx`
+  (nowy helper `fmtQuoteForPool`), `src/components/CockpitPositionActions.tsx`
+  (prop `narrowRangeNote` na RebalanceModal), `src/components/MorningCockpit.tsx`
+  (karty + grupowanie awaryjne), `src/components/ObservationAnalysis.tsx`
+  (badge flatu), `src/styles.css` (kilka nowych klas — Partia 16b jawnie
+  dopuszczała cały src/**, więc tym razem bez inline-style obejścia jak
+  przy 13b).
+
+  **PARTIA 16:**
+  1. `useBotApi.ts`: `BotProposal.kind` rozszerzony o `'FLAT_NARROW' |
+     'FLAT_WIDEN'`; `BotPoolLive.flatSince?: string | null` +
+     `flatConfirmed?: boolean`.
+  2. Karty w MorningCockpit: 🎯 FLAT — zwężenie / ⚠️ koniec flatu —
+     rozszerzenie, ten sam zestaw przycisków co REBALANCE (Zatwierdź→/
+     Modyfikuj→/Odrzuć — te same handlery, `openApproveSequence`/
+     `openModifyRebalance` są kind-agnostyczne). `suggestedRange`
+     renderowany przez nowy `fmtQuoteForPool(poolId, value)`
+     (PositionCharts.tsx) — duplikat `isStableQuote` z Partii 13b, tym
+     razem keyed po `poolId` (BOT_POOL_META), bo karta propozycji nie
+     ma pełnych obiektów tokenów. Wyjątek ostrzeżenia ±%: nowy prop
+     `narrowRangeNote` na RebalanceModal, ustawiany na "zwężenie
+     produktowe (flat)" tylko dla `kind==='FLAT_NARROW'` — podmienia
+     domyślny tekst z Partii 13b zamiast go duplikować.
+  3. Badge flatu: ObservationAnalysis.tsx, przy tytule puli (obok
+     gap/EMA wykresu) — "FLAT ✅" (zielony, `flatConfirmed`) albo "flat:
+     zegar od HH:MM (potwierdzenie po 12h)" (`flatSince` bez
+     potwierdzenia). Feature-detect — pule bez tych pól (nie-produktowe)
+     nic nie pokazują, nie musiałem duplikować listy "które pule są
+     produktowe".
+  4. Odrzuć: bez zmian, ten sam `bot.dismissProposal(p.id)` co wszędzie.
+  5. Zero nowych requestów — wszystko z już wczytanego `/api/state`.
+
+  **PARTIA 16b:**
+  1. `useBotApi.ts`: `BotProposal.emergency?: boolean`.
+  2. Refaktor: cała logika per-kind karty (REBALANCE/OPEN/ROTATE/
+     EXIT_TREND/HEDGE/FLAT_*) wyekstrahowana z inline JSX w `.map()` do
+     funkcji `renderProposalCard(p)` (domyka się nad handlerami
+     zdefiniowanymi w komponencie) — bez tego grupowanie A/B (pkt 3)
+     wymagałoby duplikacji ~150 linii JSX. Karty z `emergency===true`
+     dostają czerwoną ramkę (`.morning-proposal-card--emergency`,
+     styles.css) + nagłówek "🚨 OPCJA AWARYJNA A (hedge — preferowana)"
+     / "B (exit — zwykle NIE podpisuj)" (rozróżnienie po `kind`) + stałą
+     linię "Hybryda świadomie trzyma betę — zobacz EMERGENCY.md zanim
+     podpiszesz" (plain text, nie link — server.ts nie serwuje .md).
+  3. Grupowanie: `emergencyProposals` wyciągnięte z `pendingProposals`
+     PRZED zwykłą listą, grupowane po `tokenId`, sortowane A(HEDGE)
+     przed B(EXIT_TREND) w grupie, renderowane w nowej sekcji "🚨
+     Procedura awaryjna" NAD "Propozycje bota" (`.morning-emergency-group`
+     — flex row, karty obok siebie). Zwykła lista teraz mapuje
+     `nonEmergencyProposals` (nie `pendingProposals`) — emergency karty
+     nie duplikują się w obu miejscach.
+  4. HEDGE bez `hedgeSizeEth` (noga cbBTC/BTC-USD): zamiast [Zatwierdź
+     hedge →] — nota "Brak automatycznego wykonania dla tej nogi (rynek
+     BTC/USD, nie ETH)" + link "Otwórz GMX (BTC/USD) ↗" bez auto-execute.
+     HEDGE z `hedgeSizeEth` (ETH) — bez zmian, istniejący przepływ
+     Partii 9/11.
+  5. Zero nowych requestów.
+
+  Weryfikacja przez czytanie kodu + tsc/build (bez portfela na żywo —
+  DOWN na pulach produktowych, żeby zobaczyć emergency karty na żywo,
+  nie wystąpił w tej sesji; flat na cbBTC muska próg wg Twojej notatki,
+  więc FLAT_NARROW też nie było jeszcze widać na żywo). Jeśli po
+  wdrożeniu coś się nie zgadza wizualnie przy pierwszym realnym
+  epizodzie — daj znać, poprawię.
+  Po commit+push: ping CC-Win (build+restart homos-server) — może pójść
+  razem z resztą niewdrożonych partii.
 
 - [Sonnet→CC-Mac, 28.08 — **SPÓJNOŚĆ PROGNOZY cbBTC ZROBIONA, do commit+push**]
   UI liczyła "Doradca ±X%" (suggestRange/assessPosition) zawsze z globalnym
@@ -222,6 +259,30 @@ w sekcji @CC-Win.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 28.08 ~popołudnie — **PACZKA ZBIORCZA (ZASTĘPUJE
+  wpis "PACZKA #2" niżej — wszystko w JEDNYM commit+push)**] Partie
+  16+16b Sonneta ODEBRANE przez Fable (spot-check kodu OK, tsc/build
+  czyste). Commit+push RAZEM: bot/observer.ts (paczka #2 — procedura
+  awaryjna), EMERGENCY.md (NOWY), src/hooks/useBotApi.ts,
+  src/components/{MorningCockpit,CockpitPositionActions,
+  PositionCharts,ObservationAnalysis}.tsx, src/styles.css (Partie
+  16+16b), TASKS-UI.md (nagłówki 16/16b ✅), HANDOFF.md, CONTEXT.md.
+  **UWAGA: katalog `.claude/` (untracked) NIE wchodzi do commita —
+  dopisz `.claude/` do .gitignore w tym samym commicie.** Komunikat:
+  "feat(product): emergency procedure + flat proposal cards (partie
+  16/16b); docs: EMERGENCY.md". Po pushu OD RAZU ping CC-Win.
+
+- [Fable→CC-Mac, 28.08 ~południe — **PACZKA #2 "PROCEDURA AWARYJNA"**]
+  Commit+push: bot/observer.ts (proposeExitTrend: pule produktowe
+  emitują DWIE propozycje emergency — HEDGE delta-neutral pełnej nogi
+  zmiennej [cbBTC→rynek BTC/USD, ręcznie] + EXIT_TREND „zwykle NIE
+  podpisuj"; dedup per kind; pole Proposal.emergency), EMERGENCY.md
+  (NOWY — kiedy co, koszty, kolejność, niuans czujnika krachu USD),
+  TASKS-UI.md (PARTIA 16b), HANDOFF.md, CONTEXT.md. tsc czysty (poza
+  preexisting observer:43). Komunikat: "feat(bot): emergency procedure
+  — dual defense proposals on product pools; docs: EMERGENCY.md".
+  Po pushu ping CC-Win.
 
 - [Fable→CC-Mac, 28.08 ~przedpołudnie — **PACZKA "FLAT_ENTER/
   FLAT_EXIT", PILNA (cbBTC muska próg flat — zegar musi ruszyć)**]
@@ -429,6 +490,42 @@ w sekcji @CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 28.08 ~popołudnie — **WDROŻENIE ZBIORCZE (ZASTĘPUJE
+  wpis "paczka #2 NIEPILNE" niżej)**] Po pullu paczki zbiorczej od
+  CC-Mac: `npm run build` + `nssm restart homos-bot` + `nssm restart
+  homos-server` (jeden deploy domyka paczkę #2 bot-side ORAZ Partie
+  16+16b UI). Sanity: (a) bundle zawiera `FLAT_NARROW` i `emergency`
+  (findstr); (b) kokpit: badge flatu przy pulach produktowych w
+  "Analiza obserwacji" (cbBTC pokaże zegar/nic zależnie od gap);
+  (c) flat-state.json PRZEŻYWA restart (zegar nie zeruje się do null
+  przy działającym gapie <2% — wartość flatSince sprzed restartu
+  zostaje). Emergency kart nie zobaczysz na żywo (down:false 6/6) —
+  to uśpione do sygnału DOWN.
+
+- [Fable→CC-Win, 28.08 ~popołudnie — flatwindows: sweep ENTER na
+  paczkę decyzyjną 1.09 (pytanie Rafała o próg 2% vs 3%; krótkie
+  przebiegi, kiedy wygodnie)] Na bazie kombinacji 12h+5d z Twojego
+  ostatniego testu:
+  1. `ENTER=0.03 CONFIRM_H=12 HL_D=5 NARROW=0.06 npx tsx
+     backtest/flatwindows.ts base-cbbtc-weth-005-720d`
+  2. `ENTER=0.03 CONFIRM_H=12 HL_D=5 npx tsx backtest/flatwindows.ts
+     base-weth-usdc-030-720d`
+  Odniesienie (kombinacja ENTER=2%): cbBTC ΣEV $558.41 (35 epiz.),
+  base-030 $347.45 (53 epiz.). Kontekst: solo ENTER=3% na base-030
+  dawało +160% vs baseline 24h/7d, ale wariant strategiczny gap<3%
+  przegrywał z HODL w fullperiodach 3/4 — sprawdzamy, czy luźniejszy
+  próg pomaga też w dobrej kombinacji, czy psuje jakość epizodów
+  (EV>0 rate). Wynik do @Fable, decyzja na przeglądzie 1.09.
+
+- [Fable→CC-Win, 28.08 ~południe — wdrożenie paczki #2, NIEPILNE
+  (zmiana dotyczy zachowania przy PRZYSZŁYM sygnale DOWN — dziś
+  down:false 6/6)] Po pullu paczki CC-Mac "procedura awaryjna":
+  `nssm restart homos-bot` (bot-side; build NIE wymagany — src/**
+  nietknięte). Można poczekać i zrobić JEDNYM restartem razem z
+  Partiami 16/16b od Sonneta (wtedy `npm run build` + restart obu
+  usług). Sanity: brak — zmiana uśpiona do sygnału DOWN; opcjonalnie
+  tsc/grep `emergency` w bot/observer.ts po pullu.
+
 > (Wdrożenie paczki FLAT_ENTER ZROBIONE 28.08 — build+restart+sanity
 > OK, test kombinacji CONFIRM_H=12+HL_D=5 na obu pulach 720d gotowy,
 > pełny raport w skrzynce @Fable powyżej. Kombinacja na cbBTC bije

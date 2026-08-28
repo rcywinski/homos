@@ -30,6 +30,7 @@ legacy-*.bak
 # IDE and Editor files
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 .DS_Store

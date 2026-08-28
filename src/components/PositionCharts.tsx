@@ -56,6 +56,30 @@ export const ethIsToken0 = (poolId: string): boolean => {
   return meta ? meta.sym0.includes('ETH') : true;
 };
 
+// Partia 16 (karty propozycji FLAT_NARROW/FLAT_WIDEN): whitelist duplikowana
+// z isStableQuote w CockpitPositionActions.tsx (RebalanceModal) — tam liczona
+// z pełnych obiektów tokenów (PortfolioPosition/RebalanceTarget), tutaj z
+// samego poolId (BOT_POOL_META), bo karty propozycji mają tylko `p.poolId`,
+// nie pełne dane tokenów. Trzymać w zgodzie ręcznie, gdyby lista się zmieniła
+// (ta sama konwencja duplikacji co reszta tego pliku/BOT_POOL_META).
+const STABLE_SYMBOLS = new Set(['USDC', 'USDT', 'DAI', 'USDBC', 'USDE', 'FRAX', 'LUSD']);
+
+/** Formatuje wartość `suggestedRange.usdLo/usdHi` propozycji bota w
+ *  jednostce WŁAŚCIWEJ dla puli — "usd" w nazwie pola jest myląca dla par
+ *  bez nogi stablecoina (np. cbBTC/WETH: wartość to cbBTC-za-WETH, nie USD).
+ *  Fallback na "$" gdy poolId nieznane (bezpieczny default — reszta pul
+ *  configu jest ETH/stable). */
+export function fmtQuoteForPool(poolId: string, value: number): string {
+  const meta = BOT_POOL_META.find((m) => m.id === poolId);
+  if (!meta) return `$${value.toLocaleString()}`;
+  const ethSide = meta.sym0.includes('ETH') ? meta.sym0 : meta.sym1;
+  const otherSide = meta.sym0.includes('ETH') ? meta.sym1 : meta.sym0;
+  if (STABLE_SYMBOLS.has(otherSide.toUpperCase())) {
+    return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  }
+  return `${value.toLocaleString(undefined, { maximumSignificantDigits: 6 })} ${otherSide}/${ethSide}`;
+}
+
 // Transformuje pojedynczą surową wartość (price/lo/hi) do orientacji
 // wyświetlanej. Stosowana WCZEŚNIE — przed liczeniem skali Y i punktów
 // wykresu, nie tylko w etykietach — dzięki temu cała geometria (linia,

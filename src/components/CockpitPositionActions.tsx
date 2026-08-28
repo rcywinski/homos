@@ -366,7 +366,12 @@ export const RebalanceModal: FC<{
   bot?: UseBotApi;
   title?: string;
   initialUsdRange?: { usdLo: number; usdHi: number };
-}> = ({ position: p, actions, busy, onClose, onDone, bot, title, initialUsdRange }) => {
+  /** Partia 16: nadpisuje domyślne ostrzeżenie "to NIE jest produktowe
+   *  ±40/50%" (Partia 13b) przy wąskim prefillu (<30%) — dla FLAT_NARROW
+   *  wąski zakres jest ZAMIERZONY (zwężenie do k×σ w potwierdzonym flacie),
+   *  nie objawem starej propozycji. `undefined` = zachowanie bez zmian. */
+  narrowRangeNote?: string;
+}> = ({ position: p, actions, busy, onClose, onDone, bot, title, initialUsdRange, narrowRangeNote }) => {
   // Sugestia frontendowego doradcy (position.suggestion) albo, gdy jej brak,
   // fallback na świeżą sugestię bota dla tej samej puli (mapowanie po adresie —
   // działa tylko dla pozycji trzymanych, position.poolAddress istnieje tylko
@@ -594,7 +599,7 @@ export const RebalanceModal: FC<{
           {initialRangeWidthPct !== null && (
             <div className="morning-note">
               Zakres z propozycji: <b>±{initialRangeWidthPct.toFixed(1)}%</b> wokół środka
-              {initialRangeWidthPct < 30 ? ' — WĄSKI, to NIE jest produktowe ±40/50% (sprawdź źródło propozycji)' : ''}.
+              {initialRangeWidthPct < 30 ? ` — ${narrowRangeNote ?? 'WĄSKI, to NIE jest produktowe ±40/50% (sprawdź źródło propozycji)'}` : ''}.
             </div>
           )}
 

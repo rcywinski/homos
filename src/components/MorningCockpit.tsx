@@ -32,7 +32,7 @@ import BotTelemetry from './BotTelemetry';
 import ObservationAnalysis from './ObservationAnalysis';
 import ForecastPanel from './ForecastPanel';
 import CockpitPositionActions, { CloseModal, RebalanceModal } from './CockpitPositionActions';
-import { Sparkline, PriceRangeChart, EquityChartPoint, PositionStatsBar } from './PositionCharts';
+import { Sparkline, PriceRangeChart, EquityChartPoint, PositionStatsBar, fmtQuoteForPool } from './PositionCharts';
 import RebalanceSequenceModal from './RebalanceSequenceModal';
 import RotateSequenceModal from './RotateSequenceModal';
 import HedgeConfirmModal from './HedgeConfirmModal';
@@ -96,7 +96,17 @@ interface Props {
 //    przez resolveBotPool() dla puli, w której user jeszcze nie ma pozycji.
 type ProposalModalState =
   | { type: 'close'; position: PortfolioPosition }
-  | { type: 'open'; target: RebalanceTarget; title: string; initialUsdRange?: { usdLo: number; usdHi: number } };
+  | {
+      type: 'open';
+      target: RebalanceTarget;
+      title: string;
+      initialUsdRange?: { usdLo: number; usdHi: number };
+      /** Partia 16: nadpisuje domyślne ostrzeżenie "to NIE jest produktowe
+       *  ±40/50%" (Partia 13b, CockpitPositionActions.tsx) tekstem neutralnym
+       *  dla FLAT_NARROW — wąski prefill tam jest ZAMIERZONY (zwężenie do
+       *  k×σ w potwierdzonym flacie), nie objawem starej/zepsutej propozycji. */
+      narrowRangeNote?: string;
+    };
 
 // [Zatwierdź] (Partia 4b) — plan pełnej sekwencji (decrease+collect → swap →
 // mint) z rebalanceBuilder.ts dla kart REBALANCE. Tylko REBALANCE: stara i
@@ -179,7 +189,10 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
 
   const findHeldPosition = (tokenId: string): PortfolioPosition | undefined => portfolio.positions.find((x) => x.tokenId === tokenId);
 
-  // REBALANCE "Modyfikuj →": prefill z pozycji już trzymanej przez usera.
+  // REBALANCE/FLAT_NARROW/FLAT_WIDEN "Modyfikuj →": prefill z pozycji już
+  // trzymanej przez usera — ten sam mechanizm (istniejąca pozycja + zakres z
+  // propozycji), różni się tylko tytułem modala i (dla NARROW) ostrzeżeniem
+  // o wąskim zakresie (Partia 16 pkt 2).
   const openModifyRebalance = (p: BotProposal) => {
     const pos = findHeldPosition(p.tokenId);
     if (!pos) {
@@ -187,7 +200,19 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
       return;
     }
     setProposalError(null);
-    setProposalModal({ type: 'open', target: pos, title: `Modyfikuj rebalans #${p.tokenId}`, initialUsdRange: p.suggestedRange });
+    const title =
+      p.kind === 'FLAT_NARROW'
+        ? `Zwężenie (flat) #${p.tokenId}`
+        : p.kind === 'FLAT_WIDEN'
+          ? `Rozszerzenie (koniec flatu) #${p.tokenId}`
+          : `Modyfikuj rebalans #${p.tokenId}`;
+    setProposalModal({
+      type: 'open',
+      target: pos,
+      title,
+      initialUsdRange: p.suggestedRange,
+      narrowRangeNote: p.kind === 'FLAT_NARROW' ? 'zwężenie produktowe (flat)' : undefined,
+    });
   };
 
   // REBALANCE "Zatwierdź →" (Partia 4b): buduje pełny plan (decrease+collect →
@@ -394,6 +419,24 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   // on save) — filter defensively anyway in case that ever changes.
   const pendingProposals = (bot.state?.proposals ?? []).filter((p) => p.status === 'open');
 
+  // Partia 16b: DOWN na pulach produktowych emituje DWIE propozycje naraz
+  // (HEDGE = opcja A preferowana, EXIT_TREND = opcja B "zwykle NIE
+  // podpisuj"), obie oznaczone `emergency: true` — wyciągnięte z listy
+  // zwykłych propozycji do osobnej sekcji "Procedura awaryjna", grupowane
+  // per tokenId (ta sama pozycja produktowa), A zawsze przed B w grupie.
+  const emergencyProposals = pendingProposals.filter((p) => p.emergency);
+  const nonEmergencyProposals = pendingProposals.filter((p) => !p.emergency);
+  const emergencyGroups: BotProposal[][] = (() => {
+    const byKey = new Map<string, BotProposal[]>();
+    for (const p of emergencyProposals) {
+      const key = p.tokenId || p.id; // tokenId puste tylko w teorii (emergency dotyczy zawsze trzymanej pozycji)
+      const arr = byKey.get(key) ?? [];
+      arr.push(p);
+      byKey.set(key, arr);
+    }
+    return Array.from(byKey.values()).map((arr) => [...arr].sort((a, b) => (a.kind === 'HEDGE' ? 0 : 1) - (b.kind === 'HEDGE' ? 0 : 1)));
+  })();
+
   // Partia 15 (punkty 1+3): usePortfolio nie umie wycenić par bez nogi
   // stable/ETH (np. cbBTC/WETH — patrz "Valuation note" w usePortfolio.ts,
   // świadomie NIE ruszana w tej sesji, logika liczenia zostaje). Bot LICZY tę
@@ -414,6 +457,242 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   // nie ma ani w wycenie usePortfolio, ani w state bota — nie dla każdej
   // pozycji bez nogi stable/ETH jak dotąd (cbBTC/WETH ma teraz wycenę bota).
   const stillUnknownValue = portfolio.positions.some((p) => p.valueUsd === null && !botValueByTokenId.has(p.tokenId));
+
+  // Partia 16/16b: jedna karta propozycji, wyekstrahowana z inline JSX do
+  // funkcji, żeby renderować TĘ SAMĄ logikę per-kind zarówno w zwykłej
+  // liście "Propozycje bota", jak i w sekcji "Procedura awaryjna" (16b pkt 3
+  // — grupowanie A/B obok siebie), bez duplikowania ~150 linii JSX. Domyka
+  // się nad wszystkimi handlerami zdefiniowanymi wyżej w komponencie
+  // (openApproveSequence itd.) — bez zmiany ich sygnatur.
+  const renderProposalCard = (p: BotProposal) => {
+    const kind = p.kind ?? 'REBALANCE';
+    // Punkt 2 (Partia 16b): nagłówek "OPCJA AWARYJNA A/B" tylko na kartach z
+    // emergency===true — rozróżnienie A(hedge)/B(exit) po kind. Karty bez
+    // `emergency` (wszystkie pozostałe kind, i HEDGE/EXIT_TREND spoza
+    // procedury awaryjnej) — bez zmian.
+    const emergencyLabel = p.emergency ? (kind === 'HEDGE' ? 'A (hedge — preferowana)' : kind === 'EXIT_TREND' ? 'B (exit — zwykle NIE podpisuj)' : null) : null;
+    return (
+      <div key={p.id} className={`morning-proposal-card morning-proposal-card--stacked${p.emergency ? ' morning-proposal-card--emergency' : ''}`}>
+        {emergencyLabel && (
+          <>
+            <div className="morning-proposal-line morning-emergency-heading">🚨 OPCJA AWARYJNA {emergencyLabel}</div>
+            <div className="muted morning-emergency-note">Hybryda świadomie trzyma betę — zobacz EMERGENCY.md zanim podpiszesz.</div>
+          </>
+        )}
+        {kind === 'REBALANCE' && (
+          <>
+            <div className="morning-proposal-line">
+              🔄 REBALANS #{p.tokenId}
+              {p.suggestedRange && (
+                <>
+                  {' '}
+                  → ${p.suggestedRange.usdLo.toLocaleString()}–${p.suggestedRange.usdHi.toLocaleString()}
+                </>
+              )}
+              {typeof p.costUsd === 'number' && <> · koszt ${p.costUsd.toFixed(2)}</>}
+              {typeof p.paybackDays === 'number' && <> · payback ~{p.paybackDays.toFixed(1)} dni</>}
+            </div>
+            <div className="morning-proposal-actions">
+              <button className="action-button primary" onClick={() => openApproveSequence(p)}>
+                Zatwierdź →
+              </button>
+              <button className="action-button" onClick={() => openModifyRebalance(p)}>
+                Modyfikuj →
+              </button>
+              <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                Odrzuć
+              </button>
+            </div>
+          </>
+        )}
+
+        {kind === 'OPEN' && (
+          <>
+            <div className="morning-proposal-line">🟢 {p.action}</div>
+            {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
+            <div className="morning-proposal-actions">
+              {p.poolId && (
+                <button className="action-button" disabled={resolvingId === p.id} onClick={() => openNewAtProposal(p, `Otwórz — ${p.symbol ?? p.action}`)}>
+                  {resolvingId === p.id ? 'Wczytywanie…' : 'Otwórz →'}
+                </button>
+              )}
+              <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                Odrzuć
+              </button>
+            </div>
+          </>
+        )}
+
+        {kind === 'ROTATE' && (
+          <>
+            <div className="morning-proposal-line">
+              🔁 Zamknij #{p.tokenId}
+              {typeof p.heldApy7d === 'number' && <> (7d {p.heldApy7d.toFixed(1)}%)</>}
+            </div>
+            <div className="morning-proposal-line">
+              → Otwórz {p.symbol ?? ''}
+              {typeof p.apy7d === 'number' && <> (7d {p.apy7d.toFixed(1)}%)</>}
+              {typeof p.breakEvenDays === 'number' && <> · koszt przejścia zwraca się w ~{p.breakEvenDays.toFixed(1)}d</>}
+            </div>
+            {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
+            {/* Partia 8 (domknięcie TODO z Partii 4b): automatyczne [Zatwierdź]
+                wymaga planRotate() (stara+nowa pula, ta sama sieć) — gdy pary
+                rozłączne albo różne sieci, openRotateApprove pokaże błąd i
+                zostają kroki 1/2 ręczne poniżej jako fallback. */}
+            <div className="morning-note">
+              [Zatwierdź] wykona sekwencję automatycznie (tylko ta sama sieć) — kroki 1/2 poniżej zostają jako opcja ręczna.
+            </div>
+            <div className="morning-proposal-actions">
+              <button className="action-button primary" disabled={resolvingId === p.id} onClick={() => openRotateApprove(p)}>
+                {resolvingId === p.id ? 'Wczytywanie…' : 'Zatwierdź →'}
+              </button>
+              <button className="action-button" onClick={() => openCloseForProposal(p)}>
+                1. Zamknij starą →
+              </button>
+              {p.poolId && (
+                <button className="action-button" disabled={resolvingId === p.id} onClick={() => openNewAtProposal(p, `Otwórz nową — ${p.symbol ?? ''}`)}>
+                  {resolvingId === p.id ? 'Wczytywanie…' : '2. Otwórz nową →'}
+                </button>
+              )}
+              <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                Odrzuć
+              </button>
+            </div>
+          </>
+        )}
+
+        {kind === 'EXIT_TREND' && (
+          <>
+            <div className="morning-proposal-line">⛔ Bezpiecznik trendu: {p.symbol ?? p.poolId ?? `#${p.tokenId}`}</div>
+            {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
+            <div className="morning-proposal-actions">
+              <button className="action-button primary" onClick={() => openCloseForProposal(p)}>
+                Zamknij →
+              </button>
+              <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                Odrzuć
+              </button>
+            </div>
+          </>
+        )}
+
+        {kind === 'HEDGE' && (
+          <>
+            <div className="morning-proposal-line">🛡 Hedge: {p.symbol ?? p.poolId ?? `#${p.tokenId}`}</div>
+            {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
+            {(typeof p.hedgeSizeEth === 'number' || typeof p.hedgeNotionalUsd === 'number') && (
+              <div className="morning-proposal-line morning-hedge-size">
+                SHORT{typeof p.hedgeSizeEth === 'number' && <> ~{p.hedgeSizeEth.toFixed(2)} ETH</>}
+                {typeof p.hedgeNotionalUsd === 'number' && <> ≈ ${p.hedgeNotionalUsd.toLocaleString()}</>}
+              </div>
+            )}
+            {/* Partia 9: [Zatwierdź hedge] wysyła zlecenie z tej appki (multicall
+                ExchangeRoutera GMX, 1 podpis) — link GMX zostaje jako fallback
+                ręczny (HANDOFF Fable→Sonnet 2026-08-17 ~15:0x, rozszerzone 20.08).
+                Punkt 4 (Partia 16b): brak `hedgeSizeEth` = noga cbBTC (rynek
+                BTC/USD, nie ETH) — bot nie ma dla niej auto-execute (multicall
+                w useHedgeExecution.ts liczy tylko ETH), więc ZAMIAST przycisku
+                [Zatwierdź hedge] tylko link + nota "ręcznie". */}
+            {typeof p.hedgeSizeEth === 'number' ? (
+              <div className="morning-proposal-actions">
+                <button className="action-button primary" onClick={() => openHedgeApprove(p)}>
+                  Zatwierdź hedge →
+                </button>
+                <a className="action-button" href="https://app.gmx.io/#/trade/?market=ETH-USD" target="_blank" rel="noreferrer">
+                  Otwórz GMX ↗
+                </a>
+                <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                  Odrzuć
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="morning-note">Brak automatycznego wykonania dla tej nogi (rynek BTC/USD, nie ETH) — otwórz i rozmiaruj ręcznie na GMX.</div>
+                <div className="morning-proposal-actions">
+                  <a className="action-button primary" href="https://app.gmx.io/#/trade/?market=BTC-USD" target="_blank" rel="noreferrer">
+                    Otwórz GMX (BTC/USD) ↗
+                  </a>
+                  <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                    Odrzuć
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
+
+        {kind === 'FLAT_NARROW' && (
+          <>
+            <div className="morning-proposal-line">
+              🎯 FLAT — zwężenie: {p.symbol ?? p.poolId ?? `#${p.tokenId}`}
+              {p.suggestedRange && (
+                <>
+                  {' '}
+                  → {fmtQuoteForPool(p.poolId ?? '', p.suggestedRange.usdLo)}–{fmtQuoteForPool(p.poolId ?? '', p.suggestedRange.usdHi)}
+                </>
+              )}
+              {typeof p.costUsd === 'number' && <> · koszt ${p.costUsd.toFixed(2)}</>}
+              {typeof p.paybackDays === 'number' && <> · payback ~{p.paybackDays.toFixed(1)} dni</>}
+            </div>
+            {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
+            <div className="morning-proposal-actions">
+              <button className="action-button primary" onClick={() => openApproveSequence(p)}>
+                Zatwierdź →
+              </button>
+              <button className="action-button" onClick={() => openModifyRebalance(p)}>
+                Modyfikuj →
+              </button>
+              <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                Odrzuć
+              </button>
+            </div>
+          </>
+        )}
+
+        {kind === 'FLAT_WIDEN' && (
+          <>
+            <div className="morning-proposal-line">
+              ⚠️ koniec flatu — rozszerzenie: {p.symbol ?? p.poolId ?? `#${p.tokenId}`}
+              {p.suggestedRange && (
+                <>
+                  {' '}
+                  → {fmtQuoteForPool(p.poolId ?? '', p.suggestedRange.usdLo)}–{fmtQuoteForPool(p.poolId ?? '', p.suggestedRange.usdHi)}
+                </>
+              )}
+              {typeof p.costUsd === 'number' && <> · koszt ${p.costUsd.toFixed(2)}</>}
+            </div>
+            {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
+            <div className="morning-proposal-actions">
+              <button className="action-button primary" onClick={() => openApproveSequence(p)}>
+                Zatwierdź →
+              </button>
+              <button className="action-button" onClick={() => openModifyRebalance(p)}>
+                Modyfikuj →
+              </button>
+              <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                Odrzuć
+              </button>
+            </div>
+          </>
+        )}
+
+        {!['REBALANCE', 'OPEN', 'ROTATE', 'EXIT_TREND', 'HEDGE', 'FLAT_NARROW', 'FLAT_WIDEN'].includes(kind) && (
+          <>
+            {/* Nieznany kind (np. przyszłe rozszerzenie schematu bota) — pokaż
+                jako szarą notę zamiast crashować albo renderować pustą kartę. */}
+            <div className="morning-note">
+              Nieznany typ propozycji ({kind}): {p.action}
+            </div>
+            <div className="morning-proposal-actions">
+              <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
+                Odrzuć
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="morning-cockpit">
@@ -499,162 +778,32 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
             </div>
           )}
 
+          {/* Partia 16b pkt 3: sekcja "Procedura awaryjna" NAD zwykłymi
+              propozycjami — pary A(hedge)/B(exit) tej samej pozycji obok
+              siebie, żeby Rafał widział obie opcje naraz zamiast przewijać
+              wymieszaną listę. Puste (brak DOWN na pulach produktowych) —
+              sekcja w ogóle się nie renderuje. */}
+          {emergencyGroups.length > 0 && (
+            <>
+              <div className="morning-section-title">🚨 Procedura awaryjna</div>
+              <div className="morning-emergency-groups">
+                {emergencyGroups.map((group, i) => (
+                  <div key={i} className="morning-emergency-group">
+                    {group.map((p) => renderProposalCard(p))}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           <div className="morning-section-title">Propozycje bota</div>
           {bot.actionNotice && <div className="morning-bot-offline">⚠️ {bot.actionNotice}</div>}
           {bot.status === 'offline' ? (
             <div className="morning-bot-offline">
               Bot offline — uruchom usługę homos-bot na serwerze (⚙ żeby ustawić adres/token).
             </div>
-          ) : pendingProposals.length > 0 ? (
-            <div className="morning-proposals">
-              {pendingProposals.map((p) => {
-                const kind = p.kind ?? 'REBALANCE';
-                return (
-                  <div key={p.id} className="morning-proposal-card morning-proposal-card--stacked">
-                    {kind === 'REBALANCE' && (
-                      <>
-                        <div className="morning-proposal-line">
-                          🔄 REBALANS #{p.tokenId}
-                          {p.suggestedRange && (
-                            <>
-                              {' '}
-                              → ${p.suggestedRange.usdLo.toLocaleString()}–${p.suggestedRange.usdHi.toLocaleString()}
-                            </>
-                          )}
-                          {typeof p.costUsd === 'number' && <> · koszt ${p.costUsd.toFixed(2)}</>}
-                          {typeof p.paybackDays === 'number' && <> · payback ~{p.paybackDays.toFixed(1)} dni</>}
-                        </div>
-                        <div className="morning-proposal-actions">
-                          <button className="action-button primary" onClick={() => openApproveSequence(p)}>
-                            Zatwierdź →
-                          </button>
-                          <button className="action-button" onClick={() => openModifyRebalance(p)}>
-                            Modyfikuj →
-                          </button>
-                          <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
-                            Odrzuć
-                          </button>
-                        </div>
-                      </>
-                    )}
-
-                    {kind === 'OPEN' && (
-                      <>
-                        <div className="morning-proposal-line">🟢 {p.action}</div>
-                        {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
-                        <div className="morning-proposal-actions">
-                          {p.poolId && (
-                            <button className="action-button" disabled={resolvingId === p.id} onClick={() => openNewAtProposal(p, `Otwórz — ${p.symbol ?? p.action}`)}>
-                              {resolvingId === p.id ? 'Wczytywanie…' : 'Otwórz →'}
-                            </button>
-                          )}
-                          <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
-                            Odrzuć
-                          </button>
-                        </div>
-                      </>
-                    )}
-
-                    {kind === 'ROTATE' && (
-                      <>
-                        <div className="morning-proposal-line">
-                          🔁 Zamknij #{p.tokenId}
-                          {typeof p.heldApy7d === 'number' && <> (7d {p.heldApy7d.toFixed(1)}%)</>}
-                        </div>
-                        <div className="morning-proposal-line">
-                          → Otwórz {p.symbol ?? ''}
-                          {typeof p.apy7d === 'number' && <> (7d {p.apy7d.toFixed(1)}%)</>}
-                          {typeof p.breakEvenDays === 'number' && <> · koszt przejścia zwraca się w ~{p.breakEvenDays.toFixed(1)}d</>}
-                        </div>
-                        {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
-                        {/* Partia 8 (domknięcie TODO z Partii 4b): automatyczne [Zatwierdź]
-                            wymaga planRotate() (stara+nowa pula, ta sama sieć) — gdy pary
-                            rozłączne albo różne sieci, openRotateApprove pokaże błąd i
-                            zostają kroki 1/2 ręczne poniżej jako fallback. */}
-                        <div className="morning-note">
-                          [Zatwierdź] wykona sekwencję automatycznie (tylko ta sama sieć) — kroki 1/2 poniżej zostają jako opcja ręczna.
-                        </div>
-                        <div className="morning-proposal-actions">
-                          <button className="action-button primary" disabled={resolvingId === p.id} onClick={() => openRotateApprove(p)}>
-                            {resolvingId === p.id ? 'Wczytywanie…' : 'Zatwierdź →'}
-                          </button>
-                          <button className="action-button" onClick={() => openCloseForProposal(p)}>
-                            1. Zamknij starą →
-                          </button>
-                          {p.poolId && (
-                            <button className="action-button" disabled={resolvingId === p.id} onClick={() => openNewAtProposal(p, `Otwórz nową — ${p.symbol ?? ''}`)}>
-                              {resolvingId === p.id ? 'Wczytywanie…' : '2. Otwórz nową →'}
-                            </button>
-                          )}
-                          <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
-                            Odrzuć
-                          </button>
-                        </div>
-                      </>
-                    )}
-
-                    {kind === 'EXIT_TREND' && (
-                      <>
-                        <div className="morning-proposal-line">
-                          ⛔ Bezpiecznik trendu: {p.symbol ?? p.poolId ?? `#${p.tokenId}`}
-                        </div>
-                        {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
-                        <div className="morning-proposal-actions">
-                          <button className="action-button primary" onClick={() => openCloseForProposal(p)}>
-                            Zamknij →
-                          </button>
-                          <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
-                            Odrzuć
-                          </button>
-                        </div>
-                      </>
-                    )}
-
-                    {kind === 'HEDGE' && (
-                      <>
-                        <div className="morning-proposal-line">
-                          🛡 Hedge: {p.symbol ?? p.poolId ?? `#${p.tokenId}`}
-                        </div>
-                        {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
-                        {(typeof p.hedgeSizeEth === 'number' || typeof p.hedgeNotionalUsd === 'number') && (
-                          <div className="morning-proposal-line morning-hedge-size">
-                            SHORT{typeof p.hedgeSizeEth === 'number' && <> ~{p.hedgeSizeEth.toFixed(2)} ETH</>}
-                            {typeof p.hedgeNotionalUsd === 'number' && <> ≈ ${p.hedgeNotionalUsd.toLocaleString()}</>}
-                          </div>
-                        )}
-                        {/* Partia 9: [Zatwierdź hedge] wysyła zlecenie z tej appki (multicall
-                            ExchangeRoutera GMX, 1 podpis) — link GMX zostaje jako fallback
-                            ręczny (HANDOFF Fable→Sonnet 2026-08-17 ~15:0x, rozszerzone 20.08). */}
-                        <div className="morning-proposal-actions">
-                          <button className="action-button primary" onClick={() => openHedgeApprove(p)}>
-                            Zatwierdź hedge →
-                          </button>
-                          <a className="action-button" href="https://app.gmx.io/#/trade/?market=ETH-USD" target="_blank" rel="noreferrer">
-                            Otwórz GMX ↗
-                          </a>
-                          <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
-                            Odrzuć
-                          </button>
-                        </div>
-                      </>
-                    )}
-
-                    {!['REBALANCE', 'OPEN', 'ROTATE', 'EXIT_TREND', 'HEDGE'].includes(kind) && (
-                      <>
-                        {/* Nieznany kind (np. przyszłe rozszerzenie schematu bota) — pokaż
-                            jako szarą notę zamiast crashować albo renderować pustą kartę. */}
-                        <div className="morning-note">Nieznany typ propozycji ({kind}): {p.action}</div>
-                        <div className="morning-proposal-actions">
-                          <button className="action-button" onClick={() => bot.dismissProposal(p.id)}>
-                            Odrzuć
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+          ) : nonEmergencyProposals.length > 0 ? (
+            <div className="morning-proposals">{nonEmergencyProposals.map((p) => renderProposalCard(p))}</div>
           ) : (
             <div className="morning-note">Brak aktywnych propozycji.</div>
           )}
@@ -909,6 +1058,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           bot={bot}
           title={proposalModal.title}
           initialUsdRange={proposalModal.initialUsdRange}
+          narrowRangeNote={proposalModal.narrowRangeNote}
           onClose={() => setProposalModal(null)}
           onDone={() => {
             portfolio.refresh();

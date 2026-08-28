@@ -163,6 +163,11 @@ interface Proposal {
   heldApy7d?: number;
   breakEvenDays?: number;
   note?: string;
+  /** PROCEDURA AWARYJNA (decyzja Rafała 27.08, paczka #2 28.08): propozycja
+   *  obrony na puli PRODUKTOWEJ — hybryda świadomie trzyma betę, więc
+   *  EXIT/HEDGE przy sygnale DOWN to opcje awaryjne ("zwykle NIE podpisuj"),
+   *  nie rekomendacje. UI: czerwona ramka + odesłanie do EMERGENCY.md. */
+  emergency?: boolean;
   status: 'open' | 'dismissed';
 }
 
@@ -437,49 +442,91 @@ function updateTrend(p: BotPool, price: number, nowMs: number): number {
   return gap * 100;
 }
 
-/** propozycja obrony (EXIT_TREND lub HEDGE wg pool.trendAction — ALGORITHM
- *  v1.2 §4) dla każdej naszej pozycji w puli z sygnałem DOWN */
+/** propozycja obrony dla każdej naszej pozycji w puli z sygnałem DOWN.
+ *  Pule NIE-produktowe: jak dotąd — EXIT_TREND lub HEDGE-excess wg
+ *  pool.trendAction (ALGORITHM v1.2 §4).
+ *  Pule PRODUKTOWE (productIdleWidthPct — hybryda FlatWide): decyzja
+ *  Rafała 27.08 wieczór — sygnału NIE wyciszamy, ale przebrandowujemy na
+ *  PROCEDURĘ AWARYJNĄ: DWIE propozycje obok siebie, obie emergency:true:
+ *  (1) HEDGE delta-neutral (short PEŁNEJ ekspozycji nogi zmiennej, LP
+ *  zostaje — odwracalny), (2) EXIT_TREND ("dane mówią: zwykle NIE
+ *  podpisuj" — backtesty: exit na trendzie średnio pogarsza). Kolejność,
+ *  kryteria i koszty: EMERGENCY.md. Niuans: sygnał DOWN na cbBTC/WETH
+ *  mierzy cenę WZGLĘDNĄ — czujnikiem krachu USD dla OBU nóg jest sygnał
+ *  na WETH/USDC. */
 function proposeExitTrend(pool: BotPool, gap: number) {
   const held = positions.filter((x) => x.poolId === pool.id);
   if (!held.length) return;
-  const action = pool.trendAction ?? 'exit';
-  const kind = action === 'hedge' ? 'HEDGE' : 'EXIT_TREND';
+  const isProduct = !!pool.productIdleWidthPct;
+  const gapTxt = `cena ${(gap * 100).toFixed(1)}% pod EMA${TREND.hlDays}d (próg −${TREND.thresh * 100}%)`;
+  const backTxt = (pool.trendReentry ?? 'aboveEma') === 'aboveEma' ? 'powrocie ceny NAD EMA' : `gap > −${TREND.thresh * 50}%`;
   for (const pos of held) {
-    const key = `trend-${pool.id}-${pos.tokenId}-${new Date().toISOString().slice(0, 10)}`;
-    // dedup: jedna OTWARTA propozycja obrony per pozycja (niezależnie od dnia)
-    if (proposals.some((x) => (x.kind === 'EXIT_TREND' || x.kind === 'HEDGE') && x.tokenId === pos.tokenId && x.status === 'open')) continue;
-    const gapTxt = `cena ${(gap * 100).toFixed(1)}% pod EMA${TREND.hlDays}d (próg −${TREND.thresh * 100}%)`;
-    let prop: Proposal;
-    let msg: string;
-    if (kind === 'HEDGE') {
-      // sizing excess: short = nadwyżka ETH ponad 50% wartości pozycji
-      const P = live[pool.id]?.ethUsd ?? 0;
-      const ethAmt = pool.ethIsToken0 ? pos.amount0 : pos.amount1;
-      const sizeEth = P > 0 ? Math.max(0, ethAmt - pos.valueUsd / 2 / P) : 0;
-      const notional = sizeEth * P;
-      prop = {
-        id: key, createdAt: new Date().toISOString(), tokenId: pos.tokenId, poolId: pool.id,
-        kind: 'HEDGE', action: 'HEDGE',
-        symbol: `${pool.sym0}-${pool.sym1}`,
-        hedgeSizeEth: sizeEth, hedgeNotionalUsd: notional,
-        note: `Bezpiecznik v1.2 (hedge-excess): ${gapTxt}. Sugestia: SHORT ${sizeEth.toFixed(4)} ETH (~$${notional.toFixed(0)}) na GMX v2 (Arbitrum, app.gmx.io) — pozycja LP ZOSTAJE i zbiera fees. Zamknij short po zgaśnięciu sygnału (cena nad EMA). Fallback bez konta perp: zamknij pozycję do cash 50/50 (exit).`,
-        status: 'open',
-      };
-      msg = `🛡 HOMOS: HEDGE — ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Propozycja: short ${sizeEth.toFixed(4)} ETH (~$${notional.toFixed(0)}) na GMX; LP zostaje. [tryb OBSERWUJ — nic nie wykonano]`;
-    } else {
-      prop = {
-        id: key, createdAt: new Date().toISOString(), tokenId: pos.tokenId, poolId: pool.id,
-        kind: 'EXIT_TREND', action: 'EXIT_TREND',
-        symbol: `${pool.sym0}-${pool.sym1}`,
-        note: `Bezpiecznik trendu (ALGORITHM v1.2 §4): ${gapTxt}. Sugestia: zamknij pozycję do cash 50/50; powrót po ${(pool.trendReentry ?? 'aboveEma') === 'aboveEma' ? 'powrocie ceny NAD EMA' : 'gap > −' + (TREND.thresh * 50) + '%'}.`,
-        status: 'open',
-      };
-      msg = `⛔ HOMOS: BEZPIECZNIK TRENDU — ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Propozycja: wyjdź do cash 50/50. [tryb OBSERWUJ — nic nie wykonano]`;
+    const day = new Date().toISOString().slice(0, 10);
+    const kinds: Array<'EXIT_TREND' | 'HEDGE'> = isProduct
+      ? ['HEDGE', 'EXIT_TREND'] // hedge PIERWSZY — preferowana (odwracalna) opcja awaryjna
+      : [(pool.trendAction ?? 'exit') === 'hedge' ? 'HEDGE' : 'EXIT_TREND'];
+    let announced = false;
+    for (const kind of kinds) {
+      // dedup PER KIND (produkt emituje dwie równoległe opcje)
+      if (proposals.some((x) => x.kind === kind && x.tokenId === pos.tokenId && x.status === 'open')) continue;
+      const key = `trend-${kind === 'HEDGE' ? 'hedge-' : ''}${pool.id}-${pos.tokenId}-${day}`;
+      let prop: Proposal;
+      if (kind === 'HEDGE') {
+        const isRelative = (pool.quote ?? 'USD') === 'WETH'; // cbBTC/WETH: sygnał względny
+        // sizing: produkt = delta-neutral (PEŁNA ekspozycja nogi zmiennej);
+        // nie-produkt = excess (nadwyżka ETH ponad 50% wartości, v1.2)
+        const P = live[pool.id]?.ethUsd ?? 0; // USD za token BAZOWY puli
+        let sizeTok: number; let tokSym: string; let market: string;
+        if (!isRelative) {
+          const ethAmt = pool.ethIsToken0 ? pos.amount0 : pos.amount1;
+          sizeTok = isProduct ? ethAmt : P > 0 ? Math.max(0, ethAmt - pos.valueUsd / 2 / P) : 0;
+          tokSym = 'ETH'; market = 'ETH/USD';
+        } else {
+          // sygnał = token bazowy (cbBTC) słabnie WZGLĘDEM WETH → neutralizacja
+          // przez short nogi BAZOWEJ na rynku BTC/USD (ręcznie na app.gmx.io —
+          // 1-podpisowy builder obsługuje dziś tylko ETH/USD)
+          sizeTok = pool.ethIsToken0 ? pos.amount1 : pos.amount0; // noga cbBTC
+          tokSym = pool.ethIsToken0 ? pool.sym1 : pool.sym0; market = 'BTC/USD';
+        }
+        const notional = sizeTok * P;
+        prop = {
+          id: key, createdAt: new Date().toISOString(), tokenId: pos.tokenId, poolId: pool.id,
+          kind: 'HEDGE', action: 'HEDGE',
+          symbol: `${pool.sym0}-${pool.sym1}`,
+          hedgeSizeEth: tokSym === 'ETH' ? sizeTok : undefined, hedgeNotionalUsd: notional,
+          emergency: isProduct || undefined,
+          note: isProduct
+            ? `OPCJA AWARYJNA A (preferowana — odwracalna): ${gapTxt}. SHORT ${sizeTok.toFixed(4)} ${tokSym} (~$${notional.toFixed(0)}, delta-neutral pozycji) na GMX v2 ${market}${tokSym === 'ETH' ? ' — 1 podpis w kokpicie' : ' — ręcznie na app.gmx.io (builder 1-podpisowy obsługuje tylko ETH/USD)'}; LP ZOSTAJE i zbiera fees. Zamknij short po zgaśnięciu sygnału (${backTxt}). Koszt ~$0.5-1 + funding (hist. śr. +4.8%/r dla shorta). Kiedy podpisywać a kiedy NIE: EMERGENCY.md.${isRelative ? ' UWAGA: ten sygnał mierzy cenę WZGLĘDNĄ cbBTC/WETH — krach USD wykrywa sygnał na WETH/USDC.' : ''}`
+            : `Bezpiecznik v1.2 (hedge-excess): ${gapTxt}. Sugestia: SHORT ${sizeTok.toFixed(4)} ${tokSym} (~$${notional.toFixed(0)}) na GMX v2 (Arbitrum, app.gmx.io) — pozycja LP ZOSTAJE i zbiera fees. Zamknij short po zgaśnięciu sygnału (cena nad EMA). Fallback bez konta perp: zamknij pozycję do cash 50/50 (exit).`,
+          status: 'open',
+        };
+      } else {
+        prop = {
+          id: key, createdAt: new Date().toISOString(), tokenId: pos.tokenId, poolId: pool.id,
+          kind: 'EXIT_TREND', action: 'EXIT_TREND',
+          symbol: `${pool.sym0}-${pool.sym1}`,
+          emergency: isProduct || undefined,
+          note: isProduct
+            ? `OPCJA AWARYJNA B — dane mówią: zwykle NIE PODPISUJ. ${gapTxt}. Hybryda FlatWide ŚWIADOMIE trzyma betę (backtesty 26-27.08, 40+ przebiegów: exit na trendzie średnio POGARSZA wynik vs trzymanie; cash wygrywa tylko w silnych crashach, których nie znasz ex-ante). Zamknięcie do cash 50/50 tylko przy twardych kryteriach z EMERGENCY.md (krach systemowy, depeg, utrata zaufania do venue). Powrót po ${backTxt}. Preferowana alternatywa: opcja A (hedge, odwracalna).`
+            : `Bezpiecznik trendu (ALGORITHM v1.2 §4): ${gapTxt}. Sugestia: zamknij pozycję do cash 50/50; powrót po ${backTxt}.`,
+          status: 'open',
+        };
+      }
+      proposals.push(prop);
+      saveProposals();
+      if (!isProduct) {
+        const msg = kind === 'HEDGE'
+          ? `🛡 HOMOS: HEDGE — ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Propozycja: short (szczegóły w kokpicie); LP zostaje. [tryb OBSERWUJ — nic nie wykonano]`
+          : `⛔ HOMOS: BEZPIECZNIK TRENDU — ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Propozycja: wyjdź do cash 50/50. [tryb OBSERWUJ — nic nie wykonano]`;
+        log(msg);
+        telegram(msg);
+      } else if (!announced) {
+        announced = true;
+        const msg = `🚨 HOMOS: PROCEDURA AWARYJNA — sygnał DOWN na ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Dwie opcje w kokpicie: (A) hedge delta-neutral [preferowana, odwracalna] / (B) exit [zwykle NIE podpisuj]. Zajrzyj do EMERGENCY.md. [tryb OBSERWUJ — nic nie wykonano]`;
+        log(msg);
+        telegram(msg);
+      }
     }
-    proposals.push(prop);
-    saveProposals();
-    log(msg);
-    telegram(msg);
   }
 }
 

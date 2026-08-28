@@ -1164,3 +1164,25 @@ prefill). Stan flatu per pula jest w `state.pools[]`: `flatSince`
    epizodzie flatu; WIDEN może wrócić następnego dnia, jeśli pozycja
    nadal wąska poza flatem — to celowe).
 5. Zero nowych requestów; wszystko z /api/state.
+
+## PARTIA 16b — oznaczenie OPCJI AWARYJNYCH na kartach EXIT_TREND/HEDGE (spec Fable 28.08, paczka #2)
+
+Kontekst: na pulach PRODUKTOWYCH sygnał DOWN emituje teraz DWIE
+propozycje naraz (HEDGE delta-neutral = opcja A, EXIT_TREND = opcja B),
+obie z nowym polem `emergency: true` (bot/observer.ts). Dokument
+procedury: EMERGENCY.md (root repo). Zakres: TYLKO src/**.
+
+1. `useBotApi.ts`: `BotProposal.emergency?: boolean`.
+2. Karty z `emergency===true`: czerwona ramka/akcent + nagłówek
+   „🚨 OPCJA AWARYJNA A (hedge — preferowana)" / „🚨 OPCJA AWARYJNA B
+   (exit — zwykle NIE podpisuj)" (rozróżnienie po kind). Pod nagłówkiem
+   stała linia: „Hybryda świadomie trzyma betę — zobacz EMERGENCY.md
+   zanim podpiszesz". Karty bez `emergency` — bez zmian.
+3. Grupowanie: gdy obie opcje (A i B) dla tego samego tokenId są open,
+   renderować OBOK SIEBIE w jednej sekcji „Procedura awaryjna" (nad
+   zwykłymi propozycjami), A przed B.
+4. Przycisk akcji: HEDGE z `hedgeSizeEth` → istniejący przepływ
+   1-podpisowego shorta (Partia 9/11); HEDGE bez `hedgeSizeEth`
+   (noga cbBTC — rynek BTC/USD) → bez przycisku wykonania, tylko nota
+   (ręcznie na app.gmx.io). EXIT_TREND → jak dotychczas.
+5. Zero nowych requestów.

@@ -58,12 +58,23 @@ export interface BotProposal {
    *  HANDOFF Fable→Sonnet 2026-08-11). Brak pola = traktuj jak REBALANCE
    *  (kompatybilność wstecz ze starszymi wpisami w proposals.json). Karty w
    *  MorningCockpit.tsx renderują nieznane wartości `kind` jako szarą notę,
-   *  zamiast crashować, na wypadek kolejnych rozszerzeń schematu. */
-  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND' | 'HEDGE';
+   *  zamiast crashować, na wypadek kolejnych rozszerzeń schematu.
+   *  FLAT_NARROW/FLAT_WIDEN (Partia 16, produkt FlatWide): zwężenie do k×σ w
+   *  POTWIERDZONYM flacie (`flatConfirmed` na state.pools[]) / powrót do
+   *  szerokiego ±productIdleWidthPct po końcu flatu — obie dotyczą pozycji
+   *  już trzymanej (tokenId istniejący), ten sam mechanizm co REBALANCE
+   *  (suggestedRange + istniejący modal rebalansu). */
+  kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND' | 'HEDGE' | 'FLAT_NARROW' | 'FLAT_WIDEN';
   action: string;
   suggestedRange?: { tickLower?: number; tickUpper?: number; usdLo: number; usdHi: number };
   costUsd?: number;
   paybackDays?: number | null;
+  // Partia 16b (procedura awaryjna, bot/observer.ts): DOWN na pulach
+  // PRODUKTOWYCH emituje DWIE propozycje naraz (HEDGE = opcja A preferowana,
+  // EXIT_TREND = opcja B "zwykle NIE podpisuj"), obie oznaczone tym polem.
+  // Karty bez `emergency` (albo `false`/nieobecne) renderują się jak
+  // dotychczas — bez zmian wizualnych. Dokument procedury: EMERGENCY.md.
+  emergency?: boolean;
   // Pola selektora (OPEN/ROTATE) — bot/selector.ts SelectorProposal:
   llamaPool?: string;
   symbol?: string;
@@ -93,6 +104,15 @@ export interface BotPoolLive {
   stats: { volDaily: number; feeYieldDaily: number; swapsAnalyzed: number; hoursCovered: number } | null;
   suggestion: { tickLower: number; tickUpper: number; widthPct: number; priceLower: number; priceUpper: number } | null;
   updatedAt: string;
+  // Detektor flatu (Partia 16, bot/observer.ts FLAT_ENTER/FLAT_EXIT) — tylko
+  // pule produktowe (BotPool.productIdleWidthPct ustawione) mają te pola
+  // wypełnione; reszta zostaje undefined (feature-detect, nie osobna lista
+  // "czy to pula produktowa" duplikowana w UI). `flatSince`: moment startu
+  // NIEPRZERWANEGO flatu (ISO) albo `null`, gdy pula nie jest w flacie teraz.
+  // `flatConfirmed`: true dopiero po progu potwierdzenia (12h) — dopiero
+  // wtedy bot faktycznie proponuje FLAT_NARROW.
+  flatSince?: string | null;
+  flatConfirmed?: boolean;
 }
 
 export interface BotWatchedPosition {
