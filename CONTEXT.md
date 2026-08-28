@@ -156,6 +156,39 @@ build+restart). Fees dzień 1 wyjaśnione Rafałowi: ~$0.4/d base-030
 + ~$0.06/d cbBTC to projektowe tempo postury idle (cienka płynność
 ±50/40%), nie usterka — zarobek hybrydy ma przyjść ze zwężeń.
 
+~popołudnie #2 — WDROŻENIE ZBIORCZE POTWIERDZONE + SWEEP ENTER=3%,
+DZIEŃ DOMKNIĘTY: CC-Win wdrożył paczkę zbiorczą (FLAT_NARROW/
+emergency w bundlu 1/1); "wyzerowany zegar po restarcie" wyjaśniony
+uczciwie — gap wypłynął na −2.01% sekundę po restarcie (log 08:02:42Z),
+mechanizm przeżycia restartu potwierdzony w kodzie. SWEEP ENTER=3%
+(w kombinacji 12h+5d): WYNIK MIESZANY zgodnie z hipotezą — cbBTC
+≈0% ΣEV przy SPADKU jakości epizodów (EV>0 66→58%), base-030 +19%
+→ 2% zostaje kandydatem globalnym, 3% ew. per-pula base-030.
+PACZKA DECYZYJNA parametrów FLAT_ENTER dopisana do RESEARCH-QUEUE
+E4 (tabela 5 wariantów × 2 pule + rekomendacja Fable: 12h+5d razem,
+ENTER 2%) — przegląd 1.09 dostaje komplet bez liczenia czegokolwiek.
+BILANS DNIA 1 PRODUKTU: obie nogi in-range, vsHODL ~0, fees ~$0.4/d
+(projektowe tempo idle), detektor flat żywy, procedura awaryjna
+oprogramowana end-to-end (bot+UI+doc), 3 paczki wdrożone, zero
+incydentów. Otwarte na jutro: pierwszy potwierdzony flat na cbBTC
+(gap tańczy na progu), przegląd 1.09.
+
+~wieczór — PROŚBY UI RAFAŁA (Partia 17) + PYTANIE O IL: (1) zlecone
+Sonnetowi: panel zbiorczy realnych (Equity/PnL $ i %/vs HODL jak w
+paper), linia cyklu FlatWide na kartach (SZEROKI/WĄSKI + countdown
+do propozycji zwężenia z żywych flatParams — bez hardkodu progów),
+badge POZA ZAKRESEM; bot-side od razu (Fable, tsc czysty):
+positions[].posture + flatParams w state.json. (2) Rynek: spadek ETH
+2545→2425 wyrzucił cbBTC z okna stabilizacji (gap −2.1%, zegar
+wyzerowany), ale ZBLIŻYŁ nogę A do flatu (gap +9.4% z +12.9% rano —
+cena schodzi DO EMA). (3) Pytanie Rafała "czemu duża różnica strat
+HODL vs LP": wyjaśnione — NIE ma dużej różnicy; PnL od startu (−$69)
+zawiera BETĘ (HODL też stracił ~$60), czysta różnica LP↔HODL to
+vs HODL: −$4…−$9 (~0.1-0.26%) = normalny IL szerokiego zakresu przy
+ETH −4% (LP dokupuje ETH na spadku); do odrobienia z fees/powrotem
+ceny. Etykiety kafli do ujednolicenia w Partii 17 (tooltip "PnL
+zawiera ruch rynku").
+
 ### 2026-08-27 ~rano — SESJA DECYZYJNA (Fable + Rafał) — w toku
 Checklist z HANDOFF wykonany: (1) runda finałowa ODEBRANA i
 ZWERYFIKOWANA niezależnie na 8/8 JSON-ach walkforward — zgodność z

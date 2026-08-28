@@ -669,6 +669,20 @@
 ### E4. PRZEGLĄDY (kalendarz)
 - [ ] ~1.09: przegląd PROPONUJ (zaplanowany 26.08) + pierwszy tydzień
   produktu (realized fees, gap-tracker, incydenty UI).
+  PACZKA DECYZYJNA parametrów FLAT_ENTER (komplet policzony 27-28.08,
+  flatwindows 720d, ΣEV zwężania vs baseline ENTER=2%/24h/HL7d):
+  | wariant | cbBTC-720d | base-030-720d | werdykt wstępny |
+  |---|---|---|---|
+  | baseline (2%/24h/7d) | $400 (25 ep., EV>0 68%) | $92 | zamrożone dziś w produkcie: 2%/12h/7d |
+  | CONFIRM_H=12 solo | $452 (+13%) | $297 (+223%) | WDROŻONE 28.08 |
+  | HL_D=5 solo | $473 (+18%) | $230 (+150%) | czeka |
+  | **12h+5d razem** | **$558 (+39.5%)** | **$347** | KUMULUJE SIĘ — główny kandydat |
+  | 12h+5d+ENTER=3% | $556 (≈0%, EV>0 spada 66→58%) | $413 (+19%) | NIE globalnie; ew. per-pula base-030 |
+  Rekomendacja Fable na przegląd: przyjąć CONFIRM_H=12+HL_D=5 (HL_D
+  wymaga drugiej EMA w observerze — osobna od EMA7d trendu), ENTER
+  zostaje 2% globalnie (3% psuje jakość epizodów na cbBTC — a tam
+  jest rdzeń wartości zwężania), opcjonalnie ENTER=3% per-pula na
+  base-030 (+19%). Decyzja Rafała.
 - [ ] ~24.09 (miesiąc od wejścia): produkt vs HODL vs USDC na żywo +
   paper A/B; decyzja o transzy 2 dopiero po ≥1 pełnym cyklu
   flat→trend→flat.

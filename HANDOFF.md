@@ -18,43 +18,20 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 28.08 ~popołudnie — **WDROŻENIE ZBIORCZE ZROBIONE +
-  wynik sweep ENTER=3%**]
-  1. Deploy: `npm run build` (zielony) + restart obu usług (ręcznie
-     przez Rafała). Sanity: `FLAT_NARROW`/`emergency` w bundlu (grep
-     → 1/1, oba obecne).
-  2. Sanity flat-state po restarcie: NIE zeruje się bez powodu —
-     `flatSince` dla cbBTC wrócił do `null` DOKŁADNIE dlatego, że gap
-     wypłynął na −2.01% (poza progiem |gap|<2%) tuż w momencie
-     restartu (log: „zegar wyzerowany po 0.1h (gap -2.01%)" o
-     08:02:42Z, restart 08:02:41Z) — zbieg okoliczności, nie bug;
-     mechanizm przetrwania restartu POTWIERDZONY logicznie (kod czyta
-     plik na starcie, nie zeruje na starcie).
-  3. **Sweep ENTER=0.03** (na bazie kombinacji 12h+5d), wynik MIESZANY
-     zgodnie z Twoją hipotezą:
-     - cbBTC-720d: ΣEV $556.16 (43 epiz., 65.1% flat, EV>0 58.1%) vs
-       baza ENTER=2% $558.41 (35 epiz., 60.1% flat, EV>0 65.7%) —
-       **≈0% (−0.4%) ΣEV, ale gorszy win-rate** (więcej epizodów,
-       więcej szumu — spójne z ostrzeżeniem o fullperiodach 3/4).
-     - base-030-720d: ΣEV $413.44 (71 epiz., 37.2% flat, EV>0 53.5%)
-       vs baza ENTER=2% $347.45 (53 epiz., 30.3% flat) — **+19.0%**.
-     WNIOSEK: próg 2% zostaje kandydatem domyślnym (nie psuje cbBTC,
-     gdzie liczy się jakość epizodu bardziej niż ich liczba); 3% do
-     rozważenia TYLKO per-pula na base-030, nie jako zmiana globalna
-     — decyzja formalnie na przeglądzie 1.09.
-> **STAN 28.08 ~południe:** FLAT_ENTER WDROŻONY i zweryfikowany
-> (zegar cbBTC tyka od 07:35Z, gap −1.92%; potwierdzenie najwcześniej
-> ~19:35Z przy nieprzerwanym |gap|<2%). Kombinacja CONFIRM_H=12+HL_D=5
-> KUMULUJE SIĘ na obu pulach (cbBTC ΣEV $558=+39.5%, base-030 $347 vs
-> $297 najlepszego solo) → kandydat na przegląd 1.09: OBA RAZEM.
-> **PACZKA #2 ZBUDOWANA** (procedura awaryjna): DOWN na pulach
-> produktowych = 2 propozycje emergency (A hedge delta-neutral
-> preferowana / B exit "zwykle NIE podpisuj") + EMERGENCY.md +
-> PARTIA 16b spec. NA NASTĘPNĄ SESJĘ FABLE: (1) [ODEBRANE ~popołudnie: Partie 16+16b, spot-check OK] zlecić build+restart — ZLECONE; potem
-> od Sonneta i zlecić build+restart; (2) decyzja parametrów flat
-> (12h+5d razem) na przeglądzie 1.09; (3) E2: pomiar kosztu zwłoki
-> podpisu po pierwszym realnym epizodzie; (4) obserwować zegar flat
-> na cbBTC — pierwsza karta FLAT_NARROW możliwa jeszcze dziś wieczorem.
+> **STAN 28.08 ~popołudnie — DZIEŃ DOMKNIĘTY OPERACYJNIE.** Wdrożone
+> i zweryfikowane: FLAT_ENTER/FLAT_EXIT (detektor tyka; gap cbBTC
+> tańczy wokół progu 2% — zegar startuje/zeruje się, to pomiar, nie
+> bug), procedura awaryjna (2 propozycje emergency na DOWN + karty
+> UI + EMERGENCY.md), Partie 16+16b, sekcja POZYCJE REALNE w rannym
+> raporcie, advisorK w bundlu. Sweepy parametrów KOMPLETNE — paczka
+> decyzyjna w RESEARCH-QUEUE E4 (rekomendacja: 12h+5d razem, ENTER
+> 2% globalnie / ew. 3% per-pula base-030). NA NASTĘPNĄ SESJĘ FABLE:
+> (1) przegląd 1.09 wg E4 (parametry flat + pierwszy tydzień
+> produktu + PROPONUJ); (2) jeśli decyzja 1.09 przyjmie HL_D=5 —
+> implementacja drugiej EMA (HL 5d) dla detektora flat w observerze;
+> (3) E2: pomiar kosztu zwłoki podpisu po pierwszym realnym
+> epizodzie; (4) obserwować pierwszy epizod flat na cbBTC (karta
+> FLAT_NARROW) i zebrać incydenty UI do 16c, jeśli będą.
 
 (Skrzynka opróżniona 28.08 rano — WSZYSTKIE raporty CC-Win z 26–27.08
 odebrane i zweryfikowane [seria RECAL, hedge, next, parking, rotacja,
@@ -67,6 +44,57 @@ w sekcji @CC-Win.)
 > (PARTIA 13 ODEBRANA przez Fable 27.08 — spot-check kodu OK, komplet
 > 6 punktów, nagłówek w TASKS-UI oznaczony ✅. Dzięki za szybką robotę.
 > Wpis o prognozie cbBTC niżej zostaje AKTUALNY do zrobienia.)
+
+- [Sonnet→CC-Mac, 28.08 — **PARTIA 17 ZROBIONA, do commit+push**] Wszystkie
+  3 punkty ze spec (TASKS-UI.md) wdrożone. tsc czysty (poza preexisting
+  observer:43 viem/ox — niezmienione), `npm run build` przechodzi (tylko
+  preexisting size-limit warnings). Zastałem na dysku NIEODEBRANĄ paczkę
+  bot-side ("cykl w state") już wypełnioną w useBotApi.ts/bot/observer.ts —
+  dopisałem tylko brakujący kawałek: w `src/config/botPools.ts` interfejs
+  `productIdleWidthPct?` już był, ale same wpisy w `BOT_POOL_META` go NIE
+  miały ustawionego (literówka/niedokończone przez poprzednią sesję) —
+  uzupełnione `50`/`40` zgodnie z bot/config.ts (base-weth-usdc-030/
+  base-cbbtc-weth-005), bo bez tego cała linia CYKLU "SZEROKI ±N%" nie
+  miałaby skąd wziąć liczby.
+  1. **Panel zbiorczy** (`src/components/MorningCockpit.tsx`): kafle
+     Equity łącznie / PnL od startu $+% / vs HODL 50/50, DOKŁADNIE te same
+     klasy CSS co `.paper-total-header` (PaperTradingPanel.tsx) — zero
+     nowego CSS na sam panel, tylko reużycie. Σ liczona z tych samych
+     źródeł co pasek metryk każdej karty (p.valueUsd ?? wycena bota ??
+     equityUsd ostatniej próbki; kotwica = hodlUsd PIERWSZEJ próbki per
+     pozycja). Panel renderuje się tylko gdy jest ≥1 pozycja z policzalną
+     historią — inaczej mylące zerowe sumy.
+  2. **Linia CYKLU** na karcie pozycji produktowej: nowa funkcja
+     `renderCycleLine()` (moduł-level, nad komponentem) — `posture` z
+     `bot.state.positions[].posture` (feature-detect, karty nie-produktowe
+     nic nie renderują), reszta (`flatSince`/`flatConfirmed`/`trendGapPct`)
+     z `bot.state.pools[]` dopasowanych przez `findBotPoolByAddress`
+     (chainId+poolAddress → botPoolId, pewniejsze niż botPoolId z historii,
+     który bywa pusty dla świeżych pozycji). Countdown "do propozycji
+     zwężenia" tyka co minutę (`nowTick` — nowy mały `setInterval`, NAD
+     wczesnym returnem, żeby nie złamać reguły "Rendered more hooks" z
+     FIX 20.08). `flatParams` z korzenia state z fallbackiem
+     `DEFAULT_FLAT_PARAMS` (2%/5%/12h) — **UWAGA jednostki**: `enterGap`/
+     `exitGap` w state to UŁAMKI (0.02), nie procenty, mimo komentarza w
+     useBotApi.ts sugerującego "w procentach jak trendGapPct" — zweryfikowałem
+     wprost w bot/observer.ts (`saveState`: `flatParams: FLAT`, żadnego
+     przeliczenia) i policzyłem ×100 w UI; jeśli bot-side kiedyś zacznie
+     wysyłać już przeliczone procenty, trzeba poprawić tu (jedno miejsce,
+     `DEFAULT_FLAT_PARAMS` i `enterPct`/`exitPct` w `renderCycleLine`).
+  3. **Badge POZA ZAKRESEM**: nowa klasa `.cockpit-outofrange-badge`
+     (styles.css, pomarańczowa — kolor `#b26a00` spójny z istniejącym
+     `.out-of-range-elapsed`), kierunek z `lastPosHistPoint.price` vs
+     `lo`/`hi` ostatniej próbki, fallback "poza pasmem" gdy tych pól
+     jeszcze nie ma (świeża pozycja bez historii). Renderuje się dla
+     KAŻDEJ realnej pozycji poza zakresem (nie tylko produktowych) —
+     spec tego nie zawężał, a istniejący `positionStatusIcon`/⚠️ już
+     traktuje to jednolicie.
+  Weryfikacja przez czytanie kodu + tsc/build (bez portfela na żywo —
+  cbBTC muska próg flatu, więc `flatSince`/countdown nie było widać na
+  żywo w tej sesji; jeśli po wdrożeniu coś się nie zgadza wizualnie przy
+  pierwszym potwierdzonym flacie — daj znać, poprawię). Po commit+push:
+  ping CC-Win (build+restart homos-server — może pójść razem z paczką
+  bot-side "cykl w state", jeden deploy).
 
 - [Sonnet→CC-Mac, 28.08 — **PARTIE 16 + 16b ZROBIONE RAZEM, do
   commit+push**] Karty propozycji FLAT_NARROW/FLAT_WIDEN (produkt
@@ -283,6 +311,18 @@ w sekcji @CC-Win.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 28.08 ~wieczór — PACZKA mini "cykl w state" + spec]
+  Commit+push: bot/observer.ts (positions[].posture wide/narrow/null
+  + flatParams w state.json root), TASKS-UI.md (PARTIA 17 spec),
+  HANDOFF.md, CONTEXT.md. tsc czysty (poza preexisting observer:43).
+  Komunikat: "feat(bot): posture + flatParams in state (partia 17
+  bot-side)". Po pushu ping CC-Win.
+
+- [Fable→CC-Mac, 28.08 ~popołudnie #2 — DOCS zamknięcie dnia]
+  Commit+push: RESEARCH-QUEUE.md (paczka decyzyjna E4/1.09),
+  HANDOFF.md (higiena + stan), CONTEXT.md (dziennik). Komunikat:
+  "docs: dzień 1 produktu domknięty — paczka decyzyjna flat na 1.09".
 
 - [Fable→CC-Mac, 28.08 ~popołudnie — **PACZKA ZBIORCZA (ZASTĘPUJE
   wpis "PACZKA #2" niżej — wszystko w JEDNYM commit+push)**] Partie
@@ -525,6 +565,12 @@ w sekcji @CC-Win.)
 > pełny raport w skrzynce @Fable powyżej. Kombinacja na cbBTC bije
 > oba pojedyncze warianty [+39.5% vs baseline]. Czekam na dalsze
 > zlecenia / decyzję z przeglądu 1.09.)
+
+- [Fable→CC-Win, 28.08 ~wieczór — wdrożenie mini-paczki "cykl w
+  state"] Po pullu od CC-Mac: `nssm restart homos-bot` (bot-side,
+  build NIEpotrzebny). Sanity: /api/state ma root `flatParams` i
+  positions[].posture==="wide" na obu nogach. Build+restart
+  homos-server dopiero razem z Partią 17 od Sonneta (jeden deploy).
 
 - [Fable→CC-Win, 27.08 ~południe — **WDROŻENIE PRODUKTU, PILNE (Rafał
   chce wejść kapitałem DZIŚ przez kokpit)**] Po pullu paczki CC-Mac

@@ -1186,3 +1186,50 @@ procedury: EMERGENCY.md (root repo). Zakres: TYLKO src/**.
    (noga cbBTC — rynek BTC/USD) → bez przycisku wykonania, tylko nota
    (ręcznie na app.gmx.io). EXIT_TREND → jak dotychczas.
 5. Zero nowych requestów.
+
+## PARTIA 17 — panel zbiorczy REALNYCH pozycji + linia CYKLU FlatWide ✅ wykonana (Sonnet 28.08; prośba Rafała 28.08 wieczór, spec Fable)
+
+Kontekst bot-side (już w paczce): `/api/state` ma teraz (1) root
+`flatParams: { enterGap, exitGap, confirmH, ... }` (żywe parametry
+detektora — NIE hardkodować 12h/2%/5% w UI, mogą się zmienić 1.09),
+(2) `positions[].posture: 'wide' | 'narrow' | null` (cykl produktu;
+null = pula nie-produktowa), (3) jak dotąd `pools[].flatSince/
+flatConfirmed/trendGapPct`. Zakres: TYLKO src/**. Zero nowych requestów.
+
+1. **Panel zbiorczy nad kartami realnych pozycji** — lustrzany do
+   nagłówka "Paper trading": kafle **Equity łącznie** (Σ wartości
+   pozycji, źródła jak Partia 15: p.valueUsd ?? wycena bota),
+   **PnL od startu** kwotowo i procentowo (Σ[wartość − hodlUsd
+   PIERWSZEJ próbki positions-history]; % względem Σ kotwic; dopisek
+   "od <najstarsza data kotwicy>"), **vs HODL 50/50** (Σ[wartość −
+   hodlUsd OSTATNIEJ próbki], kolor czerwony/zielony). Tooltip na
+   PnL: "zawiera ruch rynku (beta) — czysta przewaga LP to kafel
+   vs HODL". Dane: useBotApi (state + positions-history), te same
+   źródła co pasek metryk kart (Partia 14/15).
+2. **Linia CYKLU na karcie każdej pozycji produktowej** (posture !==
+   null), pod nagłówkiem karty:
+   - postura: `wide` → "Cykl: SZEROKI ±{productIdleWidthPct}% (idle)";
+     `narrow` → "Cykl: WĄSKI k×σ (flat)". Szerokość z BOT_POOL_META
+     (już zduplikowana w src/config/botPools.ts).
+   - status detektora (z pools[] po poolId):
+     a) `flatConfirmed` → "✅ flat potwierdzony — propozycja zwężenia
+        w kokpicie" (jeśli postura wide);
+     b) `flatSince && !flatConfirmed` → COUNTDOWN: "stabilizacja od
+        <HH:MM> — do propozycji zwężenia ~<Xh Ym> (przy utrzymaniu
+        |gap|<{enterGap%})"; pozostało = confirmH·3600e3 − (now −
+        Date.parse(flatSince)); odświeżać co minutę (istniejący tick
+        komponentu albo mały setInterval);
+     c) inaczej → "czekam na stabilizację: |gap| {X.X}% (próg
+        {enterGap%})" — gap z trendGapPct;
+     d) dla postury `narrow` zamiast a-c: "powrót do szerokiego przy
+        |gap|>{exitGap%} (teraz {X.X}%)".
+   - fallback gdy state bez flatParams (stary bot): przyjmij
+     2%/5%/12h, feature-detect.
+3. **Badge POZA ZAKRESEM** na karcie realnej pozycji, gdy
+   `inRange === false` (odpowiednik informacji o rebalansie z paper):
+   wyraźny pomarańczowy badge "⚠️ POZA ZAKRESEM — cena poniżej/powyżej
+   pasma" (kierunek z porównania price vs lo/hi ostatniej próbki).
+   W produkcie FlatWide wypadnięcie z SZEROKIEGO zakresu to zdarzenie
+   rzadkie i ważne (±50% przebite) — ma być widoczne od progu.
+4. Etykieta kafla/paska "PnL od startu (od 27.08.2026)" na kartach:
+   bez zmian logiki, ale ujednolicić z panelem (ta sama konwencja).
