@@ -113,6 +113,13 @@ export interface BotPoolLive {
   // wtedy bot faktycznie proponuje FLAT_NARROW.
   flatSince?: string | null;
   flatConfirmed?: boolean;
+  /** Partia 17: gap ceny vs EMA (%, wartość podpisana) — używane do linii
+   *  CYKLU na kartach ("czekam na stabilizację: |gap| X.X%" / "powrót do
+   *  szerokiego przy |gap|>exitGap%, teraz X.X%"). Ta sama liczba co
+   *  emaGapPct w /api/history (ObservationAnalysis.tsx), tu jako "teraz",
+   *  bez potrzeby osobnego fetchu historii. Feature-detect jak reszta pól
+   *  detektora flatu. */
+  trendGapPct?: number;
 }
 
 export interface BotWatchedPosition {
@@ -132,6 +139,11 @@ export interface BotWatchedPosition {
   collectedFeesUsd?: number | null;
   costsUsd?: number | null;
   rebalances?: number | null;
+  /** Cykl produktu FlatWide (Partia 17 bot-side): 'wide' = szeroki pasywny
+   *  ±productIdleWidthPct% (idle), 'narrow' = zwężony k×σ (potwierdzony
+   *  flat). `null`/nieobecne = pula nie-produktowa (nie ma cyklu) —
+   *  feature-detect, karta wtedy nie renderuje linii CYKLU w ogóle. */
+  posture?: 'wide' | 'narrow' | null;
 }
 
 // Hedge REALNY na GMX (Arbitrum) — odczyt Readerem co cykl observera,
@@ -162,6 +174,12 @@ export interface BotStateShape {
   positions?: BotWatchedPosition[];
   proposals?: BotProposal[];
   hedge?: BotHedgeLive | null;
+  /** Partia 17: parametry ŻYWE detektora flatu (bot/config.ts FLAT, może się
+   *  zmienić na przeglądzie 1.09) — UI NIE WOLNO hardkodować 12h/2%/5%,
+   *  czytać stąd z feature-detectem (fallback na te wartości TYLKO gdy pole
+   *  całkiem nieobecne — stary bot sprzed tej paczki). Jednostki: enterGap/
+   *  exitGap w procentach (jak trendGapPct), confirmH w godzinach. */
+  flatParams?: { enterGap: number; exitGap: number; confirmH: number };
 }
 
 export type BotStatus = 'loading' | 'online' | 'stale' | 'offline';

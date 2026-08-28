@@ -19,7 +19,8 @@ import React, { FC, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { Pool } from '@uniswap/v3-sdk';
 import { usePortfolio, PortfolioPosition } from '../hooks/usePortfolio';
-import { UseBotApi, BotProposal } from '../hooks/useBotApi';
+import { UseBotApi, BotProposal, BotPoolLive } from '../hooks/useBotApi';
+import { findBotPoolByAddress } from '../config/botPools';
 import { useCockpitActions, RebalanceTarget } from '../hooks/useCockpitActions';
 import { useRebalanceExecution } from '../hooks/useRebalanceExecution';
 import { useRotateExecution } from '../hooks/useRotateExecution';
@@ -62,6 +63,69 @@ const ADVICE_TITLE: Record<string, string> = {
 const positionStatusIcon = (inRange: boolean): string => (inRange ? '🟢' : '⚠️');
 const positionStatusTitle = (inRange: boolean): string =>
   inRange ? 'W zakresie — pozycja zarabia' : 'POZA zakresem — pozycja nie nalicza opłat';
+
+// Partia 17: fallback gdy state bota nie ma jeszcze `flatParams` (stary bot
+// sprzed paczki bot-side "cykl w state", 28.08 wieczór) — te same wartości co
+// bot/config.ts FLAT na dziś. Feature-detect: użyte TYLKO gdy pole całkiem
+// nieobecne, nigdy nie nadpisuje żywych danych z /api/state.
+// UWAGA jednostki: enterGap/exitGap to UŁAMKI (0.02 = 2%), tak jak surowe
+// bot/config.ts FLAT — zweryfikowane wprost w bot/observer.ts (saveState:
+// `flatParams: FLAT`, bez przeliczenia). confirmH w godzinach.
+const DEFAULT_FLAT_PARAMS = { enterGap: 0.02, exitGap: 0.05, confirmH: 12 };
+
+/**
+ * Linia CYKLU (Partia 17, TASKS-UI.md) na karcie pozycji produktowej —
+ * `posture` przychodzi z bot.state.positions[].posture (feature-detect:
+ * `null`/nieobecne = pula nie-produktowa, funkcja wtedy nic nie renderuje).
+ */
+function renderCycleLine(
+  posture: 'wide' | 'narrow' | null | undefined,
+  poolLive: BotPoolLive | undefined,
+  widthPct: number | undefined,
+  flatParams: { enterGap: number; exitGap: number; confirmH: number },
+  now: number
+): React.ReactNode {
+  if (posture !== 'wide' && posture !== 'narrow') return null;
+  const enterPct = flatParams.enterGap * 100;
+  const exitPct = flatParams.exitGap * 100;
+  const gapAbs = typeof poolLive?.trendGapPct === 'number' ? Math.abs(poolLive.trendGapPct) : null;
+  const gapLabel = gapAbs !== null ? gapAbs.toFixed(1) : '—';
+
+  if (posture === 'narrow') {
+    return (
+      <div className="cockpit-cycle-line muted">
+        Cykl: WĄSKI k×σ (flat) · powrót do szerokiego przy |gap|&gt;{exitPct.toFixed(0)}% (teraz {gapLabel}%)
+      </div>
+    );
+  }
+
+  // posture === 'wide'
+  const widthLabel = typeof widthPct === 'number' ? `±${widthPct}%` : '';
+  let statusNode: React.ReactNode;
+  if (poolLive?.flatConfirmed) {
+    statusNode = <span className="cockpit-cycle-confirmed">✅ flat potwierdzony — propozycja zwężenia w kokpicie</span>;
+  } else if (poolLive?.flatSince) {
+    const flatSinceMs = Date.parse(poolLive.flatSince);
+    const remainingMs = flatParams.confirmH * 3600e3 - (now - flatSinceMs);
+    const sinceLabel = isFinite(flatSinceMs) ? new Date(flatSinceMs).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : '—';
+    statusNode = (
+      <span>
+        stabilizacja od {sinceLabel} — do propozycji zwężenia ~{remainingMs > 0 ? formatDuration(remainingMs) : 'lada moment'} (przy utrzymaniu |gap|&lt;{enterPct.toFixed(0)}%)
+      </span>
+    );
+  } else {
+    statusNode = (
+      <span>
+        czekam na stabilizację: |gap| {gapLabel}% (próg {enterPct.toFixed(0)}%)
+      </span>
+    );
+  }
+  return (
+    <div className="cockpit-cycle-line muted">
+      Cykl: SZEROKI {widthLabel} (idle) · {statusNode}
+    </div>
+  );
+}
 
 /**
  * Od kiedy pozycja jest NIEPRZERWANIE poza zakresem — wyliczane z próbek
@@ -158,6 +222,15 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   const [hedgeOpen, setHedgeOpen] = useState<HedgeOpenState | null>(() => loadHedgeOpen());
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [proposalError, setProposalError] = useState<string | null>(null);
+  // Partia 17: countdown "do propozycji zwężenia" na linii CYKLU musi się
+  // odświeżać bez odczytu z serwera (odliczanie czasu, nie danych) — osobny
+  // mały tick co minutę, nie ruszając pollerów bota. Hook nad wczesnym
+  // returnem (patrz FIX 20.08 wyżej — Rendered more hooks).
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   // Partia 11 pkt 3 (FIX 20.08 — crash "Rendered more hooks": ten useEffect
   // stał PONIŻEJ wczesnego returnu `if (!portfolio.connected) return null`,
@@ -457,6 +530,39 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   // nie ma ani w wycenie usePortfolio, ani w state bota — nie dla każdej
   // pozycji bez nogi stable/ETH jak dotąd (cbBTC/WETH ma teraz wycenę bota).
   const stillUnknownValue = portfolio.positions.some((p) => p.valueUsd === null && !botValueByTokenId.has(p.tokenId));
+
+  // Partia 17 pkt 1: panel zbiorczy REALNYCH pozycji, lustrzany do nagłówka
+  // "Paper trading" (.paper-total-header, PaperTradingPanel.tsx) — Σ po tych
+  // samych źródłach co pasek metryk każdej karty (Partia 14/15, poniżej w
+  // .map()): "teraz" = p.valueUsd ?? wycena bota ?? equityUsd ostatniej próbki
+  // positions-history; kotwica PnL = hodlUsd PIERWSZEJ próbki per pozycja;
+  // baza vs HODL = hodlUsd OSTATNIEJ próbki per pozycja. Tylko pozycje z
+  // policzalną wartością i historią wchodzą do sum (spójne z "—" na
+  // pojedynczej karcie, gdy brak danych — tu po prostu pomijane z sum, nie ma
+  // jak zrobić "—" na sumie częściowej). Zero nowych requestów — te same
+  // dane co bot.positionsHistory/bot.state.positions wczytane już wyżej.
+  let totalEquityUsd = 0;
+  let totalStartUsd = 0;
+  let totalPnlUsd = 0;
+  let totalVsHodlUsd = 0;
+  let oldestAnchorTs: string | null = null;
+  for (const pos of portfolio.positions) {
+    const rawHist = (bot.positionsHistory ?? []).filter((h) => h.tokenId === pos.tokenId);
+    if (rawHist.length === 0) continue;
+    const sorted = [...rawHist].sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    const botLive = botValueByTokenId.get(pos.tokenId);
+    const nowUsd = pos.valueUsd ?? botLive ?? last.valueUsd ?? null;
+    if (nowUsd === null) continue;
+    totalEquityUsd += nowUsd;
+    totalStartUsd += first.hodlUsd;
+    totalPnlUsd += nowUsd - first.hodlUsd;
+    totalVsHodlUsd += nowUsd - last.hodlUsd;
+    if (!oldestAnchorTs || Date.parse(first.ts) < Date.parse(oldestAnchorTs)) oldestAnchorTs = first.ts;
+  }
+  const totalPnlPct = totalStartUsd > 0 ? (totalPnlUsd / totalStartUsd) * 100 : 0;
+  const hasRealPositionStats = portfolio.positions.length > 0 && oldestAnchorTs !== null;
 
   // Partia 16/16b: jedna karta propozycji, wyekstrahowana z inline JSX do
   // funkcji, żeby renderować TĘ SAMĄ logikę per-kind zarówno w zwykłej
@@ -811,6 +917,32 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           {bot.status === 'stale' && <div className="morning-note">⚠ dane bota nieaktualne (starsze niż 5 min)</div>}
 
           <div className="morning-section-title">Pozycje — akcje</div>
+
+          {/* Partia 17 pkt 1: panel zbiorczy nad kartami — lustrzany do
+              .paper-total-header (PaperTradingPanel.tsx), te same klasy CSS.
+              Tylko gdy jest przynajmniej jedna pozycja z policzalną historią
+              (inaczej sumy byłyby myląco puste — "brak pozycji" komunikat
+              niżej to już mówi). */}
+          {hasRealPositionStats && (
+            <div className="paper-total-header">
+              <div className="paper-total-stat">
+                <span className="paper-total-value">{fmtUsd(totalEquityUsd)}</span>
+                <span className="muted">Equity łącznie</span>
+              </div>
+              <div className="paper-total-stat">
+                <span className={`paper-total-value ${totalPnlUsd < 0 ? 'forecast-negative' : 'paper-positive'}`} title="Zawiera ruch rynku (beta) — czysta przewaga LP to kafel vs HODL.">
+                  {fmtSigned(totalPnlUsd)} ({totalPnlPct >= 0 ? '+' : ''}
+                  {totalPnlPct.toFixed(1)}%)
+                </span>
+                <span className="muted">PnL od startu{oldestAnchorTs ? ` (od ${new Date(oldestAnchorTs).toLocaleDateString('pl-PL')})` : ''}</span>
+              </div>
+              <div className="paper-total-stat">
+                <span className={`paper-total-value ${totalVsHodlUsd < 0 ? 'forecast-negative' : 'paper-positive'}`}>{fmtSigned(totalVsHodlUsd)}</span>
+                <span className="muted">vs HODL 50/50</span>
+              </div>
+            </div>
+          )}
+
           <div className="muted status-legend">
             🟢 w zakresie · ⚠️ poza zakresem (nie zarabia) · 🔄 do rebalansu · ⏳ rebalans nieopłacalny
           </div>
@@ -922,6 +1054,18 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                 const pnlSinceStartUsd = nowValueUsdForStats !== null && firstPosHistPoint ? nowValueUsdForStats - firstPosHistPoint.hodlUsd : null;
                 const vsHodlUsd = nowValueUsdForStats !== null && lastPosHistPoint ? nowValueUsdForStats - lastPosHistPoint.hodlUsd : null;
 
+                // Partia 17 pkt 2: linia CYKLU — posture z bot.state.positions
+                // (feature-detect: null/nieobecne = pula nie-produktowa, karta
+                // nic nie renderuje), reszta (flatSince/flatConfirmed/
+                // trendGapPct) z bot.state.pools po id puli (dopasowanie przez
+                // adres — botPoolId z historii bywa pusty dla świeżych pozycji
+                // bez próbek jeszcze). flatParams z korzenia state (parametry
+                // ŻYWE detektora — NIE hardkodować 12h/2%/5%, patrz DEFAULT_FLAT_PARAMS).
+                const botMeta = findBotPoolByAddress(p.chainId, p.poolAddress);
+                const bpForCycle = (bot.state?.positions ?? []).find((x) => x.tokenId === p.tokenId);
+                const poolLiveForCycle = botMeta ? bot.state?.pools?.find((pl) => pl.id === botMeta.id) : undefined;
+                const flatParams = bot.state?.flatParams ?? DEFAULT_FLAT_PARAMS;
+
                 return (
                   <div key={`${p.chainId}-${p.tokenId}`} className="cockpit-position-card">
                     <CockpitPositionActions position={p} actions={cockpitActions} onChanged={portfolio.refresh} bot={bot} ethUsd={portfolio.ethUsd} />
@@ -946,6 +1090,27 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                         )}
                       </span>
                     </div>
+                    {/* Partia 17 pkt 2: linia CYKLU — TYLKO pozycje produktowe
+                        (posture !== null). */}
+                    {renderCycleLine(bpForCycle?.posture, poolLiveForCycle, botMeta?.productIdleWidthPct, flatParams, nowTick)}
+                    {/* Partia 17 pkt 3: badge POZA ZAKRESEM — zdarzenie rzadkie i
+                        ważne w produkcie FlatWide (postura SZEROKA to ±40/50%,
+                        przebicie pasma jest realnym sygnałem), więc widoczne od
+                        progu, osobno od licznika czasu poniżej. Kierunek z
+                        porównania price vs lo/hi OSTATNIEJ próbki historii —
+                        "poza pasmem" gdy tych pól jeszcze brak (świeża pozycja). */}
+                    {!p.inRange && (
+                      <div className="cockpit-outofrange-badge">
+                        ⚠️ POZA ZAKRESEM — cena{' '}
+                        {lastPosHistPoint && typeof lastPosHistPoint.price === 'number' && typeof lastPosHistPoint.lo === 'number' && typeof lastPosHistPoint.hi === 'number'
+                          ? lastPosHistPoint.price < lastPosHistPoint.lo
+                            ? 'poniżej pasma'
+                            : lastPosHistPoint.price > lastPosHistPoint.hi
+                              ? 'powyżej pasma'
+                              : 'poza pasmem'
+                          : 'poza pasmem'}
+                      </div>
+                    )}
                     {/* Licznik wypadnięcia dla REALNEJ pozycji (prośba Rafała 21.08).
                         Różnica wobec paper: bot NIE czeka tu 24h — propozycję
                         rebalansu wystawia od razu, gdy doradca uzna ją za opłacalną
@@ -991,7 +1156,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                         (stary bot) albo null (księga nie umie wycenić) = "—";
                         0 to POPRAWNE zero świeżej pozycji, nie "—". */}
                     {(() => {
-                      const bp = (bot.state?.positions ?? []).find((x) => x.tokenId === p.tokenId);
+                      const bp = bpForCycle; // Partia 17: reużyte wyszukanie (wyżej, ta sama pozycja)
                       return (
                         <PositionStatsBar
                           pnlUsd={pnlSinceStartUsd}
