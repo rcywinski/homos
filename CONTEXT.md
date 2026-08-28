@@ -6,6 +6,12 @@
 
 ## 1. Stan projektu — skrót
 
+- **⚡ STAN NA 28.08 rano (dzień 1 kapitału):** obie nogi in-range,
+  vsHODL ~0 (hybryda = HODL z narastającymi fees, zgodnie z planem);
+  **żywy gap cbBTC/WETH −1.9% — już wewnątrz progu flat |gap|<2%**,
+  a FLAT_ENTER jeszcze nie istnieje → budowa FLAT_ENTER/FLAT_EXIT
+  priorytetem sesji 28.08 (kandydat parametrów: CONFIRM_H=12, czeka
+  cross-check CC-Win na cbBTC-720d). ETH/USDC gap +12.9% — bez zmian.
 - **⚡ STAN NA 27.08 (DECYZJA ~południe, po iteracji z hybrydą):**
   PRODUKT = **HYBRYDA FlatWide** na obu pulach, cała transza 1
   (6 092 USDC, Base): wąski LP (k×σ) TYLKO w potwierdzonym flacie
@@ -58,6 +64,26 @@
 - [ ] Istniejące otwarte pozycje użytkownika w Uniswap (podpiąć w F2 jako pierwsze dane żywe)
 
 ## 4. Dziennik sesji
+
+### 2026-08-28 ~rano — BRIEF DZIEŃ 1 + ŻYWY POMIAR (Fable + Rafał)
+Brief z plików (raport 07:30 czysty: pipeline "porażki: BRAK",
+propozycje 0, trendDown false 6/6, paper dzień 10 $64,489 vs HODL
+−$4,605) + ŻYWY stan przez Chrome/API bota (06:52Z). DZIEŃ 1:
+#5886957 base-030 $3,475.69 (vsHODL **−$0.82**, od kotwicy −$31.80
+przy ETH 2545→2498, −1.8% — czysta beta, IL≈0); cbBTC $2,324.64
+(vsHODL **−$0.24**, od kotwicy −$25.24 przy ratio −1.1%). Hybryda
+robi dokładnie to, co ma: trzyma HODL, fees dopiero narastają
+(collectedFees 0, rebalances 0, gaz żywy). NAJWAŻNIEJSZE: **żywy gap
+cbBTC/WETH = −1.94% — pula JUŻ wewnątrz progu flat (|gap|<2%),**
+a FLAT_ENTER nie istnieje w observerze (nikt nie liczy zegara
+confirm) — priorytet sesji przestawiony na budowę FLAT_ENTER/
+FLAT_EXIT dziś. Bonus: advisor ma już statystyki dla cbBTC
+(paybackDays w state) — problem "brak danych" z 27.08 zniknął po
+cyklach. ZLECENIA: CC-Win pilny cross-check CONFIRM_H=12/HL_D=5 na
+cbBTC-720d (blokuje zamrożenie parametrów), Sonnet przypomnienie
+prognozy k=2 + zapowiedź Partii 16 (karty NARROW/WIDEN po spec),
+CC-Mac commit+push docs. Higiena HANDOFF: skrzynka @Fable
+opróżniona (komplet raportów 26–27.08 odebrany).
 
 ### 2026-08-27 ~rano — SESJA DECYZYJNA (Fable + Rafał) — w toku
 Checklist z HANDOFF wykonany: (1) runda finałowa ODEBRANA i
