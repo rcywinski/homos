@@ -189,6 +189,34 @@ ETH −4% (LP dokupuje ETH na spadku); do odrobienia z fees/powrotem
 ceny. Etykiety kafli do ujednolicenia w Partii 17 (tooltip "PnL
 zawiera ruch rynku").
 
+~wieczór #2 — PARTIA 17 WDROŻONA (Sonnet→CC-Mac→CC-Win, 5c2ae16),
+ZWERYFIKOWANA na screenie przez Fable co do centa (panel $5,701.70 =
+suma kart; PnL −$155.67/−2.7% = beta od kotwic; vs HODL −$4.46).
+Linie cyklu żywe: noga A "czekam na stabilizację |gap| 9.9%", noga B
+ZEGAR OD 18:33 — przy utrzymaniu |gap|<2% przez noc potwierdzenie
+flatu ~06:33 i pierwsza propozycja FLAT_NARROW rano w kokpicie.
+Wyjaśnione Rafałowi warstwy flat vs ranking (diagram cyklu +
+rozróżnienie: hybryda WDROŻONA, badana jest tylko formuła
+HYBRID-SCORE rankingu — miesiąc równolegle, transza 2 i tak
+bramkowana pełnym cyklem). DZIEŃ 1 PRODUKTU ZAMKNIĘTY: 5 paczek
+wdrożonych (FLAT_ENTER, procedura awaryjna, Partie 16/16b/17,
+raport POZYCJE REALNE), zero incydentów, komplet danych na 1.09.
+
+
+~wieczór #3 — PYTANIE RAFAŁA O KOTWICĘ + TRYB COMPARE W FLATWINDOWS:
+pytanie "czy po wybiciu środek nie powinien przeskoczyć na nową
+cenę/średnią dobową?" → wyjaśnione: EMA JEST ruchomą kotwicą, pytanie
+sprowadza się do tempa (HL); za szybka kotwica (dobowa) uznaje trendy
+za flat. Dobudowany tryb COMPARE_HL_D w flatwindows.ts (detect()
+2× + parowanie epizodów po nakładaniu; tsc czysty, smoke w kontenerze
+przez transpilację tsc→node, bo esbuild/tsx ma binarkę darwin).
+SMOKE na cbBTC-365d (stale): detekcja bazowa 1:1 z 27.08; HL5d
+startuje wcześniej w 10/12 epizodów, mediana +18.7h, +552h we
+flacie, ΣEV $290→$357 (+23%). Zlecenie 720d dla CC-Win Z TERMINEM
+PONIEDZIAŁEK 1.09 rano (decyzja Rafała: nie robić wcześniej) —
+ostatni element paczki decyzyjnej przeglądu.
+
+
 ### 2026-08-27 ~rano — SESJA DECYZYJNA (Fable + Rafał) — w toku
 Checklist z HANDOFF wykonany: (1) runda finałowa ODEBRANA i
 ZWERYFIKOWANA niezależnie na 8/8 JSON-ach walkforward — zgodność z

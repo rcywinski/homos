@@ -22,6 +22,10 @@
  * Użycie: npx tsx backtest/flatwindows.ts <poolId>
  * Env: ENTER=0.02 EXIT=0.05 CONFIRM_H=24 HL_D=7 CAP=2500 WIDE=0.5
  *      NARROW=0.08 COST=6
+ * Env COMPARE_HL_D=5 (28.08, pytanie Rafała "czy kotwica nie powinna
+ * szybciej przeskakiwać na nową cenę?"): liczy detekcję DRUGI raz z inną
+ * EMA i drukuje porównanie — ile epizodów łapiemy szybciej, o ile godzin,
+ * które epizody istnieją tylko na szybszej/wolniejszej kotwicy.
  */
 import { unitPrices, ethUsd, PoolSpec } from './engine';
 import { loadPool } from './load';
@@ -54,11 +58,12 @@ interface Episode {
   p0: number; p1: number;
 }
 
-(async () => {
-  const loaded = await loadPool(id);
-  if (!loaded) { console.error(`Brak cache dla ${id}`); process.exit(1); }
-  const { swaps, spec } = loaded;
-  const tau = (HL_D * 86400) / Math.LN2;
+const CMP_HL_D = process.env.COMPARE_HL_D ? Number(process.env.COMPARE_HL_D) : null;
+
+/** pełna detekcja epizodów dla zadanej EMA (wyciągnięta z main, 28.08 —
+ *  tryb COMPARE_HL_D uruchamia ją dwukrotnie na tym samym strumieniu) */
+function detect(swaps: any[], spec: PoolSpec, hlDays: number): Episode[] {
+  const tau = (hlDays * 86400) / Math.LN2;
   const rWide = 1 + WIDE;
   const rNarrow = 1 + NARROW;
 
@@ -101,8 +106,8 @@ interface Episode {
     }
 
     if (gap < ENTER) {
-      if (flatSince === null) flatSince = ev.ts;
-      if (ev.ts - flatSince >= CONFIRM_S) {
+      const since = flatSince ?? (flatSince = ev.ts);
+      if (ev.ts - since >= CONFIRM_S) {
         const { px0, px1 } = unitPrices(ev.sqrtP, spec);
         const s = ev.sqrtP;
         cur = {
@@ -121,6 +126,14 @@ interface Episode {
     }
   }
   if (cur) { cur.endTs = lastTs; episodes.push(cur); } // epizod trwający na końcu danych
+  return episodes;
+}
+
+(async () => {
+  const loaded = await loadPool(id);
+  if (!loaded) { console.error(`Brak cache dla ${id}`); process.exit(1); }
+  const { swaps, spec } = loaded;
+  const episodes = detect(swaps, spec, HL_D);
 
   const t0 = swaps[0].ts, t1 = swaps[swaps.length - 1].ts;
   const totalDays = (t1 - t0) / 86400;
@@ -149,4 +162,28 @@ interface Episode {
     console.log(`próg praktyczny: wszystkie epizody EV>0 trwały ≥${minDur.toFixed(1)} dnia — FLAT_ENTER podpisywać, gdy flat rokuje co najmniej tyle.`);
   }
   console.log(`\nUWAGI: wąska pozycja bez recenteringu (inN% pokazuje, ile wolumenu łapała); IL we flat pominięty (symetryczny, mały); nasza płynność ujęta w mianowniku share.`);
+
+  // --- tryb porównania kotwic EMA (COMPARE_HL_D) — pytanie Rafała 28.08 ---
+  if (CMP_HL_D) {
+    const cmp = detect(swaps, spec, CMP_HL_D);
+    const overlaps = (a: Episode, b: Episode) => a.startTs < b.endTs && b.startTs < a.endTs;
+    const usedCmp = new Set<number>();
+    const pairs: Array<[Episode, Episode]> = [];
+    for (const e of episodes) {
+      const j = cmp.findIndex((c, idx) => !usedCmp.has(idx) && overlaps(e, c));
+      if (j >= 0) { usedCmp.add(j); pairs.push([e, cmp[j]]); }
+    }
+    const onlyCmp = cmp.filter((_, idx) => !usedCmp.has(idx));
+    const onlyBase = episodes.filter((e) => !pairs.some(([a]) => a === e));
+    const deltasH = pairs.map(([a, b]) => (a.startTs - b.startTs) / 3600); // >0 = compare łapie wcześniej
+    const dSorted = [...deltasH].sort((x, y) => x - y);
+    const medD = dSorted.length ? dSorted[Math.floor(dSorted.length / 2)] : 0;
+    const earlier = deltasH.filter((d) => d > 0);
+    const sumEv = (arr: Episode[]) => arr.reduce((a, e) => a + evOf(e), 0);
+    console.log(`\n=== PORÓWNANIE KOTWIC: EMA HL${HL_D}d (bazowa) vs HL${CMP_HL_D}d ===`);
+    console.log(`epizodów: ${episodes.length} vs ${cmp.length} · sparowane po nakładaniu w czasie: ${pairs.length}`);
+    console.log(`w sparowanych HL${CMP_HL_D}d startuje WCZEŚNIEJ w ${earlier.length}/${pairs.length}; mediana przewagi startu ${medD.toFixed(1)}h; łącznie ${earlier.reduce((a, c) => a + c, 0).toFixed(0)}h wcześniej we flacie`);
+    console.log(`epizody TYLKO na HL${CMP_HL_D}d: ${onlyCmp.length} (ΣEV $${sumEv(onlyCmp).toFixed(2)}) · TYLKO na HL${HL_D}d: ${onlyBase.length} (ΣEV $${sumEv(onlyBase).toFixed(2)})`);
+    console.log(`ΣEV całości: HL${HL_D}d $${sumEv(episodes).toFixed(2)} vs HL${CMP_HL_D}d $${sumEv(cmp).toFixed(2)}`);
+  }
 })();

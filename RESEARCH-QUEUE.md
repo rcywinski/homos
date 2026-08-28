@@ -683,6 +683,11 @@
   zostaje 2% globalnie (3% psuje jakość epizodów na cbBTC — a tam
   jest rdzeń wartości zwężania), opcjonalnie ENTER=3% per-pula na
   base-030 (+19%). Decyzja Rafała.
+  DO ODEBRANIA W PONIEDZIAŁEK RANO (zlecone CC-Win, termin 1.09):
+  PORÓWNANIE KOTWIC HL7 vs HL5 na świeżych 720d (flatwindows
+  COMPARE_HL_D — ile epizodów łapiemy szybciej i o ile godzin);
+  smoke Fable 365d/cbBTC: HL5 wcześniej w 10/12 sparowanych,
+  mediana +18.7h, ΣEV $290→$357 (+23%).
 - [ ] ~24.09 (miesiąc od wejścia): produkt vs HODL vs USDC na żywo +
   paper A/B; decyzja o transzy 2 dopiero po ≥1 pełnym cyklu
   flat→trend→flat.

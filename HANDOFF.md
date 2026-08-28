@@ -312,6 +312,22 @@ w sekcji @CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 28.08 ~wieczór #3 — PACZKA "compare kotwic"]
+  Commit+push: backtest/flatwindows.ts (detekcja wyciągnięta do
+  funkcji detect(hlDays) + tryb COMPARE_HL_D — porównanie epizodów
+  dwóch EMA: parowanie po nakładaniu, przewaga startu, epizody
+  tylko-na-jednej-kotwicy; smoke Fable w kontenerze na cbBTC-365d:
+  detekcja bazowa IDENTYCZNA z wynikiem 27.08, HL5d wcześniej w
+  10/12, mediana +19h, ΣEV +23%), RESEARCH-QUEUE.md, HANDOFF.md,
+  CONTEXT.md. tsc czysty. Komunikat: "feat(backtest): flatwindows
+  COMPARE_HL_D — anchor comparison mode". Po pushu ping CC-Win
+  (zadanie MA TERMIN poniedziałek — nie wykonywać wcześniej).
+
+- [Fable→CC-Mac, 28.08 ~wieczór #2 — DOCS] Commit+push: CONTEXT.md
+  (dziennik: Partia 17 wdrożona i zweryfikowana, zegar cbBTC od
+  18:33), HANDOFF.md. Komunikat: "docs: partia 17 zweryfikowana —
+  dzień 1 produktu zamknięty".
+
 - [Fable→CC-Mac, 28.08 ~wieczór — PACZKA mini "cykl w state" + spec]
   Commit+push: bot/observer.ts (positions[].posture wide/narrow/null
   + flatParams w state.json root), TASKS-UI.md (PARTIA 17 spec),
@@ -565,6 +581,20 @@ w sekcji @CC-Win.)
 > pełny raport w skrzynce @Fable powyżej. Kombinacja na cbBTC bije
 > oba pojedyncze warianty [+39.5% vs baseline]. Czekam na dalsze
 > zlecenia / decyzję z przeglądu 1.09.)
+
+- [Fable→CC-Win, 28.08 ~wieczór — **NA PONIEDZIAŁEK 1.09 RANO (przed
+  przeglądem; decyzja Rafała: NIE robić wcześniej)** — porównanie
+  kotwic EMA na świeżych 720d, ostatni element paczki decyzyjnej]
+  Po pullu paczki "compare kotwic" od CC-Mac, na cache z
+  poniedziałkowego fetchu 07:30:
+  1. `COMPARE_HL_D=5 CONFIRM_H=12 NARROW=0.06 npx tsx
+     backtest/flatwindows.ts base-cbbtc-weth-005-720d`
+  2. `COMPARE_HL_D=5 CONFIRM_H=12 npx tsx backtest/flatwindows.ts
+     base-weth-usdc-030-720d`
+  Wynik (sekcja "PORÓWNANIE KOTWIC") do @Fable przed przeglądem —
+  ilustracja do decyzji HL_D=5: ile epizodów łapiemy szybciej i o
+  ile godzin. Referencja ze smoke Fable (365d stale, cbBTC): HL5d
+  wcześniej w 10/12 sparowanych, mediana +18.7h, ΣEV $290→$357.
 
 - [Fable→CC-Win, 28.08 ~wieczór — wdrożenie mini-paczki "cykl w
   state"] Po pullu od CC-Mac: `nssm restart homos-bot` (bot-side,
