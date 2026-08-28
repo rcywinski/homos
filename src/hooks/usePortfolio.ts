@@ -28,8 +28,9 @@ import { Token } from '@uniswap/sdk-core';
 import { NETWORKS, POOL_FACTORY_ABI, POOL_ABI } from '../utils/uniswap';
 import { POSITION_MANAGER_ADDRESSES } from '../utils/liquidityManagement';
 import { OBSERVED_PAIRS } from '../config/pools';
+import { findBotPoolByAddress } from '../config/botPools';
 import { getAmountsForLiquidity, humanPriceQuotePerBase, MAX_UINT128 } from '../utils/v3math';
-import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, RebalanceAssessment, RangeSuggestion } from '../utils/advisor';
+import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, ADVISOR_PARAMS, RebalanceAssessment, RangeSuggestion } from '../utils/advisor';
 
 const CHAIN_IDS = [1, 8453, 42161] as const;
 const CHAIN_LABEL: Record<number, string> = { 1: 'Ethereum', 8453: 'Base', 42161: 'Arbitrum' };
@@ -372,14 +373,27 @@ export function usePortfolio(): PortfolioSummary {
             // ma sens, tylko bez oceny opłacalności/payback).
             let suggestion: RangeSuggestion | null = null;
             if (stats) {
+              // SPÓJNOŚĆ PROGNOZY cbBTC (HANDOFF Fable→Sonnet 26.08/28.08 rano):
+              // ADVISOR_PARAMS.k=3 to domyślne dla par ETH/stable — pary
+              // skorelowane (cbBTC/WETH) grają na żywo z zamrożonym profilem
+              // v1.2 bota, k=2 (bot/config.ts BotPool.advisorK). Ten hook był
+              // JEDYNYM call site'em suggestRange/assessPosition w całej UI
+              // (Doradca ±X% w RebalanceModal, REBALANCE/WAIT_NOT_PROFITABLE
+              // na kartach) i zawsze spadał na globalne k=3, nawet dla cbBTC —
+              // do czasu rekalibracji UI ma pokazywać to, co faktycznie gra
+              // bot, nie osobną (bardziej agresywną) matematykę. Override
+              // per pula przez BOT_POOL_META.advisorK (duplikat bot/config.ts,
+              // ta sama konwencja co reszta botPools.ts), zero nowych requestów.
+              const botMeta = findBotPoolByAddress(chainId, poolInfo.address);
+              const advisorParams = botMeta?.advisorK ? { ...ADVISOR_PARAMS, k: botMeta.advisorK } : ADVISOR_PARAMS;
               try {
-                suggestion = suggestRange(stats, fee, d0, d1);
+                suggestion = suggestRange(stats, fee, d0, d1, advisorParams);
               } catch {
                 suggestion = null;
               }
               if (valueUsd !== null) {
                 try {
-                  const assessment = assessPosition({ tickLower, tickUpper, valueUsd }, stats, chainId, fee, fee / 1_000_000, d0, d1);
+                  const assessment = assessPosition({ tickLower, tickUpper, valueUsd }, stats, chainId, fee, fee / 1_000_000, d0, d1, advisorParams);
                   advice = assessment.action;
                   paybackDays = assessment.paybackDays;
                   suggestion = assessment.suggestion;
