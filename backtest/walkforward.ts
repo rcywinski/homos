@@ -224,6 +224,8 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       flatOnlyLP({ ...base, passiveWidth: 0.5, narrowWidth: 0.04 }),
       flatOnlyLP({ ...base, passiveWidth: 0.4, narrowWidth: 0.08 }),
       flatOnlyLP({ ...base, passiveWidth: 0.4 }), // k×σ×√7 — produkt sprzed 29.08
+      flatOnlyLP({ ...base, passiveWidth: 0.4, narrowWidth: 0.05, recenter: 'noswap' }),
+      flatOnlyLP({ ...base, passiveWidth: 0.5, narrowWidth: 0.05, recenter: 'noswap' }),
     ];
   };
   const mkStrategies = (): Strategy[] =>

@@ -8,6 +8,58 @@ import { MIN_TICK as VMIN, MAX_TICK as VMAX } from '../src/utils/v3math';
 
 const widthToTicks = (w: number) => Math.round(Math.log(1 + w) / Math.log(1.0001));
 
+/** ZAKRES BEZ SWAPU (29.08, pomysł Rafała: „a nie można dorzucić ETH?").
+ *  Zamiast przestawiać posturę przez rynek (swap do proporcji 50/50 dla
+ *  zakresu wycentrowanego na cenie — koszt = obrót × tier puli + poślizg),
+ *  przesuwamy zakres tak, żeby ŻĄDANE proporcje pokrywały się z tym, co
+ *  właśnie mamy w portfelu. Skrajny przypadek to zakres JEDNOSTRONNY: po
+ *  wyprzedaniu ETH stawiamy pasmo z samych USDC PONIŻEJ ceny — jeśli cena
+ *  wróci, rynek odkupi nam ETH i jeszcze zapłaci za to fee (zlecenie
+ *  z limitem, które zarabia na czekaniu).
+ *  Zachowana jest SZEROKOŚĆ (2w w skali log), zmienia się tylko środek.
+ *  Szukamy przesunięcia binarnie — analityczne rozwiązanie istnieje, ale
+ *  bisekcja jest odporna na przypadki brzegowe (pozycja poza zakresem,
+ *  zerowe salda) i kosztuje ~40 iteracji na rebalans, czyli nic.
+ *  UWAGA: to NIE kasuje IL (nadal sprzedaliśmy taniej, niż odkupimy) —
+ *  zdejmuje wyłącznie koszt swapu i pozwala odkupić po cenie, którą sami
+ *  wybieramy zamiast rynkowej z chwili kliknięcia. */
+const rangeNoSwap = (ctx: Ctx, w: number): [number, number] => {
+  const { px0, px1 } = unitPrices(ctx.ev.sqrtP, ctx.spec);
+  const have0 = ctx.state.cash0 * px0;
+  const have1 = ctx.state.cash1 * px1;
+  const total = have0 + have1;
+  if (total <= 0) return rangeAround(ctx, w);
+  const wantShare0 = have0 / total; // jaki udział wartości ma być w token0
+  const dt = widthToTicks(w);
+  // udział token0 dla zakresu przesuniętego o `off` ticków: rośnie, gdy
+  // zakres idzie W GÓRĘ (więcej pasma nad ceną = więcej token0)
+  const share0For = (off: number): number => {
+    const lo = ctx.ev.t - dt + off;
+    const hi = ctx.ev.t + dt + off;
+    const sP = Math.sqrt(1.0001 ** ctx.ev.t);
+    const sa = Math.sqrt(1.0001 ** lo);
+    const sb = Math.sqrt(1.0001 ** hi);
+    const sPc = Math.min(Math.max(sP, sa), sb);
+    const a0 = 1 / sPc - 1 / sb;
+    const a1 = sPc - sa;
+    const v0 = a0 * (px0 * 10 ** ctx.spec.d0);
+    const v1 = a1 * (px1 * 10 ** ctx.spec.d1);
+    return v0 + v1 > 0 ? v0 / (v0 + v1) : 0;
+  };
+  let lo = -2 * dt;
+  let hi = 2 * dt;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (share0For(mid) < wantShare0) lo = mid;
+    else hi = mid;
+  }
+  const off = Math.round((lo + hi) / 2);
+  let l = ctx.alignTick(ctx.ev.t - dt + off);
+  let h = ctx.alignTick(ctx.ev.t + dt + off);
+  if (h <= l) h = l + ctx.spec.tickSpacing;
+  return [Math.max(l, VMIN + ctx.spec.tickSpacing), Math.min(h, VMAX - ctx.spec.tickSpacing)];
+};
+
 const rangeAround = (ctx: Ctx, w: number): [number, number] => {
   const dt = widthToTicks(w);
   let lo = ctx.alignTick(ctx.ev.t - dt);
@@ -82,6 +134,11 @@ export const flatOnlyLP = (opts: {
   idle?: 'quote' | 'hodl' | 'passive';
   /** szerokość pasywnego LP dla idle:'passive' (default 0.4 = ±40%) */
   passiveWidth?: number;
+  /** przestawianie postury BEZ SWAPU (29.08): 'swap' [default] centruje
+   *  zakres na cenie i dopłaca różnicę przez rynek; 'noswap' przesuwa
+   *  zakres tak, żeby pasował do tego, co mamy w portfelu (do zakresu
+   *  jednostronnego włącznie) — zero obrotu, zero poślizgu. */
+  recenter?: 'swap' | 'noswap';
   /** STAŁA szerokość WĄSKIEJ nogi we flacie (29.08). Bez tego wąskie
    *  pasmo liczy się jako k×σ×√horizonDays — formuła doradcy v1.2,
    *  którą produkt PORZUCIŁ (dawała ±16–19% przy progu wyjścia 5%,
@@ -119,16 +176,18 @@ export const flatOnlyLP = (opts: {
     ctx.state.cash0 = ((total / 2) * eff) / px0;
     ctx.state.cash1 = ((total / 2) * eff) / px1;
   };
+  const mkRange = (ctx: Ctx, w: number): [number, number] =>
+    (opts.recenter ?? 'swap') === 'noswap' ? rangeNoSwap(ctx, w) : rangeAround(ctx, w);
   const idleMode = opts.idle ?? 'quote';
   const passive = idleMode === 'passive';
   const pw = opts.passiveWidth ?? 0.4;
   let inFlat = false; // dla idle:'passive' — czy obecna pozycja to WĄSKI LP
   const idleName = idleMode === 'quote' ? 'cash' : idleMode === 'hodl' ? 'HODL50/50' : `±${(pw * 100).toFixed(0)}%`;
   return {
-    name: `FlatOnly ${opts.narrowWidth ? `wąski ±${(opts.narrowWidth * 100).toFixed(0)}%` : `k=${opts.k}`} |gap|<${(opts.enterThresh * 100).toFixed(0)}%/${(opts.confirmSec / 3600).toFixed(0)}h→LP, >${(opts.exitThresh * 100).toFixed(0)}%→${idleName} (HL${opts.trendHLDays}d)`,
+    name: `FlatOnly${(opts.recenter ?? 'swap') === 'noswap' ? ' [bez swapu]' : ''} ${opts.narrowWidth ? `wąski ±${(opts.narrowWidth * 100).toFixed(0)}%` : `k=${opts.k}`} |gap|<${(opts.enterThresh * 100).toFixed(0)}%/${(opts.confirmSec / 3600).toFixed(0)}h→LP, >${(opts.exitThresh * 100).toFixed(0)}%→${idleName} (HL${opts.trendHLDays}d)`,
     init: (ctx) => {
       if (passive) {
-        ctx.openPosition(...rangeAround(ctx, pw)); // idle = szeroki pasywny LP
+        ctx.openPosition(...mkRange(ctx, pw)); // idle = szeroki pasywny LP
         inFlat = false;
       } else {
         toIdle(ctx); // start POZA rynkiem w posturze idle
@@ -156,7 +215,7 @@ export const flatOnlyLP = (opts: {
           ctx.closePosition();
           halfGas(ctx);
           if (passive) {
-            ctx.openPosition(...rangeAround(ctx, pw)); // z powrotem szeroki
+            ctx.openPosition(...mkRange(ctx, pw)); // z powrotem szeroki
             inFlat = false;
           } else {
             toIdle(ctx);
@@ -182,7 +241,7 @@ export const flatOnlyLP = (opts: {
         const ourTicks = Math.max(widthToTicks(w) * 2, bandTicks);
         const expectedDailyFees = valueUsd * ctx.poolFeeYieldDaily * (bandTicks / ourTicks);
         if (Number.isFinite(opts.maxPaybackDays) && expectedDailyFees > 0 && costUsd / expectedDailyFees > opts.maxPaybackDays) return;
-        ctx.rebalance(...rangeAround(ctx, w));
+        ctx.rebalance(...mkRange(ctx, w));
         outSince = null;
         return;
       }
@@ -193,7 +252,7 @@ export const flatOnlyLP = (opts: {
         if (ctx.ev.ts - flatSince >= opts.confirmSec) {
           if (passive && ctx.state.pos) ctx.closePosition(); // zamknij szeroki
           halfGas(ctx);
-          ctx.openPosition(...rangeAround(ctx, width(ctx)));
+          ctx.openPosition(...mkRange(ctx, width(ctx)));
           inFlat = true;
           ctx.state.rebalances++;
           flatSince = null;

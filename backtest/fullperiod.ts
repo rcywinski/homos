@@ -113,6 +113,11 @@ const productSet: Strategy[] = [
   flatOnlyLP({ ...productBase, passiveWidth: 0.5, narrowWidth: 0.08 }),
   flatOnlyLP({ ...productBase, passiveWidth: 0.4 }), // k×σ×√7 — produkt sprzed 29.08
   flatOnlyLP({ ...productBase, passiveWidth: 0.5 }),
+  // 29.08, pomysł Rafała: przestawianie postury BEZ swapu (zakres przesunięty
+  // do składu portfela, do jednostronnego włącznie) — ten sam produkt, inny
+  // sposób wykonania przejścia
+  flatOnlyLP({ ...productBase, passiveWidth: 0.4, narrowWidth: 0.05, recenter: 'noswap' }),
+  flatOnlyLP({ ...productBase, passiveWidth: 0.5, narrowWidth: 0.05, recenter: 'noswap' }),
 ];
 const strategies: Strategy[] =
   process.env.FP_SET === 'final' ? finalSet

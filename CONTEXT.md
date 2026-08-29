@@ -470,6 +470,78 @@ walkforward to 46 okien W RÓŻNYCH reżimach, a nie jedna ścieżka;
 zwężanie przegrywa też w podzbiorze okien FLAT, czyli w reżimie,
 o który Rafałowi chodzi. Do sprawdzenia na 31.08: wiersz recent90
 (czy ostatnie 90 dni zachowuje się inaczej niż całe okno).
+~16:3x — PYTANIE RAFAŁA „powinniśmy patrzeć wyłącznie na fee, bo
+ceny walut to loteria" → ROZKŁAD NA PRZYCHÓD I KOSZT (720d, $2500;
+IL wyliczone jako fee − koszty − vsHODL):
+| strategia | fee | koszty | IL | netto vs HODL |
+|---|---|---|---|---|
+| cbBTC Pasywny ±50% | $541 | $0 | $234 | **+$307** |
+| cbBTC FlatOnly ±5% | $2169 | $62 | $2097 | **+$10** |
+| base-030 Pasywny ±40% | $1354 | $0 | ~$0 | **+$1361** |
+| base-030 FlatOnly ±5% | $3147 | $242 | $2666 | **+$239** |
+Sam przychód (fee) mówi, że zwężanie wygrywa 4× i 2.3×. Po odjęciu
+IL zwężanie oddaje 97% i 92% tego przychodu — i to jest cała
+odpowiedź na pytanie o „patrzenie tylko na fee".
+ROZSTRZYGNIĘCIE POJĘCIOWE (do zapamiętania, bo wracało kilka razy):
+beta faktycznie jest loterią i trzeba ją usunąć — ale robi to
+porównanie DO HODL, a nie patrzenie na same fee. Fee to PRZYCHÓD,
+IL to KOSZT jego uzyskania; ocena po samym fee = ocena firmy po
+obrotach. IL nie jest przy tym loterią w tym samym sensie: przy tej
+samej ścieżce ceny wąskie pasmo MECHANICZNIE zamienia większą część
+ruchu w stratę — to własność strategii, nie los. Loteryjność
+pojedynczej ścieżki neutralizuje walkforward (46 okien, podział na
+reżimy), nie ignorowanie IL.
+WNIOSEK NARZĘDZIOWY: `flatwindows` raportuje wyłącznie fee (jawnie
+pomijając IL) — czyli mierzy przychód i nazywa go EV. Do przepisania
+albo do wycofania (31.08). `fullperiod` powinien dostać kolumnę IL
+liczoną wprost, żeby ten rozkład był widoczny od razu, a nie
+wyliczany ręcznie.
+~17:xx — **POMYSŁ RAFAŁA „a nie można dorzucić ETH?" → WARIANT BEZ
+SWAPU, PIERWSZE WYNIKI BARDZO DOBRE (ale z zastrzeżeniem).**
+Zamiast przestawiać posturę przez rynek (swap do 50/50 wokół ceny),
+przesuwamy ZAKRES tak, żeby żądane proporcje pokrywały się z tym, co
+mamy w portfelu — do zakresu jednostronnego włącznie (po wyprzedaniu
+ETH stawiamy pasmo z samych USDC poniżej ceny; rynek odkupi ETH i
+jeszcze zapłaci fee). Zaimplementowane jako `recenter:'noswap'`
+w `flatOnlyLP` (bisekcja po przesunięciu środka, szerokość bez zmian);
+silnik obsługiwał zakresy jednostronne od zawsze, więc koszt swapu
+przy takim przejściu wychodzi ~0.
+WYNIKI (365d, $2500, grid15) — wariant bez swapu vs ze swapem:
+· cbBTC: $1368 vs $1345 (vsHODL +$154 vs +$131) — NAJLEPSZY wiersz
+  całej tabeli, przy NIŻSZYCH fee ($514 vs $643) i in-range 74%
+  zamiast 100%. Czyli mniej zarabia, a ma więcej, bo nie księguje IL.
+· base-030: **$2428 vs $1869** (vsHODL +$613 vs +$55), maxDD −18.2%
+  zamiast −47.0%. Różnica $559 na $2500.
+ZASTRZEŻENIE, KTÓRE MUSI PÓJŚĆ RAZEM Z TYMI LICZBAMI: oba okna były
+SPADKOWE (−16.5% i −54.8%). Wariant bez swapu zmienia charakter
+strategii — po wypadnięciu górą siedzi w USDC i NIE odkupuje ETH,
+więc w rynku rosnącym przegapi ruch tak samo skutecznie, jak tu
+uniknął spadku. Innymi słowy: część tej przewagi to kierunek rynku,
+nie mechanika. Rozstrzyga bramka wielookienna z podziałem na reżimy —
+zlecona CC-Win razem z fullperiodem 720d.
+~18:xx — **ZEGAR FLATU SIĘ ZRESETOWAŁ (gap cbBTC wypadł poza próg),
+nowa stabilizacja od 18:55 → potwierdzenie ~06:49 jutro. DZIŚ NIE
+WCHODZIMY W WĄSKI ZAKRES.** Presja czasu zniknęła, wszystkie decyzje
+o szerokości przechodzą na przegląd 31.08.
+SWEEP SZEROKOŚCI POŚREDNICH (pytanie Rafała „a 30/20/10%? może zbiorą
+trochę fee przy mniejszym IL?"), 365d, $2500, kolumna IL liczona
+przez domknięcie (fee − koszty − vsHODL):
+· cbBTC (idle ±40%): vsHODL — ±5% +$131 · ±8% +$88 · **±10% +$68 ·
+  ±15% +$61 · ±20% +$58 · ±30% +$54** · pasywny bez zwężania +$84.
+· base-030 (idle ±50%): ±5% +$55 · ±8% +$31 · ±10% +$29 · ±15% +$21 ·
+  ±20% i ±30% +$18 · pasywny −$329.
+WNIOSEK ODWROTNY DO HIPOTEZY: szerokości pośrednie są NAJGORSZE.
+Na cbBTC krzywa jest w kształcie U — pasywny (+$84) bije wszystko
+z przedziału ±10–30% (+$54…+$68), a wygrywa dopiero ±5% (+$131).
+Powód widać w kolumnach: IL spada wraz z rozszerzaniem (±5% $497 →
+±30% $139), ale fee spada SZYBCIEJ ($643 → $198). Zwężenie pośrednie
+płaci pełną cenę przestawiania postury i nie dostaje w zamian
+gęstości płynności, która by to uzasadniła. Albo wąsko naprawdę,
+albo wcale.
+WARIANT BEZ SWAPU POPRAWIA KAŻDĄ SZEROKOŚĆ, i to mocno: na base-030
+±5% $1869 → $2416 (vsHODL +$55 → +$602), IL $1110 → $396; na cbBTC
++$131 → +$154. To najmocniejszy dotąd sygnał, że problemem nie jest
+sama szerokość, tylko SPOSÓB przestawiania postury.
 HIGIENA ZLECEŃ: CC-Win wyłapał sprzeczność w moich wpisach („Rafał
 podpisuje dziś" vs starsze „nic nie podpisuje") i ZGŁOSIŁ zamiast
 zgadywać — dokładnie to zachowanie, którego chcemy; wpis sprzeczny
