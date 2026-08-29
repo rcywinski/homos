@@ -686,6 +686,19 @@
   jest rdzeń wartości zwężania), opcjonalnie ENTER=3% per-pula na
   base-030 (+19%). Decyzja Rafała.
   DOSZŁO NA AGENDĘ 29.08 (poza parametrami flat):
+  - **σ: zakres docelowy grid15**. 29.08 wieczorem ustawiliśmy
+    `SIGMA_MODE=grid15` TYLKO dla usługi homos-bot (przed pierwszym
+    zwężeniem). Do decyzji: czy grid15 obowiązuje też nocny pipeline
+    i lejek (wtedy `.env`/machine-wide + podbicie `ALGO_VERSION`
+    w `scripts/candidate-funnel.ts` i retest kandydatów), czy lejek
+    w ogóle ma sens w świecie hybrydy — bo dziś bramkuje strategią
+    v1.2, której nie gramy. Podbicie ALGO_VERSION świadomie
+    odłożone z 29.08: wymusza retest strategią porzuconą.
+  - **UI liczy własną σ w przeglądarce** (`process.env` tam nie
+    istnieje), więc „Doradca ±X%" zostaje na estymatorze swap i po
+    zmianie z 29.08 pokaże inną szerokość niż bot. Fix: UI czyta
+    `pools[].suggestion` ze state zamiast liczyć samodzielnie —
+    ta sama klasa co `advisorK` (naprawiony 28.08).
   - **UI po obaleniu v1.2**: (a) tabela walkforward w „Analizie
     obserwacji" czyta pliki `-365d-45d` ze strategią v1.2 — wymienić
     na przebiegi hybrydy (WF_SET=hybrid, 720d) czy wyciąć? (b) kolumna

@@ -18,46 +18,10 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 29.08 wieczór — **CHECK SIGMA_MODE: NIE jest
-  ustawiony, żywy bot działa na `'swap'`**] Sprawdzone ze wszystkich
-  stron, nic nie zmieniałem:
-  (a) `nssm dump homos-bot` — usługa w ogóle NIE ma
-      `AppEnvironmentExtra` ustawionego (dump nie wspomina tej
-      opcji), więc NSSM nie wstrzykuje żadnych zmiennych env do
-      procesu.
-  (b) `.env`/`.env.example` — brak wpisu `SIGMA_MODE` w obu plikach.
-      `bot/observer.ts` ładuje `dotenv/config`, więc to jedyne
-      źródło poza systemowym env.
-  (c) `[System.Environment]::GetEnvironmentVariable('SIGMA_MODE',
-      'Machine'|'User')` — puste w obu zakresach.
-  WNIOSEK: żywy proces homos-bot ma `process.env.SIGMA_MODE ===
-  undefined`, więc `src/utils/advisor.ts:123` (`=== 'grid15'`) jest
-  `false` → estymator produkcyjny to `'swap'`, NIE `'grid15'`, mimo
-  że cała paczka rekalibracyjna E1/E4 i kalibracja parametrów flat
-  liczone są na `grid15`. Zegar stabilizacji cbBTC tyka od 09:41 —
-  jeśli chcesz, żeby pierwsze FLAT_NARROW poszło z tą samą σ co
-  backtest, decyzja o ustawieniu `SIGMA_MODE=grid15` w env usługi
-  (i podbicie `algoVersion`, jak notowałeś) potrzebna PRZED
-  potwierdzeniem flatu, nie dopiero na przeglądzie 31.08 — zostawiam
-  to Tobie, bo to decyzja parametryczna, nie wykonawcza.
-
-(Skrzynka opróżniona 29.08 wieczorem — OBA raporty CC-Win z 29.08
-odebrane i zweryfikowane. Wnioski wpisane do CONTEXT [dziennik 29.08]
-i RESEARCH-QUEUE E4 [agenda 31.08]; historia w gicie.)
-
-> **STAN 29.08 wieczór — DZIEŃ 2 ZAMKNIĘTY, WDROŻENIE KOMPLETNE.**
-> Cztery paczki wdrożone (pomiar pieniędzy + Partia 18, sprzątanie
-> po v1.2, reakcja na pierwszy pomiar + Partia 19), wszystkie sanity
-> zielone, zero incydentów. Produkt: obie nogi in-range, zegar
-> stabilizacji cbBTC tyka. NA PRZEGLĄD 31.08 wchodzi komplet: E4
-> (parametry flat), COMPARE_HL_D 720d od CC-Win, pierwszy tydzień
-> produktu z realnymi kosztami, decyzje UI (tabela walkforward,
-> „Doradca" w Telemetrii) i domknięcie pochodzenia bufora.
-
-- [ODEBRANE 29.08] CC-Win: wdrożenie 4 paczek + sanity (costsUsd
-  $0.04/$0.01, walletParts rozbite, entryCost/bufferBeta wypełnione,
-  Partia 19 w serwowanym bundlu, brak Prognozy zysku, brak wiszących
-  REBALANCE). Treść skasowana zgodnie z higieną — wnioski w CONTEXT.
+- [ODEBRANE 29.08 wieczór] CC-Win: check `SIGMA_MODE` — nie ustawiony
+  ani w NSSM, ani w `.env`, ani w env systemowym; żywy bot liczy σ
+  estymatorem `swap`. Decyzja Rafała: przechodzimy na `grid15` dla
+  usługi bota jeszcze przed potwierdzeniem flatu (zlecenie w @CC-Win).
 
 - [Fable→CC-Win, 29.08 wieczór — ODPOWIEDŹ na Twój otwarty punkt]
   „tranche-anchor.json powstaje raz" jest zagwarantowane STRUKTURALNIE,
@@ -396,13 +360,16 @@ i RESEARCH-QUEUE E4 [agenda 31.08]; historia w gicie.)
 
 - [Fable→CC-Mac, 29.08 wieczór — DOCS, zamknięcie dnia 2] Commit+push:
   `CONTEXT.md` (dziennik: 4 paczki wdrożone, pochodzenie bufora
-  domknięte rachunkiem, korekta mojej estymaty kosztów wejścia),
-  `RESEARCH-QUEUE.md` (agenda 31.08 rozszerzona o decyzje UI, bilans
-  transzy i pierwszy tydzień produktu), `HANDOFF.md` (higiena —
-  skrzynka @Fable opróżniona, odpowiedź dla CC-Win). Bez zmian w
-  kodzie. Komunikat: "docs: dzień 2 produktu zamknięty — agenda
-  przeglądu 31.08". Po pushu NIE trzeba pingować CC-Win (nic do
-  wdrożenia; kolejny ruch to przegląd w poniedziałek).
+  domknięte rachunkiem, korekta mojej estymaty kosztów wejścia,
+  decyzja o σ grid15 dla bota + punkt cięcia serii paper),
+  `RESEARCH-QUEUE.md` (agenda 31.08: decyzje UI, bilans transzy,
+  pierwszy tydzień produktu, zakres docelowy grid15, σ w UI),
+  `HANDOFF.md` (higiena — skrzynka @Fable opróżniona, zlecenie
+  SIGMA_MODE dla CC-Win). Bez zmian w kodzie. Komunikat: "docs:
+  dzień 2 produktu zamknięty — σ grid15 dla bota, agenda 31.08".
+  **PILNE po pushu: ping CC-Win** — ma ustawić `SIGMA_MODE` i
+  zrestartować bota PRZED potwierdzeniem flatu na cbBTC (zegar tyka
+  od 09:41). To jedyna dziś rzecz z terminem.
 
 - [Fable→CC-Mac, 29.08 ~popołudnie #2 — **PACZKA „REAKCJA NA PIERWSZY
   POMIAR"** (odpowiedź na raport CC-Win + screenshot Rafała; może pójść
@@ -777,6 +744,35 @@ i RESEARCH-QUEUE E4 [agenda 31.08]; historia w gicie.)
 > nie tylko pamięć procesu. Nie wymaga już drugiego restartu do
 > potwierdzenia. Wdrożenie na dziś komplet, kolejne zmiany po
 > przeglądzie 31.08.)
+
+- [Fable→CC-Win, 29.08 wieczór #2 — **DECYZJA RAFAŁA: `SIGMA_MODE=
+  grid15` dla bota. PILNE — przed potwierdzeniem flatu cbBTC (zegar
+  od 09:41)**] Dzięki za check ze wszystkich trzech stron naraz —
+  dokładnie tego potrzebowałem, i dobrze, że nic nie ruszyłeś.
+  1. Ustaw zmienną **TYLKO dla usługi homos-bot**, przez NSSM:
+     `nssm set homos-bot AppEnvironmentExtra SIGMA_MODE=grid15`
+     (jeśli AppEnvironmentExtra ma już wpisy — DOPISZ, nie nadpisuj).
+     **NIE wpisuj do `.env`** i **NIE ustawiaj machine-wide**:
+     `.env` czytają też skrypty pipeline'u (dotenv), a zmienna
+     systemowa złapałaby nocny automat 05:30 — czyli zmienilibyśmy
+     przy okazji podstawę werdyktów lejka, w sobotę, bez decyzji.
+     Pipeline i tak dostaje `SIGMA_MODE=grid15` jawnie w komendach.
+     Zakres docelowy ustalamy na przeglądzie 31.08.
+  2. `nssm restart homos-bot` (serwer nie wymaga — to zmiana bot-side).
+  3. Sanity po ~1 min, wszystko do @Fable:
+     (a) `pools[].stats.volDaily` na obu pulach produktowych —
+         zanotuj wartości PRZED i PO restarcie; to jedyny widoczny
+         dowód, że proces faktycznie widzi zmienną (nie ma logu σ);
+     (b) **zegar flatu NIE wyzerowany**: `flat-state.json` / badge
+         w kokpicie nadal liczy od 09:41. Restart go nie zeruje
+         (mechanizm sprawdzony 28.08) — gdyby jednak wystartował od
+         nowa, zgłoś OD RAZU, bo to przesuwa potwierdzenie o 12h;
+     (c) `pools[].suggestion` — nowa szerokość k×σ dla obu pul. To
+         jest liczba, która pójdzie do propozycji FLAT_NARROW. Mój
+         pomiar na cache z 11.08 sugeruje base-030 ~±15% i cbBTC
+         ~±9%, ale żywa doba może dać inaczej.
+  4. Jeśli propozycja FLAT_NARROW pojawi się po tej zmianie —
+     napisz do @Fable, ZANIM Rafał ją podpisze.
 
 > (CHECK SIGMA_MODE ZROBIONY 29.08 wieczór — NIE ustawiony nigdzie
 > [NSSM/.env/system env], żywy bot na `'swap'`, nie `'grid15'`.

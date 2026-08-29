@@ -252,6 +252,31 @@ są `grid15` — jeśli usługa nie ma tej zmiennej w env, pierwsze
 zwężenie pójdzie inną σ niż backtest, który je uzasadnił (na tej
 próbce 3.4 p.p. różnicy na base-030). Nie zmieniamy tego sami:
 przełączenie idzie w parze z podbiciem algoVersion, decyzja przeglądu.
+~wieczór #3 — DECYZJA: **σ produkcyjna przechodzi na grid15** (przed
+pierwszym zwężeniem, nie na przeglądzie). CC-Win potwierdził trzema
+niezależnymi sprawdzeniami (NSSM dump, `.env`, env systemowy), że
+`SIGMA_MODE` nie był ustawiony NIGDZIE — żywy bot liczył σ
+estymatorem `swap`, mimo że kalibracja k, progi flatu i EV zwężania
+z E1/E4 pochodzą z `grid15`. Decyzja Rafała: ustawiamy grid15 teraz,
+żeby pierwsze FLAT_NARROW poszło tą samą σ, która to zwężanie
+uzasadniła. ZAKRES CELOWO WĄSKI: zmienna idzie tylko do env usługi
+homos-bot (NSSM), NIE do `.env` ani machine-wide — inaczej złapałby
+ją nocny pipeline i zmienilibyśmy przy okazji podstawę werdyktów
+lejka, w sobotę, bez decyzji. PUNKT CIĘCIA SERII: od tego restartu
+paper trading i „Doradca" po stronie bota liczą inną σ niż wcześniej —
+porównania sprzed 29.08 wieczorem nie są ciągłe.
+ALGO_VERSION (`scripts/candidate-funnel.ts`, dziś 'v1.2') ŚWIADOMIE
+NIE PODBITY DZIŚ: podbicie unieważnia werdykty lejka i wymusza retest
+wszystkich kandydatów — ale strategią v1.2, czyli tą, którą już
+porzuciliśmy. Robienie tego dziś to godziny liczenia dla wyniku,
+który i tak trafi do kosza. Podbicie razem z decyzją „co robi lejek
+w świecie hybrydy" — agenda 31.08.
+ZNALEZIONE PRZY OKAZJI (na 31.08): UI liczy σ w PRZEGLĄDARCE, gdzie
+`process.env` nie istnieje, więc „Doradca ±X%" zostaje na estymatorze
+swap niezależnie od env usługi — po dzisiejszej zmianie kokpit i bot
+pokażą różne szerokości. To ta sama klasa rozjazdu co `advisorK`
+naprawiony 28.08; właściwy fix: UI ma pokazywać `pools[].suggestion`
+z bot state, a nie liczyć własną.
 TERMIN PRZEGLĄDU: **poniedziałek 31.08** (decyzja Rafała — wcześniejsze
 „1.09" było pomyłką kalendarzową, 1.09.2026 to wtorek); zlecenie CC-Win
 COMPARE_HL_D 720d na ten sam poranek. Poprawione w HANDOFF i
