@@ -82,13 +82,23 @@ export const flatOnlyLP = (opts: {
   idle?: 'quote' | 'hodl' | 'passive';
   /** szerokość pasywnego LP dla idle:'passive' (default 0.4 = ±40%) */
   passiveWidth?: number;
+  /** STAŁA szerokość WĄSKIEJ nogi we flacie (29.08). Bez tego wąskie
+   *  pasmo liczy się jako k×σ×√horizonDays — formuła doradcy v1.2,
+   *  którą produkt PORZUCIŁ (dawała ±16–19% przy progu wyjścia 5%,
+   *  czyli płynność poza zasięgiem sygnału FLAT_WIDEN). Produkcja gra
+   *  stałą szerokość = FLAT.exitGap (±5%), więc backtest musi umieć
+   *  liczyć to samo — inaczej walkforward i fullperiod mierzą inny
+   *  produkt niż ten, którym gramy (rozjazd wykryty 29.08). */
+  narrowWidth?: number;
 }): Strategy => {
   let ema: number | null = null;
   let lastTs: number | null = null;
   let flatSince: number | null = null;
   let outSince: number | null = null;
   const tau = (opts.trendHLDays * 86400) / Math.LN2;
+  // szerokość WĄSKIEJ nogi: stała z produktu, gdy podana; inaczej k×σ×√h
   const width = (ctx: Ctx) =>
+    opts.narrowWidth ??
     Math.min(Math.max(opts.k * ctx.volDaily * Math.sqrt(opts.horizonDays), opts.minWidth ?? 0.01), opts.maxWidth ?? 0.6);
   const halfGas = (ctx: Ctx) => {
     const { px0, px1 } = unitPrices(ctx.ev.sqrtP, ctx.spec);
@@ -115,7 +125,7 @@ export const flatOnlyLP = (opts: {
   let inFlat = false; // dla idle:'passive' — czy obecna pozycja to WĄSKI LP
   const idleName = idleMode === 'quote' ? 'cash' : idleMode === 'hodl' ? 'HODL50/50' : `±${(pw * 100).toFixed(0)}%`;
   return {
-    name: `FlatOnly k=${opts.k} |gap|<${(opts.enterThresh * 100).toFixed(0)}%/${(opts.confirmSec / 3600).toFixed(0)}h→LP, >${(opts.exitThresh * 100).toFixed(0)}%→${idleName} (HL${opts.trendHLDays}d)`,
+    name: `FlatOnly ${opts.narrowWidth ? `wąski ±${(opts.narrowWidth * 100).toFixed(0)}%` : `k=${opts.k}`} |gap|<${(opts.enterThresh * 100).toFixed(0)}%/${(opts.confirmSec / 3600).toFixed(0)}h→LP, >${(opts.exitThresh * 100).toFixed(0)}%→${idleName} (HL${opts.trendHLDays}d)`,
     init: (ctx) => {
       if (passive) {
         ctx.openPosition(...rangeAround(ctx, pw)); // idle = szeroki pasywny LP

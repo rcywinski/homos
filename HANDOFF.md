@@ -24,6 +24,44 @@
   Kryteria odwołania podpisu NIE spełnione. Liczby przepisane do
   CONTEXT i RESEARCH-QUEUE E4 — treść raportu skasowana (higiena).
 
+- [Fable→CC-Win, 29.08 ~13:3x — **PEŁNOOKRESOWE $2500/720d PRODUKTU
+  (pytanie Rafała: „wchodzę $2500 dwa lata temu — ile wychodzi po
+  720 dniach?"). Po pullu paczki „produkt w backteście"**]
+  To jest test KOMPLEMENTARNY do sweepu, który zrobiłeś: sweep mierzy
+  EV pojedynczych epizodów, a to mierzy pełny cykl życia kapitału —
+  wejście, zbieranie fee, reinwestycję przy każdej zmianie postury,
+  wypadanie z zakresu, koszty, procent składany.
+  1. `FP_SET=product SIGMA_MODE=grid15 NODE_OPTIONS=--max-old-space-size=12288
+     npx tsx backtest/fullperiod.ts base-cbbtc-weth-005-720d 2500`
+  2. to samo dla `base-weth-usdc-030-720d 2500`.
+  Całą tabelę (12 wierszy + wiersz USDC) wklej do @Fable.
+  ODNIESIENIE — moje przebiegi na 365d (cache 11.08, $2500):
+  cbBTC ±4% $1364 / ±5% $1345 / cash $1322 / ±8% $1302 / pasywny±40
+  $1297 / k×σ $1275 / HODL $1213; base-030 (idle ±50) ±5% $1869 /
+  ±4% $1867 / k×σ $1855 / ±8% $1846 / HODL $1815 / pasywny±50 $1486.
+  Czyli na PEŁNYM oknie ±5% jest w czołówce na obu pulach — ale na
+  podoknie 120d kolejność się odwracała (zwężanie przegrywało
+  z pasywnym o ~$118), więc wynik jest zależny od reżimu i JEDNEJ
+  daty wejścia. Dlatego punkt 3:
+  3. **BRAMKA WIELOOKIENNA — DECYZJA RAFAŁA 29.08: PUSZCZAMY DZIŚ,
+     nie w poniedziałek.** Po punktach 1–2:
+     `WF_SET=product SIGMA_MODE=grid15
+     NODE_OPTIONS=--max-old-space-size=12288
+     npx tsx backtest/walkforward.ts <id> 30 15`
+     najpierw `base-cbbtc-weth-005-720d`, potem
+     `base-weth-usdc-030-720d`. To 9 strategii × 46 okien, więc licz
+     się z godziną+ na pulę — może iść w nocy.
+     ZASADY jak zawsze: jeden ciężki proces naraz, NIE kolidować
+     z automatem 05:30–08:25 (jak wejdziesz w to okno, wstrzymaj się
+     do końca pipeline'u), raporty parami (global + reżimy + recent90),
+     `commit results`.
+     KRYTERIUM ODCZYTU: porównujemy WIERSZE MIĘDZY SOBĄ — czy hybryda
+     ±5% bije hybrydę k×σ (produkt sprzed 29.08) i pasywny szeroki
+     na %wygranych vs HODL, średniej i ogonie (worst). Bramka „≥2
+     reżimy" jak zawsze, ale tym razem nie szukamy przejścia bramki —
+     szukamy ODPOWIEDZI, czy zwężanie ±5% jest lepsze czy gorsze od
+     tego, czym graliśmy do dziś rano.
+
 - [Fable→CC-Win, 29.08 ~13:xx — **ZIELONE ŚWIATŁO, ostatni krok na
   dziś**] Sweep 720d zamyka temat szerokości: zostajemy przy ±5%,
   bez zmian w kodzie. Świetna robota — zwłaszcza że policzyłeś to
@@ -410,6 +448,24 @@
   FLAT_NARROW. Jeśli paczki tam nie będzie, przyjdzie ona ze starą
   formułą (±16% zamiast ±6%). NATYCHMIAST po pushu ping CC-Win —
   wdrożenie to sam `nssm restart homos-bot`, bez builda.
+
+- [Fable→CC-Mac, 29.08 ~13:xx — **PACZKA „PRODUKT W BACKTEŚCIE"**]
+  Commit+push: `backtest/strategies.ts` (nowa opcja `narrowWidth`
+  w `flatOnlyLP` — stała szerokość wąskiej nogi zamiast k×σ×√7;
+  nazwa strategii pokazuje szerokość), `backtest/fullperiod.ts`
+  (`FP_SET=product` — 12 wariantów: hodl/cash/passiveW ±40/±50 +
+  hybryda ±4/±5/±8% × idle ±40/±50 + k×σ jako referencja sprzed
+  29.08), `backtest/walkforward.ts` (`WF_SET=product` — ten sam
+  zestaw pod bramkę wielookienną), `CONTEXT.md`, `RESEARCH-QUEUE.md`,
+  `HANDOFF.md`. tsc czysty (poza preexisting observer:43).
+  Smoke Fable (kontener, transpilacja tsc→node, cache 365d,
+  SIGMA_MODE=grid15, $2500): przebiegi przechodzą, wyniki w CONTEXT.
+  Komunikat: "feat(backtest): fixed narrow width in flatOnlyLP +
+  product sets (FP_SET/WF_SET=product)".
+  **PILNE po pushu: ping CC-Win** — decyzja Rafała 29.08: pełen
+  zestaw przebiegów (fullperiod 720d + bramka WF_SET=product) idzie
+  DZIŚ/W NOCY, nie w poniedziałek. Bez tego pusha CC-Win nie ma
+  `WF_SET=product` ani `narrowWidth`, więc to on jest wąskim gardłem.
 
 - [Fable→CC-Mac, 29.08 wieczór — DOCS, zamknięcie dnia 2] Commit+push:
   `CONTEXT.md` (dziennik: 4 paczki wdrożone, pochodzenie bufora

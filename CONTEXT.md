@@ -378,6 +378,38 @@ kosztem ~5 p.p. udziału czasu w zakresie — świadomie NIE zmieniam
 tego dziś: pierwsze zwężenie w historii produktu jest też testem
 mechanizmu (podpis, modal, wykrycie postury, auto-dismiss), więc
 chcę je mieć w warunkach jak najczystszych. Kandydat ±4% na 31.08.
+~13:xx — **PYTANIE RAFAŁA O TEST PEŁNOOKRESOWY** („cofamy się dwa lata,
+wchodzimy $2500, zbieranie i reinwestycja fee, wypadanie z zakresu,
+ile na wyjściu po 720 dniach") — trafione w brakujące ogniwo. Taki
+test MAMY (`fullperiod.ts`, silnik reinwestuje nieodebrane fee przy
+każdej zmianie postury i liczy koszty swapu+gazu), ale symulował
+produkt sprzed 29.08. DOBUDOWANE: opcja `narrowWidth` w `flatOnlyLP`
+(stała szerokość wąskiej nogi zamiast k×σ×√7) + zestawy
+`FP_SET=product` i `WF_SET=product`. Dzięki temu wszystkie trzy
+narzędzia liczą wreszcie TEN SAM produkt.
+WYNIKI (365d, cache 11.08, $2500, SIGMA_MODE=grid15):
+· cbBTC (cena −16.5%): ±4% $1364 · **±5% $1345** · cash $1322 ·
+  ±8% $1302 · pasywny±40 $1297 · k×σ $1275 · HODL $1213 · USDC $2500
+· base-030 (cena −54.8%, idle ±50): **±5% $1869** · ±4% $1867 ·
+  k×σ $1855 · ±8% $1846 · HODL $1815 · pasywny±50 $1486 · USDC $2500
+Czyli na pełnym oknie ±5% jest w czołówce na OBU pulach i bije
+produkt sprzed 29.08 (k×σ) o $70 i $14, a pasywny szeroki o $48
+i $383. Fee przy ±5%: $643 (cbBTC) i $1259 (base-030) na $2500 —
+4× więcej niż pasywny szeroki, przy 30/47 rebalansach i kosztach
+$15/$94. In-range 98–100%.
+ALE — i to jest ważniejsze niż same liczby — na PODOKNIE 120d
+kolejność się odwraca: zwężanie przegrywa z pasywnym szerokim o ~$118
+mimo 4× większych fee. Czyli wynik zależy od reżimu i od JEDNEJ daty
+wejścia. Właściwym testem jest więc bramka wielookienna
+(`WF_SET=product`, 46 momentów wejścia) — decyzją Rafała zlecona
+DZIŚ/NA NOC, nie na poniedziałek, razem z fullperiodem 720d. Czyli
+na przegląd 31.08 wejdziemy z kompletem: sweep EV, pełne okno
+i bramka — wszystko policzone na tej samej szerokości ±5%. Do tego czasu ±5% zostaje decyzją
+opartą na: sweepie EV (365d+720d), pełnym oknie 365d (obie pule)
+i spójności z progiem wyjścia — ale NIE na bramce.
+STAŁA PRAWDA, która nie drgnęła: we wszystkich wariantach 100% USDC
+wygrywa (+$1287 i +$685 vs najlepsza strategia LP). Beta dominuje,
+hybryda to „HODL z yieldem", nie maszynka do alfy.
 HIGIENA ZLECEŃ: CC-Win wyłapał sprzeczność w moich wpisach („Rafał
 podpisuje dziś" vs starsze „nic nie podpisuje") i ZGŁOSIŁ zamiast
 zgadywać — dokładnie to zachowanie, którego chcemy; wpis sprzeczny

@@ -90,8 +90,35 @@ const hybridSet: Strategy[] = [
   flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600, idle: 'passive', passiveWidth: 0.4 }),
   flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600, idle: 'passive', passiveWidth: 0.5 }),
 ];
+// FP_SET=product (29.08, pytanie Rafała „wchodzę $2500 dwa lata temu — ile
+// wychodzi po 720 dniach?"): dokładnie ten produkt, którym gramy na żywo,
+// czyli hybryda FlatWide ze STAŁĄ szerokością wąskiej nogi (±5% = próg
+// wyjścia), a nie k×σ×√7 z doradcy v1.2. Warianty ±4/±5/±8% pokazują koszt
+// i zysk zmiany tego jednego parametru, `k×σ` = produkt sprzed 29.08 (ten,
+// który przeszedł walkforward — stąd jest w zestawie: chcemy widzieć,
+// czy zmiana szerokości nie psuje wyniku PEŁNOOKRESOWEGO, nie tylko EV
+// epizodów). Obie szerokości idle (±40 cbBTC / ±50 base-030) w jednym
+// zestawie — czytaj wiersz pasujący do puli.
+const productBase = { horizonDays: 7, trendHLDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600, idle: 'passive' as const };
+const productSet: Strategy[] = [
+  hodl5050,
+  cash100,
+  passiveW(0.4),
+  passiveW(0.5),
+  flatOnlyLP({ ...productBase, passiveWidth: 0.4, narrowWidth: 0.05 }),
+  flatOnlyLP({ ...productBase, passiveWidth: 0.5, narrowWidth: 0.05 }),
+  flatOnlyLP({ ...productBase, passiveWidth: 0.4, narrowWidth: 0.04 }),
+  flatOnlyLP({ ...productBase, passiveWidth: 0.5, narrowWidth: 0.04 }),
+  flatOnlyLP({ ...productBase, passiveWidth: 0.4, narrowWidth: 0.08 }),
+  flatOnlyLP({ ...productBase, passiveWidth: 0.5, narrowWidth: 0.08 }),
+  flatOnlyLP({ ...productBase, passiveWidth: 0.4 }), // k×σ×√7 — produkt sprzed 29.08
+  flatOnlyLP({ ...productBase, passiveWidth: 0.5 }),
+];
 const strategies: Strategy[] =
-  process.env.FP_SET === 'final' ? finalSet : process.env.FP_SET === 'hybrid' ? hybridSet : recalSet;
+  process.env.FP_SET === 'final' ? finalSet
+    : process.env.FP_SET === 'hybrid' ? hybridSet
+    : process.env.FP_SET === 'product' ? productSet
+    : recalSet;
 
 console.log(
   `${id}: ${swaps.length} swapów, ${days.toFixed(0)} dni · start $${startUsd} · ` +

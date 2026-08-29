@@ -206,9 +206,31 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600, idle: 'passive', passiveWidth: 0.5 }),
     ];
   };
+  // WF_SET=product (29.08): bramka wielookienna dla produktu, którym GRAMY —
+  // hybryda ze STAŁĄ szerokością wąskiej nogi (±5% = próg wyjścia), a nie
+  // k×σ×√7 z doradcy v1.2. Do 29.08 walkforward i produkt liczyły różne
+  // szerokości; ten zestaw domyka rozjazd. Warianty ±4/±5/±8% + referencja
+  // k×σ pokazują, czy zmiana szerokości przechodzi bramkę, a nie tylko
+  // poprawia EV epizodów (flatwindows) i wynik jednego okna (fullperiod).
+  const mkProduct = (): Strategy[] => {
+    const base = { horizonDays: 7, trendHLDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600, idle: 'passive' as const };
+    return [
+      hodl5050,
+      passiveW(0.4),
+      passiveW(0.5),
+      flatOnlyLP({ ...base, passiveWidth: 0.4, narrowWidth: 0.05 }),
+      flatOnlyLP({ ...base, passiveWidth: 0.5, narrowWidth: 0.05 }),
+      flatOnlyLP({ ...base, passiveWidth: 0.4, narrowWidth: 0.04 }),
+      flatOnlyLP({ ...base, passiveWidth: 0.5, narrowWidth: 0.04 }),
+      flatOnlyLP({ ...base, passiveWidth: 0.4, narrowWidth: 0.08 }),
+      flatOnlyLP({ ...base, passiveWidth: 0.4 }), // k×σ×√7 — produkt sprzed 29.08
+    ];
+  };
   const mkStrategies = (): Strategy[] =>
     process.env.WF_SET === 'hedge'
       ? mkHedge()
+      : process.env.WF_SET === 'product'
+      ? mkProduct()
       : process.env.WF_SET === 'hybrid'
       ? mkHybrid()
       : process.env.WF_SET === 'final'
