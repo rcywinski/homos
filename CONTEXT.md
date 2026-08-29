@@ -359,6 +359,25 @@ dłuższym oknie"; po podpisie ta wiedza jest warta dużo mniej.
 Kryterium odwołania podpisu podane CC-Winowi wprost: ΣEV przy ±5%
 nie wyraźnie wyższe niż przy ±8%, albo in-range poniżej ~80%.
 Walkforward hybrydy o tej szerokości — nadal na poniedziałek.
+**SWEEP 720d ODEBRANY PRZED DEADLINE'EM — ±5% POTWIERDZONE.**
+CC-Win policzył 8 przebiegów na świeżych 720d (z bullem):
+cbBTC (32 epizody, med 7.7d, 50.2% czasu we flat): ±4% $827 /
+±5% $623 / ±6% $452 / ±8% $223, in-range odpowiednio 92.8 / 97.7 /
+98.8 / 99.9%. base-030 (45 epizodów, med 2.4d): ±4% $1123 / ±5% $847
+/ ±6% $620 / ±8% $297, in-range 92.5 / 97.6 / 99.4 / 100%.
+WNIOSKI: (1) kierunek IDENTYCZNY jak na 365d — ΣEV rośnie
+monotonicznie w stronę węższych pasm, bez wewnętrznego maksimum
+w zakresie 4–8%; ograniczeniem jest wypadanie z zakresu, nie EV;
+(2) przewaga ±5% nad ±8% jest na 720d jeszcze WYRAŹNIEJSZA niż na
+365d (2.8× i 2.9× zamiast 2.3× i 2.7×) — czyli okno z bullem NIE
+obala wyniku, wzmacnia go; (3) próg opłacalności epizodu na cbBTC
+spada do 1.6 dnia przy medianie epizodu 7.7d — z ogromnym zapasem.
+KRYTERIA ODWOŁANIA PODPISU NIE SPEŁNIONE → zielone światło na
+dzisiejsze zwężenie przy ±5%. ±4% dałoby jeszcze ~33% więcej EV
+kosztem ~5 p.p. udziału czasu w zakresie — świadomie NIE zmieniam
+tego dziś: pierwsze zwężenie w historii produktu jest też testem
+mechanizmu (podpis, modal, wykrycie postury, auto-dismiss), więc
+chcę je mieć w warunkach jak najczystszych. Kandydat ±4% na 31.08.
 HIGIENA ZLECEŃ: CC-Win wyłapał sprzeczność w moich wpisach („Rafał
 podpisuje dziś" vs starsze „nic nie podpisuje") i ZGŁOSIŁ zamiast
 zgadywać — dokładnie to zachowanie, którego chcemy; wpis sprzeczny

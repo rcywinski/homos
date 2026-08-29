@@ -707,15 +707,26 @@
     **ROZSTRZYGNIĘTE CZĘŚCIOWO 29.08 wieczorem** (uwaga Rafała:
     „gap 2%, wyjście 5%, a zakres 11%+ — to się nie trzyma kupy").
     Produkt NIE używa już k×σ×√7 do zwężania: nowe pole
-    `productNarrowWidthPct` (base-030 8%, cbBTC 6%), bo pasmo szersze
-    niż próg wyjścia to płynność, do której cena nie dojdzie —
-    FLAT_WIDEN pada wcześniej (przy ±16% już po 32% drogi do
-    krawędzi). Liczby E4 przenoszą się teraz 1:1. ZOSTAJE DO
-    ROZSTRZYGNIĘCIA: czy 6/8% to dobre wartości — sweep NARROW
-    0.04–0.12 na obu pulach zlecony CC-Win. Jeśli optimum wypada
-    poniżej progu wyjścia 5%, trzeba będzie związać obie liczby
-    jedną regułą (np. narrow = α × exitGap), żeby nie rozjechały
-    się znowu przy następnej zmianie progu.
+    `productNarrowWidthPct`, bo pasmo szersze niż próg wyjścia to
+    płynność, do której cena nie dojdzie — FLAT_WIDEN pada wcześniej
+    (przy ±16% już po 32% drogi do krawędzi).
+    **SZEROKOŚĆ ROZSTRZYGNIĘTA EMPIRYCZNIE 29.08: ±5% NA OBU PULACH**
+    (= FLAT.exitGap, czyli jedna reguła α=1.0 zamiast dwóch liczb
+    z env). Sweep: 365d (Fable) + 720d (CC-Win, 8 przebiegów).
+    ΣEV zwężania na 720d — cbBTC (32 epiz., med 7.7d): ±4% $827 /
+    ±5% $623 / ±6% $452 / ±8% $223, in-range 92.8 / 97.7 / 98.8 /
+    99.9%; base-030 (45 epiz., med 2.4d): ±4% $1123 / ±5% $847 /
+    ±6% $620 / ±8% $297, in-range 92.5 / 97.6 / 99.4 / 100%.
+    ΣEV rośnie MONOTONICZNIE w stronę węższych pasm (brak maksimum
+    w 4–8%) — ogranicza nas wypadanie z zakresu, nie EV. Okno
+    z bullem nie obala wyniku, wzmacnia: przewaga ±5% nad ±8%
+    rośnie z 2.3–2.7× (365d) do 2.8–2.9× (720d). Próg opłacalności
+    epizodu na cbBTC: 1.6 dnia przy medianie 7.7d.
+    ZOSTAJE NA 31.08: (a) czy zejść do ±4% (+33% EV, −5 p.p.
+    in-range) — nie ruszone przed pierwszym zwężeniem, żeby test
+    mechanizmu odbył się w czystych warunkach; (b) walkforward
+    hybrydy z TĄ szerokością (niżej) — sweep mierzy EV epizodów,
+    nie wynik całych okien.
     **⚠️ ZNALEZIONE PRZY TEJ ZMIANIE — NAJWAŻNIEJSZE NA 31.08:
     dwa nasze narzędzia mierzyły DWA RÓŻNE produkty.**
     `walkforward` z `WF_SET=hybrid` (przebieg, na podstawie którego
