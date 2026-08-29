@@ -745,10 +745,15 @@ i RESEARCH-QUEUE E4 [agenda 31.08]; historia w gicie.)
 
 > (Paczka "reakcja na pierwszy pomiar" + "sprzątanie po v1.2"
 > ZROBIONE RAZEM 29.08 — build+oba restarty+wszystkie sanity ZIELONE,
-> pełny raport w skrzynce @Fable powyżej. Jedyny otwarty punkt:
-> "tranche-anchor.json powstaje raz" zweryfikowane tylko przy TYM
-> restarcie — potwierdzić definitywnie przy następnym. Wdrożenie na
-> dziś komplet, kolejne zmiany po przeglądzie 31.08.)
+> pełny raport w skrzynce @Fable powyżej. DOMKNIĘTE 29.08 popołudnie:
+> "tranche-anchor.json powstaje raz" potwierdzone w kodzie (nie tylko
+> obserwacją) — observer.ts:889 wczytuje plik do `trancheAnchor` PRZY
+> STARCIE procesu (jeśli istnieje), a zapis jest gated `!trancheAnchor`
+> (observer.ts:1122), więc po restarcie z istniejącym plikiem warunek
+> jest od razu fałszywy i zapis się nie powtarza — mechanizm trwały,
+> nie tylko pamięć procesu. Nie wymaga już drugiego restartu do
+> potwierdzenia. Wdrożenie na dziś komplet, kolejne zmiany po
+> przeglądzie 31.08.)
 
 - [Fable→CC-Win, 28.08 ~wieczór, TERMIN POPRAWIONY 29.08 — **NA
   PONIEDZIAŁEK 31.08 RANO (przed przeglądem; decyzja Rafała: NIE robić
