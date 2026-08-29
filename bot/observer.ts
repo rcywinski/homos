@@ -645,9 +645,21 @@ function proposeFlatNarrow(pool: BotPool, pos: WatchedPosition) {
   const lv = live[pool.id];
   if (!st?.confirmed || !lv?.stats) return;
   if (proposals.some((x) => x.kind === 'FLAT_NARROW' && x.tokenId === pos.tokenId && x.status === 'open')) return;
-  const sug = suggestRange(lv.stats, pool.feeBps as any, pool.d0, pool.d1, {
-    ...ADVISOR_PARAMS, k: pool.advisorK ?? ADVISOR_PARAMS.k,
-  });
+  // SZEROKOŚĆ ZWĘŻENIA (zmiana 29.08, uwaga Rafała): stała szerokość
+  // produktu zamiast k×σ×√7 z doradcy v1.2. Powód: horyzont 7 dni
+  // pochodzi ze strategii „zakres ma przeżyć tydzień bez rebalansu",
+  // a w hybrydzie pozycję i tak chroni FLAT_WIDEN przy |gap|>exitGap.
+  // Przy k×σ (dziś ±16%) sygnał wyjścia padał po 32% drogi do krawędzi
+  // pasma — dwie trzecie płynności leżałoby tam, gdzie cena nigdy nie
+  // dojdzie. Fallback na k×σ zostaje dla pul bez ustawionej szerokości.
+  const sug = pool.productNarrowWidthPct
+    ? suggestFixedRange(lv.stats, pool.feeBps as any, pool.d0, pool.d1, pool.productNarrowWidthPct)
+    : suggestRange(lv.stats, pool.feeBps as any, pool.d0, pool.d1, {
+        ...ADVISOR_PARAMS, k: pool.advisorK ?? ADVISOR_PARAMS.k,
+      });
+  const zrodloSzerokosci = pool.productNarrowWidthPct
+    ? `stała szerokość produktu ±${pool.productNarrowWidthPct}% (${(pool.productNarrowWidthPct / (FLAT.exitGap * 100)).toFixed(1)}× próg wyjścia)`
+    : `k×σ ±${sug.widthPct.toFixed(0)}% (k=${pool.advisorK ?? ADVISOR_PARAMS.k})`;
   const toUsd = (t: number) => tickToUsd(pool, t);
   const [usdLo, usdHi] = [toUsd(sug.tickLower), toUsd(sug.tickUpper)].sort((a, b) => a - b);
   // EV zwężenia: przyrost fee z węższego pasma (skalowanie jak w assessPosition)
@@ -664,7 +676,7 @@ function proposeFlatNarrow(pool: BotPool, pos: WatchedPosition) {
     symbol: `${pool.sym0}-${pool.sym1}`,
     suggestedRange: { tickLower: sug.tickLower, tickUpper: sug.tickUpper, usdLo, usdHi },
     costUsd, paybackDays: payback,
-    note: `Produkt FlatWide: flat POTWIERDZONY (|gap|<${FLAT.enterGap * 100}% ≥${FLAT.confirmH}h) — zwężenie z ±${posHalfWidthPct(pos).toFixed(0)}% do k×σ ±${sug.widthPct.toFixed(0)}% (k=${pool.advisorK ?? ADVISOR_PARAMS.k}). Dodatkowe fee ~$${extraDailyUsd.toFixed(2)}/d, koszt ~$${costUsd.toFixed(2)}, payback ~${payback?.toFixed(1) ?? '—'}d. E1: epizod musi potrwać ≥~${pool.id.includes('cbbtc') ? '5' : '2'}d, by zwężenie się opłaciło — mediana epizodów na tej puli za progiem. Powrót do szerokiego zaproponuję przy |gap|>${FLAT.exitGap * 100}%.`,
+    note: `Produkt FlatWide: flat POTWIERDZONY (|gap|<${FLAT.enterGap * 100}% ≥${FLAT.confirmH}h) — zwężenie z ±${posHalfWidthPct(pos).toFixed(0)}% do ±${sug.widthPct.toFixed(0)}%: ${zrodloSzerokosci}. Dodatkowe fee ~$${extraDailyUsd.toFixed(2)}/d, koszt ~$${costUsd.toFixed(2)}, payback ~${payback?.toFixed(1) ?? '—'}d. E1: epizod musi potrwać ≥~${pool.id.includes('cbbtc') ? '5' : '2'}d, by zwężenie się opłaciło — mediana epizodów na tej puli za progiem. Powrót do szerokiego zaproponuję przy |gap|>${FLAT.exitGap * 100}%.`,
     status: 'open',
   };
   proposals.push(prop);

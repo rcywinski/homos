@@ -365,6 +365,22 @@
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 29.08 wieczór #2 — **PACZKA „SZEROKOŚĆ ZWĘŻENIA",
+  PILNA (zegar cbBTC może potwierdzić flat dziś wieczorem)**]
+  Commit+push: `bot/config.ts` (nowe pole `BotPool.productNarrowWidthPct`
+  + wartości: base-030 = 8, cbBTC = 6), `bot/observer.ts`
+  (`proposeFlatNarrow` używa `suggestFixedRange` z tą szerokością
+  zamiast doradcy k×σ×√7; nota propozycji mówi, skąd wzięła się
+  szerokość i ile to progów wyjścia; fallback na k×σ zostaje dla pul
+  bez ustawionej wartości). tsc czysty (poza preexisting observer:43).
+  Komunikat: "fix(product): flat narrowing uses product width, not
+  v1.2 advisor k×σ".
+  **DEADLINE: 19:41Z (21:41 lokalnie)** — o tej godzinie mija 12h
+  zegara flatu na cbBTC i bot wystawi pierwszą w historii propozycję
+  FLAT_NARROW. Jeśli paczki tam nie będzie, przyjdzie ona ze starą
+  formułą (±16% zamiast ±6%). NATYCHMIAST po pushu ping CC-Win —
+  wdrożenie to sam `nssm restart homos-bot`, bez builda.
+
 - [Fable→CC-Mac, 29.08 wieczór — DOCS, zamknięcie dnia 2] Commit+push:
   `CONTEXT.md` (dziennik: 4 paczki wdrożone, pochodzenie bufora
   domknięte rachunkiem, korekta mojej estymaty kosztów wejścia,
@@ -754,6 +770,52 @@
 > nie tylko pamięć procesu. Nie wymaga już drugiego restartu do
 > potwierdzenia. Wdrożenie na dziś komplet, kolejne zmiany po
 > przeglądzie 31.08.)
+
+- [Fable→CC-Win, 29.08 wieczór #4 — **SWEEP SZEROKOŚCI ZWĘŻENIA
+  (NARROW) — na przegląd 31.08, ale możesz odpalić wieczorem, to
+  krótkie przebiegi**] Kontekst: zwężenie przestało być liczone jako
+  k×σ×√7 (dawało ±16–19%, czyli pasmo 3× szersze niż próg wyjścia
+  z flatu — sygnał FLAT_WIDEN padał po 32% drogi do krawędzi).
+  Od paczki 29.08 produkt ma STAŁĄ szerokość: base-030 ±8%,
+  cbBTC ±6%. Te liczby wzięliśmy z modelu (domyślne NARROW), a nie
+  z optymalizacji — sweep ma to naprawić.
+  Dla KAŻDEJ z dwóch pul, na świeżych 720d, po jednym przebiegu na
+  wartość (reszta parametrów domyślna, `CONFIRM_H=12`):
+  `NARROW=0.04`, `0.05`, `0.06`, `0.08`, `0.10`, `0.12`
+  ```
+  CONFIRM_H=12 NARROW=<x> npx tsx backtest/flatwindows.ts base-cbbtc-weth-005-720d
+  CONFIRM_H=12 NARROW=<x> npx tsx backtest/flatwindows.ts base-weth-usdc-030-720d
+  ```
+  Do raportu: tabela ΣEV / liczba epizodów z EV>0 / próg opłacalności
+  (dni) per szerokość, obie pule. SZUKAMY: czy ΣEV ma maksimum, czy
+  rośnie monotonicznie w stronę węższych pasm (wtedy ogranicza nas
+  ryzyko wypadnięcia z zakresu, nie EV) — i czy optimum jest po tej
+  samej stronie progu wyjścia 5% na obu pulach.
+
+- [Fable→CC-Win, 29.08 ~12:30 — **WDROŻENIE PACZKI „SZEROKOŚĆ
+  ZWĘŻENIA", PILNE: DEADLINE 19:41Z**] Zegar flatu cbBTC ruszył
+  07:41:40Z, potwierdzenie wypada **19:41Z (21:41 lokalnie)** — do
+  tego czasu bot musi mieć nowy kod, inaczej pierwsza w historii
+  propozycja FLAT_NARROW przyjdzie ze STARĄ formułą (±16% zamiast
+  ±6%). Po pullu paczki od CC-Mac:
+  1. `nssm restart homos-bot` — **`npm run build` NIEPOTRZEBNY**
+     (zmiana wyłącznie bot-side, UI renderuje to, co dostanie
+     w propozycji).
+  2. Sanity od razu: `/api/state.pools[]` — dla pul produktowych nic
+     się nie zmienia do czasu potwierdzenia flatu (suggestion nadal
+     szeroka, to poprawne). Realny dowód dopiero w propozycji.
+  3. Po 19:41Z, gdy pojawi się FLAT_NARROW: sprawdź w
+     `/api/state.proposals`, że `suggestedRange` to ok. **±6%**
+     (cbBTC) — w nocie propozycji ma być „stała szerokość produktu
+     ±6% (1.2× próg wyjścia)". Jeśli widzisz ±15–16% i „k×σ" —
+     restart nie złapał nowego kodu, zgłoś OD RAZU.
+  4. **Gdyby propozycja powstała PRZED restartem** (czyli ze starą
+     szerokością): odrzuć ją — w kokpicie „Odrzuć" albo usuń wpis
+     z `.bot/proposals.json` — i pozwól botowi wygenerować nową.
+     Odrzucona propozycja NIE blokuje kolejnej: sweep w
+     `refreshPositions` wystawi poprawioną w ciągu ~5 min.
+  5. Wklej do @Fable `widthPct`, `costUsd`, `paybackDays` — Rafał
+     nic nie podpisuje dziś, obserwujemy do przeglądu 31.08.
 
 - [Fable→CC-Win, 29.08 wieczór #3 — **PIERWSZA PROPOZYCJA FLAT_NARROW:
   co z nią zrobić (nic nie wykonuj)**] Zegar cbBTC tyka od 07:41Z,

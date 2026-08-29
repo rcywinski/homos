@@ -298,6 +298,45 @@ jeśli sama korzyść ze zwężenia jest 2.5× mniejsza niż zakładaliśmy.
 OPERACYJNIE DO PONIEDZIAŁKU: propozycja FLAT_NARROW niesie WŁASNY
 `paybackDays` (liczony z realnego L i fee-yieldu puli) — i to jest
 liczba do sprawdzenia przed podpisem, nie tabela z E4.
+~wieczór #5 — **ZWĘŻENIE PRZESTAJE UŻYWAĆ DORADCY v1.2** (uwaga
+Rafała, trafiona: „mamy gap 2%, wyjście przy 5%, a zakres 11% czy
+więcej — to się nie trzyma kupy"). Sprawdzone liczbowo: przy pasmie
+±15.8% sygnał FLAT_WIDEN (|gap|>5%) pada po przejściu 32% drogi do
+krawędzi, przy ±19.4% — po 26%. Czyli dwie trzecie płynności leżałoby
+tam, gdzie cena nigdy nie dojdzie, bo wcześniej i tak rozszerzamy
+pozycję. Źródło błędu: `horizonDays=7` w ADVISOR_PARAMS pochodzi ze
+strategii „zakres ma przeżyć tydzień bez rebalansu" (v1.2) — w
+hybrydzie pozycji pilnuje detektor flatu, nie horyzont tygodniowy.
+Ładny zbieg okoliczności potwierdzający diagnozę: k×σ×√1 daje dziś
+±7.4% (base-030) i ±6.0% (cbBTC), czyli DOKŁADNIE szerokości, na
+których liczone jest EV w E1/E4.
+ZMIANA: nowe pole `BotPool.productNarrowWidthPct` (base-030 = 8,
+cbBTC = 6 — 1.6× i 1.2× progu wyjścia), `proposeFlatNarrow` liczy
+zakres przez `suggestFixedRange`, nota propozycji podaje źródło
+szerokości. Klasyfikacja postury dalej działa (6/8% << narrowFrac ×
+idle = 24/30%). Efekt: przyrost fee ~2.5× większy niż przy k×σ, a
+liczby EV z paczki decyzyjnej E4 przenoszą się na produkt 1:1.
+UCZCIWIE: 6/8% to wartości z MODELU (domyślne NARROW), nie z
+optymalizacji — sweep szerokości (0.04–0.12 na obu pulach, 720d)
+zlecony CC-Win na przegląd 31.08. Pytanie do sweepu: czy ΣEV ma
+maksimum, czy rośnie monotonicznie w stronę węższych pasm (wtedy
+ogranicza nas ryzyko wypadnięcia, nie EV).
+ZNALEZIONE PRZY TEJ ZMIANIE (i ważniejsze niż sama szerokość):
+**walkforward hybrydy i flatwindows mierzyły dwa różne produkty.**
+`WF_SET=hybrid` — ten przebieg, na podstawie którego weszliśmy
+kapitałem — używa `flatOnlyLP` z pasmem `k × σ × √7`, czyli tym,
+co właśnie usunęliśmy. `flatwindows` (E1/E4) liczy pasmo stałe 6/8%.
+Do 29.08 produkt zgadzał się z walkforwardem, ale nie z E1; od dziś
+odwrotnie. Żadna wersja nie jest potwierdzona OBOMA narzędziami.
+Na 31.08: dodać `narrowWidth` do `flatOnlyLP` i przepuścić hybrydę
+walkforwardem z tą samą szerokością, którą gra produkt — sweep
+flatwindows daje kandydata, walkforward mówi, czy nie psuje wyniku
+w skali całych okien (wąskie pasmo częściej wypada z zakresu).
+DECYZJA NA WIECZÓR (Rafał: sobota, nie pracujemy dalej): zostaje
+6/8% — bo to jedyna szerokość, dla której mamy dodatnie EV epizodów
+policzone na realnych swapach; jeśli flat potwierdzi się dziś,
+propozycja przyjdzie z tą szerokością i własnym paybackiem, nikt
+nic nie podpisuje, obserwujemy. Liczenie w poniedziałek.
 TERMIN PRZEGLĄDU: **poniedziałek 31.08** (decyzja Rafała — wcześniejsze
 „1.09" było pomyłką kalendarzową, 1.09.2026 to wtorek); zlecenie CC-Win
 COMPARE_HL_D 720d na ten sam poranek. Poprawione w HANDOFF i

@@ -704,6 +704,37 @@
     FLAT_NARROW niesie własny `paybackDays` liczony z realnego L
     i fee-yieldu — TO jest liczba do sprawdzenia przed podpisem,
     nie tabela z E4.
+    **ROZSTRZYGNIĘTE CZĘŚCIOWO 29.08 wieczorem** (uwaga Rafała:
+    „gap 2%, wyjście 5%, a zakres 11%+ — to się nie trzyma kupy").
+    Produkt NIE używa już k×σ×√7 do zwężania: nowe pole
+    `productNarrowWidthPct` (base-030 8%, cbBTC 6%), bo pasmo szersze
+    niż próg wyjścia to płynność, do której cena nie dojdzie —
+    FLAT_WIDEN pada wcześniej (przy ±16% już po 32% drogi do
+    krawędzi). Liczby E4 przenoszą się teraz 1:1. ZOSTAJE DO
+    ROZSTRZYGNIĘCIA: czy 6/8% to dobre wartości — sweep NARROW
+    0.04–0.12 na obu pulach zlecony CC-Win. Jeśli optimum wypada
+    poniżej progu wyjścia 5%, trzeba będzie związać obie liczby
+    jedną regułą (np. narrow = α × exitGap), żeby nie rozjechały
+    się znowu przy następnej zmianie progu.
+    **⚠️ ZNALEZIONE PRZY TEJ ZMIANIE — NAJWAŻNIEJSZE NA 31.08:
+    dwa nasze narzędzia mierzyły DWA RÓŻNE produkty.**
+    `walkforward` z `WF_SET=hybrid` (przebieg, na podstawie którego
+    weszliśmy kapitałem: cbBTC śr. +0.48 / 65% / worst −1.14) używa
+    `flatOnlyLP`, gdzie wąskie pasmo liczy się jako
+    `k × σ × √horizonDays` z `horizonDays: 7` — czyli DOKŁADNIE
+    tego k×σ×√7, które właśnie usunęliśmy z produktu.
+    `flatwindows` (E1/E4, ΣEV zwężania) liczy pasmo STAŁE ±6/8%.
+    Czyli: do 29.08 produkt zgadzał się z walkforwardem, a nie z E1;
+    od 29.08 zgadza się z E1, a nie z walkforwardem. Żadna z wersji
+    nie jest dziś potwierdzona OBOMA narzędziami.
+    ZADANIE NA PONIEDZIAŁEK: dodać stałą szerokość wąskiej nogi do
+    `flatOnlyLP` (nowa opcja, np. `narrowWidth`) i przepuścić
+    `WF_SET=hybrid` z tą samą szerokością, którą gra produkt —
+    dopiero wtedy bramka wielookienna i EV epizodów mówią o tym
+    samym. Sweep NARROW z flatwindows daje kandydata na szerokość;
+    walkforward mówi, czy ta szerokość nie psuje wyniku w skali
+    całych okien (m.in. dlatego, że wąskie pasmo częściej wypada
+    z zakresu i łapie IL na wyjściu z flatu).
   - **σ: zakres docelowy grid15**. 29.08 wieczorem ustawiliśmy
     `SIGMA_MODE=grid15` TYLKO dla usługi homos-bot (przed pierwszym
     zwężeniem). Do decyzji: czy grid15 obowiązuje też nocny pipeline

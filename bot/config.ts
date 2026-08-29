@@ -43,6 +43,22 @@ export interface BotPool {
    *  do k×σ następuje TYLKO w potwierdzonym flat (|gap|<2% przez
    *  confirmH godzin — propozycja FLAT_ENTER, osobna logika). */
   productIdleWidthPct?: number;
+  /** PRODUKT 29.08 — szerokość WĄSKIEJ nogi w potwierdzonym flacie
+   *  (uwaga Rafała: „mamy gap 2%, wyjście przy 5%, a zakres 16% —
+   *  to się nie trzyma kupy" — miał rację).
+   *  Do 29.08 zwężenie liczyło się doradcą v1.2 jako k×σ×√7, gdzie
+   *  horyzont 7 dni pochodzi z ZUPEŁNIE innej strategii („zakres ma
+   *  przeżyć tydzień bez rebalansu"). W hybrydzie pozycję chroni
+   *  FLAT_WIDEN przy |gap|>exitGap, więc pasmo szersze niż próg
+   *  wyjścia to płynność, do której cena nigdy nie dojdzie:
+   *  przy ±16% sygnał wyjścia pada po 32% drogi do krawędzi, przy
+   *  ±6% — po 83%. Stąd szerokość WYPROWADZONA z progu wyjścia
+   *  (FLAT.exitGap = 5%) plus zapas na dryf EMA w trakcie epizodu.
+   *  Wartości 6/8% = dokładnie te, na których liczone jest EV
+   *  zwężania w E1/E4 (flatwindows NARROW), więc liczby z paczki
+   *  decyzyjnej przenoszą się na produkt 1:1. Sweep szerokości
+   *  (co maksymalizuje ΣEV) — na przeglądzie 31.08. */
+  productNarrowWidthPct?: number;
 }
 
 /** Bezpiecznik trendu spadkowego (ALGORITHM.md v1.1 §4) — jedna prawda. */
@@ -111,6 +127,7 @@ export const BOT_POOLS: BotPool[] = [
     t0: '0x4200000000000000000000000000000000000006', t1: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     trendAction: 'hedge', // ALGORITHM v1.2: hedge-excess (bramka 73%/−2.88 i 81%/−2.74)
     productIdleWidthPct: 50, // PRODUKT 27.08: hybryda FlatWide, idle ±50%
+    productNarrowWidthPct: 8, // 29.08: zwężenie ±8% (E1/E4 NARROW domyślny; 1.6× próg wyjścia 5%)
   },
   {
     // para skorelowana (PAIRS.md: sleeve pasywny ±15%); cena kwotowana w WETH,
@@ -127,6 +144,7 @@ export const BOT_POOLS: BotPool[] = [
     quote: 'WETH', usdRefPoolId: 'base-weth-usdc-030',
     advisorK: 2, trendReentry: 'half',
     productIdleWidthPct: 40, // PRODUKT 27.08: hybryda FlatWide, idle ±40%
+    productNarrowWidthPct: 6, // 29.08: zwężenie ±6% (E1/E4 NARROW=0.06; 1.2× próg wyjścia 5%)
   },
   {
     // WETH/cbBTC 0.3% Base — dodane 2026-08-26 decyzją przeglądu (DECYZJE
