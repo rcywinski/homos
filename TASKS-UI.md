@@ -1233,3 +1233,40 @@ flatConfirmed/trendGapPct`. Zakres: TYLKO src/**. Zero nowych requestów.
    rzadkie i ważne (±50% przebite) — ma być widoczne od progu.
 4. Etykieta kafla/paska "PnL od startu (od 27.08.2026)" na kartach:
    bez zmian logiki, ale ujednolicić z panelem (ta sama konwencja).
+
+## PARTIA 18 — pasek BILANS TRANSZY + wypełniona kolumna Koszty ✅ wykonana (Sonnet 29.08; spec Fable, spot-check Fable OK: typy `tranche` 1:1 z bot-side, „—" zamiast $0 na nullach, panel Partii 17 nietknięty poza tooltipem, tsc czysty, build przechodzi)
+
+Kontekst (decyzje Rafała 29.08): panel zbiorczy z Partii 17 mierzy jakość
+STRATEGII — PnL od kotwic pozycji i vs HODL — i ma zostać dokładnie taki,
+jaki jest (te liczby są porównywalne z backtestem). Brakuje DRUGIEJ miary:
+ile z faktycznie wpłaconych 6 092 USDC dziś jest. Różnica bierze się stąd,
+że panel sumuje wyłącznie pozycje LP, a poza nimi leży bufor w portfelu
+(~$150 WETH) i jednorazowe koszty wejścia (4 swapy + poślizg + gaz).
+Rafał wybrał: **osobna sekcja, obecne metryki bez zmian.**
+
+Bot-side JEST już gotowe (paczka 29.08) — UI tylko wyświetla, nic nie liczy:
+- `/api/state` root `tranche`: `{ label, depositedUsd, startedAt, lpUsd,
+  walletUsd, totalUsd, diffUsd, diffPct, marketPnlUsd, residualUsd,
+  gasUsd, updatedAt }`. Pola mogą być `null` (nieudany odczyt sald,
+  brak kursu) — wtedy „—", nigdy $0.
+- `positions[].costsUsd` przestało być `null`: to gaz transakcji tej
+  pozycji z receiptów (mint/zwiększenie/zwężenie/collect). Pasek metryk
+  Partii 14 ma już feature-detect, więc kolumna „Koszty" wypełni się sama
+  — sprawdź tylko, czy nie została gdzieś zahardkodowana na `null`.
+
+1. **Pasek „BILANS TRANSZY"** NAD panelem zbiorczym Partii 17 (osobna
+   sekcja, wizualnie spokojniejsza — to miara miesięczna, nie dzienna):
+   - kafle: „Wpłacone $6 092 (27.08)" · „Dziś łącznie $X" · „Różnica
+     −$Y (−Z%)" (kolor jak w istniejących kaflach PnL).
+   - linia rozbicia pod kaflami: „w pozycjach $A + w portfelu $B" oraz
+     „z tego ruch rynku −$C · reszta (koszty wejścia + beta bufora) −$D".
+   - tooltip przy „reszcie": „jednorazowe koszty wejścia — swapy,
+     poślizg, gaz mintów — plus zmiana wartości bufora w portfelu.
+     Powinna być mniej więcej stała; jeśli rośnie, zgłoś to Fable."
+   - `walletUsd === null` → pokaż „portfel: —" i NIE licz „razem"
+     samodzielnie (bot już to zrobił; totalUsd też będzie null).
+2. **Rozróżnienie w opisach** (żeby nikt nie mylił dwóch miar): kafel
+   „PnL od startu" w panelu Partii 17 dostaje dopisek/tooltip „liczone
+   od kotwic pozycji, bez bufora i kosztów wejścia — pełny rachunek
+   transzy jest w pasku wyżej".
+3. Zero nowych requestów — wszystko z już wczytanego `/api/state`.

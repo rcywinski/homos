@@ -6,6 +6,22 @@
 
 ## 1. Stan projektu — skrót
 
+- **⚡ STAN NA 29.08 rano (dzień 2 kapitału, sobota):** automat czysty
+  (porażki BRAK), obie nogi in-range, razem $5,703 / vsHODL −$4.22 —
+  PnL od kotwic −$155 to CZYSTA BETA (ETH), nie strata strategii.
+  Zegar flatu na cbBTC **nie tyka** (gap −2.1%, tuż poza progiem 2% —
+  zerował się w nocy); noga A gap 9.5%. Zero propozycji, down:false
+  6/6, rotacja nieopłacalna. Paper dzień 11: $63,725, vs HODL −$4,369.
+  ZMIANY DNIA (paczka „raport+telegram", u CC-Mac): fee NAROSŁE w
+  state bota (static collect), sekcja POZYCJE REALNE dostała kolumny
+  postura/fee/tempo $/d/zegar flatu z countdownem, **poranny Telegram
+  przepięty z paper-tradingu na POZYCJE REALNE** (decyzja Rafała:
+  paper przestał być istotny po wejściu kapitału).
+  ROZLICZENIE TRANSZY (pytanie Rafała): kokpit pokazuje PnL od KOTWIC
+  pozycji ($5,857), nie od 6 092 USDC — różnica to bufor ~$150 WETH
+  w portfelu (poza panelem) + ~$75 jednorazowych kosztów wejścia
+  (4 swapy + gaz), a nie strata. Do zbudowania: „bilans transzy"
+  liczony od 6 092 USDC (pozycje + portfel + koszty).
 - **⚡ STAN NA 28.08 rano (dzień 1 kapitału):** obie nogi in-range,
   vsHODL ~0 (hybryda = HODL z narastającymi fees, zgodnie z planem);
   **żywy gap cbBTC/WETH −1.9% — już wewnątrz progu flat |gap|<2%**,
@@ -64,6 +80,82 @@
 - [ ] Istniejące otwarte pozycje użytkownika w Uniswap (podpiąć w F2 jako pierwsze dane żywe)
 
 ## 4. Dziennik sesji
+
+### 2026-08-29 ~rano — BRIEF DZIEŃ 2 + PACZKA „RAPORT/TELEGRAM" (Fable + Rafał)
+BRIEF z plików (raport 07:30 + HANDOFF; bez ciągnięcia /api/state przez
+przeglądarkę — sekcja POZYCJE REALNE z 28.08 zadziałała). STAN: automat
+czysty (porażki BRAK, backtest-run exit 0, sweep OK), obie nogi in-range,
+razem $5,703, vsHODL −$4.22 (0.07%), PnL od kotwic −$154.90 = beta ETH.
+**Zegar flatu cbBTC wyzerowany w nocy** (gap −2.1%, próg 2% — dokładnie
+ten „taniec na progu", który zapowiedzieliśmy 28.08); noga A schodzi
+wolno: 12.9% → 9.4% → 9.5%. Zero propozycji, zero emergency (down:false
+6/6), rotacja nieopłacalna (edge −54.4 p.p.). Paper dzień 11: $63,725
+(+6.2%), vs HODL −$4,369.
+ZMIANY (Fable, tsc czysty poza preexisting observer:43):
+(1) bot/observer.ts — `feesUsd` (fee NAROSŁE, nieodebrane) na pozycji
+w state.json i w próbce positions-history; liczone sztuczką „static
+collect" (symulacja `collect()`, eth_call — nic nie podpisujemy), bo
+`tokensOwed` z `positions()` jest ZEROWE do pierwszego burn/collect
+(dlatego świeże nogi pokazywały fee $0). Ta sama metoda co UI.
+(2) scripts/morning-report.ts — POZYCJE REALNE: kolumny postura
+(SZEROKI/WĄSKI), fee narosłe (+odebrane z księgi), **tempo $/d**,
+wiersz RAZEM oraz zegar flatu z COUNTDOWNEM („potwierdzenie za X.Xh")
+i rozróżnieniem „poza progiem" vs „zegar tyka" — do tej pory obie
+sytuacje wyglądały tak samo („—"). Progi czytane z żywego
+`state.flatParams`, nie hardkodowane (przegląd może je zmienić).
+(3) **TELEGRAM PRZEPIĘTY** (decyzja Rafała): poranna wiadomość to już
+nie paper, tylko POZYCJE REALNE — 1. linia Equity łącznie + PnL od
+startu ($ i %), potem per pozycja: wartość, PnL od startu, fee narosłe,
+fee reinwestowane, cykl, stabilizacja/czas do zwężenia. Pozycje spoza
+produktu (dust #953427) jako jedna linijka na końcu; brak pozycji w
+state = alarm zamiast ciszy. Paper zostaje w RAPORCIE (A/B do 24.09).
+Test: transpilacja tsc→node na syntetycznym state, 4 scenariusze
+(zegar tyka / poza progiem / flat potwierdzony + noga WĄSKA / brak
+pozycji) + fallback bez `flatParams`.
+PYTANIE RAFAŁA „matematyka się nie zgadza" (6 092 USDC → apka pokazuje
+$5,698.83 i −$158.54): WYJAŚNIONE — panel liczy od KOTWIC pozycji
+($5,857.37; stała: 5 698.83+158.54 = 5 701.70+155.67 z wczoraj), a nie
+od transzy. Brakujące ~$235 to bufor ~$150 WETH w portfelu (panel
+sumuje TYLKO pozycje LP) + ~$75 jednorazowych kosztów wejścia (4 swapy
++ gaz + poślizg, ~1.2% transzy). Realna strata mark-to-market to −$155
+i to prawie w całości beta (vs HODL −$4). LUKA POMIAROWA do zamknięcia:
+brak „bilansu transzy" liczonego od 6 092 USDC (pozycje + portfel +
+koszty wejścia) — dziś nikt tej liczby nie pilnuje.
+~przedpołudnie — KOSZTY GAZU + BILANS TRANSZY (decyzje Rafała):
+(1) **Kolumna „Koszty" przestaje być pusta**: gaz liczony z RECEIPTÓW
+transakcji z księgi (`gasUsed × effectiveGasPrice`, dokładnie co do wei;
+cache `.bot/tx-costs.json`, receipt pobierany raz na tx, limit 25/cykl
+żeby backfill nie zjadł pętli). Gaz trzymany w ETH, na USD przeliczany
+przy odczycie. Tx dotykający dwóch nóg dzieli gaz po równo.
+(2) **Rozstrzygnięcie zakresu kosztów** (AskUserQuestion): koszty
+POZYCJI = tylko gaz jej transakcji; koszty swapów wejściowych
+(poślizg + fee, ~$75) NIE są przypisywane do nóg — to koszt transzy,
+bo swap USDC→WETH nie należy do żadnej pozycji.
+(3) **BILANS TRANSZY jako OSOBNA miara** (wybór Rafała: nie zastępować
+obecnych metryk): panel Partii 17 mierzy jakość STRATEGII (PnL od
+kotwic, vs HODL — porównywalne z walkforwardem), bilans transzy mierzy
+PRZEDSIĘWZIĘCIE (ile z 6 092 USDC dziś jest). Bot liczy: LP + portfel
+(salda ERC20 + natywny ETH na Base, wycenione kursami z żywych pul),
+różnica vs wpłacone, rozbicie na ruch rynku i RESZTĘ (koszty wejścia +
+beta bufora). Reszta liczona przez domknięcie bilansu — i to jest jej
+zaleta: powinna być mniej więcej STAŁA, więc jej dryf to sygnał, że
+księgowanie się rozjeżdża. `state.tranche` + sekcja w raporcie + linia
+w Telegramie; PARTIA 18 (spec) dla Sonneta na pasek w kokpicie.
+(4) **PARTIA 18 ODEBRANA** (Sonnet, tego samego dnia): pasek bilansu
+NAD panelem Partii 17, świadomie „spokojniejszy" wizualnie (mniejsza
+czcionka, bez kafli PnL), tooltip przy „reszcie", a kafel „PnL od
+startu" dostał dopisek „liczone od kotwic pozycji — pełny rachunek
+transzy jest w pasku wyżej" (to mylenie dwóch miar zrodziło pytanie
+Rafała). SPOT-CHECK Fable: typy `tranche` w useBotApi 1:1 z bot-side,
+nulle renderowane jako „—" (nigdy $0), UI nic nie liczy samo, panel
+Partii 17 nietknięty; tsc czysty, build przechodzi.
+WDROŻENIE: zbiorcze (decyzja Rafała — jeden build + OBA restarty
+naraz); paczka zbiorcza u CC-Mac, zlecenie u CC-Win z listą sanity
+(feesUsd / costsUsd / tranche / pasek w kokpicie).
+TERMIN PRZEGLĄDU: **poniedziałek 31.08** (decyzja Rafała — wcześniejsze
+„1.09" było pomyłką kalendarzową, 1.09.2026 to wtorek); zlecenie CC-Win
+COMPARE_HL_D 720d na ten sam poranek. Poprawione w HANDOFF i
+RESEARCH-QUEUE E4.
 
 ### 2026-08-28 ~rano — BRIEF DZIEŃ 1 + ŻYWY POMIAR (Fable + Rafał)
 Brief z plików (raport 07:30 czysty: pipeline "porażki: BRAK",

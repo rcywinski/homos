@@ -667,7 +667,9 @@
   po spec.
 
 ### E4. PRZEGLĄDY (kalendarz)
-- [ ] ~1.09: przegląd PROPONUJ (zaplanowany 26.08) + pierwszy tydzień
+- [ ] **31.08 (poniedziałek — termin ustalony przez Rafała 29.08;
+  wcześniejsze „1.09" było pomyłką kalendarzową)**: przegląd PROPONUJ
+  (zaplanowany 26.08) + pierwszy tydzień
   produktu (realized fees, gap-tracker, incydenty UI).
   PACZKA DECYZYJNA parametrów FLAT_ENTER (komplet policzony 27-28.08,
   flatwindows 720d, ΣEV zwężania vs baseline ENTER=2%/24h/HL7d):
@@ -683,7 +685,7 @@
   zostaje 2% globalnie (3% psuje jakość epizodów na cbBTC — a tam
   jest rdzeń wartości zwężania), opcjonalnie ENTER=3% per-pula na
   base-030 (+19%). Decyzja Rafała.
-  DO ODEBRANIA W PONIEDZIAŁEK RANO (zlecone CC-Win, termin 1.09):
+  DO ODEBRANIA W PONIEDZIAŁEK 31.08 RANO (zlecone CC-Win):
   PORÓWNANIE KOTWIC HL7 vs HL5 na świeżych 720d (flatwindows
   COMPARE_HL_D — ile epizodów łapiemy szybciej i o ile godzin);
   smoke Fable 365d/cbBTC: HL5 wcześniej w 10/12 sparowanych,

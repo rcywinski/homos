@@ -14,7 +14,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { createPublicClient, http, fallback, PublicClient, formatUnits } from 'viem';
 import { mainnet, base, arbitrum } from 'viem/chains';
-import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR, TREND, FLAT } from './config';
+import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR, TREND, FLAT, TRANCHE } from './config';
 import { ADVISOR_PARAMS } from '../src/utils/advisor';
 import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, suggestFixedRange, PoolStats } from '../src/utils/advisor';
 import { getAmountsForLiquidity, sqrtPriceX96ToHumanPrice } from '../src/utils/v3math';
@@ -101,7 +101,22 @@ const PM_ABI = [
       { name: 'tokensOwed0', type: 'uint128' }, { name: 'tokensOwed1', type: 'uint128' },
     ],
   },
+  // collect() TYLKO do symulacji (29.08): `tokensOwed0/1` z positions() jest
+  // ZEROWE do pierwszego burn/collect, więc świeża pozycja pokazywałaby
+  // "fee $0" mimo narastających opłat. Ta sama sztuczka „static collect", co
+  // w UI (src/hooks/usePortfolio.ts) — eth_call, nic nie podpisujemy.
+  {
+    name: 'collect', type: 'function', stateMutability: 'nonpayable',
+    inputs: [{
+      name: 'params', type: 'tuple', components: [
+        { name: 'tokenId', type: 'uint256' }, { name: 'recipient', type: 'address' },
+        { name: 'amount0Max', type: 'uint128' }, { name: 'amount1Max', type: 'uint128' },
+      ],
+    }],
+    outputs: [{ name: 'amount0', type: 'uint256' }, { name: 'amount1', type: 'uint256' }],
+  },
 ] as const;
+const MAX_U128 = 2n ** 128n - 1n;
 
 // --- stan w pamięci ---
 interface PoolLive {
@@ -138,6 +153,10 @@ interface WatchedPosition {
   collectedFeesUsd: number | null;
   costsUsd: number | null;
   rebalances: number | null;
+  /** fee NAROSŁE, jeszcze nieodebrane (29.08, brief Rafała: raport nie
+   *  pokazywał tempa zarabiania nóg produktu). Symulacja collect() —
+   *  suma w USD po kursach z tego samego cyklu; null gdy RPC odmówi. */
+  feesUsd: number | null;
   /** cykl produktu FlatWide (PARTIA 17): 'wide' = postura idle
    *  (±productIdleWidthPct), 'narrow' = zwężenie flatowe (k×σ);
    *  null = pula nie-produktowa (cykl nie dotyczy) */
@@ -272,7 +291,7 @@ const saveState = () => {
       // potwierdzenia, progi w opisach) — jedna prawda z bot/config.ts,
       // UI nie hardkoduje 12h/2%/5% (PARTIA 17; wartości mogą się zmienić
       // decyzją przeglądu 1.09)
-      { updatedAt: new Date().toISOString(), mode: 'OBSERVE', watch: WATCH_ADDRESS, flatParams: FLAT, pools: Object.values(live), positions, hedge: hedgeLive, gasUsd: gasUsdLive, proposals: proposals.filter((p) => p.status === 'open') },
+      { updatedAt: new Date().toISOString(), mode: 'OBSERVE', watch: WATCH_ADDRESS, flatParams: FLAT, tranche: trancheLive, pools: Object.values(live), positions, hedge: hedgeLive, gasUsd: gasUsdLive, proposals: proposals.filter((p) => p.status === 'open') },
       bigintReplacer, 2
     )
   );
@@ -782,18 +801,124 @@ async function refreshStats() {
   saveState();
 }
 
+// --- KOSZTY GAZU (29.08, decyzja Rafała: gaz ma być kosztem POZYCJI, nie
+// tylko domniemaną częścią PnL). Źródło: receipty transakcji z księgi —
+// `gasUsed × effectiveGasPrice`, dokładne co do wei, więc kolumna „Koszty"
+// przestaje być pusta. Cache w .bot/tx-costs.json: receipt pobieramy RAZ
+// na transakcję (są niezmienne), więc backfill nie powtarza się co cykl.
+// Wycena: gaz trzymamy w ETH, na USD przeliczamy dopiero przy odczycie —
+// kurs z chwili zdarzenia mielibyśmy tylko z dodatkowego zapytania o blok,
+// a na Base gaz to centy (na mainnecie stare pyłki i tak są historią).
+const TX_COSTS_PATH = path.join(DIR, 'tx-costs.json');
+interface TxCost { chain: string; gasEth: number; block: number }
+const txCosts: Record<string, TxCost> = fs.existsSync(TX_COSTS_PATH)
+  ? JSON.parse(fs.readFileSync(TX_COSTS_PATH, 'utf8'))
+  : {};
+const saveTxCosts = () => fs.writeFileSync(TX_COSTS_PATH, JSON.stringify(txCosts, null, 2));
+
+/** Dociąga receipty dla transakcji z księgi, których jeszcze nie wyceniliśmy.
+ *  Limit na cykl — backfill starych pyłków nie może zjeść pętli pozycji. */
+async function refreshTxCosts(maxPerCycle = 25) {
+  let added = 0;
+  let failed = 0;
+  for (const e of readLedger()) {
+    if (added >= maxPerCycle) break;
+    if (txCosts[e.txHash]) continue;
+    const client = clients[e.chain];
+    if (!client) continue;
+    try {
+      const r = await client.getTransactionReceipt({ hash: e.txHash as `0x${string}` });
+      const wei = (r.gasUsed ?? 0n) * (r.effectiveGasPrice ?? 0n);
+      txCosts[e.txHash] = { chain: e.chain, gasEth: +formatUnits(wei, 18), block: Number(r.blockNumber) };
+      added++;
+    } catch {
+      failed++; // brak receiptu na tym RPC (pruning/limit) — spróbujemy w kolejnym cyklu
+    }
+  }
+  if (added) {
+    saveTxCosts();
+    log(`koszty gazu: +${added} transakcji (razem ${Object.keys(txCosts).length}${failed ? `, nieudane ${failed}` : ''})`);
+  }
+}
+
+/** USD za natywny ETH — do wyceny gazu (ta sama zasada co refreshGas:
+ *  kurs z pierwszej żywej puli kwotowanej w USD, bez dodatkowego zapytania) */
+const nativeEthUsd = (): number | null =>
+  BOT_POOLS.filter((p) => (p.quote ?? 'USD') === 'USD')
+    .map((p) => live[p.id]?.ethUsd)
+    .find((v): v is number => typeof v === 'number' && v > 0) ?? null;
+
+// --- BILANS TRANSZY (29.08). Panel kokpitu mierzy jakość STRATEGII (PnL od
+// kotwic, vs HODL) i taki ma zostać — porównywalny z walkforwardem. Ta
+// sekcja mierzy co innego: ile z WPŁACONYCH USDC realnie dziś jest.
+// Różnica między nimi to bufor w portfelu (poza pozycjami) + jednorazowe
+// koszty wejścia (swapy, poślizg, gaz mintów) — do 29.08 nikt tego nie
+// pilnował, stąd wrażenie „matematyka się nie zgadza".
+interface TrancheState {
+  label: string; depositedUsd: number; startedAt: string;
+  lpUsd: number; walletUsd: number | null; totalUsd: number | null;
+  diffUsd: number | null; diffPct: number | null;
+  marketPnlUsd: number | null; residualUsd: number | null; gasUsd: number | null;
+  updatedAt: string;
+}
+let trancheLive: TrancheState | null = null;
+const ERC20_ABI = [
+  { name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ name: 'a', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
+] as const;
+
+/** Wartość tokenów transzy leżących w PORTFELU (poza pozycjami LP) —
+ *  bez tego bilans transzy pokazywałby bufor jako stratę. */
+async function walletValueUsd(): Promise<number | null> {
+  const pools = BOT_POOLS.filter((p) => p.chain === TRANCHE.chain && p.productIdleWidthPct && live[p.id]);
+  if (!pools.length) return null;
+  const client = clients[TRANCHE.chain];
+  // cena USD per ADRES tokenu — ta sama logika co wycena pozycji
+  const priceByAddr = new Map<string, number>();
+  const decByAddr = new Map<string, number>();
+  for (const p of pools) {
+    const lv = live[p.id];
+    const ref = refEthUsd(p);
+    const usdQuote = (p.quote ?? 'USD') === 'USD';
+    const px0 = usdQuote ? (p.ethIsToken0 ? lv.ethUsd : 1) : (p.ethIsToken0 ? ref : lv.ethUsd);
+    const px1 = usdQuote ? (p.ethIsToken0 ? 1 : lv.ethUsd) : (p.ethIsToken0 ? lv.ethUsd : ref);
+    if (p.t0 && typeof px0 === 'number' && px0 > 0) { priceByAddr.set(p.t0.toLowerCase(), px0); decByAddr.set(p.t0.toLowerCase(), p.d0); }
+    if (p.t1 && typeof px1 === 'number' && px1 > 0) { priceByAddr.set(p.t1.toLowerCase(), px1); decByAddr.set(p.t1.toLowerCase(), p.d1); }
+  }
+  if (!priceByAddr.size) return null;
+  try {
+    let sum = 0;
+    for (const [addr, px] of priceByAddr) {
+      const bal = (await client.readContract({
+        address: addr as `0x${string}`, abi: ERC20_ABI, functionName: 'balanceOf', args: [WATCH_ADDRESS as `0x${string}`],
+      })) as bigint;
+      sum += parseFloat(formatUnits(bal, decByAddr.get(addr) ?? 18)) * px;
+    }
+    // natywny ETH na gaz też jest częścią transzy (kupiony za USDC)
+    const eth = nativeEthUsd();
+    if (eth) sum += parseFloat(formatUnits(await client.getBalance({ address: WATCH_ADDRESS as `0x${string}` }), 18)) * eth;
+    return +sum.toFixed(2);
+  } catch (e) {
+    log(`portfel transzy: ${String(e).slice(0, 120)}`);
+    return null;
+  }
+}
+
 // --- pętla pozycji (5min) ---
 /** Agregaty księgi per chain:tokenId dla ŻYWYCH pozycji (PARTIA 14).
  *  fees = COLLECT − DECREASE (obie strony null-guarded: brak metadanych
  *  albo usd:null w którymkolwiek wpisie → null, nie zgadujemy).
  *  rebalances = liczba zdarzeń DECREASE (zwężenie/rebalans/partial close). */
-function ledgerAggregates(): Map<string, { feesUsd: number | null; rebalances: number }> {
-  const map = new Map<string, { feesUsd: number | null; rebalances: number }>();
+function ledgerAggregates(): Map<string, { feesUsd: number | null; rebalances: number; gasEth: number | null }> {
+  const map = new Map<string, { feesUsd: number | null; rebalances: number; gasEth: number | null }>();
   try {
     const byToken = new Map<string, LedgerEntry[]>();
+    // txHash → ile RÓŻNYCH pozycji dotknęła ta transakcja: gaz dzielimy po
+    // równo, żeby jeden tx obsługujący dwie nogi nie policzył się podwójnie
+    const tokensPerTx = new Map<string, Set<string>>();
     for (const e of readLedger()) {
       const k = `${e.chain}:${e.tokenId}`;
       (byToken.get(k) ?? byToken.set(k, []).get(k)!).push(e);
+      (tokensPerTx.get(e.txHash) ?? tokensPerTx.set(e.txHash, new Set()).get(e.txHash)!).add(k);
     }
     for (const [k, evs] of byToken) {
       const sumUsd = (kind: string): number | null => {
@@ -807,9 +932,18 @@ function ledgerAggregates(): Map<string, { feesUsd: number | null; rebalances: n
       };
       const col = sumUsd('COLLECT');
       const dec = sumUsd('DECREASE');
+      // gaz: suma po UNIKALNYCH txHash tej pozycji, z podziałem gdy tx
+      // dotyczył kilku pozycji; null gdy żaden receipt jeszcze nie pobrany
+      let gasEth: number | null = null;
+      for (const h of new Set(evs.map((e) => e.txHash))) {
+        const c = txCosts[h];
+        if (!c) continue;
+        gasEth = (gasEth ?? 0) + c.gasEth / (tokensPerTx.get(h)?.size || 1);
+      }
       map.set(k, {
         feesUsd: col !== null && dec !== null ? +Math.max(0, col - dec).toFixed(2) : null,
         rebalances: evs.filter((e) => e.kind === 'DECREASE').length,
+        gasEth,
       });
     }
   } catch (e) {
@@ -820,7 +954,9 @@ function ledgerAggregates(): Map<string, { feesUsd: number | null; rebalances: n
 
 async function refreshPositions() {
   const found: WatchedPosition[] = [];
+  await refreshTxCosts(); // receipty → gaz per transakcja (kolumna „Koszty")
   const ledgerAgg = ledgerAggregates();
+  const ethUsdForGas = nativeEthUsd();
   for (const chainId of [...new Set(BOT_POOLS.map((p) => p.chainId))]) {
     const chain = BOT_POOLS.find((p) => p.chainId === chainId)!.chain;
     const pm = NFT_MANAGER[chainId];
@@ -868,6 +1004,23 @@ async function refreshPositions() {
           payback = a.paybackDays;
           if (a.action === 'REBALANCE') maybePropose(tokenId.toString(), match, a, valueUsd);
         }
+        // fee narosłe (nieodebrane) — static collect, best-effort: błąd RPC
+        // zostawia null (raport pokaże "—"), nie wywala cyklu pozycji.
+        let feesUsd: number | null = null;
+        try {
+          const { result } = await client.simulateContract({
+            address: pm, abi: PM_ABI, functionName: 'collect',
+            args: [{ tokenId, recipient: WATCH_ADDRESS as `0x${string}`, amount0Max: MAX_U128, amount1Max: MAX_U128 }],
+            account: WATCH_ADDRESS as `0x${string}`,
+          });
+          const [owed0, owed1] = result as unknown as [bigint, bigint];
+          feesUsd = +(
+            parseFloat(formatUnits(owed0, match.d0)) * px0 + parseFloat(formatUnits(owed1, match.d1)) * px1
+          ).toFixed(2);
+        } catch (e) {
+          log(`fees #${tokenId}: ${String(e).slice(0, 100)}`);
+        }
+
         const la = ledgerAgg.get(`${match.chain}:${tokenId.toString()}`);
         found.push({
           tokenId: tokenId.toString(), poolId: match.id,
@@ -876,7 +1029,12 @@ async function refreshPositions() {
           inRange: lv.tick >= Number(lo) && lv.tick < Number(hi),
           advice, paybackDays: payback,
           collectedFeesUsd: la?.feesUsd ?? null,
-          costsUsd: null, // gaz nieindeksowany (TASKS-LEDGER §3)
+          feesUsd,
+          // KOSZTY = gaz transakcji tej pozycji (mint/zwiększenie/zwężenie/
+          // collect) z receiptów. Koszty swapów wejściowych NIE wchodzą tu
+          // świadomie (decyzja Rafała 29.08) — nie należą do żadnej nogi,
+          // liczy je bilans transzy.
+          costsUsd: la?.gasEth != null && ethUsdForGas ? +(la.gasEth * ethUsdForGas).toFixed(2) : null,
           rebalances: la ? la.rebalances : null,
           posture: match.productIdleWidthPct
             ? (isNarrowPos(match, { tickLower: Number(lo), tickUpper: Number(hi) }) ? 'narrow' : 'wide')
@@ -898,7 +1056,7 @@ async function refreshPositions() {
             POS_HIST_PATH,
             JSON.stringify({
               ts: new Date().toISOString(), tokenId: id, poolId: match.id,
-              valueUsd: +valueUsd.toFixed(2), hodlUsd: +hodlUsd.toFixed(2),
+              valueUsd: +valueUsd.toFixed(2), hodlUsd: +hodlUsd.toFixed(2), feesUsd,
               inRange: lv.tick >= Number(lo) && lv.tick < Number(hi),
               price: +sqrtPriceX96ToHumanPrice(BigInt(lv.sqrtPriceX96), match.d0, match.d1).toPrecision(6),
               lo: +tickHuman(Number(lo)).toPrecision(6), hi: +tickHuman(Number(hi)).toPrecision(6),
@@ -913,6 +1071,49 @@ async function refreshPositions() {
     }
   }
   positions = found;
+
+  // BILANS TRANSZY (29.08) — druga, niezależna miara: ile z wpłaconych USDC
+  // realnie dziś jest. Rozbicie: różnica = ruch rynku na LP (PnL od kotwic)
+  // + RESZTA, gdzie reszta ≈ jednorazowe koszty wejścia (swapy/poślizg/gaz
+  // mintów) plus beta bufora w portfelu. Reszta powinna być mniej więcej
+  // STAŁA — jej dryf w czasie oznacza, że coś w księgowaniu się rozjeżdża.
+  try {
+    const prodPositions = found.filter((p) => p.posture !== null);
+    const lpUsd = +prodPositions.reduce((s, p) => s + p.valueUsd, 0).toFixed(2);
+    const walletUsd = await walletValueUsd();
+    const totalUsd = walletUsd === null ? null : +(lpUsd + walletUsd).toFixed(2);
+    // UWAGA na pułapkę (złapana przy pisaniu): kotwica wyceniona DZISIEJSZYMI
+    // cenami daje „vs HODL" (~$0), a nie ruch rynku. Ruch rynku = wartość
+    // dziś − wartość w CHWILI zakotwiczenia, czyli hodlUsd PIERWSZEJ próbki
+    // positions-history (ta sama konwencja co „PnL od kotwicy" w raporcie/UI).
+    const firstAnchorUsd = new Map<string, number>();
+    try {
+      for (const lineRaw of fs.readFileSync(POS_HIST_PATH, 'utf8').trimEnd().split('\n')) {
+        const r = JSON.parse(lineRaw);
+        if (!firstAnchorUsd.has(r.tokenId) && typeof r.hodlUsd === 'number') firstAnchorUsd.set(r.tokenId, r.hodlUsd);
+      }
+    } catch { /* brak historii (świeży start) → marketPnl zostanie null */ }
+    let marketPnl: number | null = null;
+    for (const p of prodPositions) {
+      const anchorUsd = firstAnchorUsd.get(p.tokenId);
+      if (anchorUsd === undefined) continue;
+      marketPnl = (marketPnl ?? 0) + (p.valueUsd - anchorUsd);
+    }
+    const gasEthTotal = Object.values(txCosts).reduce((s, c) => s + c.gasEth, 0);
+    const diffUsd = totalUsd === null ? null : +(totalUsd - TRANCHE.depositedUsd).toFixed(2);
+    trancheLive = {
+      label: TRANCHE.label, depositedUsd: TRANCHE.depositedUsd, startedAt: TRANCHE.startedAt,
+      lpUsd, walletUsd, totalUsd,
+      diffUsd,
+      diffPct: diffUsd === null ? null : +((diffUsd / TRANCHE.depositedUsd) * 100).toFixed(2),
+      marketPnlUsd: marketPnl === null ? null : +marketPnl.toFixed(2),
+      residualUsd: diffUsd === null || marketPnl === null ? null : +(diffUsd - marketPnl).toFixed(2),
+      gasUsd: ethUsdForGas ? +(gasEthTotal * ethUsdForGas).toFixed(2) : null,
+      updatedAt: new Date().toISOString(),
+    };
+  } catch (e) {
+    log(`bilans transzy: ${String(e).slice(0, 140)}`);
+  }
 
   // PRODUKT 27.08 (rozstrzygnięcie Rafała po wejściu #5886957): propozycja
   // OPEN znika automatycznie, gdy w tej puli JEST już nasza pozycja —

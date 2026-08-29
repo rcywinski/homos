@@ -142,6 +142,10 @@ for (const f of ['selector-state.json', 'trend-state.json']) {
 // musiał ciągnąć /api/state przez przeglądarkę. Czyta state.json (żywe
 // wartości z observera) + positions-history.ndjson (kotwica HODL =
 // pierwsza próbka per tokenId).
+// Digest na Telegram (29.08, decyzja Rafała): poranna wiadomość dotyczy
+// WYŁĄCZNIE realnych pozycji — paper przestał być istotny po wejściu
+// kapitału, a codzienny digest paper zagłuszał to, co wymaga decyzji.
+let tgRealDigest: string | null = null;
 try {
   const stRaw = readSafe(path.join(BOT, 'state.json'));
   if (stRaw) {
@@ -155,9 +159,22 @@ try {
       try { const r = JSON.parse(line); if (!first[r.tokenId]) first[r.tokenId] = r; last[r.tokenId] = r; } catch { /* pomiń */ }
     }
     const fmtUsd = (v: number | null) => (v === null ? '—' : `${v >= 0 ? '+' : ''}$${v.toFixed(2)}`);
+    // parametry detektora flatu z korzenia state (jedna prawda z bot/config.ts,
+    // PARTIA 17) — raport NIE hardkoduje 2%/12h, bo przegląd może je zmienić
+    const fp = st.flatParams ?? {};
+    const enterPct = (typeof fp.enterGap === 'number' ? fp.enterGap : 0.02) * 100;
+    const exitPct = (typeof fp.exitGap === 'number' ? fp.exitGap : 0.05) * 100;
+    const confirmH = typeof fp.confirmH === 'number' ? fp.confirmH : 12;
+    const nowMs = Date.now();
+    // digest telefonowy liczy TYLKO pozycje produktowe (posture ustawione) —
+    // stary dust #953427 ($2, legacy mainnet) nie ma cyklu ani stabilizacji
+    // i zaśmiecałby wiadomość; leci jako jedna linijka na końcu.
+    const tgPositions: string[] = [];
+    const tgOther: string[] = [];
+    let tgVal = 0, tgPnl = 0, tgAnchor = 0;
     const rows = [
-      '| pozycja | pula | wartość | vs HODL | PnL od kotwicy | zakres | gap EMA | flat |',
-      '|---|---|---|---|---|---|---|---|',
+      '| pozycja | pula | postura | wartość | vs HODL | PnL od kotwicy | fee narosłe | tempo $/d | zakres | gap EMA | flat |',
+      '|---|---|---|---|---|---|---|---|---|---|---|',
     ];
     for (const pos of st.positions ?? []) {
       const f = first[pos.tokenId];
@@ -165,22 +182,122 @@ try {
       const vsHodl = l ? pos.valueUsd - l.hodlUsd : null;
       const pnl = f ? pos.valueUsd - f.hodlUsd : null; // kotwica: hodlUsd 1. próbki = wartość w chwili zakotwiczenia
       const pl = poolsById[pos.poolId];
-      const flatTxt = pl?.flatConfirmed
-        ? '✅ POTWIERDZONY'
+      // TEMPO FEE (29.08, brief Rafała): fee od otwarcia = narosłe (nieodebrane)
+      // + już odebrane z księgi; dzielone przez dni od kotwicy. Po pierwszym
+      // COLLECT samo `feesUsd` spadłoby do zera i tempo kłamałoby w dół.
+      // gdy narosłe nieznane (RPC odmówił) → "—", NIE "$0.00": zero z braku
+      // danych wyglądałoby jak "pula nic nie zarabia" i myliłoby przy briefie
+      const feesTotal =
+        typeof pos.feesUsd === 'number' ? pos.feesUsd + (pos.collectedFeesUsd ?? 0) : null;
+      const days = f ? (nowMs - Date.parse(f.ts)) / 86_400e3 : null;
+      const pace = feesTotal !== null && days !== null && days > 0.5 ? feesTotal / days : null;
+      const postureTxt = pos.posture === 'narrow' ? 'WĄSKI' : pos.posture === 'wide' ? 'SZEROKI' : '—';
+      // ZEGAR FLATU z countdownem — bez tego raport mówił tylko "—" i nie
+      // dawało się odróżnić "gap poza progiem" od "zegar tyka, blisko końca".
+      let flatTxt: string;
+      if (pl?.flatConfirmed) {
+        flatTxt = `✅ POTWIERDZONY (od ${String(pl.flatSince ?? '').slice(5, 16)}Z)`;
+      } else if (pl?.flatSince) {
+        const leftH = confirmH - (nowMs - Date.parse(String(pl.flatSince))) / 3600e3;
+        flatTxt = `⏳ zegar od ${String(pl.flatSince).slice(5, 16)}Z — ${leftH > 0 ? `potwierdzenie za ${leftH.toFixed(1)}h` : 'potwierdzenie w najbliższym cyklu'}`;
+      } else if (pos.posture !== null && pos.posture !== undefined) {
+        // UWAGA: żadnych pionowych kresek w treści komórki (rozwaliłoby tabelę)
+        flatTxt = `— poza progiem (potrzeba < ${enterPct.toFixed(1)}%)`;
+      } else {
+        flatTxt = '—';
+      }
+      // wiersz telegramowy (29.08): ta sama prawda co tabela, ale językiem
+      // telefonu — „stabilizacja" zamiast „flat", czas do ZWĘŻENIA wprost
+      const tgFlat = pos.posture === 'narrow'
+        // w wąskim zakresie liczy się już nie wejście, tylko wyjście z flatu
+        ? `✅ wąski zakres pracuje — rozszerzenie przy gap > ${exitPct.toFixed(1)}%`
+        : pl?.flatConfirmed
+        ? '✅ stabilizacja potwierdzona — zwężenie w propozycjach'
         : pl?.flatSince
-          ? `zegar od ${String(pl.flatSince).slice(5, 16)}Z`
-          : '—';
+          ? (() => {
+              const leftH = confirmH - (nowMs - Date.parse(String(pl.flatSince))) / 3600e3;
+              return leftH > 0
+                ? `⏳ stabilizacja od ${String(pl.flatSince).slice(11, 16)}Z — do zwężenia ${leftH.toFixed(1)}h`
+                : '⏳ stabilizacja pełna — zwężenie w najbliższym cyklu';
+            })()
+          : `brak stabilizacji (gap ${typeof pl?.trendGapPct === 'number' ? pl.trendGapPct.toFixed(1) : '?'}%, potrzeba < ${enterPct.toFixed(1)}%)`;
+      if (!pos.posture) {
+        tgOther.push(`#${pos.tokenId} ${pos.poolId}: $${pos.valueUsd.toFixed(2)} (poza produktem)`);
+      } else {
+        tgVal += pos.valueUsd;
+        tgPnl += pnl ?? 0;
+        tgAnchor += f?.hodlUsd ?? 0;
+        tgPositions.push(
+          `#${pos.tokenId} ${pos.poolId}${pos.inRange ? '' : ' ⚠️ POZA ZAKRESEM'}\n` +
+          `  $${pos.valueUsd.toFixed(2)} · PnL od startu ${fmtUsd(pnl)}\n` +
+          `  fee narosłe ${typeof pos.feesUsd === 'number' ? `$${pos.feesUsd.toFixed(2)}` : '—'} · reinwestowane ${typeof pos.collectedFeesUsd === 'number' ? `$${pos.collectedFeesUsd.toFixed(2)}` : '—'}\n` +
+          `  cykl: ${postureTxt} · ${tgFlat}`
+        );
+      }
       rows.push(
-        `| #${pos.tokenId} | ${pos.poolId} | $${pos.valueUsd.toFixed(0)} | ${fmtUsd(vsHodl)} | ${fmtUsd(pnl)}${f ? ` (od ${String(f.ts).slice(0, 10)})` : ''} | ${pos.inRange ? 'w zakresie' : '⚠️ POZA'} | ${typeof pl?.trendGapPct === 'number' ? pl.trendGapPct.toFixed(1) + '%' : '—'} | ${flatTxt} |`
+        `| #${pos.tokenId} | ${pos.poolId} | ${postureTxt} | $${pos.valueUsd.toFixed(0)} | ${fmtUsd(vsHodl)} | ${fmtUsd(pnl)}${f ? ` (od ${String(f.ts).slice(0, 10)})` : ''} | ${feesTotal === null ? '—' : `$${feesTotal.toFixed(2)}`} | ${pace === null ? '—' : `$${pace.toFixed(2)}`} | ${pos.inRange ? 'w zakresie' : '⚠️ POZA'} | ${typeof pl?.trendGapPct === 'number' ? pl.trendGapPct.toFixed(1) + '%' : '—'} | ${flatTxt} |`
       );
     }
-    if ((st.positions ?? []).length) sections.push('## POZYCJE REALNE (produkt FlatWide)\n\n' + rows.join('\n'));
-    else sections.push('## POZYCJE REALNE (produkt FlatWide)\nbrak żywych pozycji w state.json');
+    if ((st.positions ?? []).length) {
+      const sumVal = (st.positions ?? []).reduce((s: number, p: any) => s + (p.valueUsd ?? 0), 0);
+      const sumVsHodl = (st.positions ?? []).reduce(
+        (s: number, p: any) => s + (last[p.tokenId] ? p.valueUsd - last[p.tokenId].hodlUsd : 0), 0);
+      rows.push(`| **RAZEM** | | | **$${sumVal.toFixed(2)}** | ${fmtUsd(sumVsHodl)} | | | | | | |`);
+      // PnL od startu = wartość dziś − kotwica (hodlUsd 1. próbki). UWAGA
+      // interpretacyjna dla czytelnika: to zawiera RUCH RYNKU (betę), więc
+      // ujemne PnL przy vs HODL ≈ 0 znaczy „rynek spadł", nie „strategia traci".
+      const trHeader = st.tranche && typeof st.tranche.depositedUsd === 'number' && st.tranche.totalUsd !== null
+        ? `\n${st.tranche.label ?? 'Transza'}: $${st.tranche.depositedUsd.toFixed(0)} wpłacone → $${st.tranche.totalUsd.toFixed(2)} dziś (${fmtUsd(st.tranche.diffUsd)}${st.tranche.diffPct === null ? '' : `, ${st.tranche.diffPct.toFixed(2)}%`})`
+        : '';
+      if (tgPositions.length) {
+        tgRealDigest =
+          `📈 HOMOS ${localDate} — pozycje realne\n` +
+          `Equity łącznie: $${tgVal.toFixed(2)} · PnL od startu: ${fmtUsd(tgPnl)}` +
+          `${tgAnchor > 0 ? ` (${((tgPnl / tgAnchor) * 100).toFixed(2)}%)` : ''}` +
+          `${trHeader}\n\n` +
+          tgPositions.join('\n\n') +
+          (tgOther.length ? `\n\n${tgOther.join('\n')}` : '');
+      }
+      // BILANS TRANSZY (29.08) — druga miara obok metryk strategii: ile
+      // z WPŁACONYCH USDC realnie dziś jest (LP + portfel), i co zjadło
+      // różnicę. Bot liczy, raport tylko wyświetla.
+      const tr = st.tranche;
+      if (tr && typeof tr.depositedUsd === 'number') {
+        const line = (k: string, v: string) => `| ${k} | ${v} |`;
+        const trRows = [
+          '| pozycja bilansu | kwota |', '|---|---|',
+          line(`wpłacone (${tr.startedAt})`, `$${tr.depositedUsd.toFixed(2)}`),
+          line('dziś w pozycjach LP', `$${(tr.lpUsd ?? 0).toFixed(2)}`),
+          line('dziś w portfelu (bufor + gaz)', tr.walletUsd === null ? '— (odczyt sald nieudany)' : `$${tr.walletUsd.toFixed(2)}`),
+          line('**razem dziś**', tr.totalUsd === null ? '—' : `**$${tr.totalUsd.toFixed(2)}**`),
+          line('**różnica vs wpłacone**', tr.diffUsd === null ? '—' : `**${fmtUsd(tr.diffUsd)}${tr.diffPct === null ? '' : ` (${tr.diffPct.toFixed(2)}%)`}**`),
+          line('— z tego ruch rynku na LP', tr.marketPnlUsd === null ? '—' : fmtUsd(tr.marketPnlUsd)),
+          line('— z tego reszta (koszty wejścia + beta bufora)', tr.residualUsd === null ? '—' : fmtUsd(tr.residualUsd)),
+          line('(informacyjnie) gaz zaindeksowany', tr.gasUsd === null ? '—' : `$${tr.gasUsd.toFixed(2)}`),
+        ];
+        sections.push(
+          `## BILANS TRANSZY — ${tr.label ?? 'transza 1'}\n\n` + trRows.join('\n') +
+          '\n\n_„Reszta" to jednorazowe koszty wejścia (swapy, poślizg, gaz mintów) plus beta bufora w portfelu._' +
+          '\n_Powinna być mniej więcej STAŁA — jeśli rośnie z dnia na dzień, coś w księgowaniu się rozjeżdża._' +
+          '\n_Gaz jest już zawarty w „reszcie" — linia informacyjna, nie odejmuj drugi raz._'
+        );
+      }
+      sections.push(
+        '## POZYCJE REALNE (produkt FlatWide)\n\n' + rows.join('\n') +
+        `\n\n_fee narosłe = nieodebrane + odebrane z księgi; tempo = fee / dni od kotwicy._` +
+        `\n_Progi detektora flatu z żywego state: wejście gap < ${enterPct.toFixed(1)}%, potwierdzenie ${confirmH}h._`
+      );
+    } else {
+      sections.push('## POZYCJE REALNE (produkt FlatWide)\nbrak żywych pozycji w state.json');
+      // cisza byłaby dwuznaczna (bot padł? pozycje zamknięte?) — wysyłamy alarm
+      tgRealDigest = `⚠️ HOMOS ${localDate}: brak żywych pozycji w state.json — sprawdź observera`;
+    }
   }
 } catch { sections.push('## POZYCJE REALNE\nstate.json/positions-history nieparsowalne'); }
 
 // --- PAPER TRADING: podsumowanie dnia (stan + PnL vs HODL per pula) ---
-let tgPaperDigest: string | null = null;
+// Zostaje w RAPORCIE (A/B produktu vs paper ma sens do przeglądu 24.09),
+// ale NIE idzie już na Telegram — od 29.08 poranna wiadomość to pozycje realne.
 const paperRaw = readSafe(path.join(BOT, 'paper-state.json'));
 if (paperRaw) {
   try {
@@ -207,7 +324,6 @@ if (paperRaw) {
     if (n > 0) {
       rows.push(`| **RAZEM** | | **$${totalEq.toFixed(0)}** | ${totalEq - n * cap >= 0 ? '+' : ''}$${(totalEq - n * cap).toFixed(0)} | ${totalEq - totalHodl >= 0 ? '+' : ''}$${(totalEq - totalHodl).toFixed(0)} | | |`);
       sections.push(`## PAPER TRADING (start ${(ps.startedAt || '').slice(0, 10)}, $${cap}/pula)\n\n${rows.join('\n')}`);
-      tgPaperDigest = `📊 PAPER dziś: razem $${totalEq.toFixed(0)} (${totalEq - totalHodl >= 0 ? '+' : ''}$${(totalEq - totalHodl).toFixed(0)} vs HODL)\n${tg.join('\n')}`;
     }
   } catch { sections.push('## PAPER TRADING\npaper-state.json nieparsowalny'); }
 }
@@ -215,11 +331,13 @@ if (paperRaw) {
 fs.writeFileSync(OUT, sections.join('\n\n') + '\n');
 console.log(`zapisano ${path.relative(ROOT, OUT)}`);
 
-// --- Telegram: dzienny digest paper-tradingu (decyzja Rafała 18.08) ---
-if (tgPaperDigest && process.env.TG_TOKEN && process.env.TG_CHAT) {
+// --- Telegram: poranny digest POZYCJI REALNYCH (decyzja Rafała 29.08;
+// zastępuje digest paper-tradingu z 18.08 — paper nadal jest w raporcie,
+// ale wiadomość na telefon ma dotyczyć pieniędzy, które realnie pracują) ---
+if (tgRealDigest && process.env.TG_TOKEN && process.env.TG_CHAT) {
   fetch(`https://api.telegram.org/bot${process.env.TG_TOKEN}/sendMessage`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id: process.env.TG_CHAT, text: tgPaperDigest }),
+    body: JSON.stringify({ chat_id: process.env.TG_CHAT, text: tgRealDigest }),
   }).catch((e) => console.log(`telegram digest error: ${e}`));
 }
 

@@ -72,6 +72,22 @@ export const FLAT = {
   narrowFrac: 0.6, // pozycja "wąska", gdy połówkowa szerokość < 0.6 × productIdleWidthPct
 };
 
+/** TRANSZA KAPITAŁU (29.08, pytanie Rafała „matematyka się nie zgadza"):
+ *  panel kokpitu liczy PnL od KOTWIC pozycji, więc nie widać, ile z
+ *  wpłaconych USDC realnie wróciło. Bilans transzy pilnuje tej drugiej
+ *  liczby: wpłacone → dziś (LP + portfel), a różnicę rozbija na ruch
+ *  rynku i „resztę" (koszty wejścia: swapy, poślizg, gaz mintów).
+ *  depositedUsd = kwota wpłacona do gry, NIE suma mintów. */
+export const TRANCHE = {
+  id: 'transza-1',
+  label: 'Transza 1',
+  depositedUsd: 6092,
+  startedAt: '2026-08-27',
+  /** sieć, na której transza pracuje — portfel liczymy tylko tam
+   *  (mainnet/arbitrum mają tylko stare pyłki, nie należą do transzy) */
+  chain: 'base' as const,
+};
+
 export const BOT_POOLS: BotPool[] = [
   {
     id: 'mainnet-usdc-weth-030',

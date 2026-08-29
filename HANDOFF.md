@@ -18,18 +18,21 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 28.08 ~wieczór — **WDROŻENIE "cykl w state" + PARTIA
-  17 ZROBIONE**] Jeden deploy (oba pakiety były już w tym samym pullu):
-  `npm run build` (zielony) + restart obu usług (ręcznie przez Rafała).
-  Sanity: `/api/state` root `flatParams` obecne (`{enterGap:0.02,
-  exitGap:0.05, confirmH:12, minVolDaily:0.005, narrowFrac:0.6}`),
-  `positions[].posture==="wide"` na OBU nogach (#5886957, #5887690).
-  UWAGA proceduralna: bezpośrednio po restarcie (16:53:37Z) pierwszy
-  odczyt `/api/state` pokazał `positions:[]`/`posture:undefined` —
-  to przejściowe (cykl odświeżenia pozycji z łańcucha jeszcze się nie
-  zakończył), nie bug; poprawny stan widoczny ~1 min później
-  (16:54:39Z). Jeśli sanity po przyszłych restartach robicie od razu
-  po restarcie — warto odczekać cykl (do ~1 min) przed werdyktem.
+(Skrzynka opróżniona 29.08 rano — raport CC-Win o wdrożeniu „cykl w
+state" + Partii 17 odebrany [flatParams i posture=wide na obu nogach
+potwierdzone]. Notatka proceduralna CC-Win przeniesiona do zasad niżej
+w sekcji @CC-Win, żeby nie zginęła przy kasowaniu wpisu.)
+
+> **STAN 29.08 ~rano — DZIEŃ 2, SOBOTA (godziny operacyjne 9–20 pn–pt,
+> dziś tylko alarm EXIT_TREND 24/7).** Automat czysty, obie nogi
+> in-range, vsHODL −$4.22, zegar flatu cbBTC WYZEROWANY w nocy (gap
+> −2.1% przy progu 2%) — pierwszego zwężenia nadal nie było.
+> W drodze paczka „raport+telegram" (fee narosłe w state, kolumny
+> POZYCJI REALNYCH, digest Telegrama przepięty z paper na realne).
+> **TERMIN PRZEGLĄDU USTALONY (Rafał, 29.08): PONIEDZIAŁEK 31.08**
+> (wcześniejsze „1.09" było sprzecznością — 1.09.2026 to wtorek).
+> Zlecenie CC-Win COMPARE_HL_D na 720d ma ten sam termin: 31.08 rano.
+
 > **STAN 28.08 ~popołudnie — DZIEŃ DOMKNIĘTY OPERACYJNIE.** Wdrożone
 > i zweryfikowane: FLAT_ENTER/FLAT_EXIT (detektor tyka; gap cbBTC
 > tańczy wokół progu 2% — zegar startuje/zeruje się, to pomiar, nie
@@ -210,6 +213,37 @@ w sekcji @CC-Win.)
   Weryfikacja przez czytanie kodu + tsc/build (bez portfela na żywo).
   Po commit+push: ping CC-Win (build+restart homos-server).
 
+- [Sonnet→CC-Mac, 29.08 — **PARTIA 18 ZROBIONA, do commit+push**] Oba
+  punkty ze spec (TASKS-UI.md PARTIA 18) wdrożone. tsc czysty (poza
+  preexisting observer:43 viem/ox — niezmienione), `npm run build`
+  przechodzi (tylko preexisting size-limit warnings).
+  1. **`src/hooks/useBotApi.ts`**: `BotStateShape.tranche?` — kształt
+     1:1 z `TrancheState` w bot/observer.ts (label/depositedUsd/
+     startedAt zawsze obecne, reszta `number|null`).
+  2. **Pasek „BILANS TRANSZY"** (`src/components/MorningCockpit.tsx`),
+     NAD panelem zbiorczym Partii 17 — nowe klasy `.tranche-bar`/
+     `.tranche-bar-stat`/`.tranche-bar-value`/`.tranche-breakdown`
+     (styles.css, celowo mniejsza czcionka niż `.paper-total-header` —
+     "spokojniejsza" wg spec). Kafle Wpłacone/Dziś łącznie/Różnica +
+     linia rozbicia "w pozycjach $A + w portfelu $B · z tego ruch
+     rynku ±$C · reszta ±$D" (tooltip na "reszcie" z dokładnym tekstem
+     ze spec). `walletUsd`/`totalUsd`/`diffUsd`/`diffPct` → „—" gdy
+     `null`, zero własnego liczenia sumy. Cały pasek renderuje się
+     tylko gdy `bot.state.tranche` istnieje (świeży/stary bot bez
+     paczki 29.08 — nic nie pokazuje, nie psuje layoutu).
+  3. **Rozróżnienie miar**: kafel "PnL od startu" w panelu Partii 17
+     dostał `title` (na wartości i na etykiecie) — "Liczone od kotwic
+     pozycji, bez bufora i kosztów wejścia — pełny rachunek transzy
+     jest w pasku wyżej". Panel Partii 17 poza tym BEZ ZMIAN (jak
+     zastrzegał spec).
+  4. Kolumna Koszty: sprawdzone — `costsUsd={bp?.costsUsd ?? null}`
+     w MorningCockpit.tsx już było feature-detectem, NIE hardkodowane
+     na `null` (Partia 15/17 to zrobiły dobrze). Nic do zmiany.
+  5. Zero nowych requestów — wszystko z już wczytanego `/api/state`.
+  Weryfikacja przez czytanie kodu + tsc/build (bez portfela na żywo —
+  `tranche` w state u mnie na dysku nie było jeszcze widoczne live w
+  tej sesji). Po commit+push: ping CC-Win (build + restart homos-server).
+
 - [Fable→Sonnet, 28.08 ~rano] ZAPOWIEDŹ Partii 16: karty propozycji
   zwężenia/rozszerzenia (FLAT_NARROW/FLAT_WIDEN) — spec dopiszę do
   TASKS-UI po zbudowaniu FLAT_ENTER w observerze (dziś). NIE zaczynać
@@ -323,6 +357,30 @@ w sekcji @CC-Win.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 29.08 — **PACZKA ZBIORCZA „POMIAR PIENIĘDZY" +
+  PARTIA 18 — wszystko w JEDNYM commit+push**] Partia 18 od Sonneta
+  ODEBRANA i sprawdzona przez Fable (typy `tranche` zgodne z bot-side
+  co do pola, nulle renderowane jako „—", panel Partii 17 nietknięty
+  poza tooltipem; tsc czysty, `npm run build` przechodzi — tylko
+  preexisting size-limit warnings). Commit+push RAZEM:
+  - `bot/config.ts` — stała `TRANCHE` (wpłacone 6 092 USDC, start
+    27.08, sieć base);
+  - `bot/observer.ts` — `feesUsd` (fee narosłe, symulacja `collect()`),
+    `costsUsd` (gaz z RECEIPTÓW, cache `.bot/tx-costs.json`),
+    `state.tranche` (bilans transzy z odczytem sald portfela);
+  - `scripts/morning-report.ts` — sekcja BILANS TRANSZY, nowe kolumny
+    POZYCJI REALNYCH, **digest Telegrama przepięty z paper-tradingu
+    na pozycje realne**;
+  - `src/components/MorningCockpit.tsx`, `src/hooks/useBotApi.ts`,
+    `src/styles.css` — PARTIA 18 (pasek bilansu + tooltipy);
+  - `TASKS-UI.md` (PARTIA 18 ✅), `RESEARCH-QUEUE.md` i `CONTEXT.md`
+    (termin przeglądu 31.08 + dziennik), `HANDOFF.md`.
+  Komunikat: "feat(bot): position gas costs + tranche balance;
+  feat(ui): tranche balance bar (partia 18); feat(report): real-position
+  columns + telegram digest on real positions".
+  **NATYCHMIAST po pushu ping CC-Win** — wdrożenie zbiorcze czeka
+  tylko na ten commit.
 
 - [Fable→CC-Mac, 28.08 ~wieczór #3 — PACZKA "compare kotwic"]
   Commit+push: backtest/flatwindows.ts (detekcja wyciągnięta do
@@ -595,11 +653,66 @@ w sekcji @CC-Win.)
 > zlecenia / decyzję z przeglądu 1.09.)
 
 > (Wdrożenie "cykl w state" + Partia 17 ZROBIONE 28.08 wieczór —
-> build+restart+sanity OK, raport w skrzynce @Fable powyżej.)
+> build+restart+sanity OK, raport odebrany przez Fable 29.08.
+> ZASADA Z TAMTEGO RAPORTU, zostaje na stałe: sanity `/api/state`
+> robimy ~1 min PO restarcie — pierwszy odczyt tuż po restarcie
+> pokazuje `positions:[]`/`posture:undefined`, bo cykl odświeżania
+> pozycji z łańcucha jeszcze nie doszedł do końca. To nie bug.)
 
-- [Fable→CC-Win, 28.08 ~wieczór — **NA PONIEDZIAŁEK 1.09 RANO (przed
-  przeglądem; decyzja Rafała: NIE robić wcześniej)** — porównanie
-  kotwic EMA na świeżych 720d, ostatni element paczki decyzyjnej]
+- [Fable→CC-Win, 29.08 — **WDROŻENIE ZBIORCZE: paczka „pomiar
+  pieniędzy" (bot + raport + Telegram) + PARTIA 18 (UI). GOTOWE DO
+  WDROŻENIA — Partia 18 odebrana, wszystko idzie jednym commitem
+  od CC-Mac**]
+  1. `git pull`, `npm run build` (frontend — Partia 18), a potem
+     **OBA restarty od razu, w jednym podejściu** (decyzja Rafała
+     29.08): `nssm restart homos-bot` + `nssm restart homos-server`.
+     Nie zostawiaj bota na później — bez jego restartu nowe pola
+     (`feesUsd`, `costsUsd`, `tranche`) nie pojawią się w state,
+     a świeży frontend pokaże puste kafle i będzie wyglądał na zepsuty.
+     Jeśli NSSM jest poza uprawnieniami sesji (jak 28.08) — poproś
+     Rafała o oba restarty naraz, nie o jeden.
+  UWAGA na jutrzejszy raport: `scripts/morning-report.ts` działa z
+  repo (bez usługi), więc sam `git pull` wystarczy, by o 08:45 poszedł
+  NOWY digest. Jeśli pull będzie, a restart bota jeszcze nie — nowe
+  kolumny (fee narosłe / koszty / bilans transzy) pokażą „—" zamiast
+  liczb. To nie usterka, tylko brakujące pola w starym state.json.
+  2. Sanity po ~1 min: `/api/state` →
+     (a) `positions[].feesUsd` to LICZBA (nie null) na obu nogach —
+         rzędu $0.x–$1.x na #5886957, grosze na #5887690. Jeśli null,
+         w observer.log jest linia `fees #<tokenId>: ...` z powodem
+         (RPC odmówiło symulacji `collect()`) — wklej ją do @Fable.
+     (b) `positions[].costsUsd` to LICZBA (gaz z receiptów; na Base
+         centy–kilkadziesiąt centów). W logu powinna być linia
+         `koszty gazu: +N transakcji (razem M)`. Backfill idzie po
+         25 tx na cykl, więc przy pyłkach z mainnetu pełna liczba
+         może się ustalić dopiero po kilku cyklach — to normalne.
+     (c) root `tranche`: `walletUsd` NIE jest null (to odczyt sald
+         WATCH_ADDRESS na Base) i `totalUsd ≈ lpUsd + walletUsd`.
+         Gdyby `walletUsd: null` — w logu jest `portfel transzy: ...`.
+     **Do @Fable podaj cały obiekt `tranche`** — pierwsza wartość
+     `residualUsd` domyka rachunek wejścia (spodziewane ok. −$70…−$95)
+     i chcę ją zobaczyć, zanim wejdzie do przeglądu 31.08.
+  3. Test raportu BEZ wysyłki i BEZ gita:
+     `REPORT_PUSH=0 npm run report:morning` — sprawdź w
+     `reports/morning-<data>.md`, że sekcja POZYCJE REALNE ma nowe
+     kolumny (postura / fee narosłe / tempo $/d / RAZEM) i że tabela
+     się nie rozjeżdża.
+  4. Sanity UI (Partia 18): w kokpicie NAD panelem zbiorczym jest
+     pasek „Wpłacone / Dziś łącznie / Różnica" z linią rozbicia
+     („w pozycjach … + w portfelu … · z tego ruch rynku … · reszta …").
+     Jeśli paska NIE MA, a `/api/state.tranche` istnieje — to stary
+     bundle, powtórz `npm run build` (klasa błędu z 27–28.08).
+  5. Jutrzejszy automat 08:45 wyśle na Telegram digest POZYCJI
+     REALNYCH zamiast paper — to zamierzone (decyzja Rafała 29.08).
+     Jeśli zamiast digestu przyjdzie „⚠️ brak żywych pozycji w
+     state.json" — to alarm, nie kosmetyka: pinguj od razu.
+
+- [Fable→CC-Win, 28.08 ~wieczór, TERMIN POPRAWIONY 29.08 — **NA
+  PONIEDZIAŁEK 31.08 RANO (przed przeglądem; decyzja Rafała: NIE robić
+  wcześniej)** — porównanie kotwic EMA na świeżych 720d, ostatni
+  element paczki decyzyjnej. UWAGA: wcześniejsze wpisy mówiły
+  „poniedziałek 1.09" — to była sprzeczność (1.09.2026 to wtorek);
+  Rafał rozstrzygnął 29.08: **przegląd i to zadanie = 31.08**]
   Po pullu paczki "compare kotwic" od CC-Mac, na cache z
   poniedziałkowego fetchu 07:30:
   1. `COMPARE_HL_D=5 CONFIRM_H=12 NARROW=0.06 npx tsx

@@ -180,6 +180,27 @@ export interface BotStateShape {
    *  całkiem nieobecne — stary bot sprzed tej paczki). Jednostki: enterGap/
    *  exitGap w procentach (jak trendGapPct), confirmH w godzinach. */
   flatParams?: { enterGap: number; exitGap: number; confirmH: number };
+  /** Partia 18: bilans TRANSZY (bot/observer.ts trancheLive, 29.08) — druga,
+   *  niezależna miara obok panelu zbiorczego Partii 17 (ten mierzy jakość
+   *  strategii od kotwic pozycji; to tutaj mierzy ile z faktycznie
+   *  wpłaconych USDC dziś jest, licząc bufor w portfelu i koszty wejścia).
+   *  KAŻDE pole poza label/depositedUsd/startedAt może być `null` (nieudany
+   *  odczyt sald albo brak kursu) — renderować „—", NIGDY $0 ani liczyć
+   *  sumy samodzielnie w UI, bot już to policzył. */
+  tranche?: {
+    label: string;
+    depositedUsd: number;
+    startedAt: string;
+    lpUsd: number;
+    walletUsd: number | null;
+    totalUsd: number | null;
+    diffUsd: number | null;
+    diffPct: number | null;
+    marketPnlUsd: number | null;
+    residualUsd: number | null;
+    gasUsd: number | null;
+    updatedAt: string;
+  } | null;
 }
 
 export type BotStatus = 'loading' | 'online' | 'stale' | 'offline';

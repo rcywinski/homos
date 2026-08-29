@@ -1919,6 +1919,30 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   font-size: 11px;
   margin-bottom: 12px;
 }
+
+/* --- Partia 18: pasek BILANS TRANSZY (MorningCockpit.tsx, NAD panelem
+   zbiorczy Partii 17) — miara osobna, celowo "spokojniejsza" wizualnie
+   (mniejsza czcionka, bez zielono-czerwonych kafli jak PnL) niż
+   .paper-total-header, żeby nie mylić dwóch różnych miar. --- */
+.tranche-bar {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
+}
+.tranche-bar-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tranche-bar-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+.tranche-breakdown {
+  font-size: 11px;
+  margin-bottom: 10px;
+}
 .paper-pool-grid {
   display: flex;
   flex-direction: column;

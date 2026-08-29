@@ -918,6 +918,58 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
 
           <div className="morning-section-title">Pozycje — akcje</div>
 
+          {/* Partia 18: pasek BILANS TRANSZY, NAD panelem zbiorczym Partii 17
+              (decyzja Rafała 29.08 — sekcja OSOBNA, panel Partii 17 zostaje
+              BEZ ZMIAN poza dopiskiem/tooltipem niżej). Mierzy INNĄ rzecz niż
+              panel Partii 17: ile z faktycznie wpłaconych USDC dziś jest
+              (zawiera bufor w portfelu + jednorazowe koszty wejścia), a nie
+              tylko jakość LP od kotwic pozycji. Bot-side już liczy wszystko —
+              UI tylko wyświetla `bot.state.tranche`, zero własnej matematyki.
+              `walletUsd`/`totalUsd`/`diffUsd`/`diffPct` bywają `null` (nieudany
+              odczyt sald lub brak kursu) — wtedy „—", NIGDY $0. */}
+          {bot.state?.tranche && (
+            <>
+              <div className="tranche-bar">
+                <div className="tranche-bar-stat">
+                  <span className="tranche-bar-value">{fmtUsd(bot.state.tranche.depositedUsd)}</span>
+                  <span className="muted">
+                    Wpłacone ({new Date(bot.state.tranche.startedAt).toLocaleDateString('pl-PL')})
+                  </span>
+                </div>
+                <div className="tranche-bar-stat">
+                  <span className="tranche-bar-value">{bot.state.tranche.totalUsd === null ? '—' : fmtUsd(bot.state.tranche.totalUsd)}</span>
+                  <span className="muted">Dziś łącznie</span>
+                </div>
+                <div className="tranche-bar-stat">
+                  <span
+                    className={`tranche-bar-value ${
+                      bot.state.tranche.diffUsd === null ? '' : bot.state.tranche.diffUsd < 0 ? 'forecast-negative' : 'paper-positive'
+                    }`}
+                  >
+                    {bot.state.tranche.diffUsd === null || bot.state.tranche.diffPct === null
+                      ? '—'
+                      : `${fmtSigned(bot.state.tranche.diffUsd)} (${bot.state.tranche.diffPct >= 0 ? '+' : ''}${bot.state.tranche.diffPct.toFixed(1)}%)`}
+                  </span>
+                  <span className="muted">Różnica</span>
+                </div>
+              </div>
+              <div className="muted tranche-breakdown">
+                w pozycjach {fmtUsd(bot.state.tranche.lpUsd)} + w portfelu {bot.state.tranche.walletUsd === null ? '—' : fmtUsd(bot.state.tranche.walletUsd)}
+                {bot.state.tranche.marketPnlUsd !== null && bot.state.tranche.residualUsd !== null && (
+                  <>
+                    {' '}
+                    · z tego ruch rynku {fmtSigned(bot.state.tranche.marketPnlUsd)} · reszta (koszty wejścia + beta bufora){' '}
+                    <span
+                      title="jednorazowe koszty wejścia — swapy, poślizg, gaz mintów — plus zmiana wartości bufora w portfelu. Powinna być mniej więcej stała; jeśli rośnie, zgłoś to Fable."
+                    >
+                      {fmtSigned(bot.state.tranche.residualUsd)}
+                    </span>
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
           {/* Partia 17 pkt 1: panel zbiorczy nad kartami — lustrzany do
               .paper-total-header (PaperTradingPanel.tsx), te same klasy CSS.
               Tylko gdy jest przynajmniej jedna pozycja z policzalną historią
@@ -930,11 +982,19 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                 <span className="muted">Equity łącznie</span>
               </div>
               <div className="paper-total-stat">
-                <span className={`paper-total-value ${totalPnlUsd < 0 ? 'forecast-negative' : 'paper-positive'}`} title="Zawiera ruch rynku (beta) — czysta przewaga LP to kafel vs HODL.">
+                <span
+                  className={`paper-total-value ${totalPnlUsd < 0 ? 'forecast-negative' : 'paper-positive'}`}
+                  title="Liczone od kotwic pozycji, bez bufora i kosztów wejścia — pełny rachunek transzy jest w pasku wyżej."
+                >
                   {fmtSigned(totalPnlUsd)} ({totalPnlPct >= 0 ? '+' : ''}
                   {totalPnlPct.toFixed(1)}%)
                 </span>
-                <span className="muted">PnL od startu{oldestAnchorTs ? ` (od ${new Date(oldestAnchorTs).toLocaleDateString('pl-PL')})` : ''}</span>
+                <span
+                  className="muted"
+                  title="Liczone od kotwic pozycji, bez bufora i kosztów wejścia — pełny rachunek transzy jest w pasku wyżej."
+                >
+                  PnL od startu{oldestAnchorTs ? ` (od ${new Date(oldestAnchorTs).toLocaleDateString('pl-PL')})` : ''}
+                </span>
               </div>
               <div className="paper-total-stat">
                 <span className={`paper-total-value ${totalVsHodlUsd < 0 ? 'forecast-negative' : 'paper-positive'}`}>{fmtSigned(totalVsHodlUsd)}</span>
