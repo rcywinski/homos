@@ -54,10 +54,21 @@ export interface BotPool {
    *  przy ±16% sygnał wyjścia pada po 32% drogi do krawędzi, przy
    *  ±6% — po 83%. Stąd szerokość WYPROWADZONA z progu wyjścia
    *  (FLAT.exitGap = 5%) plus zapas na dryf EMA w trakcie epizodu.
-   *  Wartości 6/8% = dokładnie te, na których liczone jest EV
-   *  zwężania w E1/E4 (flatwindows NARROW), więc liczby z paczki
-   *  decyzyjnej przenoszą się na produkt 1:1. Sweep szerokości
-   *  (co maksymalizuje ΣEV) — na przeglądzie 31.08. */
+   *  WARTOŚĆ 5% NA OBU PULACH = dokładnie FLAT.exitGap (decyzja
+   *  Rafała 29.08 po sweepie): krawędź pasma pokrywa się z sygnałem
+   *  FLAT_WIDEN, więc pozycja przestaje zarabiać w tym samym
+   *  momencie, w którym i tak ją rozszerzamy — jedna reguła zamiast
+   *  dwóch przypadkowych liczb. Sweep (flatwindows, 365d, CONFIRM_H=12,
+   *  ΣEV zwężania): cbBTC ±8% $193 → ±6% $334 → ±5% $442 → ±4% $570
+   *  → ±3% $685; base-030 ±8% $195 → ±6% $388 → ±5% $525 → ±4% $672.
+   *  EV rośnie monotonicznie w stronę węższych pasm, ale poniżej ±5%
+   *  psuje się udział czasu w zakresie (cbBTC przy ±3%: 59–79%
+   *  w kilku epizodach) — stąd ±5% jako punkt, w którym mamy prawie
+   *  całe EV przy in-range 85–100%.
+   *  ZASTRZEŻENIE: sweep liczony na cache 365d kończącym się 11.08;
+   *  weryfikacja na świeżych 720d (z bullem) — zlecona CC-Win na
+   *  przegląd 31.08, razem z walkforwardem hybrydy o TEJ szerokości
+   *  (dziś walkforward zwęża po k×σ×√7 — patrz RESEARCH-QUEUE E4). */
   productNarrowWidthPct?: number;
 }
 
@@ -127,7 +138,7 @@ export const BOT_POOLS: BotPool[] = [
     t0: '0x4200000000000000000000000000000000000006', t1: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     trendAction: 'hedge', // ALGORITHM v1.2: hedge-excess (bramka 73%/−2.88 i 81%/−2.74)
     productIdleWidthPct: 50, // PRODUKT 27.08: hybryda FlatWide, idle ±50%
-    productNarrowWidthPct: 8, // 29.08: zwężenie ±8% (E1/E4 NARROW domyślny; 1.6× próg wyjścia 5%)
+    productNarrowWidthPct: 5, // 29.08: zwężenie ±5% = próg wyjścia (sweep: ΣEV $525 vs $195 przy ±8%)
   },
   {
     // para skorelowana (PAIRS.md: sleeve pasywny ±15%); cena kwotowana w WETH,
@@ -144,7 +155,7 @@ export const BOT_POOLS: BotPool[] = [
     quote: 'WETH', usdRefPoolId: 'base-weth-usdc-030',
     advisorK: 2, trendReentry: 'half',
     productIdleWidthPct: 40, // PRODUKT 27.08: hybryda FlatWide, idle ±40%
-    productNarrowWidthPct: 6, // 29.08: zwężenie ±6% (E1/E4 NARROW=0.06; 1.2× próg wyjścia 5%)
+    productNarrowWidthPct: 5, // 29.08: zwężenie ±5% = próg wyjścia (sweep: ΣEV $442 vs $193 przy ±8%; in-range 85-100%)
   },
   {
     // WETH/cbBTC 0.3% Base — dodane 2026-08-26 decyzją przeglądu (DECYZJE

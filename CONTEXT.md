@@ -332,11 +332,28 @@ Na 31.08: dodać `narrowWidth` do `flatOnlyLP` i przepuścić hybrydę
 walkforwardem z tą samą szerokością, którą gra produkt — sweep
 flatwindows daje kandydata, walkforward mówi, czy nie psuje wyniku
 w skali całych okien (wąskie pasmo częściej wypada z zakresu).
-DECYZJA NA WIECZÓR (Rafał: sobota, nie pracujemy dalej): zostaje
-6/8% — bo to jedyna szerokość, dla której mamy dodatnie EV epizodów
-policzone na realnych swapach; jeśli flat potwierdzi się dziś,
-propozycja przyjdzie z tą szerokością i własnym paybackiem, nikt
-nic nie podpisuje, obserwujemy. Liczenie w poniedziałek.
+SWEEP ZROBIONY OD RAZU (Rafał: „dziś będę chciał wejść w wąski
+range, jak flat się utrzyma" — skoro podpis ma paść dziś, dane
+muszą być PRZED podpisem, nie po). flatwindows, cache 365d,
+CONFIRM_H=12, ΣEV zwężania per szerokość:
+| pasmo | cbBTC | base-030 |
+|---|---|---|
+| ±3% | $685 (in-range 59–98%) | — |
+| ±4% | $570 (80–100%) | $672 |
+| **±5%** | **$442 (85–100%)** | **$525** |
+| ±6% | $334 | $388 |
+| ±8% | $193, próg 8.1d | $195 |
+| ±12% | $47, próg 17.0d | — |
+EV rośnie monotonicznie im wężej, ale poniżej ±5% zaczyna się sypać
+udział czasu w zakresie. DECYZJA RAFAŁA: **±5% na obu pulach** =
+dokładnie FLAT.exitGap — krawędź pasma pokrywa się z sygnałem
+FLAT_WIDEN, więc pozycja przestaje zarabiać w tym samym momencie,
+w którym i tak ją rozszerzamy. Jedna reguła zamiast dwóch liczb
+z env. Efekt vs stan sprzed dziś (k×σ ±16%): próg opłacalności
+epizodu spada z ~17 dni do 2.5 dnia przy medianie epizodu 10.9d.
+ZASTRZEŻENIE, które musi wybrzmieć na 31.08: sweep liczony na cache
+kończącym się 11.08 i na oknie 365d; 720d z bullem oraz walkforward
+hybrydy o TEJ szerokości — dopiero w poniedziałek.
 TERMIN PRZEGLĄDU: **poniedziałek 31.08** (decyzja Rafała — wcześniejsze
 „1.09" było pomyłką kalendarzową, 1.09.2026 to wtorek); zlecenie CC-Win
 COMPARE_HL_D 720d na ten sam poranek. Poprawione w HANDOFF i

@@ -373,6 +373,15 @@
   zamiast doradcy k×σ×√7; nota propozycji mówi, skąd wzięła się
   szerokość i ile to progów wyjścia; fallback na k×σ zostaje dla pul
   bez ustawionej wartości). tsc czysty (poza preexisting observer:43).
+  **AKTUALIZACJA ~12:5x — szerokość to ±5% NA OBU PULACH** (nie 6/8):
+  Rafał chce dziś wejść w wąski zakres, więc policzyłem sweep od razu
+  (flatwindows, cache 365d, CONFIRM_H=12). ΣEV zwężania rośnie
+  monotonicznie im wężej — cbBTC: ±8% $193 / ±6% $334 / ±5% $442 /
+  ±4% $570 / ±3% $685; base-030: ±8% $195 / ±6% $388 / ±5% $525 /
+  ±4% $672 — ale poniżej ±5% psuje się udział czasu w zakresie
+  (cbBTC ±3%: 59–79% w kilku epizodach). ±5% = dokładnie próg
+  wyjścia z flatu, więc krawędź pasma pokrywa się z sygnałem
+  FLAT_WIDEN. Decyzja Rafała: ±5% na obu pulach.
   Komunikat: "fix(product): flat narrowing uses product width, not
   v1.2 advisor k×σ".
   **DEADLINE: 19:41Z (21:41 lokalnie)** — o tej godzinie mija 12h
@@ -805,10 +814,14 @@
      się nie zmienia do czasu potwierdzenia flatu (suggestion nadal
      szeroka, to poprawne). Realny dowód dopiero w propozycji.
   3. Po 19:41Z, gdy pojawi się FLAT_NARROW: sprawdź w
-     `/api/state.proposals`, że `suggestedRange` to ok. **±6%**
-     (cbBTC) — w nocie propozycji ma być „stała szerokość produktu
-     ±6% (1.2× próg wyjścia)". Jeśli widzisz ±15–16% i „k×σ" —
-     restart nie złapał nowego kodu, zgłoś OD RAZU.
+     `/api/state.proposals`, że `suggestedRange` to ok. **±5%** —
+     w nocie propozycji ma być „stała szerokość produktu ±5%
+     (1.0× próg wyjścia)". Jeśli widzisz ±15–16% i „k×σ" — restart
+     nie złapał nowego kodu, zgłoś OD RAZU.
+     **UWAGA: Rafał zamierza tę propozycję DZIŚ PODPISAĆ**, więc ten
+     punkt nie jest kosmetyką — to ostatnia bramka przed realną
+     transakcją. Jeśli cokolwiek się nie zgadza, pisz do @Fable
+     ZANIM Rafał kliknie.
   4. **Gdyby propozycja powstała PRZED restartem** (czyli ze starą
      szerokością): odrzuć ją — w kokpicie „Odrzuć" albo usuń wpis
      z `.bot/proposals.json` — i pozwól botowi wygenerować nową.
