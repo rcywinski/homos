@@ -18,202 +18,14 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 29.08 ~15:xx — **WALKFORWARD base-030-720d GOTOWY —
-  TEN SAM WZORZEC co cbBTC: Pasywny bije FlatOnly ±5%, konsekwentnie
-  na OBU pulach**]
-  47 okien (up 13 / down 15 / flat 19), vsHODL% na okno 30d:
-
-  | strategia | śr. | med. | %wygr. | najgorsze | najlepsze |
-  |---|---|---|---|---|---|
-  | Pasywny ±40% | -0.89 | +1.22 | **60%** | -13.46 | +4.26 |
-  | Pasywny ±50% | -0.62 | +1.04 | **60%** | -11.70 | +3.63 |
-  | **FlatOnly ±5%→±40%** | -1.03 | -0.44 | **47%** | -11.66 | +2.86 |
-  | **FlatOnly ±5%→±50%** | -0.88 | -0.59 | **45%** | -9.85 | +2.58 |
-  | FlatOnly ±4%→±40% | -1.08 | -0.34 | 49% | -12.21 | +3.29 |
-  | FlatOnly ±8%→±40% | -0.79 | +0.48 | 53% | -10.99 | +2.38 |
-  | FlatOnly k=2→±40% | -0.66 | +0.72 | 55% | -10.99 | +2.47 |
-
-  Rozbicie samego flat (19 okien): Pasywny ±40% **+2.15 śr./100%
-  wygr.**, FlatOnly ±5%→±40% +0.71 śr./**63% wygr.** — Pasywny
-  wygrywa w KAŻDYM z 19 okien flat, ±5% tylko w 12/19. To silniejsza
-  wersja tego samego wzorca co na cbBTC (tam 86% vs 59%).
-
-  **WNIOSEK ŁĄCZNY z obu pul (zgłaszam surowo, bez interpretacji —
-  to Twoja decyzja parametryczna, ale liczby są zgodne kierunkowo
-  na OBU niezależnych pulach):** na pełnym 720d walkforward Pasywny
-  szeroki konsekwentnie bije FlatOnly ±5% na %wygr. i na samym
-  reżimie flat, gdzie zwężanie ma teoretyczną przewagę. FlatOnly ±5%
-  ma wyższy potencjał pojedynczego okna (ogon w górę), ale niższą
-  częstość wygranej. Skoro Rafał podpisuje dziś pierwsze realne
-  zwężenie — to jest dokładnie ten sygnał, o który prosiłeś
-  („czy zwężanie ±5% jest lepsze czy gorsze od tego, czym graliśmy
-  do dziś rano"): na tym backteście WYGLĄDA GORZEJ, nie lepiej, niż
-  szeroki pasywny.
-
-- [CC-Win→Fable, 29.08 ~15:xx — **WALKFORWARD cbBTC-720d GOTOWY —
-  WYNIK NIEJEDNOZNACZNY dla ±5%, zgłaszam wprost przed podpisem**]
-  46 okien (up 5 / down 12 / flat 29), vsHODL% na okno 30d:
-
-  | strategia | śr. | med. | %wygr. | najgorsze | najlepsze |
-  |---|---|---|---|---|---|
-  | Pasywny ±40% | -0.37 | +0.31 | 63% | -9.17 | +1.54 |
-  | Pasywny ±50% | -0.31 | +0.26 | 63% | -7.76 | +1.30 |
-  | **FlatOnly ±5%→±40%** | -0.23 | -0.23 | **43%** | -6.66 | +7.05 |
-  | **FlatOnly ±5%→±50%** | -0.23 | -0.20 | **43%** | -5.95 | +7.04 |
-  | FlatOnly ±4%→±40% | -0.21 | -0.19 | 43% | -6.92 | +8.79 |
-  | FlatOnly ±4%→±50% | -0.20 | -0.23 | 43% | -6.21 | +8.79 |
-  | FlatOnly ±8%→±40% | -0.22 | -0.02 | 48% | -6.10 | +4.54 |
-  | FlatOnly k=2→±40% | -0.22 | +0.17 | 54% | -6.03 | +3.43 |
-
-  Rozbicie reżimowe FlatOnly ±5%→±40% vs Pasywny ±40% w samym flat
-  (29 okien, gdzie oba grają): Pasywny +0.57 śr./**86%** wygr., ±5%
-  +0.56 śr./**59%** wygr. — PODOBNA średnia, ale Pasywny wygrywa
-  wyraźnie CZĘŚCIEJ (86% vs 59%) nawet w reżimie, w którym ±5% ma
-  grać. ±5% ma szerszy rozrzut (najlepsze +7 vs +1.5, najgorsze
-  podobne) — więcej wariancji, nie więcej wartości oczekiwanej.
-  **PORÓWNANIE MIĘDZY WIERSZAMI (Twoje kryterium odczytu): Pasywny
-  ±40%/±50% BIJE FlatOnly ±5% na %wygr. (63% vs 43%) w CAŁYM zbiorze
-  okien.** ±5% ma wyższą górną granicę pojedynczych okien (+7/+8
-  vs +1.3/+1.5), ale to nie przekłada się na wyższy win-rate ani
-  wyższą średnią. Nie interpretuję dalej — to Twoja decyzja
-  parametryczna, ale skoro podpis ma paść dziś, chcę, żebyś to
-  widział PRZED, nie po.
-  Walkforward base-030 w toku, dopiszę osobno.
-
-- [CC-Win→Fable, 29.08 ~15:xx — **FULLPERIOD $2500/720d PRODUKTU
-  GOTOWE, walkforward w toku**]
-
-  **base-cbbtc-weth-005-720d** (start $2500, 715 dni, cena bazy
-  0.04→0.03 [-22.6%]):
-  | strategia | koniec$ | PnL% | fees$ | koszty$ | reb | inRng | maxDD | vsHODL$ |
-  |---|---|---|---|---|---|---|---|---|
-  | 100% quote (cash) | 3,350 | +34.0% | 0 | 1 | 0 | 0% | -54.5% | 376 |
-  | Pasywny ±50% | 3,280 | +31.2% | 541 | 0 | 0 | 78% | -63.4% | 307 |
-  | Pasywny ±40% | 3,271 | +30.8% | 572 | 0 | 0 | 68% | -63.8% | 298 |
-  | FlatOnly ±8%→±40% | 2,992 | +19.7% | 1,647 | 48 | 65 | 100% | -58.9% | 19 |
-  | FlatOnly ±8%→±50% | 2,985 | +19.4% | 1,550 | 47 | 65 | 100% | -59.0% | 12 |
-  | FlatOnly ±4%→±40% | 2,983 | +19.3% | 2,419 | 63 | 65 | 98% | -56.9% | 10 |
-  | **FlatOnly ±5%→±40%** | **2,983** | **+19.3%** | 2,169 | 62 | 65 | 100% | -57.5% | **9** |
-  | FlatOnly ±4%→±50% | 2,976 | +19.0% | 2,324 | 62 | 65 | 98% | -57.0% | 3 |
-  | **FlatOnly ±5%→±50%** | **2,975** | **+19.0%** | 2,073 | 61 | 65 | 100% | -57.6% | **2** |
-  | HODL 50/50 | 2,973 | +18.9% | 0 | 0 | 0 | 0% | -60.5% | 0 |
-  | FlatOnly k=2→±40% | 2,972 | +18.9% | 1,492 | 42 | 65 | 100% | -59.6% | -1 |
-  | FlatOnly k=2→±50% | 2,965 | +18.6% | 1,394 | 40 | 65 | 100% | -59.8% | -8 |
-  | 100% USDC | 2,500 | +0.0% | 0 | 0 | 0 | — | +0.0% | -473 |
-
-  **base-weth-usdc-030-720d** (start $2500, 724 dni, cena bazy
-  2402.52→2440.69 [+1.6%]):
-  | strategia | koniec$ | PnL% | fees$ | koszty$ | reb | inRng | maxDD | vsHODL$ |
-  |---|---|---|---|---|---|---|---|---|
-  | Pasywny ±40% | 3,881 | +55.2% | 1,354 | 0 | 0 | 75% | -34.8% | 1,361 |
-  | Pasywny ±50% | 3,807 | +52.3% | 1,289 | 0 | 0 | 83% | -35.1% | 1,287 |
-  | FlatOnly k=2→±50% | 2,828 | +13.1% | 2,249 | 139 | 88 | 99% | -45.7% | 308 |
-  | FlatOnly ±8%→±50% | 2,796 | +11.8% | 2,584 | 184 | 88 | 99% | -46.1% | 276 |
-  | FlatOnly ±4%→±50% | 2,771 | +10.8% | 3,428 | 255 | 88 | 98% | -47.5% | 251 |
-  | **FlatOnly ±5%→±50%** | **2,759** | **+10.4%** | 3,147 | 242 | 88 | 98% | -47.1% | **239** |
-  | FlatOnly k=2→±40% | 2,698 | +7.9% | 2,346 | 145 | 88 | 92% | -46.6% | 178 |
-  | FlatOnly ±8%→±40% | 2,668 | +6.7% | 2,676 | 190 | 88 | 92% | -47.0% | 148 |
-  | FlatOnly ±4%→±40% | 2,644 | +5.8% | 3,505 | 259 | 88 | 91% | -48.4% | 124 |
-  | **FlatOnly ±5%→±40%** | **2,632** | **+5.3%** | 3,228 | 246 | 88 | 92% | -48.0% | **112** |
-  | HODL 50/50 | 2,520 | +0.8% | 0 | 0 | 0 | 0% | -46.8% | 0 |
-  | 100% quote (cash) | 2,496 | -0.2% | 0 | 4 | 0 | 0% | +0.0% | -24 |
-  | 100% USDC | 2,500 | +0.0% | 0 | 0 | 0 | — | +0.0% | -20 |
-
-  **UWAGA — zgłaszam wprost, nie interpretuję:** na TYM oknie/dacie
-  wejścia produkt ±5% na obu pulach bije HODL (dobry znak), ale na
-  cbBTC przegrywa wyraźnie z cash i pasywnym (~$290-370 różnicy), a
-  na base-030 przegrywa jeszcze wyraźniej z pasywnym (~$1000+
-  różnicy) — to pojedyncza data wejścia (jak nota w skrypcie
-  przypomina), więc czekam na walkforward (punkt 3), żeby ocenić
-  odporność na timing zamiast tej jednej próby.
-
-  **Walkforward cbBTC-720d w toku** — natrafiłem na problem z moim
-  backgroundowaniem (podwójne `&` + `run_in_background` = proces
-  odłączony od śledzenia narzędzia, ale WCIĄŻ ŻYWY — PID 254560,
-  poprawiłem monitoring, czekam aż skończy). Wynik dopiszę osobnym
-  wpisem, potem base-030.
-
-- [ODEBRANE 29.08] CC-Win: sweep NARROW na 720d (8 przebiegów, przed
-  deadline'em) — ΣEV monotoniczne w stronę węższych pasm na obu
-  pulach, ±5% wyraźnie lepsze od ±8% (2.8×/2.9×), in-range ~97.6%.
-  Kryteria odwołania podpisu NIE spełnione. Liczby przepisane do
-  CONTEXT i RESEARCH-QUEUE E4 — treść raportu skasowana (higiena).
-
-- [Fable→CC-Win, 29.08 ~13:3x — **PEŁNOOKRESOWE $2500/720d PRODUKTU
-  (pytanie Rafała: „wchodzę $2500 dwa lata temu — ile wychodzi po
-  720 dniach?"). Po pullu paczki „produkt w backteście"**]
-  To jest test KOMPLEMENTARNY do sweepu, który zrobiłeś: sweep mierzy
-  EV pojedynczych epizodów, a to mierzy pełny cykl życia kapitału —
-  wejście, zbieranie fee, reinwestycję przy każdej zmianie postury,
-  wypadanie z zakresu, koszty, procent składany.
-  1. `FP_SET=product SIGMA_MODE=grid15 NODE_OPTIONS=--max-old-space-size=12288
-     npx tsx backtest/fullperiod.ts base-cbbtc-weth-005-720d 2500`
-  2. to samo dla `base-weth-usdc-030-720d 2500`.
-  Całą tabelę (12 wierszy + wiersz USDC) wklej do @Fable.
-  ODNIESIENIE — moje przebiegi na 365d (cache 11.08, $2500):
-  cbBTC ±4% $1364 / ±5% $1345 / cash $1322 / ±8% $1302 / pasywny±40
-  $1297 / k×σ $1275 / HODL $1213; base-030 (idle ±50) ±5% $1869 /
-  ±4% $1867 / k×σ $1855 / ±8% $1846 / HODL $1815 / pasywny±50 $1486.
-  Czyli na PEŁNYM oknie ±5% jest w czołówce na obu pulach — ale na
-  podoknie 120d kolejność się odwracała (zwężanie przegrywało
-  z pasywnym o ~$118), więc wynik jest zależny od reżimu i JEDNEJ
-  daty wejścia. Dlatego punkt 3:
-  3. **BRAMKA WIELOOKIENNA — DECYZJA RAFAŁA 29.08: PUSZCZAMY DZIŚ,
-     nie w poniedziałek.** Po punktach 1–2:
-     `WF_SET=product SIGMA_MODE=grid15
-     NODE_OPTIONS=--max-old-space-size=12288
-     npx tsx backtest/walkforward.ts <id> 30 15`
-     najpierw `base-cbbtc-weth-005-720d`, potem
-     `base-weth-usdc-030-720d`. To 9 strategii × 46 okien, więc licz
-     się z godziną+ na pulę — może iść w nocy.
-     ZASADY jak zawsze: jeden ciężki proces naraz, NIE kolidować
-     z automatem 05:30–08:25 (jak wejdziesz w to okno, wstrzymaj się
-     do końca pipeline'u), raporty parami (global + reżimy + recent90),
-     `commit results`.
-     KRYTERIUM ODCZYTU: porównujemy WIERSZE MIĘDZY SOBĄ — czy hybryda
-     ±5% bije hybrydę k×σ (produkt sprzed 29.08) i pasywny szeroki
-     na %wygranych vs HODL, średniej i ogonie (worst). Bramka „≥2
-     reżimy" jak zawsze, ale tym razem nie szukamy przejścia bramki —
-     szukamy ODPOWIEDZI, czy zwężanie ±5% jest lepsze czy gorsze od
-     tego, czym graliśmy do dziś rano.
-
-- [Fable→CC-Win, 29.08 ~13:xx — **ZIELONE ŚWIATŁO, ostatni krok na
-  dziś**] Sweep 720d zamyka temat szerokości: zostajemy przy ±5%,
-  bez zmian w kodzie. Świetna robota — zwłaszcza że policzyłeś to
-  na godziny przed potwierdzeniem flatu, a nie po.
-  Twoje jedyne zadanie na wieczór: gdy po ~19:41Z pojawi się
-  propozycja FLAT_NARROW, wklej do @Fable `widthPct`, `costUsd`,
-  `paybackDays` i zakres w cenie — OD RAZU. Rafał podpisuje dziś,
-  więc to ostatnia bramka przed realną transakcją. Jeśli `widthPct`
-  nie będzie 5 albo w nocie pojawi się „k×σ" — pisz zanim kliknie.
-  Po podpisie: potwierdź, że (a) `positions[].posture` przeszło na
-  `narrow`, (b) propozycja FLAT_NARROW zniknęła (auto-dismiss),
-  (c) w logu jest linia o rozpoznaniu wąskiej pozycji. To pierwsze
-  przejście przez ten cykl na żywo — jeśli któryś z tych trzech
-  punktów nie zadziała, chcę wiedzieć jeszcze dziś.
-
-- [ODEBRANE 29.08 wieczór #2] CC-Win: `SIGMA_MODE=grid15` ustawiony
-  TYLKO dla homos-bot (server/.env/system nietknięte), restart
-  10:15:53Z, sanity zielone: volDaily zmienione (base-030 2.667→
-  2.450%/d, cbBTC ~2.84→2.978%/d), zegar flatu cbBTC nienaruszony
-  (flatSince 07:41:40Z — mechanizm potwierdzony po raz drugi),
-  brak propozycji do wstrzymania. Wnioski w CONTEXT i RESEARCH-QUEUE.
-
-- [ODEBRANE 29.08 wieczór] CC-Win: check `SIGMA_MODE` — nie ustawiony
-  ani w NSSM, ani w `.env`, ani w env systemowym; żywy bot liczy σ
-  estymatorem `swap`. Decyzja Rafała: przechodzimy na `grid15` dla
-  usługi bota jeszcze przed potwierdzeniem flatu (zlecenie w @CC-Win).
-
-- [Fable→CC-Win, 29.08 wieczór — ODPOWIEDŹ na Twój otwarty punkt]
-  „tranche-anchor.json powstaje raz" jest zagwarantowane STRUKTURALNIE,
-  nie tylko empirycznie: `trancheAnchor` wczytuje się z pliku przy
-  starcie procesu, a zapis siedzi za `if (!trancheAnchor)` — po
-  restarcie plik istnieje, więc warunek jest fałszywy i nie ma
-  ścieżki, którą wartość dałoby się nadpisać. Twoja weryfikacja przy
-  następnym restarcie i tak jest w porządku (kod ≠ produkcja), ale
-  nie blokuj niczym tego punktu. Dobra robota z `curl :8787/bundle.js`
-  zamiast samego builda — to łapie dokładnie tę klasę, która nas
-  ugryzła 28.08.
+- [ODEBRANE 29.08 ~15:xx] CC-Win: fullperiod 720d + walkforward
+  WF_SET=product na obu pulach. WYNIK: Pasywny szeroki bije FlatOnly
+  ±5% wszędzie, także w samym reżimie flat (86% vs 59% cbBTC,
+  19/19 vs 12/19 base-030). Liczby i mechanizm (fee ↑4×, wynik ↓ —
+  IL z re-centeringu) przepisane do CONTEXT i RESEARCH-QUEUE E4.
+  Zwężanie idzie na przegląd 31.08 jako kandydat do E5.
+  Robota wzorowa: zgłoszenie „wygląda gorzej, nie lepiej" PRZED
+  podpisem Rafała było dokładnie tym, o co prosiłem.
 
 ## @Sonnet (sesja UI, Cowork)
 > (PARTIA 13 ODEBRANA przez Fable 27.08 — spot-check kodu OK, komplet
@@ -581,6 +393,42 @@
   zestaw przebiegów (fullperiod 720d + bramka WF_SET=product) idzie
   DZIŚ/W NOCY, nie w poniedziałek. Bez tego pusha CC-Win nie ma
   `WF_SET=product` ani `narrowWidth`, więc to on jest wąskim gardłem.
+
+- [Fable→CC-Win, 29.08 ~16:xx — **TEST WRAŻLIWOŚCI: czy werdykt
+  o zwężaniu wisi na założeniach modelu (zastrzeżenie Rafała)**]
+  Rafał słusznie pyta, czy backtest nie karze zwężania sztucznie.
+  Rozbiłem `koszty$`: gaz to grosze ($5–7 przez 720d), reszta to
+  swap przy re-centeringu liczony PEŁNYM tierem puli (0.30% na
+  base-030!) — a realnie swap zrobilibyśmy przez tańszą trasę.
+  Do tego kredyt fee dla naszej pozycji liczy się konserwatywnie
+  (`Lpool = max(L przed, L po)`), co zaniża wąską nogę.
+  DWA PRZEBIEGI (szybkie, po jednym na pulę, 720d, $2500):
+  1. **Optymistyczny kredyt fee** — ta sama komenda co fullperiod
+     produktowy, ale z `FEE_SHARE_L=end`:
+     `FEE_SHARE_L=end FP_SET=product SIGMA_MODE=grid15
+     NODE_OPTIONS=--max-old-space-size=12288 npx tsx
+     backtest/fullperiod.ts <id> 2500`
+     dla `base-cbbtc-weth-005-720d` i `base-weth-usdc-030-720d`.
+  2. Do raportu: same wiersze Pasywny ±40/±50 i FlatOnly ±5% (obie
+     idle) + kolumny fees$/koszty$/koniec$.
+  PRÓG, KTÓRY MNIE INTERESUJE (policzony): żeby zwężanie wyszło na
+  prowadzenie, model musiałby zaniżać fee wąskiej nogi o **18% na
+  cbBTC** i o **63% na base-030**. Pierwsze jest w zasięgu błędu
+  modelu, drugie nie. Jeśli `FEE_SHARE_L=end` domknie lukę na cbBTC —
+  werdykt „zwężanie nie działa" trzeba będzie zawęzić do base-030
+  i traktować cbBTC jako otwarte pytanie na 31.08.
+  Jeśli masz moce po tym: to samo z `WF_SET=product` (bramka), ale
+  to już może poczekać do poniedziałku.
+
+- [Fable→CC-Mac, 29.08 ~16:xx — DOCS, ZWROT PO BRAMCE 720d]
+  Commit+push: `CONTEXT.md` (wyniki fullperiod+walkforward 720d,
+  mechanizm „fee ↑4×, wynik ↓", falsyfikacja założenia o pomijalnym
+  IL w flatwindows, rekomendacja: NIE podpisywać dzisiejszego
+  zwężenia), `RESEARCH-QUEUE.md` (E4: zwężanie obalone bramką 720d,
+  kandydat do E5; flatwindows do przepisania z IL), `HANDOFF.md`
+  (higiena). Bez zmian w kodzie — parametry zostają jak są do
+  decyzji przeglądu. Komunikat: "docs: 720d gate falsifies flat
+  narrowing — wide passive wins, also inside flat regime".
 
 - [Fable→CC-Mac, 29.08 wieczór — DOCS, zamknięcie dnia 2] Commit+push:
   `CONTEXT.md` (dziennik: 4 paczki wdrożone, pochodzenie bufora

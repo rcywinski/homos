@@ -410,6 +410,66 @@ i spójności z progiem wyjścia — ale NIE na bramce.
 STAŁA PRAWDA, która nie drgnęła: we wszystkich wariantach 100% USDC
 wygrywa (+$1287 i +$685 vs najlepsza strategia LP). Beta dominuje,
 hybryda to „HODL z yieldem", nie maszynka do alfy.
+~15:xx — **ZWROT: BRAMKA 720d OBALA ZWĘŻANIE. ODRADZAM DZISIEJSZY
+PODPIS.** CC-Win policzył komplet (fullperiod 720d + walkforward
+WF_SET=product na obu pulach) i wynik jest jednoznaczny w drugą
+stronę niż moja rekomendacja sprzed dwóch godzin.
+FULLPERIOD 720d ($2500): cbBTC — Pasywny ±50% $3280 vs FlatOnly ±5%
+$2983 (−$297); base-030 — Pasywny ±40% $3881 vs FlatOnly ±5%→±50%
+$2759 (−$1122). WALKFORWARD: cbBTC Pasywny 63% wygr. vs ±5% 43%;
+base-030 Pasywny 60% vs ±5% 45–47%. **I NAJWAŻNIEJSZE: w SAMYM
+REŻIMIE FLAT**, gdzie zwężanie ma teoretyczną przewagę — cbBTC
+Pasywny 86% wygr. vs ±5% 59%; base-030 Pasywny **19/19 okien** vs
+±5% 12/19. Zwężanie przegrywa nawet tam, gdzie miało wygrywać.
+MECHANIZM (liczby mówią wprost): zwężanie zarobiło DUŻO więcej fee —
+cbBTC $2169 vs $541, base-030 $3147 vs $1354 — a skończyło NIŻEJ.
+Czyli IL i re-centering zjadły ~$1.9k (cbBTC) i ~$2.9k (base-030)
+ponad to, co dołożyły fee, przy 65 i 88 rebalansach. Wąskie pasmo
+to short gamma: każde przejście postury REALIZUJE dywergencję.
+CO SIĘ ZŁAMAŁO W MOIM ROZUMOWANIU: `flatwindows` liczy ΣEV zwężania
+z jawnym założeniem „IL we flat pominięty (symetryczny, mały)" —
+i to założenie jest FAŁSZYWE. Cały mój dzisiejszy łańcuch (sweep →
+±5% → „zielone światło") stał na EV, które ignorowało główny koszt.
+Sweep i pełne okno 365d zgodnie schlebiały zwężaniu; 720d obalił —
+dokładnie ten sam wzorzec, co przy hedge'u 26.08 (artefakt małej
+próby / krótszego okna). Lekcja się powtórzyła, a ja jej nie
+zastosowałem do własnego wyniku.
+DECYZJA DO PODJĘCIA PRZEZ RAFAŁA (dziś ~21:41 pojawi się pierwsza
+propozycja FLAT_NARROW): rekomendacja Fable — NIE podpisywać;
+zostajemy w szerokim, temat zwężania wraca na przegląd 31.08 jako
+kandydat do E5 (falsyfikacje). Jeśli mimo to chcemy dane
+operacyjne — jeden świadomy cykl na cbBTC ($2.37 kosztu) jako
+EKSPERYMENT POMIAROWY, z góry opisany jako ujemny w oczekiwaniu.
+~16:xx — ZASTRZEŻENIE RAFAŁA DO WERDYKTU („rebalans tyle nie
+kosztuje, gaz jest ułamkowy; testy mogą mieć błędne założenia;
+rynek jest dynamiczny; nie wiem, jak model zakłada IL") —
+rozbite na trzy części, bo każda ma inny status:
+(1) **KOSZTY — Rafał ma rację, ale to nie one ważą.** Rozbicie
+kolumny `koszty$`: gaz to $5.20 (cbBTC) i $7.04 (base-030) przez
+720 dni — dokładnie tak ułamkowy, jak mówi. Reszta ($57 i $235) to
+SWAP przy re-centeringu, liczony PEŁNYM tierem puli: $0.87 i $2.67
+na rebalans. Na base-030 model płaci 0.30%, choć realnie swap
+poszedłby tańszą trasą — to jest realne zawyżenie, ale rzędu $200,
+przy luce $1122.
+(2) **IL — NIE JEST ZAŁOŻENIEM.** Silnik nie ma parametru IL:
+wartość pozycji liczy `amountsForL` (dokładna matematyka v3) po
+cenie z każdego swapu. IL jest WYNIKIEM zakresu i ścieżki ceny, nie
+wsadem. Nie da się go „źle założyć" — można się mylić tylko co do
+tego, jak często re-centrujemy (a to odwzorowuje nasz produkt 1:1).
+(3) **FEE — TU JEST REALNA NIEPEWNOŚĆ.** Kredyt liczy się jako
+`share = L_nasze/(L_pool + L_nasze) × nakładanie ścieżki swapu`,
+przy czym `L_pool = max(L przed, L po)` — wybór KONSERWATYWNY,
+zaniżający wąską nogę. Jest przełącznik `FEE_SHARE_L=end` (górna
+granica). POLICZONY PRÓG: żeby werdykt się odwrócił, model musiałby
+zaniżać fee wąskiej nogi o **18% na cbBTC** i **63% na base-030**.
+Pierwsze mieści się w błędzie modelu, drugie nie. Przebieg
+`FEE_SHARE_L=end` zlecony CC-Win — jeśli domknie lukę na cbBTC,
+werdykt zawężamy do base-030, a cbBTC zostaje otwarte na 31.08.
+(4) „Ostatnie dwa lata ≠ następne" — uczciwe zastrzeżenie, ale
+walkforward to 46 okien W RÓŻNYCH reżimach, a nie jedna ścieżka;
+zwężanie przegrywa też w podzbiorze okien FLAT, czyli w reżimie,
+o który Rafałowi chodzi. Do sprawdzenia na 31.08: wiersz recent90
+(czy ostatnie 90 dni zachowuje się inaczej niż całe okno).
 HIGIENA ZLECEŃ: CC-Win wyłapał sprzeczność w moich wpisach („Rafał
 podpisuje dziś" vs starsze „nic nie podpisuje") i ZGŁOSIŁ zamiast
 zgadywać — dokładnie to zachowanie, którego chcemy; wpis sprzeczny

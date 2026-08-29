@@ -722,11 +722,26 @@
     z bullem nie obala wyniku, wzmacnia: przewaga ±5% nad ±8%
     rośnie z 2.3–2.7× (365d) do 2.8–2.9× (720d). Próg opłacalności
     epizodu na cbBTC: 1.6 dnia przy medianie 7.7d.
-    ZOSTAJE NA 31.08: (a) czy zejść do ±4% (+33% EV, −5 p.p.
-    in-range) — nie ruszone przed pierwszym zwężeniem, żeby test
-    mechanizmu odbył się w czystych warunkach; (b) walkforward
-    hybrydy z TĄ szerokością (niżej) — sweep mierzy EV epizodów,
-    nie wynik całych okien.
+    **⛔ OBALONE TEGO SAMEGO DNIA (29.08 ~15:xx) — bramka 720d.**
+    Walkforward `WF_SET=product` + fullperiod 720d na OBU pulach:
+    Pasywny szeroki bije FlatOnly ±5% wszędzie — %wygr. 63 vs 43
+    (cbBTC) i 60 vs 45–47 (base-030), fullperiod $3280 vs $2983
+    i $3881 vs $2759 — a w SAMYM reżimie flat, gdzie zwężanie ma
+    grać: 86% vs 59% (cbBTC) i 19/19 vs 12/19 okien (base-030).
+    MECHANIZM: zwężanie zarobiło 4× więcej fee ($2169 vs $541;
+    $3147 vs $1354) i mimo to skończyło niżej — IL z re-centeringu
+    (65 i 88 rebalansów) zjadł ~$1.9k i ~$2.9k ponad przyrost fee.
+    DLACZEGO NIE WYSZŁO WCZEŚNIEJ: `flatwindows` liczy ΣEV zwężania
+    z jawnym założeniem „IL we flat pominięty (symetryczny, mały)" —
+    założenie FAŁSZYWE, i to ono napędzało cały sweep. 365d (sweep
+    i fullperiod) schlebiał zwężaniu, 720d obalił — ten sam wzorzec
+    co przy hedge'u 26.08.
+    NA 31.08: (a) decyzja, czy zwężanie w ogóle zostaje w produkcie
+    (kandydat do E5), (b) jeśli zostaje — `flatwindows` wymaga
+    przepisania tak, żeby liczył IL, inaczej to narzędzie będzie
+    dalej produkować mylące EV, (c) przy okazji: skoro Pasywny
+    szeroki wygrywa także w flat, wraca pytanie, czy detektor flatu
+    jest do czegokolwiek potrzebny poza procedurą awaryjną.
     **⚠️ ZNALEZIONE PRZY TEJ ZMIANIE — NAJWAŻNIEJSZE NA 31.08:
     dwa nasze narzędzia mierzyły DWA RÓŻNE produkty.**
     `walkforward` z `WF_SET=hybrid` (przebieg, na podstawie którego
