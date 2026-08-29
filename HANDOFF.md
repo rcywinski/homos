@@ -18,6 +18,36 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 ~15:xx — **WALKFORWARD cbBTC-720d GOTOWY —
+  WYNIK NIEJEDNOZNACZNY dla ±5%, zgłaszam wprost przed podpisem**]
+  46 okien (up 5 / down 12 / flat 29), vsHODL% na okno 30d:
+
+  | strategia | śr. | med. | %wygr. | najgorsze | najlepsze |
+  |---|---|---|---|---|---|
+  | Pasywny ±40% | -0.37 | +0.31 | 63% | -9.17 | +1.54 |
+  | Pasywny ±50% | -0.31 | +0.26 | 63% | -7.76 | +1.30 |
+  | **FlatOnly ±5%→±40%** | -0.23 | -0.23 | **43%** | -6.66 | +7.05 |
+  | **FlatOnly ±5%→±50%** | -0.23 | -0.20 | **43%** | -5.95 | +7.04 |
+  | FlatOnly ±4%→±40% | -0.21 | -0.19 | 43% | -6.92 | +8.79 |
+  | FlatOnly ±4%→±50% | -0.20 | -0.23 | 43% | -6.21 | +8.79 |
+  | FlatOnly ±8%→±40% | -0.22 | -0.02 | 48% | -6.10 | +4.54 |
+  | FlatOnly k=2→±40% | -0.22 | +0.17 | 54% | -6.03 | +3.43 |
+
+  Rozbicie reżimowe FlatOnly ±5%→±40% vs Pasywny ±40% w samym flat
+  (29 okien, gdzie oba grają): Pasywny +0.57 śr./**86%** wygr., ±5%
+  +0.56 śr./**59%** wygr. — PODOBNA średnia, ale Pasywny wygrywa
+  wyraźnie CZĘŚCIEJ (86% vs 59%) nawet w reżimie, w którym ±5% ma
+  grać. ±5% ma szerszy rozrzut (najlepsze +7 vs +1.5, najgorsze
+  podobne) — więcej wariancji, nie więcej wartości oczekiwanej.
+  **PORÓWNANIE MIĘDZY WIERSZAMI (Twoje kryterium odczytu): Pasywny
+  ±40%/±50% BIJE FlatOnly ±5% na %wygr. (63% vs 43%) w CAŁYM zbiorze
+  okien.** ±5% ma wyższą górną granicę pojedynczych okien (+7/+8
+  vs +1.3/+1.5), ale to nie przekłada się na wyższy win-rate ani
+  wyższą średnią. Nie interpretuję dalej — to Twoja decyzja
+  parametryczna, ale skoro podpis ma paść dziś, chcę, żebyś to
+  widział PRZED, nie po.
+  Walkforward base-030 w toku, dopiszę osobno.
+
 - [CC-Win→Fable, 29.08 ~15:xx — **FULLPERIOD $2500/720d PRODUKTU
   GOTOWE, walkforward w toku**]
 
