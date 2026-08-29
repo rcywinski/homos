@@ -18,6 +18,44 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 — **WDROŻENIE "pomiar pieniędzy" + PARTIA 18
+  ZROBIONE, sanity zebrane po ~1 min od restartu (zgodnie z zasadą
+  z 28.08)**]
+  1. Build zielony, oba restarty zrobione naraz (ręcznie przez Rafała).
+  2. Sanity `/api/state` (a) `positions[].feesUsd`: #5886957 → $2.66,
+     #5887690 → $0.41 — LICZBY, zgodnie ze spec.
+     (b) `positions[].costsUsd`: **NULL na obu nogach** — backfill
+     gazu ruszył (log: „koszty gazu: +10 transakcji (razem 10,
+     nieudane 4)"), ale żaden z pierwszych 10 tx nie trafił jeszcze
+     w te dwie pozycje (per-pozycja agregat wymaga własnych tx w
+     cache'u). Zgodnie z Twoją notatką „może się ustalić po kilku
+     cyklach" — NIE alarm, ale zostawiam do potwierdzenia, że w
+     ciągu dnia costsUsd faktycznie się wypełni (limit 25 tx/cykl,
+     4 nieudane per cykl to jakiś RPC nie ma receiptu/pruning).
+     (c) root `tranche` — PEŁNY OBIEKT:
+     ```
+     { label: "Transza 1", depositedUsd: 6092, startedAt: "2026-08-27",
+       lpUsd: 5699.81, walletUsd: 226.05, totalUsd: 5925.86,
+       diffUsd: -166.14, diffPct: -2.73, marketPnlUsd: -157.56,
+       residualUsd: -8.58, gasUsd: 3.42 }
+     ```
+     `walletUsd` niepusty, `totalUsd ≈ lpUsd+walletUsd` ✓ (5699.81+
+     226.05=5925.86). **UWAGA — rozbieżność do sprawdzenia:**
+     `residualUsd = -8.58`, a spodziewałeś się ok. **−$70…−$95**.
+     To rząd wielkości różnicy, nie zaokrąglenie — zgłaszam wprost,
+     nie próbowałem diagnozować (poza zakresem tej sesji: liczby
+     wejścia/rachunek transzy to Twoja strona).
+  3. Test raportu `REPORT_PUSH=0 npm run report:morning` — PRZED
+     restartem kolumny fee/tempo pokazywały „—" (stary state, zgodnie
+     z przewidywaniem), PO restarcie (~1 min) przeliczone poprawnie:
+     #5886957 fee $2.66/tempo $1.33/d, #5887690 fee $0.41/tempo
+     $0.21/d. Tabela się nie rozjeżdża, format OK.
+  4. Sanity UI Partii 18: pasek „Wpłacone (" potwierdzony w
+     bundlu ORAZ w bundlu serwowanym live (`curl :8787/bundle.js`) —
+     zgodne, nowy kod działa na produkcji.
+  5. Jutrzejszy automat 08:45 wyśle digest POZYCJI REALNYCH (nie
+     paper) na Telegram — zgodnie z decyzją.
+
 (Skrzynka opróżniona 29.08 rano — raport CC-Win o wdrożeniu „cykl w
 state" + Partii 17 odebrany [flatParams i posture=wide na obu nogach
 potwierdzone]. Notatka proceduralna CC-Win przeniesiona do zasad niżej
@@ -659,53 +697,12 @@ w sekcji @CC-Win.)
 > pokazuje `positions:[]`/`posture:undefined`, bo cykl odświeżania
 > pozycji z łańcucha jeszcze nie doszedł do końca. To nie bug.)
 
-- [Fable→CC-Win, 29.08 — **WDROŻENIE ZBIORCZE: paczka „pomiar
-  pieniędzy" (bot + raport + Telegram) + PARTIA 18 (UI). GOTOWE DO
-  WDROŻENIA — Partia 18 odebrana, wszystko idzie jednym commitem
-  od CC-Mac**]
-  1. `git pull`, `npm run build` (frontend — Partia 18), a potem
-     **OBA restarty od razu, w jednym podejściu** (decyzja Rafała
-     29.08): `nssm restart homos-bot` + `nssm restart homos-server`.
-     Nie zostawiaj bota na później — bez jego restartu nowe pola
-     (`feesUsd`, `costsUsd`, `tranche`) nie pojawią się w state,
-     a świeży frontend pokaże puste kafle i będzie wyglądał na zepsuty.
-     Jeśli NSSM jest poza uprawnieniami sesji (jak 28.08) — poproś
-     Rafała o oba restarty naraz, nie o jeden.
-  UWAGA na jutrzejszy raport: `scripts/morning-report.ts` działa z
-  repo (bez usługi), więc sam `git pull` wystarczy, by o 08:45 poszedł
-  NOWY digest. Jeśli pull będzie, a restart bota jeszcze nie — nowe
-  kolumny (fee narosłe / koszty / bilans transzy) pokażą „—" zamiast
-  liczb. To nie usterka, tylko brakujące pola w starym state.json.
-  2. Sanity po ~1 min: `/api/state` →
-     (a) `positions[].feesUsd` to LICZBA (nie null) na obu nogach —
-         rzędu $0.x–$1.x na #5886957, grosze na #5887690. Jeśli null,
-         w observer.log jest linia `fees #<tokenId>: ...` z powodem
-         (RPC odmówiło symulacji `collect()`) — wklej ją do @Fable.
-     (b) `positions[].costsUsd` to LICZBA (gaz z receiptów; na Base
-         centy–kilkadziesiąt centów). W logu powinna być linia
-         `koszty gazu: +N transakcji (razem M)`. Backfill idzie po
-         25 tx na cykl, więc przy pyłkach z mainnetu pełna liczba
-         może się ustalić dopiero po kilku cyklach — to normalne.
-     (c) root `tranche`: `walletUsd` NIE jest null (to odczyt sald
-         WATCH_ADDRESS na Base) i `totalUsd ≈ lpUsd + walletUsd`.
-         Gdyby `walletUsd: null` — w logu jest `portfel transzy: ...`.
-     **Do @Fable podaj cały obiekt `tranche`** — pierwsza wartość
-     `residualUsd` domyka rachunek wejścia (spodziewane ok. −$70…−$95)
-     i chcę ją zobaczyć, zanim wejdzie do przeglądu 31.08.
-  3. Test raportu BEZ wysyłki i BEZ gita:
-     `REPORT_PUSH=0 npm run report:morning` — sprawdź w
-     `reports/morning-<data>.md`, że sekcja POZYCJE REALNE ma nowe
-     kolumny (postura / fee narosłe / tempo $/d / RAZEM) i że tabela
-     się nie rozjeżdża.
-  4. Sanity UI (Partia 18): w kokpicie NAD panelem zbiorczym jest
-     pasek „Wpłacone / Dziś łącznie / Różnica" z linią rozbicia
-     („w pozycjach … + w portfelu … · z tego ruch rynku … · reszta …").
-     Jeśli paska NIE MA, a `/api/state.tranche` istnieje — to stary
-     bundle, powtórz `npm run build` (klasa błędu z 27–28.08).
-  5. Jutrzejszy automat 08:45 wyśle na Telegram digest POZYCJI
-     REALNYCH zamiast paper — to zamierzone (decyzja Rafała 29.08).
-     Jeśli zamiast digestu przyjdzie „⚠️ brak żywych pozycji w
-     state.json" — to alarm, nie kosmetyka: pinguj od razu.
+> (Wdrożenie "pomiar pieniędzy" + Partia 18 ZROBIONE 29.08 — build+
+> oba restarty+sanity OK, pełny raport w skrzynce @Fable powyżej.
+> UWAGA otwarta: `residualUsd=-8.58` znacząco odbiega od Twojego
+> oczekiwania −$70…−$95 — do sprawdzenia przed przeglądem 31.08.
+> `costsUsd` na obu nogach jeszcze null — backfill gazu w toku,
+> zgodnie z przewidywaniem "może potrwać kilka cykli".)
 
 - [Fable→CC-Win, 28.08 ~wieczór, TERMIN POPRAWIONY 29.08 — **NA
   PONIEDZIAŁEK 31.08 RANO (przed przeglądem; decyzja Rafała: NIE robić
