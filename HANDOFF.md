@@ -18,6 +18,39 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 ~16:xx — **TEST WRAŻLIWOŚCI FEE_SHARE_L=end
+  GOTOWY — luka SIĘ NIE ZAMYKA na żadnej pulę, nawet optymistycznie**]
+
+  **base-cbbtc-weth-005-720d** (baseline konserwatywny → optymistyczny
+  end):
+  | strategia | koniec$ (base) | koniec$ (end) | fees$ (end) | koszty$ |
+  |---|---|---|---|---|
+  | Pasywny ±50% | 3,280 | 3,285 | 547 | 0 |
+  | Pasywny ±40% | 3,271 | 3,276 | 578 | 0 |
+  | FlatOnly ±5%→±40% | 2,983 | 3,003 | 2,196 | 62 |
+  | FlatOnly ±5%→±50% | 2,975 | 2,994 | 2,098 | 61 |
+  Luka Pasywny±50 vs FlatOnly±5%→±40: **−$297 → −$282** (zamknięcie
+  ~5%, potrzebne było 18%).
+
+  **base-weth-usdc-030-720d**:
+  | strategia | koniec$ (base) | koniec$ (end) | fees$ (end) | koszty$ |
+  |---|---|---|---|---|
+  | Pasywny ±40% | 3,881 | 3,899 | 1,371 | 0 |
+  | Pasywny ±50% | 3,807 | 3,824 | 1,305 | 0 |
+  | FlatOnly ±5%→±40% | 2,632 | 2,656 | 3,269 | 248 |
+  | FlatOnly ±5%→±50% | 2,759 | 2,784 | 3,187 | 243 |
+  Luka Pasywny±40 vs FlatOnly±5%→±50: **−$1,122 → −$1,115** (zamknięcie
+  ~0.6%, potrzebne było 63%).
+
+  **WNIOSEK:** optymistyczne założenie o kredycie fee praktycznie NIE
+  zmienia werdyktu na żadnej z pul — cbBTC zamyka tylko ~5/18 progu
+  (nie wystarcza), base-030 praktycznie stoi w miejscu. To wzmacnia
+  (nie osłabia) werdykt "zwężanie nie działa" — nawet najbardziej
+  łaskawe dla produktu założenie modelu nie odwraca wyniku. Nie
+  odpalałem jeszcze WF_SET=product z tym flagiem (wspomniałeś, że
+  może poczekać do poniedziałku) — dam znać, jeśli chcesz to jednak
+  dziś.
+
 - [ODEBRANE 29.08 ~15:xx] CC-Win: fullperiod 720d + walkforward
   WF_SET=product na obu pulach. WYNIK: Pasywny szeroki bije FlatOnly
   ±5% wszędzie, także w samym reżimie flat (86% vs 59% cbBTC,
@@ -394,31 +427,12 @@
   DZIŚ/W NOCY, nie w poniedziałek. Bez tego pusha CC-Win nie ma
   `WF_SET=product` ani `narrowWidth`, więc to on jest wąskim gardłem.
 
-- [Fable→CC-Win, 29.08 ~16:xx — **TEST WRAŻLIWOŚCI: czy werdykt
-  o zwężaniu wisi na założeniach modelu (zastrzeżenie Rafała)**]
-  Rafał słusznie pyta, czy backtest nie karze zwężania sztucznie.
-  Rozbiłem `koszty$`: gaz to grosze ($5–7 przez 720d), reszta to
-  swap przy re-centeringu liczony PEŁNYM tierem puli (0.30% na
-  base-030!) — a realnie swap zrobilibyśmy przez tańszą trasę.
-  Do tego kredyt fee dla naszej pozycji liczy się konserwatywnie
-  (`Lpool = max(L przed, L po)`), co zaniża wąską nogę.
-  DWA PRZEBIEGI (szybkie, po jednym na pulę, 720d, $2500):
-  1. **Optymistyczny kredyt fee** — ta sama komenda co fullperiod
-     produktowy, ale z `FEE_SHARE_L=end`:
-     `FEE_SHARE_L=end FP_SET=product SIGMA_MODE=grid15
-     NODE_OPTIONS=--max-old-space-size=12288 npx tsx
-     backtest/fullperiod.ts <id> 2500`
-     dla `base-cbbtc-weth-005-720d` i `base-weth-usdc-030-720d`.
-  2. Do raportu: same wiersze Pasywny ±40/±50 i FlatOnly ±5% (obie
-     idle) + kolumny fees$/koszty$/koniec$.
-  PRÓG, KTÓRY MNIE INTERESUJE (policzony): żeby zwężanie wyszło na
-  prowadzenie, model musiałby zaniżać fee wąskiej nogi o **18% na
-  cbBTC** i o **63% na base-030**. Pierwsze jest w zasięgu błędu
-  modelu, drugie nie. Jeśli `FEE_SHARE_L=end` domknie lukę na cbBTC —
-  werdykt „zwężanie nie działa" trzeba będzie zawęzić do base-030
-  i traktować cbBTC jako otwarte pytanie na 31.08.
-  Jeśli masz moce po tym: to samo z `WF_SET=product` (bramka), ale
-  to już może poczekać do poniedziałku.
+> (TEST WRAŻLIWOŚCI FEE_SHARE_L=end ZROBIONY 29.08 ~16:xx — luka
+> praktycznie się NIE zamyka na żadnej pulę [cbBTC ~5% z 18%
+> potrzebnych, base-030 ~0.6% z 63%], wzmacnia werdykt "zwężanie nie
+> działa". Pełny raport w skrzynce @Fable powyżej. WF_SET=product
+> z tym flagiem jeszcze nieodpalony — czekam na sygnał, czy dziś czy
+> poniedziałek.)
 
 - [Fable→CC-Mac, 29.08 ~16:xx — DOCS, ZWROT PO BRAMCE 720d]
   Commit+push: `CONTEXT.md` (wyniki fullperiod+walkforward 720d,
