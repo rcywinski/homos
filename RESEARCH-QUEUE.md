@@ -685,6 +685,22 @@
   zostaje 2% globalnie (3% psuje jakość epizodów na cbBTC — a tam
   jest rdzeń wartości zwężania), opcjonalnie ENTER=3% per-pula na
   base-030 (+19%). Decyzja Rafała.
+  DOSZŁO NA AGENDĘ 29.08 (poza parametrami flat):
+  - **UI po obaleniu v1.2**: (a) tabela walkforward w „Analizie
+    obserwacji" czyta pliki `-365d-45d` ze strategią v1.2 — wymienić
+    na przebiegi hybrydy (WF_SET=hybrid, 720d) czy wyciąć? (b) kolumna
+    „Doradca" w Telemetrii mówi językiem v1.2 (IN_RANGE_HOLD/REBALANCE)
+    — przestawić na posturę + stan flatu? („Prognoza zysku" już
+    usunięta, guard REBALANCE na pulach produktowych wdrożony.)
+  - **Bilans transzy — pierwszy pomiar**: koszty wejścia wyszły
+    −$8.58 (nie ~$75 jak szacowałem: bufor to $226, nie $150).
+    Do rozstrzygnięcia: czy natywny ETH $16.55 na Base był z transzy
+    (wtedy −$8.58) czy sprzed niej (wtedy −$25.13). Wniosek na
+    transzę 2: snapshot sald PRZED wejściem albo osobny adres —
+    inaczej bufor zawsze będzie mieszał się z „tym, co już było".
+  - **Pierwszy tydzień produktu**: fee narosłe vs tempo projektowe
+    (~$0.4/d base-030, ~$0.06/d cbBTC), realne koszty gazu (grosze),
+    liczba epizodów flat i czy któryś dożył do zwężenia.
   DO ODEBRANIA W PONIEDZIAŁEK 31.08 RANO (zlecone CC-Win):
   PORÓWNANIE KOTWIC HL7 vs HL5 na świeżych 720d (flatwindows
   COMPARE_HL_D — ile epizodów łapiemy szybciej i o ile godzin);

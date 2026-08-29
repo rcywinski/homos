@@ -218,6 +218,25 @@ z cbBTC. Do rozróżnienia etykietami, nie zmianą liczb.
 (2) `statFmtUsd` zaokrągla do pełnych dolarów, więc fee $0.41 → „$0",
 a gaz w centach → „$0" — nowe kolumny są bezużyteczne dokładnie tam,
 gdzie miały coś mówić. Dwa miejsca po przecinku dla kwot < $10.
+~wieczór — DZIEŃ 2 ZAMKNIĘTY (4 paczki wdrożone, sanity zielone):
+`costsUsd` $0.04/$0.01 (gaz na Base to grosze — kolumna „Koszty" ma
+sens dopiero z groszami z Partii 19), `walletParts` rozbite,
+`entryCostUsd −8.58` / `bufferBetaUsd 0`, Partia 19 w SERWOWANYM
+bundlu (CC-Win sprawdza `curl :8787/bundle.js`, nie sam build — to
+łapie klasę „stary bundle" z 28.08), brak Prognozy zysku, brak
+wiszących REBALANCE na pulach produktowych.
+POCHODZENIE BUFORA — DOMKNIĘTE RACHUNKIEM: portfel $226.05 to
+WETH 0.08573 ($208.99) + natywny ETH 0.00679 ($16.55) + USDC $0.51.
+Ten WETH to niemal dokładnie nierozdysponowany utarg z korekty
+proporcji 27.08: 0.0028 cbBTC × ~$80.3k = $224.8 = 0.0881 WETH przy
+ETH $2553, wobec 0.08573 dziś (różnica 0.0023 WETH ≈ $6 — gaz i
+zaokrąglenia dziennika). Czyli bufor to pieniądze transzy, a notatka
+„~$150 WETH" z 27.08 była po prostu zgrubna. JEDYNA NIEPEWNOŚĆ:
+natywny ETH $16.55 — jeśli był na Base PRZED transzą, koszty wejścia
+to nie −$8.58, tylko −$25.13 (pytanie do Rafała, wchodzi na 31.08).
+Bot i tak nie odróżni „resztek transzy" od „pieniędzy, które tam
+były" — to ograniczenie pomiaru, nie usterka; warto je pamiętać przy
+transzy 2 (czysty adres albo snapshot sald PRZED wejściem).
 TERMIN PRZEGLĄDU: **poniedziałek 31.08** (decyzja Rafała — wcześniejsze
 „1.09" było pomyłką kalendarzową, 1.09.2026 to wtorek); zlecenie CC-Win
 COMPARE_HL_D 720d na ten sam poranek. Poprawione w HANDOFF i
