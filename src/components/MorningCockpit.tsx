@@ -31,7 +31,6 @@ import { formatDuration } from '../utils/formatters';
 import BotStatusDot from './BotStatusDot';
 import BotTelemetry from './BotTelemetry';
 import ObservationAnalysis from './ObservationAnalysis';
-import ForecastPanel from './ForecastPanel';
 import CockpitPositionActions, { CloseModal, RebalanceModal } from './CockpitPositionActions';
 import { Sparkline, PriceRangeChart, EquityChartPoint, PositionStatsBar, fmtQuoteForPool } from './PositionCharts';
 import RebalanceSequenceModal from './RebalanceSequenceModal';
@@ -1251,11 +1250,17 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
             <PaperTradingPanel bot={bot} />
           </ExpandableSection>
 
-          {/* Wszystkie cztery sekcje mają teraz ten sam szkielet (telemetry-section
-              z własnym nagłówkiem) — Ranking był wcześniej opakowany w
-              ExpandableSection i przez to dostawał dodatkową belkę/ramkę. */}
+          {/* Sekcje mają ten sam szkielet (telemetry-section z własnym
+              nagłówkiem) — Ranking był wcześniej opakowany w
+              ExpandableSection i przez to dostawał dodatkową belkę/ramkę.
+              „Prognoza zysku" (ForecastPanel) USUNIĘTA 29.08: forecast.json
+              opisywał strategie v1.2 (k=3 + rebalans/exit), którymi po
+              przejściu na hybrydę FlatWide nie gramy, liczone na σ swapowej
+              odrzuconej 26.08 i nieodświeżane od 17.08 (generator nie był
+              w pipelinie). Historia w gicie — wróci dopiero jako prognoza
+              PRODUKTU (EV zwężania z flatwindows), jeśli przegląd tak
+              zdecyduje. */}
           <BotTelemetry bot={bot} />
-          <ForecastPanel bot={bot} />
           <ObservationAnalysis bot={bot} />
           <TopRankingPanel bot={bot} />
           <ClosedPositionsPanel bot={bot} />

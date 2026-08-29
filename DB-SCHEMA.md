@@ -134,7 +134,7 @@ CREATE INDEX ix_tx_ts ON tx(ts); CREATE INDEX ix_tx_pool ON tx(pool_id, ts);
 -- ===== WYNIKI BACKTESTÓW (indeks plików results/ — metadane, nie liczby) =====
 CREATE TABLE backtest_run (
   id INTEGER PRIMARY KEY, ts INTEGER NOT NULL,
-  kind TEXT NOT NULL,                     -- walkforward|sweep|run|pegged|forecast
+  kind TEXT NOT NULL,                     -- walkforward|sweep|run|pegged
   pool_id TEXT, params TEXT,              -- JSON: okno/krok/WF_SET
   file TEXT NOT NULL,                     -- ścieżka JSON w backtest/results/
   git_commit TEXT                         -- wersja silnika (audyt: co policzono czym)

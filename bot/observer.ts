@@ -1130,6 +1130,17 @@ async function refreshPositions() {
         autoClosed++;
         log(`proposal ${pr.id}: zamknięta automatycznie — pozycja w ${pr.poolId} już otwarta`);
       }
+      // sprzątanie po v1.2 (29.08): REBALANCE z doradcy na puli PRODUKTOWEJ
+      // nie ma prawa wisieć — szerokością rządzi cykl FLAT_*. Sam guard w
+      // maybePropose blokuje tylko NOWE; te zapisane w proposals.json przed
+      // fixem przeżyłyby restart (klasa incydentu z 27.08).
+      if (pr.status === 'open' && pr.kind === 'REBALANCE' && pr.poolId &&
+          BOT_POOLS.find((b) => b.id === pr.poolId)?.productIdleWidthPct) {
+        pr.status = 'dismissed';
+        pr.note = `${pr.note ? pr.note + ' · ' : ''}zamknięta automatycznie — pula produktowa, zwężaniem rządzi cykl FLAT_NARROW/FLAT_WIDEN`;
+        autoClosed++;
+        log(`proposal ${pr.id}: REBALANCE odrzucony — ${pr.poolId} jest pulą produktową (hybryda FlatWide)`);
+      }
     }
     if (autoClosed) saveProposals();
   } catch (e) {
@@ -1256,6 +1267,15 @@ function tickToUsd(pool: BotPool, t: number): number {
 }
 
 function maybePropose(tokenId: string, pool: BotPool, a: ReturnType<typeof assessPosition>, valueUsd: number) {
+  // PULE PRODUKTOWE NIE DOSTAJĄ REBALANSU Z DORADCY (fix 29.08, znaleziony
+  // przy przeglądzie sekcji UI). Hybryda FlatWide ma JEDEN organ decydujący
+  // o szerokości: cykl FLAT_NARROW/FLAT_WIDEN (|gap| 2%/5% + confirm).
+  // Doradca k×σ to logika v1.2 — bez tego wyjątku bot mógł wystawić
+  // propozycję zwężenia POZA cyklem, czyli dokładnie klasę incydentu
+  // z 27.08 (stara wąska propozycja ±16% wyglądająca jak normalna).
+  // Sam `advice` z assessPosition zostaje w state (telemetria/diagnostyka),
+  // ale nie zamienia się już w propozycję do podpisu.
+  if (pool.productIdleWidthPct) return;
   const key = `${tokenId}-${a.suggestion.tickLower}-${a.suggestion.tickUpper}`;
   if (proposals.some((p) => p.id === key && p.status === 'open')) return;
   const toUsd = (t: number) => tickToUsd(pool, t);

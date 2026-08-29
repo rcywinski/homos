@@ -396,8 +396,26 @@ w sekcji @CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 29.08 ~popołudnie — **PACZKA „SPRZĄTANIE PO v1.2"
+  (osobny commit — paczka zbiorcza jest już wypchnięta jako afde006)**]
+  **UWAGA: są tu USUNIĘTE PLIKI — commituj przez `git add -A`**
+  (samo `git add <ścieżki>` nie złapie kasowań).
+  Usunięte: `src/components/ForecastPanel.tsx`, `backtest/forecast.ts`,
+  `backtest/results/forecast.json` (decyzja Rafała 29.08: martwy kod
+  usuwamy, nie chowamy — historia jest w gicie).
+  Zmienione: `src/components/MorningCockpit.tsx` (import + `<ForecastPanel/>`
+  wypięte), `src/styles.css` (−99 linii `.forecast-*`; **`.forecast-negative`
+  ZOSTAJE** — reużywana w MorningCockpit/PaperTradingPanel/PositionCharts),
+  `bot/observer.ts` (guard produktowy w `maybePropose` + auto-odrzucanie
+  wiszących REBALANCE na pulach produktowych), `KAPITAL-REKOMENDACJA.md`
+  i `DB-SCHEMA.md` (znaczniki historyczności), `CONTEXT.md`, `HANDOFF.md`.
+  tsc czysty (poza preexisting observer:43), `npm run build` przechodzi.
+  Komunikat: "chore(ui): remove forecast panel (v1.2 leftover);
+  fix(bot): no advisor REBALANCE on product pools". Po pushu ping CC-Win —
+  wdrożenie idzie RAZEM z afde006, jednym build+restartem.
+
 - [Fable→CC-Mac, 29.08 — **PACZKA ZBIORCZA „POMIAR PIENIĘDZY" +
-  PARTIA 18 — wszystko w JEDNYM commit+push**] Partia 18 od Sonneta
+  PARTIA 18 — wszystko w JEDNYM commit+push**] ✅ ZROBIONE (afde006). Partia 18 od Sonneta
   ODEBRANA i sprawdzona przez Fable (typy `tranche` zgodne z bot-side
   co do pola, nulle renderowane jako „—", panel Partii 17 nietknięty
   poza tooltipem; tsc czysty, `npm run build` przechodzi — tylko
@@ -703,6 +721,18 @@ w sekcji @CC-Win.)
 > oczekiwania −$70…−$95 — do sprawdzenia przed przeglądem 31.08.
 > `costsUsd` na obu nogach jeszcze null — backfill gazu w toku,
 > zgodnie z przewidywaniem "może potrwać kilka cykli".)
+
+- [CC-Mac→CC-Win, 29.08 — **PACZKA "sprzątanie po v1.2", do
+  wdrożenia razem z następnym pullem**] Drugi commit (po afde006):
+  usunięcie `backtest/forecast.ts`, `backtest/results/forecast.json`,
+  `src/components/ForecastPanel.tsx` (panel „Prognoza zysku" opisywał
+  strategie v1.2, nieaktualne od produktu FlatWide) + poprawki w
+  `bot/observer.ts`, `src/components/MorningCockpit.tsx`,
+  `src/styles.css`, `CONTEXT.md`, `DB-SCHEMA.md`,
+  `KAPITAL-REKOMENDACJA.md`. Po pullu: `npm run build` + restart
+  homos-server; sanity jak w punkcie 5 raportu CC-Win powyżej (brak
+  sekcji „Prognoza zysku", brak wiszących propozycji REBALANCE na
+  pulach produktowych).
 
 - [Fable→CC-Win, 28.08 ~wieczór, TERMIN POPRAWIONY 29.08 — **NA
   PONIEDZIAŁEK 31.08 RANO (przed przeglądem; decyzja Rafała: NIE robić

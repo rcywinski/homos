@@ -1788,111 +1788,12 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   margin-top: 16px;
 }
 
-/* --- UI session: "Prognoza zysku" (ForecastPanel.tsx) — HANDOFF
-   Fable→Sonnet 2026-08-17 ~16:3x. Wzorzec telemetry-*/observation-* --- */
-.forecast-amount-input-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.forecast-amount-input {
-  width: 120px;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 14px;
-}
-.forecast-pool-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.forecast-pool-tile {
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: #fafafa;
-}
-.forecast-pool-title {
-  margin-bottom: 2px;
-}
-.forecast-strategy {
-  font-weight: 400;
-}
-.forecast-pool-note {
-  margin: 2px 0 6px;
-}
-.forecast-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: 13px;
-}
-.forecast-row {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-.forecast-row-label {
-  width: 60px;
-  color: #555;
-}
-.forecast-amount {
-  font-variant-numeric: tabular-nums;
-}
-.forecast-amount-sep {
-  color: #bbb;
-}
+/* .forecast-negative — JEDYNA pozostałość po usuniętym ForecastPanel.tsx
+   (29.08): klasa czerwonego koloru dla liczb ujemnych, reużywana w
+   MorningCockpit/PaperTradingPanel/PositionCharts. Reszta stylów
+   .forecast-* poszła razem z panelem — historia w gicie. */
 .forecast-negative {
   color: #e04334;
-}
-.forecast-legend {
-  font-size: 11px;
-  margin-top: 4px;
-}
-.forecast-footnote {
-  font-size: 11px;
-  margin-top: 2px;
-}
-.forecast-disclaimer {
-  font-size: 11px;
-  margin-top: 12px;
-  padding-top: 8px;
-  border-top: 1px dashed #ddd;
-}
-@media (max-width: 480px) {
-  .forecast-row-label { width: 52px; }
-}
-
-/* --- UI session: ForecastPanel v2 "per pogoda rynku" — HANDOFF
-   Fable→Sonnet 2026-08-17 ~17:4x --- */
-.forecast-regime-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  margin-top: 4px;
-}
-.forecast-regime-table th,
-.forecast-regime-table td {
-  text-align: left;
-  padding: 4px 6px;
-  border-bottom: 1px solid #eee;
-}
-.forecast-regime-table th {
-  font-weight: 600;
-  color: #555;
-  font-size: 11px;
-}
-.forecast-regime-better {
-  background: #f2faf4;
-}
-.forecast-regime-better td:first-child {
-  font-weight: 600;
-}
-@media (max-width: 480px) {
-  .forecast-regime-table { font-size: 12px; }
-  .forecast-regime-table th, .forecast-regime-table td { padding: 3px 4px; }
 }
 
 /* --- UI session: PaperTradingPanel.tsx (TASKS-UI.md Partia 5) — wizualizacja

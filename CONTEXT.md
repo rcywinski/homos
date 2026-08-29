@@ -152,6 +152,38 @@ Partii 17 nietknięty; tsc czysty, build przechodzi.
 WDROŻENIE: zbiorcze (decyzja Rafała — jeden build + OBA restarty
 naraz); paczka zbiorcza u CC-Mac, zlecenie u CC-Win z listą sanity
 (feesUsd / costsUsd / tranche / pasek w kokpicie).
+~popołudnie — SPRZĄTANIE PO v1.2 + FIX PROPOZYCJI (pytanie Rafała: „czy
+sekcje Telemetria / Prognoza / Analiza obserwacji mają jeszcze sens po
+obaleniu v1.2?"). PRZEGLĄD KODU, werdykt per sekcja:
+(1) **PROGNOZA ZYSKU — USUNIĘTA** (decyzja Rafała: usuwać, nie chować;
+historia jest w gicie, projekt nie ma się rozrastać w martwe strony).
+Dowody: `backtest/forecast.ts` miał NA SZTYWNO listę strategii v1.2
+(„Adapt k=3 + hedge(excess)", „…trend(exit,HL7d,5%,re>ema)"), żywy
+`forecast.json` był z 17.08 z APR −11…−26%, liczony σ swapową odrzuconą
+26.08, a generator nie był w pipelinie (nie odświeżał się sam). Panel
+pokazywał więc prognozę algorytmu, którym nie gramy. Usunięte:
+`src/components/ForecastPanel.tsx`, `backtest/forecast.ts`,
+`backtest/results/forecast.json`, import+użycie w MorningCockpit, 99
+linii `.forecast-*` w styles.css. ZOSTAJE `.forecast-negative` —
+reużywana w 4 innych komponentach (sprawdzone grepem, nie „na oko").
+Znaczniki historyczności: KAPITAL-REKOMENDACJA.md (dokument z v1.2 —
+nagłówek „NIE DZIAŁAĆ WG NIEGO"), DB-SCHEMA.md (kind `forecast` z enuma).
+(2) TELEMETRIA BOTA — zostaje: odpowiada „czy bot żyje i co widzi",
+niezależnie od algorytmu. Do agendy 31.08: kolumna „Doradca" mówi
+jeszcze językiem v1.2 (IN_RANGE_HOLD/REBALANCE), na pulach produktowych
+powinna pokazywać posturę i stan flatu.
+(3) ANALIZA OBSERWACJI — zostaje POŁOWICZNIE: wykresy cena/gap/EMA +
+badge flatu to dziś oko na produkt (cały cykl kręci się wokół gapu vs
+próg 2%); tabela walkforward czyta pliki `-365d-45d` ze strategią v1.2 —
+do wymiany na przebiegi hybrydy albo do wycięcia, decyzja 31.08.
+(4) **FIX ZNALEZIONY PRZY OKAZJI (istotniejszy niż UI)**: `maybePropose`
+nie miał wyjątku dla pul produktowych — advisor k×σ (v1.2) mógł wystawić
+REBALANCE obok cyklu FlatWide, czyli dokładnie klasę incydentu z 27.08
+(stara wąska propozycja ±16% wyglądająca jak normalna). EXIT_TREND został
+27.08 świadomie przebrandowany na procedurę awaryjną, REBALANCE po prostu
+przeoczono. Teraz: guard w `maybePropose` (nowe nie powstają) + sweep
+w refreshPositions (istniejące, zapisane w proposals.json przed fixem,
+są auto-odrzucane z notatką). `advice` zostaje w state do diagnostyki.
 TERMIN PRZEGLĄDU: **poniedziałek 31.08** (decyzja Rafała — wcześniejsze
 „1.09" było pomyłką kalendarzową, 1.09.2026 to wtorek); zlecenie CC-Win
 COMPARE_HL_D 720d na ten sam poranek. Poprawione w HANDOFF i

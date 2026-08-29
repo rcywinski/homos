@@ -1,5 +1,12 @@
 # KAPITAL-REKOMENDACJA.md — pierwsze wejście LP wg ALGORITHM v1.2
 
+> ⚠️ **DOKUMENT HISTORYCZNY — NIE DZIAŁAĆ WG NIEGO (znacznik 29.08).**
+> Opisuje wejście algorytmem v1.2 (k=3, rebalans/exit), który 26.08 nie
+> przeszedł bramki 720d i został zastąpiony hybrydą FlatWide (CONTEXT
+> 27.08). Cytowany niżej `forecast.json` USUNIĘTY 29.08 (opisywał
+> strategie, którymi nie gramy). Aktualny stan: CONTEXT.md §1.
+> Zostawiony jako zapis rozumowania sprzed zmiany produktu.
+
 > Przygotowane przez Fable 2026-08-19 na zlecenie Rafała (RESEARCH-QUEUE §C
 > "DECYZJA KAPITAŁOWA"). To rekomendacja z liczbami — decyzja jest Rafała.
 > Źródła: walk-forwardy 365d/22 okna (backtest/results/), forecast.json
