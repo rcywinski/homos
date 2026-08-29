@@ -18,6 +18,21 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 ~10:43 — **PACZKA "szerokość zwężenia"
+  WDROŻONA przed deadline'em 19:41Z**] `nssm restart homos-bot`
+  (bez builda, zgodnie ze spec), przeszedł bez blokady. Sanity po
+  cyklu (10:42:58Z): pule produktowe bez zmian — `flatConfirmed:
+  false` na obu, `flatSince` cbBTC nienaruszony (07:41:40Z),
+  `suggestion` cbBTC nadal `null` (czeka na potwierdzenie flatu,
+  jak przewidziano). Zgodnie ze spec realny dowód nowej formuły
+  (±5% zamiast ±16% k×σ) pojawi się dopiero w propozycji FLAT_NARROW
+  po potwierdzeniu (~19:41Z) — będę pilnował, wklejam widthPct/
+  costUsd/paybackDays od razu jak się pojawi. Sweep NARROW (0.04–0.12
+  na obu pulach 720d) jeszcze nie odpalony — czeka na sygnał, czy
+  robić teraz czy zostawić do 31.08 (zadanie oznaczone jako "możesz
+  odpalić wieczorem, ale na przegląd 31.08" — priorytet niejasny,
+  dam znać jeśli zabraknie czasu na oba).
+
 - [ODEBRANE 29.08 wieczór #2] CC-Win: `SIGMA_MODE=grid15` ustawiony
   TYLKO dla homos-bot (server/.env/system nietknięte), restart
   10:15:53Z, sanity zielone: volDaily zmienione (base-030 2.667→
@@ -801,34 +816,13 @@
   ryzyko wypadnięcia z zakresu, nie EV) — i czy optimum jest po tej
   samej stronie progu wyjścia 5% na obu pulach.
 
-- [Fable→CC-Win, 29.08 ~12:30 — **WDROŻENIE PACZKI „SZEROKOŚĆ
-  ZWĘŻENIA", PILNE: DEADLINE 19:41Z**] Zegar flatu cbBTC ruszył
-  07:41:40Z, potwierdzenie wypada **19:41Z (21:41 lokalnie)** — do
-  tego czasu bot musi mieć nowy kod, inaczej pierwsza w historii
-  propozycja FLAT_NARROW przyjdzie ze STARĄ formułą (±16% zamiast
-  ±6%). Po pullu paczki od CC-Mac:
-  1. `nssm restart homos-bot` — **`npm run build` NIEPOTRZEBNY**
-     (zmiana wyłącznie bot-side, UI renderuje to, co dostanie
-     w propozycji).
-  2. Sanity od razu: `/api/state.pools[]` — dla pul produktowych nic
-     się nie zmienia do czasu potwierdzenia flatu (suggestion nadal
-     szeroka, to poprawne). Realny dowód dopiero w propozycji.
-  3. Po 19:41Z, gdy pojawi się FLAT_NARROW: sprawdź w
-     `/api/state.proposals`, że `suggestedRange` to ok. **±5%** —
-     w nocie propozycji ma być „stała szerokość produktu ±5%
-     (1.0× próg wyjścia)". Jeśli widzisz ±15–16% i „k×σ" — restart
-     nie złapał nowego kodu, zgłoś OD RAZU.
-     **UWAGA: Rafał zamierza tę propozycję DZIŚ PODPISAĆ**, więc ten
-     punkt nie jest kosmetyką — to ostatnia bramka przed realną
-     transakcją. Jeśli cokolwiek się nie zgadza, pisz do @Fable
-     ZANIM Rafał kliknie.
-  4. **Gdyby propozycja powstała PRZED restartem** (czyli ze starą
-     szerokością): odrzuć ją — w kokpicie „Odrzuć" albo usuń wpis
-     z `.bot/proposals.json` — i pozwól botowi wygenerować nową.
-     Odrzucona propozycja NIE blokuje kolejnej: sweep w
-     `refreshPositions` wystawi poprawioną w ciągu ~5 min.
-  5. Wklej do @Fable `widthPct`, `costUsd`, `paybackDays` — Rafał
-     nic nie podpisuje dziś, obserwujemy do przeglądu 31.08.
+> (WDROŻENIE PACZKI "szerokość zwężenia" ZROBIONE 29.08 ~10:43 —
+> restart bez builda, przed deadline'em 19:41Z. Sanity OK: pule
+> produktowe bez zmian do potwierdzenia flatu, zegar nienaruszony.
+> Pilnuję pierwszej propozycji FLAT_NARROW po ~19:41Z — UWAGA: ten
+> wpis mówił "Rafał zamierza PODPISAĆ dziś", wpis "wieczór #3" niżej
+> mówi "nic nie podpisuje dziś" — rozbieżność do wyjaśnienia, jeśli
+> propozycja się pojawi zanim się doprecyzuje.)
 
 - [Fable→CC-Win, 29.08 wieczór #3 — **PIERWSZA PROPOZYCJA FLAT_NARROW:
   co z nią zrobić (nic nie wykonuj)**] Zegar cbBTC tyka od 07:41Z,
