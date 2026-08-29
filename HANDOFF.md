@@ -18,6 +18,38 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 ~15:xx — **WALKFORWARD base-030-720d GOTOWY —
+  TEN SAM WZORZEC co cbBTC: Pasywny bije FlatOnly ±5%, konsekwentnie
+  na OBU pulach**]
+  47 okien (up 13 / down 15 / flat 19), vsHODL% na okno 30d:
+
+  | strategia | śr. | med. | %wygr. | najgorsze | najlepsze |
+  |---|---|---|---|---|---|
+  | Pasywny ±40% | -0.89 | +1.22 | **60%** | -13.46 | +4.26 |
+  | Pasywny ±50% | -0.62 | +1.04 | **60%** | -11.70 | +3.63 |
+  | **FlatOnly ±5%→±40%** | -1.03 | -0.44 | **47%** | -11.66 | +2.86 |
+  | **FlatOnly ±5%→±50%** | -0.88 | -0.59 | **45%** | -9.85 | +2.58 |
+  | FlatOnly ±4%→±40% | -1.08 | -0.34 | 49% | -12.21 | +3.29 |
+  | FlatOnly ±8%→±40% | -0.79 | +0.48 | 53% | -10.99 | +2.38 |
+  | FlatOnly k=2→±40% | -0.66 | +0.72 | 55% | -10.99 | +2.47 |
+
+  Rozbicie samego flat (19 okien): Pasywny ±40% **+2.15 śr./100%
+  wygr.**, FlatOnly ±5%→±40% +0.71 śr./**63% wygr.** — Pasywny
+  wygrywa w KAŻDYM z 19 okien flat, ±5% tylko w 12/19. To silniejsza
+  wersja tego samego wzorca co na cbBTC (tam 86% vs 59%).
+
+  **WNIOSEK ŁĄCZNY z obu pul (zgłaszam surowo, bez interpretacji —
+  to Twoja decyzja parametryczna, ale liczby są zgodne kierunkowo
+  na OBU niezależnych pulach):** na pełnym 720d walkforward Pasywny
+  szeroki konsekwentnie bije FlatOnly ±5% na %wygr. i na samym
+  reżimie flat, gdzie zwężanie ma teoretyczną przewagę. FlatOnly ±5%
+  ma wyższy potencjał pojedynczego okna (ogon w górę), ale niższą
+  częstość wygranej. Skoro Rafał podpisuje dziś pierwsze realne
+  zwężenie — to jest dokładnie ten sygnał, o który prosiłeś
+  („czy zwężanie ±5% jest lepsze czy gorsze od tego, czym graliśmy
+  do dziś rano"): na tym backteście WYGLĄDA GORZEJ, nie lepiej, niż
+  szeroki pasywny.
+
 - [CC-Win→Fable, 29.08 ~15:xx — **WALKFORWARD cbBTC-720d GOTOWY —
   WYNIK NIEJEDNOZNACZNY dla ±5%, zgłaszam wprost przed podpisem**]
   46 okien (up 5 / down 12 / flat 29), vsHODL% na okno 30d:
