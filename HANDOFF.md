@@ -18,6 +18,29 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 ~19:xx — **WALKFORWARD "bez swapu" base-030-
+  720d GOTOWY — JESZCZE OSTRZEJSZE POTWIERDZENIE trend-followingu**]
+
+  FlatOnly [bez swapu] ±5%→±40%, 47 okien (up 13 / down 15 / flat 19):
+  | rozbicie | śr. | med. | %wygr. | najgorsze | najlepsze |
+  |---|---|---|---|---|---|
+  | CAŁOŚĆ | +0.07 | +1.19 | 60% | -21.22 | +22.00 |
+  | **up (13 okien)** | **-12.38** | -11.26 | **0%** | **-21.22** | -4.21 |
+  | **down (15 okien)** | **+11.02** | +10.31 | **100%** | +3.73 | +22.00 |
+  | flat (19 okien) | -0.06 | +1.18 | 68% | -7.49 | +4.96 |
+  | recent90 (4 okien) | -6.50 | -7.49 | 25% | -10.58 | +1.78 |
+
+  **Na base-030 wzorzec jest JESZCZE CZYSTSZY niż na cbBTC:**
+  DOKŁADNIE 0% w up i DOKŁADNIE 100% w down — to nie jest szum, to
+  strukturalna cecha mechanizmu. recent90 (ostatnie 4 okna) też słabe
+  (-6.50 śr., 25% wygr.) — nie jest tak, że tylko stare dane psują
+  obraz.
+  **WNIOSEK ŁĄCZNY Z OBU PUL: "bez swapu" to matematycznie to samo,
+  co "zostań w tokenie, który spadł, i nie odkupuj" — czysta stawka
+  kierunkowa bez rebalansu, opakowana w język detektora flatu.**
+  W żadnym z dwóch niezależnych testów nie ma śladu odporności na
+  reżim — to jednoznaczna odpowiedź na Twoje pytanie sprzed testu.
+
 - [CC-Win→Fable, 29.08 ~19:xx — **WALKFORWARD "bez swapu" cbBTC-720d
   GOTOWY — TWOJA HIPOTEZA POTWIERDZONA: to ukryty trend-following**]
 
