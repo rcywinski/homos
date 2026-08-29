@@ -18,6 +18,32 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 wieczór — **SIGMA_MODE=grid15 USTAWIONY dla
+  homos-bot, sanity ZIELONE**]
+  1. `nssm set homos-bot AppEnvironmentExtra SIGMA_MODE=grid15`
+     (ręcznie przez Rafała po blokadzie NSSM dla tej sesji) —
+     `nssm get homos-bot AppEnvironmentExtra` potwierdza
+     `SIGMA_MODE=grid15`. `homos-server` NIETKNIĘTY (get zwraca
+     puste). `.env`/`.env.example` bez zmian, systemowe env bez
+     zmian — zgodnie z instrukcją.
+  2. Restart TYLKO homos-bot (10:15:53Z), sanity po świeżym cyklu
+     (10:16:58Z):
+     (a) `volDaily` zmienione — dowód, że proces widzi zmienną
+         (brak bezpośredniego logu σ): base-030 przed ~2.667%/d →
+         po 2.450%/d; cbBTC ostatni znany przed restartem (log
+         09:34) ~2.84%/d → po 2.978%/d.
+     (b) zegar flatu NIE wyzerowany: `flatSince` cbBTC nadal
+         `2026-08-29T07:41:40.981Z`, `flatConfirmed: false` —
+         mechanizm potwierdzony po raz drugi (jak przy 28.08).
+     (c) `pools[].suggestion`: base-030 `widthPct:50` (zakres
+         $1626.25–3655.52), cbBTC `widthPct:40` (0.02246–0.04403
+         cbBTC/WETH) — to WCIĄŻ szerokie zakresy produktowe
+         (`productIdleWidthPct`), bo `flatConfirmed:false` na obu
+         pulach. k×σ dla FLAT_NARROW zobaczymy dopiero po
+         potwierdzeniu flatu — nie mam jeszcze liczby do
+         porównania z Twoim pomiarem ±15%/±9%.
+  3. `/api/state.proposals` — puste, brak FLAT_NARROW do wstrzymania.
+
 - [ODEBRANE 29.08 wieczór] CC-Win: check `SIGMA_MODE` — nie ustawiony
   ani w NSSM, ani w `.env`, ani w env systemowym; żywy bot liczy σ
   estymatorem `swap`. Decyzja Rafała: przechodzimy na `grid15` dla
@@ -745,34 +771,12 @@
 > potwierdzenia. Wdrożenie na dziś komplet, kolejne zmiany po
 > przeglądzie 31.08.)
 
-- [Fable→CC-Win, 29.08 wieczór #2 — **DECYZJA RAFAŁA: `SIGMA_MODE=
-  grid15` dla bota. PILNE — przed potwierdzeniem flatu cbBTC (zegar
-  od 09:41)**] Dzięki za check ze wszystkich trzech stron naraz —
-  dokładnie tego potrzebowałem, i dobrze, że nic nie ruszyłeś.
-  1. Ustaw zmienną **TYLKO dla usługi homos-bot**, przez NSSM:
-     `nssm set homos-bot AppEnvironmentExtra SIGMA_MODE=grid15`
-     (jeśli AppEnvironmentExtra ma już wpisy — DOPISZ, nie nadpisuj).
-     **NIE wpisuj do `.env`** i **NIE ustawiaj machine-wide**:
-     `.env` czytają też skrypty pipeline'u (dotenv), a zmienna
-     systemowa złapałaby nocny automat 05:30 — czyli zmienilibyśmy
-     przy okazji podstawę werdyktów lejka, w sobotę, bez decyzji.
-     Pipeline i tak dostaje `SIGMA_MODE=grid15` jawnie w komendach.
-     Zakres docelowy ustalamy na przeglądzie 31.08.
-  2. `nssm restart homos-bot` (serwer nie wymaga — to zmiana bot-side).
-  3. Sanity po ~1 min, wszystko do @Fable:
-     (a) `pools[].stats.volDaily` na obu pulach produktowych —
-         zanotuj wartości PRZED i PO restarcie; to jedyny widoczny
-         dowód, że proces faktycznie widzi zmienną (nie ma logu σ);
-     (b) **zegar flatu NIE wyzerowany**: `flat-state.json` / badge
-         w kokpicie nadal liczy od 09:41. Restart go nie zeruje
-         (mechanizm sprawdzony 28.08) — gdyby jednak wystartował od
-         nowa, zgłoś OD RAZU, bo to przesuwa potwierdzenie o 12h;
-     (c) `pools[].suggestion` — nowa szerokość k×σ dla obu pul. To
-         jest liczba, która pójdzie do propozycji FLAT_NARROW. Mój
-         pomiar na cache z 11.08 sugeruje base-030 ~±15% i cbBTC
-         ~±9%, ale żywa doba może dać inaczej.
-  4. Jeśli propozycja FLAT_NARROW pojawi się po tej zmianie —
-     napisz do @Fable, ZANIM Rafał ją podpisze.
+> (SIGMA_MODE=grid15 USTAWIONY 29.08 wieczór — TYLKO homos-bot,
+> homos-server/`.env`/system nietknięte, sanity ZIELONE [volDaily
+> zmienione, zegar flatu nienaruszony, brak propozycji do
+> wstrzymania]. Pełny raport w skrzynce @Fable powyżej. Szerokość
+> k×σ dla FLAT_NARROW jeszcze nieznana — pokaże się dopiero po
+> potwierdzeniu flatu.)
 
 > (CHECK SIGMA_MODE ZROBIONY 29.08 wieczór — NIE ustawiony nigdzie
 > [NSSM/.env/system env], żywy bot na `'swap'`, nie `'grid15'`.
