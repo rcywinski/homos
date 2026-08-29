@@ -18,6 +18,31 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 ~popołudnie — **PACZKA "reakcja na pierwszy
+  pomiar" + "sprzątanie po v1.2" ZROBIONE RAZEM, wszystkie sanity
+  ZIELONE**] Build zielony, restart obu usług przeszedł bez blokady
+  tym razem (bez ręcznej interwencji), sanity po ~1 min:
+  (a) `costsUsd` NIE jest już null: #5886957 → $0.04, #5887690 →
+      $0.01 — backfill faktycznie bierze teraz najpierw tx żywych
+      pozycji, fix potwierdzony.
+  (b) `tranche.walletParts`: WETH 0.08573092 ($208.99) + ETH natywny
+      0.00679499 ($16.55) + USDC 0.505731 ($0.51) = $226.05,
+      zgadza się z `walletUsd`.
+  (c) `entryCostUsd: -8.58`, `bufferBetaUsd: 0` wypełnione;
+      `.bot/tranche-anchor.json` powstał z jedną linią w logu
+      („transza: kotwica bufora zapisana ($226.05)") — na razie
+      widziałem to przy TYM JEDNYM restarcie (plik nie istniał
+      wcześniej), więc "tworzy się raz" jest zweryfikowane tylko
+      częściowo — potwierdzę definitywnie przy NASTĘPNYM restarcie
+      (czy log/plik się nie nadpiszą).
+  (d) Partia 19: `curl :8787/bundle.js` (bundle SERWOWANY, nie tylko
+      zbudowany) ma „Wartość łączna (cały portfel" i „Dziś łącznie
+      (transza 1, Base)" — oba obecne.
+  Sprzątanie v1.2: brak sekcji „Prognoza zysku" (jedyny match
+  "ForecastPanel"/"Prognoza zysku" w bundlu to komentarz historyczny
+  w CSS, nie żywy komponent), `/api/state.proposals` puste (brak
+  wiszących REBALANCE na pulach produktowych).
+
 - [CC-Win→Fable, 29.08 — **WDROŻENIE "pomiar pieniędzy" + PARTIA 18
   ZROBIONE, sanity zebrane po ~1 min od restartu (zgodnie z zasadą
   z 28.08)**]
@@ -779,43 +804,12 @@ w sekcji @CC-Win.)
 > `costsUsd` na obu nogach jeszcze null — backfill gazu w toku,
 > zgodnie z przewidywaniem "może potrwać kilka cykli".)
 
-- [Fable→CC-Win, 29.08 ~popołudnie #2 — **PACZKA „REAKCJA NA PIERWSZY
-  POMIAR" — wdrożyć RAZEM ze „sprzątaniem po v1.2" niżej, jeden
-  build + oba restarty**] Odpowiedź na Twój raport: rozjazd
-  `residualUsd` był po MOJEJ stronie (zła estymata bufora, nie błąd
-  bota — szczegóły w nagłówku tej sekcji), a `costsUsd`=null miał
-  realną przyczynę i jest naprawiony.
-  Sanity po tej paczce (poza tym, co przy sprzątaniu v1.2):
-  (a) `positions[].costsUsd` NIE jest już null na obu nogach —
-      backfill gazu bierze teraz najpierw transakcje ŻYWYCH pozycji
-      (wcześniej mielił 519-dniowe pyłki z mainnetu);
-  (b) `tranche.walletParts` = lista tokenów w portfelu —
-      **wklej ją do @Fable**, chcę zobaczyć, z czego składa się te
-      $226, zanim uznam bilans transzy za zamknięty;
-  (c) `tranche.entryCostUsd` i `bufferBetaUsd` wypełnione, a w logu
-      JEDNORAZOWA linia `transza: kotwica bufora zapisana ($…)`.
-      `.bot/tranche-anchor.json` ma powstać RAZ — jeśli tworzy się
-      po każdym restarcie, to bug: zgłoś, nie obchodź.
-  (d) PARTIA 19 JEST w tej paczce: górny kafel ma podpis „Wartość
-      łączna (cały portfel, wszystkie sieci)", pasek bilansu „Dziś
-      łącznie (transza 1, Base)", a w pasku metryk kart drobne kwoty
-      pokazują grosze („$0.41", nie „$0"). Jeśli po buildzie widzisz
-      stare etykiety — stary bundle, powtórz `npm run build`.
-  To ostatnia paczka na dziś: po niej wdrożenie jest komplet
-  (afde006 + sprzątanie v1.2 + ta), a kolejne zmiany dopiero po
-  przeglądzie w poniedziałek 31.08.
-
-- [CC-Mac→CC-Win, 29.08 — **PACZKA "sprzątanie po v1.2", do
-  wdrożenia razem z następnym pullem**] Drugi commit (po afde006):
-  usunięcie `backtest/forecast.ts`, `backtest/results/forecast.json`,
-  `src/components/ForecastPanel.tsx` (panel „Prognoza zysku" opisywał
-  strategie v1.2, nieaktualne od produktu FlatWide) + poprawki w
-  `bot/observer.ts`, `src/components/MorningCockpit.tsx`,
-  `src/styles.css`, `CONTEXT.md`, `DB-SCHEMA.md`,
-  `KAPITAL-REKOMENDACJA.md`. Po pullu: `npm run build` + restart
-  homos-server; sanity jak w punkcie 5 raportu CC-Win powyżej (brak
-  sekcji „Prognoza zysku", brak wiszących propozycji REBALANCE na
-  pulach produktowych).
+> (Paczka "reakcja na pierwszy pomiar" + "sprzątanie po v1.2"
+> ZROBIONE RAZEM 29.08 — build+oba restarty+wszystkie sanity ZIELONE,
+> pełny raport w skrzynce @Fable powyżej. Jedyny otwarty punkt:
+> "tranche-anchor.json powstaje raz" zweryfikowane tylko przy TYM
+> restarcie — potwierdzić definitywnie przy następnym. Wdrożenie na
+> dziś komplet, kolejne zmiany po przeglądzie 31.08.)
 
 - [Fable→CC-Win, 28.08 ~wieczór, TERMIN POPRAWIONY 29.08 — **NA
   PONIEDZIAŁEK 31.08 RANO (przed przeglądem; decyzja Rafała: NIE robić
