@@ -18,6 +18,59 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 ~15:xx — **FULLPERIOD $2500/720d PRODUKTU
+  GOTOWE, walkforward w toku**]
+
+  **base-cbbtc-weth-005-720d** (start $2500, 715 dni, cena bazy
+  0.04→0.03 [-22.6%]):
+  | strategia | koniec$ | PnL% | fees$ | koszty$ | reb | inRng | maxDD | vsHODL$ |
+  |---|---|---|---|---|---|---|---|---|
+  | 100% quote (cash) | 3,350 | +34.0% | 0 | 1 | 0 | 0% | -54.5% | 376 |
+  | Pasywny ±50% | 3,280 | +31.2% | 541 | 0 | 0 | 78% | -63.4% | 307 |
+  | Pasywny ±40% | 3,271 | +30.8% | 572 | 0 | 0 | 68% | -63.8% | 298 |
+  | FlatOnly ±8%→±40% | 2,992 | +19.7% | 1,647 | 48 | 65 | 100% | -58.9% | 19 |
+  | FlatOnly ±8%→±50% | 2,985 | +19.4% | 1,550 | 47 | 65 | 100% | -59.0% | 12 |
+  | FlatOnly ±4%→±40% | 2,983 | +19.3% | 2,419 | 63 | 65 | 98% | -56.9% | 10 |
+  | **FlatOnly ±5%→±40%** | **2,983** | **+19.3%** | 2,169 | 62 | 65 | 100% | -57.5% | **9** |
+  | FlatOnly ±4%→±50% | 2,976 | +19.0% | 2,324 | 62 | 65 | 98% | -57.0% | 3 |
+  | **FlatOnly ±5%→±50%** | **2,975** | **+19.0%** | 2,073 | 61 | 65 | 100% | -57.6% | **2** |
+  | HODL 50/50 | 2,973 | +18.9% | 0 | 0 | 0 | 0% | -60.5% | 0 |
+  | FlatOnly k=2→±40% | 2,972 | +18.9% | 1,492 | 42 | 65 | 100% | -59.6% | -1 |
+  | FlatOnly k=2→±50% | 2,965 | +18.6% | 1,394 | 40 | 65 | 100% | -59.8% | -8 |
+  | 100% USDC | 2,500 | +0.0% | 0 | 0 | 0 | — | +0.0% | -473 |
+
+  **base-weth-usdc-030-720d** (start $2500, 724 dni, cena bazy
+  2402.52→2440.69 [+1.6%]):
+  | strategia | koniec$ | PnL% | fees$ | koszty$ | reb | inRng | maxDD | vsHODL$ |
+  |---|---|---|---|---|---|---|---|---|
+  | Pasywny ±40% | 3,881 | +55.2% | 1,354 | 0 | 0 | 75% | -34.8% | 1,361 |
+  | Pasywny ±50% | 3,807 | +52.3% | 1,289 | 0 | 0 | 83% | -35.1% | 1,287 |
+  | FlatOnly k=2→±50% | 2,828 | +13.1% | 2,249 | 139 | 88 | 99% | -45.7% | 308 |
+  | FlatOnly ±8%→±50% | 2,796 | +11.8% | 2,584 | 184 | 88 | 99% | -46.1% | 276 |
+  | FlatOnly ±4%→±50% | 2,771 | +10.8% | 3,428 | 255 | 88 | 98% | -47.5% | 251 |
+  | **FlatOnly ±5%→±50%** | **2,759** | **+10.4%** | 3,147 | 242 | 88 | 98% | -47.1% | **239** |
+  | FlatOnly k=2→±40% | 2,698 | +7.9% | 2,346 | 145 | 88 | 92% | -46.6% | 178 |
+  | FlatOnly ±8%→±40% | 2,668 | +6.7% | 2,676 | 190 | 88 | 92% | -47.0% | 148 |
+  | FlatOnly ±4%→±40% | 2,644 | +5.8% | 3,505 | 259 | 88 | 91% | -48.4% | 124 |
+  | **FlatOnly ±5%→±40%** | **2,632** | **+5.3%** | 3,228 | 246 | 88 | 92% | -48.0% | **112** |
+  | HODL 50/50 | 2,520 | +0.8% | 0 | 0 | 0 | 0% | -46.8% | 0 |
+  | 100% quote (cash) | 2,496 | -0.2% | 0 | 4 | 0 | 0% | +0.0% | -24 |
+  | 100% USDC | 2,500 | +0.0% | 0 | 0 | 0 | — | +0.0% | -20 |
+
+  **UWAGA — zgłaszam wprost, nie interpretuję:** na TYM oknie/dacie
+  wejścia produkt ±5% na obu pulach bije HODL (dobry znak), ale na
+  cbBTC przegrywa wyraźnie z cash i pasywnym (~$290-370 różnicy), a
+  na base-030 przegrywa jeszcze wyraźniej z pasywnym (~$1000+
+  różnicy) — to pojedyncza data wejścia (jak nota w skrypcie
+  przypomina), więc czekam na walkforward (punkt 3), żeby ocenić
+  odporność na timing zamiast tej jednej próby.
+
+  **Walkforward cbBTC-720d w toku** — natrafiłem na problem z moim
+  backgroundowaniem (podwójne `&` + `run_in_background` = proces
+  odłączony od śledzenia narzędzia, ale WCIĄŻ ŻYWY — PID 254560,
+  poprawiłem monitoring, czekam aż skończy). Wynik dopiszę osobnym
+  wpisem, potem base-030.
+
 - [ODEBRANE 29.08] CC-Win: sweep NARROW na 720d (8 przebiegów, przed
   deadline'em) — ΣEV monotoniczne w stronę węższych pasm na obu
   pulach, ±5% wyraźnie lepsze od ±8% (2.8×/2.9×), in-range ~97.6%.
