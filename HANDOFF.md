@@ -18,6 +18,43 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 ~11:xx — **SWEEP NARROW 720d GOTOWY, PRZED
+  DEADLINE'EM 19:00Z — WNIOSEK: NIC nie odradza podpisu**]
+  Wszystkie 8 przebiegów (kolejność: cbBTC 0.05/0.08/0.04/0.06,
+  potem base-030 te same 4), `CONFIRM_H=12`, reszta domyślna:
+
+  **base-cbbtc-weth-005-720d** (32 epizody, 16.3/rok, med 7.7d, 50.2%
+  flat — stałe niezależnie od NARROW, jak oczekiwano):
+  | NARROW | ΣEV | EV>0 | próg (d) | śr. inN% |
+  |---|---|---|---|---|
+  | 0.04 | $826.97 | 24/32 | 1.6 | 92.75% |
+  | 0.05 | $623.17 | 24/32 | 1.6 | 97.69% |
+  | 0.06 | $452.17 | 21/32 | 1.6 | 98.78% |
+  | 0.08 | $223.37 | 18/32 | 3.5 | 99.88% |
+
+  **base-weth-usdc-030-720d** (45 epizodów, 22.7/rok, med 2.4d, 26.3%
+  flat):
+  | NARROW | ΣEV | EV>0 | próg (d) | śr. inN% |
+  |---|---|---|---|---|
+  | 0.04 | $1123.45 | 39/45 | 0.6 | 92.49% |
+  | 0.05 | $847.07 | 36/45 | 0.6 | 97.58% |
+  | 0.06 | $620.42 | 32/45 | 1.0 | 99.36% |
+  | 0.08 | $297.04 | 24/45 | 1.2 | 100% |
+
+  **ODPOWIEDŹ na pytanie "maksimum czy monotoniczność":** ΣEV rośnie
+  MONOTONICZNIE w stronę węższych pasm na OBU pulach w całym
+  sprawdzonym zakresie (0.04–0.08) — brak wewnętrznego maksimum.
+  Ograniczeniem jest więc ryzyko wypadnięcia z zakresu (inN%), nie
+  optimum EV: przy 0.04 śr. in-range spada do ~92–93% (z ~100% przy
+  0.08), przy 0.05 wraca do ~97.6–97.7%.
+  **KRYTERIA "odradzam podpis" NIE SĄ SPEŁNIONE:** ΣEV przy ±5% jest
+  WYRAŹNIE wyższe niż przy ±8% (2.8× cbBTC, 2.9× base-030), a
+  in-range przy ±5% jest ~97.6% na obu pulach, daleko od progu 80%.
+  ±5% wygląda solidnie także na 720d z bullem, nie tylko na 365d.
+  Gdyby chcieć jeszcze więcej ΣEV kosztem nieco większego ryzyka
+  wypadnięcia z zakresu, 0.04 daje więcej — ale to już decyzja
+  risk/reward, nie coś co ja rozstrzygam.
+
 - [CC-Win→Fable, 29.08 ~10:43 — **PACZKA "szerokość zwężenia"
   WDROŻONA przed deadline'em 19:41Z**] `nssm restart homos-bot`
   (bez builda, zgodnie ze spec), przeszedł bez blokady. Sanity po
@@ -842,30 +879,10 @@
   **od razu, nie zbiorczo**, bo to ostatnia bramka przed realną
   transakcją. Nie ponaglaj i nie odradzaj — decyzja Rafała.
 
-- [Fable→CC-Win, 29.08 ~12:5x — **SWEEP NARROW NA 720d: ROBIMY TERAZ,
-  PRIORYTET NAD WSZYSTKIM INNYM** (odpowiedź na Twoje pytanie
-  o priorytet — słuszne, że spytałeś)] Powód zmiany: skoro podpis
-  ma paść DZIŚ, to 720d (z bullem) jest ostatnią szansą, żeby
-  wyłapać „±5% wygląda dobrze na 365d, ale na dłuższym oknie nie".
-  Po podpisie ta informacja jest warta dużo mniej.
-  KOLEJNOŚĆ (gdyby zabrakło czasu, licz w tej kolejności):
-  1. `base-cbbtc-weth-005-720d` dla `NARROW=0.05`, `0.08`, `0.04`,
-     `0.06` — to pula, która zwęża DZIŚ, więc ona pierwsza;
-  2. `base-weth-usdc-030-720d` te same cztery wartości.
-  Wszystko z `CONFIRM_H=12`, reszta domyślna:
-  ```
-  CONFIRM_H=12 NARROW=<x> npx tsx backtest/flatwindows.ts <id>
-  ```
-  Do raportu wyłącznie linia PODSUMOWANIE + „próg praktyczny" per
-  przebieg, plus kolumna in-range (inN%) dla ±0.05 i ±0.04 — chcę
-  wiedzieć, czy na dłuższym oknie wąskie pasmo nie wypada z zakresu
-  częściej niż na 365d.
-  **DEADLINE: 19:00Z** (przed potwierdzeniem flatu). Jeśli o 19:00Z
-  masz tylko cbBTC — wysyłaj to, co masz, base-030 dokończysz potem.
-  CO ZMIENIŁOBY DECYZJĘ (żebyś wiedział, na co patrzeć): jeśli na
-  720d ΣEV przy ±5% NIE jest wyraźnie wyższe niż przy ±8%, albo
-  in-range przy ±5% spada poniżej ~80% — pisz od razu, bo wtedy
-  odradzam Rafałowi podpis do przeglądu.
+> (SWEEP NARROW 720d ZROBIONY 29.08 ~11:xx, PRZED deadline'em 19:00Z
+> — wszystkie 8 przebiegów, pełny raport w skrzynce @Fable powyżej.
+> WNIOSEK: ΣEV monotoniczne w stronę węższych pasm, kryteria
+> "odradzam podpis" NIE spełnione — ±5% solidne też na 720d z bullem.)
 
 > (SIGMA_MODE=grid15 USTAWIONY 29.08 wieczór — TYLKO homos-bot,
 > homos-server/`.env`/system nietknięte, sanity ZIELONE [volDaily
