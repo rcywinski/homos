@@ -184,6 +184,40 @@ REBALANCE obok cyklu FlatWide, czyli dokładnie klasę incydentu z 27.08
 przeoczono. Teraz: guard w `maybePropose` (nowe nie powstają) + sweep
 w refreshPositions (istniejące, zapisane w proposals.json przed fixem,
 są auto-odrzucane z notatką). `advice` zostaje w state do diagnostyki.
+~popołudnie #2 — PIERWSZY POMIAR NA ŻYWO + KOREKTA MOJEJ ESTYMATY:
+CC-Win wdrożył (build + oba restarty, sanity po ~1 min) i zgłosił
+rozjazd: `residualUsd` −$8.58 zamiast zapowiadanych −$70…−$95.
+WERDYKT PO SPRAWDZENIU: bot liczy DOBRZE, błędna była moja estymata.
+Rachunek: kotwica LP 5857.37 + portfel 226.05 − 6092 = −8.58 ✓.
+Pomyliłem się na buforze — z notatki „~$150 WETH + kurz" (27.08)
+zrobiłem założenie, a realnie w portfelu jest $226.05. Czyli koszty
+wejścia to ~$8.6, nie ~$75: cztery swapy na płynnych pulach Base
+kosztowały grosze. Dokładnie po to mierzymy zamiast szacować —
+i dokładnie dlatego liczba z domknięcia bilansu jest wartościowa.
+STAN NA ŻYWO (screenshot Rafała): pasek bilansu działa, obie nogi
+in-range, **zegar stabilizacji cbBTC znów tyka od 09:41** (~10h do
+propozycji zwężenia), noga A gap 9.2%, zero propozycji.
+POPRAWKI (paczka #3): (a) backfill gazu bierze NAJPIERW transakcje
+żywych pozycji — `costsUsd` był null nie z powodu błędu, tylko dlatego
+że kolejka szła od 519-dniowych pyłków z mainnetu; (b) `walletParts`
+(skład portfela per token) — bez tego nie da się zweryfikować, czemu
+portfel to $226, a nie $150; (c) rozbicie reszty na `entryCostUsd`
+(stałe) i `bufferBetaUsd` (pływa z ceną, kotwica bufora w
+`.bot/tranche-anchor.json`) — przy reszcie rzędu $8 beta bufora $226
+WETH przy ruchu 5% ($11) całkowicie zagłuszyłaby sygnał „coś się
+rozjeżdża".
+PARTIA 19 ZROBIONA PRZEZ SONNETA tego samego popołudnia (spot-check
+Fable OK: etykiety i tooltipy bez dotykania liczb, `statFmtUsd` z
+groszami tylko dla kwot < $10 — paper trading wygląda jak dotąd).
+DWA ROZJAZDY PREZENTACJI ZE SCREENA → PARTIA 19 dla Sonneta:
+(1) „Wartość łączna" $6 253.67 vs „Dziś łącznie" $5 925.83 — obie
+poprawne, ale liczą co innego: usePortfolio sumuje portfel ze
+WSZYSTKICH sieci (te $327.84 to stary gaz na mainnet/Arbitrum, spoza
+transzy) i pomija cbBTC, a bilans transzy bierze tylko Base, za to
+z cbBTC. Do rozróżnienia etykietami, nie zmianą liczb.
+(2) `statFmtUsd` zaokrągla do pełnych dolarów, więc fee $0.41 → „$0",
+a gaz w centach → „$0" — nowe kolumny są bezużyteczne dokładnie tam,
+gdzie miały coś mówić. Dwa miejsca po przecinku dla kwot < $10.
 TERMIN PRZEGLĄDU: **poniedziałek 31.08** (decyzja Rafała — wcześniejsze
 „1.09" było pomyłką kalendarzową, 1.09.2026 to wtorek); zlecenie CC-Win
 COMPARE_HL_D 720d na ten sam poranek. Poprawione w HANDOFF i

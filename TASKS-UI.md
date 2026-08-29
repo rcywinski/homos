@@ -1270,3 +1270,36 @@ Bot-side JEST już gotowe (paczka 29.08) — UI tylko wyświetla, nic nie liczy:
    od kotwic pozycji, bez bufora i kosztów wejścia — pełny rachunek
    transzy jest w pasku wyżej".
 3. Zero nowych requestów — wszystko z już wczytanego `/api/state`.
+
+## PARTIA 19 — dwa rozjazdy widoczne na żywo po wdrożeniu 29.08 ✅ wykonana (Sonnet 29.08; spot-check Fable OK: etykiety+tooltipy bez zmiany liczb, `statFmtUsd` 2 miejsca dla |v|<10 i bez zmian dla dużych kwot, tsc czysty, build przechodzi)
+
+Screenshot Rafała po restartach ujawnił dwie rzeczy. ŻADNA nie jest błędem
+liczenia — obie to sposób prezentacji, który wprowadza w błąd.
+
+1. **Dwie różne „sumy wszystkiego" obok siebie.** Górny kafel „Wartość
+   łączna" pokazał $6 253.67, a pasek bilansu „Dziś łącznie" $5 925.83 —
+   różnica $327.84. Powód (sprawdzony w kodzie, NIE do zgadywania):
+   - `usePortfolio.totalUsd` = pozycje + portfel **ze WSZYSTKICH sieci**
+     (ETH/WETH/USDC na mainnet + Base + Arbitrum), z pominięciem cbBTC
+     (UI nie ma kursu BTC — komentarz w usePortfolio.ts ~465);
+   - `state.tranche.totalUsd` = pozycje produktowe + portfel **tylko na
+     Base**, za to Z cbBTC — bo transza 1 pracuje na Base.
+   Te $327.84 to stary gaz/resztki na mainnecie i Arbitrum, spoza transzy.
+   DO ZROBIENIA (bez zmiany liczb, tylko etykiety i tooltipy):
+   - górny kafel: podpis „Wartość łączna (cały portfel, wszystkie sieci)"
+     + tooltip „zawiera środki spoza transzy 1 — stary gaz i resztki na
+     mainnet/Arbitrum; cbBTC pominięte (UI nie ma kursu BTC)";
+   - kafel paska bilansu: „Dziś łącznie (transza 1, Base)" + tooltip
+     „tylko środki transzy 1 na Base — pozycje produktowe i portfel".
+   Bez tego dwie poprawne liczby obok siebie wyglądają jak błąd.
+
+2. **Zaokrąglenie do pełnych dolarów zjada nowe kolumny.** `statFmtUsd`
+   (PositionCharts.tsx:320) ma `maximumFractionDigits: 0`, więc na skali
+   Base: fee narosłe $0.41 → „$0", koszty gazu (centy) → „$0", fee $2.66
+   → „$3". Kolumny „Fee narosłe" i „Koszty" stają się bezużyteczne
+   dokładnie tam, gdzie miały coś mówić.
+   DO ZROBIENIA: w `statFmtUsd` dwa miejsca po przecinku dla |v| < 10
+   (np. „$0.41", „$2.66"), pełne dolary powyżej — PnL i vs HODL zostają
+   wtedy czytelne jak dziś, a drobne kwoty przestają znikać.
+   Uwaga: ta sama funkcja obsługuje paper trading (tam kwoty są duże,
+   więc zachowanie się nie zmieni).

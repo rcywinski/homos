@@ -317,7 +317,16 @@ export const PriceRangeChart: FC<{ poolId: string; points: EquityChartPoint[]; e
 // tooltipem tłumaczącym DLACZEGO (rozróżnienie "w budowie" dla pól
 // bot-side vs zwykły brak historii, żeby nie sugerować usterki tam, gdzie
 // to po prostu jeszcze nie istnieje).
-const statFmtUsd = (v: number) => (v < 0 ? '−$' : '$') + Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+// Partia 19 pkt 2: zaokrąglenie do pełnych dolarów zjadało drobne kwoty na
+// skali Base (fee narosłe $0.41, gaz w centach → oba wychodziły jako "$0",
+// bezużyteczne dokładnie tam, gdzie miały coś powiedzieć). Dla |v| < 10 dwa
+// miejsca po przecinku, powyżej pełne dolary jak dotąd (PnL/vsHODL na
+// paper-tradingu, gdzie kwoty są duże, wyglądają identycznie jak wcześniej).
+const statFmtUsd = (v: number) => {
+  const abs = Math.abs(v);
+  const digits = abs < 10 ? 2 : 0;
+  return (v < 0 ? '−$' : '$') + abs.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+};
 const statFmtSigned = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + statFmtUsd(Math.abs(v));
 
 export interface PositionStatsBarProps {

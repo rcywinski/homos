@@ -821,7 +821,17 @@ const saveTxCosts = () => fs.writeFileSync(TX_COSTS_PATH, JSON.stringify(txCosts
 async function refreshTxCosts(maxPerCycle = 25) {
   let added = 0;
   let failed = 0;
-  for (const e of readLedger()) {
+  // KOLEJNOŚĆ MA ZNACZENIE (fix 29.08 po zgłoszeniu CC-Win: `costsUsd`
+  // null mimo działającego backfillu): księga jest posortowana od
+  // najstarszych, a najstarsze to pyłki z mainnetu sprzed ~519 dni —
+  // przy 25 tx na cykl nasze dwie nogi doczekałyby się receiptów dopiero
+  // po wielu cyklach. Transakcje ŻYWYCH pozycji idą więc pierwsze.
+  const liveIds = new Set(positions.map((p) => p.tokenId));
+  const all = readLedger();
+  const queue = liveIds.size
+    ? [...all.filter((e) => liveIds.has(e.tokenId)), ...all.filter((e) => !liveIds.has(e.tokenId))]
+    : all;
+  for (const e of queue) {
     if (added >= maxPerCycle) break;
     if (txCosts[e.txHash]) continue;
     const client = clients[e.chain];
@@ -859,44 +869,70 @@ interface TrancheState {
   lpUsd: number; walletUsd: number | null; totalUsd: number | null;
   diffUsd: number | null; diffPct: number | null;
   marketPnlUsd: number | null; residualUsd: number | null; gasUsd: number | null;
+  /** rozbicie „reszty" (29.08, po pierwszym pomiarze): koszty wejścia są
+   *  STAŁE, beta bufora pływa z ceną — bez tego podziału reszta ruszałaby
+   *  się z rynkiem i przestała być testem poprawności księgowania. */
+  entryCostUsd: number | null; bufferBetaUsd: number | null;
+  /** skład portfela per token — żeby dało się AUDYTOWAĆ, co bot wliczył
+   *  (pierwszy pomiar dał $226 zamiast szacowanych $150; bez rozbicia nie
+   *  wiadomo, czy to bufor transzy, czy stary ETH na gaz spoza niej) */
+  walletParts: Array<{ sym: string; amount: number; usd: number }> | null;
   updatedAt: string;
 }
 let trancheLive: TrancheState | null = null;
+// kotwica bufora: kwoty w portfelu nie zmieniają się bez swapów, więc
+// wartość z pierwszego udanego odczytu pozwala oddzielić betę bufora od
+// jednorazowych kosztów wejścia. UCZCIWOŚĆ: kotwica powstaje DZIŚ, więc
+// beta bufora z 27–29.08 zostaje po stronie entryCostUsd.
+const TRANCHE_ANCHOR_PATH = path.join(DIR, 'tranche-anchor.json');
+interface TrancheAnchor { anchoredAt: string; walletUsd: number }
+let trancheAnchor: TrancheAnchor | null = fs.existsSync(TRANCHE_ANCHOR_PATH)
+  ? JSON.parse(fs.readFileSync(TRANCHE_ANCHOR_PATH, 'utf8'))
+  : null;
 const ERC20_ABI = [
   { name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ name: 'a', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
 ] as const;
 
 /** Wartość tokenów transzy leżących w PORTFELU (poza pozycjami LP) —
  *  bez tego bilans transzy pokazywałby bufor jako stratę. */
-async function walletValueUsd(): Promise<number | null> {
+async function walletValueUsd(): Promise<{ usd: number; parts: Array<{ sym: string; amount: number; usd: number }> } | null> {
   const pools = BOT_POOLS.filter((p) => p.chain === TRANCHE.chain && p.productIdleWidthPct && live[p.id]);
   if (!pools.length) return null;
   const client = clients[TRANCHE.chain];
   // cena USD per ADRES tokenu — ta sama logika co wycena pozycji
   const priceByAddr = new Map<string, number>();
   const decByAddr = new Map<string, number>();
+  const symByAddr = new Map<string, string>();
   for (const p of pools) {
     const lv = live[p.id];
     const ref = refEthUsd(p);
     const usdQuote = (p.quote ?? 'USD') === 'USD';
     const px0 = usdQuote ? (p.ethIsToken0 ? lv.ethUsd : 1) : (p.ethIsToken0 ? ref : lv.ethUsd);
     const px1 = usdQuote ? (p.ethIsToken0 ? 1 : lv.ethUsd) : (p.ethIsToken0 ? lv.ethUsd : ref);
-    if (p.t0 && typeof px0 === 'number' && px0 > 0) { priceByAddr.set(p.t0.toLowerCase(), px0); decByAddr.set(p.t0.toLowerCase(), p.d0); }
-    if (p.t1 && typeof px1 === 'number' && px1 > 0) { priceByAddr.set(p.t1.toLowerCase(), px1); decByAddr.set(p.t1.toLowerCase(), p.d1); }
+    if (p.t0 && typeof px0 === 'number' && px0 > 0) { priceByAddr.set(p.t0.toLowerCase(), px0); decByAddr.set(p.t0.toLowerCase(), p.d0); symByAddr.set(p.t0.toLowerCase(), p.sym0); }
+    if (p.t1 && typeof px1 === 'number' && px1 > 0) { priceByAddr.set(p.t1.toLowerCase(), px1); decByAddr.set(p.t1.toLowerCase(), p.d1); symByAddr.set(p.t1.toLowerCase(), p.sym1); }
   }
   if (!priceByAddr.size) return null;
   try {
     let sum = 0;
+    const parts: Array<{ sym: string; amount: number; usd: number }> = [];
     for (const [addr, px] of priceByAddr) {
       const bal = (await client.readContract({
         address: addr as `0x${string}`, abi: ERC20_ABI, functionName: 'balanceOf', args: [WATCH_ADDRESS as `0x${string}`],
       })) as bigint;
-      sum += parseFloat(formatUnits(bal, decByAddr.get(addr) ?? 18)) * px;
+      const amount = parseFloat(formatUnits(bal, decByAddr.get(addr) ?? 18));
+      const usd = amount * px;
+      sum += usd;
+      if (amount > 0) parts.push({ sym: symByAddr.get(addr) ?? addr.slice(0, 8), amount: +amount.toFixed(8), usd: +usd.toFixed(2) });
     }
     // natywny ETH na gaz też jest częścią transzy (kupiony za USDC)
     const eth = nativeEthUsd();
-    if (eth) sum += parseFloat(formatUnits(await client.getBalance({ address: WATCH_ADDRESS as `0x${string}` }), 18)) * eth;
-    return +sum.toFixed(2);
+    if (eth) {
+      const amount = parseFloat(formatUnits(await client.getBalance({ address: WATCH_ADDRESS as `0x${string}` }), 18));
+      sum += amount * eth;
+      if (amount > 0) parts.push({ sym: 'ETH (natywny)', amount: +amount.toFixed(8), usd: +(amount * eth).toFixed(2) });
+    }
+    return { usd: +sum.toFixed(2), parts: parts.sort((a, b) => b.usd - a.usd) };
   } catch (e) {
     log(`portfel transzy: ${String(e).slice(0, 120)}`);
     return null;
@@ -1080,8 +1116,14 @@ async function refreshPositions() {
   try {
     const prodPositions = found.filter((p) => p.posture !== null);
     const lpUsd = +prodPositions.reduce((s, p) => s + p.valueUsd, 0).toFixed(2);
-    const walletUsd = await walletValueUsd();
+    const wallet = await walletValueUsd();
+    const walletUsd = wallet === null ? null : wallet.usd;
     const totalUsd = walletUsd === null ? null : +(lpUsd + walletUsd).toFixed(2);
+    if (walletUsd !== null && !trancheAnchor) {
+      trancheAnchor = { anchoredAt: new Date().toISOString(), walletUsd };
+      fs.writeFileSync(TRANCHE_ANCHOR_PATH, JSON.stringify(trancheAnchor, null, 2));
+      log(`transza: kotwica bufora zapisana ($${walletUsd.toFixed(2)})`);
+    }
     // UWAGA na pułapkę (złapana przy pisaniu): kotwica wyceniona DZISIEJSZYMI
     // cenami daje „vs HODL" (~$0), a nie ruch rynku. Ruch rynku = wartość
     // dziś − wartość w CHWILI zakotwiczenia, czyli hodlUsd PIERWSZEJ próbki
@@ -1109,8 +1151,15 @@ async function refreshPositions() {
       marketPnlUsd: marketPnl === null ? null : +marketPnl.toFixed(2),
       residualUsd: diffUsd === null || marketPnl === null ? null : +(diffUsd - marketPnl).toFixed(2),
       gasUsd: ethUsdForGas ? +(gasEthTotal * ethUsdForGas).toFixed(2) : null,
+      entryCostUsd: null, bufferBetaUsd: null, // wypełniane niżej, gdy jest kotwica
+      walletParts: wallet?.parts ?? null,
       updatedAt: new Date().toISOString(),
     };
+    // rozbicie „reszty": beta bufora (pływa z ceną) vs koszty wejścia (stałe)
+    if (trancheLive.residualUsd !== null && walletUsd !== null && trancheAnchor) {
+      trancheLive.bufferBetaUsd = +(walletUsd - trancheAnchor.walletUsd).toFixed(2);
+      trancheLive.entryCostUsd = +(trancheLive.residualUsd - trancheLive.bufferBetaUsd).toFixed(2);
+    }
   } catch (e) {
     log(`bilans transzy: ${String(e).slice(0, 140)}`);
   }

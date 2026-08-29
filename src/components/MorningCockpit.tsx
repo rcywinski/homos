@@ -843,7 +843,12 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           <div className="morning-summary">
             <div className="morning-stat">
               <span className="morning-stat-value">{portfolio.loading ? '…' : fmtUsd(adjustedTotalUsd)}</span>
-              <span className="morning-stat-label">Wartość łączna{stillUnknownValue ? '*' : ''}</span>
+              <span
+                className="morning-stat-label"
+                title="zawiera środki spoza transzy 1 — stary gaz i resztki na mainnet/Arbitrum; cbBTC pominięte (UI nie ma kursu BTC)"
+              >
+                Wartość łączna (cały portfel, wszystkie sieci){stillUnknownValue ? '*' : ''}
+              </span>
             </div>
             <div className="morning-stat">
               <span className="morning-stat-value">
@@ -937,7 +942,9 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                 </div>
                 <div className="tranche-bar-stat">
                   <span className="tranche-bar-value">{bot.state.tranche.totalUsd === null ? '—' : fmtUsd(bot.state.tranche.totalUsd)}</span>
-                  <span className="muted">Dziś łącznie</span>
+                  <span className="muted" title="tylko środki transzy 1 na Base — pozycje produktowe i portfel">
+                    Dziś łącznie (transza 1, Base)
+                  </span>
                 </div>
                 <div className="tranche-bar-stat">
                   <span

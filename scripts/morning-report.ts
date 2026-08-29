@@ -273,12 +273,22 @@ try {
           line('**różnica vs wpłacone**', tr.diffUsd === null ? '—' : `**${fmtUsd(tr.diffUsd)}${tr.diffPct === null ? '' : ` (${tr.diffPct.toFixed(2)}%)`}**`),
           line('— z tego ruch rynku na LP', tr.marketPnlUsd === null ? '—' : fmtUsd(tr.marketPnlUsd)),
           line('— z tego reszta (koszty wejścia + beta bufora)', tr.residualUsd === null ? '—' : fmtUsd(tr.residualUsd)),
+          ...(tr.entryCostUsd === null && tr.bufferBetaUsd === null ? [] : [
+            line('&nbsp;&nbsp;• koszty wejścia (stałe)', tr.entryCostUsd === null ? '—' : fmtUsd(tr.entryCostUsd)),
+            line('&nbsp;&nbsp;• beta bufora (od kotwicy bufora)', tr.bufferBetaUsd === null ? '—' : fmtUsd(tr.bufferBetaUsd)),
+          ]),
           line('(informacyjnie) gaz zaindeksowany', tr.gasUsd === null ? '—' : `$${tr.gasUsd.toFixed(2)}`),
         ];
+        // skład portfela — audytowalność: pierwszy pomiar dał $226 zamiast
+        // szacowanych $150, więc musi być widać, CO bot wliczył
+        const parts = Array.isArray(tr.walletParts) && tr.walletParts.length
+          ? `\n\n_Portfel: ${tr.walletParts.map((w: any) => `${w.sym} ${w.amount} ($${w.usd.toFixed(2)})`).join(' · ')}_`
+          : '';
         sections.push(
-          `## BILANS TRANSZY — ${tr.label ?? 'transza 1'}\n\n` + trRows.join('\n') +
+          `## BILANS TRANSZY — ${tr.label ?? 'transza 1'}\n\n` + trRows.join('\n') + parts +
           '\n\n_„Reszta" to jednorazowe koszty wejścia (swapy, poślizg, gaz mintów) plus beta bufora w portfelu._' +
-          '\n_Powinna być mniej więcej STAŁA — jeśli rośnie z dnia na dzień, coś w księgowaniu się rozjeżdża._' +
+          '\n_Koszty wejścia powinny być STAŁE — ich dryf oznacza, że coś w księgowaniu się rozjeżdża._' +
+          '\n_UWAGA: kotwica bufora powstała 29.08, więc beta bufora z 27–29.08 siedzi w kosztach wejścia._' +
           '\n_Gaz jest już zawarty w „reszcie" — linia informacyjna, nie odejmuj drugi raz._'
         );
       }
