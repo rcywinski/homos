@@ -686,6 +686,24 @@
   jest rdzeń wartości zwężania), opcjonalnie ENTER=3% per-pula na
   base-030 (+19%). Decyzja Rafała.
   DOSZŁO NA AGENDĘ 29.08 (poza parametrami flat):
+  - **⚠️ NAJWAŻNIEJSZE: szerokość zwężenia w modelu ≠ w produkcie.**
+    Cała wycena zwężania (E1, tabela E4, ΣEV $558 itd.) liczona jest
+    `flatwindows.ts` z ustaloną szerokością wąskiego pasma:
+    **±8% domyślnie, ±6% dla cbBTC** (`NARROW=0.06` w zleceniach).
+    Produkt zwęża natomiast do `k × σ × √7` — a na żywych danych
+    z 29.08 wieczór (już grid15) to: base-030 σ 2.450%/d → **±19.4%**,
+    cbBTC σ 2.978%/d → **±15.8%**. Czyli 2.3–2.5× SZERZEJ niż model.
+    Przyrost fee skaluje się ~1/szerokość, więc realne EV zwężania to
+    ok. **40–43% tego, co pokazuje paczka decyzyjna E4**. Modelowe
+    szerokości wymagałyby σ ~1.0–1.1%/d, czyli reżimu 2–3× spokojniej
+    szego niż dzisiejszy. DO ROZSTRZYGNIĘCIA 31.08: (a) czy zwężamy
+    stałą szerokością (jak w modelu) zamiast k×σ, (b) czy zostajemy
+    przy k×σ i przeliczamy E1/E4 tą samą formułą (uczciwsze, ale to
+    nowe przebiegi), (c) czy próg „epizod musi potrwać ≥5d/≥2d"
+    trzeba podnieść proporcjonalnie. Do tego czasu: propozycja
+    FLAT_NARROW niesie własny `paybackDays` liczony z realnego L
+    i fee-yieldu — TO jest liczba do sprawdzenia przed podpisem,
+    nie tabela z E4.
   - **σ: zakres docelowy grid15**. 29.08 wieczorem ustawiliśmy
     `SIGMA_MODE=grid15` TYLKO dla usługi homos-bot (przed pierwszym
     zwężeniem). Do decyzji: czy grid15 obowiązuje też nocny pipeline

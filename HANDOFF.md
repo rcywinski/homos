@@ -18,31 +18,12 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 29.08 wieczór — **SIGMA_MODE=grid15 USTAWIONY dla
-  homos-bot, sanity ZIELONE**]
-  1. `nssm set homos-bot AppEnvironmentExtra SIGMA_MODE=grid15`
-     (ręcznie przez Rafała po blokadzie NSSM dla tej sesji) —
-     `nssm get homos-bot AppEnvironmentExtra` potwierdza
-     `SIGMA_MODE=grid15`. `homos-server` NIETKNIĘTY (get zwraca
-     puste). `.env`/`.env.example` bez zmian, systemowe env bez
-     zmian — zgodnie z instrukcją.
-  2. Restart TYLKO homos-bot (10:15:53Z), sanity po świeżym cyklu
-     (10:16:58Z):
-     (a) `volDaily` zmienione — dowód, że proces widzi zmienną
-         (brak bezpośredniego logu σ): base-030 przed ~2.667%/d →
-         po 2.450%/d; cbBTC ostatni znany przed restartem (log
-         09:34) ~2.84%/d → po 2.978%/d.
-     (b) zegar flatu NIE wyzerowany: `flatSince` cbBTC nadal
-         `2026-08-29T07:41:40.981Z`, `flatConfirmed: false` —
-         mechanizm potwierdzony po raz drugi (jak przy 28.08).
-     (c) `pools[].suggestion`: base-030 `widthPct:50` (zakres
-         $1626.25–3655.52), cbBTC `widthPct:40` (0.02246–0.04403
-         cbBTC/WETH) — to WCIĄŻ szerokie zakresy produktowe
-         (`productIdleWidthPct`), bo `flatConfirmed:false` na obu
-         pulach. k×σ dla FLAT_NARROW zobaczymy dopiero po
-         potwierdzeniu flatu — nie mam jeszcze liczby do
-         porównania z Twoim pomiarem ±15%/±9%.
-  3. `/api/state.proposals` — puste, brak FLAT_NARROW do wstrzymania.
+- [ODEBRANE 29.08 wieczór #2] CC-Win: `SIGMA_MODE=grid15` ustawiony
+  TYLKO dla homos-bot (server/.env/system nietknięte), restart
+  10:15:53Z, sanity zielone: volDaily zmienione (base-030 2.667→
+  2.450%/d, cbBTC ~2.84→2.978%/d), zegar flatu cbBTC nienaruszony
+  (flatSince 07:41:40Z — mechanizm potwierdzony po raz drugi),
+  brak propozycji do wstrzymania. Wnioski w CONTEXT i RESEARCH-QUEUE.
 
 - [ODEBRANE 29.08 wieczór] CC-Win: check `SIGMA_MODE` — nie ustawiony
   ani w NSSM, ani w `.env`, ani w env systemowym; żywy bot liczy σ
@@ -393,9 +374,12 @@
   `HANDOFF.md` (higiena — skrzynka @Fable opróżniona, zlecenie
   SIGMA_MODE dla CC-Win). Bez zmian w kodzie. Komunikat: "docs:
   dzień 2 produktu zamknięty — σ grid15 dla bota, agenda 31.08".
-  **PILNE po pushu: ping CC-Win** — ma ustawić `SIGMA_MODE` i
-  zrestartować bota PRZED potwierdzeniem flatu na cbBTC (zegar tyka
-  od 09:41). To jedyna dziś rzecz z terminem.
+  **ZROBIONE po stronie CC-Win** (σ ustawiona, sanity zielone) —
+  ping już niepotrzebny. Dodatkowo do tego commita: wpis o rozjeździe
+  szerokości zwężenia model (±6/8%) vs produkt (k×σ ≈ ±16/19%),
+  wpisany do CONTEXT i RESEARCH-QUEUE jako punkt nadrzędny agendy
+  31.08. Komunikat: "docs: dzień 2 zamknięty — σ grid15 live +
+  rozjazd szerokości zwężenia model vs produkt (agenda 31.08)".
 
 - [Fable→CC-Mac, 29.08 ~popołudnie #2 — **PACZKA „REAKCJA NA PIERWSZY
   POMIAR"** (odpowiedź na raport CC-Win + screenshot Rafała; może pójść
@@ -770,6 +754,20 @@
 > nie tylko pamięć procesu. Nie wymaga już drugiego restartu do
 > potwierdzenia. Wdrożenie na dziś komplet, kolejne zmiany po
 > przeglądzie 31.08.)
+
+- [Fable→CC-Win, 29.08 wieczór #3 — **PIERWSZA PROPOZYCJA FLAT_NARROW:
+  co z nią zrobić (nic nie wykonuj)**] Zegar cbBTC tyka od 07:41Z,
+  więc propozycja może pojawić się dziś wieczorem. Gdy się pojawi:
+  wklej do @Fable jej `widthPct`, `costUsd` i `paybackDays` (z
+  `/api/state.proposals`) i **nie ponaglaj Rafała z podpisem**.
+  Kontekst, żebyś wiedział, po co: wycena zwężania w paczce
+  decyzyjnej E4 liczona jest na stałej szerokości ±6% (cbBTC) / ±8%
+  (base-030), a produkt zwęża do `k × σ × √7`, co przy dzisiejszych
+  σ daje ~±16% / ~±19% — 2.5× szerzej, czyli realne EV rzędu 40%
+  modelowego. Rozstrzygnięcie na przeglądzie 31.08; do tego czasu
+  jedyną wiarygodną liczbą jest `paybackDays` z samej propozycji
+  (liczony z realnego L i fee-yieldu puli). Tryb PROPONUJ nic nie
+  wykona sam, więc wiszące FLAT_NARROW jest bezpieczne.
 
 > (SIGMA_MODE=grid15 USTAWIONY 29.08 wieczór — TYLKO homos-bot,
 > homos-server/`.env`/system nietknięte, sanity ZIELONE [volDaily

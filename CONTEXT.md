@@ -277,6 +277,27 @@ swap niezależnie od env usługi — po dzisiejszej zmianie kokpit i bot
 pokażą różne szerokości. To ta sama klasa rozjazdu co `advisorK`
 naprawiony 28.08; właściwy fix: UI ma pokazywać `pools[].suggestion`
 z bot state, a nie liczyć własną.
+~wieczór #4 — σ grid15 WDROŻONA (CC-Win: NSSM tylko dla homos-bot,
+restart 10:15:53Z, `volDaily` base-030 2.667→2.450%/d, cbBTC
+~2.84→2.978%/d, zegar flatu cbBTC NIENARUSZONY [flatSince 07:41:40Z]
+— mechanizm przeżycia restartu potwierdzony po raz drugi).
+**I TU WYSZŁA RZECZ WAŻNIEJSZA NIŻ SAMA σ.** Podstawiając żywe σ do
+formuły produktu (`k × σ × √7`) zwężenie wyszłoby: base-030 ±19.4%,
+cbBTC ±15.8%. Tymczasem CAŁA wycena zwężania z E1/E4 (ΣEV $558,
+progi „epizod ≥5d/≥2d") liczona jest `flatwindows.ts` ze STAŁĄ
+szerokością wąskiego pasma: ±8% domyślnie, ±6% dla cbBTC. To 2.3–2.5×
+różnicy w parametrze, który NAJMOCNIEJ napędza EV — przyrost fee
+skaluje się ~1/szerokość, więc realne EV zwężania to ~40–43% tego,
+co pokazuje paczka decyzyjna. Modelowe szerokości wymagałyby σ
+~1.0–1.1%/d, czyli reżimu 2–3× spokojniejszego niż dzisiejszy.
+Nie jest to błąd kodu — to rozjazd MODELU z PRODUKTEM, którego nikt
+nie zauważył, bo model dostawał szerokość z env, a produkt liczy ją
+z σ. Wpisane na 31.08 jako punkt nadrzędny wobec strojenia CONFIRM_H
+i HL_D: strojenie progów wejścia w flat ma drugorzędne znaczenie,
+jeśli sama korzyść ze zwężenia jest 2.5× mniejsza niż zakładaliśmy.
+OPERACYJNIE DO PONIEDZIAŁKU: propozycja FLAT_NARROW niesie WŁASNY
+`paybackDays` (liczony z realnego L i fee-yieldu puli) — i to jest
+liczba do sprawdzenia przed podpisem, nie tabela z E4.
 TERMIN PRZEGLĄDU: **poniedziałek 31.08** (decyzja Rafała — wcześniejsze
 „1.09" było pomyłką kalendarzową, 1.09.2026 to wtorek); zlecenie CC-Win
 COMPARE_HL_D 720d na ten sam poranek. Poprawione w HANDOFF i
