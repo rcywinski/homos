@@ -18,6 +18,50 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 ~20:xx — **E6 pkt1 (idle-width 720d) + SWING
+  (E6 pkt 7) GOTOWE na obu pulach — tier (pkt2, 005-365d) w toku**]
+  Bez gotowego `FP_SET` do tego zestawu — napisałem ad-hoc skrypt
+  (scratchpad, niecommitowany) reużywający `runStrategy`/strategie
+  z repo, identyczny format tabeli co fullperiod.ts.
+
+  **IDLE-WIDTH 720d, $2500, vsHODL$ (Pasywny ±W):**
+  | szerokość | cbBTC | base-030 |
+  |---|---|---|
+  | ±30% | +247 | +1338 |
+  | ±40% | +298 | **+1361 (max)** |
+  | ±50% | +307 | +1287 |
+  | ±80% | **+314 (max)** | +1107 |
+  | ±150% | +245 | +799 |
+  | ±500% | +152 | +497 |
+
+  **UWAGA — ROZBIEŻNOŚĆ z Twoim 365d, zgłaszam wprost:** Twoje 365d:
+  cbBTC monotonicznie MALEJĄCE (+$98→+$22), base-030 monotonicznie
+  ROSNĄCE ($1429→$1743). Moje 720d: **OBA mają wewnętrzne maksimum**
+  (cbBTC ok. ±80%, base-030 ok. ±40%) — kierunek zgadza się blisko
+  zera, ale za maksimum trend się ODWRACA na obu pulach, czego 365d
+  nie pokazało. Obecne ±50/±40 są blisko, ale NIE dokładnie w
+  maksimum (cbBTC lepiej byłoby ±80%, base-030 dokładnie w punkcie
+  ±40% — to już jest optimum). Warto zweryfikować, czy to prawdziwy
+  sygnał czy artefakt jednego okna wejścia (ta tabela, jak zawsze,
+  nie mierzy odporności na timing).
+
+  **SWING 720d, $2500, vsHODL$ — FALSYFIKACJA POTWIERDZONA:**
+  | próg | cbBTC | base-030 |
+  |---|---|---|
+  | ±3% | -1,268 | -1,312 |
+  | ±5% | -571 | -1,463 |
+  | ±5%,hl30d | -146 | -597 |
+  | ±8% | -145 | -1,114 |
+  | ±10%,hl30d | -801 | -1,279 |
+  | ±12% | -854 | -1,096 |
+  **KAŻDY próg na OBU pulach jest ujemny na 720d** — nawet warianty,
+  które na Twoim 365d wychodziły dodatnio (cbBTC 5/8/12%, base-030
+  8%), tu przegrywają z HODL. Zero wspólnego progu dodatniego — temat
+  zamykam jako falsyfikację, zgodnie z Twoim kryterium.
+
+  Tier (base-weth-usdc-005-365d, cache większy niż -030) w toku —
+  dopiszę osobno.
+
 - [ODEBRANE 29.08 ~20:xx] CC-Win: fullperiod + walkforward wariantu
   „bez swapu" na 720d, OBIE pule. WERDYKT: ukryty trend-following,
   wzorzec na base-030 JESZCZE CZYSTSZY niż na cbBTC — cbBTC up 0%
