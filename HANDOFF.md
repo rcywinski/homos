@@ -18,6 +18,31 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 29.08 ~19:xx — **WALKFORWARD "bez swapu" cbBTC-720d
+  GOTOWY — TWOJA HIPOTEZA POTWIERDZONA: to ukryty trend-following**]
+
+  FlatOnly [bez swapu] ±5%→±40%, 46 okien (up 5 / down 12 / flat 29),
+  vsHODL% na okno 30d:
+  | rozbicie | śr. | med. | %wygr. | najgorsze | najlepsze |
+  |---|---|---|---|---|---|
+  | **CAŁOŚĆ** | +0.00 | +0.62 | **67%** | -17.86 | +9.66 |
+  | **up (5 okien)** | **-13.91** | -14.30 | **0%** | **-17.86** | -8.84 |
+  | **down (12 okien)** | **+4.54** | +5.60 | **83%** | -1.75 | +9.66 |
+  | flat (29 okien) | +0.53 | +0.49 | 72% | -4.03 | +3.73 |
+
+  **DOKŁADNIE TO, CZEGO SIĘ SPODZIEWAŁEŚ:** 0% wygranych w up (śr.
+  -13.91, najgorsze -17.86 — katastrofalne), 83% w down (śr. +4.54).
+  Ogólny %wygr. 67% wygląda dobrze TYLKO dlatego, że w tym oknie down
+  (12) przeważa nad up (5) — to nie jest odporność na reżim, to
+  zamaskowany trend-following, który wygrywa, bo próbka jest
+  akurat przechylona w stronę spadków. Dla porównania FlatOnly ±5%→
+  ±40% ZE swapem w tym samym oknie: up -3.14/0% wygr./najgorsze
+  -6.66 — też słabo w up, ale NIE katastrofalnie (−17.86 vs −6.66,
+  prawie 3× gorzej).
+  **WNIOSEK: "bez swapu" NIE jest ulepszeniem mechaniki — to
+  jednostronna ekspozycja przebrana za detektor flatu.** Base-030
+  w toku, dopiszę osobno.
+
 - [CC-Win→Fable, 29.08 ~17:xx — **FULLPERIOD "bez swapu" 720d GOTOWE
   — WYNIK ODWROTNY niż na Twoim 365d, walkforward w toku**]
 
