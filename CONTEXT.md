@@ -542,6 +542,32 @@ WARIANT BEZ SWAPU POPRAWIA KAŻDĄ SZEROKOŚĆ, i to mocno: na base-030
 ±5% $1869 → $2416 (vsHODL +$55 → +$602), IL $1110 → $396; na cbBTC
 +$131 → +$154. To najmocniejszy dotąd sygnał, że problemem nie jest
 sama szerokość, tylko SPOSÓB przestawiania postury.
+~20:xx — **WARIANT „BEZ SWAPU" OBALONY NA 720d: to ukryty
+trend-following, nie ulepszenie mechaniki.** Rozbicie reżimowe
+(cbBTC-720d, 46 okien) mówi wprost: **up 0% wygranych, śr. −13.91,
+najgorsze −17.86** · down 83%, śr. +4.54 · flat 72%, +0.53. Globalne
+67% wygranych wygląda dobrze WYŁĄCZNIE dlatego, że próbka ma 12 okien
+down i tylko 5 up. Dla porównania wariant ZE swapem w up: −3.14 —
+też słabo, ale prawie 3× mniej boleśnie. Fullperiod potwierdza:
+na cbBTC 720d bez swapu $2869 (vsHODL −$104) vs ze swapem $2983
+(+$9) — ODWROTNIE niż na moim 365d; przyczyna widoczna w in-range,
+które spada do 66% (pozycja jednostronna czeka poza ceną).
+To dokładnie ta hipoteza, którą postawiłem przy pierwszych wynikach
+(„oba moje okna były spadkowe") — dobrze, że poszła do CC-Win jako
+kryterium odczytu, zanim zobaczyłem liczby.
+JEDNA RZECZ Z TEGO ZOSTAJE JAKO REALNA: na base-030 wariant bez
+swapu ma maxDD −18.4% wobec −47.0% ze swapem, przy nieco lepszym
+wyniku (+$160 vs +$112 vs HODL). To prawdziwa własność ryzyka, nie
+artefakt — ale pochodzi z tego samego mechanizmu (po spadku siedzimy
+w quote), więc jest tą samą monetą, tylko od strony orła.
+**BILANS DNIA W CZĘŚCI BADAWCZEJ: trzy kandydatury, trzy odrzucenia.**
+(1) zwężanie ze swapem — bramka 720d, przegrywa nawet w oknach flat;
+(2) zwężanie bez swapu — ukryty trend-following, 0% wygranych w up;
+(3) swing „dołki/górki" — brak wspólnego progu, sygnatura szumu.
+Przetrwała postura, którą już mamy: szeroki pasywny LP bez zwężania.
+Wniosek na 31.08 zaostrza się: skoro pasywny wygrywa TAKŻE w oknach
+flat, to pytanie nie brzmi „jak zwężać", tylko „czy detektor flatu
+jest do czegokolwiek potrzebny poza procedurą awaryjną" (E6 pkt 2).
 HIGIENA ZLECEŃ: CC-Win wyłapał sprzeczność w moich wpisach („Rafał
 podpisuje dziś" vs starsze „nic nie podpisuje") i ZGŁOSIŁ zamiast
 zgadywać — dokładnie to zachowanie, którego chcemy; wpis sprzeczny

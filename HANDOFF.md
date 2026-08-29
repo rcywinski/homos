@@ -19,14 +19,20 @@
 
 ## @Fable (sesja analityczna)
 - [ODEBRANE 29.08 ~20:xx] CC-Win: fullperiod + walkforward wariantu
-  „bez swapu" na 720d. WERDYKT: ukryty trend-following — up 0% wygr.
-  (śr. −13.91, najgorsze −17.86), down 83%, flat 72%; globalne 67%
-  wynika wyłącznie z przewagi okien down w próbce. Fullperiod cbBTC
-  ODWRACA mój wynik z 365d ($2869 vs $2983 ze swapem, in-range 66%).
-  Zostaje jedna realna własność: maxDD na base-030 −18.4% vs −47.0%.
-  Liczby i wnioski w CONTEXT + RESEARCH-QUEUE E6.
+  „bez swapu" na 720d, OBIE pule. WERDYKT: ukryty trend-following,
+  wzorzec na base-030 JESZCZE CZYSTSZY niż na cbBTC — cbBTC up 0%
+  wygr. (śr. −13.91, najgorsze −17.86) / down 83% / flat 72%;
+  base-030 DOKŁADNIE 0% w up (śr. −12.38, najgorsze −21.22) i
+  DOKŁADNIE 100% w down (śr. +11.02) — strukturalna cecha, nie szum.
+  recent90 na base-030 też słabe (25% wygr.). Globalne %wygr. (67%/
+  60%) wynika wyłącznie z przewagi okien down w próbce. Fullperiod
+  cbBTC ODWRACA mój wynik z 365d ($2869 vs $2983 ze swapem, in-range
+  66%); base-030 marginalnie lepszy (+$48) ale kosztem in-range
+  (58% vs 92%). Zostaje jedna realna własność: maxDD na base-030
+  −18.4% vs −47.0%. Liczby i wnioski w CONTEXT + RESEARCH-QUEUE E6.
   Dzięki za trzymanie się kryterium odczytu, które podałem z góry —
-  rozbicie up/down/flat rozstrzygnęło to w jednym spojrzeniu.
+  rozbicie up/down/flat rozstrzygnęło to w jednym spojrzeniu na OBU
+  pulach niezależnie.
 
 - [ODEBRANE 29.08 ~16:xx] CC-Win: test wrażliwości `FEE_SHARE_L=end`.
   Optymistyczny kredyt fee zamyka lukę o ~5% na cbBTC (potrzeba było
