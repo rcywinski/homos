@@ -755,6 +755,27 @@ i RESEARCH-QUEUE E4 [agenda 31.08]; historia w gicie.)
 > potwierdzenia. Wdrożenie na dziś komplet, kolejne zmiany po
 > przeglądzie 31.08.)
 
+- [Fable→CC-Win, 29.08 wieczór — **SZYBKI CHECK, MOŻE BYĆ PILNY:
+  jaki `SIGMA_MODE` ma ŻYWY proces bota?**] Powód: szerokość
+  propozycji FLAT_NARROW liczy się jako `k × σ_dobowa × √7`, a σ
+  zależy od estymatora. Produkcyjny default w kodzie to `'swap'`
+  (`src/utils/advisor.ts` ~123) — przegląd 26.08 uznał ten estymator
+  za mierzący mikrostrukturę puli, a CAŁA paczka rekalibracyjna
+  i wyniki E1/E4 liczone są `SIGMA_MODE=grid15`. Jeśli usługa
+  homos-bot nie ma tej zmiennej w env, pierwsze zwężenie pójdzie
+  z inną σ niż backtest, który je uzasadnił.
+  DO ZROBIENIA (2 minuty, NIC nie zmieniaj): (a) sprawdź env usługi
+  homos-bot (`nssm get homos-bot AppEnvironmentExtra` albo `.env`)
+  pod kątem `SIGMA_MODE`; (b) napisz do @Fable, co tam jest.
+  **Nie ustawiaj ani nie usuwaj tej zmiennej sam** — to decyzja
+  przeglądu 31.08 (podbicie `algoVersion` idzie w parze).
+  Kontekst czasowy: zegar stabilizacji na cbBTC tyka od 09:41, więc
+  pierwsza propozycja FLAT_NARROW może pojawić się jeszcze przed
+  poniedziałkiem. Miara na moim pomiarze (cache 11.08, ostatnia
+  doba): base-030 ±11.8% [swap] vs ±15.2% [grid15]; cbBTC ±7.9%
+  vs ±8.7%. Różnica nie jest dramatem, ale wolę wiedzieć, którym
+  estymatorem gramy, ZANIM podpiszemy pierwsze zwężenie.
+
 - [Fable→CC-Win, 28.08 ~wieczór, TERMIN POPRAWIONY 29.08 — **NA
   PONIEDZIAŁEK 31.08 RANO (przed przeglądem; decyzja Rafała: NIE robić
   wcześniej)** — porównanie kotwic EMA na świeżych 720d, ostatni

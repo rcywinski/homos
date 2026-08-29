@@ -237,6 +237,21 @@ to nie −$8.58, tylko −$25.13 (pytanie do Rafała, wchodzi na 31.08).
 Bot i tak nie odróżni „resztek transzy" od „pieniędzy, które tam
 były" — to ograniczenie pomiaru, nie usterka; warto je pamiętać przy
 transzy 2 (czysty adres albo snapshot sald PRZED wejściem).
+~wieczór #2 — PYTANIE RAFAŁA „jaki % zakresu proponujemy po
+potwierdzeniu flatu?" → POMIAR, nie pamięć. Wzór: `w = clamp(k ×
+σ_dobowa × √7, 1%, 60%)`, zakres symetryczny w TICKACH wokół
+bieżącej ceny, czyli geometrycznie: góra ×(1+w), dół ÷(1+w).
+Policzone realnie (cache 11.08, ostatnia doba, oba estymatory):
+base-030 k=3 → ±11.8% [σ swap 1.49%/d] lub ±15.2% [σ grid15 1.91%/d];
+cbBTC k=2 → ±7.9% [1.50%/d] lub ±8.7% [1.64%/d]. Czyli zwężenie to
+3–4× ciaśniej niż postura idle (±50/±40%) — z zapasem poniżej progu
+`narrowFrac 0.6` (<30% / <24%), więc klasyfikacja postury zadziała.
+ZNALEZIONE PRZY OKAZJI (na 31.08, zlecony check u CC-Win): produkcyjny
+default to `SIGMA_MODE='swap'`, a rekalibracja i wyniki E1/E4 liczone
+są `grid15` — jeśli usługa nie ma tej zmiennej w env, pierwsze
+zwężenie pójdzie inną σ niż backtest, który je uzasadnił (na tej
+próbce 3.4 p.p. różnicy na base-030). Nie zmieniamy tego sami:
+przełączenie idzie w parze z podbiciem algoVersion, decyzja przeglądu.
 TERMIN PRZEGLĄDU: **poniedziałek 31.08** (decyzja Rafała — wcześniejsze
 „1.09" było pomyłką kalendarzową, 1.09.2026 to wtorek); zlecenie CC-Win
 COMPARE_HL_D 720d na ten sam poranek. Poprawione w HANDOFF i
