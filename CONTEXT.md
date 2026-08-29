@@ -555,6 +555,15 @@ które spada do 66% (pozycja jednostronna czeka poza ceną).
 To dokładnie ta hipoteza, którą postawiłem przy pierwszych wynikach
 („oba moje okna były spadkowe") — dobrze, że poszła do CC-Win jako
 kryterium odczytu, zanim zobaczyłem liczby.
+POTWIERDZENIE NA DRUGIEJ PULI (base-030-720d, 47 okien) jest jeszcze
+ostrzejsze: **up 13 okien → DOKŁADNIE 0% wygranych** (śr. −12.38,
+najgorsze −21.22), **down 15 okien → DOKŁADNIE 100%** (śr. +11.02),
+flat 68%/−0.06. Zero i sto procent na dwóch niezależnych pulach to
+cecha strukturalna, nie szum próbki. CC-Win dorzucił wiersz, o który
+nie prosiłem, a który domyka zastrzeżenie Rafała „ostatnie dwa lata
+mogły być inne niż teraz": **recent90 (4 ostatnie okna) — 25%
+wygranych, śr. −6.50**. Czyli nie jest tak, że obraz psują tylko
+stare dane; ostatni kwartał wygląda tak samo źle.
 JEDNA RZECZ Z TEGO ZOSTAJE JAKO REALNA: na base-030 wariant bez
 swapu ma maxDD −18.4% wobec −47.0% ze swapem, przy nieco lepszym
 wyniku (+$160 vs +$112 vs HODL). To prawdziwa własność ryzyka, nie
