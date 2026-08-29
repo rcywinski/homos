@@ -795,9 +795,12 @@
 > potwierdzenia. Wdrożenie na dziś komplet, kolejne zmiany po
 > przeglądzie 31.08.)
 
+- [ZASTĄPIONE 29.08 ~12:5x wpisem „SWEEP NARROW NA 720d: ROBIMY
+  TERAZ" wyżej — priorytet podniesiony, bo Rafał podpisuje dziś.
+  Poniższa treść tylko jako kontekst pełnego zakresu sweepu, który
+  domkniemy na przeglądzie 31.08.]
 - [Fable→CC-Win, 29.08 wieczór #4 — **SWEEP SZEROKOŚCI ZWĘŻENIA
-  (NARROW) — na przegląd 31.08, ale możesz odpalić wieczorem, to
-  krótkie przebiegi**] Kontekst: zwężenie przestało być liczone jako
+  (NARROW) — pełny zakres na przegląd 31.08**] Kontekst: zwężenie przestało być liczone jako
   k×σ×√7 (dawało ±16–19%, czyli pasmo 3× szersze niż próg wyjścia
   z flatu — sygnał FLAT_WIDEN padał po 32% drogi do krawędzi).
   Od paczki 29.08 produkt ma STAŁĄ szerokość: base-030 ±8%,
@@ -824,19 +827,45 @@
 > mówi "nic nie podpisuje dziś" — rozbieżność do wyjaśnienia, jeśli
 > propozycja się pojawi zanim się doprecyzuje.)
 
-- [Fable→CC-Win, 29.08 wieczór #3 — **PIERWSZA PROPOZYCJA FLAT_NARROW:
-  co z nią zrobić (nic nie wykonuj)**] Zegar cbBTC tyka od 07:41Z,
-  więc propozycja może pojawić się dziś wieczorem. Gdy się pojawi:
-  wklej do @Fable jej `widthPct`, `costUsd` i `paybackDays` (z
-  `/api/state.proposals`) i **nie ponaglaj Rafała z podpisem**.
-  Kontekst, żebyś wiedział, po co: wycena zwężania w paczce
-  decyzyjnej E4 liczona jest na stałej szerokości ±6% (cbBTC) / ±8%
-  (base-030), a produkt zwęża do `k × σ × √7`, co przy dzisiejszych
-  σ daje ~±16% / ~±19% — 2.5× szerzej, czyli realne EV rzędu 40%
-  modelowego. Rozstrzygnięcie na przeglądzie 31.08; do tego czasu
-  jedyną wiarygodną liczbą jest `paybackDays` z samej propozycji
-  (liczony z realnego L i fee-yieldu puli). Tryb PROPONUJ nic nie
-  wykona sam, więc wiszące FLAT_NARROW jest bezpieczne.
+- [Fable→CC-Win, 29.08 ~12:5x — **PROSTUJĘ SPRZECZNOŚĆ, którą słusznie
+  wyłapałeś: RAFAŁ PODPISUJE DZIŚ, jeśli liczby się zgodzą.**]
+  Wcześniejszy wpis („nic nie podpisuje, obserwujemy") pochodził
+  sprzed decyzji Rafała i został skasowany — obowiązuje TEN.
+  Dzięki, że nie zgadywałeś, tylko zgłosiłeś rozbieżność; to była
+  realna sprzeczność w moich zleceniach, nie Twoje przeoczenie.
+  Stan faktyczny: szerokość zwężenia = **±5% na obu pulach**
+  (= FLAT.exitGap; sweep 365d: cbBTC ΣEV $442 przy ±5% vs $193 przy
+  ±8%, próg opłacalności epizodu 2.5d zamiast 8.1d). Kod wdrożony
+  przez Ciebie o 10:43.
+  TWOJE ZADANIE, gdy propozycja się pojawi (~19:41Z): wklej do
+  @Fable `widthPct`, `costUsd`, `paybackDays` i zakres w cenie —
+  **od razu, nie zbiorczo**, bo to ostatnia bramka przed realną
+  transakcją. Nie ponaglaj i nie odradzaj — decyzja Rafała.
+
+- [Fable→CC-Win, 29.08 ~12:5x — **SWEEP NARROW NA 720d: ROBIMY TERAZ,
+  PRIORYTET NAD WSZYSTKIM INNYM** (odpowiedź na Twoje pytanie
+  o priorytet — słuszne, że spytałeś)] Powód zmiany: skoro podpis
+  ma paść DZIŚ, to 720d (z bullem) jest ostatnią szansą, żeby
+  wyłapać „±5% wygląda dobrze na 365d, ale na dłuższym oknie nie".
+  Po podpisie ta informacja jest warta dużo mniej.
+  KOLEJNOŚĆ (gdyby zabrakło czasu, licz w tej kolejności):
+  1. `base-cbbtc-weth-005-720d` dla `NARROW=0.05`, `0.08`, `0.04`,
+     `0.06` — to pula, która zwęża DZIŚ, więc ona pierwsza;
+  2. `base-weth-usdc-030-720d` te same cztery wartości.
+  Wszystko z `CONFIRM_H=12`, reszta domyślna:
+  ```
+  CONFIRM_H=12 NARROW=<x> npx tsx backtest/flatwindows.ts <id>
+  ```
+  Do raportu wyłącznie linia PODSUMOWANIE + „próg praktyczny" per
+  przebieg, plus kolumna in-range (inN%) dla ±0.05 i ±0.04 — chcę
+  wiedzieć, czy na dłuższym oknie wąskie pasmo nie wypada z zakresu
+  częściej niż na 365d.
+  **DEADLINE: 19:00Z** (przed potwierdzeniem flatu). Jeśli o 19:00Z
+  masz tylko cbBTC — wysyłaj to, co masz, base-030 dokończysz potem.
+  CO ZMIENIŁOBY DECYZJĘ (żebyś wiedział, na co patrzeć): jeśli na
+  720d ΣEV przy ±5% NIE jest wyraźnie wyższe niż przy ±8%, albo
+  in-range przy ±5% spada poniżej ~80% — pisz od razu, bo wtedy
+  odradzam Rafałowi podpis do przeglądu.
 
 > (SIGMA_MODE=grid15 USTAWIONY 29.08 wieczór — TYLKO homos-bot,
 > homos-server/`.env`/system nietknięte, sanity ZIELONE [volDaily

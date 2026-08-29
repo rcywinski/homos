@@ -351,9 +351,19 @@ FLAT_WIDEN, więc pozycja przestaje zarabiać w tym samym momencie,
 w którym i tak ją rozszerzamy. Jedna reguła zamiast dwóch liczb
 z env. Efekt vs stan sprzed dziś (k×σ ±16%): próg opłacalności
 epizodu spada z ~17 dni do 2.5 dnia przy medianie epizodu 10.9d.
-ZASTRZEŻENIE, które musi wybrzmieć na 31.08: sweep liczony na cache
-kończącym się 11.08 i na oknie 365d; 720d z bullem oraz walkforward
-hybrydy o TEJ szerokości — dopiero w poniedziałek.
+ZASTRZEŻENIE: sweep liczony na cache kończącym się 11.08, okno 365d.
+Dlatego sweep 720d (z bullem) PRZESUNIĘTY z poniedziałku na DZIŚ,
+priorytet nad wszystkim u CC-Win, deadline 19:00Z — skoro podpis ma
+paść dziś, to ostatnia szansa wyłapać „±5% dobre na 365d, słabe na
+dłuższym oknie"; po podpisie ta wiedza jest warta dużo mniej.
+Kryterium odwołania podpisu podane CC-Winowi wprost: ΣEV przy ±5%
+nie wyraźnie wyższe niż przy ±8%, albo in-range poniżej ~80%.
+Walkforward hybrydy o tej szerokości — nadal na poniedziałek.
+HIGIENA ZLECEŃ: CC-Win wyłapał sprzeczność w moich wpisach („Rafał
+podpisuje dziś" vs starsze „nic nie podpisuje") i ZGŁOSIŁ zamiast
+zgadywać — dokładnie to zachowanie, którego chcemy; wpis sprzeczny
+skasowany. Lekcja dla mnie: przy zmianie decyzji kasować stary wpis
+w tym samym ruchu, nie dopisywać nowy obok.
 TERMIN PRZEGLĄDU: **poniedziałek 31.08** (decyzja Rafała — wcześniejsze
 „1.09" było pomyłką kalendarzową, 1.09.2026 to wtorek); zlecenie CC-Win
 COMPARE_HL_D 720d na ten sam poranek. Poprawione w HANDOFF i
