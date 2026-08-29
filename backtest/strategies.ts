@@ -103,6 +103,57 @@ export const cash100: Strategy = {
   onEvent: () => {},
 };
 
+/** Swap całego cash do nogi BAZOWEJ (ETH/cbBTC) — lustro toQuoteAll. */
+const toBaseAll = (ctx: Ctx) => {
+  const { px0, px1 } = unitPrices(ctx.ev.sqrtP, ctx.spec);
+  const ethIs0 = ctx.spec.ethIsToken0;
+  const amt = ethIs0 ? ctx.state.cash1 : ctx.state.cash0; // noga quote do sprzedania
+  if (amt <= 0) return;
+  const usd = amt * (ethIs0 ? px1 : px0);
+  const cost = usd * (ctx.spec.feeRate + ctx.spec.slippageBps / 10_000);
+  ctx.state.swapCostUsd += cost;
+  if (ethIs0) {
+    ctx.state.cash1 = 0;
+    ctx.state.cash0 += Math.max(usd - cost, 0) / px0;
+  } else {
+    ctx.state.cash0 = 0;
+    ctx.state.cash1 += Math.max(usd - cost, 0) / px1;
+  }
+};
+
+/** 1d. SWING „kupuj dołki, sprzedawaj górki" (pomysł Rafała 29.08) —
+ *  BEZ LP, czysty kierunek: gdy cena jest `thresh` PONIŻEJ EMA → cały
+ *  kapitał w aktywo bazowe; gdy `thresh` POWYŻEJ → cały w quote.
+ *  Ten sam sygnał (log-gap do EMA HL7d), którego używa detektor flatu,
+ *  więc porównanie jest uczciwe: to nie nowa informacja, tylko inny
+ *  sposób jej użycia. Zero fee — strategia nie dostarcza płynności,
+ *  płaci tylko koszty swapu przy każdym przełączeniu. */
+export const swingHold = (opts: { thresh: number; hlDays?: number }): Strategy => {
+  let ema: number | null = null;
+  let lastTs: number | null = null;
+  let side: 'base' | 'quote' | null = null;
+  const tau = ((opts.hlDays ?? 7) * 86400) / Math.LN2;
+  return {
+    name: `Swing ±${(opts.thresh * 100).toFixed(0)}% (dołki→aktywo, górki→quote)`,
+    init: (ctx) => {
+      ctx.toHalfHalf();
+      ema = Math.log(ethUsd(ctx.ev.sqrtP, ctx.spec));
+      lastTs = ctx.ev.ts;
+    },
+    onEvent: (ctx) => {
+      const logP = Math.log(ethUsd(ctx.ev.sqrtP, ctx.spec));
+      if (ema === null || lastTs === null) { ema = logP; lastTs = ctx.ev.ts; return; }
+      const dt = Math.max(ctx.ev.ts - lastTs, 1);
+      const a = 1 - Math.exp(-dt / tau);
+      ema = (1 - a) * ema + a * logP;
+      lastTs = ctx.ev.ts;
+      const gap = logP - ema;
+      if (gap < -opts.thresh && side !== 'base') { toBaseAll(ctx); side = 'base'; ctx.state.rebalances++; }
+      else if (gap > opts.thresh && side !== 'quote') { toQuoteAll(ctx); side = 'quote'; ctx.state.rebalances++; }
+    },
+  };
+};
+
 /**
  * 1c. FLAT-ONLY LP (26.08, kierunek z przeglądu + teza Rafała o rynku
  * bocznym): DOMYŚLNIE CASH (100% quote — zero bety na ETH/stable), wejście

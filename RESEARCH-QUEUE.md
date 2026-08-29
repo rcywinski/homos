@@ -798,6 +798,89 @@
   paper A/B; decyzja o transzy 2 dopiero po ≥1 pełnym cyklu
   flat→trend→flat.
 
+### E6. KOLEJKA BADAWCZA 29.08 wieczór (decyzja Rafała: „przebiegi nic
+### nie kosztują, róbmy ich więcej") — uporządkowana wg DECYZJI, nie ciekawości
+
+ZASADA, żeby to nie zamieniło się w łowienie zwycięzcy: kandydat wchodzi
+do produktu dopiero, gdy przejdzie bramkę 720d w ≥2 reżimach ORAZ nie
+psuje wyniku na oknie odłożonym (ostatnie 90 dni, `FP_DAYS=90` — nie
+patrzymy na nie przy strojeniu). Każdy przebieg ma tu wpisane, co
+rozstrzyga; jeśli nie rozstrzyga niczego, nie odpalamy.
+
+1. **[ZAMKNIĘTE 29.08 — TREND-FOLLOWING, nie mechanika]** noswap na
+   720d. Kryterium postawione z góry („wygrywa w down, przegrywa w up,
+   remisuje we flat → trend-following") spełnione CO DO JOTY:
+   cbBTC-720d, 46 okien — **up 0% wygr., śr. −13.91, najgorsze −17.86**;
+   down 83%, +4.54; flat 72%, +0.53. Globalne 67% to artefakt próbki
+   (12 okien down vs 5 up). Fullperiod cbBTC: $2869 (vsHODL −$104) vs
+   $2983 ze swapem — odwrotnie niż na 365d, bo in-range spada do 66%.
+   ZOSTAJE DO WYKORZYSTANIA: maxDD na base-030 −18.4% vs −47.0% przy
+   lepszym wyniku (+$160 vs +$112) — realna własność ryzyka, ale
+   pochodna tego samego mechanizmu. Jeśli kiedyś wrócimy do tematu
+   ograniczania obsunięcia, to jest ślad; jako „lepsze zwężanie" —
+   nie.
+2. **Czy detektor flatu w ogóle coś wnosi.** Wariant „zwężaj zawsze,
+   gdy pozycja w zakresie" (bez bramki |gap|<2%/12h) vs obecny.
+   Rozstrzyga: czy płacimy za detektor, który nic nie daje — bo skoro
+   pasywny wygrywa TAKŻE w oknach flat, sam sygnał może być bezwartościowy.
+3. **[PIERWSZE WYNIKI 29.08, 365d, $2500, bez zwężania] Szerokość
+   postury idle — OPTIMUM JEST RÓŻNE NA OBU PULACH, a nasze ustawienia
+   leżą pośrodku.**
+   · base-030 (ETH −54.8%): im SZERZEJ, tym lepiej — ±30% $1429 ·
+     ±40% $1467 · ±50% $1486 [nasze] · ±80% $1513 · ±150% $1686 ·
+     ±500% (≈full-range) $1743. In-range rośnie 20% → 100%.
+     Wszystkie i tak poniżej HODL ($1815) i cash ($2496).
+   · cbBTC (−16.5%): ODWROTNIE — im WĘŻEJ, tym lepiej: ±30% +$98 ·
+     ±40% +$84 [nasze] · ±50% +$71 · ±80% +$51 · ±150% +$35 ·
+     ±500% +$22 (vs HODL).
+   INTERPRETACJA: para powracająca do średniej (cbBTC/WETH — cena
+   względna dwóch kryptowalut) nagradza ciaśniejsze pasmo; para
+   trendująca (ETH/USD w oknie −55%) karze każde pasmo, a najmniej
+   full-range. Czyli „szerokość idle" nie jest jedną liczbą dla
+   produktu, tylko funkcją charakteru pary. Do potwierdzenia bramką
+   720d — okno spadkowe z natury schlebia szerokim.
+   ZOSTAJE: przebieg na 720d + porównanie tierów (niżej).
+   Wcześniejsza wersja pytania: ±40/±50 vs ±80 vs full-range. Powód:
+   base-030 w oknie −55% miał in-range tylko 32% przy ±50% — pasmo
+   przestało pracować dokładnie wtedy, gdy było potrzebne. Literatura
+   (research 26.08) wskazuje full-range jako trudny do pobicia.
+4. **Tier puli dla tej samej pary.** base-weth-usdc-030 (0.30%) vs
+   base-weth-usdc-005 (0.05%), oba mamy w cache. Rozstrzyga realny
+   wybór operacyjny: siedzimy w droższym tierze, a koszt przestawiania
+   postury liczy się właśnie od tieru.
+5. **Gdzie stawiać pasmo jednostronne** (tylko jeśli pkt 1 wyjdzie
+   dobrze): przy cenie vs z odsunięciem. Rozstrzyga, czy „zlecenie
+   z limitem" ma czekać blisko, czy dalej.
+6. **Out-of-sample.** Najlepszy kandydat z 1–5 puszczony na oknie
+   odłożonym, którego nie oglądaliśmy przy strojeniu.
+7. **[POLICZONE 29.08 — WYNIK: BRAK STABILNEGO SYGNAŁU] „Kupuj dołki,
+   sprzedawaj górki całymi pozycjami"** (pomysł Rafała). Nowa
+   strategia `swingHold(thresh, hlDays)` w strategies.ts: ten sam
+   log-gap do EMA, którego używa detektor flatu, ale użyty
+   KIERUNKOWO — poniżej progu cały kapitał w aktywo, powyżej cały
+   w quote. Bez LP, więc bez fee; koszt = swap przy każdym
+   przełączeniu. Wyniki vsHODL (365d, $2500):
+   | próg | base-030 | cbBTC |
+   |---|---|---|
+   | 3% | −$215 | −$86 |
+   | 5% | −$251 | **+$212** |
+   | 8% | **+$29** | +$136 |
+   | 12% | −$350 | +$77 |
+   | 20% | −$589 | $0 |
+   DIAGNOZA: wynik zmienia ZNAK wraz z progiem i nie ma wspólnego
+   optimum — najlepszy próg na base-030 (8%) jest na cbBTC drugim
+   z kolei, a najlepszy na cbBTC (5%) daje na base-030 drugi
+   NAJGORSZY wynik. To sygnatura szumu, nie przewagi: wybór progu
+   po tej tabeli = klasyczne dopasowanie do historii. Do tego
+   strategia oddaje jedyny strumień, w którym mamy realną przewagę
+   (fee za dostarczanie płynności) w zamian za rzut monetą.
+   Spójne z dwoma wcześniejszymi falsyfikacjami: ORACLE znający
+   przyszłe 7 dni przegrywał z single-pool przez koszty (26.08),
+   a opóźnianie sygnału (upConfirm) systematycznie szkodziło.
+   DO POTWIERDZENIA: bramka 720d (zlecona) — ale poprzeczka jest
+   wysoka: potrzebny byłby JEDEN próg wygrywający na OBU pulach
+   i w ≥2 reżimach.
+
 ### E5. ZAMKNIĘTE — NIE wracać bez nowych danych (falsyfikacje 26-27.08)
 rotacja między pulami (przegrywa z single-pool i USDC, nawet ORACLE),
 hedge ciągły full/excess (artefakt małej próby, 720d obala), upConfirm
