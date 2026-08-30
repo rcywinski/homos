@@ -81,6 +81,36 @@
 
 ## 4. Dziennik sesji
 
+### 2026-08-30 ~10:xx — Niedzielny brief (Fable-desktop) — odbiór E6, zegar flatu znów wyzerowany
+BRIEF z plików (raport 07:30 + HANDOFF + git log). Automat czysty
+(porażki BRAK), obie nogi in-range, bilans transzy $5,960.62 vs 6 092
+(−2.16%, z czego −$125 to beta, koszty wejścia stałe −$8.58), zero
+propozycji, rotacja nieopłacalna, down:false 6/6. Nic pilnego.
+SPODZIEWANA ~06:49 PIERWSZA PROPOZYCJA FLAT_NARROW NIE PRZYSZŁA:
+zegar flatu cbBTC znów się wyzerował w nocy (kolejny „taniec na
+progu" 2%), tyka od 02:59Z → potwierdzenie ~14:59Z dziś, jeśli gap
+(−1.9%) się utrzyma. Decyzja bez zmian: NIE podpisujemy, notujemy
+realne widthPct/costUsd/paybackDays jako punkt odniesienia na 31.08.
+ODBIÓR E6 od CC-Win (wpisy skasowane ze skrzynki @Fable po
+przepisaniu tu; pełne tabele w gicie — commity c157ac7, a43ea44):
+(1) IDLE-WIDTH 720d (fullperiod, $2500, vsHODL): wewnętrzne maksimum
+na OBU pulach — cbBTC max ~±80% (+$314; obecne ±40% daje +$298),
+base-030 max DOKŁADNIE ±40% (+$1361 — jesteśmy w optimum).
+Rozbieżność z monotonicznym obrazem 365d; jedna data wejścia, brak
+testu odporności na timing — NIE zmieniać szerokości na tej
+podstawie.
+(2) SWING 720d: sfalsyfikowany — każdy testowany próg ujemny na obu
+pulach, zero wspólnego progu dodatniego. Temat zamknięty.
+(3) TIER 005 vs 030 (base-weth-usdc-005-365d): nasze produktowe
+±40/±50 na tierze 005 PRZEGRYWAJĄ z HODL (−$191/−$154), na 030
+wygrywają — wspiera pozostanie w droższym tierze (zastrzeżenie
+metodologiczne CC-Win: różne okna i daty wejścia, nie czysty test).
+ZLECENIE dla CC-Win (skrzynka @CC-Win): walkforward idle-width
+±30/±40/±50/±80/±150 na obu pulach 720d z rozbiciem reżimowym
++ recent90 — rozstrzygnięcie, czy maksimum ±80% na cbBTC to sygnał
+czy artefakt timingu; komplet na przegląd 31.08.
+
+
 ### 2026-08-29 ~rano — BRIEF DZIEŃ 2 + PACZKA „RAPORT/TELEGRAM" (Fable + Rafał)
 BRIEF z plików (raport 07:30 + HANDOFF; bez ciągnięcia /api/state przez
 przeglądarkę — sekcja POZYCJE REALNE z 28.08 zadziałała). STAN: automat
