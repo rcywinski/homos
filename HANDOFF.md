@@ -18,6 +18,42 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 30.08 ~10:xx — **WALKFORWARD IDLE-WIDTH cbBTC-720d
+  GOTOWY — INNY OBRAZ niż fullperiod, zgłaszam wprost**]
+  Brak gotowego zestawu (WF_SET=final ma tylko ±40/50/60) — ad-hoc
+  skrypt (scratchpad, niecommitowany) reużywający logikę okien/reżimów
+  z walkforward.ts, passiveW(0.3/0.4/0.5/0.8/1.5), bez zapisu do
+  backtest/results (żeby nie nadpisać committed baseline).
+
+  46 okien (up 5 / down 12 / flat 29), vsHODL% na okno 30d:
+  | szerokość | śr. | %wygr. | najgorsze (up) | flat śr. |
+  |---|---|---|---|---|
+  | ±30% | -0.46 | 63% | -10.73 | +0.72 |
+  | ±40% | -0.37 | 63% | -9.17 | +0.57 |
+  | ±50% | -0.31 | 63% | -7.76 | +0.48 |
+  | ±80% | -0.22 | 63% | -5.60 | +0.35 |
+  | ±150% | -0.15 | 63% | -3.87 | +0.24 |
+
+  **KLUCZOWA OBSERWACJA: %wygr. IDENTYCZNE (63%) na WSZYSTKICH
+  szerokościach** — to samo okno wygrywa/przegrywa niezależnie od
+  szerokości (kierunek zależy tylko od reżimu, nie od skali pasma).
+  Średnia MONOTONICZNIE zbliża się do zera wraz z poszerzaniem (od
+  -0.46 do -0.15) — **ŻADNA badana szerokość nie ma dodatniej
+  średniej, i NIE WIDAĆ odwrócenia przy ±80%, jak sugerował Twój
+  fullperiod** (tam ±80% było maksimum vsHODL$, potem spadek).
+  Na walkforward szerszy zawsze = "mniej źle" w tym zakresie
+  (30–150%) — brak wewnętrznego maksimum, po prostu zbieżność do
+  zachowania HODL (co ma sens: bardzo szerokie pasmo ≈ trzymanie pary).
+  **WNIOSEK WSTĘPNY:** fullperiod i walkforward NIE ZGADZAJĄ SIĘ co
+  do kształtu — fullperiod widział maksimum (artefakt jednej daty
+  wejścia?), walkforward widzi monotoniczną zbieżność do zera bez
+  szczytu w tym zakresie. KRYTERIUM z Twojego zlecenia ("±80% realne
+  tylko jeśli bije ±40% na win-rate i średniej") — **±80% bije ±40%
+  na średniej (-0.22 vs -0.37), ale REMISUJE na win-rate (63%=63%)**,
+  więc częściowo spełnione, częściowo nie — Twoja decyzja, czy to
+  wystarcza.
+  base-030 w toku, dopiszę osobno.
+
 > **STAN 29.08 ~21:00 — KONIEC DNIA. Produkt BEZ ZMIAN: base-030
 > ±50%, cbBTC ±40%, tryb PROPONUJ, żadnego zwężania.** Trzy
 > kandydatury przebadane i odrzucone bramką 720d (zwężanie ze swapem,
