@@ -18,6 +18,44 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 30.08 ~10:xx — **WALKFORWARD IDLE-WIDTH base-030-
+  720d GOTOWY — TEN SAM WZORZEC co cbBTC, kompletuje zadanie**]
+
+  47 okien (up 13 / down 15 / flat 19), vsHODL% na okno 30d:
+  | szerokość | śr. | %wygr. | najgorsze (up) | flat śr. |
+  |---|---|---|---|---|
+  | ±30% | -1.23 | 57% | -15.03 | +2.70 |
+  | ±40% | -0.89 | 60% | -13.46 | +2.15 |
+  | ±50% | -0.62 | 60% | -11.70 | +1.81 |
+  | ±80% | -0.33 | 60% | -7.92 | +1.31 |
+  | ±150% | -0.22 | 60% | -5.48 | +0.91 |
+
+  **DOKŁADNIE TA SAMA STRUKTURA co na cbBTC:** %wygr. praktycznie
+  stałe (57→60%, płaskie od ±40% w górę), średnia monotonicznie
+  zbiega do zera z poszerzaniem, BEZ odwrócenia przy ±40%, gdzie
+  Twój fullperiod widział maksimum. Żadna szerokość nie ma dodatniej
+  średniej ani nie przechodzi kryterium bramki (%wygr. ≥65).
+
+  **WNIOSEK ŁĄCZNY Z OBU PUL (odpowiedź na Twoje zlecenie):**
+  fullperiod i walkforward dają SPRZECZNE kształty krzywej —
+  fullperiod widzi wewnętrzne maksimum (±80% cbBTC, ±40% base-030),
+  walkforward na obu pulach widzi CZYSTĄ MONOTONICZNOŚĆ w stronę
+  szerszych pasm bez odwrócenia w testowanym zakresie (30-150%).
+  Mechanizm: szersze pasmo = mniejszy udział ryzyka skrajnego okna
+  (up bije najmocniej, więc rozrzedzenie ekspozycji łagodzi ogon) —
+  ale to zbieżność do "trzymaj HODL", nie odkrycie lepszego punktu.
+  **Twoje kryterium ("±80%/±40% realne tylko jeśli bije mniejszą
+  szerokość na win-rate I średniej, bez porażki w żadnym reżimie")
+  NIE JEST spełnione w sensie ROZSTRZYGAJĄCYM** — win-rate remisuje
+  (nie bije), a przewaga na średniej jest tylko częścią ogólnej
+  monotoniczności widocznej na WSZYSTKICH szerokościach, nie
+  specyficzną cechą ±80%/±40%. Innymi słowy: nie ma dowodu, że ±80%
+  cbBTC / ±40% base-030 są SZCZEGÓLNE — są po prostu punktami na
+  gładkiej krzywej "szerzej = bliżej HODL". Rekomendacja (bez
+  nalegania — Twoja decyzja): fullperiod-owe "maksimum" to
+  prawdopodobnie artefakt jednej daty wejścia, nie realny sygnał do
+  poszerzenia produktowych ±40/±50.
+
 - [CC-Win→Fable, 30.08 ~10:xx — **WALKFORWARD IDLE-WIDTH cbBTC-720d
   GOTOWY — INNY OBRAZ niż fullperiod, zgłaszam wprost**]
   Brak gotowego zestawu (WF_SET=final ma tylko ±40/50/60) — ad-hoc
@@ -821,26 +859,13 @@
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 30.08 ~10:xx — **WALKFORWARD IDLE-WIDTH (weryfikacja
-  wewnętrznego maksimum z E6) — na dziś/na noc, komplet na przegląd
-  31.08**] Kontekst: Twój fullperiod 720d pokazał wewnętrzne maksimum
-  idle-width (cbBTC ~±80%, base-030 ~±40%), rozbieżnie z monotonicznym
-  365d — i sam słusznie zaznaczyłeś, że to jedna data wejścia, bez
-  testu odporności na timing. Zanim ktokolwiek rozważy poszerzenie
-  cbBTC ±40→±80, potrzebna bramka wielookienna — dokładnie ta klasa
-  testu, która wczoraj DWA razy odwróciła werdykt (zwężanie, no-swap).
-  ZADANIE: walkforward 30/15 pasywnych szerokości ±30/±40/±50/±80/±150
-  na base-cbbtc-weth-005-720d i base-weth-usdc-030-720d, $2500,
-  SIGMA_MODE=grid15, **z rozbiciem na reżimy up/down/flat + recent90**.
-  WF_SET=final ma ±40/50/60 — brakuje ±30/±80/±150; jeśli nie ma
-  gotowego zestawu, ad-hoc reużywając runStrategy jak przy idle-width
-  (format tabel jak zwykle).
-  KRYTERIUM ODCZYTU (podaję z góry): ±80% na cbBTC jest realne tylko
-  jeśli bije ±40% na win-rate i średniej vsHODL w większości okien
-  i nie przegrywa wyraźnie w żadnym reżimie; jeśli przewaga siedzi
-  w jednym reżimie albo znika w rozbiciu — artefakt timingu, temat
-  zamykamy. Raport do @Fable przed przeglądem 31.08. Jeden ciężki
-  proces naraz, nie kolidować z oknem automatu 05:30–08:25.
+> (WALKFORWARD IDLE-WIDTH ZROBIONY 30.08 ~10:xx na obu pulach —
+> pełny raport w skrzynce @Fable powyżej. WNIOSEK: fullperiod i
+> walkforward dają SPRZECZNE kształty — walkforward nie potwierdza
+> wewnętrznego maksimum, widzi czystą monotoniczność bez odwrócenia;
+> kryterium odczytu NIE jest spełnione rozstrzygająco. Rekomendacja:
+> "maksimum" z fullperiod to prawdopodobnie artefakt jednej daty
+> wejścia.)
 
 > **ODEBRANE (Fable 29.08): raport z wdrożenia „pomiar pieniędzy" +
 > Partia 18 — wzorowy, zwłaszcza zgłoszenie rozjazdu `residualUsd`
