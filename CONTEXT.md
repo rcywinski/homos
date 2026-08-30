@@ -582,6 +582,18 @@ podpisuje dziś" vs starsze „nic nie podpisuje") i ZGŁOSIŁ zamiast
 zgadywać — dokładnie to zachowanie, którego chcemy; wpis sprzeczny
 skasowany. Lekcja dla mnie: przy zmianie decyzji kasować stary wpis
 w tym samym ruchu, nie dopisywać nowy obok.
+~21:xx — **DZIEŃ 2 ZAMKNIĘTY. STAN: OBIE NOGI W SZEROKICH ZAKRESACH,
+BEZ ZMIAN PARAMETRÓW, CZEKAMY DO 31.08.** Produkt zostaje dokładnie
+tam, gdzie był rano: base-030 ±50%, cbBTC ±40%, tryb PROPONUJ.
+Zmieniło się to, ile o nim wiemy, a nie to, jak gra.
+UWAGA NA NIEDZIELNY PORANEK: zegar flatu na cbBTC tyka od 18:55, więc
+około 06:49 bot najprawdopodobniej wystawi PIERWSZĄ w historii
+propozycję FLAT_NARROW (±5%) i pośle alert na Telegram. ŚWIADOMIE
+zostawiamy to włączone i NIE podpisujemy: propozycja przyniesie
+realne `widthPct`, `costUsd` i `paybackDays` z żywej puli, czyli
+darmowy punkt odniesienia dla poniedziałkowych liczb. Wyciszanie
+detektora wymagałoby deployu w sobotę wieczorem dla żadnego zysku —
+tryb PROPONUJ i tak nic nie wykona sam.
 TERMIN PRZEGLĄDU: **poniedziałek 31.08** (decyzja Rafała — wcześniejsze
 „1.09" było pomyłką kalendarzową, 1.09.2026 to wtorek); zlecenie CC-Win
 COMPARE_HL_D 720d na ten sam poranek. Poprawione w HANDOFF i

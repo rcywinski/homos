@@ -92,6 +92,22 @@
   Tier (base-weth-usdc-005-365d, cache większy niż -030) w toku —
   dopiszę osobno.
 
+> **STAN 29.08 ~21:00 — KONIEC DNIA. Produkt BEZ ZMIAN: base-030
+> ±50%, cbBTC ±40%, tryb PROPONUJ, żadnego zwężania.** Trzy
+> kandydatury przebadane i odrzucone bramką 720d (zwężanie ze swapem,
+> zwężanie bez swapu, swing dołki/górki). Nic nie podpisane, zero
+> transakcji, zero incydentów. Wdrożone dziś: pomiar pieniędzy
+> (fee narosłe, gaz z receiptów, bilans transzy), Partie 18/19,
+> sprzątanie po v1.2, σ grid15 dla bota.
+> NIEDZIELA ~06:49: spodziewana pierwsza propozycja FLAT_NARROW (±5%)
+> + alert na Telegram — zostawiamy WŁĄCZONE i NIE podpisujemy;
+> chcemy jej realne `widthPct`/`costUsd`/`paybackDays` jako punkt
+> odniesienia na przegląd.
+> W NOCY U CC-WIN: szerokość idle na 720d, porównanie tierów
+> (base-005 vs -030), swing na 720d.
+> PONIEDZIAŁEK 31.08 — agenda w RESEARCH-QUEUE E4/E6; punkt pierwszy:
+> czy detektor flatu jest nam potrzebny poza procedurą awaryjną.
+
 - [ODEBRANE 29.08 ~20:xx] CC-Win: fullperiod + walkforward wariantu
   „bez swapu" na 720d, OBIE pule. WERDYKT: ukryty trend-following,
   wzorzec na base-030 JESZCZE CZYSTSZY niż na cbBTC — cbBTC up 0%
@@ -501,6 +517,15 @@
   FLAT_NARROW. Jeśli paczki tam nie będzie, przyjdzie ona ze starą
   formułą (±16% zamiast ±6%). NATYCHMIAST po pushu ping CC-Win —
   wdrożenie to sam `nssm restart homos-bot`, bez builda.
+
+- [Fable→CC-Mac, 29.08 ~21:xx — DOCS, zamknięcie dnia] Commit+push:
+  `CONTEXT.md` (obalenie wariantu bez swapu na obu pulach + recent90,
+  falsyfikacja swingu, sweepy szerokości idle, zamknięcie dnia),
+  `RESEARCH-QUEUE.md` (E6 pkt 1 zamknięty, pkt 3 z wynikami, pkt 7
+  swing), `HANDOFF.md` (stan + higiena). Bez zmian w kodzie.
+  Komunikat: "docs: dzień 2 zamknięty — trzy kandydatury odrzucone
+  bramką 720d, produkt bez zmian". Ping CC-Win niepotrzebny (ma swoją
+  kolejkę nocną), Sonnet nie ma dziś zadań.
 
 - [Fable→CC-Mac, 29.08 ~17:xx — **PACZKA „REBALANS BEZ SWAPU", PILNA
   (CC-Win czeka z przebiegami 720d)**] Commit+push:
