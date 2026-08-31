@@ -28,10 +28,29 @@
   | arbitrum-weth-usdc-030-365d | ±70% | -0.05 | 67% | GORSZY (50%) | ❌ FAIL — najbliższa zeru z dotychczasowych, ale wciąż ujemna na WSZYSTKICH szerokościach |
   | optimism-weth-usdc-030-365d | ±70% | **+0.03** | 71% | GORSZY (50%) | ⚠️ GRANICZNY — pierwsza dodatnia średnia w grupie 2, ale recent90 nadal słabszy (-0.42/50%) |
   | mainnet-usdc-weth-001-365d | ±70% | -0.41 | 58% | GORSZY (50%) | ❌ FAIL — nie przechodzi nawet %wygr. (58%<60%) |
-  Reszta grupy 2 w toku (2/8). UWAGA: wszystkie te pary WETH/USDC
-  (base/arbitrum×2/optimism/mainnet, ta sama seria cen ETH) mają
-  IDENTYCZNY wzorzec okien i identyczny problem recent90 — to nie są
-  niezależne testy, tylko ta sama historia ceny w różnych pulach.
+  | mainnet-weth-usdt-001-365d | ±70% | -0.83 | 63% | GORSZY (50%) | ❌ FAIL — najgorsza średnia w grupie mimo %wygr. OK |
+  | mainnet-wtao-weth-100 (niski priorytet) | ±40% | +1.09 | 60% | GORSZY (50%) | ⚠️ NIEROZSTRZYGNIĘTE — cache ma tylko 102 dni = **5 okien**, za mało statystycznie (technicznie dodatnia, ale to nie jest sygnał) |
+
+  **SKAN WIDE KOMPLETNY (13/13 pul, obie grupy) — WNIOSEK KOŃCOWY:**
+  Jedyna prawdziwa wygrana w całym skanie: **mainnet-tbtc-wbtc-001**
+  (100% win-rate, dodatnia średnia na wszystkich szerokościach,
+  recent90 trzyma się global). Stable-stable (USDC/USDT×2, DAI/USDT)
+  formalnie przechodzą kryterium, ale APR netto ~0.3-0.4%/r —
+  ekonomicznie nieistotne. wstETH/WETH FAIL (dryf psuje wąskie pasma).
+  CAŁA grupa 2 (7 par WETH/USDC-USDT na 5 chainach/tierach) — **FAIL
+  jednolicie**: nawet gdy %wygr. przechodzi próg 60-71%, średnia
+  vsHODL jest ujemna na WSZYSTKICH szerokościach na WSZYSTKICH parach
+  poza jednym granicznym punktem (optimism-030 ±70%: +0.03, ledwo
+  dodatnie), a recent90 jest gorszy niż global WSZĘDZIE (identyczny
+  wzorzec — te pule dzielą tę samą serię ceny ETH, to nie są
+  niezależne próby). wTAO nierozstrzygnięte z braku danych.
+  **REKOMENDACJA (bez nalegania): pasywny szeroki LP na parach
+  zmiennych ETH/stable nie ma przewagi nad HODL na ŻADNYM z 7
+  sprawdzonych rynków/tierów — nasze produktowe ±40/±50 nie są
+  gorsze od alternatyw, są zgodne z ogólnym wzorcem "ETH/stable LP
+  przegrywa z HODL". Jedyny obiecujący kierunek z tego skanu to
+  BTC-BTC pegged (tBTC/WBTC) — inna klasa aktywów, warto rozważyć
+  jako osobny temat, nie rozszerzenie obecnego produktu.**
 
 - [CC-Win→Fable, 31.08 — **SKAN WIDE GRUPA 1 GOTOWA (5 pul, pary
   skorelowane/stabilne) — DWIE PRAWDZIWE WYGRANE, reszta trywialna**]
@@ -845,38 +864,16 @@ zwężania. Pełne tabele w gicie — a1c7d4a. Dzięki za czysty przebieg.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 31.08 ~przegląd — **SKAN WIDE ISTNIEJĄCYCH CACHE
-  (decyzja Rafała na przeglądzie: lejek/top10 idzie w stronę metryki
-  produktu; masz wolne moce → skan od razu, dziś/w nocy)**]
-  CEL: znaleźć pule, gdzie pasywny szeroki LP ma **DODATNIĄ średnią
-  vsHODL na walkforwardzie** (fee > drag wariancji). Na naszych dwóch
-  produktowych ŻADNA szerokość jej nie ma (Twoje idle-width z 30.08) —
-  szukamy pul z odwróconym znakiem.
-  Narzędzia jak przy idle-width 30.08: walkforward passiveW, okna
-  30/15, `SIGMA_MODE=grid15`, raporty global+recent90; fullperiod
-  tylko dla zwycięzców (ilustracja $, nie bramka — decyzja przeglądu).
-  **GRUPA 1 — pary skorelowane/stabilne (drag≈0, więc szerokości
-  WĄSKIE: passiveW ±1/±2/±5/±10) — NAJPIERW, tu spodziewamy się
-  dodatniego znaku:** mainnet-wsteth-weth-001, mainnet-tbtc-wbtc-001,
-  mainnet-usdc-usdt-001, arbitrum-usdc-usdt-001, mainnet-dai-usdt-001.
-  UWAGA stable-stable: vsHODL wyjdzie dodatni niemal z definicji —
-  raportuj też **APR netto w %/rok** (realna miara = porównanie
-  z parkowaniem USDC). UWAGA wstETH/WETH: kurs dryfuje w górę
-  ~3–4%/r (staking yield), więc ±1/±2 może systematycznie wypadać
-  jedną stroną — jeśli tak, odnotuj czas-w-zakresie, nie strój.
-  **GRUPA 2 — zmienne (passiveW ±20/±30/±40/±50/±70):**
-  mainnet-wbtc-usdc-030, base-weth-usdc-005-365d,
-  arbitrum-weth-usdc-005-365d, arbitrum-weth-usdc-030-365d,
-  optimism-weth-usdc-030-365d, mainnet-usdc-weth-001-365d,
-  mainnet-weth-usdt-001-365d; na końcu (niski priorytet)
-  mainnet-wtao-weth-100.
-  KRYTERIUM ODCZYTU: śr. vsHODL > 0 **I** %wygr ≥60 **I** recent90
-  nie gorszy niż global. Odniesienie: nasze pule produktowe (30.08)
-  — wszystkie średnie ujemne (cbBTC −0.46…−0.15, base-030
-  −1.23…−0.22). Wynik do @Fable krótko: per pula tabelka
-  szerokość/śr/%wygr/worst/recent90 + jedna linia werdyktu.
-  NIE kolidować z oknem automatu 05:30–08:25; jeden ciężki proces
-  naraz. Pełne tabele commituj do results jak zwykle.
+> (SKAN WIDE ZROBIONY 31.08 — WSZYSTKIE 13 pul, obie grupy — pełny
+> raport w skrzynce @Fable powyżej. WNIOSEK: jedyna prawdziwa wygrana
+> to mainnet-tbtc-wbtc-001 [BTC-BTC pegged]; cała grupa 2 (7 par ETH/
+> stable) FAIL jednolicie; stable-stable formalnie przechodzi ale
+> ekonomicznie nieistotne; wTAO nierozstrzygnięte [za mało danych].
+> UWAGA proceduralna: użyty ad-hoc skrypt scratchpad NIE zapisywał
+> do backtest/results/ [żeby nie nadpisać innych committed baseline'ów
+> — jak przy idle-width 30.08], więc nie ma tam JSON-ów do skanu —
+> pełne tabele tylko w HANDOFF/historii commitów, jeśli potrzebne
+> jako pliki, dam znać i domknę osobno.)
 
 > **ODEBRANE (Fable 30.08 ~11:xx): oba walkforwardy idle-width —
 > robota ekspresowa i wzorowa, zwłaszcza zgłoszenie "obraz różni się
