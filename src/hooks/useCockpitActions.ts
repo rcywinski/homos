@@ -138,12 +138,22 @@ function showGlobalToast(kind: 'ok' | 'err', text: string) {
 // 2 próby po 5s, a po ich wyczerpaniu ZWRACAMY (nie rzucamy) — wywołujący
 // kontynuuje tak, jakby transakcja przeszła (hash trafi na łańcuch prędzej
 // czy później; kolejny odczyt salda/allowance i tak to pokaże poprawnie).
-async function waitReceiptBestEffort(
+// HOTFIX 31.08 (pierwsze bojowe FLAT_NARROW): eksportowany — używany też przez
+// useRebalanceExecution/useRotateExecution (sekwencje [Zatwierdź] miały wciąż
+// surowe waitForTransactionReceipt i przerywały się na tym samym błędzie
+// Rabby+publicnode "Invalid parameters" co useHedgeExecution 20.08). Dodatkowo
+// walidacja formatu hasha jak w useHedgeExecution — nietypowy hash od portfela
+// pomija czekanie zamiast wysadzać sekwencję.
+export async function waitReceiptBestEffort(
   client: { waitForTransactionReceipt: (args: { hash: `0x${string}` }) => Promise<unknown> },
   hash: `0x${string}`,
   retries = 2,
   delayMs = 5_000
 ): Promise<void> {
+  if (typeof hash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(hash)) {
+    console.warn('waitReceiptBestEffort: nietypowy hash od portfela — pomijam receipt:', String(hash).slice(0, 80));
+    return;
+  }
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       await client.waitForTransactionReceipt({ hash });

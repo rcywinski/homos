@@ -32,6 +32,14 @@ import { Address, encodeFunctionData, erc20Abi } from 'viem';
 import { RebalancePlan, buildMintStep, saveProgress, loadProgress, clearProgress, RebalanceProgress } from '../utils/rebalanceBuilder';
 import { addTransaction } from '../components/TransactionHistory';
 import { config } from '../config/wallet';
+// HOTFIX 31.08 (pierwsza bojowa sekwencja FLAT_NARROW, #5887690): surowe
+// waitForTransactionReceipt przerywało sekwencję na błędzie Rabby+publicnode
+// "Invalid parameters" (ta sama klasa co useHedgeExecution FIX 20.08 i
+// Partia 13) — każdy klik [Zatwierdź] wysyłał jedną tx i padał na odczycie
+// jej potwierdzenia, w kółko od kroku 1. Receipt to best-effort: tx po
+// sendTransaction JEST na łańcuchu; pre-flight symulacja (client.call) przed
+// każdym krokiem chroni przed wysłaniem kroku, który by zrewertował.
+import { waitReceiptBestEffort } from './useCockpitActions';
 
 export interface ExecStatus {
   phase: 'idle' | 'approving' | 'step' | 'done' | 'error';
@@ -95,7 +103,7 @@ export function useRebalanceExecution() {
           if (allowance >= appr.amount) continue;
           setStatus({ phase: 'approving', stepIndex: 0, totalSteps: total, message: `Approve: ${appr.label}` });
           const hash = await wc.sendTransaction({ to: appr.tx.to, data: appr.tx.data, value: appr.tx.value, account: address, chain: wc.chain });
-          await client.waitForTransactionReceipt({ hash });
+          await waitReceiptBestEffort(client, hash);
           addTransaction(address, hash, plan.chainId, appr.label);
         }
 
@@ -125,7 +133,7 @@ export function useRebalanceExecution() {
               setStatus({ phase: 'approving', stepIndex: step.index, totalSteps: total, message: `Approve ${sym} (realne saldo różni się od estymaty) przed mintem…` });
               const approveData = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [manager, amt] });
               const hash = await wc.sendTransaction({ to: tok, data: approveData, value: 0n, account: address, chain: wc.chain });
-              await client.waitForTransactionReceipt({ hash });
+              await waitReceiptBestEffort(client, hash);
               addTransaction(address, hash, plan.chainId, `Approve ${sym} dla NFT managera (mint, dociągnięcie)`);
             }
           }
@@ -135,7 +143,10 @@ export function useRebalanceExecution() {
           setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — podpis w Rabby…` });
           const hash = await wc.sendTransaction({ to: tx.to, data: tx.data, value: tx.value, account: address, chain: wc.chain });
           setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — potwierdzanie…` });
-          await client.waitForTransactionReceipt({ hash });
+          // HOTFIX 31.08: best-effort (nie throw) + progress zapisywany także
+          // bez receiptu — tx jest wysłana, a brak zapisu postępu powodował
+          // ponowne wysyłanie TEGO SAMEGO kroku przy kolejnym [Zatwierdź].
+          await waitReceiptBestEffort(client, hash);
           addTransaction(address, hash, plan.chainId, step.label);
 
           progress.completed = [...progress.completed, step.index];

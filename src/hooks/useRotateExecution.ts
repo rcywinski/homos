@@ -24,6 +24,9 @@ import { Address, encodeFunctionData, erc20Abi } from 'viem';
 import { RotatePlan, buildMintStep } from '../utils/rebalanceBuilder';
 import { addTransaction } from '../components/TransactionHistory';
 import { config } from '../config/wallet';
+// HOTFIX 31.08: receipt best-effort (ta sama klasa co useRebalanceExecution —
+// patrz komentarz tam; błąd Rabby+publicnode 'Invalid parameters').
+import { waitReceiptBestEffort } from './useCockpitActions';
 
 export interface RotateExecStatus {
   phase: 'idle' | 'approving' | 'step' | 'done' | 'error';
@@ -122,7 +125,7 @@ export function useRotateExecution() {
           if (allowance >= appr.amount) continue;
           setStatus({ phase: 'approving', stepIndex: 0, totalSteps: total, message: `Approve: ${appr.label}` });
           const hash = await wc.sendTransaction({ to: appr.tx.to, data: appr.tx.data, value: appr.tx.value, account: address, chain: wc.chain });
-          await client.waitForTransactionReceipt({ hash });
+          await waitReceiptBestEffort(client, hash);
           addTransaction(address, hash, plan.chainId, appr.label);
         }
 
@@ -152,7 +155,7 @@ export function useRotateExecution() {
               setStatus({ phase: 'approving', stepIndex: step.index, totalSteps: total, message: `Approve ${sym} (realne saldo różni się od estymaty) przed mintem…` });
               const approveData = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [manager, amt] });
               const hash = await wc.sendTransaction({ to: tok, data: approveData, value: 0n, account: address, chain: wc.chain });
-              await client.waitForTransactionReceipt({ hash });
+              await waitReceiptBestEffort(client, hash);
               addTransaction(address, hash, plan.chainId, `Approve ${sym} dla NFT managera (mint, dociągnięcie)`);
             }
           }
@@ -162,7 +165,7 @@ export function useRotateExecution() {
           setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — podpis w Rabby…` });
           const hash = await wc.sendTransaction({ to: tx.to, data: tx.data, value: tx.value, account: address, chain: wc.chain });
           setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — potwierdzanie…` });
-          await client.waitForTransactionReceipt({ hash });
+          await waitReceiptBestEffort(client, hash);
           addTransaction(address, hash, plan.chainId, step.label);
 
           progress.completed = [...progress.completed, step.index];
