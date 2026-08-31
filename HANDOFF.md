@@ -18,6 +18,37 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 31.08 ~07:xx — **COMPARE_HL_D GOTOWE na świeżym
+  cache 07:30 (poniedziałkowym) — ostatni element paczki decyzyjnej
+  przed przeglądem**] Automat 05:30–08:25 już skończył (brak żywych
+  procesów), odpaliłem bez kolizji.
+
+  **base-cbbtc-weth-005-720d** (32 epiz. HL7d bazowa, 717 dni):
+  === PORÓWNANIE KOTWIC: EMA HL7d vs HL5d ===
+  epizodów: 32 vs 35 · sparowane: 31 · HL5d startuje WCZEŚNIEJ w
+  **26/31** · mediana przewagi startu **13.1h** · łącznie 1093h
+  wcześniej we flacie. Tylko-HL5d: 4 epiz. (ΣEV -$18.50); tylko-HL7d:
+  1 epiz. (ΣEV -$1.97). **ΣEV całości: HL7d $452.17 vs HL5d $561.88**
+  (+24.3%).
+
+  **base-weth-usdc-030-720d** (45 epiz. HL7d bazowa, 726 dni):
+  === PORÓWNANIE KOTWIC: EMA HL7d vs HL5d ===
+  epizodów: 45 vs 53 · sparowane: 40 · HL5d startuje wcześniej w
+  **29/40** · mediana przewagi startu **tylko 1.4h** · łącznie 511h.
+  Tylko-HL5d: 13 epiz. (ΣEV -$47.75); tylko-HL7d: 5 epiz. (ΣEV
+  -$17.57). **ΣEV całości: HL7d $297.04 vs HL5d $347.45** (+17.0%).
+
+  **WNIOSEK: HL5d wygrywa ΣEV na OBU pulach, ale efekt jest znacznie
+  SILNIEJSZY na cbBTC** (mediana przewagi startu 13.1h vs 1.4h na
+  base-030 — prawie 10× słabszy sygnał). Referencja Twojego smoke
+  (365d stale, cbBTC): mediana +18.7h, ΣEV $290→$357 — kierunek
+  zgodny, ale skala przewagi na świeżym 720d jest MNIEJSZA (13.1h vs
+  18.7h) niż na starym cache. Na base-030 przewaga jest na granicy
+  szumu (1.4h medianą to niewiele więcej niż nic).
+  To ostatni element paczki decyzyjnej — reszta agendy 31.08 (E4/E6,
+  czy detektor flatu jest potrzebny poza procedurą awaryjną) po
+  Twojej stronie. Gotowy na dalsze zlecenia z przeglądu.
+
 > **STAN 29.08 ~21:00 — KONIEC DNIA. Produkt BEZ ZMIAN: base-030
 > ±50%, cbBTC ±40%, tryb PROPONUJ, żadnego zwężania.** Trzy
 > kandydatury przebadane i odrzucone bramką 720d (zwężanie ze swapem,
@@ -798,19 +829,8 @@
 > na jutro rano (COMPARE_HL_D, wpis niżej). Dobrej nocy przed
 > przeglądem.**
 
-- [Fable→CC-Win, 28.08 ~wieczór, TERMIN POPRAWIONY 29.08 — **NA
-  PONIEDZIAŁEK 31.08 RANO (przed przeglądem; decyzja Rafała: NIE robić
-  wcześniej)** — porównanie kotwic EMA na świeżych 720d, ostatni
-  element paczki decyzyjnej. UWAGA: wcześniejsze wpisy mówiły
-  „poniedziałek 1.09" — to była sprzeczność (1.09.2026 to wtorek);
-  Rafał rozstrzygnął 29.08: **przegląd i to zadanie = 31.08**]
-  Po pullu paczki "compare kotwic" od CC-Mac, na cache z
-  poniedziałkowego fetchu 07:30:
-  1. `COMPARE_HL_D=5 CONFIRM_H=12 NARROW=0.06 npx tsx
-     backtest/flatwindows.ts base-cbbtc-weth-005-720d`
-  2. `COMPARE_HL_D=5 CONFIRM_H=12 npx tsx backtest/flatwindows.ts
-     base-weth-usdc-030-720d`
-  Wynik (sekcja "PORÓWNANIE KOTWIC") do @Fable przed przeglądem —
-  ilustracja do decyzji HL_D=5: ile epizodów łapiemy szybciej i o
-  ile godzin. Referencja ze smoke Fable (365d stale, cbBTC): HL5d
-  wcześniej w 10/12 sparowanych, mediana +18.7h, ΣEV $290→$357.
+> (COMPARE_HL_D ZROBIONE 31.08 rano na świeżym cache — pełny raport
+> w skrzynce @Fable powyżej. HL5d wygrywa ΣEV na obu pulach, ale
+> efekt dużo silniejszy na cbBTC [13.1h mediana] niż base-030
+> [1.4h — na granicy szumu]. To zamyka paczkę decyzyjną przed
+> przeglądem 31.08.)
