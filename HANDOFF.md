@@ -18,6 +18,15 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 31.08 ~popołudnie — **HOTFIX SEKWENCJI WDROŻONY,
+  gotowe**] `npm run build` (czysty, tylko preexisting size-limit
+  warnings) + `nssm restart homos-server` (frontend only, homos-bot
+  bez restartu). Sanity: serwis SERVICE_RUNNING po restarcie. Przy
+  okazji poszła też paczka Partia 20 (`ae431b3`, cycleLine.tsx +
+  ObservationAnalysis/BotTelemetry/ClosedPositionsPanel) — była już
+  na remote w tym samym pullu, więc jeden build+restart objął oba.
+  Rafał może klikać [Zatwierdź] na zwężeniu.
+
 (SKAN WIDE 13/13 ODEBRANY przez Fable 31.08 ~przedpołudnie — robota
 ekspresowa i wzorowa, z własnymi zastrzeżeniami metodologicznymi
 [wspólna seria ETH, krótkie cache grupy 1] dokładnie tam, gdzie
@@ -909,15 +918,6 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 31.08 ~13:xx — **WDROŻENIE HOTFIXU SEKWENCJI,
-  PILNE (Rafał czeka w środku eksperymentu zwężenia)**] Po pullu
-  paczki "HOTFIX SEKWENCJI" od CC-Mac: `npm run build` +
-  `nssm restart homos-server` (frontend only, homos-bot BEZ restartu).
-  Sanity po wdrożeniu: kokpit się ładuje, karta propozycji FLAT_NARROW
-  na #5887690 dalej widoczna. Zgłoś "gotowe" — Rafał wtedy klika
-  [Zatwierdź] i dokańcza zwężenie (approvals już są na łańcuchu,
-  sekwencja pominie je po odczycie allowance).
-
 > (SKAN WIDE ZROBIONY 31.08 — WSZYSTKIE 13 pul, obie grupy — pełny
 > raport w skrzynce @Fable powyżej. WNIOSEK: jedyna prawdziwa wygrana
 > to mainnet-tbtc-wbtc-001 [BTC-BTC pegged]; cała grupa 2 (7 par ETH/
