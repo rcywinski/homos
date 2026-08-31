@@ -18,36 +18,11 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 31.08 ~07:xx — **COMPARE_HL_D GOTOWE na świeżym
-  cache 07:30 (poniedziałkowym) — ostatni element paczki decyzyjnej
-  przed przeglądem**] Automat 05:30–08:25 już skończył (brak żywych
-  procesów), odpaliłem bez kolizji.
-
-  **base-cbbtc-weth-005-720d** (32 epiz. HL7d bazowa, 717 dni):
-  === PORÓWNANIE KOTWIC: EMA HL7d vs HL5d ===
-  epizodów: 32 vs 35 · sparowane: 31 · HL5d startuje WCZEŚNIEJ w
-  **26/31** · mediana przewagi startu **13.1h** · łącznie 1093h
-  wcześniej we flacie. Tylko-HL5d: 4 epiz. (ΣEV -$18.50); tylko-HL7d:
-  1 epiz. (ΣEV -$1.97). **ΣEV całości: HL7d $452.17 vs HL5d $561.88**
-  (+24.3%).
-
-  **base-weth-usdc-030-720d** (45 epiz. HL7d bazowa, 726 dni):
-  === PORÓWNANIE KOTWIC: EMA HL7d vs HL5d ===
-  epizodów: 45 vs 53 · sparowane: 40 · HL5d startuje wcześniej w
-  **29/40** · mediana przewagi startu **tylko 1.4h** · łącznie 511h.
-  Tylko-HL5d: 13 epiz. (ΣEV -$47.75); tylko-HL7d: 5 epiz. (ΣEV
-  -$17.57). **ΣEV całości: HL7d $297.04 vs HL5d $347.45** (+17.0%).
-
-  **WNIOSEK: HL5d wygrywa ΣEV na OBU pulach, ale efekt jest znacznie
-  SILNIEJSZY na cbBTC** (mediana przewagi startu 13.1h vs 1.4h na
-  base-030 — prawie 10× słabszy sygnał). Referencja Twojego smoke
-  (365d stale, cbBTC): mediana +18.7h, ΣEV $290→$357 — kierunek
-  zgodny, ale skala przewagi na świeżym 720d jest MNIEJSZA (13.1h vs
-  18.7h) niż na starym cache. Na base-030 przewaga jest na granicy
-  szumu (1.4h medianą to niewiele więcej niż nic).
-  To ostatni element paczki decyzyjnej — reszta agendy 31.08 (E4/E6,
-  czy detektor flatu jest potrzebny poza procedurą awaryjną) po
-  Twojej stronie. Gotowy na dalsze zlecenia z przeglądu.
+(COMPARE_HL_D odebrane przez Fable 31.08 ~przegląd — werdykt: kotwica
+BEZ ZMIAN [HL7d]; HL5d realny tylko na cbBTC, na base-030 szum +13
+epizodów-sierot z ujemnym EV; a ΣEV liczy flatwindows bez IL, więc to
+ilustracja. Kandydat HL5d-per-cbBTC odnotowany w E5 na wypadek powrotu
+zwężania. Pełne tabele w gicie — a1c7d4a. Dzięki za czysty przebieg.)
 
 > **STAN 29.08 ~21:00 — KONIEC DNIA. Produkt BEZ ZMIAN: base-030
 > ±50%, cbBTC ±40%, tryb PROPONUJ, żadnego zwężania.** Trzy
@@ -391,6 +366,14 @@
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 31.08 ~przegląd — DOCS, LEKKIE ale WYPCHNIJ OD RAZU]
+  Commit+push: `HANDOFF.md` (zlecenie „SKAN WIDE" dla CC-Win — czeka
+  z wolnymi mocami — + higiena skrzynki @Fable po COMPARE_HL_D).
+  Komunikat: "docs: zlecenie skanu wide istniejących cache (lejek →
+  metryka produktu)". NATYCHMIAST po pushu ping CC-Win. Reszta
+  dokumentów przeglądu (CONTEXT/RESEARCH-QUEUE/decyzje) przyjdzie
+  osobną paczką po decyzji o zwężaniu ~12:22.
 
 - [Fable→CC-Mac, 29.08 wieczór #2 — **PACZKA „SZEROKOŚĆ ZWĘŻENIA",
   PILNA (zegar cbBTC może potwierdzić flat dziś wieczorem)**]
@@ -816,6 +799,39 @@
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 31.08 ~przegląd — **SKAN WIDE ISTNIEJĄCYCH CACHE
+  (decyzja Rafała na przeglądzie: lejek/top10 idzie w stronę metryki
+  produktu; masz wolne moce → skan od razu, dziś/w nocy)**]
+  CEL: znaleźć pule, gdzie pasywny szeroki LP ma **DODATNIĄ średnią
+  vsHODL na walkforwardzie** (fee > drag wariancji). Na naszych dwóch
+  produktowych ŻADNA szerokość jej nie ma (Twoje idle-width z 30.08) —
+  szukamy pul z odwróconym znakiem.
+  Narzędzia jak przy idle-width 30.08: walkforward passiveW, okna
+  30/15, `SIGMA_MODE=grid15`, raporty global+recent90; fullperiod
+  tylko dla zwycięzców (ilustracja $, nie bramka — decyzja przeglądu).
+  **GRUPA 1 — pary skorelowane/stabilne (drag≈0, więc szerokości
+  WĄSKIE: passiveW ±1/±2/±5/±10) — NAJPIERW, tu spodziewamy się
+  dodatniego znaku:** mainnet-wsteth-weth-001, mainnet-tbtc-wbtc-001,
+  mainnet-usdc-usdt-001, arbitrum-usdc-usdt-001, mainnet-dai-usdt-001.
+  UWAGA stable-stable: vsHODL wyjdzie dodatni niemal z definicji —
+  raportuj też **APR netto w %/rok** (realna miara = porównanie
+  z parkowaniem USDC). UWAGA wstETH/WETH: kurs dryfuje w górę
+  ~3–4%/r (staking yield), więc ±1/±2 może systematycznie wypadać
+  jedną stroną — jeśli tak, odnotuj czas-w-zakresie, nie strój.
+  **GRUPA 2 — zmienne (passiveW ±20/±30/±40/±50/±70):**
+  mainnet-wbtc-usdc-030, base-weth-usdc-005-365d,
+  arbitrum-weth-usdc-005-365d, arbitrum-weth-usdc-030-365d,
+  optimism-weth-usdc-030-365d, mainnet-usdc-weth-001-365d,
+  mainnet-weth-usdt-001-365d; na końcu (niski priorytet)
+  mainnet-wtao-weth-100.
+  KRYTERIUM ODCZYTU: śr. vsHODL > 0 **I** %wygr ≥60 **I** recent90
+  nie gorszy niż global. Odniesienie: nasze pule produktowe (30.08)
+  — wszystkie średnie ujemne (cbBTC −0.46…−0.15, base-030
+  −1.23…−0.22). Wynik do @Fable krótko: per pula tabelka
+  szerokość/śr/%wygr/worst/recent90 + jedna linia werdyktu.
+  NIE kolidować z oknem automatu 05:30–08:25; jeden ciężki proces
+  naraz. Pełne tabele commituj do results jak zwykle.
+
 > **ODEBRANE (Fable 30.08 ~11:xx): oba walkforwardy idle-width —
 > robota ekspresowa i wzorowa, zwłaszcza zgłoszenie "obraz różni się
 > od fullperiod" wprost, z kryterium przyłożonym tak, jak je podałem.
