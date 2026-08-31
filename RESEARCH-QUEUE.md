@@ -291,6 +291,59 @@
 - [ ] Backfill: dzienne snapshoty rankingu Pool Scannera do SQLite (żeby za rok
   mieć własną, niezależną od DefiLlamy historię selekcji).
 
+## E7. UNISWAP v4 / HOOKI — GŁÓWNY WĄTEK BADAWCZY (decyzja Rafała 31.08 po południu: „jak najszybciej")
+> Kontekst decyzji: lista zadań obecnego trybu (pasywny wide na v3) się
+> wyczerpuje — samo granie wide da się robić ręcznie przez Uniswap UI +
+> alerty push. Wartość trwała po naszej stronie: warstwa pomiarowa
+> (księga/bilans/podatki) i maszyna badawcza — obie przenośne na v4.
+> Teza: hooki dynamicznych fee / redystrybucji MEV to jedyna znana
+> strukturalna szansa odwrócenia wyniku „LP przegrywa z HODL"
+> (falsyfikacje 26–31.08 dotyczą zwykłych AMM bez obrony).
+REKONESANS 31.08 (Fable, web): ekosystem realny — v4 TVL ~$3.4B
+(maj 2026), tysiące pul z hookami, marketplace hooków + program $500M
+(kwiecień 2026); wolumen głównie mainnet + UNICHAIN (nas tam nie ma —
+osobna rubryka). Teza obrony LP oficjalnie głównym motywem v4
+(dynamic fees, aukcje MEV → LP: Angstrom/Sorella; literatura LVR).
+⚠️ LEKCJA BUNNI: flagowy hook zyskowności LP (podobno ~90% wolumenu
+v4, „100× volume/TVL vs pula bez hooka") — EXPLOIT $8.4M (09.2025),
+ZAMKNIĘTY (10.2025), zabrakło na audyty relaunchu. Hook = dodatkowy
+smart kontrakt między nami a pieniędzmi; złożoność zabija.
+- [ ] **KROK 1 — INWENTARYZACJA (bez kodu, dane świeże):** żywe pule
+  v4 na naszych parach (ETH/USDC, ETH/BTC, klasy pegged) per sieć
+  (mainnet/Base/Arbitrum/Unichain): TVL, wolumen 7/30d, jaki hook
+  (dynamic fee / MEV-aukcja / vanilla), od kiedy żyje, audyty.
+  Porównanie: realne fees/TVL puli v4 vs bliźniak v3 ta sama para/sieć.
+  Źródła: DefiLlama (per-pool), HookRank/marketplace, explorery.
+- [ ] **KROK 2 — RAMY RYZYKA (przed jakimkolwiek kapitałem):** twarde
+  progi wejścia: hook żyje ≥6–12 mies., TVL ≥ $10M, audyty publiczne,
+  brak admin-keys mogących ruszyć płynność (albo timelock), limit
+  ekspozycji na hook (np. ≤25% transzy). Lekcja Bunni wprost.
+- [ ] **KROK 3 — POMIAR:** czy LP w puli z obronnym hookiem faktycznie
+  wychodzi lepiej vs HODL (nasza bramka!) — najpierw z danych
+  publicznych puli (fee/TVL minus drag σ² — piętro 1 lejka v2 umie to
+  policzyć, klasa „v4-hooked" do słownika klas), potem ewentualnie
+  pozycja sondażowa małą kwotą (jak dziś: eksperyment ≠ strategia).
+- [ ] **KROK 4 — NARZĘDZIA (dopiero po pozytywnym kroku 3):** fetch
+  danych v4 (singleton PoolManager, inne eventy niż v3) + adaptacja
+  backtestu. NIE budować przed dowodem, że jest czego szukać (lekcja
+  v1.2: najpierw dane, potem kod).
+- [ ] Rubryka osobna: UNICHAIN — czy nasze wejście tam ma sens
+  (mosty, gaz, ryzyko młodej sieci) — dopiero jeśli krok 1 pokaże,
+  że najlepsze pule żyją właśnie tam.
+(Wpis w H „inwentaryzacja v4" — zastąpiony tym wątkiem, tam zostaje
+odnośnik.)
+
+## D0. PACZKA „DETEKTOR→POMIAR" — poczekalnia (wdrożyć PO zamknięciu epizodu #5908083)
+- [ ] observer: detektor flatu przestaje emitować FLAT_NARROW/FLAT_WIDEN
+      (zostaje pomiar epizodów + logi) — decyzja przeglądu 31.08.
+- [ ] KOSMETYKA „k×σ" (3 kryjówki starej formułki): observer.ts:631
+      (alert Telegram „pora rozważyć zwężenie do k×σ"), formatka
+      Telegrama propozycji (zakres z „$" zamiast jednostki puli),
+      src/components/cycleLine.tsx (etykieta „WĄSKI k×σ (flat)" →
+      „WĄSKI ±5% (flat)" z productNarrowWidthPct).
+- UWAGA: NIE wdrażać przed zamknięciem epizodu — pkt 1 zabiłby sygnał
+  FLAT_WIDEN, na który czekamy.
+
 ## D. OPERACYJNE PRZYPOMNIENIA
 
 - [x] Test fizycznego rebootu Windows — ✅ POTWIERDZONE (Rafał, 20.08: kilka
@@ -468,8 +521,21 @@
 
 ## H. POMYSŁY NA PRZYSZŁE MODUŁY (backlog pomysłów — nie w budowie)
 
-- [ ] **UNISWAP v4 — INWENTARYZACJA HOOKÓW („może to zrobimy", Rafał
-  31.08)**. Kontekst: skan wide 31.08 pokazał, że na zwykłych pulach
+- [ ] **GM POOLS (GMX v2) — KLASA „DOM KASYNA"** (pytanie Rafała 31.08).
+  Struktura: LP = kontrpartner traderów z dźwignią; zarabia fee+borrow+
+  straty traderów, traci gdy traderzy wygrywają; wycena po ORAKLACH →
+  brak klasycznego LVR/arbitrażu (strukturalnie inna klasa niż AMM!),
+  w zamian ryzyko ogona „gracz rozbija bank" + ~50% bety koszyka.
+  BADAĆ TYLKO duże rynki (ETH/USD, BTC/USD GM; TVL ≥ $10M) — górne
+  wiersze rankingów APY to pule-groszaki (108% na $1.8k TVL = szum).
+  Kolumna uczciwa: annualized PERFORMANCE, nie FEE APY (GMX/USD:
+  fee 18.2% vs perf. 2.3% — różnica = wygrane traderów + beta).
+  TEST NASZĄ BRAMKĄ: realized performance GM minus beta koszyka vs
+  HODL koszyka, możliwie długa historia (DefiLlama ma serie per pool).
+  Bonus operacyjny: GMX już w stacku (venue hedge, EMERGENCY.md).
+
+- [→E7] **UNISWAP v4 — INWENTARYZACJA HOOKÓW** — AWANSOWANE 31.08 po
+  południu do aktywnego wątku E7 (decyzja Rafała: „jak najszybciej"). Kontekst: skan wide 31.08 pokazał, że na zwykłych pulach
   ETH/stable LP przegrywa z HODL wszędzie — mechanizm (adverse
   selection arbitrażu) siedzi w konstrukcji AMM, więc v4 z pulami
   vanilla NIC nie zmienia. JEDYNA strukturalna nadzieja: hooki
