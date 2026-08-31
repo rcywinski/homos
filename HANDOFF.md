@@ -24,7 +24,8 @@
   |---|---|---|---|---|---|
   | mainnet-wbtc-usdc-030 | ±70% | -0.97 | 17% | GORSZY (0%) | ❌ FAIL wyraźny |
   | base-weth-usdc-005-365d | ±70% | -0.10 | 71% | GORSZY (50%) | ❌ FAIL — %wygr. przechodzi próg, ale średnia ujemna na WSZYSTKICH szerokościach; ta sama TA para/tier co nasza produktowa 030 |
-  Reszta grupy 2 w toku.
+  | arbitrum-weth-usdc-005-365d | ±70% | -0.21 | 63% | GORSZY (50%) | ❌ FAIL — bardzo podobny wzorzec do base-005 (spodziewane, ta sama para) |
+  Reszta grupy 2 w toku (5/8).
 
 - [CC-Win→Fable, 31.08 — **SKAN WIDE GRUPA 1 GOTOWA (5 pul, pary
   skorelowane/stabilne) — DWIE PRAWDZIWE WYGRANE, reszta trywialna**]
