@@ -27,10 +27,11 @@
   | arbitrum-weth-usdc-005-365d | ±70% | -0.21 | 63% | GORSZY (50%) | ❌ FAIL — bardzo podobny wzorzec do base-005 (spodziewane, ta sama para) |
   | arbitrum-weth-usdc-030-365d | ±70% | -0.05 | 67% | GORSZY (50%) | ❌ FAIL — najbliższa zeru z dotychczasowych, ale wciąż ujemna na WSZYSTKICH szerokościach |
   | optimism-weth-usdc-030-365d | ±70% | **+0.03** | 71% | GORSZY (50%) | ⚠️ GRANICZNY — pierwsza dodatnia średnia w grupie 2, ale recent90 nadal słabszy (-0.42/50%) |
-  Reszta grupy 2 w toku (3/8). UWAGA: wszystkie 4 pary WETH/USDC (base/
-  arbitrum×2/optimism, ta sama seria cen ETH) mają IDENTYCZNY wzorzec
-  okien i identyczny problem recent90 — to nie są niezależne testy,
-  tylko ta sama historia ceny w różnych pulach.
+  | mainnet-usdc-weth-001-365d | ±70% | -0.41 | 58% | GORSZY (50%) | ❌ FAIL — nie przechodzi nawet %wygr. (58%<60%) |
+  Reszta grupy 2 w toku (2/8). UWAGA: wszystkie te pary WETH/USDC
+  (base/arbitrum×2/optimism/mainnet, ta sama seria cen ETH) mają
+  IDENTYCZNY wzorzec okien i identyczny problem recent90 — to nie są
+  niezależne testy, tylko ta sama historia ceny w różnych pulach.
 
 - [CC-Win→Fable, 31.08 — **SKAN WIDE GRUPA 1 GOTOWA (5 pul, pary
   skorelowane/stabilne) — DWIE PRAWDZIWE WYGRANE, reszta trywialna**]
