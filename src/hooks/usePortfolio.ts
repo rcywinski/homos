@@ -20,7 +20,7 @@
  * USD totals. `hasUnknownValue` tells the UI to show a footnote instead of
  * silently under-reporting the total.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAccount, useBalance, usePublicClient } from 'wagmi';
 import { Address } from 'viem';
 import { Pool } from '@uniswap/v3-sdk';
@@ -31,6 +31,7 @@ import { OBSERVED_PAIRS } from '../config/pools';
 import { findBotPoolByAddress } from '../config/botPools';
 import { getAmountsForLiquidity, humanPriceQuotePerBase, MAX_UINT128 } from '../utils/v3math';
 import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, ADVISOR_PARAMS, RebalanceAssessment, RangeSuggestion } from '../utils/advisor';
+import { UseBotApi } from './useBotApi';
 
 const CHAIN_IDS = [1, 8453, 42161] as const;
 const CHAIN_LABEL: Record<number, string> = { 1: 'Ethereum', 8453: 'Base', 42161: 'Arbitrum' };
@@ -137,6 +138,13 @@ export interface PortfolioPosition {
   feesOwed0Raw: string;
   feesOwed1Raw: string;
   suggestion: RangeSuggestion | null; // sugerowany zakres doradcy — do rebalansu ręcznego
+  /** PARTIA 20 pkt 1: skąd pochodzi `suggestion` — 'bot' gdy pula jest
+   *  ŚLEDZONA przez bota i mieliśmy jego gotową sugestię (bot.state.pools[].suggestion,
+   *  ta sama liczba co bot faktycznie gra, SIGMA_MODE bota włącznie); 'ui-estimate'
+   *  gdy to własne liczenie tego hooka (suggestRange/assessPosition, estymator
+   *  swapowy przeglądarki) — jedyny wypadek TERAZ to pula spoza konfiguracji
+   *  bota (findBotPoolByAddress nic nie znalazł). `null` = brak sugestii w ogóle. */
+  suggestionSource: 'bot' | 'ui-estimate' | null;
 }
 
 export interface PortfolioSummary {
@@ -183,7 +191,7 @@ const usdValueOf = (amount0: number, amount1: number, sym0: string, sym1: string
   return null;
 };
 
-export function usePortfolio(): PortfolioSummary {
+export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
   const { address, isConnected } = useAccount();
   const clientMainnet = usePublicClient({ chainId: 1 });
   const clientBase = usePublicClient({ chainId: 8453 });
@@ -371,6 +379,12 @@ export function usePortfolio(): PortfolioSummary {
             // Sugerowany zakres doradcy — liczony gdy mamy statystyki, niezależnie
             // od tego, czy dało się wycenić pozycję w USD (rebalans ręczny nadal
             // ma sens, tylko bez oceny opłacalności/payback).
+            // PARTIA 20 pkt 1: to liczenie (suggestRange/assessPosition, estymator
+            // swapowy przeglądarki — SIGMA_MODE bota tu NIE obowiązuje) jest teraz
+            // TYLKO fallbackiem dla pul spoza konfiguracji bota. Dla pul ŚLEDZONYCH
+            // przez bota nadpisujemy `suggestion` gotową liczbą z bot.state.pools[]
+            // niżej (w useMemo po tej pętli, żeby nie triggerować ponownego RPC
+            // przy każdym pollu /api/state — patrz komentarz przy `positionsWithBotSuggestion`).
             let suggestion: RangeSuggestion | null = null;
             if (stats) {
               // SPÓJNOŚĆ PROGNOZY cbBTC (HANDOFF Fable→Sonnet 26.08/28.08 rano):
@@ -440,6 +454,7 @@ export function usePortfolio(): PortfolioSummary {
               feesOwed0Raw: feesOwed0Raw.toString(),
               feesOwed1Raw: feesOwed1Raw.toString(),
               suggestion,
+              suggestionSource: suggestion ? 'ui-estimate' : null,
             });
           }
         }
@@ -460,6 +475,24 @@ export function usePortfolio(): PortfolioSummary {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, isConnected, tick]);
+
+  // PARTIA 20 pkt 1: override sugestii dla pul ŚLEDZONYCH przez bota — osobny
+  // useMemo NAD efektem z RPC, nie w jego zależnościach, żeby poll /api/state
+  // (co 60s, useBotApi) NIE triggerował ponownego przejścia po wszystkich
+  // pozycjach on-chain (drogie RPC) — tylko przelicza istniejące `positions`
+  // z najświeższym bot.state.pools[].suggestion. Zero nowych requestów: dane
+  // z bota już są w pamięci (useBotApi), tu tylko dopasowanie po adresie puli.
+  const positionsWithBotSuggestion = useMemo<PortfolioPosition[]>(() => {
+    const botPools = bot?.state?.pools;
+    if (!botPools || !botPools.length) return positions;
+    return positions.map((p) => {
+      const botMeta = findBotPoolByAddress(p.chainId, p.poolAddress);
+      if (!botMeta) return p; // pula spoza konfiguracji bota — zostaje własna estymata (albo brak)
+      const botLive = botPools.find((pl) => pl.id === botMeta.id);
+      if (!botLive?.suggestion) return p; // bot jeszcze nie ma świeżej sugestii dla tej puli — zostaje fallback
+      return { ...p, suggestion: { ...botLive.suggestion }, suggestionSource: 'bot' as const };
+    });
+  }, [positions, bot?.state?.pools]);
 
   const num = (b?: { formatted: string }) => Number(b?.formatted ?? 0);
   // ETH i WETH sumujemy przez wszystkie sieci (ten sam kurs), USDC to 1:1 USD.
@@ -487,7 +520,7 @@ export function usePortfolio(): PortfolioSummary {
     positionsInRange,
     positionsOutOfRange,
     hasUnknownValue,
-    positions,
+    positions: positionsWithBotSuggestion,
     refresh,
     ethUsd,
   };

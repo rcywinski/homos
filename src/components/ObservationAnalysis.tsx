@@ -63,7 +63,19 @@ interface WalkforwardFile {
 }
 
 const EMA_GAP_DANGER_PCT = -5; // ALGORITHM.md §4 — próg bezpiecznika trendu
-const WALKFORWARD_NAME_SUFFIX = '-365d-45d';
+// PARTIA 20 pkt 3 (przegląd 31.08): tabela czytała pliki `-365d-45d` —
+// walk-forward strategii ALGORITHM v1.2 (k×σ doradcy), którymi bot JUŻ NIE
+// GRA (produkt od 27–29.08 to hybryda FlatWide ze stałą szerokością wąskiej
+// nogi, patrz backtest/walkforward.ts mkHybrid/mkProduct, WF_SET=hybrid|
+// product). Zamiast tego czytamy najnowsze przebiegi na 720-dniowej historii
+// (`walkforward-<botPoolId>-720d-30d.json`, backtest/walkforward.ts:373 —
+// nazwa pliku niesie okno danych z ID przebiegu, nie env WF_SET, więc
+// dopasowanie jest po SUFIKSIE nazwy pliku, nie po treści; `summary`
+// renderuje się generycznie jak dotychczas, jakiekolwiek strategie w nim są).
+// Feature-detect: gdy pliku dla danej puli brak (404), WalkforwardPoolBlock
+// całkiem się nie renderuje (żadnych werdyktów porzuconej strategii v1.2) —
+// bez hardkodowania listy pul, po prostu po tym, co faktycznie odpowie API.
+const WALKFORWARD_NAME_SUFFIX = '-720d-30d';
 
 /** Normalizuje HistoryPoint.ts (ISO string z observer.ts, ale defensywnie też liczby s/ms) do epoch-sekund. */
 function tsSeconds(v: number | string): number {
@@ -263,40 +275,49 @@ const PoolHistoryChart: FC<{ points: HistoryPoint[]; proposals: BotProposal[] }>
   );
 };
 
-const WalkforwardMiniTable: FC<{ botPoolId: string; apiBase: string; apiToken: string }> = ({ botPoolId, apiBase, apiToken }) => {
-  const { result, fileDate, failed } = useWalkforward(apiBase, apiToken, `walkforward-${botPoolId}${WALKFORWARD_NAME_SUFFIX}`);
+// PARTIA 20 pkt 3: cały blok (tytuł + tabela) dla danej puli — NIE tylko
+// tabela jak poprzednio (WalkforwardMiniTable) — bo decyzja przeglądu jest
+// "sekcję UKRYĆ", czyli razem z nagłówkiem "para · botPoolId", nie tylko
+// treść tabeli zastąpić notką. Zwraca null, gdy pliku 720d-30d dla tej puli
+// nie ma (404/błąd sieci) albo `summary` jest puste — żadnych werdyktów
+// strategii, którą porzuciliśmy, ani pustych nagłówków bez treści.
+const WalkforwardPoolBlock: FC<{ meta: { id: string; sym0: string; sym1: string }; apiBase: string; apiToken: string }> = ({ meta, apiBase, apiToken }) => {
+  const { result, fileDate, failed } = useWalkforward(apiBase, apiToken, `walkforward-${meta.id}${WALKFORWARD_NAME_SUFFIX}`);
 
-  if (failed || !result?.summary) {
-    return <div className="morning-note muted">ostatni walk-forward: niedostępny (bot sprzed aktualizacji, albo brak wyniku dla tej puli).</div>;
-  }
+  if (failed || !result?.summary) return null;
   const rows = Object.entries(result.summary);
   if (rows.length === 0) return null;
 
   return (
-    <div className="observation-walkforward-wrap">
-      <div className="telemetry-table-wrap">
-        <table className="telemetry-table observation-walkforward-table">
-          <thead>
-            <tr>
-              <th>Strategia</th>
-              <th>mean %</th>
-              <th>winPct</th>
-              <th>worst %</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(([name, r]) => (
-              <tr key={name}>
-                <td>{name}</td>
-                <td>{r.mean.toFixed(2)}</td>
-                <td>{r.winPct.toFixed(0)}%</td>
-                <td>{r.worst.toFixed(2)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="observation-pool-block">
+      <div className="observation-pool-title muted">
+        {meta.sym0}/{meta.sym1} · {meta.id}
       </div>
-      {fileDate && <div className="muted observation-walkforward-date">plik z: {fileDate}</div>}
+      <div className="observation-walkforward-wrap">
+        <div className="telemetry-table-wrap">
+          <table className="telemetry-table observation-walkforward-table">
+            <thead>
+              <tr>
+                <th>Strategia</th>
+                <th>mean %</th>
+                <th>winPct</th>
+                <th>worst %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(([name, r]) => (
+                <tr key={name}>
+                  <td>{name}</td>
+                  <td>{r.mean.toFixed(2)}</td>
+                  <td>{r.winPct.toFixed(0)}%</td>
+                  <td>{r.worst.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {fileDate && <div className="muted observation-walkforward-date">plik z: {fileDate}</div>}
+      </div>
     </div>
   );
 };
@@ -354,14 +375,15 @@ const ObservationAnalysis: FC<Props> = ({ bot }) => {
             })
           )}
 
-          <div className="morning-section-title observation-section-title">Algorytm vs świeże dane (ostatni walk-forward)</div>
+          {/* PARTIA 20 pkt 3: nagłówek zaktualizowany — pliki `-365d-45d`
+              (ALGORITHM v1.2, k×σ doradcy) zastąpione przebiegami hybrydy
+              720d (WF_SET=product/hybrid, backtest/walkforward.ts), którymi
+              bot faktycznie gra od 27–29.08. Pule bez wyniku 720d-30d na
+              serwerze po prostu nie renderują bloku (WalkforwardPoolBlock
+              zwraca null) — nie pokazujemy werdyktów porzuconej strategii. */}
+          <div className="morning-section-title observation-section-title">Algorytm vs świeże dane (walk-forward hybrydy, 720d)</div>
           {BOT_POOL_META.map((meta) => (
-            <div key={meta.id} className="observation-pool-block">
-              <div className="observation-pool-title muted">
-                {meta.sym0}/{meta.sym1} · {meta.id}
-              </div>
-              <WalkforwardMiniTable botPoolId={meta.id} apiBase={bot.apiBase} apiToken={bot.apiToken} />
-            </div>
+            <WalkforwardPoolBlock key={meta.id} meta={meta} apiBase={bot.apiBase} apiToken={bot.apiToken} />
           ))}
 
           <div className="morning-note muted observation-footer-note">

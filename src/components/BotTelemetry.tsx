@@ -11,6 +11,8 @@
  */
 import React, { FC, useState } from 'react';
 import { UseBotApi, BotPoolLive } from '../hooks/useBotApi';
+import { findBotPoolById } from '../config/botPools';
+import { renderCycleLine, DEFAULT_FLAT_PARAMS } from './cycleLine';
 
 interface Props {
   bot: UseBotApi;
@@ -107,17 +109,34 @@ const BotTelemetry: FC<Props> = ({ bot }) => {
             <>
               <div className="morning-section-title">Pozycje obserwowane przez bota</div>
               <div className="morning-advice-list">
-                {positions.map((p) => (
-                  <div key={`${p.poolId}-${p.tokenId}`} className="morning-advice-row">
-                    <span>
-                      {ADVICE_ICON[p.advice] ?? '·'} #{p.tokenId} {p.poolId}
-                    </span>
-                    <span className="muted">
-                      {fmtUsd(p.valueUsd)}
-                      {p.paybackDays !== null && isFinite(p.paybackDays) ? ` · payback ~${p.paybackDays.toFixed(1)}d` : ''}
-                    </span>
-                  </div>
-                ))}
+                {positions.map((p) => {
+                  // PARTIA 20 pkt 2: kolumna "Doradca" mówiła językiem v1.2
+                  // (IN_RANGE_HOLD/REBALANCE) nawet dla pul PRODUKTOWYCH, gdzie
+                  // bot od Partii 17 gra zupełnie inny cykl (postura SZEROKI/
+                  // WĄSKI + detektor flatu) — dla nich zastąpione linią CYKLU
+                  // (te same źródła i jednostki co karty pozycji w
+                  // MorningCockpit.tsx, wspólny helper w cycleLine.tsx, żeby
+                  // liczby się nie rozjechały). Pule nie-produktowe (posture
+                  // null/nieobecne) zostają po staremu — ikona doradcy v1.2.
+                  const isProduct = p.posture === 'wide' || p.posture === 'narrow';
+                  const botMeta = findBotPoolById(p.poolId);
+                  const poolLive = pools.find((pl) => pl.id === p.poolId);
+                  const flatParams = bot.state?.flatParams ?? DEFAULT_FLAT_PARAMS;
+                  return (
+                    <div key={`${p.poolId}-${p.tokenId}`} className="morning-advice-row-wrap">
+                      <div className="morning-advice-row">
+                        <span>
+                          {isProduct ? '🔁' : ADVICE_ICON[p.advice] ?? '·'} #{p.tokenId} {p.poolId}
+                        </span>
+                        <span className="muted">
+                          {fmtUsd(p.valueUsd)}
+                          {!isProduct && p.paybackDays !== null && isFinite(p.paybackDays) ? ` · payback ~${p.paybackDays.toFixed(1)}d` : ''}
+                        </span>
+                      </div>
+                      {isProduct && renderCycleLine(p.posture, poolLive, botMeta?.productIdleWidthPct, flatParams, Date.now())}
+                    </div>
+                  );
+                })}
               </div>
             </>
           )}

@@ -22,11 +22,52 @@
  * ZAKRES TWARDY: bot/** nietknięty (tylko czytanie typu przez useBotApi.ts).
  */
 import React, { FC, useState } from 'react';
-import { UseBotApi, ClosedPosition } from '../hooks/useBotApi';
+import { UseBotApi, ClosedPosition, BotPoolLive } from '../hooks/useBotApi';
 import { POSITION_MANAGER_ADDRESSES } from '../utils/liquidityManagement';
+import { BOT_POOL_META } from '../config/botPools';
 
 interface Props {
   bot: UseBotApi;
+}
+
+// PARTIA 20 pkt 4: fallback wyceny netto dla par krypto-krypto (np. cbBTC/WETH
+// zamknięta #5887690, "— (brak wyceny obu nóg)" — bot/ledger.ts wycenia tylko
+// nogi z parą dolarową, ten sam ograniczenie co usdValueOf w usePortfolio.ts).
+// Tej samej klasy fix co Partia 15 (kwadraciki tam liczyły przez
+// bot.state.positions[].valueUsd — tu, ponieważ pozycja jest ZAMKNIĘTA i już
+// nie ma wiersza w state.positions, liczymy sami z bot.state.pools[].ethUsd
+// (kurs referencyjny bota, ta sama semantyka co orientacja cen w
+// bot/observer.ts: dla puli quote:'USD' ethUsd = USD za ETH, dla quote:'WETH'
+// (cbBTC/WETH) ethUsd = USD za token bazowy nie-WETH). UWAGA: to jest kurs
+// BIEŻĄCY (ostatni tick bota), NIE historyczny w momencie zamknięcia — ledger
+// nie niesie timestampu dopasowanego do żadnej zapisanej ceny, więc dopisek
+// mówi wprost "po kursie dziś", zamiast udawać precyzyjny realized PnL.
+const STABLE_SYMBOLS = new Set(['USDC', 'USDT', 'DAI', 'USDBC', 'USDE', 'FRAX', 'LUSD']);
+const isStableSym = (s: string) => STABLE_SYMBOLS.has(s.toUpperCase());
+const isEthSym = (s: string) => s.toUpperCase().includes('ETH');
+
+/** Cena USD symbolu (dziś) przez kurs referencyjny bota — null, gdy żadna
+ *  pula bota na tym łańcuchu nie niesie tego tokenu (spoza konfiguracji). */
+function usdPriceForSymbolToday(sym: string, chainId: number, botPools: BotPoolLive[]): number | null {
+  if (isStableSym(sym)) return 1;
+  for (const meta of BOT_POOL_META) {
+    if (meta.chainId !== chainId) continue;
+    if (meta.sym0 !== sym && meta.sym1 !== sym) continue;
+    const other = meta.sym0 === sym ? meta.sym1 : meta.sym0;
+    const live = botPools.find((pl) => pl.id === meta.id);
+    if (!live || !(live.ethUsd > 0)) continue;
+    if (isEthSym(sym)) {
+      // sym to noga ETH-owa — ethUsd tej puli to cena ETH TYLKO gdy druga
+      // noga jest stablecoinem (pula quote:'USD'); w puli quote:'WETH'
+      // (np. cbBTC/WETH) ethUsd to cena DRUGIEGO tokenu, nie ETH — pomiń.
+      if (isStableSym(other)) return live.ethUsd;
+      continue;
+    }
+    // sym to token bazowy nie-ETH/nie-stable (np. cbBTC) — potrzebna pula
+    // quote:'WETH' (druga noga ETH-owa), gdzie ethUsd JEST ceną tego tokenu.
+    if (isEthSym(other)) return live.ethUsd;
+  }
+  return null;
 }
 
 // Slug (`chain` w ClosedPosition/LedgerEntry, jak w bot/ledger.ts) → chainId
@@ -45,7 +86,7 @@ const fmtTok = (v: number | null, sym: string): string => (v === null ? '—' : 
 const fmtDate = (iso: string | null): string =>
   iso ? new Date(iso).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' }) : '—';
 
-const ClosedPositionCard: FC<{ p: ClosedPosition }> = ({ p }) => {
+const ClosedPositionCard: FC<{ p: ClosedPosition; botPools: BotPoolLive[] }> = ({ p, botPools }) => {
   const meta = CHAIN_META[p.chain];
   const manager = meta ? (POSITION_MANAGER_ADDRESSES[meta.chainId] as string | undefined) : undefined;
   const nftUrl = meta && manager ? `${meta.explorerNftBase}/${manager}/${p.tokenId}` : null;
@@ -54,6 +95,20 @@ const ClosedPositionCard: FC<{ p: ClosedPosition }> = ({ p }) => {
   // kolumna w CSV/ledger, nie liczona tu). Etykietowane wprost jako
   // przybliżenie, żeby nie sugerować precyzyjnego realized PnL.
   const netUsd = p.inUsd !== null && p.outUsd !== null ? p.outUsd - p.inUsd : null;
+
+  // PARTIA 20 pkt 4: fallback, gdy ledger nie wycenił żadnej nogi w USD (para
+  // krypto-krypto, np. cbBTC/WETH) — kurs referencyjny bota, TYLKO gdy mamy
+  // wszystkie cztery ilości tokenów (in0/in1/out0/out1) i pula jest w
+  // konfiguracji bota na tym łańcuchu. `null` = zostaje "— (brak wyceny obu nóg)".
+  const netUsdBotToday = (() => {
+    if (netUsd !== null || !meta) return null;
+    const { in0, in1, out0, out1 } = p;
+    if (in0 === null || in1 === null || out0 === null || out1 === null) return null;
+    const px0 = usdPriceForSymbolToday(p.sym0, meta.chainId, botPools);
+    const px1 = usdPriceForSymbolToday(p.sym1, meta.chainId, botPools);
+    if (px0 === null || px1 === null) return null;
+    return out0 * px0 + out1 * px1 - (in0 * px0 + in1 * px1);
+  })();
 
   return (
     <div className="cockpit-position-card closed-position-card">
@@ -93,6 +148,14 @@ const ClosedPositionCard: FC<{ p: ClosedPosition }> = ({ p }) => {
           <span className={netUsd >= 0 ? 'closed-position-net-pos' : 'closed-position-net-neg'}>
             netto (bez gazu): {netUsd >= 0 ? '+' : ''}
             {fmtUsd(netUsd)}
+          </span>
+        ) : netUsdBotToday !== null ? (
+          <span
+            className={netUsdBotToday >= 0 ? 'closed-position-net-pos' : 'closed-position-net-neg'}
+            title="Ledger nie wycenia obu nóg w USD (para krypto-krypto, brak stablecoina/WETH z parą dolarową) — liczba pochodzi z kursu referencyjnego bota (bot.state.pools[].ethUsd, ten sam mechanizm co usdRefPoolId w bot/config.ts). To kurs BIEŻĄCY (dzisiejszy tick bota), NIE historyczny z chwili zamknięcia — ledger nie niesie timestampu dopasowanego do zapisanej ceny."
+          >
+            netto (bez gazu, wycena bota, po kursie dziś): {netUsdBotToday >= 0 ? '+' : ''}
+            {fmtUsd(netUsdBotToday)}
           </span>
         ) : (
           <span>netto: — (brak wyceny obu nóg)</span>
@@ -164,7 +227,7 @@ const ClosedPositionsPanel: FC<Props> = ({ bot }) => {
                 .slice()
                 .sort((a, b) => (b.closedAt ?? '').localeCompare(a.closedAt ?? ''))
                 .map((p) => (
-                  <ClosedPositionCard key={`${p.chain}-${p.tokenId}`} p={p} />
+                  <ClosedPositionCard key={`${p.chain}-${p.tokenId}`} p={p} botPools={bot.state?.pools ?? []} />
                 ))}
             </div>
           )}

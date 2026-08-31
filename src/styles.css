@@ -1327,9 +1327,13 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   justify-content: space-between;
   font-size: 13px;
   padding: 6px 0;
-  border-bottom: 1px solid #f5f5f5;
 }
-.morning-advice-row:last-child { border-bottom: none; }
+/* PARTIA 20 pkt 2: wrapper wokół .morning-advice-row + linia CYKLU (pule
+   produktowe, BotTelemetry.tsx) — border-bottom przeniesiony tutaj, żeby
+   grupować wiersz z jego linią cyklu zamiast rysować kreskę między nimi. */
+.morning-advice-row-wrap { border-bottom: 1px solid #f5f5f5; }
+.morning-advice-row-wrap:last-child { border-bottom: none; }
+.morning-advice-row-wrap .cockpit-cycle-line { padding: 0 0 6px; font-size: 12px; }
 
 @media (max-width: 480px) {
   .morning-summary { flex-direction: column; }

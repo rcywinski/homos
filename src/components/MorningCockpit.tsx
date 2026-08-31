@@ -19,7 +19,7 @@ import React, { FC, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { Pool } from '@uniswap/v3-sdk';
 import { usePortfolio, PortfolioPosition } from '../hooks/usePortfolio';
-import { UseBotApi, BotProposal, BotPoolLive } from '../hooks/useBotApi';
+import { UseBotApi, BotProposal } from '../hooks/useBotApi';
 import { findBotPoolByAddress } from '../config/botPools';
 import { useCockpitActions, RebalanceTarget } from '../hooks/useCockpitActions';
 import { useRebalanceExecution } from '../hooks/useRebalanceExecution';
@@ -30,6 +30,7 @@ import { planHedgeOpen, planHedgeClose, HedgePlan } from '../utils/hedgeBuilder'
 import { formatDuration } from '../utils/formatters';
 import BotStatusDot from './BotStatusDot';
 import BotTelemetry from './BotTelemetry';
+import { renderCycleLine, DEFAULT_FLAT_PARAMS } from './cycleLine';
 import ObservationAnalysis from './ObservationAnalysis';
 import CockpitPositionActions, { CloseModal, RebalanceModal } from './CockpitPositionActions';
 import { Sparkline, PriceRangeChart, EquityChartPoint, PositionStatsBar, fmtQuoteForPool } from './PositionCharts';
@@ -63,68 +64,9 @@ const positionStatusIcon = (inRange: boolean): string => (inRange ? '🟢' : '�
 const positionStatusTitle = (inRange: boolean): string =>
   inRange ? 'W zakresie — pozycja zarabia' : 'POZA zakresem — pozycja nie nalicza opłat';
 
-// Partia 17: fallback gdy state bota nie ma jeszcze `flatParams` (stary bot
-// sprzed paczki bot-side "cykl w state", 28.08 wieczór) — te same wartości co
-// bot/config.ts FLAT na dziś. Feature-detect: użyte TYLKO gdy pole całkiem
-// nieobecne, nigdy nie nadpisuje żywych danych z /api/state.
-// UWAGA jednostki: enterGap/exitGap to UŁAMKI (0.02 = 2%), tak jak surowe
-// bot/config.ts FLAT — zweryfikowane wprost w bot/observer.ts (saveState:
-// `flatParams: FLAT`, bez przeliczenia). confirmH w godzinach.
-const DEFAULT_FLAT_PARAMS = { enterGap: 0.02, exitGap: 0.05, confirmH: 12 };
-
-/**
- * Linia CYKLU (Partia 17, TASKS-UI.md) na karcie pozycji produktowej —
- * `posture` przychodzi z bot.state.positions[].posture (feature-detect:
- * `null`/nieobecne = pula nie-produktowa, funkcja wtedy nic nie renderuje).
- */
-function renderCycleLine(
-  posture: 'wide' | 'narrow' | null | undefined,
-  poolLive: BotPoolLive | undefined,
-  widthPct: number | undefined,
-  flatParams: { enterGap: number; exitGap: number; confirmH: number },
-  now: number
-): React.ReactNode {
-  if (posture !== 'wide' && posture !== 'narrow') return null;
-  const enterPct = flatParams.enterGap * 100;
-  const exitPct = flatParams.exitGap * 100;
-  const gapAbs = typeof poolLive?.trendGapPct === 'number' ? Math.abs(poolLive.trendGapPct) : null;
-  const gapLabel = gapAbs !== null ? gapAbs.toFixed(1) : '—';
-
-  if (posture === 'narrow') {
-    return (
-      <div className="cockpit-cycle-line muted">
-        Cykl: WĄSKI k×σ (flat) · powrót do szerokiego przy |gap|&gt;{exitPct.toFixed(0)}% (teraz {gapLabel}%)
-      </div>
-    );
-  }
-
-  // posture === 'wide'
-  const widthLabel = typeof widthPct === 'number' ? `±${widthPct}%` : '';
-  let statusNode: React.ReactNode;
-  if (poolLive?.flatConfirmed) {
-    statusNode = <span className="cockpit-cycle-confirmed">✅ flat potwierdzony — propozycja zwężenia w kokpicie</span>;
-  } else if (poolLive?.flatSince) {
-    const flatSinceMs = Date.parse(poolLive.flatSince);
-    const remainingMs = flatParams.confirmH * 3600e3 - (now - flatSinceMs);
-    const sinceLabel = isFinite(flatSinceMs) ? new Date(flatSinceMs).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }) : '—';
-    statusNode = (
-      <span>
-        stabilizacja od {sinceLabel} — do propozycji zwężenia ~{remainingMs > 0 ? formatDuration(remainingMs) : 'lada moment'} (przy utrzymaniu |gap|&lt;{enterPct.toFixed(0)}%)
-      </span>
-    );
-  } else {
-    statusNode = (
-      <span>
-        czekam na stabilizację: |gap| {gapLabel}% (próg {enterPct.toFixed(0)}%)
-      </span>
-    );
-  }
-  return (
-    <div className="cockpit-cycle-line muted">
-      Cykl: SZEROKI {widthLabel} (idle) · {statusNode}
-    </div>
-  );
-}
+// PARTIA 20 pkt 2: renderCycleLine + DEFAULT_FLAT_PARAMS wyekstrahowane do
+// components/cycleLine.tsx (BotTelemetry.tsx potrzebuje tej samej logiki dla
+// kolumny "Doradca" pul produktowych — zero duplikacji jednostek flatParams).
 
 /**
  * Od kiedy pozycja jest NIEPRZERWANIE poza zakresem — wyliczane z próbek
@@ -206,7 +148,11 @@ interface HedgeModalState {
 
 const MorningCockpit: FC<Props> = ({ bot }) => {
   const { address } = useAccount();
-  const portfolio = usePortfolio();
+  // PARTIA 20 pkt 1: bot przekazany do usePortfolio, żeby pozycje w pulach
+  // ŚLEDZONYCH przez bota dostały gotową sugestię z bot.state.pools[]
+  // zamiast własnej sygmy UI (feature-detect po findBotPoolByAddress, wewnątrz
+  // usePortfolio.ts — zero nowych requestów, dane już są w useBotApi).
+  const portfolio = usePortfolio(bot);
   const cockpitActions = useCockpitActions();
   const rebalanceExecution = useRebalanceExecution();
   const rotateExecution = useRotateExecution();

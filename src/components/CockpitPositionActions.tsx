@@ -387,7 +387,22 @@ export const RebalanceModal: FC<{
     ? [botSuggestion.tickLower, botSuggestion.tickUpper]
     : null;
   const advisorWidthPct = p.suggestion ? p.suggestion.widthPct : botSuggestion ? botSuggestion.widthPct : null;
-  const advisorLabel = p.suggestion ? 'Doradca' : botSuggestion ? 'Doradca (z bota)' : null;
+  // PARTIA 20 pkt 1: dla pul ŚLEDZONYCH przez bota `p.suggestion` jest już
+  // sourcowane z bot.state.pools[] przez usePortfolio.ts (suggestionSource
+  // === 'bot') — sama liczba jest tu tylko wyświetlana, nie liczona od nowa.
+  // Jedyny wypadek "ui-estimate" to pula spoza konfiguracji bota (nie ma jej
+  // w BOT_POOL_META) — dopisek "(estymata UI)" ostrzega, że to własne liczenie
+  // przeglądarki, nie to samo, co bot faktycznie gra. `suggestionSource` jest
+  // opcjonalne (RebalanceTarget z resolveBotPool go nie niesie — target dla
+  // propozycji OPEN/ROTATE nie przechodzi przez usePortfolio).
+  const suggestionSource = (p as { suggestionSource?: 'bot' | 'ui-estimate' | null }).suggestionSource ?? null;
+  const advisorLabel = p.suggestion
+    ? suggestionSource === 'ui-estimate'
+      ? 'Doradca (estymata UI)'
+      : 'Doradca'
+    : botSuggestion
+    ? 'Doradca (z bota)'
+    : null;
 
   const [mode, setMode] = useState<'suggested' | 'custom'>(initialUsdRange ? 'custom' : advisorTicks ? 'suggested' : 'custom');
   const [amount0, setAmount0] = useState('');
