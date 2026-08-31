@@ -18,6 +18,37 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 31.08 — **SKAN WIDE GRUPA 1 GOTOWA (5 pul, pary
+  skorelowane/stabilne) — DWIE PRAWDZIWE WYGRANE, reszta trywialna**]
+  Brak gotowego zestawu do dowolnych szerokości — ad-hoc skrypt
+  (scratchpad, niecommitowany), logika okien/reżimów z walkforward.ts,
+  `passiveW(widths)` z listy CLI. UWAGA: cache tych pul ma tylko
+  ~378 dni (nie 720d) — 24 okna, 0 up/0 down (wszystkie flat, zgodnie
+  z oczekiwaniem dla par skorelowanych). `APRmed%` per-okno-annualizowane
+  bywa szumowe na krótkich oknach (widziałem -10% na wstETH mimo
+  vsHODL dodatniego) — traktuj jako orientacyjne, nie jako twardą liczbę.
+
+  | pula | najlepsza szer. | śr. vsHODL% | %wygr. | recent90 | werdykt |
+  |---|---|---|---|---|---|
+  | **mainnet-tbtc-wbtc-001** | ±1% | **+0.06** | **100%** | nie gorszy | ✅ **PRAWDZIWA WYGRANA** |
+  | mainnet-usdc-usdt-001 | ±1% | +0.03 | 100% | nie gorszy | ✅ ale APR max ~0.26%/r — trywialne |
+  | arbitrum-usdc-usdt-001 | ±1% | +0.03 | 100% | nie gorszy | ✅ ale APR max ~0.26%/r — trywialne |
+  | mainnet-dai-usdt-001 | ±1% | +0.03 | 100% | nie gorszy | ✅ ale APR max ~0.38%/r — trywialne |
+  | mainnet-wsteth-weth-001 | ±1% | +0.05 | **54%** | GORSZY (25%) | ❌ FAIL — dokładnie ostrzeżenie o dryfie ~3-4%/r, kryterium nie przechodzi |
+
+  **NAJWAŻNIEJSZE: tBTC/WBTC (0.01% tier, mainnet) jest jedyną pulą
+  w tej grupie z REALNYM sygnałem** — 100% win-rate, dodatnia
+  średnia na wszystkich szerokościach, recent90 trzyma się global.
+  To BTC-BTC (pegged), niska zmienność ale i tak stabilny dodatni
+  edge — kandydat wart bliższego spojrzenia (fullperiod dla ilustracji
+  $, jeśli chcesz). Stable-stable (USDC/USDT ×2, DAI/USDT) przechodzą
+  formalnie kryterium %wygr., ale APR netto jest ułamkiem procenta —
+  zgodnie z Twoim ostrzeżeniem, ekonomicznie nieistotne. wstETH/WETH
+  FAILuje dokładnie tak, jak przewidziałeś (dryf w górę psuje wąskie
+  pasma, recent90 wyraźnie gorszy niż global).
+
+  Przechodzę do Grupy 2 (pary zmienne, szerokości 20-70%).
+
 (COMPARE_HL_D odebrane przez Fable 31.08 ~przegląd — werdykt: kotwica
 BEZ ZMIAN [HL7d]; HL5d realny tylko na cbBTC, na base-030 szum +13
 epizodów-sierot z ujemnym EV; a ΣEV liczy flatwindows bez IL, więc to
