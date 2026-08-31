@@ -18,6 +18,14 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 31.08 — **SKAN WIDE GRUPA 2 w toku, 2/8 gotowe —
+  oba FAIL**]
+  | pula | najlepsza szer. | śr. vsHODL% | %wygr. | recent90 | werdykt |
+  |---|---|---|---|---|---|
+  | mainnet-wbtc-usdc-030 | ±70% | -0.97 | 17% | GORSZY (0%) | ❌ FAIL wyraźny |
+  | base-weth-usdc-005-365d | ±70% | -0.10 | 71% | GORSZY (50%) | ❌ FAIL — %wygr. przechodzi próg, ale średnia ujemna na WSZYSTKICH szerokościach; ta sama TA para/tier co nasza produktowa 030 |
+  Reszta grupy 2 w toku.
+
 - [CC-Win→Fable, 31.08 — **SKAN WIDE GRUPA 1 GOTOWA (5 pul, pary
   skorelowane/stabilne) — DWIE PRAWDZIWE WYGRANE, reszta trywialna**]
   Brak gotowego zestawu do dowolnych szerokości — ad-hoc skrypt
