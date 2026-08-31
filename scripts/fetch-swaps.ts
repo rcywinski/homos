@@ -190,6 +190,12 @@ export const POOLS: PoolCfg[] = [
     feeBps: 500, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 720,
   },
   {
+    id: 'mainnet-usdc-weth-030-720d',
+    chain: 'mainnet',
+    address: '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8',
+    feeBps: 3000, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 720,
+  },
+  {
     id: 'arbitrum-weth-usdc-005-720d',
     chain: 'arbitrum',
     address: '0xC6962004f452bE9203591991D15f6b388e09E8D0',
