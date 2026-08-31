@@ -110,6 +110,35 @@ ZLECENIE dla CC-Win (skrzynka @CC-Win): walkforward idle-width
 + recent90 — rozstrzygnięcie, czy maksimum ±80% na cbBTC to sygnał
 czy artefakt timingu; komplet na przegląd 31.08.
 
+~11:xx — **WALKFORWARD IDLE-WIDTH ODEBRANY (CC-Win, obie pule 720d,
+ekspresowo) — WERDYKT: maksimum z fullperiodu to ARTEFAKT, produktowe
+±40/±50 ZOSTAJĄ.** Kryterium podane z góry („±80% realne tylko jeśli
+bije ±40% na win-rate I średniej") nie jest spełnione: win-rate
+IDENTYCZNE na wszystkich szerokościach (cbBTC 63%, base-030 57–60%
+— to samo okno wygrywa/przegrywa niezależnie od pasma), a przewaga
+na średniej to fragment gładkiej monotoniczności „szerzej = bliżej
+HODL" na całym zakresie 30–150%, nie cecha ±80%/±40%. Brak
+wewnętrznego maksimum na obu pulach. Trzecia iteracja tej samej
+lekcji w dwa dni (zwężanie → no-swap → idle-width): pojedyncza data
+wejścia schlebia, bramka wielookienna prostuje. Skrzynka @CC-Win
+wyczyszczona (decyzja Rafała), zostało jedno żywe zlecenie
+(COMPARE_HL_D na 31.08 rano); pełne tabele w gicie (bae4e17, c5de722).
+DWA WNIOSKI SZERSZE — NA AGENDĘ PRZEGLĄDU 31.08, ponad strojenie:
+(1) **Żadna szerokość idle nie ma dodatniej średniej vsHODL na
+walkforwardzie** (cbBTC −0.46…−0.15, base-030 −1.23…−0.22; żadna nie
+przechodzi bramki %wygr.≥65). Szeroki pasywny LP to nie alfa, tylko
+minimalizacja straty do HODL przy zbieraniu fee — wzmacnia sobotni
+wniosek „hybryda = HODL z yieldem" i pytanie nadrzędne o sens
+detektora flatu.
+(2) **Fullperiod i walkforward nie zgadzają się nawet co do ZNAKU
+dla tych samych strategii pasywnych** (fullperiod: +$298…+$1361
+vsHODL; walkforward: średnia ujemna wszędzie). Pytanie metodologiczne
+na 31.08: które narzędzie bramkuje decyzje o posturze idle — dziś
+odpowiedź zależy od tego, którym się spojrzy. (Hipoteza robocza do
+sprawdzenia: fullperiod składa fee procentem przez 720d i liczy jedną
+ścieżkę, okna 30d obcinają kumulację — ale to trzeba POLICZYĆ, nie
+przyjąć.)
+
 
 ### 2026-08-29 ~rano — BRIEF DZIEŃ 2 + PACZKA „RAPORT/TELEGRAM" (Fable + Rafał)
 BRIEF z plików (raport 07:30 + HANDOFF; bez ciągnięcia /api/state przez
