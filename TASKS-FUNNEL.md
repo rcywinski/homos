@@ -101,3 +101,58 @@ Semantyka wprost od Rafała 24.08: obecna etykieta sugerowała, że
 
 Auto-edycja BOT_POOLS, auto-OPEN, retest cykliczny, pule spoza
 ETH/BTC/stable, drugi harmonogram. Wszystko przez decyzję człowieka.
+
+## 2. PRZEBUDOWA NA METRYKĘ WIDE — „LEJEK v2" (spec Fable, 31.08; decyzja Rafała na przeglądzie)
+
+> Kontekst: pilot skanu wide 31.08 (13 pul, CC-Win) — klasa ETH/stable
+> przegrywa z HODL na KAŻDEJ szerokości na 7 rynkach; jedyny realny
+> sygnał: tBTC/WBTC (BTC-BTC pegged). Dzisiejszy lejek bramkuje
+> strategią v1.2, której nie gramy, i wchodzi tylko z top10 APY —
+> podwójnie ślepy. Cel v2: szeroki przegląd POD PRODUKT (pasywny wide /
+> klasy pegged), nie pod headline APY. Decyzja o wejściu ZOSTAJE ręczna.
+> WYZWALACZ WDROŻENIA: po odebraniu follow-upu tBTC/WBTC od CC-Win
+> (pojemność/APR) — jego wynik może skorygować progi Piętra 1.
+
+### Piętro 1 — SCORING CAŁEGO UNIWERSUM (tani, bez swap-cache, codziennie)
+- Wejście: pełne universe.json (DefiLlama) + dzienne serie cen tokenów
+  (istniejące źródła; dla par bez naszej serii — kurs z DefiLlama).
+- Filtry higieny: nasze sieci (mainnet/Base/Arbitrum/Optimism),
+  TVL ≥ $3M, wiek ≥ 90d, wolumen 7d > 0.
+- KLASYFIKACJA PARY (kluczowa zmiana vs v1): `pegged-btc` (tBTC/WBTC,
+  cbBTC/WBTC…), `pegged-eth/LST` (wstETH, weETH, cbETH…/WETH),
+  `stable-stable`, `eth-btc` (WETH/cbBTC itp.), `crypto-stable`,
+  `inne`. Słownik klas W KODZIE (jak SEED_VERDICTS — trackowany).
+- WIDE EDGE SCORE = fee_yield_rozcieńczony − drag_wariancji:
+  - fee_yield = fees7d/TVL (annualizowane) × wsp. rozcieńczenia
+    szerokości (nasza gęstość vs skoncentrowana reszta puli — policzyć
+    z matematyki v3 dla szerokości domyślnej klasy; KALIBRACJA: na
+    naszych żywych pozycjach znamy realne $/d, współczynnik ma je
+    odtwarzać ±30%);
+  - drag ≈ σ²/8 rocznie (σ z dziennych zamknięć, 90d) — dla klas
+    pegged/stable σ pary (ratio), nie aktywa!
+  - szerokość domyślna per klasa: pegged ±1/±2, LST ±2/±5 (uwaga dryf),
+    stable ±0.5/±1, eth-btc ±40, crypto-stable ±50.
+- Wyjście: ranking WSZYSTKICH przefiltrowanych pul (nie top10) z klasą,
+  score, składowymi — do data/, sekcja w morning-report (top 15 + pełny
+  CSV). Klasy `crypto-stable`/`eth-btc` w rankingu ZOSTAJĄ (uczciwość),
+  ale wiemy z pilota, że score wyjdzie im ujemny.
+### Piętro 2 — FETCH + SCREEN dla top ~50 score (nocami, porcjami)
+- fetch 365d (istniejący fetch-swaps-hypersync, cache `cand-*`),
+  NADREPREZENTACJA klas pegged (kwoty per klasa: pegged/LST/stable
+  min. 60% listy — score po APY je zaniża, a to tam pilot znalazł
+  jedyny sygnał).
+- screen: walkforward passiveW z szerokościami klasy (jak pilot CC-Win
+  31.08 — patrz HANDOFF/commity 3e95efe…6871e1f), kryterium pilota:
+  śr. vsHODL > 0 ∧ %wygr ≥ 60 ∧ recent90 nie gorszy; dla stable-stable
+  dodatkowo APR netto ≥ 2%/r (inaczej „trywialne — odrzuć").
+### Piętro 3 — BRAMKA dla finalistów (ręcznie zlecane, jak dziś)
+- fetch 720d + walkforward + recent90 + fullperiod (ilustracja $) —
+  dokładnie procedura z pilota; werdykt na przegląd, wejście = decyzja
+  Rafała. Uwaga mainnet: do werdyktu dołączać szacunek gazu operacji
+  (mainnet $5–20/mint vs Base ~1.5 centa — zmierzone 31.08).
+### Co WYPADA z v1
+- Walkforward v1.2 (krok 4 specu §1) — strategia porzucona; werdykty
+  historyczne w verdicts zostają z adnotacją algoVersion.
+- Kwalifikacja „top10 APY ≥3d persystencji" — zastąpiona Piętrem 1
+  (APY zostaje tylko wewnątrz fee_yield). Propozycje OPEN selektora
+  spoza BOT_POOLS: nadal możliwe, ale werdykt bierze się z Piętra 2/3.

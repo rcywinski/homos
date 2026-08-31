@@ -18,70 +18,15 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 31.08 — **SKAN WIDE GRUPA 2 w toku, 2/8 gotowe —
-  oba FAIL**]
-  | pula | najlepsza szer. | śr. vsHODL% | %wygr. | recent90 | werdykt |
-  |---|---|---|---|---|---|
-  | mainnet-wbtc-usdc-030 | ±70% | -0.97 | 17% | GORSZY (0%) | ❌ FAIL wyraźny |
-  | base-weth-usdc-005-365d | ±70% | -0.10 | 71% | GORSZY (50%) | ❌ FAIL — %wygr. przechodzi próg, ale średnia ujemna na WSZYSTKICH szerokościach; ta sama TA para/tier co nasza produktowa 030 |
-  | arbitrum-weth-usdc-005-365d | ±70% | -0.21 | 63% | GORSZY (50%) | ❌ FAIL — bardzo podobny wzorzec do base-005 (spodziewane, ta sama para) |
-  | arbitrum-weth-usdc-030-365d | ±70% | -0.05 | 67% | GORSZY (50%) | ❌ FAIL — najbliższa zeru z dotychczasowych, ale wciąż ujemna na WSZYSTKICH szerokościach |
-  | optimism-weth-usdc-030-365d | ±70% | **+0.03** | 71% | GORSZY (50%) | ⚠️ GRANICZNY — pierwsza dodatnia średnia w grupie 2, ale recent90 nadal słabszy (-0.42/50%) |
-  | mainnet-usdc-weth-001-365d | ±70% | -0.41 | 58% | GORSZY (50%) | ❌ FAIL — nie przechodzi nawet %wygr. (58%<60%) |
-  | mainnet-weth-usdt-001-365d | ±70% | -0.83 | 63% | GORSZY (50%) | ❌ FAIL — najgorsza średnia w grupie mimo %wygr. OK |
-  | mainnet-wtao-weth-100 (niski priorytet) | ±40% | +1.09 | 60% | GORSZY (50%) | ⚠️ NIEROZSTRZYGNIĘTE — cache ma tylko 102 dni = **5 okien**, za mało statystycznie (technicznie dodatnia, ale to nie jest sygnał) |
-
-  **SKAN WIDE KOMPLETNY (13/13 pul, obie grupy) — WNIOSEK KOŃCOWY:**
-  Jedyna prawdziwa wygrana w całym skanie: **mainnet-tbtc-wbtc-001**
-  (100% win-rate, dodatnia średnia na wszystkich szerokościach,
-  recent90 trzyma się global). Stable-stable (USDC/USDT×2, DAI/USDT)
-  formalnie przechodzą kryterium, ale APR netto ~0.3-0.4%/r —
-  ekonomicznie nieistotne. wstETH/WETH FAIL (dryf psuje wąskie pasma).
-  CAŁA grupa 2 (7 par WETH/USDC-USDT na 5 chainach/tierach) — **FAIL
-  jednolicie**: nawet gdy %wygr. przechodzi próg 60-71%, średnia
-  vsHODL jest ujemna na WSZYSTKICH szerokościach na WSZYSTKICH parach
-  poza jednym granicznym punktem (optimism-030 ±70%: +0.03, ledwo
-  dodatnie), a recent90 jest gorszy niż global WSZĘDZIE (identyczny
-  wzorzec — te pule dzielą tę samą serię ceny ETH, to nie są
-  niezależne próby). wTAO nierozstrzygnięte z braku danych.
-  **REKOMENDACJA (bez nalegania): pasywny szeroki LP na parach
-  zmiennych ETH/stable nie ma przewagi nad HODL na ŻADNYM z 7
-  sprawdzonych rynków/tierów — nasze produktowe ±40/±50 nie są
-  gorsze od alternatyw, są zgodne z ogólnym wzorcem "ETH/stable LP
-  przegrywa z HODL". Jedyny obiecujący kierunek z tego skanu to
-  BTC-BTC pegged (tBTC/WBTC) — inna klasa aktywów, warto rozważyć
-  jako osobny temat, nie rozszerzenie obecnego produktu.**
-
-- [CC-Win→Fable, 31.08 — **SKAN WIDE GRUPA 1 GOTOWA (5 pul, pary
-  skorelowane/stabilne) — DWIE PRAWDZIWE WYGRANE, reszta trywialna**]
-  Brak gotowego zestawu do dowolnych szerokości — ad-hoc skrypt
-  (scratchpad, niecommitowany), logika okien/reżimów z walkforward.ts,
-  `passiveW(widths)` z listy CLI. UWAGA: cache tych pul ma tylko
-  ~378 dni (nie 720d) — 24 okna, 0 up/0 down (wszystkie flat, zgodnie
-  z oczekiwaniem dla par skorelowanych). `APRmed%` per-okno-annualizowane
-  bywa szumowe na krótkich oknach (widziałem -10% na wstETH mimo
-  vsHODL dodatniego) — traktuj jako orientacyjne, nie jako twardą liczbę.
-
-  | pula | najlepsza szer. | śr. vsHODL% | %wygr. | recent90 | werdykt |
-  |---|---|---|---|---|---|
-  | **mainnet-tbtc-wbtc-001** | ±1% | **+0.06** | **100%** | nie gorszy | ✅ **PRAWDZIWA WYGRANA** |
-  | mainnet-usdc-usdt-001 | ±1% | +0.03 | 100% | nie gorszy | ✅ ale APR max ~0.26%/r — trywialne |
-  | arbitrum-usdc-usdt-001 | ±1% | +0.03 | 100% | nie gorszy | ✅ ale APR max ~0.26%/r — trywialne |
-  | mainnet-dai-usdt-001 | ±1% | +0.03 | 100% | nie gorszy | ✅ ale APR max ~0.38%/r — trywialne |
-  | mainnet-wsteth-weth-001 | ±1% | +0.05 | **54%** | GORSZY (25%) | ❌ FAIL — dokładnie ostrzeżenie o dryfie ~3-4%/r, kryterium nie przechodzi |
-
-  **NAJWAŻNIEJSZE: tBTC/WBTC (0.01% tier, mainnet) jest jedyną pulą
-  w tej grupie z REALNYM sygnałem** — 100% win-rate, dodatnia
-  średnia na wszystkich szerokościach, recent90 trzyma się global.
-  To BTC-BTC (pegged), niska zmienność ale i tak stabilny dodatni
-  edge — kandydat wart bliższego spojrzenia (fullperiod dla ilustracji
-  $, jeśli chcesz). Stable-stable (USDC/USDT ×2, DAI/USDT) przechodzą
-  formalnie kryterium %wygr., ale APR netto jest ułamkiem procenta —
-  zgodnie z Twoim ostrzeżeniem, ekonomicznie nieistotne. wstETH/WETH
-  FAILuje dokładnie tak, jak przewidziałeś (dryf w górę psuje wąskie
-  pasma, recent90 wyraźnie gorszy niż global).
-
-  Przechodzę do Grupy 2 (pary zmienne, szerokości 20-70%).
+(SKAN WIDE 13/13 ODEBRANY przez Fable 31.08 ~przedpołudnie — robota
+ekspresowa i wzorowa, z własnymi zastrzeżeniami metodologicznymi
+[wspólna seria ETH, krótkie cache grupy 1] dokładnie tam, gdzie
+trzeba. WERDYKT: ETH/stable — odwrócony znak nie istnieje, ±40/±50
+zgodne z klasą; tBTC/WBTC = jedyny realny sygnał (~0.7%/r w naturze
+BTC — osobny temat, nie rozszerzenie produktu; follow-up w Twojej
+skrzynce); stable-stable trywialne, wstETH dryf → backlog "pasmo
+świadome dryfu". Streszczenie w CONTEXT 31.08, pełne tabele w gicie
+3e95efe…6871e1f. Wpisy skasowane — higiena.)
 
 (COMPARE_HL_D odebrane przez Fable 31.08 ~przegląd — werdykt: kotwica
 BEZ ZMIAN [HL7d]; HL5d realny tylko na cbBTC, na base-030 szum +13
@@ -105,10 +50,75 @@ zwężania. Pełne tabele w gicie — a1c7d4a. Dzięki za czysty przebieg.)
 > PONIEDZIAŁEK 31.08 — agenda w RESEARCH-QUEUE E4/E6; punkt pierwszy:
 > czy detektor flatu jest nam potrzebny poza procedurą awaryjną.
 
-> [AKTUALIZACJA 30.08 ~10:xx, Fable-desktop: propozycja ~06:49 NIE przyszła — zegar flatu cbBTC wyzerował się w nocy, tyka od 02:59Z → potwierdzenie ~14:59Z dziś, jeśli gap (−1.9%) się utrzyma. Decyzja bez zmian: NIE podpisujemy, notujemy widthPct/costUsd/paybackDays. Raporty E6 odebrane i skasowane ze skrzynki — streszczenie w CONTEXT 30.08, pełne tabele w gicie.]
+> [AKTUALIZACJA 31.08 ~przegląd, Fable-desktop: **PRZEGLĄD ODBYTY —
+> komplet decyzji w CONTEXT 31.08.** Najważniejsze: dzisiejsze
+> FLAT_NARROW na cbBTC (~10:22Z) **PODPISUJEMY jako eksperyment
+> operacyjny** (decyzja Rafała, protokół w CONTEXT — n=1 nie testuje
+> strategii, falsyfikacja 720d w mocy); detektor→tryb pomiarowy
+> DOPIERO po zamknięciu epizodu (nie zabić FLAT_WIDEN!); bramka =
+> walkforward; E1 zamknięty (kotwica HL7d bez zmian); σ grid15 tylko
+> bot; lejek → przebudowa na metrykę wide (pilot: skan u CC-Win,
+> spec 3-piętrowy u Fable); transza 2 = snapshot sald przed wejściem.]
 
 
 ## @Sonnet (sesja UI, Cowork)
+(PARTIA 20 ODEBRANA przez Fable 31.08 — spot-check kodu OK [cycleLine.tsx
+wspólny, suggestionSource, sufiks 720d-30d, wycena "po kursie dziś"],
+tsc czysty, nagłówek w TASKS-UI ✅. Ekspresowo i czysto — dzięki.
+Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
+
+- [Sonnet→CC-Mac, 31.08 — **PARTIA 20 ZROBIONA, do commit+push**] Wszystkie
+  4 punkty ze spec (TASKS-UI.md PARTIA 20) wdrożone, tylko src/** dotknięte
+  (bot/**, backtest/**, scripts/** nietknięte). tsc czysty (poza preexisting
+  observer:43 viem/ox + node_modules/ox), `npm run build` przechodzi (tylko
+  preexisting size-limit/NODE_ENV warnings).
+  1. **σ z bota, nie z przeglądarki**: `src/hooks/usePortfolio.ts` przyjmuje
+     opcjonalny `bot?: UseBotApi`; nowe pole `PortfolioPosition.suggestionSource:
+     'bot' | 'ui-estimate' | null`. Dotychczasowe liczenie `suggestRange`/
+     `assessPosition` zostaje TYLKO jako fallback (tagowane `'ui-estimate'`);
+     nowy `useMemo` nadpisuje `suggestion`/`suggestionSource` na `'bot'`, gdy
+     `findBotPoolByAddress` trafi w pulę z żywym `bot.state.pools[].suggestion`
+     — świadomie POZA depsami efektu RPC, żeby polling bota nie odpalał
+     ponownych fetchy on-chain. `MorningCockpit.tsx` woła teraz
+     `usePortfolio(bot)`. `CockpitPositionActions.tsx` (RebalanceModal):
+     etykieta „Doradca" dla źródła bota, „Doradca (estymata UI)" dla
+     fallbacku. `BotTelemetry.tsx` kolumna „Sugerowany zakres $" już czytała
+     `pool.suggestion` wprost ze stanu bota — bez zmian.
+  2. **Kolumna „Doradca" → język cyklu dla pul produktowych**:
+     `renderCycleLine`/`DEFAULT_FLAT_PARAMS` wyciągnięte z MorningCockpit.tsx
+     do nowego `src/components/cycleLine.tsx` (jedno źródło prawdy dla
+     jednostek flatParams — zero duplikacji, zgodnie z zastrzeżeniem specu).
+     `BotTelemetry.tsx`: lista „Pozycje obserwowane przez bota" sprawdza
+     `p.posture` — pule produktowe (`wide`/`narrow`) dostają linię CYKLU
+     (postura + stan flatu) zamiast tekstu IN_RANGE_HOLD/REBALANCE; pule
+     nie-produktowe bez zmian. `styles.css`: `.morning-advice-row-wrap`.
+  3. **Tabela walkforward → 720d, ukrycie gdy brak pliku**:
+     `ObservationAnalysis.tsx`: `WALKFORWARD_NAME_SUFFIX` `-365d-45d` →
+     `-720d-30d` (zweryfikowane wprost w `backtest/results/` — pliki dla
+     base-030/arbitrum-005/cbBTC-005/mainnet-usdc-weth-005 istnieją).
+     `WalkforwardMiniTable` → `WalkforwardPoolBlock`, który przy 404/pustym
+     `summary` zwraca `null` w CAŁOŚCI (tytuł+tabela), nie notkę zastępczą —
+     zgodnie z „sekcję UKRYĆ". **Znalezisko (punkt 5 specu)**:
+     `mainnet-usdc-weth-030` i `base-weth-cbbtc-030` NIE MAJĄ pliku
+     `-720d-30d.json` w `backtest/results/` (tylko starsze `-30d`/`-365d-*`,
+     albo `cand-` dla tej drugiej) — ich sekcja walkforward po prostu nie
+     wyrenderuje się, dopóki ktoś nie przepuści tych pul przez
+     `WF_SET=product/hybrid` po stronie backtest/**. Nie obchodziłem tego —
+     poza zakresem tej sesji, zgłaszam do @Fable.
+  4. **Zamknięte pozycje: USD dla par krypto-krypto**:
+     `ClosedPositionsPanel.tsx`: nowy `usdPriceForSymbolToday(sym, chainId,
+     botPools)` (ta sama orientacja ceny co bot/observer.ts — `ethUsd` jako
+     cena ETH dla pul `quote:'USD'`, jako cena bazowego tokena dla pul
+     `quote:'WETH'` typu cbBTC/WETH). `ClosedPositionCard` liczy
+     `netUsdBotToday` z `in0/in1/out0/out1` × ceny bota, TYLKO gdy ledgerowe
+     `inUsd`/`outUsd` oba `null`. Render: „netto (bez gazu, wycena bota, po
+     kursie dziś): ±$X" + tooltip (kurs BIEŻĄCY z bota, nie historyczny —
+     ledger nie ma timestampu dopasowanego do kursu). Zamknięta #5887690
+     (cbBTC/WETH) pokazuje teraz wycenioną netto zamiast „—".
+  Weryfikacja przez czytanie kodu + tsc/build (bez portfela na żywo — jak
+  zawsze w tej sesji). Po commit+push: ping CC-Win (build+restart
+  homos-server).
+
 > (PARTIA 13 ODEBRANA przez Fable 27.08 — spot-check kodu OK, komplet
 > 6 punktów, nagłówek w TASKS-UI oznaczony ✅. Dzięki za szybką robotę.
 > Wpis o prognozie cbBTC niżej zostaje AKTUALNY do zrobienia.)
@@ -432,13 +442,48 @@ zwężania. Pełne tabele w gicie — a1c7d4a. Dzięki za czysty przebieg.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
-- [Fable→CC-Mac, 31.08 ~przegląd — DOCS, LEKKIE ale WYPCHNIJ OD RAZU]
-  Commit+push: `HANDOFF.md` (zlecenie „SKAN WIDE" dla CC-Win — czeka
-  z wolnymi mocami — + higiena skrzynki @Fable po COMPARE_HL_D).
-  Komunikat: "docs: zlecenie skanu wide istniejących cache (lejek →
-  metryka produktu)". NATYCHMIAST po pushu ping CC-Win. Reszta
-  dokumentów przeglądu (CONTEXT/RESEARCH-QUEUE/decyzje) przyjdzie
-  osobną paczką po decyzji o zwężaniu ~12:22.
+- [Fable→CC-Mac, 31.08 ~13:xx — **HOTFIX SEKWENCJI, NAJPILNIEJSZE
+  DZIŚ (Rafał stoi w środku eksperymentu zwężenia z podpisanymi
+  approvals)** — commit+push NATYCHMIAST, może iść RAZEM z paczką
+  DOCS niżej (jeden push)] Zmiany (Fable, tsc czysty poza preexisting
+  observer:43, `npm run build` przechodzi — 3 preexisting warnings):
+  - `src/hooks/useCockpitActions.ts` — `waitReceiptBestEffort`
+    EKSPORTOWANY + walidacja formatu hasha (wzorzec useHedgeExecution
+    20.08);
+  - `src/hooks/useRebalanceExecution.ts` — 3× surowe
+    `waitForTransactionReceipt` (approvals z planu, dociągnięcie
+    approve przed mintem, kroki 1..N) → `waitReceiptBestEffort`;
+  - `src/hooks/useRotateExecution.ts` — te same 3 podmiany.
+  TŁO (incydent ~12:3x, pierwsza bojowa sekwencja FLAT_NARROW
+  #5887690): błąd Rabby+publicnode "Invalid parameters" na
+  `eth_getTransactionReceipt` wysadzał sekwencję po KAŻDEJ wysłanej
+  tx — 3 kliknięcia = 3 approvals na łańcuchu (Success), ZERO kroków
+  właściwych, pozycja nietknięta, strat brak (~$0.002 gazu). Ta sama
+  klasa co FIX 20.08 i Partia 13 — sekwencje były trzecim,
+  niezałatanym miejscem.
+  Komunikat: "fix(ui): best-effort receipt wait in rebalance/rotate
+  sequences (Rabby+publicnode invalid-params, third occurrence)".
+  **NATYCHMIAST po pushu ping CC-Win (build+restart homos-server) —
+  Rafał czeka z dokończeniem zwężenia.**
+
+- [Fable→CC-Mac, 31.08 ~przegląd — DOCS PRZEGLĄDU, WYPCHNIJ OD RAZU]
+  Commit+push: `HANDOFF.md` (zlecenia + stan po przeglądzie + higiena),
+  `CONTEXT.md` (dziennik 31.08 — decyzje przeglądu, odbiór skanu 13/13,
+  incydent+hotfix, START EPIZODU #5908083), `RESEARCH-QUEUE.md` (E1
+  zamknięty, E4 przegląd odbyty, backlog v4-hooki), `TASKS-UI.md`
+  (PARTIA 20 spec + ✅), `TASKS-FUNNEL.md` (§2 LEJEK v2 spec) —
+  **ORAZ PARTIA 20 od Sonneta (odebrana przez Fable, spot-check OK):**
+  `src/components/{BotTelemetry,ClosedPositionsPanel,
+  CockpitPositionActions,MorningCockpit,ObservationAnalysis}.tsx`,
+  `src/hooks/usePortfolio.ts`, `src/styles.css` + NOWY
+  `src/components/cycleLine.tsx` — **commituj `git add -A`** (nowy
+  plik!). Partia 20 jako OSOBNY commit w tym samym pushu, komunikat:
+  "feat(ui): bot-sourced range suggestions + cycle language in telemetry
+  + closed-position USD fallback (partia 20)". Po pushu ping CC-Win:
+  build+restart homos-server (jednym deployem z resztą).
+  Komunikat: "docs: przegląd 31.08 — eksperyment zwężenia cbBTC,
+  bramka=walkforward, lejek → metryka wide (pilot CC-Win)".
+  NATYCHMIAST po pushu ping CC-Win — czeka z wolnymi mocami na skan.
 
 - [Fable→CC-Mac, 29.08 wieczór #2 — **PACZKA „SZEROKOŚĆ ZWĘŻENIA",
   PILNA (zegar cbBTC może potwierdzić flat dziś wieczorem)**]
@@ -864,6 +909,15 @@ zwężania. Pełne tabele w gicie — a1c7d4a. Dzięki za czysty przebieg.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 31.08 ~13:xx — **WDROŻENIE HOTFIXU SEKWENCJI,
+  PILNE (Rafał czeka w środku eksperymentu zwężenia)**] Po pullu
+  paczki "HOTFIX SEKWENCJI" od CC-Mac: `npm run build` +
+  `nssm restart homos-server` (frontend only, homos-bot BEZ restartu).
+  Sanity po wdrożeniu: kokpit się ładuje, karta propozycji FLAT_NARROW
+  na #5887690 dalej widoczna. Zgłoś "gotowe" — Rafał wtedy klika
+  [Zatwierdź] i dokańcza zwężenie (approvals już są na łańcuchu,
+  sekwencja pominie je po odczycie allowance).
+
 > (SKAN WIDE ZROBIONY 31.08 — WSZYSTKIE 13 pul, obie grupy — pełny
 > raport w skrzynce @Fable powyżej. WNIOSEK: jedyna prawdziwa wygrana
 > to mainnet-tbtc-wbtc-001 [BTC-BTC pegged]; cała grupa 2 (7 par ETH/
@@ -874,6 +928,33 @@ zwężania. Pełne tabele w gicie — a1c7d4a. Dzięki za czysty przebieg.)
 > — jak przy idle-width 30.08], więc nie ma tam JSON-ów do skanu —
 > pełne tabele tylko w HANDOFF/historii commitów, jeśli potrzebne
 > jako pliki, dam znać i domknę osobno.)
+
+- [Fable→CC-Win, 31.08 ~popołudnie — NIEPILNE, przy wolnych mocach]
+  Po wdrożeniu Partii 20 sekcja walkforward w "Analizie obserwacji"
+  czyta pliki `walkforward-<pula>-720d-30d.json` — brakuje ich dla
+  `mainnet-usdc-weth-030` (cache jest) i `base-weth-cbbtc-030`
+  (cache cand-* ma zepsuty 1. punkt — pomiń, jeśli fetch nie da rady).
+  Zlecenie: `WF_SET=product SIGMA_MODE=grid15 walkforward
+  mainnet-usdc-weth-030 30 15` + commit results — sekcja tej puli
+  w UI wtedy sama się pojawi. Bez kolizji z automatem.
+
+- [Fable→CC-Win, 31.08 ~przedpołudnie — **FOLLOW-UP tBTC/WBTC
+  (jedyna wygrana skanu; NIEPILNE, po oknie automatu)**] Dzięki za
+  ekspresowy komplet 13/13 — werdykt przyjąłem w całości, wpisy
+  skasowane ze skrzynki @Fable (higiena), streszczenie w CONTEXT
+  31.08. Jedno zlecenie domykające: **mainnet-tbtc-wbtc-001**:
+  1. `fullperiod $2500` na dostępnym cache, szerokości ±1/±2/±5 —
+     ilustracja dolarowa + ile razy pasmo wypadło z zakresu.
+  2. APR netto %/r per szerokość (jak przy stable-stable) —
+     do porównania z ~0.7%/r implikowanym z walkforwardu.
+  3. Z DefiLlama/universe: TVL i wolumen 7d/30d puli — pytanie
+     o POJEMNOŚĆ (czy $5–10k naszej skali nie rozwodni fee) i czy
+     peg tBTC miewał epizody odklejenia (zakres min/max kursu
+     w cache wystarczy).
+  KONTEKST: badanie klasy „BTC-BTC pegged" jako OSOBNEGO tematu
+  (pełna beta BTC, gaz mainnet $5–20/mint) — nie zmiana produktu.
+  Wynik krótko do @Fable; bez kolizji z automatem 05:30–08:25.
+  Plików do results nie potrzebuję — tabele w HANDOFF wystarczą.
 
 > **ODEBRANE (Fable 30.08 ~11:xx): oba walkforwardy idle-width —
 > robota ekspresowa i wzorowa, zwłaszcza zgłoszenie "obraz różni się

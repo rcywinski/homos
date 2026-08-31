@@ -1303,3 +1303,47 @@ liczenia — obie to sposób prezentacji, który wprowadza w błąd.
    wtedy czytelne jak dziś, a drobne kwoty przestają znikać.
    Uwaga: ta sama funkcja obsługuje paper trading (tam kwoty są duże,
    więc zachowanie się nie zmieni).
+
+## PARTIA 20 — sprzątanie po v1.2 w UI + spójność σ + USD w księdze ✅ wykonana (spec Fable 31.08, Sonnet 31.08, odebrana przez Fable — spot-check OK) ✅ wykonana (Sonnet 31.08; szczegóły w HANDOFF — brak plików `-720d-30d.json` dla mainnet-usdc-weth-030/base-weth-cbbtc-030 zgłoszony osobno)
+
+> Kontekst decyzyjny (CONTEXT dziennik 31.08): bramka = walkforward;
+> produkt gra stałe szerokości (idle ±40/50, zwężenie ±5% — dziś pierwszy
+> bojowy epizod, pozycja #5908083), doradcza σ w przeglądarce NIE jest już
+> źródłem prawdy. Zakres: tylko src/** (twardy zakres z nagłówka pliku).
+
+1. **UI przestaje liczyć własną σ do sugestii zakresu.** Problem: „Doradca
+   ±X%" w Telemetrii/modalu liczy się w przeglądarce estymatorem swapowym
+   (`process.env` tam nie istnieje, więc SIGMA_MODE=grid15 bota NIE
+   obowiązuje w UI) — po 29.08 pokazuje inną szerokość niż bot. Fix tej
+   samej klasy co advisorK (28.08): wszędzie, gdzie UI pokazuje sugestię
+   zakresu dla pul ŚLEDZONYCH przez bota, czytać gotowe
+   `bot.state.pools[].suggestion` (feature-detect po dopasowaniu
+   findBotPoolByAddress); własne liczenie zostaje TYLKO jako fallback dla
+   pul spoza bota, z dopiskiem „(estymata UI)". Zero nowych requestów —
+   suggestion już jest w /api/state.
+2. **Kolumna „Doradca" w Telemetrii mówi językiem v1.2** (IN_RANGE_HOLD/
+   REBALANCE) — dla pul produktowych zastąpić ją stanem CYKLU: postura
+   (SZEROKI ±N% / WĄSKI ±5%) + stan flatu (poza progiem / zegar od HH:MM /
+   FLAT ✅) — te same źródła co linia CYKLU z Partii 17 (reużyć
+   renderCycleLine albo wyciągnąć wspólny helper, nie duplikować logiki
+   jednostek flatParams!). Pule nie-produktowe: zostaje po staremu.
+3. **Tabela walkforward w „Analizie obserwacji"** czyta pliki `-365d-45d`
+   ze strategiami v1.2, których nie gramy. Decyzja przeglądu: WYMIENIĆ na
+   przebiegi hybrydy 720d (WF_SET=product/hybrid) jeśli pliki są w
+   backtest/results — a jeśli dla danej puli ich nie ma, sekcję UKRYĆ
+   (nie pokazywać werdyktów strategii porzuconej). Feature-detect po
+   nazwach plików, bez hardkodowania listy pul.
+4. **„Zamknięte pozycje": USD „—" dla par krypto-krypto** (dzisiejszy
+   przykład: zamknięta #5887690 ma netto „— (brak wyceny obu nóg)").
+   Fix tej samej klasy co Partia 15: fallback wyceny przez kurs
+   referencyjny bota (usdRefPoolId / wycena z bot.state) dla nóg bez
+   pary dolarowej + dopisek „(wycena bota)" i tooltip jak na kartach.
+   Jeśli ledger nie daje timestampów zgodnych z dostępnym kursem —
+   wycenić po kursie BIEŻĄCYM z jawnym dopiskiem „po kursie dziś", nie
+   udawać wyceny historycznej.
+5. Zero zmian w bot/**, backtest/**, scripts/** — jeśli czegoś brakuje w
+   state (np. suggestion dla którejś puli), opisz w HANDOFF @Fable
+   zamiast obchodzić.
+   WERYFIKACJA: tsc + build + porównanie „Doradca ±X%" z
+   `state.pools[].suggestion` na żywym kokpicie (liczby mają być
+   IDENTYCZNE); zamknięta #5887690 ma pokazać netto w USD z dopiskiem.

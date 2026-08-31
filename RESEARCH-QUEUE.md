@@ -468,6 +468,22 @@
 
 ## H. POMYSŁY NA PRZYSZŁE MODUŁY (backlog pomysłów — nie w budowie)
 
+- [ ] **UNISWAP v4 — INWENTARYZACJA HOOKÓW („może to zrobimy", Rafał
+  31.08)**. Kontekst: skan wide 31.08 pokazał, że na zwykłych pulach
+  ETH/stable LP przegrywa z HODL wszędzie — mechanizm (adverse
+  selection arbitrażu) siedzi w konstrukcji AMM, więc v4 z pulami
+  vanilla NIC nie zmienia. JEDYNA strukturalna nadzieja: hooki
+  **dynamicznych opłat** (fee rośnie przy zmienności → płacą
+  arbitrażyści) i konstrukcje przechwytujące zysk arbitrażu dla LP.
+  KROK 1 (tani, zanim dotkniemy kodu): inwentaryzacja — które pule
+  v4 dla naszych par (ETH/USDC, cbBTC/WETH, klasy pegged) mają
+  REALNY wolumen/TVL, jakie hooki, fee/TVL na tle naszych v3;
+  świeże dane (DefiLlama/explorer), nie pamięć modelu. Zastrzeżenia:
+  wyższe fee może wypychać wolumen; cały nasz warsztat
+  (fetch/backtest/pozycje) jest v3-only — pełne badanie = duży koszt,
+  więc najpierw dowód, że jest czego szukać. Łączy się ze scoringiem
+  lejka (v4-z-hookami jako osobna klasa pul).
+
 - [ ] **SQLITE DLA LOGÓW/PAPER (pomysł Rafała 18.08)** — SCHEMAT
   ZAPROJEKTOWANY: **DB-SCHEMA.md** (zasady rozszerzalności: migracje
   numerowane, raw-bigint jako TEXT, JSON1 na płynne ładunki, słowniki
@@ -583,7 +599,7 @@
 > szerokim zakresie + potencjalny uplift z flat-zwężenia (nigdy nie grany
 > na żywo). Badania mają służyć TEMU podejściu, nie szukać nowego.
 
-### E1. PRIORYTET: wycena FLAT_ENTER zanim pierwszy raz go podpiszemy (~2-3 tyg.)
+### E1. ZAMKNIĘTY 31.08 (przegląd): COMPARE_HL_D odebrany — kotwica bez zmian (HL7d); strojenie detektora pod zwężanie bezprzedmiotowe po falsyfikacji 720d. Kandydat HL5d-tylko-cbBTC w E5 na wypadek powrotu. Szczegóły: CONTEXT 31.08. (oryginalny tytuł: wycena FLAT_ENTER zanim pierwszy raz go podpiszemy)
 - [x] **Analiza flat-okien historycznych** — skrypt `backtest/flatwindows.ts`
   (Fable 27.08 wieczór), policzony na 365d (stale cache Maca):
   base-030: 14 epizodów/rok, mediana 3.9d, 22% czasu we flat;
@@ -671,6 +687,12 @@
   wcześniejsze „1.09" było pomyłką kalendarzową)**: przegląd PROPONUJ
   (zaplanowany 26.08) + pierwszy tydzień
   produktu (realized fees, gap-tracker, incydenty UI).
+  **✅ PRZEGLĄD ODBYTY 31.08 rano — komplet decyzji w CONTEXT
+  (dziennik 31.08): bramka=walkforward, detektor→pomiar (po epizodzie),
+  E1 zamknięty, σ tylko bot, EKSPERYMENT zwężenia cbBTC (podpisujemy
+  dzisiejsze FLAT_NARROW wg protokołu), lejek→przebudowa na metrykę
+  wide (pilot u CC-Win), transza 2 = snapshot sald. Punkt zwężania
+  domyka się po zamknięciu epizodu eksperymentalnego.**
   PACZKA DECYZYJNA parametrów FLAT_ENTER (komplet policzony 27-28.08,
   flatwindows 720d, ΣEV zwężania vs baseline ENTER=2%/24h/HL7d):
   | wariant | cbBTC-720d | base-030-720d | werdykt wstępny |

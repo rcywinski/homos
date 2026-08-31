@@ -81,6 +81,169 @@
 
 ## 4. Dziennik sesji
 
+### 2026-08-31 (Sesja UI, Sonnet) — Partia 20: sprzątanie po v1.2 w UI ✅
+Wykonana cała Partia 20 z TASKS-UI.md (spec Fable po przeglądzie 31.08).
+Zakres wyłącznie src/**, bot/**/backtest/**/scripts/** nietknięte. Szczegóły
+plik-po-pliku w HANDOFF.md (Sonnet→CC-Mac). Skrót: (1) sugestia zakresu
+czytana z `bot.state.pools[].suggestion` zamiast liczona w przeglądarce
+(usePortfolio.ts, feature-detect przez findBotPoolByAddress; własne liczenie
+zostaje jako fallback „(estymata UI)"); (2) kolumna „Doradca" w Telemetrii dla
+pul produktowych mówi teraz językiem cyklu (postura+flat) przez wspólny
+`renderCycleLine` wyekstrahowany do nowego `cycleLine.tsx`; (3) tabela
+walkforward w Analizie obserwacji czyta pliki `-720d-30d` zamiast `-365d-45d`,
+a gdy pliku brak — sekcja się chowa (znalezisko: brakuje go dla
+mainnet-usdc-weth-030 i base-weth-cbbtc-030, zgłoszone do @Fable/backtest);
+(4) zamknięte pozycje krypto-krypto (np. #5887690) dostają netto USD z
+wyceny bota „po kursie dziś" zamiast „—". tsc/build czyste poza preexisting
+observer:43.
+
+### 2026-08-31 ~przegląd (Fable-desktop + Rafał) — przegląd poranny + DECYZJA: eksperyment zwężenia
+BRIEF: automat czysty (porażki BRAK), obie nogi in-range, $5,698.99 /
+vsHODL −$4.98; bilans transzy $5,924.73 vs 6 092 → −$167.27 (−2.75%;
+beta −$158.38, koszty wejścia stałe −$8.58 — bez dryfu); tempo fee
+$1.15/d (base-030) + $0.19/d (cbBTC) — powyżej projektowego; rotacja
+nieopłacalna (edge −32.7 p.p.), down:false 6/6. Zegar flatu cbBTC tyka
+od 30.08 22:22Z (pierwsza noc BEZ resetu po trzech „tańcach na progu")
+→ pierwsza w historii propozycja FLAT_NARROW ~10:22Z. OPEN selektora
+na USDC-CBBTC 005 (pula spoza konfiguracji, siostra 030 ma FAIL) — do
+odrzucenia.
+DECYZJE PRZEGLĄDU (Rafał):
+(1) **Bramka metodologiczna: walkforward wielookienny** (720d+recent90)
+bramkuje decyzje o posturze; fullperiod = ilustracja dolarowa jednej
+ścieżki. Hipoteza o źródle rozjazdu znaków (kumulacja fee vs okna 30d)
+— do POLICZENIA, niepilne.
+(2) **Detektor flatu → docelowo tryb pomiarowy** (liczy/loguje epizody,
+nie emituje propozycji). Wdrożenie WSTRZYMANE do zamknięcia epizodu
+eksperymentalnego (pkt 5) — inaczej zabijemy sygnał FLAT_WIDEN.
+(3) **COMPARE_HL_D odebrany** (CC-Win, świeże 720d): kotwica BEZ ZMIAN
+(HL7d). HL5d realny tylko na cbBTC (mediana +13.1h, wcześniej w 26/31),
+na base-030 szum (+1.4h) plus 13 epizodów-sierot z ujemnym EV; całe
+ΣEV z flatwindows liczone bez IL = ilustracja, nie dolary. E1
+ZAMKNIĘTY; kandydat HL5d-tylko-cbBTC odnotowany na wypadek powrotu
+zwężania (E5).
+(4) **σ grid15: zostaje tylko homos-bot** — bez ALGO_VERSION i retestu
+lejka strategią v1.2, której nie gramy.
+(5) **EKSPERYMENT ZWĘŻENIA (decyzja Rafała, przy świadomości ujemnego
+EV z bramki 720d): dzisiejsze FLAT_NARROW na cbBTC PODPISUJEMY.**
+Cel OPERACYJNY, nie strategiczny: pierwszy przebieg całej maszynerii
+live (propozycja→podpis→wykonanie→FLAT_WIDEN→powrót), kalibracja
+realnych costUsd/paybackDays vs model. n=1 NICZEGO nie dowodzi o EV —
+werdykt strategiczny o zwężaniu dopiero po zamknięciu epizodu
+(kierunkowo: falsyfikacja 720d w mocy). Ekonomia ex-ante ($2,269,
+±5%): fee ekstra ~$8–12 przy medianie epizodu 7.7d (zagęszczenie ~8×),
+koszty rundy tam-i-z-powrotem ~$3–6, IL przy wypadnięciu z pasma
+~$25–30 (model 720d: ~$29/rebalans przy tej skali); zakres wyniku
+−$40…+$10. PROTOKÓŁ: liczby propozycji spisane PRZED podpisem; tylko
+cbBTC, tylko ten epizod; FLAT_WIDEN podpisywany sprawnie w godzinach
+operacyjnych; pełny pomiar do dziennika i na przegląd 24.09.
+(6) **LEJEK/TOP10 → przebudowa na metrykę produktu** (decyzja Rafała:
+badać szeroko pod wide, nie po APY). Architektura 3-piętrowa:
+scoring CAŁEGO uniwersum (wide edge score = fee yield po rozcieńczeniu
+szerokością − drag wariancji σ²; z DefiLlama + dziennych cen, bez
+swap-cache) → fetch 365d dla top ~50 (z NADREPREZENTACJĄ klas
+skorelowanych: LST/ETH, wrappery BTC, stable-stable, ETH/BTC — scoring
+po APY je zaniża) + tani screen → bramka 720d walkforward+recent90 dla
+finalistów. Kod produkcyjny i UI DOPIERO po walidacji metryki (lekcja
+po v1.2: nie budować stron pod metrykę, która może nie przeżyć).
+PILOT zlecony CC-Win: skan wide 24 istniejących cache (skorelowane
+±1–10%, zmienne ±20–70%; kryterium śr. vsHODL>0 ∧ %wygr≥60 ∧ recent90
+nie gorszy).
+(7) **Bilans**: koszty wejścia −$8.58 z gwiazdką (pochodzenie ETH
+natywnego $16.54 nierozstrzygnięte — Rafał nie pamięta; alternatywa
+−$25.13); **transza 2 = snapshot sald przed pierwszym swapem**
+(standard od teraz).
+
+~12:2x — **EPIZOD EKSPERYMENTALNY WYSTARTOWAŁ.** Flat cbBTC
+POTWIERDZONY 10:22Z (pierwszy w historii — po trzech nocnych
+resetach zegara). Telegram doszedł (treść alertu wciąż mówi „k×σ" —
+stale string z 28.08 w observer.ts:631, sama propozycja liczy nową
+ścieżką; kosmetyka, zniknie z paczką detektor→pomiar). PIERWSZA
+PROPOZYCJA FLAT_NARROW, liczby spisane PRZED podpisem (protokół):
+zakres 73 992–81 610 cbBTC/WETH (środek 77 801) = **±4.9%** ✓ (nowa
+ścieżka productNarrowWidthPct, nie ±16% k×σ), **koszt $1.22**,
+**dodatkowe fee ~$0.23/d**, **payback ~5.4d**, powrót przy |gap|>5%.
+KALIBRACJA #1 (przed podpisem): fee-uplift ~$0.23/d vs naiwne ~$1.5/d
+(8× gęstość) — udział w wąskim pasmie NIE rośnie 8×, bo inni LP też
+się tam tłoczą; to liczba, której backtest nie dawał. UWAGA: payback
+5.4d nie zawiera kosztu powrotu (~$1–1.5) → realny próg rundy
+~10–11d przy medianie epizodu 7.7d — na medianowym epizodzie
+oczekiwane ~−$1–2, zgodnie z bramką. Rafał podpisuje (Zatwierdź→).
+
+~12:3x–13:xx — **INCYDENT WYKONANIA (znalezisko #2 eksperymentu) +
+HOTFIX.** Sekwencja [Zatwierdź] rebalansu przerywała się 3× z rzędu:
+błąd Rabby+publicnode "Invalid parameters" na
+`eth_getTransactionReceipt` — TA SAMA klasa co FIX 20.08
+(useHedgeExecution) i Partia 13 (approve/otwarcie), ale sekwencje
+useRebalanceExecution/useRotateExecution miały wciąż SUROWE
+`waitForTransactionReceipt`. Przebieg: każdy klik wysyłał jedną tx
+i padał na odczycie jej potwierdzenia → 3 kliknięcia = 3 approvals
+(wszystkie Success na Basescanie: swap-router 0.0026 cbBTC, NFPM
+0.5519 WETH, NFPM 0.0118 cbBTC), ZERO kroków właściwych, pozycja
+#5887690 nietknięta, strat brak (~$0.002 gazu). Diagnoza potwierdzona
+u źródła: komentarz FIX 20.08 w useHedgeExecution opisuje identyczny
+błąd. HOTFIX (Fable, tsc czysty, build przechodzi):
+`waitReceiptBestEffort` wyeksportowany z useCockpitActions
+(+walidacja formatu hasha), podmienione 3+3 surowe waity w
+useRebalanceExecution i useRotateExecution. Progress kroków zapisuje
+się teraz także bez receiptu (tx wysłana = nie wysyłamy jej drugi
+raz). U CC-Mac paczka HOTFIX (pilna), u CC-Win zlecenie
+build+restart homos-server. Eksperyment WSTRZYMANY do wdrożenia —
+approvals na łańcuchu czekają, sekwencja po hotfixie pominie je
+z odczytu allowance i dokończy 3 kroki właściwe.
+LEKCJA SYSTEMOWA (do przeglądu 24.09): ten sam błąd łatany TRZECI
+raz w trzecim miejscu — wniosek: wrappery RPC/portfela powinny być
+w JEDNYM module (nie per-hook), inaczej każda nowa ścieżka wykonania
+odtwarza incydent na żywych pieniądzach.
+
+~13:0x — **EPIZOD WYSTARTOWAŁ: pierwsza bojowa transakcja produktu
+WYKONANA.** Po wdrożeniu hotfixu (CC-Win: build+restart) sekwencja
+przeszła na czysto za jednym [Zatwierdź]: approve 0.0119 cbBTC →
+multicall decrease+collect (+0.4696 WETH +0.0144 cbBTC do portfela)
+→ exactInputSingle 0.0026 cbBTC→0.0825 WETH → approve 0.5522 WETH +
+approve 0.0119 cbBTC (dociągnięcie) → **mint #5908083** (cbBTC/WETH
+0.05%, zakres 0.029992–0.033080 = ±4.9%, cena ~1% pod środkiem,
+in-range). Stara pozycja #5887690 zamknięta.
+KALIBRACJA #2: gaz CAŁEJ operacji (6 tx, z wcześniejszymi 3 approvals
+9 tx) ≈ **1.5–2 centy** — szacunek costUsd $1.22 to niemal w całości
+fee swapu + poślizg, nie gaz. Baza pomiaru epizodu: fee-uplift do
+pobicia $0.23/d, próg opłacalności rundy ~10–11d (z powrotem),
+mediana epizodów 7.7d. DYSCYPLINA: FLAT_WIDEN przy |gap|>5%
+podpisujemy niezwłocznie (godziny operacyjne) — przetrzymanie
+wąskiej pozycji poza pasmem to główne ryzyko rundy.
+Do weryfikacji po cyklu bota: wycena #5908083 w state, CYKL „WĄSKI",
+auto-sprzątnięcie propozycji FLAT_NARROW po podpisie.
+PO EPIZODZIE do zrobienia: paczka „detektor→pomiar", Partia 20 UI
+(suggestion ze state zamiast własnej σ, kolumna Doradca→postura+cykl,
+tabela walkforward → hybryda 720d albo wycięcie), spec lejka (pkt 6).
+
+~przedpołudnie — **PILOT SKANU WIDE ODEBRANY (CC-Win, 13/13 pul,
+ekspresowo — commity 3e95efe…6871e1f). WYNIK GŁÓWNIE NEGATYWNY,
+ale rozstrzygający:**
+(1) **ETH/stable: odwrócony znak NIE istnieje.** 7 rynków (5 chainów,
+3 tiery), średnia vsHODL ujemna na KAŻDEJ szerokości 20–70%; jedyny
+dodatni punkt (optimism-030 ±70%: +0.03) = szum z gorszym recent90.
+Zastrzeżenie CC-Win (słuszne): wspólna seria ceny ETH — jedna próba
+w 7 kostiumach, nie 7 prób. WNIOSEK: nasze ±40/±50 zgodne z klasą,
+nie źle dobrane; wzmacnia pytanie nadrzędne na 24.09 (wartość
+produktu = HODL+yield−drag, nie alfa).
+(2) **tBTC/WBTC 0.01% mainnet — jedyny realny sygnał** (100% wygr.,
+dodatnia średnia na wszystkich szerokościach, recent90 trzyma):
++0.06%/okno ≈ ~0.7%/r przewagi nad HODL W NATURZE BTC. Zimna ocena:
+„lokata na BTC" — wymaga CHCIEĆ betę BTC (nasza transza jest z USDC
+— to inny produkt), a gaz mainnet ($5–20/mint = 0.1–0.3% pozycji)
+zjada miesiące przewagi. OSOBNY TEMAT badawczy, nie rozszerzenie
+produktu. Follow-up zlecony (fullperiod $ + APR netto + realia puli).
+(3) Stable-stable (USDC/USDT ×2, DAI/USDT): formalnie przechodzą,
+APR ~0.3–0.4%/r — ekonomicznie nieistotne, temat zamknięty.
+(4) **wstETH/WETH FAIL przez dryf** (~3–4%/r w górę psuje symetryczne
+wąskie pasma; recent90 25%). Jedyny FAIL z naprawialną wadą
+konstrukcji → BACKLOG: „pasmo świadome dryfu" (środek wędruje
+z pegiem) dla klasy LST.
+(5) **Korekta specu lejka**: scoring uniwersum filtruje PO KLASIE
+pary (pegged BTC-BTC, LST z korektą dryfu, stable-stable z realnym
+wolumenem) — masowy skan ETH/stable to liczenie tej samej ujemnej
+odpowiedzi w kółko. Fetch top-50 celuje w klasy pegged.
+
 ### 2026-08-30 ~10:xx — Niedzielny brief (Fable-desktop) — odbiór E6, zegar flatu znów wyzerowany
 BRIEF z plików (raport 07:30 + HANDOFF + git log). Automat czysty
 (porażki BRAK), obie nogi in-range, bilans transzy $5,960.62 vs 6 092
