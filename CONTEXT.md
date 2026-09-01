@@ -81,6 +81,27 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-01 ~12:xx — DRYF KOSZTÓW WEJŚCIA ROZWIĄZANY (Fable): to rebalans, nie korupcja księgi + FIX w observerze
+Znalezisko z porannego raportu (−$8.58 → −$76.02 w linii „koszty
+wejścia (stałe)") PRZEŚLEDZONE DO KOŃCA. Mechanizm: bilans transzy
+liczy ruch rynku TYLKO po otwartych pozycjach (valueUsd − hodlUsd
+pierwszej próbki positions-history per tokenId). Rebalans eksperymentu
+31.08 (#5887690 → #5908083) usunął starą nogę z tej sumy — jej
+zrealizowana beta z 27–31.08 (≈ −$66) wypadła z „ruchu rynku"
+i wylądowała w resztowych „kosztach wejścia". Czyli: linia-strażnik
+zadziałała zgodnie z projektem (dryf = sygnał), ale sygnalizowała
+lukę KONSTRUKCJI, nie korupcję danych — każdy przyszły rebalans
+powtarzałby przesunięcie.
+FIX (bot/observer.ts, tsc czysty): marketPnl dolicza zamknięte
+pozycje produktowe (ostatnia próbka − pierwsza kotwica z historii;
+hedge odfiltrowany po pulach produktowych). Koszt swapa/poślizgu
+rundy ŚWIADOMIE zostaje w kosztach wejścia — to realny koszt.
+RACHUNEK KONTROLNY (przewidywanie po fixie, do sprawdzenia w
+jutrzejszym raporcie): ruch rynku ≈ −$94 (−28.05 − 66), koszty
+wejścia ≈ −$10 (−8.58 sprzed rebalansu − $1.22 swap rundy) —
+model domyka się z pierwszych zasad co do ~$1.
+Paczka u CC-Mac; CC-Win: pull + restart homos-bot.
+
 ### 2026-09-01 ~11:xx — LEJEK v2 PIĘTRO 1: wide-score ZAIMPLEMENTOWANY + ZWALIDOWANY (Fable)
 Nowy `scripts/wide-score.ts` (`npm run wide:score`) — scoring całego
 uniwersum pod produkt wg specu TASKS-FUNNEL §2. Model: score =

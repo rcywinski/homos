@@ -1141,10 +1141,22 @@ async function refreshPositions() {
     // dziś − wartość w CHWILI zakotwiczenia, czyli hodlUsd PIERWSZEJ próbki
     // positions-history (ta sama konwencja co „PnL od kotwicy" w raporcie/UI).
     const firstAnchorUsd = new Map<string, number>();
+    // FIX 01.09 (Fable, znalezisko z porannego raportu): rebalans
+    // #5887690→#5908083 sprawił, że „koszty wejścia (stałe)" skoczyły
+    // −$8.58→−$76.02. Mechanizm: marketPnl liczył TYLKO otwarte pozycje,
+    // więc zrealizowany ruch rynku ZAMKNIĘTEJ pozycji (−$66 bety starej
+    // nogi cbBTC z 27–31.08) wypadał z „ruchu rynku" i lądował w
+    // resztowych „kosztach wejścia". Naprawa: dla zamkniętych pozycji
+    // produktowych doliczamy (ostatnia próbka − pierwsza kotwica) z
+    // positions-history. Hedge (poolId gmx-*) odfiltrowany przez zbiór
+    // pul produktowych. Koszt swapa/poślizgu rundy NADAL zostaje w
+    // kosztach wejścia (to prawdziwy koszt, nie ruch rynku).
+    const lastSample = new Map<string, { poolId: string; valueUsd: number }>();
     try {
       for (const lineRaw of fs.readFileSync(POS_HIST_PATH, 'utf8').trimEnd().split('\n')) {
         const r = JSON.parse(lineRaw);
         if (!firstAnchorUsd.has(r.tokenId) && typeof r.hodlUsd === 'number') firstAnchorUsd.set(r.tokenId, r.hodlUsd);
+        if (typeof r.valueUsd === 'number') lastSample.set(r.tokenId, { poolId: r.poolId, valueUsd: r.valueUsd });
       }
     } catch { /* brak historii (świeży start) → marketPnl zostanie null */ }
     let marketPnl: number | null = null;
@@ -1152,6 +1164,15 @@ async function refreshPositions() {
       const anchorUsd = firstAnchorUsd.get(p.tokenId);
       if (anchorUsd === undefined) continue;
       marketPnl = (marketPnl ?? 0) + (p.valueUsd - anchorUsd);
+    }
+    // zamknięte pozycje produktowe (zrealizowany ruch rynku)
+    const productPoolIds = new Set(BOT_POOLS.filter((p) => p.productIdleWidthPct).map((p) => p.id));
+    const openIds = new Set(prodPositions.map((p) => p.tokenId));
+    for (const [id, rec] of Array.from(lastSample.entries())) {
+      if (openIds.has(id) || !productPoolIds.has(rec.poolId)) continue;
+      const anchorUsd = firstAnchorUsd.get(id);
+      if (anchorUsd === undefined) continue;
+      marketPnl = (marketPnl ?? 0) + (rec.valueUsd - anchorUsd);
     }
     const gasEthTotal = Object.values(txCosts).reduce((s, c) => s + c.gasEth, 0);
     const diffUsd = totalUsd === null ? null : +(totalUsd - TRANCHE.depositedUsd).toFixed(2);
