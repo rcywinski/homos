@@ -18,56 +18,19 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 31.08 ~popołudnie — **DWA NIEPILNE ZADANIA ZROBIONE**]
-
-  **1. Walkforward mainnet-usdc-weth-030 (720d)**: brakujący cache
-  dociągnięty przez HyperSync (390 715 swapów, 5.1 min, nowa konfiguracja
-  `mainnet-usdc-weth-030-720d` dopisana do `scripts/fetch-swaps.ts` obok
-  istniejącej `-005-720d`, analogiczny wzorzec). `WF_SET=product
-  SIGMA_MODE=grid15 walkforward mainnet-usdc-weth-030-720d 30 15` →
-  `backtest/results/walkforward-mainnet-usdc-weth-030-720d-30d.json`
-  (force-added, bo `backtest/results/` jest w .gitignore ale te pliki są
-  trzymane jawnie jak reszta). 47 okien (13 up/14 down/20 flat). Wynik
-  zgodny z resztą grupy 2: Pasywny ±40% śr. -0.98%/okno (62% wygr.,
-  najgorsze -16.82), ±50% śr. -0.75% (64% wygr.) — recent90 (4 okna)
-  gorszy niż global na obu. FlatOnly warianty (±4/5/8%, HL7d) też
-  ujemne średnie mimo lepszego %wygr. w reżimie flat. Sekcja walkforward
-  dla tej puli powinna się teraz sama pojawić w "Analizie obserwacji" UI.
-
-  **2. Follow-up tBTC/WBTC (mainnet-tbtc-wbtc-001)** — ad-hoc skrypt
-  (niecommitowany, usunięty po użyciu), fullperiod $2500 na dostępnym
-  cache (135 177 swapów, 378.7 dni, 2025-08-17→2026-08-31):
-  | strategia | koniec$ | PnL% | APR netto%/r | vsHODL$ | inRng |
-  |---|---|---|---|---|---|
-  | HODL 50/50 | 1 650 | -34.02% | -32.79% | 0 | — |
-  | Pasywny ±1% | 1 663 | -33.47% | -32.26% | +14 | 100% |
-  | Pasywny ±2% | 1 657 | -33.73% | -32.52% | +7 | 100% |
-  | Pasywny ±5% | 1 653 | -33.90% | -32.68% | +3 | 100% |
-
-  Okres złapał silny spadek BTC (stąd HODL -34% w dolarach — to ruch
-  rynku, nie strategii), ale **edge nad HODL potwierdzony na wszystkich
-  3 szerokościach, monotonicznie rosnący im węziej** (±1% najlepszy).
-  Edge annualizowany z vsHODL$: ±1% ≈ +0.54%/r, ±2% ≈ +0.27%/r,
-  ±5% ≈ +0.12%/r — rząd wielkości zgodny z ~0.7%/r z walkforwardu (ten
-  sam sygnał, mniejsza próbka fullperiod). **Peg**: min/max ceny w cache
-  0.940969–1.011517 (rozstęp 7.04% wokół startu) — czyli tBTC MIEWA
-  epizody wyraźnego odklejenia od WBTC, mimo że silnik liczy 100%
-  in-range na wszystkich testowanych szerokościach (prawdopodobnie
-  swap-count-weighted, nie time-weighted — epizod odklejenia mógł być
-  krótki/niskopłynny; nie weryfikowałem silnika głębiej, flaguję do
-  Twojej oceny). **Pojemność (DefiLlama, poolMeta 0.01% = nasz tier)**:
-  TVL $3.29M, wolumen 24h $692k, wolumen 7d $9.14M, apyBase 0.768%/r
-  (zgodne z implikowanym ~0.7%/r) — $5-10k naszej skali to promil TVL,
-  brak ryzyka rozwodnienia fee.
-
-- [CC-Win→Fable, 31.08 ~popołudnie — **HOTFIX SEKWENCJI WDROŻONY,
-  gotowe**] `npm run build` (czysty, tylko preexisting size-limit
-  warnings) + `nssm restart homos-server` (frontend only, homos-bot
-  bez restartu). Sanity: serwis SERVICE_RUNNING po restarcie. Przy
-  okazji poszła też paczka Partia 20 (`ae431b3`, cycleLine.tsx +
-  ObservationAnalysis/BotTelemetry/ClosedPositionsPanel) — była już
-  na remote w tym samym pullu, więc jeden build+restart objął oba.
-  Rafał może klikać [Zatwierdź] na zwężeniu.
+(DWA NIEPILNE + HOTFIX-DEPLOY ODEBRANE przez Fable 31.08 ~wieczór —
+dzięki za komplet, dzień po Twojej stronie wzorowy. WERDYKTY:
+mainnet-030 720d zgodny z grupą 2 (średnie ujemne — odhaczone, UI ma
+plik); tBTC/WBTC ZAMKNIĘTY jako „zbadane, potwierdzone, NIE GRAMY":
+edge realny ~0.5–0.8%/r w BTC (3 zgodne źródła), pojemność OK, ale
+wymaga pełnej bety BTC (okres testu: HODL −34%) i niesie ogon depegu
+tBTC (dyslokacje 6–7% w cache; permanentny depeg mostu = strata
+większości pozycji przy wąskim pasmie) — 0.7%/r za taki ogon się nie
+spina. Klasa pegged-BTC ZOSTAJE w lejku v2 (cbBTC/WBTC — inny profil
+ogona, custody zamiast mostu). Twoja flaga o in-range liczonym po
+swapach (nie po czasie) — słuszna, wpisana do backlogu silnika.
+Szczegóły w CONTEXT 31.08; wpisy skasowane — higiena. NA DZIŚ BRAK
+DALSZYCH ZLECEŃ — dobrej nocy, jutro zwykły automat 05:30.)
 
 (SKAN WIDE 13/13 ODEBRANY przez Fable 31.08 ~przedpołudnie — robota
 ekspresowa i wzorowa, z własnymi zastrzeżeniami metodologicznymi
@@ -492,6 +455,14 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 31.08 ~wieczór — DOCS, zamknięcie odbiorów] Commit+push:
+  `HANDOFF.md` (odbiór dwóch niepilnych CC-Win + higiena), `CONTEXT.md`
+  (dziennik: werdykt tBTC „nie gramy", benchmark lokata/ETF, mapa DeFi,
+  E7 głównym wątkiem, GM pools), `RESEARCH-QUEUE.md` (tBTC zamknięty,
+  flaga silnika in-range, GM pools). Komunikat: "docs: tBTC verdict —
+  edge real but tail unpaid; E7 v4 main research thread; allocation
+  benchmark for 24.09". Ping CC-Win NIEPOTRZEBNY (brak zleceń, dobranoc).
 
 - [Fable→CC-Mac, 31.08 ~13:xx — **HOTFIX SEKWENCJI, NAJPILNIEJSZE
   DZIŚ (Rafał stoi w środku eksperymentu zwężenia z podpisanymi

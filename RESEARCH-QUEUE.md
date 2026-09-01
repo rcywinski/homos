@@ -521,6 +521,19 @@ odnośnik.)
 
 ## H. POMYSŁY NA PRZYSZŁE MODUŁY (backlog pomysłów — nie w budowie)
 
+- [✓ zbadane 31.08 — NIE GRAMY] **tBTC/WBTC (pegged-BTC)**: edge
+  potwierdzony (~0.5–0.8%/r w BTC; fullperiod+walkforward+apyBase
+  zgodne), pojemność OK ($3.3M TVL), ALE: pełna beta BTC (okres testu
+  HODL −34%) + ogon depegu tBTC (dyslokacje 6–7% w danych; permanentny
+  depeg mostu = utrata większości przy ±1%). 0.7%/r nie płaci za ogon.
+  Klasa pegged-BTC zostaje w lejku v2 — kandydat cbBTC/WBTC (custody
+  zamiast mostu). Pełne tabele: HANDOFF/git 0dbdf72, CONTEXT 31.08.
+- [ ] **SILNIK: in-range liczone po swapach, nie po czasie** (flaga
+  CC-Win 31.08 przy tBTC): epizody o małej liczbie swapów (depeg,
+  niska płynność) są niedoważone w metryce czasu-w-zakresie. Poprawka
+  time-weighted przy najbliższej pracy w backtest/** — nie zmienia
+  dotychczasowych werdyktów (tam decydowały średnie vsHODL).
+
 - [ ] **GM POOLS (GMX v2) — KLASA „DOM KASYNA"** (pytanie Rafała 31.08).
   Struktura: LP = kontrpartner traderów z dźwignią; zarabia fee+borrow+
   straty traderów, traci gdy traderzy wygrywają; wycena po ORAKLACH →

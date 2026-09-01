@@ -244,6 +244,32 @@ pary (pegged BTC-BTC, LST z korektą dryfu, stable-stable z realnym
 wolumenem) — masowy skan ETH/stable to liczenie tej samej ujemnej
 odpowiedzi w kółko. Fetch top-50 celuje w klasy pegged.
 
+~popołudnie/wieczór — ODBIÓR DWÓCH NIEPILNYCH od CC-Win (0dbdf72):
+(1) walkforward mainnet-030-720d — zgodny z grupą 2 (śr. ujemne obie
+szerokości, recent90 gorszy); sekcja w UI ma plik. (2) **tBTC/WBTC
+ZAMKNIĘTY: „zbadane, potwierdzone, NIE GRAMY"** — edge ~0.5–0.8%/r
+w BTC potwierdzony trzema źródłami (fullperiod ±1% +$14 vsHODL,
+walkforward, apyBase 0.77%), pojemność OK, ale pełna beta BTC (HODL
+−34% w okresie testu!) + OGON DEPEGU: kurs tBTC/WBTC w cache 0.941–
+1.012 (dyslokacje 6–7%) — wąskie pasmo w depegu = 100% w odklejającym
+się tokenie; permanentny depeg mostu = strata większości. 0.7%/r nie
+płaci za ten ogon. Klasa pegged-BTC zostaje w lejku v2 (kandydat
+cbBTC/WBTC — custody, nie most). Flaga CC-Win do silnika (in-range po
+swapach, nie po czasie) → backlog.
+DOKOŃCZENIE DNIA (rozmowy z Rafałem, popołudnie): (a) benchmark
+alokacyjny na 24.09 = lokata 4.5% PLN + ETF-y (długoterminowo 7–10%/r;
++40% w rok = beta, nie stopa) — produkt konkuruje z pytaniem „czy
+krypto w portfelu", nie z lokatą; (b) mapa źródeł zysku DeFi wg „kto
+płaci": lending stabli 4–5% (przegrywa z lokatą risk-adjusted),
+staking ~3% w ETH, LP ≈ HODL (zmierzone), delta-neutral 3–11% (na
+$6k zjadane przez koszty), boty detaliczne ≈ zero po kosztach;
+(c) decyzja Rafała: **E7 (v4/hooki) głównym wątkiem badawczym** —
+rekonesans zrobiony (TVL $3.4B, marketplace hooków, teza obrony LP
+realna; ⚠️ lekcja Bunni: flagowy hook zyskowności zhakowany $8.4M
+i zamknięty 10.2025 — ramy ryzyka obowiązkowe), plan 4-krokowy w E7;
+(d) GM pools (GMX v2) sklasyfikowane jako „dom kasyna" (bez LVR,
+z ogonem wygranych traderów) → backlog z planem testu bramką.
+
 ### 2026-08-30 ~10:xx — Niedzielny brief (Fable-desktop) — odbiór E6, zegar flatu znów wyzerowany
 BRIEF z plików (raport 07:30 + HANDOFF + git log). Automat czysty
 (porażki BRAK), obie nogi in-range, bilans transzy $5,960.62 vs 6 092
