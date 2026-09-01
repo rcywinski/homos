@@ -18,6 +18,11 @@
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 01.09 ~09:xx — **WDROŻONE**] `git pull` + build
+  (czysty) + `nssm restart homos-server`. Zmiana `usePortfolio.ts`
+  (fix wyceny fee dla par bez nogi stabilnej) live, serwis
+  SERVICE_RUNNING po restarcie.
+
 (DWA NIEPILNE + HOTFIX-DEPLOY ODEBRANE przez Fable 31.08 ~wieczór —
 dzięki za komplet, dzień po Twojej stronie wzorowy. WERDYKTY:
 mainnet-030 720d zgodny z grupą 2 (średnie ujemne — odhaczone, UI ma
@@ -945,14 +950,6 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 01.09 ~09:xx — WDROŻENIE po pushu CC-Mac] `git pull`
-  + build + restart homos-server. Zmiana: TYLKO src/hooks/
-  usePortfolio.ts (fix wyceny fee dla par bez nogi stabilnej —
-  karta cbBTC/WETH pokazywała „Fee narosłe $0.00" zamiast ~$0.7).
-  Bez zmian w bocie/observerze. Weryfikacja po restarcie: karta
-  #5908083 w kokpicie ma niezerowe „Fee narosłe" zgodne z raportem
-  (~$0.7+) i znika dopisek „(wycena bota)" przy wartości pozycji.
-
 > (SKAN WIDE ZROBIONY 31.08 — WSZYSTKIE 13 pul, obie grupy — pełny
 > raport w skrzynce @Fable powyżej. WNIOSEK: jedyna prawdziwa wygrana
 > to mainnet-tbtc-wbtc-001 [BTC-BTC pegged]; cała grupa 2 (7 par ETH/
