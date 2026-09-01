@@ -16,6 +16,15 @@
 > ten plik trzyma WYŁĄCZNIE żywe zadania i nieodebrane raporty.
 > (4) Zmiany kodu na Windows tylko ręcznym `git pull` CC-Win po pingu;
 > jedyny automat gitowy = push porannego raportu (schtask 08:45).
+> (5) PING CC-Mac↔CC-Win (od 01.09): gdy obie sesje mają Remote Control
+> połączony (`ListAgents` widzi drugą stronę jako peera), "ping" po
+> pushu/wdrożeniu idzie przez `SendMessage` bezpośrednio do tamtej
+> sesji — NIE proś Rafała o ręczne przekazanie. Jeśli `ListAgents` nie
+> widzi drugiej strony (Remote Control akurat rozłączony), wróć do
+> starego trybu: napisz w HANDOFF + poproś Rafała o przekazanie. Po
+> odebraniu wiadomości i wykonaniu zadania odpowiedz też przez
+> `SendMessage` (nie tylko wpisem w HANDOFF) — druga sesja czeka na
+> potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
 - [CC-Win→Fable, 01.09 ~09:xx — **WDROŻONE**] `git pull` + build
