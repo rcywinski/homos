@@ -191,6 +191,49 @@ const usdValueOf = (amount0: number, amount1: number, sym0: string, sym1: string
   return null;
 };
 
+/**
+ * FIX 01.09 (Fable): wycena przez KURS PULI dla par bez ścieżki w usdValueOf
+ * (np. cbBTC/WETH — brak nogi stabilnej). Objaw: karta kokpitu pokazywała
+ * „Fee narosłe $0.00" na wąskiej nodze eksperymentu (#5908083), podczas gdy
+ * bot i Uniswap widziały ~$0.7 — feesUsd robiło `?? 0` na null z usdValueOf.
+ * Nieznaną nogę sprowadzamy kursem puli (sqrtPriceX96) do nogi ETH/stabilnej,
+ * potem do USD. Naprawia też wartość pozycji (znika fallback „(wycena bota)").
+ * Uwaga: gałęzie ETH wymagają derivedEthUsd — wyprowadzanego z wcześniej
+ * przetworzonej puli stable/ETH (kolejność pętli, jak dotychczas).
+ */
+const usdValueViaPool = (
+  amount0: number,
+  amount1: number,
+  sym0: string,
+  sym1: string,
+  ethUsd: number | null,
+  sqrtPriceX96: bigint,
+  d0: number,
+  d1: number
+): number | null => {
+  const direct = usdValueOf(amount0, amount1, sym0, sym1, ethUsd);
+  if (direct !== null) return direct;
+  // Noga ETH + noga niewyceniana (cbBTC/WETH): drugą nogę przeliczamy kursem puli na ETH.
+  if (isEth(sym0) && ethUsd !== null) {
+    const p1InEth = humanPriceQuotePerBase(sqrtPriceX96, d0, d1, false); // ETH (token0) za 1 token1
+    return (amount0 + amount1 * p1InEth) * ethUsd;
+  }
+  if (isEth(sym1) && ethUsd !== null) {
+    const p0InEth = humanPriceQuotePerBase(sqrtPriceX96, d0, d1, true); // ETH (token1) za 1 token0
+    return (amount1 + amount0 * p0InEth) * ethUsd;
+  }
+  // Noga stabilna + noga niewyceniana (np. WBTC/USDC): kurs puli daje USD wprost.
+  if (isStable(sym0)) {
+    const p1InUsd = humanPriceQuotePerBase(sqrtPriceX96, d0, d1, false);
+    return amount0 + amount1 * p1InUsd;
+  }
+  if (isStable(sym1)) {
+    const p0InUsd = humanPriceQuotePerBase(sqrtPriceX96, d0, d1, true);
+    return amount1 + amount0 * p0InUsd;
+  }
+  return null;
+};
+
 export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
   const { address, isConnected } = useAccount();
   const clientMainnet = usePublicClient({ chainId: 1 });
@@ -325,7 +368,9 @@ export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
               }
             }
 
-            const valueUsd = tok0 && tok1 ? usdValueOf(amt0, amt1, sym0, sym1, derivedEthUsd) : null;
+            const valueUsd = tok0 && tok1
+              ? usdValueViaPool(amt0, amt1, sym0, sym1, derivedEthUsd, poolInfo.sqrtPriceX96, d0, d1)
+              : null;
 
             // Unclaimed fees — same static-collect trick as MyPositions.tsx.
             let feesUsd = 0;
@@ -346,7 +391,9 @@ export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
               feesOwed1Raw = owed1;
               feeAmount0 = Number(owed0) / 10 ** d0;
               feeAmount1 = Number(owed1) / 10 ** d1;
-              feesUsd = tok0 && tok1 ? usdValueOf(feeAmount0, feeAmount1, sym0, sym1, derivedEthUsd) ?? 0 : 0;
+              feesUsd = tok0 && tok1
+                ? usdValueViaPool(feeAmount0, feeAmount1, sym0, sym1, derivedEthUsd, poolInfo.sqrtPriceX96, d0, d1) ?? 0
+                : 0;
             } catch {
               // best-effort — leave feesUsd at 0 rather than fail the whole position
             }

@@ -464,6 +464,20 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   edge real but tail unpaid; E7 v4 main research thread; allocation
   benchmark for 24.09". Ping CC-Win NIEPOTRZEBNY (brak zleceń, dobranoc).
 
+- [Fable→CC-Mac, 01.09 ~09:xx — PACZKA „FIX FEE $0.00" + sprzątanie]
+  (1) NAJPIERW: `rm .git/index.lock` — martwy lock po nieudanym
+  `git stash` z sandboxa Fable (mount blokował unlink; żaden git nie
+  działa, plik 0 bajtów z 09:07). (2) Commit+push: `src/hooks/
+  usePortfolio.ts` (fix: fee narosłe $0.00 dla cbBTC/WETH — nowy
+  `usdValueViaPool`, wycena przez kurs puli dla par bez nogi
+  stabilnej; wartość pozycji + fee; szczegóły CONTEXT 01.09),
+  `CONTEXT.md` (dziennik: brief 1.09 + fix), `HANDOFF.md`,
+  `RESEARCH-QUEUE.md` (jeśli zmienione). Komunikat: "fix(ui): price
+  fees via pool rate for pairs without stable leg (cbBTC/WETH fee
+  showed $0.00)". Zweryfikowane u Fable: tsc src czysty, webpack
+  compiled successfully. (3) Ping CC-Win: pull + build + restart
+  homos-server (wpis w ich skrzynce).
+
 - [Fable→CC-Mac, 31.08 ~13:xx — **HOTFIX SEKWENCJI, NAJPILNIEJSZE
   DZIŚ (Rafał stoi w środku eksperymentu zwężenia z podpisanymi
   approvals)** — commit+push NATYCHMIAST, może iść RAZEM z paczką
@@ -931,6 +945,14 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 01.09 ~09:xx — WDROŻENIE po pushu CC-Mac] `git pull`
+  + build + restart homos-server. Zmiana: TYLKO src/hooks/
+  usePortfolio.ts (fix wyceny fee dla par bez nogi stabilnej —
+  karta cbBTC/WETH pokazywała „Fee narosłe $0.00" zamiast ~$0.7).
+  Bez zmian w bocie/observerze. Weryfikacja po restarcie: karta
+  #5908083 w kokpicie ma niezerowe „Fee narosłe" zgodne z raportem
+  (~$0.7+) i znika dopisek „(wycena bota)" przy wartości pozycji.
+
 > (SKAN WIDE ZROBIONY 31.08 — WSZYSTKIE 13 pul, obie grupy — pełny
 > raport w skrzynce @Fable powyżej. WNIOSEK: jedyna prawdziwa wygrana
 > to mainnet-tbtc-wbtc-001 [BTC-BTC pegged]; cała grupa 2 (7 par ETH/

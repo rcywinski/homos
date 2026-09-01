@@ -81,6 +81,40 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-01 ~09:xx — Brief poranny (Fable) + FIX: fee $0.00 na karcie cbBTC (wycena przez kurs puli)
+BRIEF (raport 07:30): automat czysty, propozycje OPEN 0 (kandydat
+USDC-CBBTC 005 auto-FAIL w lejku — zgodnie z wczorajszym „do
+odrzucenia"). Eksperyment #5908083: in-range, gap −1.3% (daleko od
+progu FLAT_WIDEN ±5%). **KALIBRACJA #3: fee ~$0.70 w ~¾ doby →
+tempo ~$0.90/d vs $0.19/d na szerokim = uplift ~$0.7/d, 3× powyżej
+modelowego $0.23/d** (Uniswap potwierdza: $0.715, APR 32.6% vs 28.0%
+na szerokiej). Jeśli się utrzyma, payback rundy ~3–4d zamiast 10–11d
+— n=1 doba, mierzymy dalej. Selektor: rotacja nieopłacalna, edge
+maleje 4. dzień (−58.6→−29.8 p.p.). Bilans transzy −$100.81 (−1.65%).
+⚠️ OTWARTE: linia „koszty wejścia (stałe)" −$76.02 vs −$8.58
+wczoraj — dryf, którego raport sam zabrania; $1.25 kosztów
+eksperymentu tego nie tłumaczy. Do prześledzenia w księgowaniu
+bilansu (możliwy związek z notą o kotwicy bufora 29.08).
+FIX (Fable, za zgodą Rafała, src/**): karta kokpitu pokazywała
+„Fee narosłe $0.00" dla cbBTC/WETH mimo realnych ~$0.7 — `usdValueOf`
+w usePortfolio.ts nie wycenia par bez nogi stabilnej (null), a
+`feesUsd` robiło `?? 0`. Wartość pozycji miała fallback „(wycena
+bota)" z Partii 20, fee nie miało żadnego. Nowy `usdValueViaPool`:
+nieznaną nogę sprowadza kursem puli (sqrtPriceX96,
+humanPriceQuotePerBase) do nogi ETH/stabilnej, potem USD; użyty dla
+wartości pozycji ORAZ fee. Efekt uboczny: znika fallback „(wycena
+bota)" — kokpit wycenia cbBTC/WETH samodzielnie. tsc: src czysty
+(3 stare błędy w node_modules/ox — nie nasze); build webpack OK.
+Paczka u CC-Mac, zlecenie build+restart u CC-Win.
+UWAGA infra: `git stash` z sandboxa Fable zostawił martwy
+`.git/index.lock` (mount blokuje unlink) — do usunięcia ręcznie na
+Macu: `rm .git/index.lock`. Lekcja: Fable nie dotyka gita na mountcie
+poza odczytem.
+PRZY OKAZJI (Uniswap UI Rafała): pozycja „OxSwap-org / USDe" z
+04/2025 to scam-airdrop podrzucony do portfela — NIE dotykać
+(collect/remove = wektor drain), można ukryć w UI. Odnotowane.
+Plan dnia bez zmian: E7 krok 1 (inwentaryzacja v4) + spec lejka wide.
+
 ### 2026-08-31 (Sesja UI, Sonnet) — Partia 20: sprzątanie po v1.2 w UI ✅
 Wykonana cała Partia 20 z TASKS-UI.md (spec Fable po przeglądzie 31.08).
 Zakres wyłącznie src/**, bot/**/backtest/**/scripts/** nietknięte. Szczegóły
