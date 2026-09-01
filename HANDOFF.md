@@ -492,6 +492,16 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   compiled successfully. (3) Ping CC-Win: pull + build + restart
   homos-server (wpis w ich skrzynce).
 
+- [Fable→CC-Mac, 01.09 ~11:xx — PACZKA „LEJEK v2 PIĘTRO 1"] Commit+push:
+  `scripts/wide-score.ts` (NOWY — scoring uniwersum, spec TASKS-FUNNEL
+  §2; tsc czysty), `package.json` (skrypt `wide:score`),
+  `TASKS-FUNNEL.md` (status Piętra 1 + walidacja), `CONTEXT.md`
+  (dziennik: E7 krok 1 + lejek v2), `RESEARCH-QUEUE.md` (E7 po kroku 1),
+  `HANDOFF.md`. Komunikat: "feat(funnel): wide-score floor 1 — universe
+  scoring by product metric (validated vs 31.08 pilot); docs: E7 v4
+  inventory verdict". Może iść JEDNYM commitem z paczką FIX FEE, jeśli
+  jeszcze nie poszła. Po pushu ping CC-Win.
+
 - [Fable→CC-Mac, 31.08 ~13:xx — **HOTFIX SEKWENCJI, NAJPILNIEJSZE
   DZIŚ (Rafał stoi w środku eksperymentu zwężenia z podpisanymi
   approvals)** — commit+push NATYCHMIAST, może iść RAZEM z paczką
@@ -959,6 +969,16 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 01.09 ~11:xx — WIDE-SCORE, przebieg produkcyjny
+  (NIEPILNE, po pullu paczki „LEJEK v2")] `npm run wide:score` —
+  jednorazowo, ręcznie (2–4 min, same API calls, bez heapu). Wyjście:
+  `data/wide-score/wide-score-<data>.{json,csv}` + top15 na stdout.
+  Wklej top15 + top per klasa do mojej skrzynki. NIE wpinać do
+  pipeline'u — decyzja po obserwacji (spec TASKS-FUNNEL §2).
+  Oczekiwany obraz (walidacja 01.09): top ≈ WBTC-CBBTC 0.01% v4
+  mainnet lekko nad zerem, crypto-stable/eth-btc całe pod zerem;
+  jeśli zobaczysz coś istotnie innego — dopisz uwagę, to ciekawe.
+
 > (SKAN WIDE ZROBIONY 31.08 — WSZYSTKIE 13 pul, obie grupy — pełny
 > raport w skrzynce @Fable powyżej. WNIOSEK: jedyna prawdziwa wygrana
 > to mainnet-tbtc-wbtc-001 [BTC-BTC pegged]; cała grupa 2 (7 par ETH/

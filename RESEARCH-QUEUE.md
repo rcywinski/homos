@@ -291,7 +291,18 @@
 - [ ] Backfill: dzienne snapshoty rankingu Pool Scannera do SQLite (żeby za rok
   mieć własną, niezależną od DefiLlamy historię selekcji).
 
-## E7. UNISWAP v4 / HOOKI — GŁÓWNY WĄTEK BADAWCZY (decyzja Rafała 31.08 po południu: „jak najszybciej")
+## E7. UNISWAP v4 / HOOKI — po kroku 1 (01.09): PRIORYTET W DÓŁ, krok 3 zawężony do Angstroma
+> **AKTUALIZACJA 01.09 (Fable, krok 1 WYKONANY — szczegóły CONTEXT
+> 01.09 ~10:xx):** v4 TVL ~$1.03 mld (nie $3.4B), Unichain $17M —
+> rubryka Unichain ZAMKNIĘTA. Hooki = 31 pul / ~$10M TVL (≈1% v4);
+> pule dynamic-fee na naszych parach martwe; Bunni $0, EulerSwap $0;
+> jedyny żywy „obronny" hook: **Angstrom $6M TVL / $70M vol 7d** —
+> niszowy, bez publicznego APY dla LP. v4 vanilla bez przewagi nad
+> bliźniakami v3 (Base v3 wyraźnie lepsze). JEDYNY KONKRET:
+> WBTC-CBBTC 0.01% v4 mainnet, wolumen 5–8× bliźniaka v3 → do
+> lejka v2 (klasa pegged-BTC). Krok 2 (ramy ryzyka) bezprzedmiotowy
+> do czasu istnienia kandydata; krok 3 zawężony do Angstroma;
+> krok 4 WSTRZYMANY. Przegląd tematu: 24.09.
 > Kontekst decyzji: lista zadań obecnego trybu (pasywny wide na v3) się
 > wyczerpuje — samo granie wide da się robić ręcznie przez Uniswap UI +
 > alerty push. Wartość trwała po naszej stronie: warstwa pomiarowa

@@ -81,6 +81,61 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-01 ~11:xx — LEJEK v2 PIĘTRO 1: wide-score ZAIMPLEMENTOWANY + ZWALIDOWANY (Fable)
+Nowy `scripts/wide-score.ts` (`npm run wide:score`) — scoring całego
+uniwersum pod produkt wg specu TASKS-FUNNEL §2. Model: score =
+c_klasy·apy_min − 0.6·(σ²/8)·g(w); pełny opis i kalibracja (na żywych
+pozycjach: c crypto-stable ±50 ≈0.19–0.35, eth-btc ±40 ≈0.06) w
+nagłówku skryptu. Trzy decyzje projektowe z walidacji: fee = MIN okien
+apy (kara za epizodyczność), flaga dryfu tylko klasy ciasne, v4 bez
+filtra wolumenu (pole u Llamy niestabilne — rano 89.8M, po południu
+0.0 dla tej samej puli). WALIDACJA (żywe dane, 48 pul, przeglądarka —
+te same formuły co skrypt): wszystkie klasy pilota 31.08 odtworzone
+kierunkowo — crypto-stable 0/32 dodatnich, eth-btc 0/5, stable-stable
+„trywialne" +0.17, wstETH ⚠DRIFT, a tBTC/WBTC −6.75: metryka SAMA
+odtwarza decyzję „nie gramy" (σ łapie depeg, min-fee epizodyczność).
+**TOP: WBTC-CBBTC 0.01% v4 mainnet (+0.21)** — zbieżne z E7. Ranking
+ledwo nad zerem = kolejny dowód pod tezę 24.09 (yield, nie alfa).
+Świadomie BEZ pipeline'u i UI (miesiąc obserwacji obok rankingu APY,
+jak w E3). tsc czysty. Paczka u CC-Mac; CC-Win: przebieg produkcyjny.
+Techniczne pułapki API (w komentarzach skryptu): coins.llama.fi limit
+keys×dni≤500/request; searchWidth w SEKUNDACH (nie podawać).
+
+### 2026-09-01 ~10:xx — E7 KROK 1 WYKONANY (Fable): inwentaryzacja v4 — wynik NEGATYWNY dla tezy hooków, jeden konkret do lejka
+Dane: DefiLlama (yields API + protocol + dexs), na żywo w przeglądarce;
+HookRank nie doładował danych (do ew. powrotu). USTALENIA:
+(1) **SKALA: v4 TVL ~$1.03 mld** (Ethereum $686M, Robinhood Chain $89M,
+BSC $62M, Base $53M, Arbitrum $35M, **Unichain $17M**) — liczba $3.4B
+z rekonesansu 31.08 nieaktualna/zawyżona, a „wolumen głównie Unichain"
+NIE potwierdza się. **Rubryka Unichain ZAMKNIĘTA** (nie ma po co).
+(2) **HOOKI SĄ MARGINESEM: 31 pul / ~$10M TVL (≈1% TVL v4)** vs 1740
+pul vanilla / $1.03 mld. Dwie pule „Dynamic fee (hook)" na naszych
+parach (mainnet ETH/USDC $3.3M, ETH/USDT $2.5M) — MARTWE (vol 0,
+APY ~0). Ekosystem „obrony LP": **Angstrom (aukcje MEV) $6M TVL,
+$70M vol/7d, $200M/30d** — żywy, ale niszowy (0.4% wolumenu całego
+Uniswapa) i bez publicznego trackingu APY dla LP; Bunni V2 $0
+(martwy po exploicie), EulerSwap $0 w dexs. Teza „hooki odwracają
+LP-przegrywa-z-HODL" nie ma dziś MIERZALNEGO PRZEDMIOTU w skali.
+(3) **v4 vs BLIŹNIAKI v3 na naszych parach: v4 bez przewagi.**
+Mainnet ETH/USDC: v4-030 $42M TVL apy30 10.5 vs v3-030 $30M/15.3 i
+v3-005 $105M/14.4. ETH/USDT: v3 miażdży (v3-030 $114M/35.2 vs v4-030
+$18M/14.1). Base (nasze pule): v3 WETH/USDC-030 $115M apy30 58.3,
+v3 WETH/cbBTC-005 $8M apy30 58.2 — v4 odpowiedniki $5.8M/$2.0M,
+płycej i bez wyższego fee yield. FLAGA: DefiLlama pokazuje vol7d=0
+dla wielu pul v4 na L2 — porównania wolumenowe L2 niewiarygodne.
+(4) **JEDYNY KONKRET: WBTC-CBBTC 0.01% na v4 mainnet** — dwie pule
+($13.4M + $4.3M TVL) z wolumenem **$90M + $151M / 7d vs $18M na
+bliźniaku v3** (5–8×); apy30 niskie (0.3–1.4%, wolumen wygląda na
+świeży/epizodyczny), ale to dokładnie klasa pegged-BTC z lejka v2
+(custody, nie most) → **dodać v4-bliźniaka do pilota skanu wide /
+lejka v2** (na razie tylko metryki DefiLlama — fetch v4 to inne
+eventy, singleton; bez budowy narzędzi, zgodnie z krokiem 4).
+WERDYKT E7 po kroku 1–2: kroki wykonane, wynik negatywny dla
+priorytetu „jak najszybciej" — **krok 3 ZAWĘŻONY do Angstroma**
+(jedyny żywy kandydat; wymaga ich własnych danych), **krok 4
+(narzędzia) WSTRZYMANY** — nie ma dowodu, że jest czego szukać.
+Temat zostaje w kolejce z niższym priorytetem; przegląd 24.09.
+
 ### 2026-09-01 ~09:xx — Brief poranny (Fable) + FIX: fee $0.00 na karcie cbBTC (wycena przez kurs puli)
 BRIEF (raport 07:30): automat czysty, propozycje OPEN 0 (kandydat
 USDC-CBBTC 005 auto-FAIL w lejku — zgodnie z wczorajszym „do

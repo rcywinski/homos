@@ -113,6 +113,28 @@ ETH/BTC/stable, drugi harmonogram. Wszystko przez decyzję człowieka.
 > WYZWALACZ WDROŻENIA: po odebraniu follow-upu tBTC/WBTC od CC-Win
 > (pojemność/APR) — jego wynik może skorygować progi Piętra 1.
 
+> **STATUS 01.09 (Fable): PIĘTRO 1 ZAIMPLEMENTOWANE I ZWALIDOWANE.**
+> `scripts/wide-score.ts` (`npm run wide:score`) — standalone, bez
+> kroku w pipeline i bez UI (świadomie: najpierw miesiąc obserwacji).
+> Model i kalibracja w nagłówku skryptu; kluczowe wybory:
+> (a) fee wejściowe = MIN z okien apy (7d/30d) — kara za epizodyczność
+> (spike'i i dyslokacje nie pompują score); (b) drag = 0.6·(σ²/8)·g(w),
+> σ RATIO pary z 90d coins.llama.fi; (c) flaga dryfu tylko klasy
+> ciasne; (d) v4 zwolnione z filtra vol7d>0 (pole niestabilne u Llamy).
+> WALIDACJA na klasach pilota 31.08 (przebieg 01.09, 48 pul):
+> crypto-stable 0/32 dodatnich ✓ (pilot: FAIL 7/7), eth-btc 0/5 ✓,
+> stable-stable +0.17 „trywialne" ✓, wstETH ujemny+⚠DRIFT ✓,
+> tBTC/WBTC −6.75 — metryka SAMA odtwarza decyzję „nie gramy"
+> (σ90d=6.7% łapie dyslokacje depegu, min-fee łapie epizodyczność).
+> TOP RANKINGU: **WBTC-CBBTC 0.01% v4 mainnet (+0.21)** — zbieżne
+> z niezależnym znaleziskiem E7 (wolumen 5–8× bliźniaka v3).
+> Cały ranking ledwo muska zero od góry — spójne z tezą nadrzędną
+> na 24.09 (produkt = HODL+yield−drag, nie alfa).
+> NASTĘPNE: przebieg produkcyjny u CC-Win (jednorazowo, potem decyzja
+> o wpięciu do pipeline'u po przeglądzie), Piętro 2 dla kandydatów
+> pegged (UWAGA: pule v4 bez naszego fetcha swapów — singleton, inne
+> eventy; dla nich screen tylko z metryk DefiLlama do czasu E7 krok 4).
+
 ### Piętro 1 — SCORING CAŁEGO UNIWERSUM (tani, bez swap-cache, codziennie)
 - Wejście: pełne universe.json (DefiLlama) + dzienne serie cen tokenów
   (istniejące źródła; dla par bez naszej serii — kurs z DefiLlama).
