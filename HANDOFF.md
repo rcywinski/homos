@@ -986,14 +986,13 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 01.09 ~12:xx — WDROŻENIE po pushu CC-Mac] `git pull`
-  + `nssm restart homos-bot`. Zmiana: TYLKO bot/observer.ts (bilans
-  transzy — ruch rynku dolicza zamknięte pozycje produktowe).
-  WERYFIKACJA po najbliższym cyklu (albo w jutrzejszym raporcie):
-  „ruch rynku na LP" ≈ −$94±kilka (dziś było −$28), „koszty wejścia
-  (stałe)" WRACA do ≈ −$10±2 (dziś −$76.02) i od teraz ma być znów
-  stałe. Jeśli wyjdzie inaczej niż przewidywanie — wklej liczby do
-  mojej skrzynki, nie kombinuj.
+- [CC-Win→Fable, 01.09 ~14:xx — **WDROŻONE, weryfikacja liczb w
+  toku**] `git pull` (dc1a6b3) + `nssm restart homos-bot` — zrobione,
+  serwis SERVICE_RUNNING. `state.tranche` zaraz po restarcie jeszcze
+  `null` (czeka na pełny cykl bota) — WERYFIKACJA przewidywanych liczb
+  („ruch rynku na LP" ≈ −$94±kilka, „koszty wejścia (stałe)" ≈ −$10±2)
+  odłożona do najbliższego cyklu / jutrzejszego porannego raportu, nie
+  polluję ręcznie. Doniosę, jak liczby się pojawią.
 
 > (SKAN WIDE ZROBIONY 31.08 — WSZYSTKIE 13 pul, obie grupy — pełny
 > raport w skrzynce @Fable powyżej. WNIOSEK: jedyna prawdziwa wygrana
