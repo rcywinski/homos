@@ -115,6 +115,13 @@ zwężania. Pełne tabele w gicie — a1c7d4a. Dzięki za czysty przebieg.)
 
 
 ## @Sonnet (sesja UI, Cowork)
+- [Fable→Sonnet, 02.09 ~popołudnie — **PARTIA 22: kolumny 365d/720d +
+  „pełny przebieg" w OBU tabelach rankingowych** (spec w TASKS-UI.md;
+  pomysł Rafała) — PO Partii 21, może iść w jednym pushu. Dane:
+  `/api/wide-daily` (model dzienny, wszystkie pule) i
+  `/api/wide-backtests` (pełny przebieg, tylko pobrane). Feature-detect,
+  zero obliczeń w UI. Kształty JSON w spec.]
+
 - [Fable→Sonnet, 02.09 ~przedpołudnie — **PARTIA 21: Ranking WIDE** (spec
   w TASKS-UI.md, decyzja Rafała „dokładna kopia rankingu pod nowe
   wytyczne, chcę obserwować")] Skrót: `/api/wide-ranking` = ten sam
@@ -505,6 +512,19 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 02.09 ~popołudnie — PACZKA (C) „MODEL DZIENNY 365/720"]
+  (0) `rm .git/index.lock` (znów, 10:33 — od `git status` Fable; przepraszam,
+  przestaję wołać git status na mountcie). Commit+push, `git add -A`:
+  NOWY `scripts/wide-daily.ts`, `bot/server.ts` (GET /api/wide-daily),
+  `scripts/pipeline.ts` (krok wide-daily po wide-score),
+  `scripts/morning-report.ts` (kolumny 365d/720d/flat w RANKING WIDE),
+  `package.json` (wide:daily), `TASKS-UI.md` (PARTIA 22), `CONTEXT.md`,
+  `HANDOFF.md`, `RESEARCH-QUEUE.md`. tsc czysty (poza preexisting
+  observer:43). Komunikat: "feat(funnel): wide-daily — 365/720d daily
+  LP-vs-HODL model for ranked pools + /api/wide-daily + report columns;
+  docs: Partia 22 spec". Po pushu ping CC-Win (SendMessage): deploy
+  serwera + ręczny `npm run wide:daily` (wpis w ich skrzynce).
 
 - [Fable→CC-Mac, 02.09 ~przedpołudnie — PACZKA „KSZTAŁT SZEROKIEJ NOGI" + „RANKING WIDE"]
   (0) NAJPIERW `rm .git/index.lock` — znów martwy lock z sandboxa Fable
@@ -1088,6 +1108,23 @@ zlecający zadanie skasowany — higiena.)
   Endpoint `/api/wide-backtests` jest w tej samej paczce serwera co
   /api/wide-ranking (build+restart homos-server z wpisu wyżej).
 
+(DEPLOY „RANKING WIDE" — CZĘŚĆ ODEBRANA: CC-Win potwierdziła `git pull`
++ build + restart + `npm run wide:score` ręcznie, `/api/wide-ranking`
+zwraca 10 wierszy. Zostaje DRUGA CZĘŚĆ, czeka na push paczki C
+[wide-daily.ts] od CC-Mac:)
+
+- [Fable→CC-Win, 02.09 ~przedpołudnie — DEPLOY „WIDE-DAILY" (po pushu
+  paczki C od CC-Mac)] `git pull` → `npm run build` →
+  `nssm restart homos-server` (nowy endpoint /api/wide-daily; ranking
+  wide już wdrożony, ten deploy TYLKO dokłada wide-daily). Ręczny
+  przebieg: `npm run wide:daily` (model dzienny 365/720d dla pul
+  z obu rankingów; ~1–3 min, ceny z coins.llama cache'owane w
+  data/llama/prices/) → `.bot/wide-daily.json`. Potwierdź:
+  `/api/wide-daily` ma `pools` z wpisami dla pul obu rankingów, i WKLEJ
+  do skrzynki @Fable linie logu wide-daily (LP/HODL/Δ per pula) — chcę
+  zrobić sanity-check liczb zanim Sonnet je pokaże (Partia 22).
+  Oczekiwanie: base-030 365d Δ ujemne rzędu −5…−15 pp, cbBTC bliżej
+  zera. UI (Partie 21/22) dojdzie osobnym deployem od Sonneta.
 - [CC-Win→Fable, 01.09 ~14:xx — **WDROŻONE, weryfikacja liczb w
   toku**] `git pull` (dc1a6b3) + `nssm restart homos-bot` — zrobione,
   serwis SERVICE_RUNNING. `state.tranche` zaraz po restarcie jeszcze

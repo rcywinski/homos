@@ -21,7 +21,8 @@
     "scan": "tsx backtest/scan-universe.ts",
     "report:morning": "tsx scripts/morning-report.ts",
     "wide:score": "tsx scripts/wide-score.ts",
-    "wide:collect": "tsx scripts/wide-collect.ts"
+    "wide:collect": "tsx scripts/wide-collect.ts",
+    "wide:daily": "tsx scripts/wide-daily.ts"
   },
   "author": "HOMO$",
   "license": "ISC",

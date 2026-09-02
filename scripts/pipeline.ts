@@ -114,6 +114,12 @@ function swapsFresh(): { fresh: string[]; stale: string[] } {
     // porażka = wpis w raporcie (stary ranking wide-ranking.json zostaje).
     if (!(await withRetry('wide-score', () => runStep('wide-score', 'scripts/wide-score.ts'), 1)))
       failures.push('wide-score');
+    // Model dzienny 365/720d dla pul z obu rankingów (02.09) — czyta
+    // .bot/wide-ranking.json (wyżej) i selector-ranking.json (selektor z
+    // poprzedniego dnia; dzisiejszy nadpisze po 06:00 — pule i tak te same
+    // w 90%, a wynik odświeża się co noc). Ceny z coins.llama (cache dzienny).
+    if (!(await withRetry('wide-daily', () => runStep('wide-daily', 'scripts/wide-daily.ts'), 1)))
+      failures.push('wide-daily');
     // Auto-lejek kandydatów (TASKS-FUNNEL.md): PO fetchu (świeże universe),
     // PRZED backtest-run (OOM backtestu nie może zabić lejka). 1 podejście,
     // steady-state max 1 kandydat/noc; porażka = wpis w raporcie, lecimy dalej.

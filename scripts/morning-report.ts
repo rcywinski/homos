@@ -136,17 +136,26 @@ try {
   const wr = readSafe(path.join(BOT, 'wide-ranking.json'));
   if (wr) {
     const r = JSON.parse(wr);
+    const daily = (() => { try { return JSON.parse(readSafe(path.join(BOT, 'wide-daily.json')) || '{}').pools ?? {}; } catch { return {}; } })();
+    const dcol = (uuid: string) => {
+      const d = daily[uuid];
+      if (!d || d.error) return '— | — | —';
+      const w3 = d.windows?.w365, w7 = d.windows?.w720;
+      const f = (x: any) => (x === null || x === undefined ? '—' : (x > 0 ? '+' : '') + x);
+      return `${w3 ? `${f(w3.latest.lpPct)}/${f(w3.latest.hodlPct)}/${f(w3.latest.deltaPct)} (med Δ ${f(w3.medDeltaPct)}, n${w3.n})` : '—'} | ${w7 ? `${f(w7.latest.deltaPct)} (med ${f(w7.medDeltaPct)})` : '—'} | ${d.flatPct365 ?? '—'}%`;
+    };
     const lines = [
       `dzień ${r.day} · ${r.criteria?.window ?? ''}`,
       '',
-      '| # | pula | klasa | score %/r | fee wide | drag | σ/r | streak | TVL | w bocie |',
-      '|---|---|---|---|---|---|---|---|---|---|',
+      '| # | pula | klasa | score %/r | fee wide | drag | σ/r | streak | TVL | w bocie | 365d LP/HODL/Δ | 720d Δ | flat |',
+      '|---|---|---|---|---|---|---|---|---|---|---|---|---|',
     ];
     for (const row of r.rows ?? [])
       lines.push(
-        `| ${row.rank} | ${row.symbol} ${row.poolMeta} @ ${row.chain} | ${row.cls ?? ''} | ${row.apy7d} | ${row.feeAprWide ?? '—'} | ${row.dragPct ?? '—'} | ${row.sigmaAnnPct ?? '—'}${row.driftFlag ? ' ⚠' : ''} | ${row.streak}d | $${(row.tvlUsd / 1e6).toFixed(1)}M | ${row.botPoolId ?? '—'} |`
+        `| ${row.rank} | ${row.symbol} ${row.poolMeta} @ ${row.chain} | ${row.cls ?? ''} | ${row.apy7d} | ${row.feeAprWide ?? '—'} | ${row.dragPct ?? '—'} | ${row.sigmaAnnPct ?? '—'}${row.driftFlag ? ' ⚠' : ''} | ${row.streak}d | $${(row.tvlUsd / 1e6).toFixed(1)}M | ${row.botPoolId ?? '—'} | ${dcol(row.llamaUuid)} |`
       );
-    lines.push('', '_score = fee szerokiego pasma − koszt zmienności (drag); w %/r; ranking obserwacyjny, decyzja o wejściu ręczna (TASKS-FUNNEL §2)._');
+    lines.push('', '_score = fee szerokiego pasma − koszt zmienności (drag); w %/r; ranking obserwacyjny, decyzja o wejściu ręczna (TASKS-FUNNEL §2)._',
+      '_365d/720d = MODEL DZIENNY szerokiego pasma klasy (wide-daily): LP % / HODL 50/50 % / Δ pp „od dziś wstecz", med Δ = mediana okien kroczących co 30d; flat = % dni w |gap|<2% (365d). ±kilka pp — do porównań, nie do księgowości._');
     sections.push('## RANKING WIDE (pod produkt, top 10)\n\n' + lines.join('\n'));
   } else sections.push('## RANKING WIDE\nBRAK .bot/wide-ranking.json (krok wide-score jeszcze nie biegł)');
 } catch { sections.push('## RANKING WIDE\nwide-ranking.json nieparsowalny'); }

@@ -141,6 +141,12 @@ app.get('/api/wide-ranking', (_req, res) => {
   res.json(r);
 });
 
+// Model dzienny 365/720d (scripts/wide-daily.ts, krok pipeline'u po
+// wide-score): {pools: {llamaUuid → LP/HODL/Δ, mediany okien, flat%}}.
+app.get('/api/wide-daily', (_req, res) => {
+  res.json(readJson(path.join(DIR, 'wide-daily.json')) ?? { generatedAt: null, pools: {} });
+});
+
 // Pełne przebiegi (walkforward 720d, WF_SET=wide) dla pul z rankingów —
 // pisze scripts/wide-collect.ts (Piętro 2 lejka, subagent CC-Win w tle).
 // Obiekt {llamaUuid → summary}; UI dokłada kolumny po llamaUuid (Partia 22).

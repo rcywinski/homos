@@ -1404,3 +1404,60 @@ wide-score.ts, morning-report.ts.
    dodatkowe) — próbka z przebiegu Fable 01.09 jest w
    `data/wide-score/wide-score-2026-09-01.json` (rows[0..9], mapowanie
    pól: score→apy7d, feeTier→poolMeta, pool→llamaUuid).
+
+## PARTIA 22 — kolumny „365d / 720d wstecz" w OBU tabelach rankingowych (pomysł Rafała 02.09; spec Fable 02.09) — PO PARTII 21
+KONTEKST (bez żargonu): Rafał chce przy każdej puli w rankingu widzieć,
+ile NASZ styl (szerokie pasywne pasmo w szerokości klasy pary) zarobiłby
+na tej puli przez ostatni rok i dwa lata — obok tego, co dałoby zwykłe
+trzymanie pary 50/50 (HODL), bo sam % w dolarach mówi głównie o kursie
+ETH. Dwa źródła danych, DWIE GRUPY KOLUMN, obie feature-detect:
+(a) `GET /api/wide-daily` — MODEL DZIENNY dla wszystkich pul z obu
+    rankingów (scripts/wide-daily.ts, krok nocny). Kształt:
+    `{generatedAt, params, pools: {[llamaUuid]: {symbol, chain, cls,
+    widthPct, feeCapture, ageDays, error?, stale?, windows: {w365: W|null,
+    w720: W|null}, flatPct365, feeAprMean365}}}`, gdzie
+    `W = {n, latest:{lpPct, hodlPct, deltaPct, feesPct, inRangePct,
+    recenters}, medLpPct, medHodlPct, medDeltaPct, worstDeltaPct, winPct}`.
+    `latest` = okno zaczynające się DOKŁADNIE W dni temu („od dziś
+    wstecz"); `med*` = mediany z okien kroczących co 30 dni (n okien).
+(b) `GET /api/wide-backtests` — PEŁNY PRZEBIEG silnika (walkforward
+    720d, okna 30/15) tylko dla pul, które kolekcjoner Piętra 2 już
+    pobrał (scripts/wide-collect.ts; dziś kilka, z każdą nocą więcej).
+    Kształt: `{[llamaUuid]: {id, cls, widthPct, windows, passive:{mean,
+    med, winPct, worst, best, windows, recent90, byRegime}|null,
+    hybrid:{…to samo…}|null, computedAt}}` — wartości w pp vs HODL na
+    okno 30d (jak w „Analizie obserwacji").
+ZAKRES: tylko src/**. Oba endpointy są w tej samej paczce serwera co
+/api/wide-ranking.
+1. **`useBotApi.ts`**: `wideDaily` (obiekt jw. | null) i `wideBacktests`
+   (obiekt | null) — ten sam poller co ranking (30 min); brak/404/pusty
+   → null, bez czerwonego błędu (to wzbogacenie rankingu, jak werdykty).
+2. **`TopRankingPanel.tsx`** (oba warianty, 'apy' i 'wide'): po kolumnie
+   TVL, PRZED statusem, dołożyć grupę **„model dzienny"** — dwie
+   kolumny: `365d` i `720d`, każda w formacie trzech liczb
+   `LP / HODL / Δ` z `latest` (np. `+9.1 / +2.4 / +6.7`), Δ kolorowane
+   (>0 zielony, <0 czerwony), tooltip: „mediana okien kroczących
+   (n=13): LP x / HODL y / Δ z · najgorsze Δ w · wygrane v% · w zakresie
+   u% · recentrowań r · fee x%". Trzecia mała kolumna **`flat`** =
+   `flatPct365` z „%" (tooltip: „% dni ostatniego roku, w których para
+   spełniała nasz warunek flatu |gap|<2% — tam zwężanie ma szansę
+   pracować"). Brak wpisu / `error` / okno null → „—" z tooltipem
+   (`error` albo „za krótka historia").
+3. Czwarta kolumna **„pełny przebieg"** z (b): `Δ śr. pasywny` (pp/30d,
+   `passive.mean`) + w tooltipie `%wygr / worst / recent90.mean` oraz —
+   gdy `hybrid` istnieje — druga linijka „hybryda ±5%: Δ śr. …". Pule
+   bez wpisu: „—" (tooltip „w kolejce kolekcjonera / brak historii
+   transakcji"). To OSOBNA kolumna od modelu dziennego — nie mieszać
+   liczb (inne jednostki: pp/okno 30d vs % za 365d).
+4. Nagłówek grupy albo linia pod tabelą: „365d/720d: model dzienny
+   szerokiego pasma (±50% ETH/stable, ±40% krypto/krypto, ciasne dla par
+   spiętych) vs HODL 50/50, ±kilka pp — do porównań między pulami;
+   ‚pełny przebieg' = silnik backtestu na historii transakcji (sędzia)".
+   Wąska tabela na iPhone: grupa „model dzienny" może zwijać się do
+   samego Δ (LP/HODL w tooltipie) poniżej ~700px — decyzja Twoja, byle
+   na desktopie były trzy liczby.
+5. Zero obliczeń w UI — wszystko z JSON. Zero zmian poza src/**.
+   WERYFIKACJA: tsc + build; sensowność: pula „✅ gra w bocie"
+   base-weth-usdc-030 powinna mieć 365d Δ ujemne rzędu −5…−15 pp
+   (rok spadkowy), cbBTC/WETH bliżej zera — jeśli wychodzi coś
+   absurdalnego (±100), zgłoś do @Fable, nie poprawiaj w UI.

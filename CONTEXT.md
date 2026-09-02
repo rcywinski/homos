@@ -165,6 +165,24 @@ w load.ts; lock + pauza na czas pipeline'u). Decyzja Rafała: liczy
 SUBAGENT CC-Win w tle, bez blokowania bieżących zmian. Dysk ~0.5 GB/
 pula Base 720d — do sprawdzenia przed startem. tsc czysty; kod bez
 testu na HyperSync (sandbox) — pierwszy `--one` u CC-Win jest testem.
+(9) MODEL DZIENNY ZBUDOWANY (`scripts/wide-daily.ts`, `npm run
+wide:daily`, krok pipeline'u po wide-score): dla każdej puli z obu
+rankingów — pasywne pasmo klasy (±50 ETH/stable, ±40 krypto/krypto,
+ciasne pegged; konwencja log-sym. jak produkt) na dziennych cenach
+coins.llama (1100d, cache) i dziennym apyBase z historii DefiLlamy;
+fee = wartość × apy/365 × c_klasy × [w zakresie]; recentrowanie po
+7 dniach poza pasmem z kosztem 0.15%; HODL 50/50 w USD. Okna 365 i
+720d: „od dziś wstecz" (latest) + mediana/worst/%wygr z okien co 30d
+(max 13); flat % (|gap|<2%, EMA HL7d) za 365d. Wyjście
+`.bot/wide-daily.json` → `/api/wide-daily`; poranny raport RANKING
+WIDE ma kolumny 365d LP/HODL/Δ, 720d Δ, flat. Test syntetyczny
+(sandbox, bez sieci): cena stała 20%/r×c=0.37 → +7.4% ✓; +50% do
+krawędzi bez fee: LP +11.2 vs HODL +25 (IL zgodny z formułą v3) ✓;
+quote taniejący, para stała → Δ=0 ✓; krach −60% → recenter 1,
+Δ −20.6 ✓; flat% sinus 100 / trend 3 ✓. Pierwszy przebieg na żywych
+danych u CC-Win — poprosiłem o log do sanity-checku PRZED UI.
+Spec UI = PARTIA 22 (dwie grupy kolumn: model dzienny + pełny
+przebieg z wide-collect, feature-detect).
 (8) ODBIÓR PRZEBIEGÓW „KSZTAŁT" (CC-Win 4/4, 720d, ~popołudnie).
 Fullperiod: base-030 (ETH +0.6% end-to-end, 728d) — symetryczne/
 węższe wygrywają (±15 +1429, ±50 +1284, −65/+30 +762); cbBTC (−23%)

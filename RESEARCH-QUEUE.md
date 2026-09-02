@@ -1018,6 +1018,11 @@ rozstrzyga; jeśli nie rozstrzyga niczego, nie odpalamy.
       sprawdzenia na danych Aerodrome (gauge APR dla ±40%) — ręcznie,
       bez kodu. Jeśli >2× naszego realized ~15%/r przy tej szerokości →
       osobna karta (NFT w gauge, sprzedaż AERO, nowy kontrakt, observer).
+- [x] **Kolumny 365d/720d w rankingach (pomysł Rafała 02.09)** — model
+      dzienny `wide-daily.ts` (wszystkie pule obu rankingów) + pełny
+      przebieg z `wide-collect.ts` (Piętro 2) → Partia 22. Po miesiącu:
+      porównać model dzienny z pełnym przebiegiem na pulach, które mają
+      oba — kalibracja c_klasy i kosztu recentrowania.
 - [ ] **Benchmark 24.09 = HODL 50/50 + pasywny yield** (wstETH ~3% + USDC
       Aave ~4–5% ≈ 3.5–4%/r bez IL) obok lokaty/ETF — dopisać do E4.
 - [ ] FLAGA silnika: flatOnlyLP idle:'passive' nie recentruje szerokiej
