@@ -81,6 +81,41 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-01 ~popołudnie — ANALIZA PRAWDOPODOBIEŃSTW + MONTE CARLO STRATEGII (Fable + Rafał) — materiał na przegląd 24.09
+Na prośbę Rafała („analizy jak profesjonalni maklerzy") — dwie
+analizy z 500d dziennych cen (coins.llama.fi, ETH i BTC, na żywo).
+A. TABELA SZANS (okna kroczące, bez prognozy kierunku):
+- ETH/BTC (σ 36%/r): utrzymanie ±5% przez 6d = **72%**, przez 11d
+  (opłacalna runda zwężenia) = **54%**; ±40% przez 90d = 78%.
+  → matematyka EKSPERYMENTU ZWĘŻENIA na plus (a wchodzimy dopiero
+  po potwierdzonym flacie, więc warunkowo pewnie lepiej).
+- ETH/USD (σ 63%/r): ±5%/6d tylko 33% (słusznie nie zwężamy);
+  ±50% przez 90d = 79%, przez 180d = **41%** → rebalans szerokiej
+  nogi ~raz na pół roku to NORMA produktu, nie awaria.
+- Wachlarz 30d ETH: połowa przypadków −11…+12%; 1/10 gorzej niż
+  −26%; 1/10 lepiej niż +34%. (Mediana 90d w tej próbce −19% —
+  artefakt okresu, NIE prognoza.)
+B. MONTE CARLO STRATEGII (5000 ścieżek × 90d, bootstrap blokowy 5d
+zachowujący korelację ETH↔ETH/BTC; pełna mechanika v3 obu nóg:
+pasma ±50/±40, recenter po wyjściu, koszt 0.15%, fee wg żywych stóp):
+start $5,765 → mediana $5,950 (+3.2%), P(plus)=57%,
+P(strata>20%)=14%, środkowa połowa $5.15k–6.57k, fees ~$109/90d,
+rebalanse śr. 0.63. **vs HODL: mediana −$125, P(>HODL)=36%** —
+zgodne z bramkami historycznymi (niezależna metoda, ten sam wynik).
+ASYMETRIA (kluczowe zdanie na 24.09): w spokoju strategia wygrywa
+z HODL o ~$50–100 (fees), w krachu przegrywa o $500–1,100 (poniżej
+pasma portfel jest 100% w spadającym aktywie) — **profil =
+„sprzedawanie ubezpieczenia od nudy"**. Zastrzeżenia: próbka 500d
+z wysokim σ (konserwatywnie); model recentruje od razu (bot przy
+spadku czeka — realnie łagodniej); fee stałe (w zmienności rosną);
+zwężanie niemodelowane (±$10–30).
+Werdykt dnia (rozmowa z Rafałem, spisany wprost): alfy nie ma —
+produkt to HODL+yield−drag; przy płaskim rynku realistycznie
+8–12%/r z prowizji; przy wzroście zarabiamy MNIEJ niż HODL (pula
+wyprzedaje rosnące aktywo, ~70% ekspozycji, sufit pasma); wartość
+trwała = pomiar + maszyna badawcza + wiedza. Decyzja o skali/sensie
+na przeglądzie 24.09 z benchmarkiem lokata/ETF.
+
 ### 2026-09-01 ~12:xx — DRYF KOSZTÓW WEJŚCIA ROZWIĄZANY (Fable): to rebalans, nie korupcja księgi + FIX w observerze
 Znalezisko z porannego raportu (−$8.58 → −$76.02 w linii „koszty
 wejścia (stałe)") PRZEŚLEDZONE DO KOŃCA. Mechanizm: bilans transzy
