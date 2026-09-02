@@ -2095,8 +2095,33 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   padding-top: 8px;
   border-top: 1px dashed #ddd;
 }
+/* Ranking WIDE (Partia 21, 02.09) — score %/r: >0 zielony, ≤0 muted (spec —
+   NIE czerwony, score ujemny to normalny wynik pary zmiennej, nie błąd). */
+.wideranking-score-pos {
+  color: #1a7a3c;
+  font-weight: 600;
+}
+.wideranking-score-neg {
+  color: #666;
+}
+.wideranking-drift-flag {
+  color: #8a6d00;
+  white-space: nowrap;
+}
+/* Kolumna „pełny przebieg" (Partia 22) — druga linijka hybrydy pod
+   wartością pasywną, mniejsza i wyciszona jak reszta tooltipowych detali. */
+.wideranking-hybrid-line {
+  font-size: 10px;
+  white-space: nowrap;
+}
 @media (max-width: 480px) {
   .topranking-table { font-size: 12px; }
+}
+@media (max-width: 700px) {
+  /* Partia 22, spec pkt 4: na wąskim ekranie kolumny modelu dziennego
+     zwężone do samego Δ — LP/HODL dostępne w tooltipie, nie na ekranie. */
+  .topranking-table .wideranking-hybrid-line { display: none; }
+  .topranking-table .wideranking-lphodl { display: none; }
 }
 
 /* 21.08: kokpit jako główny layout — nagłówek stracił tytuł i strzałkę

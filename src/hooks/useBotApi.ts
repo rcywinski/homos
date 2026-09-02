@@ -298,6 +298,16 @@ export interface RankingRow {
   tvlUsd: number;
   botPoolId: string | null;
   llamaUuid?: string;
+  // Pola dodatkowe rankingu WIDE (GET /api/wide-ranking, Partia 21,
+  // HANDOFF Fable→Sonnet 02.09) — nieobecne w starym /api/ranking, stąd
+  // opcjonalne (feature-detect). UWAGA: w rankingu wide `apy7d` (wyżej)
+  // niesie SCORE %/r, nie APY 7d — etykieta w UI musi o tym mówić.
+  cls?: string;
+  feeAprWide?: number | null;
+  dragPct?: number | null;
+  sigmaAnnPct?: number | null;
+  driftFlag?: boolean;
+  wOursPct?: number;
 }
 
 export interface RankingCriteria {
@@ -318,6 +328,77 @@ export interface RankingData {
 // 'not-started' == 503 (selektor jeszcze nie zapisał pierwszego rankingu —
 // oczekiwane do pierwszego przebiegu po 8:00).
 export type RankingStatus = 'loading' | 'ok' | 'not-started' | 'error';
+
+// Model dzienny szerokiego pasma — GET /api/wide-daily (scripts/wide-daily.ts,
+// HANDOFF Fable→Sonnet 02.09, TASKS-UI.md Partia 22). Klucz mapy `pools` =
+// `RankingRow.llamaUuid`. `latest` = okno zaczynające się dokładnie N dni
+// temu ("od dziś wstecz"); `med*`/`worstDeltaPct`/`winPct` = statystyki z
+// okien kroczących co 30 dni (n okien).
+export interface WideDailyWindowLatest {
+  lpPct: number;
+  hodlPct: number;
+  deltaPct: number;
+  feesPct: number;
+  inRangePct: number;
+  recenters: number;
+}
+
+export interface WideDailyWindow {
+  n: number;
+  latest: WideDailyWindowLatest;
+  medLpPct: number;
+  medHodlPct: number;
+  medDeltaPct: number;
+  worstDeltaPct: number;
+  winPct: number;
+}
+
+export interface WideDailyPool {
+  symbol: string;
+  chain: string;
+  cls: string;
+  widthPct: number;
+  feeCapture: number;
+  ageDays: number;
+  error?: string;
+  stale?: boolean;
+  windows: { w365: WideDailyWindow | null; w720: WideDailyWindow | null };
+  flatPct365: number;
+  feeAprMean365: number;
+}
+
+export interface WideDailyData {
+  generatedAt: string;
+  params: Record<string, unknown>;
+  pools: Record<string, WideDailyPool>;
+}
+
+// Pełny przebieg silnika (walkforward 720d, okna 30/15) — GET
+// /api/wide-backtests (scripts/wide-collect.ts, lejek v2 piętro 2). Tylko
+// pule, które kolekcjoner już pobrał — mapa rzadsza niż wide-daily. Wartości
+// w pp vs HODL na okno 30d (jak w Analizie obserwacji/ObservationAnalysis).
+export interface WideBacktestSummary {
+  mean: number;
+  med: number;
+  winPct: number;
+  worst: number;
+  best: number;
+  windows: number;
+  recent90: { mean: number; windows?: number } | null;
+  byRegime?: Record<string, unknown>;
+}
+
+export interface WideBacktestEntry {
+  id: string;
+  cls: string;
+  widthPct: number;
+  windows: number;
+  passive: WideBacktestSummary | null;
+  hybrid: WideBacktestSummary | null;
+  computedAt: string;
+}
+
+export type WideBacktestsData = Record<string, WideBacktestEntry>;
 
 // Historia REALNYCH pozycji — GET /api/positions-history?hours=N (bot/observer.ts
 // refreshPositions, HANDOFF Fable→Sonnet 2026-08-20, TASKS-UI.md Partia 10:
@@ -434,6 +515,10 @@ export interface UseBotApi {
   paperStatus: PaperStatus;
   ranking: RankingData | null;
   rankingStatus: RankingStatus;
+  wideRanking: RankingData | null;
+  wideRankingStatus: RankingStatus;
+  wideDaily: WideDailyData | null;
+  wideBacktests: WideBacktestsData | null;
   positionsHistory: PositionHistoryPoint[] | null;
   positionsHistoryStatus: PositionsHistoryStatus;
   candidates: CandidateVerdict[] | null;
@@ -463,6 +548,13 @@ export function useBotApi(): UseBotApi {
   const [paperStatus, setPaperStatus] = useState<PaperStatus>('loading');
   const [ranking, setRanking] = useState<RankingData | null>(null);
   const [rankingStatus, setRankingStatus] = useState<RankingStatus>('loading');
+  const [wideRanking, setWideRanking] = useState<RankingData | null>(null);
+  const [wideRankingStatus, setWideRankingStatus] = useState<RankingStatus>('loading');
+  // Wide-daily/wide-backtests (Partia 22) — wzbogacenie rankingów, nie
+  // zależność krytyczna: brak/404/pusty → null po cichu, bez czerwonego
+  // błędu (jak candidates/werdykty).
+  const [wideDaily, setWideDaily] = useState<WideDailyData | null>(null);
+  const [wideBacktests, setWideBacktests] = useState<WideBacktestsData | null>(null);
   const [positionsHistory, setPositionsHistory] = useState<PositionHistoryPoint[] | null>(null);
   const [positionsHistoryStatus, setPositionsHistoryStatus] = useState<PositionsHistoryStatus>('loading');
   const [candidates, setCandidates] = useState<CandidateVerdict[] | null>(null);
@@ -600,6 +692,88 @@ export function useBotApi(): UseBotApi {
     const id = setInterval(fetchRanking, RANKING_POLL_MS);
     return () => clearInterval(id);
   }, [fetchRanking, tick]);
+
+  // Ranking WIDE — GET /api/wide-ranking (scripts/wide-score.ts, lejek v2
+  // piętro 1, HANDOFF Fable→Sonnet 02.09, TASKS-UI.md Partia 21). Ten sam
+  // kształt co /api/ranking (RankingData) — poller i statusy 1:1.
+  const fetchWideRanking = useCallback(async () => {
+    try {
+      const headers: Record<string, string> = {};
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+      const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/wide-ranking`, { headers });
+      if (res.status === 503) {
+        // wide-score jeszcze nie zapisał pierwszego rankingu (przed pierwszym nocnym przebiegiem po deployu)
+        setWideRanking(null);
+        setWideRankingStatus('not-started');
+        return;
+      }
+      if (!res.ok) {
+        setWideRanking(null);
+        setWideRankingStatus('error');
+        return;
+      }
+      const data: RankingData = await res.json();
+      setWideRanking(data);
+      setWideRankingStatus('ok');
+    } catch {
+      // sieć niedostępna — jak przy pozostałych pollerach, cicho
+      setWideRanking(null);
+      setWideRankingStatus('error');
+    }
+  }, [apiBase, apiToken]);
+
+  useEffect(() => {
+    fetchWideRanking();
+    const id = setInterval(fetchWideRanking, RANKING_POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchWideRanking, tick]);
+
+  // Model dzienny (wide-daily) + pełny przebieg (wide-backtests) — Partia 22,
+  // HANDOFF Fable→Sonnet 02.09. Ten sam poller co ranking (30 min); brak/404/
+  // pusty → null po cichu (wzbogacenie tabel rankingowych, nie zależność).
+  const fetchWideDaily = useCallback(async () => {
+    try {
+      const headers: Record<string, string> = {};
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+      const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/wide-daily`, { headers });
+      if (!res.ok) {
+        setWideDaily(null);
+        return;
+      }
+      const data: WideDailyData = await res.json();
+      setWideDaily(data);
+    } catch {
+      setWideDaily(null);
+    }
+  }, [apiBase, apiToken]);
+
+  useEffect(() => {
+    fetchWideDaily();
+    const id = setInterval(fetchWideDaily, RANKING_POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchWideDaily, tick]);
+
+  const fetchWideBacktests = useCallback(async () => {
+    try {
+      const headers: Record<string, string> = {};
+      if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
+      const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/wide-backtests`, { headers });
+      if (!res.ok) {
+        setWideBacktests(null);
+        return;
+      }
+      const data: WideBacktestsData = await res.json();
+      setWideBacktests(data);
+    } catch {
+      setWideBacktests(null);
+    }
+  }, [apiBase, apiToken]);
+
+  useEffect(() => {
+    fetchWideBacktests();
+    const id = setInterval(fetchWideBacktests, RANKING_POLL_MS);
+    return () => clearInterval(id);
+  }, [fetchWideBacktests, tick]);
 
   const fetchPositionsHistory = useCallback(async () => {
     try {
@@ -802,6 +976,10 @@ export function useBotApi(): UseBotApi {
     paperStatus,
     ranking,
     rankingStatus,
+    wideRanking,
+    wideRankingStatus,
+    wideDaily,
+    wideBacktests,
     positionsHistory,
     positionsHistoryStatus,
     candidates,

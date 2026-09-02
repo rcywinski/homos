@@ -1216,6 +1216,12 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           <BotTelemetry bot={bot} />
           <ObservationAnalysis bot={bot} />
           <TopRankingPanel bot={bot} />
+          {/* Partia 21 (02.09, decyzja Rafała „dokładna kopia rankingu pod
+              nowe wytyczne, chcę obserwować"): drugi ranking obok
+              pierwszego, ten sam komponent z variant="wide" — źródło
+              /api/wide-ranking, apy7d niesie SCORE %/r zamiast APY. Oba
+              rankingi żyją obok siebie ~miesiąc (obserwacja). */}
+          <TopRankingPanel bot={bot} variant="wide" />
           <ClosedPositionsPanel bot={bot} />
       </div>
 
