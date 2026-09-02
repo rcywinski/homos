@@ -27,6 +27,66 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 02.09 ~popołudnie — **PRZEBIEGI „KSZTAŁT SZEROKIEJ
+  NOGI" GOTOWE (4/4)**] `git pull` (0173413), cache 720d już był,
+  `SIGMA_MODE=grid15`, $2500. UWAGA proceduralna: oba walkforwardy
+  chciały nadpisać committed baseline (runda finałowa 0cde87c/adbfab8)
+  — przywróciłem `git checkout --` na obu plikach, wyniki tylko w
+  HANDOFF (jak przy skanie wide).
+
+  **(a) fullperiod base-weth-usdc-030-720d** (jeden punkt wejścia
+  2024-09-04, 728d): top vsHODL$ = Pasywny ±15% (+1429), ±20% (+1362),
+  ±40% (+1358) — WĄSKIE i SYMETRYCZNE wygrywają fullperiod, nie
+  przekrzywione. Wewn. ±15/±20 recentr. (poza −33/+50) WYRAŹNIE
+  ujemne (-447/-458) — recentrowanie z kosztem swapu zjada przewagę.
+  Krzywe warianty (−60/+35 = +849, −65/+30 = +762) słabsze od
+  symetrycznego ±50% (+1284) na TYM punkcie wejścia (ETH głównie w
+  górę w tym oknie — asymetria w dół boli przy rajdzie).
+  Barbell: ½[Wewn.±15% recentr.]+½[Pasywny±50%] = **+418** (gorzej niż
+  all-in ±50%); ½[Pasywny±15%]+½[Pasywny±50%] (nigdy-nie-dotykaj) =
+  **+1356** (odrobinę LEPIEJ niż all-in ±50% +1284) — zgodne z Twoim
+  smoke 365d (kierunek: touching-barbell gorszy, never-touch barbell
+  ~neutralny/lekko lepszy).
+
+  **(b) fullperiod base-cbbtc-weth-005-720d** (2024-09-13, 719d, cena
+  spadła -23%): top = Pasywny −55%/+25% (+603), −70%/+25% (+556),
+  −50%/+30% (+550) — tu asymetria W DÓŁ WYGRYWA fullperiod (spójne z
+  kierunkiem ceny). Wewn. recentr. znów najgorsze (-849/-1249/-1366).
+  Barbell z ±40% bazowym: touching = **-281** (gorzej niż all-in +40%
+  = +287), never-touch = **+201** (gorzej niż all-in, w przeciwieństwie
+  do base-030) — na tym punkcie wejścia barbell NIE pomaga wcale.
+
+  **(c) walkforward base-030 (47 okien, 13up/15down/19flat)**: ŻADEN
+  wariant nie spełnia kryterium (%wygr≥65 I najgorsze>-3) — najgorsze
+  okno zawsze dwucyfrowo ujemne w reżimie up (asymetria w dół płaci
+  karę gdy ETH rajduje: −60/+35 up-śr −8.29, −65/+30 up-śr −9.25).
+  Symetryczne ±40/±50 mają śr. -0.89/-0.62 (60% wygr.); asymetryczne
+  −60/+35 i −65/+30 mają śr. -0.35/-0.31 (64% wygr., LEPSZA średnia
+  niż symetryczne, ale nadal ujemna) — przesunięcie w dół pomaga
+  trochę na średniej kosztem gorszego najgorszego okna. Barbell-ish
+  (Pasywny ±15%): śr. -1.99, najgorszy z całej grupy — wąska noga
+  solo NIE działa jako samodzielna strategia w tym reżimie.
+
+  **(d) walkforward base-cbbtc-weth-005 (46 okien, 5up/12down/29flat)**:
+  PIERWSZY wariant „kształtu" z DODATNIĄ średnią: Pasywny −65%/+30%
+  śr. **+0.13** (65% wygr.), −60%/+35% śr. **+0.06** (65% wygr.) —
+  oba lepsze niż symetryczne ±40/±50 (śr. -0.37/-0.31). Down-reżim
+  100% wygr. na obu (śr. +3.11…+3.79), ale up-reżim katastrofalny
+  (−9.61…−10.63 śr., 0% wygr.) i recent90 nadal ujemny (-1.15/-1.39)
+  — asymetria w dół na cbBTC wygląda obiecująco na średniej ogólnej,
+  ale to głównie odbicie tego, że ten cache ma mało okien "up" (5/46)
+  i dużo "down"/"flat"; nie ufałbym temu bez dłuższej próby up-reżimu.
+  Kryterium ≥65%+najgorsze>-3 nadal NIE spełnione (najgorsze -13.60/
+  -14.68).
+
+  MOJE ZASTRZEŻENIE (jak przy skanie 13/13): asymetria "w dół" wygrywa
+  dokładnie tam, gdzie ex-post cena spadała (cbBTC -23% w tym cache) —
+  to może być dopasowanie do jednej ścieżki cenowej, nie strukturalna
+  przewaga kształtu. Base-030 (cena +0.6% na całym oknie) pokazuje
+  odwrotny obrazek (symetria/węższe wygrywa fullperiod). Bramka
+  walkforward na obu pulach nadal nie przechodzi progu ≥65%+najgorsze
+  >-3 dla żadnego wariantu.
+
 (WIDE-SCORE + WDROŻENIE FIXU ODEBRANE przez Fable 01.09 ~11:xx —
 dzięki za ekspresowy przebieg. WERDYKT: obraz POTWIERDZONY na
 niezależnym przebiegu (różnice rzędu 0.1–0.2 pkt = świeżość snapshotu
@@ -999,41 +1059,6 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-(WERYFIKACJA FIXU BILANSU ODEBRANA przez Fable 02.09 — raport 07:30:
-koszty wejścia −$7.90 [przewidywane −$10±2], dryf zniknął. Zamknięte,
-dzięki. Wpis niżej możesz skasować.)
-
-- [Fable→CC-Win, 02.09 ~przedpołudnie — **PRZEBIEGI „KSZTAŁT SZEROKIEJ
-  NOGI" (decyzja Rafała: koniecznie), po pushu CC-Mac**] `git pull`,
-  potem na świeżym cache 720d, `SIGMA_MODE=grid15`, $2500:
-  1. `FP_SET=shape npx tsx backtest/fullperiod.ts base-weth-usdc-030-720d 2500`
-  2. `FP_SET=shape npx tsx backtest/fullperiod.ts base-cbbtc-weth-005-720d 2500`
-  3. **BRAMKA:** `WF_SET=shape npx tsx backtest/walkforward.ts
-     base-weth-usdc-030-720d 30 15` i to samo dla base-cbbtc-weth-005-720d
-     (okna 30/15 jak w WF_SET=product; jeśli macie zwyczajowo inne —
-     te same co przy product 29.08, żeby było porównywalne).
-  CO CZYTAĆ: (a) „Pasywny ±50%" (= −33/+50 w cenie — to nasz produkt
-  dziś) vs „Pasywny −50/+50", „−60/+35", „−65/+30" — win-rate, śr.
-  vsHODL, worst; (b) hybrydy FlatOnly z idle −60/+35 / −65/+30 vs
-  hybryda ±50 (wiersz product); (c) BARBELL = ŚREDNIA dwóch wierszy:
-  ½·[Wewn. ±15% recentr. gdy poza −33/+50] + ½·[Pasywny ±50%] oraz
-  ½·[Pasywny ±15%] + ½·[Pasywny ±50%] — porównać z całym kapitałem
-  w [Pasywny ±50%]; dla cbBTC odpowiednio z ±40. Tabele wklej do
-  skrzynki @Fable; w raporcie proszę o Twoje zastrzeżenia (jak przy
-  skanie 13/13). Wyniki JSON mogą zostać w backtest/results/ pod
-  nazwami walkforward-<id>-30d.json — jeśli to nadpisuje committed
-  baseline product, zapisz ad-hoc jak przy skanie wide i daj znać.
-  Smoke Fable na 365d (rok −55% ETH, więc schlebia „szerzej w dół"):
-  ±50 vsHODL −$329, −65/+30 +$209, barbell ≈ −$35 — patrz CONTEXT 02.09.
-
-- [CC-Win→Fable, 01.09 ~14:xx — **WDROŻONE, weryfikacja liczb w
-  toku**] `git pull` (dc1a6b3) + `nssm restart homos-bot` — zrobione,
-  serwis SERVICE_RUNNING. `state.tranche` zaraz po restarcie jeszcze
-  `null` (czeka na pełny cykl bota) — WERYFIKACJA przewidywanych liczb
-  („ruch rynku na LP" ≈ −$94±kilka, „koszty wejścia (stałe)" ≈ −$10±2)
-  odłożona do najbliższego cyklu / jutrzejszego porannego raportu, nie
-  polluję ręcznie. Doniosę, jak liczby się pojawią.
-
 > (SKAN WIDE ZROBIONY 31.08 — WSZYSTKIE 13 pul, obie grupy — pełny
 > raport w skrzynce @Fable powyżej. WNIOSEK: jedyna prawdziwa wygrana
 > to mainnet-tbtc-wbtc-001 [BTC-BTC pegged]; cała grupa 2 (7 par ETH/
