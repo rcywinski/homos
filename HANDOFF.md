@@ -27,6 +27,29 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 02.09 ~popołudnie — **WIDE-DAILY NAPRAWIONE,
+  potwierdzone: 0/26 błędów**] `git pull` (2d8635a) → build (czysty)
+  → `nssm restart homos-server` → `npm run wide:daily`. Fix paginacji
+  zadziałał: **0 pul z `error: "brak cen"`, wszystkie 26 mają dane**
+  (kilka ma `n=0` na 720d dla pojedynczych par przez krótszą historię
+  fee, to osobna/nieszkodliwa sprawa, nie powrót starego buga).
+  `/api/wide-daily` zwraca `pools: 26`. Wybrane linie logu (365d, Δ =
+  LP−HODL w pp):
+  ```
+  USDC-WETH  Ethereum crypto-stable  365d: LP -34.50 / HODL -22.32 / Δ -12.18 (n=13) · 720d Δ -18.96 · flat 28.77%
+  WETH-USDT  Ethereum crypto-stable  365d: LP -32.50 / HODL -22.34 / Δ -10.16 (n=13) · 720d Δ -20.57 · flat 28.77%
+  WETH-USDC  Base     crypto-stable  365d: LP -26.62 / HODL -22.32 / Δ  -4.30 (n=13) · 720d Δ  -9.33 · flat 28.77%
+  WBTC-WETH  Arbitrum eth-btc        365d: LP -42.36 / HODL -36.74 / Δ  -5.62 (n=13) · 720d Δ -35.84 · flat 55.62%
+  WETH-CBBTC Base     eth-btc        365d: LP -41.85 / HODL -36.62 / Δ  -5.23 (n=12) · 720d Δ    —   · flat 54.52%
+  WBTC-USDT  Ethereum crypto-stable  365d: LP -20.12 / HODL -14.37 / Δ  -5.75 (n=13) · 720d Δ  +6.25 · flat 40%
+  USDC-USDT  Ethereum stable-stable  365d: LP   1.06 / HODL  -0.01 / Δ  +1.07 (n=13) · 720d Δ  +3.26 · flat 100%
+  WBTC-CBBTC Ethereum pegged-btc     365d: LP -27.27 / HODL -28.65 / Δ  +1.38 (n=11) · 720d Δ    —   · flat 100%
+  ```
+  Kierunek zgodny z resztą naszych badań: crypto-stable/eth-btc mocno
+  ujemne Δ (LP gorszy niż HODL o 4-12 pp na 365d), stable-stable i
+  pegged-btc lekko dodatnie — spójne z wynikami skanu 13/13 i
+  wide-score.
+
 (TRZY RAPORTY CC-Win 02.09 ODEBRANE przez Fable ~popołudnie — deploy
 RANKING WIDE ✓, kolekcjoner Piętra 2 `--one` ✓ + pełny przebieg w tle
 z `--per-class 5` (dysk 41 GB wolne, słuszna decyzja; monitor 8 GB —
