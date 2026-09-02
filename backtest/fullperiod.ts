@@ -15,7 +15,7 @@
  *   SIGMA_MODE=grid15 npx tsx backtest/fullperiod.ts base-cbbtc-weth-005-720d 5000
  */
 import { runStrategy, ethUsd, Strategy, RunResult } from './engine';
-import { hodl5050, cash100, passiveWide, passiveW, fixedNaive, flatOnlyLP, volAdaptive, volAdaptiveTrend } from './strategies';
+import { hodl5050, cash100, passiveWide, passiveW, passiveAsym, fixedNaive, fixedNaiveAsym, innerTrig, flatOnlyLP, volAdaptive, volAdaptiveTrend } from './strategies';
 import { loadPool } from './load';
 
 const id = process.argv[2];
@@ -119,10 +119,50 @@ const productSet: Strategy[] = [
   flatOnlyLP({ ...productBase, passiveWidth: 0.4, narrowWidth: 0.05, recenter: 'noswap' }),
   flatOnlyLP({ ...productBase, passiveWidth: 0.5, narrowWidth: 0.05, recenter: 'noswap' }),
 ];
+// FP_SET=shape (02.09, dwa pomysły z briefu — KSZTAŁT szerokiej nogi,
+// nie jej sterowanie):
+//  (3) KRZYWY PRZEDZIAŁ: rangeAround jest symetryczny w LOG-cenie, więc
+//      produktowe „±50%" = −33%/+50% w cenie — mniej miejsca w dół, a to
+//      w dół boli (MC 01.09). Warianty: prawdziwie symetryczny −50/+50,
+//      przekrzywione w dół −60/+35, −65/+30, −70/+25; dla cbBTC (±40):
+//      −40/+40, −50/+30, −55/+25. Czytaj wiersz pasujący do puli.
+//  (4) BARBELL: dwie statyczne pozycje (½ wąska ±15/±20%, ½ szeroka) — silnik
+//      ma jedną pozycję, ale wynik jest liniowy w kapitale, więc barbell =
+//      ŚREDNIA z dwóch wierszy: np. ½·[Wewn. ±15% recentr. gdy poza −33/+50]
+//      + ½·[Pasywny ±50%]. Wersja „nigdy nie dotykaj" = ½·[Pasywny ±15%]
+//      + ½·[Pasywny ±50%]. Do porównania: cały kapitał w [Pasywny ±50%].
+// Bramka jak zawsze: fullperiod to ilustracja, decyduje WF_SET=shape.
+const productHybrid = (asym: [number, number]) =>
+  flatOnlyLP({ ...productBase, passiveWidth: 0.5, narrowWidth: 0.05, passiveAsym: asym });
+const shapeSet: Strategy[] = [
+  hodl5050,
+  passiveW(0.4), // = −29/+40 w cenie (cbBTC dziś)
+  passiveW(0.5), // = −33/+50 w cenie (base-030 dziś)
+  // (3) krzywy przedział — pasywne
+  passiveAsym(0.5, 0.5),
+  passiveAsym(0.6, 0.35),
+  passiveAsym(0.65, 0.3),
+  passiveAsym(0.7, 0.25),
+  passiveAsym(0.4, 0.4),
+  passiveAsym(0.5, 0.3),
+  passiveAsym(0.55, 0.25),
+  // (3) krzywy przedział — pełna hybryda (szeroka noga asym., wąska ±5%)
+  productHybrid([0.6, 0.35]),
+  productHybrid([0.65, 0.3]),
+  // (4) barbell — nogi do uśrednienia z passiveW(0.5)/(0.4)
+  passiveW(0.15),
+  passiveW(0.2),
+  innerTrig(0.15, 1 / 3, 0.5),
+  innerTrig(0.2, 1 / 3, 0.5),
+  innerTrig(0.15, 0.29, 0.4),
+  fixedNaive(0.5), // szeroka noga z recentrowaniem po wyjściu (para do innerTrig)
+  fixedNaiveAsym(0.6, 0.35),
+];
 const strategies: Strategy[] =
   process.env.FP_SET === 'final' ? finalSet
     : process.env.FP_SET === 'hybrid' ? hybridSet
     : process.env.FP_SET === 'product' ? productSet
+    : process.env.FP_SET === 'shape' ? shapeSet
     : recalSet;
 
 console.log(

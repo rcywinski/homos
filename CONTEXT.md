@@ -81,6 +81,64 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-02 ~przedpołudnie — Brief + ŚWIEŻE SPOJRZENIE NA ZYSKI (Fable + Rafał): kształt szerokiej nogi do bramki, Aerodrome sprawdzony, benchmark „HODL+yield"
+BRIEF (raport 07:30): automat czysty, kolejka pusta, down:false 6/6.
+Bilans transzy −$200.86 (−3.30%): rynek −$190.70, reszta −$10.16
+(koszty wejścia −$7.90, beta bufora −$2.26) — **fix z 01.09
+ZWERYFIKOWANY** (przewidywane koszty ≈ −$10±2), dryf zniknął; spadek
+o ~$100 od wczoraj = czysta beta ETH (vs HODL łącznie −$6.53).
+Eksperyment #5908083: in-range, gap −0.6%, fee $1.60, **$0.90/d
+utrzymane 2. dzień** (≈14.6%/r na $2,253; szeroka $1.06/d ≈ 11%/r).
+Selektor: edge maleje 5. dzień (−58.6→−28.0 p.p.) — za ~1–2 tyg.
+może przeciąć zero i zacząć proponować ROTACJĘ pul produktowych;
+do rozstrzygnięcia przed tym, czy pule produktowe są wyłączone z
+rotacji (E3). OPEN mainnet-030 (22% APR) — nieproduktowa, ignor.
+ROZMOWA O ZYSKACH (bez żargonu, decyzje Rafała spisane):
+(1) BENCHMARK: HODL 50/50 to za niska poprzeczka — realna
+alternatywa to HODL z pasywnym yieldem (wstETH ~3% + USDC na Aave
+~4–5% ≈ 3.5–4%/r bez IL i bez rebalansów). Na 24.09 porównujemy
+się z TYM, obok lokaty/ETF.
+(2) AERODROME (emisje AERO zamiast fee — ta sama mechanika v3):
+SPRAWDZONE na żywo (DefiLlama yields, Base). **WETH/USDC: NIE** —
+nasza pula Uni v3 0.3% ($115M TVL, apy30 58.8, vol7 $469M) bije
+Aerodrome CL100 (apy 19.4 = 9.9 fee + 9.5 AERO, $9M TVL) wyraźnie;
+Uniswap jest tu najlepszy w klasie. **cbBTC/WETH: NIEROZSTRZYGNIĘTE**
+— Aerodrome CL10 0.025% pokazuje apy 177 (62 fee + 115 AERO,
+$10M TVL) vs nasza Uni 0.05% apy30 58.3, ALE vol7=0 (znana wada
+danych L2 u Llamy, CONTEXT 01.09) i CL10 = ciasny tick spacing
+(emisje idą do płynności in-range, więc ±40% dostanie ułamek).
+Do weryfikacji na danych samego Aerodrome (UI/gauge APR dla
+naszej szerokości) — bez kodu, bez kapitału. Koszt wejścia w temat,
+gdyby liczby się potwierdziły: NFT w gauge (fee idą do voterów,
+LP dostaje AERO), sprzedaż AERO, nowy kontrakt, przeróbka observera.
+(3) KRZYWY PRZEDZIAŁ — **ZNALEZISKO**: `rangeAround`/`suggestFixedRange`
+są symetryczne w LOG-cenie, więc produktowe „±50%" = **−33%/+50% w
+cenie** (a „±40%" = −29/+40). Szeroka noga ma DWA RAZY mniej miejsca
+w stronę, która wg MC boli (poniżej pasma 100% w spadającym aktywie).
+(4) BARBELL: dwie statyczne pozycje (½ wąska ±15/20%, ½ szeroka),
+recentrowanie wąskiej dopiero gdy cena wyjdzie poza szeroką — inny
+mechanizm niż odrzucone zwężanie (tam wąska goniła cenę).
+KOD (Fable, tsc czysty poza preexisting observer:43): `backtest/
+strategies.ts` — `rangeAsym`, `passiveAsym(down,up)`,
+`fixedNaiveAsym`, `innerTrig(wIn,trigDown,trigUp)`, opcja
+`passiveAsym` w `flatOnlyLP`; `fullperiod.ts` `FP_SET=shape`,
+`walkforward.ts` `WF_SET=shape`. Barbell = ŚREDNIA dwóch wierszy
+(silnik ma jedną pozycję, wynik liniowy w kapitale).
+SMOKE (kontener, cache 365d do 11.08, grid15, $2500) — ILUSTRACJA,
+nie bramka: base-030 (rok −54.8% ETH): Pasywny ±50% vsHODL −$329
+(inRange 32%!), −50/+50 −$151, −60/+35 +$123, −65/+30 +$209,
+−70/+25 +$271, hybryda z idle −65/+30 +$397; barbell ½·[wewn. ±15%]
++½·[±50%] ≈ −$35. cbBTC (para −16.5%, wszystko in-range): rozrzut
+$71…$150, asym −65/+30 hybryda najlepsza (+$150 vs ±40 +$84).
+Oczywiste zastrzeżenie: rok spadkowy schlebia „szerzej w dół" —
+DECYDUJE walkforward 720d u CC-Win (zlecenie w HANDOFF).
+FLAGA silnika (poza zakresem dziś): w `flatOnlyLP` idle:'passive'
+szeroka noga NIGDY nie jest recentrowana po wyjściu z pasma (żywy
+bot proponuje REBALANCE) — backtest hybrydy jest tu pesymistyczny.
+(5) SKALA: decyzja Rafała — jeśli badania 3/4 (lub 2) poprawią
+% zysku, wchodzimy większą skalą; bez poprawy P&L na $6k nie
+zwraca czasu, wartość = maszyna badawcza. Na agendę 24.09.
+
 ### 2026-09-01 ~popołudnie — ANALIZA PRAWDOPODOBIEŃSTW + MONTE CARLO STRATEGII (Fable + Rafał) — materiał na przegląd 24.09
 Na prośbę Rafała („analizy jak profesjonalni maklerzy") — dwie
 analizy z 500d dziennych cen (coins.llama.fi, ETH i BTC, na żywo).

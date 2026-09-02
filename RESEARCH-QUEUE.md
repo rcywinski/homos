@@ -993,6 +993,29 @@ rozstrzyga; jeśli nie rozstrzyga niczego, nie odpalamy.
    wysoka: potrzebny byłby JEDEN próg wygrywający na OBU pulach
    i w ≥2 reżimach.
 
+### E6b. KSZTAŁT SZEROKIEJ NOGI (02.09, brief „świeże spojrzenie" — decyzja Rafała: koniecznie)
+- [ ] **Krzywy przedział**: produktowe „±50%" = −33/+50 w cenie (log-symetria
+      w rangeAround i advisor.suggestFixedRange). Warianty −50/+50, −60/+35,
+      −65/+30, −70/+25 (cbBTC: −40/+40, −50/+30, −55/+25) + hybrydy z idle
+      asym. Kod: FP_SET/WF_SET=shape. Bramka: walkforward 720d u CC-Win.
+      Smoke 365d w CONTEXT 02.09. Jeśli przejdzie → zmiana = jedna liczba
+      w bot/config (productIdleWidthPct → para down/up) + advisor.
+- [ ] **Barbell**: ½ wąska ±15/20% statyczna (recentr. tylko gdy cena
+      poza szeroką) + ½ szeroka. Ten sam zestaw shape; wynik = średnia
+      dwóch wierszy. Jeśli przejdzie → wymaga DWÓCH NFT per pula w
+      observerze (nowa klasa pracy — decyzja na przeglądzie).
+- [ ] **Aerodrome Slipstream** (emisje AERO): WETH/USDC — NIE (Uni v3 0.3%
+      bije, CONTEXT 02.09). cbBTC/WETH CL10 — nierozstrzygnięte (Llama
+      apy 177 = 62 fee + 115 AERO, ale vol7=0 i ciasny spacing). Do
+      sprawdzenia na danych Aerodrome (gauge APR dla ±40%) — ręcznie,
+      bez kodu. Jeśli >2× naszego realized ~15%/r przy tej szerokości →
+      osobna karta (NFT w gauge, sprzedaż AERO, nowy kontrakt, observer).
+- [ ] **Benchmark 24.09 = HODL 50/50 + pasywny yield** (wstETH ~3% + USDC
+      Aave ~4–5% ≈ 3.5–4%/r bez IL) obok lokaty/ETF — dopisać do E4.
+- [ ] FLAGA silnika: flatOnlyLP idle:'passive' nie recentruje szerokiej
+      nogi po wyjściu z pasma (żywy bot proponuje REBALANCE) — backtest
+      hybrydy pesymistyczny; do backlogu silnika obok „in-range po swapach".
+
 ### E5. ZAMKNIĘTE — NIE wracać bez nowych danych (falsyfikacje 26-27.08)
 rotacja między pulami (przegrywa z single-pool i USDC, nawet ORACLE),
 hedge ciągły full/excess (artefakt małej próby, 720d obala), upConfirm

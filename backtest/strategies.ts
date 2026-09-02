@@ -68,6 +68,25 @@ const rangeAround = (ctx: Ctx, w: number): [number, number] => {
   return [Math.max(lo, VMIN + ctx.spec.tickSpacing), Math.min(hi, VMAX - ctx.spec.tickSpacing)];
 };
 
+/** ZAKRES ASYMETRYCZNY W CENIE (02.09, „krzywy przedział"). UWAGA na
+ *  konwencję: `rangeAround(w)` jest symetryczny w LOG-cenie, czyli
+ *  „±50%" = [P/1.5, P·1.5] = −33% w dół / +50% w górę. Produkt na żywo
+ *  (advisor.suggestFixedRange) liczy identycznie — nasza szeroka noga ma
+ *  więc DWA RAZY mniej miejsca w stronę, która wg Monte Carlo (01.09)
+ *  boli najbardziej (poniżej pasma: 100% w spadającym aktywie).
+ *  Tu `down`/`up` są ułamkami CENY: lo = P·(1−down), hi = P·(1+up).
+ *  passiveAsym(0.5, 0.5) = prawdziwe −50/+50; passiveW(0.5) ≡
+ *  passiveAsym(0.333, 0.5). */
+const rangeAsym = (ctx: Ctx, down: number, up: number): [number, number] => {
+  const dLo = Math.round(-Math.log(1 - down) / Math.log(1.0001));
+  const dHi = Math.round(Math.log(1 + up) / Math.log(1.0001));
+  let lo = ctx.alignTick(ctx.ev.t - dLo);
+  let hi = ctx.alignTick(ctx.ev.t + dHi);
+  if (hi <= lo) hi = lo + ctx.spec.tickSpacing;
+  return [Math.max(lo, VMIN + ctx.spec.tickSpacing), Math.min(hi, VMAX - ctx.spec.tickSpacing)];
+};
+const asymName = (down: number, up: number) => `−${(down * 100).toFixed(0)}%/+${(up * 100).toFixed(0)}%`;
+
 /** 1. HODL 50/50 — benchmark bramki wyjścia. */
 export const hodl5050: Strategy = {
   name: 'HODL 50/50',
@@ -198,6 +217,9 @@ export const flatOnlyLP = (opts: {
    *  liczyć to samo — inaczej walkforward i fullperiod mierzą inny
    *  produkt niż ten, którym gramy (rozjazd wykryty 29.08). */
   narrowWidth?: number;
+  /** ASYMETRYCZNA szeroka noga idle w CENIE (02.09): [down, up] — nadpisuje
+   *  passiveWidth (które jest log-symetryczne, patrz rangeAsym). */
+  passiveAsym?: [number, number];
 }): Strategy => {
   let ema: number | null = null;
   let lastTs: number | null = null;
@@ -232,13 +254,18 @@ export const flatOnlyLP = (opts: {
   const idleMode = opts.idle ?? 'quote';
   const passive = idleMode === 'passive';
   const pw = opts.passiveWidth ?? 0.4;
+  // szeroka noga: asymetryczna w cenie, gdy podano passiveAsym (02.09);
+  // wariant noswap dotyczy tylko przejść z wąskiej nogi, więc tu bez niego
+  const mkIdleRange = (ctx: Ctx): [number, number] =>
+    opts.passiveAsym ? rangeAsym(ctx, opts.passiveAsym[0], opts.passiveAsym[1]) : mkRange(ctx, pw);
   let inFlat = false; // dla idle:'passive' — czy obecna pozycja to WĄSKI LP
-  const idleName = idleMode === 'quote' ? 'cash' : idleMode === 'hodl' ? 'HODL50/50' : `±${(pw * 100).toFixed(0)}%`;
+  const idleName = idleMode === 'quote' ? 'cash' : idleMode === 'hodl' ? 'HODL50/50'
+    : opts.passiveAsym ? asymName(opts.passiveAsym[0], opts.passiveAsym[1]) : `±${(pw * 100).toFixed(0)}%`;
   return {
     name: `FlatOnly${(opts.recenter ?? 'swap') === 'noswap' ? ' [bez swapu]' : ''} ${opts.narrowWidth ? `wąski ±${(opts.narrowWidth * 100).toFixed(0)}%` : `k=${opts.k}`} |gap|<${(opts.enterThresh * 100).toFixed(0)}%/${(opts.confirmSec / 3600).toFixed(0)}h→LP, >${(opts.exitThresh * 100).toFixed(0)}%→${idleName} (HL${opts.trendHLDays}d)`,
     init: (ctx) => {
       if (passive) {
-        ctx.openPosition(...mkRange(ctx, pw)); // idle = szeroki pasywny LP
+        ctx.openPosition(...mkIdleRange(ctx)); // idle = szeroki pasywny LP
         inFlat = false;
       } else {
         toIdle(ctx); // start POZA rynkiem w posturze idle
@@ -266,7 +293,7 @@ export const flatOnlyLP = (opts: {
           ctx.closePosition();
           halfGas(ctx);
           if (passive) {
-            ctx.openPosition(...mkRange(ctx, pw)); // z powrotem szeroki
+            ctx.openPosition(...mkIdleRange(ctx)); // z powrotem szeroki
             inFlat = false;
           } else {
             toIdle(ctx);
@@ -345,6 +372,53 @@ export const passiveW = (w: number): Strategy => ({
   init: (ctx) => ctx.openPosition(...rangeAround(ctx, w)),
   onEvent: () => {},
 });
+
+/** Pasywny asymetryczny −down/+up (w CENIE) — otwórz raz, nie ruszaj.
+ *  Rodzina „krzywy przedział" (02.09): szerzej w dół, węziej w górę. */
+export const passiveAsym = (down: number, up: number): Strategy => ({
+  name: `Pasywny ${asymName(down, up)}`,
+  init: (ctx) => ctx.openPosition(...rangeAsym(ctx, down, up)),
+  onEvent: () => {},
+});
+
+/** Sztywny asymetryczny z naiwnym rebalansem po wyjściu (para do fixedNaive). */
+export const fixedNaiveAsym = (down: number, up: number): Strategy => ({
+  name: `Sztywny ${asymName(down, up)} (naiwny)`,
+  init: (ctx) => ctx.openPosition(...rangeAsym(ctx, down, up)),
+  onEvent: (ctx) => {
+    const p = ctx.state.pos;
+    if (p && (ctx.ev.t < p.lo || ctx.ev.t >= p.hi)) ctx.rebalance(...rangeAsym(ctx, down, up));
+  },
+});
+
+/** NOGA WEWNĘTRZNA „BARBELL" (02.09, pomysł: dwie statyczne pozycje zamiast
+ *  jednej). Silnik trzyma JEDNĄ pozycję, ale wynik jest liniowy w kapitale
+ *  (gaz stały i share L/(Lpool+L) to pomijalne nieliniowości przy $2.5k vs
+ *  pula $10M+), więc barbell = ŚREDNIA dwóch osobnych przebiegów:
+ *    barbell(A,B) ≈ ½·final(A) + ½·final(B)   (to samo dla fees/gas/swap)
+ *  Noga wewnętrzna: wąski ±wIn (log-sym.), recentrowany DOPIERO gdy cena
+ *  wyjdzie poza [c·(1−trigDown), c·(1+trigUp)] od środka c — czyli wtedy,
+ *  kiedy i tak przestawialibyśmy nogę szeroką. Pomiędzy: NIC (zero kosztów).
+ *  To NIE jest zwężanie z 29.08 (tam wąska noga goniła cenę co wyjście —
+ *  koszty zjadały efekt); tu przez większość czasu pozycja stoi. */
+export const innerTrig = (wIn: number, trigDown: number, trigUp: number): Strategy => {
+  let center = 0;
+  return {
+    name: `Wewn. ±${(wIn * 100).toFixed(0)}% recentr. gdy poza ${asymName(trigDown, trigUp)}`,
+    init: (ctx) => {
+      center = ctx.ev.t;
+      ctx.openPosition(...rangeAround(ctx, wIn));
+    },
+    onEvent: (ctx) => {
+      const dLo = Math.round(-Math.log(1 - trigDown) / Math.log(1.0001));
+      const dHi = Math.round(Math.log(1 + trigUp) / Math.log(1.0001));
+      if (ctx.ev.t < center - dLo || ctx.ev.t >= center + dHi) {
+        center = ctx.ev.t;
+        ctx.rebalance(...rangeAround(ctx, wIn));
+      }
+    },
+  };
+};
 
 /** 4. Sztywny ±w% z naiwnym rebalansem natychmiast po wyjściu z zakresu. */
 export const fixedNaive = (w: number): Strategy => ({

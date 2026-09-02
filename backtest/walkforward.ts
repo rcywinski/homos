@@ -21,7 +21,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { runStrategy, Strategy, ethUsd } from './engine';
-import { hodl5050, cash100, flatOnlyLP, passiveWide, passiveW, fixedNaive, volAdaptive, volAdaptiveTrend, volAdaptiveHedge } from './strategies';
+import { hodl5050, cash100, flatOnlyLP, passiveWide, passiveW, passiveAsym, fixedNaive, innerTrig, volAdaptive, volAdaptiveTrend, volAdaptiveHedge } from './strategies';
 import { loadPool, loadFunding } from './load'; // wspólny loader (obsługuje też pary quote:'WETH')
 
 const OUT = path.join(__dirname, 'results');
@@ -228,9 +228,35 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       flatOnlyLP({ ...base, passiveWidth: 0.5, narrowWidth: 0.05, recenter: 'noswap' }),
     ];
   };
+  // WF_SET=shape (02.09): bramka wielookienna dla KSZTAŁTU szerokiej nogi —
+  // krzywy przedział (3) i barbell (4); opis zestawu w fullperiod.ts.
+  // Barbell = średnia dwóch wierszy (wynik liniowy w kapitale).
+  const mkShape = (): Strategy[] => {
+    const base = { horizonDays: 7, trendHLDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600, idle: 'passive' as const };
+    return [
+      hodl5050,
+      passiveW(0.4),
+      passiveW(0.5),
+      passiveAsym(0.5, 0.5),
+      passiveAsym(0.6, 0.35),
+      passiveAsym(0.65, 0.3),
+      passiveAsym(0.4, 0.4),
+      passiveAsym(0.5, 0.3),
+      flatOnlyLP({ ...base, passiveWidth: 0.5, narrowWidth: 0.05 }),
+      flatOnlyLP({ ...base, passiveWidth: 0.5, narrowWidth: 0.05, passiveAsym: [0.6, 0.35] }),
+      flatOnlyLP({ ...base, passiveWidth: 0.4, narrowWidth: 0.05, passiveAsym: [0.5, 0.3] }),
+      passiveW(0.15),
+      passiveW(0.2),
+      innerTrig(0.15, 1 / 3, 0.5),
+      innerTrig(0.2, 1 / 3, 0.5),
+      fixedNaive(0.5),
+    ];
+  };
   const mkStrategies = (): Strategy[] =>
     process.env.WF_SET === 'hedge'
       ? mkHedge()
+      : process.env.WF_SET === 'shape'
+      ? mkShape()
       : process.env.WF_SET === 'product'
       ? mkProduct()
       : process.env.WF_SET === 'hybrid'
