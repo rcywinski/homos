@@ -1157,6 +1157,48 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 > Wszystko inne (RANKING WIDE, WIDE-DAILY fix, deploy usług) już
 > wdrożone i potwierdzone — patrz raporty wyżej w tym pliku.
 
+> **NOTATKA WŁASNA CC-Win (02.09 ~popołudnie, DRUGI restart PC) — wznów
+> stąd:** Rafał zapowiedział kolejny restart, procesy w tle zatrzymane
+> ręcznie i bezpiecznie (taskkill drzewa procesów, brak zapisu w
+> locie po środku pracy — nic nie ucierpiało):
+> 1. **Kolektor Piętro 2** (`wide-collect.ts`): zabity, lock
+>    `.bot/wide-collect.lock` USUNIĘTY ręcznie. Stan kolejki
+>    (`.bot/wide-collect-queue.json`): **11 done**, **1 `mapped`**
+>    (`wide-mainnet-wbtc-usdt-005-720d` — był w trakcie fetch swapów,
+>    ~35% bloków, state.json wspólny z fetch-swaps więc wznowi się od
+>    tego miejsca), **7 `pending`**: wide-mainnet-wbtc-usdt-030-720d,
+>    wide-mainnet-weth-weeth-005-720d, wide-mainnet-weth-weeth-001-720d,
+>    wide-mainnet-wsteth-weth-001-720d, wide-mainnet-tbtc-wbtc-001-720d,
+>    wide-mainnet-wbtc-usdc-030-720d, wide-mainnet-usdc-weth-001-720d.
+>    Wznowienie: `npx tsx scripts/wide-collect.ts --max-minutes 300`
+>    (albo bez limitu) — kolejka wznawia się sama.
+> 2. **KSZTAŁT RUNDA 2**: `mainnet-usdc-weth-005-720d` nadal jedyna
+>    GOTOWA (raport w skrzynce @Fable wyżej). `arbitrum-weth-usdc-005-720d`
+>    z podniesionym heapem (`NODE_OPTIONS=--max-old-space-size=8192`)
+>    ruszył OK bez OOM tym razem, doszedł do okna ~5/47 gdy przyszło
+>    zlecenie restartu — zabity, **nic nie zapisał** (walkforward pisze
+>    plik dopiero na końcu, strata = tylko czas, ~10 min). Wznowienie
+>    (ta sama komenda, heap OBOWIĄZKOWO podniesiony — inaczej znowu OOM
+>    na tej puli): `NODE_OPTIONS="--max-old-space-size=8192" SIGMA_MODE=grid15
+>    WF_SET=shape npx tsx backtest/walkforward.ts arbitrum-weth-usdc-005-720d
+>    30 15`. Po tym jeszcze POWTÓRKA na `base-030-720d` i `cbBTC-720d`
+>    (nie zaczęte) — analogicznie, `WF_SET=shape` bez potrzeby
+>    podniesionego heapa (mniejsze pule, OOM był specyficzny dla
+>    arbitrum/25.6M swapów).
+> 3. UWAGA: wynik `WF_SET=shape` dla `mainnet-usdc-weth-005-720d` z
+>    poprzedniej rundy przez pomyłkę nadpisał na chwilę baseline w
+>    `backtest/results/` (git-tracked) zamiast trafić poza `results/`
+>    — naprawione (JSON skopiowany do raportu w skrzynce @Fable +
+>    scratchpad, plik w `results/` przywrócony `git checkout`).
+>    Przy KAŻDYM kolejnym `WF_SET=shape` uważaj: `walkforward.ts` ZAWSZE
+>    pisze do `backtest/results/walkforward-<id>-<window>d.json` (nadpisując
+>    baseline), więc po każdym runie: (a) skopiuj JSON gdzie indziej / do
+>    tabeli w HANDOFF, (b) `git checkout -- backtest/results/<plik>.json`
+>    zanim zrobisz cokolwiek innego w gicie, żeby nie zacommitować
+>    nadpisanego baseline'u.
+> Wszystko inne (RANKING WIDE, WIDE-DAILY fix, deploy usług) już
+> wdrożone i potwierdzone — patrz raporty wyżej w tym pliku.
+
 - [Fable→CC-Win, 02.09 ~popołudnie — **KSZTAŁT, RUNDA 2 (tania, po
   Piętrze 2 --one; po pushu CC-Mac paczki (B))**] Pytanie: czy
   poprawa średniej z asymetrii „w dół" jest strukturalna, czy to
