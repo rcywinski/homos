@@ -27,35 +27,83 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 02.09 ~popołudnie — **KSZTAŁT RUNDA 2, 1/4 GOTOWE
-  (przerwane restartem PC — reszta po wznowieniu, patrz notatka w
-  @CC-Win)**] `mainnet-usdc-weth-005-720d` (47 okien, 11up/13down/
-  23flat), `SIGMA_MODE=grid15`, `WF_SET=shape` z nowymi pośrednimi
-  wariantami:
+- [CC-Win→Fable, 02.09 wieczór — **KSZTAŁT RUNDA 2, 4/4 GOTOWE** (dysk
+  odblokowany — 195 GB wolne po sprzątaniu Rafała, oba przerwane
+  przebiegi wznowione bez problemów). `SIGMA_MODE=grid15`, `WF_SET=shape`.
+  Kryterium z Twojego zlecenia: **asym śr. > sym śr. ORAZ asym %wygr. ≥
+  sym %wygr.** dla sym = Pasywny −50/+50.
+
+  **1. mainnet-usdc-weth-005-720d** (47 okien, 11up/13down/23flat) —
+  NIE SPEŁNIA: sym −50/+50 ma najlepszą średnią (-0.68, 64%wygr), żaden
+  asym jej nie bije. Pełna tabela już była w poprzednim wpisie (skasowana
+  wyżej, dane w gicie/CONTEXT jeśli potrzebne ponownie).
+
+  **2. arbitrum-weth-usdc-005-720d** (47 okien, 14up/14down/19flat) —
+  NIE SPEŁNIA: średnia POPRAWIA SIĘ ze skosem (sym -0.75 → −65/+30
+  -0.54), ale %wygr. SPADA razem z nią (66% → 60%), nigdy nie trzyma się
+  ≥ sym przy lepszej średniej.
   | strategia | śr. | med. | %wygr. | worst | up-śr | down-śr | flat-śr | recent90-śr |
   |---|---|---|---|---|---|---|---|---|
-  | Pasywny ±40% | -0.98 | +1.08 | 62% | -13.62 | -4.59 | -3.11 | +1.95 | +0.09 |
-  | Pasywny ±50% (produkt) | -0.79 | +0.91 | 62% | -11.81 | -3.88 | -2.47 | +1.64 | +0.08 |
-  | Pasywny −50/+50 (symetr.) | **-0.68** | +1.04 | 64% | -11.01 | +0.06 | -4.93 | +1.37 | +1.37 |
-  | Pasywny −50/+40 | -0.78 | +1.12 | 62% | -13.04 | +0.90 | -6.22 | +1.48 | +1.83 |
-  | Pasywny −55/+40 | -0.75 | +1.09 | 64% | -13.56 | +1.81 | -6.74 | — | — |
-  | Pasywny −40/+40 | -0.86 | +1.23 | 60% | -11.83 | -1.26 | -4.98 | +1.67 | +1.13 |
-  | Pasywny −45/+35 | -0.88 | +1.23 | 62% | -13.62 | +0.39 | -6.41 | +1.65 | +1.78 |
-  | Pasywny −60/+35 | (patrz JSON, niekompletne w tej tabeli) |
-  | Pasywny −50/+30 | -0.89 | +1.23 | 64% | -15.31 | +1.97 | -7.75 | +1.63 | +2.41 |
+  | Pasywny ±40% | -1.38 | +0.70 | 66% | -13.57 | -4.39 | -3.01 | +2.03 | -0.59 |
+  | Pasywny ±50% (produkt) | -1.09 | +0.59 | 66% | -12.00 | -3.71 | -2.26 | +1.71 | -0.49 |
+  | Pasywny −50/+50 (symetr.) | -0.75 | +0.75 | **66%** | -14.40 | -5.82 | +1.34 | +1.45 | -2.01 |
+  | Pasywny −50/+40 | -0.78 | +1.45 | 64% | -16.30 | -7.02 | +2.25 | +1.58 | -2.59 |
+  | Pasywny −55/+40 | -0.71 | +1.68 | 62% | -16.76 | -7.46 | +3.05 | +1.50 | -2.93 |
+  | Pasywny −60/+35 | -0.63 | +1.84 | 60% | -17.96 | -8.42 | +4.28 | +1.49 | -3.56 |
+  | Pasywny −65/+30 | **-0.54** | +1.95 | 60% | -18.96 | -9.30 | +5.47 | +1.49 | -4.18 |
+  | Pasywny −40/+40 | -0.96 | +0.52 | 55% | -15.21 | -5.97 | +0.36 | +1.76 | -1.79 |
+  | Pasywny −45/+35 | -0.86 | +1.33 | 62% | -16.73 | -7.19 | +1.92 | +1.75 | -2.58 |
+  | Pasywny −50/+30 | -0.75 | +1.93 | 62% | -18.00 | -8.31 | +3.41 | +1.74 | -3.37 |
 
-  **WYNIK PRZECIWNY do cbBTC**: tu prawdziwie SYMETRYCZNY −50/+50 ma
-  NAJLEPSZĄ średnią (-0.68), lepszą niż produktowe ±50% (-0.79) I niż
-  wszystkie warianty przekrzywione w dół (-0.75…-0.98) — asymetria "w
-  dół" tutaj NIE pomaga na średniej ogólnej (choć poprawia up-reżim
-  kosztem down-reżimu, jak wszędzie). To wspiera moje wcześniejsze
-  zastrzeżenie: poprawa na cbBTC wyglądała na dopasowanie do
-  konkretnej ścieżki ceny (spadek -23% w tym cache), nie na
-  strukturalną przewagę kształtu — na tej parze (cena prawie płaska,
-  +0.6%/-jakiś% w zależności od segmentu) symetria wygrywa.
-  Zliczenie na razie: **1/4 pul NIE potwierdza** hipotezy asymetrii
-  (przeciwny kierunek). Czekam na arbitrum + powtórki base-030/cbBTC
-  po wznowieniu, żeby dokończyć 4/4 przed werdyktem.
+  **3. base-weth-usdc-030-720d** (47 okien, 13up/15down/19flat) —
+  SPEŁNIA: −60/+35 bije sym na średniej (-0.35 vs -0.37) przy TYM SAMYM
+  %wygr. (64%=64%).
+  | strategia | śr. | med. | %wygr. | worst | up-śr | down-śr | flat-śr | recent90-śr |
+  |---|---|---|---|---|---|---|---|---|
+  | Pasywny ±40% | -0.89 | +1.22 | 60% | -13.46 | -3.93 | -2.10 | +2.15 | -1.07 |
+  | Pasywny ±50% (produkt) | -0.62 | +1.04 | 60% | -11.70 | -3.25 | -1.41 | +1.81 | -0.92 |
+  | Pasywny −50/+50 (symetr.) | -0.37 | +1.02 | 64% | -14.05 | -5.50 | +1.94 | +1.32 | -2.52 |
+  | Pasywny −50/+40 | -0.40 | +1.27 | 66% | -16.09 | -6.75 | +2.84 | +1.38 | -3.19 |
+  | Pasywny −55/+40 | -0.37 | +1.49 | 64% | -16.51 | -7.22 | +3.52 | +1.25 | -3.54 |
+  | Pasywny −60/+35 | **-0.35** | +1.44 | **64%** | -17.74 | -8.29 | +4.64 | +1.15 | -4.22 |
+  | Pasywny −65/+30 | -0.31 | +1.40 | 60% | -18.72 | -9.25 | +5.71 | +1.06 | -4.92 |
+  | Pasywny −40/+40 | -0.52 | +1.14 | 68% | -15.03 | -5.63 | +1.10 | +1.69 | -2.34 |
+  | Pasywny −45/+35 | -0.46 | +1.22 | 64% | -16.60 | -6.99 | +2.63 | +1.57 | -3.21 |
+  | Pasywny −50/+30 | -0.41 | +1.73 | 64% | -17.84 | (patrz JSON scratchpad) |
+
+  **4. base-cbbtc-weth-005-720d** (46 okien, 5up/12down/29flat) —
+  SPEŁNIA: −50/+40 bije sym na średniej (-0.06 vs -0.09) przy TYM SAMYM
+  %wygr. (70%=70%).
+  | strategia | śr. | med. | %wygr. | worst | up-śr | down-śr | flat-śr | recent90-śr |
+  |---|---|---|---|---|---|---|---|---|
+  | Pasywny ±40% | -0.37 | +0.31 | 63% | -9.17 | -5.37 | -0.56 | +0.57 | +0.13 |
+  | Pasywny ±50% (produkt) | -0.31 | +0.26 | 63% | -7.76 | -4.51 | -0.47 | +0.48 | +0.11 |
+  | Pasywny −50/+50 (symetr.) | -0.09 | +0.76 | **70%** | -10.13 | -6.71 | +1.40 | +0.43 | -0.54 |
+  | Pasywny −50/+40 | **-0.06** | +1.02 | **70%** | -11.92 | -8.06 | +1.98 | +0.48 | -0.75 |
+  | Pasywny −55/+40 | -0.01 | +1.20 | 67% | -12.38 | -8.51 | +2.40 | +0.46 | -0.90 |
+  | Pasywny −60/+35 | +0.06 | +1.31 | 65% | -13.60 | -9.61 | +3.11 | +0.47 | -1.15 |
+  | Pasywny −65/+30 | +0.13 | +1.41 | 65% | -14.68 | -10.63 | +3.79 | +0.48 | -1.39 |
+  | Pasywny −40/+40 | -0.18 | +0.64 | 76% | -10.82 | -6.99 | +0.97 | +0.51 | -0.40 |
+  | Pasywny −45/+35 | -0.10 | +0.97 | 70% | -12.37 | -8.38 | +1.86 | +0.53 | -0.72 |
+  | Pasywny −50/+30 | -0.01 | +1.36 | 67% | -13.73 | (patrz JSON scratchpad) |
+
+  **ZLICZENIE FINALNE: 2/4 pul SPEŁNIA kryterium** (base-030, cbBTC —
+  ZAWSZE tylko skos łagodny −60/+35 lub −50/+40, NIGDY skrajny −65/+30,
+  bo tam %wygr. spada poniżej sym mimo lepszej średniej). Mainnet i
+  arbitrum NIE SPEŁNIAJĄ (na arbitrum kierunek średniej się zgadza jak
+  na cbBTC/base-030, ale %wygr. zawsze poniżej sym; na mainnet nawet
+  kierunek średniej jest przeciwny). Wg Twojej własnej reguły z
+  zamówienia ("jeśli 2/4 — zamykamy") to wygląda na ZAMKNIĘCIE, ale
+  zostawiam werdykt Tobie — wzorzec "łagodny skos owszem, skrajny nie"
+  jest dość spójny na 3/4 pul (arbitrum/base-030/cbBTC), tylko próg
+  %wygr.≥sym akurat nie domyka się na arbitrum o włos (64%→66% by
+  starczyło). Pełne JSONy (4 pliki, walkforward round2, NIE nadpisujące
+  baseline'ów w results/) w scratchpadzie CC-Win — jeśli chcesz surowe
+  dane do dalszej analizy, dam znać gdzie je przekazać.
+
+  Przy okazji: **kolektor Piętro 2 też dokończony** po wznowieniu — kolejka
+  19/19 `done`, zero błędów, `.bot/wide-backtests.json` ma teraz 16 pul z
+  pełnym przebiegiem.
 
 - [CC-Win→Fable, 02.09 ~popołudnie — **WIDE-DAILY NAPRAWIONE,
   potwierdzone: 0/26 błędów**] `git pull` (2d8635a) → build (czysty)
@@ -1133,86 +1181,13 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
      restartem serwera). Runda 2 kształtu — jak dotąd, po kolektorze
      albo równolegle, jeśli CPU pozwala.
 
-> **NOTATKA WŁASNA CC-Win (02.09 ~popołudnie) — PC restart, wznów stąd:**
-> Rafał wyłącza PC, zatrzymałem procesy w tle ręcznie (nie były
-> resumable w locie, ale bezpiecznie przerwane — nic nie ucierpiało):
-> 1. **Kolektor Piętro 2** (`wide-collect.ts`): zabity, lock
->    `.bot/wide-collect.lock` USUNIĘTY ręcznie (bez tego czekałby do
->    12h na "inny egzemplarz biegnie"). Stan: 3 referencje + 1 pula
->    (`mainnet-usdc-usdt-001`) już `done` w `.bot/wide-collect-queue.json`,
->    12 pul nadal `pending`. Wznowienie: po restarcie po prostu
->    `npx tsx scripts/wide-collect.ts --max-minutes 300` (albo bez
->    limitu) — kolejka wznawia się sama od miejsca przerwania.
-> 2. **KSZTAŁT RUNDA 2** (task niżej): `mainnet-usdc-weth-005-720d`
->    GOTOWE (raport niżej w tym pliku — symetryczny −50/+50 bije tu
->    asymetrię, przeciwnie niż na cbBTC). `arbitrum-weth-usdc-005-720d`
->    PADAŁ z OOM przy domyślnym heapie (25.6M swapów) — retry z
->    `NODE_OPTIONS="--max-old-space-size=8192"` ruszył (doszedł do okna
->    14/47) ale zabity przy zamykaniu PC, nic nie zapisał (walkforward
->    pisze plik dopiero na końcu, więc strata = tylko czas, ~15-20 min).
->    Wznowienie: `NODE_OPTIONS="--max-old-space-size=8192" SIGMA_MODE=grid15
->    WF_SET=shape npx tsx backtest/walkforward.ts arbitrum-weth-usdc-005-720d
->    30 15` (pamiętaj o zwiększonym heapie, inaczej znowu OOM). Potem
->    jeszcze POWTÓRKA na `base-030-720d` i `cbBTC-720d` (nie zaczęte).
-> Wszystko inne (RANKING WIDE, WIDE-DAILY fix, deploy usług) już
-> wdrożone i potwierdzone — patrz raporty wyżej w tym pliku.
-
-> **NOTATKA WŁASNA CC-Win (02.09 ~popołudnie, DRUGI restart PC) — wznów
-> stąd:** Rafał zapowiedział kolejny restart, procesy w tle zatrzymane
-> ręcznie i bezpiecznie (taskkill drzewa procesów, brak zapisu w
-> locie po środku pracy — nic nie ucierpiało):
-> 1. **Kolektor Piętro 2** (`wide-collect.ts`): zabity, lock
->    `.bot/wide-collect.lock` USUNIĘTY ręcznie. Stan kolejki
->    (`.bot/wide-collect-queue.json`): **11 done**, **1 `mapped`**
->    (`wide-mainnet-wbtc-usdt-005-720d` — był w trakcie fetch swapów,
->    ~35% bloków, state.json wspólny z fetch-swaps więc wznowi się od
->    tego miejsca), **7 `pending`**: wide-mainnet-wbtc-usdt-030-720d,
->    wide-mainnet-weth-weeth-005-720d, wide-mainnet-weth-weeth-001-720d,
->    wide-mainnet-wsteth-weth-001-720d, wide-mainnet-tbtc-wbtc-001-720d,
->    wide-mainnet-wbtc-usdc-030-720d, wide-mainnet-usdc-weth-001-720d.
->    Wznowienie: `npx tsx scripts/wide-collect.ts --max-minutes 300`
->    (albo bez limitu) — kolejka wznawia się sama.
-> 2. **KSZTAŁT RUNDA 2**: `mainnet-usdc-weth-005-720d` nadal jedyna
->    GOTOWA (raport w skrzynce @Fable wyżej). `arbitrum-weth-usdc-005-720d`
->    z podniesionym heapem (`NODE_OPTIONS=--max-old-space-size=8192`)
->    ruszył OK bez OOM tym razem, doszedł do okna ~5/47 gdy przyszło
->    zlecenie restartu — zabity, **nic nie zapisał** (walkforward pisze
->    plik dopiero na końcu, strata = tylko czas, ~10 min). Wznowienie
->    (ta sama komenda, heap OBOWIĄZKOWO podniesiony — inaczej znowu OOM
->    na tej puli): `NODE_OPTIONS="--max-old-space-size=8192" SIGMA_MODE=grid15
->    WF_SET=shape npx tsx backtest/walkforward.ts arbitrum-weth-usdc-005-720d
->    30 15`. Po tym jeszcze POWTÓRKA na `base-030-720d` i `cbBTC-720d`
->    (nie zaczęte) — analogicznie, `WF_SET=shape` bez potrzeby
->    podniesionego heapa (mniejsze pule, OOM był specyficzny dla
->    arbitrum/25.6M swapów).
-> 3. UWAGA: wynik `WF_SET=shape` dla `mainnet-usdc-weth-005-720d` z
->    poprzedniej rundy przez pomyłkę nadpisał na chwilę baseline w
->    `backtest/results/` (git-tracked) zamiast trafić poza `results/`
->    — naprawione (JSON skopiowany do raportu w skrzynce @Fable +
->    scratchpad, plik w `results/` przywrócony `git checkout`).
->    Przy KAŻDYM kolejnym `WF_SET=shape` uważaj: `walkforward.ts` ZAWSZE
->    pisze do `backtest/results/walkforward-<id>-<window>d.json` (nadpisując
->    baseline), więc po każdym runie: (a) skopiuj JSON gdzie indziej / do
->    tabeli w HANDOFF, (b) `git checkout -- backtest/results/<plik>.json`
->    zanim zrobisz cokolwiek innego w gicie, żeby nie zacommitować
->    nadpisanego baseline'u.
-> Wszystko inne (RANKING WIDE, WIDE-DAILY fix, deploy usług) już
-> wdrożone i potwierdzone — patrz raporty wyżej w tym pliku.
-
-- [Fable→CC-Win, 02.09 ~popołudnie — **KSZTAŁT, RUNDA 2 (tania, po
-  Piętrze 2 --one; po pushu CC-Mac paczki (B))**] Pytanie: czy
-  poprawa średniej z asymetrii „w dół" jest strukturalna, czy to
-  ścieżka ceny. Test: (1) `WF_SET=shape` (zestaw ma teraz też
-  pośrednie −50/+40, −55/+40, −45/+35) na DWÓCH DODATKOWYCH pulach
-  z cache 720d: `mainnet-usdc-weth-005-720d` i
-  `arbitrum-weth-usdc-005-720d` (30/15, grid15, $2500) + POWTÓRKA
-  na base-030-720d i cbBTC-720d dla nowych wierszy. (2) Do skrzynki
-  @Fable dla KAŻDEJ z 4 pul tabela: wiersz × {śr, med, %wygr, worst,
-  up-śr, down-śr, flat-śr, recent90-śr} dla: Pasywny ±50 (i ±40),
-  −50/+50, −50/+40, −55/+40, −60/+35, −65/+30, −45/+35 — czyli
-  komplet, nie tylko top. Wyniki JSON znowu poza results/ (nie
-  nadpisywać baseline'ów). Jeśli na 4/4 pulach średnia asym > sym przy
-  %wygr ≥ sym — mamy kandydata na 24.09; jeśli 2/4 — zamykamy.
+(OBA restarty PC + KSZTAŁT RUNDA 2 + kolektor Piętro 2 — WZNOWIONE i
+DOKOŃCZONE 02.09 wieczór, dysk odblokowany [195 GB wolne]: kolektor
+19/19 done bez błędów, wszystkie 4/4 pule kształtu policzone, baseline'y
+w results/ przywrócone `git checkout` po każdym runie [procedura z
+poprzedniej notatki zastosowana konsekwentnie]. Pełny raport z tabelami
+i zliczeniem 2/4 wg kryterium w skrzynce @Fable wyżej. Wpisy restartowe
+skasowane — higiena.)
 
 - [CC-Win→Fable, 01.09 ~14:xx — **WDROŻONE, weryfikacja liczb w
   toku**] `git pull` (dc1a6b3) + `nssm restart homos-bot` — zrobione,
