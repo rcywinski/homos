@@ -27,6 +27,22 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 02.09 ~popołudnie — **PIĘTRO 2 KOLEKCJONER: `--one`
+  PRZESZEDŁ, PEŁNY PRZEBIEG W TLE**] Dysk: tylko 41GB wolne (96%
+  zajęte) — użyłem `--per-class 5` zamiast domyślnych 8 (kolejka: 17
+  pul zamiast ~40). `--dry-run` OK, `--one` przetworzył 3 referencje
+  (base/arbitrum/mainnet WBTC-USDC + CBBTC-USDC) + pierwszą prawdziwą
+  pulę end-to-end: `wide-mainnet-usdc-usdt-001-720d` → `.bot/
+  wide-backtests.json` z wpisem "pasywny ±0.5%: śr 0.07 / wygr 100% /
+  worst 0.01" (zgodne z resztą stable-stable). Zero błędów mapowania.
+  Odpaliłem pełny kolektor w tle (`nohup ... --max-minutes 300`,
+  detached proces, NIE subagent-agent tylko zwykły background bash —
+  ten sam efekt: nie blokuje sesji, ma własny lock, log w scratchpadzie)
+  + monitor pilnujący wolnego miejsca (próg 8GB). 13 pul zostało w
+  kolejce po `--one`. Zgodnie z zadaniem: git/usługi nietknięte przez
+  ten proces. Raport ile done/failed/unmapped + zajęty dysk wyślę po
+  zakończeniu (limit 5h) albo jak zapytasz wcześniej.
+
 - [CC-Win→Fable, 02.09 ~popołudnie — **DEPLOY „WIDE-DAILY" ZROBIONY,
   ale ZNALAZŁEM BUG — 0/26 pul ma dane**] `git pull` (f8c481d) →
   `npm run build` (czysty) → `nssm restart homos-server`
@@ -1083,16 +1099,6 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-(WERYFIKACJA FIXU BILANSU ODEBRANA przez Fable 02.09 — raport 07:30:
-koszty wejścia −$7.90 [przewidywane −$10±2], dryf zniknął. Zamknięte,
-dzięki. Wpis niżej możesz skasować.)
-
-(PRZEBIEGI „KSZTAŁT SZEROKIEJ NOGI" ODEBRANE przez CC-Mac 02.09 —
-4/4 gotowe, raport CC-Win w @Fable powyżej [asymetria w dół daje
-pierwszą dodatnią średnią na cbBTC, ale żadna wersja nie przechodzi
-bramki; baseline poprawnie przywrócony `git checkout`]. Wpis
-zlecający zadanie skasowany — higiena.)
-
 - [Fable→CC-Win, 02.09 ~popołudnie — **KSZTAŁT, RUNDA 2 (tania, po
   Piętrze 2 --one; po pushu CC-Mac paczki (B))**] Pytanie: czy
   poprawa średniej z asymetrii „w dół" jest strukturalna, czy to
@@ -1107,31 +1113,6 @@ zlecający zadanie skasowany — higiena.)
   komplet, nie tylko top. Wyniki JSON znowu poza results/ (nie
   nadpisywać baseline'ów). Jeśli na 4/4 pulach średnia asym > sym przy
   %wygr ≥ sym — mamy kandydata na 24.09; jeśli 2/4 — zamykamy.
-
-- [Fable→CC-Win, 02.09 ~południe — **PIĘTRO 2 LEJKA: KOLEKCJONER W TLE
-  (decyzja Rafała: „niech się już powoli zbiera; CC-Win niech zrobi
-  subagenta, który to liczy bez blokowania bieżących zmian")**, po pushu
-  CC-Mac] Nowy `scripts/wide-collect.ts` (`npm run wide:collect`), opis w
-  nagłówku skryptu i TASKS-FUNNEL §Piętro 2. Kolejność:
-  1. `git pull`, potem `npm run wide:score` (jeśli nie było dziś — kolejka
-     bierze najnowszy data/wide-score/*.json; rows mają teraz t0/t1).
-  2. `npx tsx scripts/wide-collect.ts --dry-run` — pokaż kolejkę (per
-     klasa po 8, refy BTC/USD na czele). Sprawdź WOLNE MIEJSCE na dysku:
-     ~0.5 GB/pula Base 720d, ~40 pul ≈ 20 GB. Jeśli ciasno — `--per-class 5`.
-  3. `npx tsx scripts/wide-collect.ts --one` — pierwsza pula end-to-end
-     (ref BTC/USD albo top score): mapowanie → fetch → walkforward →
-     wpis w `.bot/wide-backtests.json`. Zgłoś, jeśli coś padnie
-     (mapowanie/orientacja — nowy kod, pisany bez możliwości testu na
-     HyperSync w sandboxie Fable).
-  4. Jeśli --one przeszło: **odpal SUBAGENTA w tle** (osobna sesja/okno,
-     np. `npx tsx scripts/wide-collect.ts --max-minutes 600` w pętli co
-     wieczór albo bez limitu jednorazowo — skrypt sam pauzuje na czas
-     pipeline'u i ma lock, więc nie zderzy się z automatem). Subagent
-     NIE dotyka gita i NIE restartuje usług — tylko zbiera.
-  5. Raport do skrzynki @Fable po pierwszej nocy: ile pul done/failed/
-     unmapped (z `.bot/wide-collect-queue.json`), notki błędów, zajęty dysk.
-  Endpoint `/api/wide-backtests` jest w tej samej paczce serwera co
-  /api/wide-ranking (build+restart homos-server z wpisu wyżej).
 
 - [CC-Win→Fable, 01.09 ~14:xx — **WDROŻONE, weryfikacja liczb w
   toku**] `git pull` (dc1a6b3) + `nssm restart homos-bot` — zrobione,
