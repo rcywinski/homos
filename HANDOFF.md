@@ -128,6 +128,20 @@
   pegged-btc lekko dodatnie — spójne z wynikami skanu 13/13 i
   wide-score.
 
+(WIDE-DAILY 26/26 + DEPLOY UI 21/22 ODEBRANE przez Fable 02.09 ~późne
+popołudnie — dzięki. SANITY-CHECK LICZB: PRZECHODZI. base-030 365d Δ
+−4.3 pp (w widełkach −5…−15, na górnej granicy — Base ma najlepszy fee
+yield klasy, spójne z selektorem), mainnet ETH/stable −10…−12
+(niższy yield → większy drag), eth-btc −5…−6 (para −16…−20% w roku +
+IL wzmocnione ±40 > fee c=0.064), stable-stable +1.1 (≈ czyste fee),
+pegged-btc +1.4 (fee ±1%), WBTC-USDT 720d +6 przy 365d −6 = BTC
+round-trip w pasmie (fee 2 lata bez wyjścia) — wszystko ma sens
+kierunkowo i co do rzędu. Flat % identyczne w klasie (ta sama seria
+ETH) — poprawne. `n=0` na 720d = krótsza historia fee, OK. UI: nic
+do poprawy z mojej strony; obserwujemy miesiąc. Wpis skasowany —
+higiena. NA DZIŚ: kolektor w tle + runda 2 kształtu (gdy CPU wolne);
+brak nowych zleceń.)
+
 (TRZY RAPORTY CC-Win 02.09 ODEBRANE przez Fable ~popołudnie — deploy
 RANKING WIDE ✓, kolekcjoner Piętra 2 `--one` ✓ + pełny przebieg w tle
 z `--per-class 5` (dysk 41 GB wolne, słuszna decyzja; monitor 8 GB —
@@ -603,6 +617,17 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 02.09 ~późne popołudnie — DOCS, odbiór wide-daily +
+  ZASADA WYJŚCIA] `rm .git/index.lock` jeśli jest. Commit+push:
+  `HANDOFF.md` (odbiór + higiena), `CONTEXT.md` (sanity-check liczb,
+  §2: zasada wyjścia 24.09 / +5%), `RESEARCH-QUEUE.md` (E4),
+  `TASKS-UI.md` (21/22 WDROŻONE). BEZ zmian w kodzie (bot/config,
+  observer, useBotApi mają być identyczne z HEAD — jeśli `git status`
+  pokazuje je jako zmienione, to artefakt mountu; `git diff` ma być
+  pusty). Komunikat: "docs: wide-daily numbers sanity-checked, UI 21+22
+  deployed; exit rule for tranche 1 (24.09 / +5%)". Ping CC-Win
+  NIEPOTRZEBNY.
 
 - [Fable→CC-Mac, 02.09 ~popołudnie — **JEDEN PUSH, DWA COMMITY: paczka (D)
   + UI Partie 21/22**] `rm .git/index.lock` jeśli jest. `git add -A`.

@@ -69,6 +69,7 @@
 | 2026-08-26 | KAPITAŁ: transza 1 (6 092 USDC, Base) **CZEKA W USDC** do wyników rekalibracji i eksperymentu "LP tylko we flat"; bez parkingu Aave | Wejście w wąski LP na kalibracji, którą sami uznaliśmy za zepsutą, bez sensu; 720d=0/21; horyzont czekania 1–2 tyg. |
 | 2026-08-26 | hUp48 → tylko paper; histereza ujednolicona na "udział czasu w oknie" (3 miejsca); cbBTC k2/k3 i GAS_USD-backtest w paczce; WETH-CBBTC 0.3% Base → BOT_POOLS (paper); żywy gaz w observerze od razu | Decyzje Rafała na przeglądzie 26.08 — szczegóły i uzasadnienia w DECYZJE-2026-08-26 |
 | 2026-08-26 | Godziny operacyjne: podpisy 9–20 pn–pt, **EXIT_TREND alarm 24/7 również w weekend**; pomiar kosztu zwłoki od 1. dnia | Tryb PROPONUJ nic nie wykonuje sam; zwłoka podpisu = jedyne ryzyko (noc ~13h, weekend ~61h); przegląd pomiaru po 2 tyg. |
+| 2026-09-02 | **ZASADA WYJŚCIA TRANSZY 1** (decyzja Rafała po kolumnach 365/720 w rankingach): (1) **24.09 wychodzimy z LP niezależnie od kursu**; (2) **wcześniej, jeśli bilans transzy ≥ +5%** (≥ $6 396.60 przy wpłaconych $6 092) — wychodzimy od razu; kapitał wraca na giełdę → ETF. Monitoring RĘCZNY, dzienny (Rafał, pasek BILANS TRANSZY w kokpicie / raport 07:30) — ŚWIADOMIE bez automatu w bocie. Zasada może zostać zrewidowana, jeśli do 24.09 pełne przebiegi (Piętro 2, runda 2 kształtu) pokażą coś nowego | Produkt na parach zmiennych nie bije HODL w żadnym z 5 sposobów liczenia (13/13, wide-score, MC, model dzienny, pełny przebieg); benchmark HODL+yield ~4%/r bez oporu wygrywa. Zasada ustalona na chłodno, nie w dniu skoku |
 | 2026-08-26 ~10:3x | REWIZJA kapitału: zamiast "czeka" — **wejście warunkowe TEGO SAMEGO dnia**, jeśli pula przejdzie bramkę 720d+recent90 na przebiegach recal (grid15); wejście = jednoczesne przełączenie bota na grid15+nowe k (algoVersion) | Decyzja Rafała: rynek boczny (potwierdzony przez bota), mała stawka $6k, wartość eksperymentu operacyjnego; pełny zapis z notatką FOMO w DECYZJE-2026-08-26 pkt 8-REWIZJA |
 
 ## 3. Rzeczy do zweryfikowania na aktualnych danych (nie z pamięci AI)
@@ -165,6 +166,28 @@ w load.ts; lock + pauza na czas pipeline'u). Decyzja Rafała: liczy
 SUBAGENT CC-Win w tle, bez blokowania bieżących zmian. Dysk ~0.5 GB/
 pula Base 720d — do sprawdzenia przed startem. tsc czysty; kod bez
 testu na HyperSync (sandbox) — pierwszy `--one` u CC-Win jest testem.
+(13) DECYZJA RAFAŁA — ZASADA WYJŚCIA (wpis w §2): 24.09 wyjście z LP
+niezależnie od kursu; wcześniej przy bilansie transzy ≥ +5% (≥ $6 397)
+— od razu; kapitał → giełda/ETF. Interpretacja tabel dla Rafała
+spisana w rozmowie: pierwsza liczba (LP %) to głównie kurs ETH (−45%
+r/r), trzecia (Δ vs HODL) to jedyna miara strategii — ujemna na
+wszystkich parach zmiennych (Base −4 pp jako najlepsza, mainnet −10…
+−13), dodatnia ~+1 pp tylko na spiętych; 720d: ETH wrócił do punktu
+wyjścia (HODL +2.8), LP −6…−28 = „ubezpieczenie od nudy" płaci w obie
+strony. Proponowany automat (propozycja EXIT po progu/terminie w
+bocie) — NAPISANY i COFNIĘTY na życzenie Rafała: monitoring ręczny,
+dzienny; czekamy jeszcze na komplet pełnych przebiegów, może coś
+wymyślimy. Rafał sam pilnuje progu $6 397 na pasku BILANS TRANSZY.
+(12) WIDE-DAILY NA ŻYWO (po fixie paginacji, CC-Win): 26/26 pul z
+danymi, UI 21/22 wdrożone. SANITY-CHECK PRZESZEDŁ: ETH/stable 365d Δ
+vs HODL od −4.3 (Base 030) do −12 (mainnet), eth-btc −5…−6,
+stable-stable +1.1, pegged-btc +1.4, WBTC-USDT 720d +6 (round-trip
+BTC w pasmie); HODL ETH/stable −22.3% (ETH ≈ −45% r/r); flat % 29
+(ETH/USD) / 55 (ETH/BTC) / 100 (pegged). Obraz identyczny z 13/13,
+wide-score i MC: na parach zmiennych szerokie pasmo przegrywa z HODL
+o kilka–kilkanaście pp/r, na spiętych wygrywa o ~1 pp. Od jutra
+kolumny w apce i raporcie; kalibracja modelu dziennego vs pełny
+przebieg po miesiącu (RESEARCH-QUEUE E6b).
 (11) UI PARTIE 21+22 ODEBRANE (Sonnet, ~popołudnie): Ranking WIDE jako
 wariant tego samego panelu (bez duplikacji), kolumny 365d/720d (model
 dzienny, LP/HODL/Δ z tooltipem median), flat %, „pełny przebieg" z

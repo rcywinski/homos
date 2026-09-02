@@ -773,6 +773,14 @@ odnośnik.)
   po spec.
 
 ### E4. PRZEGLĄDY (kalendarz)
+- [ ] **24.09 — WYJŚCIE Z LP (decyzja Rafała 02.09, CONTEXT §2)**: obie
+  pozycje produktowe → USDC → off-ramp (Kraken, procedura 25.08) → ETF.
+  Niezależnie od kursu. WCZEŚNIEJ: bilans transzy ≥ +5% (≥ $6 397) →
+  wyjście od razu (monitoring ręczny, dzienny). Przed 24.09 do
+  rozstrzygnięcia tylko: czy pełne przebiegi (Piętro 2) / runda 2
+  kształtu / Aerodrome cbBTC pokazują coś, co zmienia obraz — jeśli
+  nie, zasada stoi. Agenda 24.09 = benchmark HODL+yield + decyzja, co
+  dalej z maszyną badawczą (wartość = pomiar + wiedza).
 - [ ] **31.08 (poniedziałek — termin ustalony przez Rafała 29.08;
   wcześniejsze „1.09" było pomyłką kalendarzową)**: przegląd PROPONUJ
   (zaplanowany 26.08) + pierwszy tydzień
