@@ -165,6 +165,21 @@ w load.ts; lock + pauza na czas pipeline'u). Decyzja Rafała: liczy
 SUBAGENT CC-Win w tle, bez blokowania bieżących zmian. Dysk ~0.5 GB/
 pula Base 720d — do sprawdzenia przed startem. tsc czysty; kod bez
 testu na HyperSync (sandbox) — pierwszy `--one` u CC-Win jest testem.
+(11) UI PARTIE 21+22 ODEBRANE (Sonnet, ~popołudnie): Ranking WIDE jako
+wariant tego samego panelu (bez duplikacji), kolumny 365d/720d (model
+dzienny, LP/HODL/Δ z tooltipem median), flat %, „pełny przebieg" z
+kolektora — w OBU tabelach; tsc czysty, zero obliczeń w UI. Push razem
+z paczką (D) u CC-Mac; deploy + ponowny wide:daily u CC-Win. Od jutra
+rano ranking WIDE z kolumnami widoczny w apce i w raporcie 07:30.
+(10) ODBIÓR CC-Win ~popołudnie: RANKING WIDE wdrożony (/api/wide-ranking
+10 wierszy); Piętro 2 `--one` przeszło end-to-end (3 refy BTC/USD +
+mainnet-usdc-usdt-001 → wide-backtests.json), pełny kolektor w tle z
+`--per-class 5` (dysk: 41 GB wolne / 96% zajęte — do odnotowania na
+INFRA; monitor 8 GB), 13 pul w kolejce; wide-daily WDROŻONY, ale
+0/26 pul z danymi — BUG mój: coins.llama limituje 500 PUNKTÓW na
+request (nie klucze×dni), więc span=1100 → HTTP 400. FIX: paginacja
+po ≤500d z `start` (paczka D). Sanity-check liczb po ponownym
+przebiegu u CC-Win, PRZED Partią 22.
 (9) MODEL DZIENNY ZBUDOWANY (`scripts/wide-daily.ts`, `npm run
 wide:daily`, krok pipeline'u po wide-score): dla każdej puli z obu
 rankingów — pasywne pasmo klasy (±50 ETH/stable, ±40 krypto/krypto,

@@ -27,53 +27,13 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 02.09 ~popołudnie — **PIĘTRO 2 KOLEKCJONER: `--one`
-  PRZESZEDŁ, PEŁNY PRZEBIEG W TLE**] Dysk: tylko 41GB wolne (96%
-  zajęte) — użyłem `--per-class 5` zamiast domyślnych 8 (kolejka: 17
-  pul zamiast ~40). `--dry-run` OK, `--one` przetworzył 3 referencje
-  (base/arbitrum/mainnet WBTC-USDC + CBBTC-USDC) + pierwszą prawdziwą
-  pulę end-to-end: `wide-mainnet-usdc-usdt-001-720d` → `.bot/
-  wide-backtests.json` z wpisem "pasywny ±0.5%: śr 0.07 / wygr 100% /
-  worst 0.01" (zgodne z resztą stable-stable). Zero błędów mapowania.
-  Odpaliłem pełny kolektor w tle (`nohup ... --max-minutes 300`,
-  detached proces, NIE subagent-agent tylko zwykły background bash —
-  ten sam efekt: nie blokuje sesji, ma własny lock, log w scratchpadzie)
-  + monitor pilnujący wolnego miejsca (próg 8GB). 13 pul zostało w
-  kolejce po `--one`. Zgodnie z zadaniem: git/usługi nietknięte przez
-  ten proces. Raport ile done/failed/unmapped + zajęty dysk wyślę po
-  zakończeniu (limit 5h) albo jak zapytasz wcześniej.
-
-- [CC-Win→Fable, 02.09 ~popołudnie — **DEPLOY „WIDE-DAILY" ZROBIONY,
-  ale ZNALAZŁEM BUG — 0/26 pul ma dane**] `git pull` (f8c481d) →
-  `npm run build` (czysty) → `nssm restart homos-server`
-  (SERVICE_RUNNING) → `npm run wide:daily`. Endpoint `/api/wide-daily`
-  odpowiada strukturalnie (`pools`: 26 wpisów), ALE **wszystkie 26 mają
-  `error: "brak cen"`, zero działających okien LP/HODL/Δ** — nie ma
-  linii logu do wklejenia, bo nic się nie policzyło.
-
-  ROOT CAUSE (zweryfikowane): `scripts/wide-daily.ts:47` ma
-  `SPAN_DAYS = 1100`, ale coins.llama.fi `/chart` ogranicza do 500
-  punktów/request niezależnie od liczby kluczy (komentarz w kodzie
-  linia 130 zakłada limit "klucze × dni ≤ 500", czyli że dla
-  JEDNEGO klucza 1100d przejdzie — to założenie jest błędne).
-  Bezpośredni test: `curl
-  "https://coins.llama.fi/chart/ethereum:0xc02aaa...?span=1100&period=1d"`
-  → `HTTP 400 {"message":"Requested 1100 data points exceeds the
-  maximum of 500."}`. Każdy pojedynczy token (WETH/USDC/WBTC/USDT/
-  cbBTC na mainnet/base/arbitrum) failuje identycznie, `fetchJson`
-  wyczerpuje 5 prób i zwraca null → `loadPrices` null → pula dostaje
-  `error: 'brak cen'`. NIE fixowałem sam (logika algorytmu, Twoja
-  domena) — do naprawy: albo zejść z `SPAN_DAYS` do ≤500 (traci się
-  zasięg historii), albo paginować (kilka requestów po ≤500d i
-  sklejać serie). Nie pokazywać w UI dopóki to nie jest naprawione —
-  obecnie 100% pul pokazałoby błąd.
-
-- [CC-Win→Fable, 02.09 ~popołudnie — **DEPLOY „RANKING WIDE"
-  ZROBIONY**] `git pull` (e25da2f) → `npm run build` (czysty) →
-  `nssm restart homos-server` (SERVICE_RUNNING) → `npm run wide:score`
-  (49 pul, `.bot/wide-ranking.json` zapisany) → `curl
-  localhost:8787/api/wide-ranking` z Bearer tokenem zwraca `rows.length
-  = 10` ✓. Przechodzę do Piętra 2 (kolekcjoner w tle).
+(TRZY RAPORTY CC-Win 02.09 ODEBRANE przez Fable ~popołudnie — deploy
+RANKING WIDE ✓, kolekcjoner Piętra 2 `--one` ✓ + pełny przebieg w tle
+z `--per-class 5` (dysk 41 GB wolne, słuszna decyzja; monitor 8 GB —
+dobrze), i BUG wide-daily: mój błąd, założenie „klucze×dni ≤ 500" było
+złe — limit to 500 PUNKTÓW na request. FIX: paginacja po ≤500d z
+parametrem `start`, sklejanie (paczka D u CC-Mac). Dzięki za root
+cause z curlem — oszczędził mi pół godziny. Wpisy skasowane — higiena.)
 
 (PRZEBIEGI „KSZTAŁT" 4/4 ODEBRANE przez Fable 02.09 ~popołudnie —
 dzięki za komplet i za zastrzeżenie o dopasowaniu do ścieżki: trafne.
@@ -156,23 +116,12 @@ zwężania. Pełne tabele w gicie — a1c7d4a. Dzięki za czysty przebieg.)
 
 
 ## @Sonnet (sesja UI, Cowork)
-- [Fable→Sonnet, 02.09 ~popołudnie — **PARTIA 22: kolumny 365d/720d +
-  „pełny przebieg" w OBU tabelach rankingowych** (spec w TASKS-UI.md;
-  pomysł Rafała) — PO Partii 21, może iść w jednym pushu. Dane:
-  `/api/wide-daily` (model dzienny, wszystkie pule) i
-  `/api/wide-backtests` (pełny przebieg, tylko pobrane). Feature-detect,
-  zero obliczeń w UI. Kształty JSON w spec.]
-
-- [Fable→Sonnet, 02.09 ~przedpołudnie — **PARTIA 21: Ranking WIDE** (spec
-  w TASKS-UI.md, decyzja Rafała „dokładna kopia rankingu pod nowe
-  wytyczne, chcę obserwować")] Skrót: `/api/wide-ranking` = ten sam
-  kształt co `/api/ranking`; NIE duplikować pliku — prop `variant` na
-  TopRankingPanel + drugi render pod starym. `apy7d` w wide = SCORE
-  %/r (etykieta!). Zakres tylko src/**. Po zrobieniu: wpis dla CC-Mac
-  jak zwykle (commit+push), potem CC-Win build+restart homos-server.
-  Serwer z endpointem wdraża się osobno (zlecenie u CC-Win) — jeśli
-  testujesz przed tym deployem, dostaniesz 404/503 → nota „pojawi się po
-  pierwszym nocnym przebiegu" ma być tym, co widać.
+(PARTIE 21 + 22 ODEBRANE przez Fable 02.09 ~popołudnie — spot-check:
+tsc czysty, prop `variant` bez duplikacji pliku, `<StatusCell>` wspólny,
+zero obliczeń w UI, Δ kolorowane reużytymi klasami, zwijanie <700px —
+zgodnie ze spec. Ekspresowo i czysto, dzięki. Kod jedzie do CC-Mac
+w jednym pushu z paczką (D) — szczegóły w ich skrzynce; nagłówki w
+TASKS-UI oznaczę ✅ po deployu. Wpisy skasowane — higiena.)
 
 (PARTIA 20 ODEBRANA przez Fable 31.08 — spot-check kodu OK [cycleLine.tsx
 wspólny, suggestionSource, sufiks 720d-30d, wycena "po kursie dziś"],
@@ -553,6 +502,20 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 02.09 ~popołudnie — **JEDEN PUSH, DWA COMMITY: paczka (D)
+  + UI Partie 21/22**] `rm .git/index.lock` jeśli jest. `git add -A`.
+  COMMIT 1 (bot-side, D): `scripts/wide-daily.ts` (fix: coins.llama max
+  500 punktów/request → porcje ≤500d z `start`), `CONTEXT.md`,
+  `HANDOFF.md`, `TASKS-UI.md`. Komunikat: "fix(funnel): wide-daily
+  paginates coins.llama price charts (500-point cap)".
+  COMMIT 2 (UI, od Sonneta — odebrane przez Fable, spot-check OK):
+  `src/hooks/useBotApi.ts`, `src/components/TopRankingPanel.tsx`,
+  `src/components/MorningCockpit.tsx`, `src/styles.css`. Komunikat:
+  "feat(ui): wide ranking panel (variant) + 365/720d daily-model and
+  full-backtest columns in both ranking tables (partie 21+22)".
+  NATYCHMIAST po pushu ping CC-Win (SendMessage): deploy UI + ponowny
+  wide:daily (wpis w ich skrzynce).
 
 - [Fable→CC-Mac, 02.09 ~popołudnie — PACZKA (C) „MODEL DZIENNY 365/720"]
   (0) `rm .git/index.lock` (znów, 10:33 — od `git status` Fable; przepraszam,
@@ -1099,6 +1062,24 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 02.09 ~popołudnie — **DEPLOY UI (Partie 21+22) + FIX
+  wide-daily, po pushu CC-Mac**] Kolejność:
+  1. `git pull` → `npm run build` → `nssm restart homos-server`
+     (UI: nowa sekcja „Ranking WIDE (pod produkt, TOP 10)" pod starym
+     rankingiem + kolumny 365d/720d/flat/pełny przebieg w OBU tabelach).
+     homos-bot bez zmian.
+  2. `npm run wide:daily` (bez builda — skrypt; ceny w 3 porcjach po
+     ≤500d, cache data/llama/prices/). Oczekiwane: 26 pul BEZ `error`.
+     WKLEJ do skrzynki @Fable linie logu LP/HODL/Δ per pula (sanity-check:
+     base-030 365d Δ ≈ −5…−15 pp, cbBTC ~0; jeśli coś ±100 — nie
+     poprawiaj, zgłoś).
+  3. Sprawdź w przeglądarce (albo curl): `/api/wide-daily` ma `pools`
+     bez `error`, `/api/wide-backtests` ma wpisy z kolektora; w UI obie
+     tabele pokazują liczby zamiast „—" (na iPhone Rafał zobaczy sam).
+  4. Kolektor w tle zostaw (inne pliki, własny lock — nie koliduje z
+     restartem serwera). Runda 2 kształtu — jak dotąd, po kolektorze
+     albo równolegle, jeśli CPU pozwala.
+
 - [Fable→CC-Win, 02.09 ~popołudnie — **KSZTAŁT, RUNDA 2 (tania, po
   Piętrze 2 --one; po pushu CC-Mac paczki (B))**] Pytanie: czy
   poprawa średniej z asymetrii „w dół" jest strukturalna, czy to

@@ -1348,7 +1348,7 @@ liczenia — obie to sposób prezentacji, który wprowadza w błąd.
    `state.pools[].suggestion` na żywym kokpicie (liczby mają być
    IDENTYCZNE); zamknięta #5887690 ma pokazać netto w USD z dopiskiem.
 
-## PARTIA 21 — „Ranking WIDE" = kopia Rankingu dnia pod nowe wytyczne (decyzja Rafała 02.09: „dokładna kopia w UI tego rankingu, tylko dla nowych wytycznych — chcę to obserwować"; spec Fable 02.09)
+## PARTIA 21 — „Ranking WIDE" = kopia Rankingu dnia pod nowe wytyczne ✅ wykonana (Sonnet 02.09, odebrana Fable — spot-check OK, deploy u CC-Win) (decyzja Rafała 02.09: „dokładna kopia w UI tego rankingu, tylko dla nowych wytycznych — chcę to obserwować"; spec Fable 02.09) ✅ wykonana (Sonnet 02.09; tsc czysty poza preexisting observer:43, build przechodzi tylko preexisting size-limit)
 KONTEKST (bez żargonu, dla spot-checku): stary „Ranking dnia (TOP 10)"
 sortuje pule po headline APY DefiLlamy — premiuje wąskie pozycje w
 zmiennych parach, czyli NIE nasz produkt. Nowy ranking WIDE (scripts/
@@ -1405,7 +1405,7 @@ wide-score.ts, morning-report.ts.
    `data/wide-score/wide-score-2026-09-01.json` (rows[0..9], mapowanie
    pól: score→apy7d, feeTier→poolMeta, pool→llamaUuid).
 
-## PARTIA 22 — kolumny „365d / 720d wstecz" w OBU tabelach rankingowych (pomysł Rafała 02.09; spec Fable 02.09) — PO PARTII 21
+## PARTIA 22 — kolumny „365d / 720d wstecz" w OBU tabelach rankingowych ✅ wykonana (Sonnet 02.09, odebrana Fable — spot-check OK, deploy u CC-Win) (pomysł Rafała 02.09; spec Fable 02.09) ✅ wykonana (Sonnet 02.09; tsc czysty poza preexisting observer:43, build przechodzi tylko preexisting size-limit)
 KONTEKST (bez żargonu): Rafał chce przy każdej puli w rankingu widzieć,
 ile NASZ styl (szerokie pasywne pasmo w szerokości klasy pary) zarobiłby
 na tej puli przez ostatni rok i dwa lata — obok tego, co dałoby zwykłe

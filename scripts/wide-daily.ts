@@ -127,12 +127,21 @@ async function loadPrices(slug: string, addr: string): Promise<Map<number, numbe
   if (cached && cached.day === today) series = cached.series;
   if (!series) {
     try {
-      // limit API: klucze × dni ≤ 500 → przy 1100d jeden klucz na request
-      const j = await fetchJson(`https://coins.llama.fi/chart/${key}?span=${SPAN_DAYS}&period=1d`);
-      const v = j.coins?.[key] ?? j.coins?.[Object.keys(j.coins ?? {})[0]];
-      series = (v?.prices ?? []).map((x: any) => ({ t: x.timestamp, p: x.price }));
-      if (series && series.length) fs.writeFileSync(f, JSON.stringify({ day: today, key, series }));
-      await sleep(300);
+      // LIMIT API (znalezisko CC-Win 02.09, HTTP 400 „exceeds the maximum
+      // of 500"): max 500 PUNKTÓW na request, niezależnie od liczby kluczy
+      // → 1100d w porcjach po ≤500d z parametrem `start` (unix s), sklejane.
+      const CHUNK = 500;
+      const startAll = Math.floor(Date.now() / 1000) - SPAN_DAYS * DAY;
+      const acc: { t: number; p: number }[] = [];
+      for (let off = 0; off < SPAN_DAYS; off += CHUNK) {
+        const span = Math.min(CHUNK, SPAN_DAYS - off);
+        const j = await fetchJson(`https://coins.llama.fi/chart/${key}?start=${startAll + off * DAY}&span=${span}&period=1d`);
+        const v = j.coins?.[key] ?? j.coins?.[Object.keys(j.coins ?? {})[0]];
+        for (const x of v?.prices ?? []) acc.push({ t: x.timestamp, p: x.price });
+        await sleep(300);
+      }
+      series = acc;
+      if (series.length) fs.writeFileSync(f, JSON.stringify({ day: today, key, series }));
     } catch (e) { log(`ceny ${key}: ${String(e).slice(0, 80)}`); return cached?.series ? toMap(cached.series) : null; }
   }
   return series && series.length ? toMap(series) : null;
