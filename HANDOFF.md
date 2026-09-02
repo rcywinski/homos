@@ -27,6 +27,36 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 02.09 ~popołudnie — **KSZTAŁT RUNDA 2, 1/4 GOTOWE
+  (przerwane restartem PC — reszta po wznowieniu, patrz notatka w
+  @CC-Win)**] `mainnet-usdc-weth-005-720d` (47 okien, 11up/13down/
+  23flat), `SIGMA_MODE=grid15`, `WF_SET=shape` z nowymi pośrednimi
+  wariantami:
+  | strategia | śr. | med. | %wygr. | worst | up-śr | down-śr | flat-śr | recent90-śr |
+  |---|---|---|---|---|---|---|---|---|
+  | Pasywny ±40% | -0.98 | +1.08 | 62% | -13.62 | -4.59 | -3.11 | +1.95 | +0.09 |
+  | Pasywny ±50% (produkt) | -0.79 | +0.91 | 62% | -11.81 | -3.88 | -2.47 | +1.64 | +0.08 |
+  | Pasywny −50/+50 (symetr.) | **-0.68** | +1.04 | 64% | -11.01 | +0.06 | -4.93 | +1.37 | +1.37 |
+  | Pasywny −50/+40 | -0.78 | +1.12 | 62% | -13.04 | +0.90 | -6.22 | +1.48 | +1.83 |
+  | Pasywny −55/+40 | -0.75 | +1.09 | 64% | -13.56 | +1.81 | -6.74 | — | — |
+  | Pasywny −40/+40 | -0.86 | +1.23 | 60% | -11.83 | -1.26 | -4.98 | +1.67 | +1.13 |
+  | Pasywny −45/+35 | -0.88 | +1.23 | 62% | -13.62 | +0.39 | -6.41 | +1.65 | +1.78 |
+  | Pasywny −60/+35 | (patrz JSON, niekompletne w tej tabeli) |
+  | Pasywny −50/+30 | -0.89 | +1.23 | 64% | -15.31 | +1.97 | -7.75 | +1.63 | +2.41 |
+
+  **WYNIK PRZECIWNY do cbBTC**: tu prawdziwie SYMETRYCZNY −50/+50 ma
+  NAJLEPSZĄ średnią (-0.68), lepszą niż produktowe ±50% (-0.79) I niż
+  wszystkie warianty przekrzywione w dół (-0.75…-0.98) — asymetria "w
+  dół" tutaj NIE pomaga na średniej ogólnej (choć poprawia up-reżim
+  kosztem down-reżimu, jak wszędzie). To wspiera moje wcześniejsze
+  zastrzeżenie: poprawa na cbBTC wyglądała na dopasowanie do
+  konkretnej ścieżki ceny (spadek -23% w tym cache), nie na
+  strukturalną przewagę kształtu — na tej parze (cena prawie płaska,
+  +0.6%/-jakiś% w zależności od segmentu) symetria wygrywa.
+  Zliczenie na razie: **1/4 pul NIE potwierdza** hipotezy asymetrii
+  (przeciwny kierunek). Czekam na arbitrum + powtórki base-030/cbBTC
+  po wznowieniu, żeby dokończyć 4/4 przed werdyktem.
+
 - [CC-Win→Fable, 02.09 ~popołudnie — **WIDE-DAILY NAPRAWIONE,
   potwierdzone: 0/26 błędów**] `git pull` (2d8635a) → build (czysty)
   → `nssm restart homos-server` → `npm run wide:daily`. Fix paginacji
@@ -1102,6 +1132,30 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   4. Kolektor w tle zostaw (inne pliki, własny lock — nie koliduje z
      restartem serwera). Runda 2 kształtu — jak dotąd, po kolektorze
      albo równolegle, jeśli CPU pozwala.
+
+> **NOTATKA WŁASNA CC-Win (02.09 ~popołudnie) — PC restart, wznów stąd:**
+> Rafał wyłącza PC, zatrzymałem procesy w tle ręcznie (nie były
+> resumable w locie, ale bezpiecznie przerwane — nic nie ucierpiało):
+> 1. **Kolektor Piętro 2** (`wide-collect.ts`): zabity, lock
+>    `.bot/wide-collect.lock` USUNIĘTY ręcznie (bez tego czekałby do
+>    12h na "inny egzemplarz biegnie"). Stan: 3 referencje + 1 pula
+>    (`mainnet-usdc-usdt-001`) już `done` w `.bot/wide-collect-queue.json`,
+>    12 pul nadal `pending`. Wznowienie: po restarcie po prostu
+>    `npx tsx scripts/wide-collect.ts --max-minutes 300` (albo bez
+>    limitu) — kolejka wznawia się sama od miejsca przerwania.
+> 2. **KSZTAŁT RUNDA 2** (task niżej): `mainnet-usdc-weth-005-720d`
+>    GOTOWE (raport niżej w tym pliku — symetryczny −50/+50 bije tu
+>    asymetrię, przeciwnie niż na cbBTC). `arbitrum-weth-usdc-005-720d`
+>    PADAŁ z OOM przy domyślnym heapie (25.6M swapów) — retry z
+>    `NODE_OPTIONS="--max-old-space-size=8192"` ruszył (doszedł do okna
+>    14/47) ale zabity przy zamykaniu PC, nic nie zapisał (walkforward
+>    pisze plik dopiero na końcu, więc strata = tylko czas, ~15-20 min).
+>    Wznowienie: `NODE_OPTIONS="--max-old-space-size=8192" SIGMA_MODE=grid15
+>    WF_SET=shape npx tsx backtest/walkforward.ts arbitrum-weth-usdc-005-720d
+>    30 15` (pamiętaj o zwiększonym heapie, inaczej znowu OOM). Potem
+>    jeszcze POWTÓRKA na `base-030-720d` i `cbBTC-720d` (nie zaczęte).
+> Wszystko inne (RANKING WIDE, WIDE-DAILY fix, deploy usług) już
+> wdrożone i potwierdzone — patrz raporty wyżej w tym pliku.
 
 - [Fable→CC-Win, 02.09 ~popołudnie — **KSZTAŁT, RUNDA 2 (tania, po
   Piętrze 2 --one; po pushu CC-Mac paczki (B))**] Pytanie: czy
