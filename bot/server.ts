@@ -133,6 +133,21 @@ app.get('/api/ranking', (_req, res) => {
   res.json(r);
 });
 
+// Ranking WIDE (lejek v2 piętro 1, scripts/wide-score.ts — krok nocnego
+// pipeline'u od 02.09). Ten sam kształt co /api/ranking; `apy7d` = score [%/r].
+app.get('/api/wide-ranking', (_req, res) => {
+  const r = readJson(path.join(DIR, 'wide-ranking.json'));
+  if (!r) return res.status(503).json({ error: 'wide ranking not generated yet (pipeline step wide-score, nightly)' });
+  res.json(r);
+});
+
+// Pełne przebiegi (walkforward 720d, WF_SET=wide) dla pul z rankingów —
+// pisze scripts/wide-collect.ts (Piętro 2 lejka, subagent CC-Win w tle).
+// Obiekt {llamaUuid → summary}; UI dokłada kolumny po llamaUuid (Partia 22).
+app.get('/api/wide-backtests', (_req, res) => {
+  res.json(readJson(path.join(DIR, 'wide-backtests.json')) ?? {});
+});
+
 // Werdykty walidacji kandydatów (TASKS-FUNNEL.md): seed w kodzie +
 // runtime .bot/candidate-verdicts.json (pisze nocny lejek). UI dopasowuje
 // po llamaPool do wierszy rankingu → badge PASS/FAIL/QUEUED.

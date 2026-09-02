@@ -1347,3 +1347,60 @@ liczenia — obie to sposób prezentacji, który wprowadza w błąd.
    WERYFIKACJA: tsc + build + porównanie „Doradca ±X%" z
    `state.pools[].suggestion` na żywym kokpicie (liczby mają być
    IDENTYCZNE); zamknięta #5887690 ma pokazać netto w USD z dopiskiem.
+
+## PARTIA 21 — „Ranking WIDE" = kopia Rankingu dnia pod nowe wytyczne (decyzja Rafała 02.09: „dokładna kopia w UI tego rankingu, tylko dla nowych wytycznych — chcę to obserwować"; spec Fable 02.09)
+KONTEKST (bez żargonu, dla spot-checku): stary „Ranking dnia (TOP 10)"
+sortuje pule po headline APY DefiLlamy — premiuje wąskie pozycje w
+zmiennych parach, czyli NIE nasz produkt. Nowy ranking WIDE (scripts/
+wide-score.ts, lejek v2 piętro 1) liczy „ile zarobi pasywne SZEROKIE
+pasmo minus koszt zmienności pary" (score w %/r). Od 02.09 pipeline
+nocny zapisuje `.bot/wide-ranking.json`, serwer daje GET
+`/api/wide-ranking` — **DOKŁADNIE ten sam kształt co `/api/ranking`**
+(RankingData), plus pola dodatkowe w wierszach. Oba rankingi mają żyć
+OBOK siebie przez ~miesiąc (obserwacja), potem decyzja o przepięciu.
+ZAKRES: tylko src/**. bot-side gotowe (Fable): server.ts, pipeline.ts,
+wide-score.ts, morning-report.ts.
+1. **`src/hooks/useBotApi.ts`**: `wideRanking: RankingData | null` +
+   `wideRankingStatus: RankingStatus` — ten sam poller co `ranking`
+   (RANKING_POLL_MS, 503 → 'not-started'), endpoint `/api/wide-ranking`.
+   Rozszerzyć `RankingRow` o OPCJONALNE pola (feature-detect, stary
+   ranking ich nie ma): `cls?: string; feeAprWide?: number | null;
+   dragPct?: number | null; sigmaAnnPct?: number | null; driftFlag?:
+   boolean; wOursPct?: number`. UWAGA: w rankingu wide pole `apy7d`
+   NIESIE SCORE [%/r] (celowo, żeby kształt był 1:1) — etykieta w UI
+   ma o tym mówić, nie pokazywać „APY 7d".
+2. **`src/components/TopRankingPanel.tsx`**: NIE duplikować pliku.
+   Dodać prop `variant?: 'apy' | 'wide'` (default 'apy' — zero zmian
+   zachowania starego panelu) i renderować w MorningCockpit DWA razy:
+   stary (jak dziś) i tuż POD nim `<TopRankingPanel bot={bot}
+   variant="wide" />`. Dla 'wide': źródło `bot.wideRanking`/
+   `wideRankingStatus`; tytuł „Ranking WIDE (pod produkt, TOP 10)";
+   kolumny: `#`, `para` (symbol + poolMeta + chain jak dziś),
+   `klasa` (cls), `score %/r` (apy7d, 1 miejsce, kolor: >0 zielony /
+   ≤0 muted), `fee wide` (feeAprWide), `drag` (dragPct), `σ/r`
+   (sigmaAnnPct + „⚠ dryf" gdy driftFlag, tooltip „dryf pega >½
+   szerokości — pasmo nieświadome dryfu może wypaść"), `streak`,
+   `TVL`, `status` (te same badge’e co dziś — werdykty z
+   `/api/candidates` po llamaUuid działają bez zmian; „✅ gra w bocie"
+   po botPoolId). Linia kryteriów: `criteria.window` + `filter` (są w
+   JSON). Disclaimer pod tabelą (wide): „score = fee szerokiego pasma −
+   koszt zmienności, model wide-score v1 (kalibracja na żywych
+   pozycjach 01.09); ranking OBSERWACYJNY — decyzja o wejściu ręczna,
+   po bramce walkforward. Rankingi APY i WIDE liczą różne rzeczy: ta
+   sama pula może być wysoko w jednym i nisko w drugim — o to chodzi."
+   Sekcja domyślnie ZWINIĘTA jak stary panel; stale-warning jak dziś.
+3. **Wspólny szkielet**: ten sam `telemetry-section`/`telemetry-table`
+   co stary panel (Partia 6 + ujednolicenie 21.08) — bez nowego CSS
+   poza ew. klasą koloru score (`.wideranking-score-pos`/`-neg`
+   w styles.css, jeśli nie ma gotowej).
+4. Zero nowych obliczeń w UI (ZAKRES TWARDY) — wszystkie liczby z JSON.
+   Gdy `/api/wide-ranking` daje 503 (Windows przed pierwszym nocnym
+   przebiegiem po deployu): nota „Ranking WIDE pojawi się po pierwszym
+   nocnym przebiegu pipeline'u (krok wide-score)".
+5. Zero zmian w bot/**, backtest/**, scripts/**. Jeśli czegoś brakuje
+   w JSON — HANDOFF @Fable.
+   WERYFIKACJA: tsc + build; lokalnie można podłożyć plik testowy
+   `.bot/wide-ranking.json` (kształt jak selector-ranking.json + pola
+   dodatkowe) — próbka z przebiegu Fable 01.09 jest w
+   `data/wide-score/wide-score-2026-09-01.json` (rows[0..9], mapowanie
+   pól: score→apy7d, feeTier→poolMeta, pool→llamaUuid).

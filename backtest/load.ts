@@ -143,8 +143,10 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
     // wpisuje quoteRefId do cfg, fetch-swaps-hypersync przenosi do meta.json) —
     // statyczne mapy wyżej nie znają id `cand-*`. Refy to USDC/WETH, więc
     // domyślna orientacja (cfg.ethIsToken0 referencji) jest poprawna.
+    // 02.09 (wide-collect): `quoteRefAssetIsToken0` = jawna orientacja
+    // referencji innej niż USDC/WETH (np. BTC/USDC, gdzie BTC bywa token0).
     spec.quote = 'WETH';
-    spec.usdPerEth = await loadUsdRef(cfg.quoteRefId);
+    spec.usdPerEth = await loadUsdRef(cfg.quoteRefId, cfg.quoteRefAssetIsToken0);
   }
 
   const swaps: SwapEv[] = [];

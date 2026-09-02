@@ -238,9 +238,12 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       passiveW(0.4),
       passiveW(0.5),
       passiveAsym(0.5, 0.5),
+      passiveAsym(0.5, 0.4), // runda 2 (02.09): pośrednie — mniejsza kara w up
+      passiveAsym(0.55, 0.4),
       passiveAsym(0.6, 0.35),
       passiveAsym(0.65, 0.3),
       passiveAsym(0.4, 0.4),
+      passiveAsym(0.45, 0.35),
       passiveAsym(0.5, 0.3),
       flatOnlyLP({ ...base, passiveWidth: 0.5, narrowWidth: 0.05 }),
       flatOnlyLP({ ...base, passiveWidth: 0.5, narrowWidth: 0.05, passiveAsym: [0.6, 0.35] }),
@@ -252,9 +255,24 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
       fixedNaive(0.5),
     ];
   };
+  // WF_SET=wide (02.09, Piętro 2 lejka — scripts/wide-collect.ts): szerokość
+  // KLASY pary z env WIDE_W (0.5 crypto-stable, 0.4 crypto-crypto, ciasne dla
+  // pegged), hybryda FlatWide z wąską nogą WIDE_NARROW tylko gdy podana
+  // (klasy szerokie). Minimalny zestaw: HODL, pasywny, hybryda — to, co
+  // trafia do kolumn „pełny przebieg" w tabelach rankingowych (Partia 22).
+  const mkWide = (): Strategy[] => {
+    const w = Number(process.env.WIDE_W || '0.5');
+    const narrow = process.env.WIDE_NARROW ? Number(process.env.WIDE_NARROW) : null;
+    const base = { horizonDays: 7, trendHLDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600, idle: 'passive' as const };
+    const out: Strategy[] = [hodl5050, passiveW(w)];
+    if (narrow) out.push(flatOnlyLP({ ...base, passiveWidth: w, narrowWidth: narrow }));
+    return out;
+  };
   const mkStrategies = (): Strategy[] =>
     process.env.WF_SET === 'hedge'
       ? mkHedge()
+      : process.env.WF_SET === 'wide'
+      ? mkWide()
       : process.env.WF_SET === 'shape'
       ? mkShape()
       : process.env.WF_SET === 'product'

@@ -131,6 +131,26 @@ try {
   sections.push('## Kandydaci (auto-lejek)\n\n' + lines.join('\n'));
 } catch { sections.push('## Kandydaci (auto-lejek)\npliki lejka nieparsowalne'); }
 
+// --- ranking WIDE (lejek v2 piętro 1; obok rankingu APY selektora) ---
+try {
+  const wr = readSafe(path.join(BOT, 'wide-ranking.json'));
+  if (wr) {
+    const r = JSON.parse(wr);
+    const lines = [
+      `dzień ${r.day} · ${r.criteria?.window ?? ''}`,
+      '',
+      '| # | pula | klasa | score %/r | fee wide | drag | σ/r | streak | TVL | w bocie |',
+      '|---|---|---|---|---|---|---|---|---|---|',
+    ];
+    for (const row of r.rows ?? [])
+      lines.push(
+        `| ${row.rank} | ${row.symbol} ${row.poolMeta} @ ${row.chain} | ${row.cls ?? ''} | ${row.apy7d} | ${row.feeAprWide ?? '—'} | ${row.dragPct ?? '—'} | ${row.sigmaAnnPct ?? '—'}${row.driftFlag ? ' ⚠' : ''} | ${row.streak}d | $${(row.tvlUsd / 1e6).toFixed(1)}M | ${row.botPoolId ?? '—'} |`
+      );
+    lines.push('', '_score = fee szerokiego pasma − koszt zmienności (drag); w %/r; ranking obserwacyjny, decyzja o wejściu ręczna (TASKS-FUNNEL §2)._');
+    sections.push('## RANKING WIDE (pod produkt, top 10)\n\n' + lines.join('\n'));
+  } else sections.push('## RANKING WIDE\nBRAK .bot/wide-ranking.json (krok wide-score jeszcze nie biegł)');
+} catch { sections.push('## RANKING WIDE\nwide-ranking.json nieparsowalny'); }
+
 // --- stany ---
 for (const f of ['selector-state.json', 'trend-state.json']) {
   const s = readSafe(path.join(BOT, f));

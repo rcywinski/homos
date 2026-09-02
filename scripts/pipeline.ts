@@ -109,6 +109,11 @@ function swapsFresh(): { fresh: string[]; stale: string[] } {
   }
 
   if (!only || only === 'funnel') {
+    // Ranking WIDE (02.09, lejek v2 piętro 1): scoring uniwersum pod produkt,
+    // OBOK rankingu APY selektora. Same API DefiLlamy (~2-4 min), 1 podejście,
+    // porażka = wpis w raporcie (stary ranking wide-ranking.json zostaje).
+    if (!(await withRetry('wide-score', () => runStep('wide-score', 'scripts/wide-score.ts'), 1)))
+      failures.push('wide-score');
     // Auto-lejek kandydatów (TASKS-FUNNEL.md): PO fetchu (świeże universe),
     // PRZED backtest-run (OOM backtestu nie może zabić lejka). 1 podejście,
     // steady-state max 1 kandydat/noc; porażka = wpis w raporcie, lecimy dalej.

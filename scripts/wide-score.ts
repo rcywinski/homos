@@ -35,6 +35,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { BOT_POOLS, STATE_DIR } from '../bot/config';
 
 const OUT_DIR = path.join(__dirname, '..', 'data', 'wide-score');
 fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -236,6 +237,7 @@ function ratioStats(pa: { t: number; p: number }[], pb: { t: number; p: number }
       pool: p.pool,
       chain: p.chain,
       project: p.project,
+      t0, t1, // adresy nóg (kolejność = symbol) — dla kolekcjonera Piętra 2 (wide-collect.ts)
       symbol: p.symbol,
       feeTier: p.poolMeta,
       cls: p.cls,
@@ -264,6 +266,69 @@ function ratioStats(pa: { t: number; p: number }[], pb: { t: number; p: number }
   fs.writeFileSync(`${base}.csv`, [cols.join(';'), ...rows.map((r: any) => cols.map((c) => r[c]).join(';'))].join('\n'));
 
   console.log(`\nZapisano ${rows.length} pul → ${base}.{json,csv}\n`);
+
+  // ── RANKING WIDE dla UI/raportu (02.09, decyzja Rafała: „dokładna kopia
+  // rankingu w UI, tylko pod nowe wytyczne — chcę to obserwować").
+  // Ten sam kształt co .bot/selector-ranking.json (RankingData w useBotApi),
+  // żeby UI mogło reużyć TopRankingPanel 1:1; w `apy7d` siedzi SCORE [%/r]
+  // (etykieta w UI: „score wide"), a pola dodatkowe niosą rozbicie.
+  // Streak = dni z rzędu w strefie topu (2×TOP_N, jak w selector.ts), stan
+  // w .bot/wide-ranking-streaks.json. Pule NO-PRICE (score null) pomijane.
+  // Ranking OBOK starego, nie zamiast — miesiąc obserwacji, potem decyzja.
+  try {
+    const TOP_N = 10;
+    const stateDir = path.join(__dirname, '..', STATE_DIR);
+    fs.mkdirSync(stateDir, { recursive: true });
+    const streakPath = path.join(stateDir, 'wide-ranking-streaks.json');
+    const st: { lastDay?: string; streaks: Record<string, number> } = fs.existsSync(streakPath)
+      ? JSON.parse(fs.readFileSync(streakPath, 'utf8'))
+      : { streaks: {} };
+    const scored = rows.filter((r: any) => r.score !== null);
+    if (st.lastDay !== today) {
+      const zone = new Set(scored.slice(0, TOP_N * 2).map((r: any) => r.pool));
+      for (const u of zone) st.streaks[u] = (st.streaks[u] || 0) + 1;
+      for (const u of Object.keys(st.streaks)) if (!zone.has(u)) st.streaks[u] = 0;
+      st.lastDay = today;
+      fs.writeFileSync(streakPath, JSON.stringify(st, null, 2));
+    }
+    const CHAIN_MAP: Record<string, string> = { Ethereum: 'mainnet', Base: 'base', Arbitrum: 'arbitrum' };
+    const FEE_META: Record<number, string> = { 100: '0.01%', 500: '0.05%', 3000: '0.3%', 10000: '1%' };
+    const botPoolId = (r: any): string | null => {
+      const chain = CHAIN_MAP[r.chain];
+      if (!chain || r.project !== 'uniswap-v3') return null;
+      const syms = new Set(String(r.symbol).split('-').map((x) => x.toUpperCase()));
+      const b = BOT_POOLS.find((b) => b.chain === chain && FEE_META[b.feeBps] === String(r.feeTier).trim() && syms.has(b.sym0.toUpperCase()) && syms.has(b.sym1.toUpperCase()));
+      return b?.id ?? null;
+    };
+    const out = {
+      day: today,
+      generatedAt: new Date().toISOString(),
+      criteria: { window: 'wide-score v1: fee_wide − 0.6·σ²/8·g(w), fee = MIN(apy7d, apy30)', persistDays: 3, minTvlUsd: MIN_TVL, filter: 'uniswap-v3 + v4, ETH/Base/Arb/OP, wiek ≥90d; score w %/r' },
+      rows: scored.slice(0, TOP_N).map((r: any, i: number) => ({
+        rank: i + 1,
+        symbol: r.symbol,
+        chain: r.chain,
+        poolMeta: `${r.feeTier}${r.project === 'uniswap-v4' ? ' v4' : ''}`,
+        apy7d: r.score, // = SCORE [%/r] — patrz komentarz wyżej
+        streak: st.streaks[r.pool] || 0,
+        eligible: (st.streaks[r.pool] || 0) >= 3 && r.score > 0,
+        tvlUsd: r.tvlUsd,
+        botPoolId: botPoolId(r),
+        llamaUuid: r.pool,
+        // rozbicie score (pola dodatkowe, tylko ranking wide)
+        cls: r.cls,
+        feeAprWide: r.feeAprWide,
+        dragPct: r.dragPct,
+        sigmaAnnPct: r.sigmaAnnPct,
+        driftFlag: r.driftFlag,
+        wOursPct: r.wOursPct,
+      })),
+    };
+    fs.writeFileSync(path.join(stateDir, 'wide-ranking.json'), JSON.stringify(out, null, 2));
+    console.log(`Ranking WIDE (top ${TOP_N}) → ${STATE_DIR}/wide-ranking.json`);
+  } catch (e) {
+    console.error(`wide-ranking: zapis nieudany: ${String(e).slice(0, 160)}`);
+  }
   console.log('TOP 15 (score %/r):');
   for (const r of rows.slice(0, 15))
     console.log(

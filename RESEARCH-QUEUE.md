@@ -1000,10 +1000,18 @@ rozstrzyga; jeśli nie rozstrzyga niczego, nie odpalamy.
       asym. Kod: FP_SET/WF_SET=shape. Bramka: walkforward 720d u CC-Win.
       Smoke 365d w CONTEXT 02.09. Jeśli przejdzie → zmiana = jedna liczba
       w bot/config (productIdleWidthPct → para down/up) + advisor.
-- [ ] **Barbell**: ½ wąska ±15/20% statyczna (recentr. tylko gdy cena
-      poza szeroką) + ½ szeroka. Ten sam zestaw shape; wynik = średnia
-      dwóch wierszy. Jeśli przejdzie → wymaga DWÓCH NFT per pula w
-      observerze (nowa klasa pracy — decyzja na przeglądzie).
+- [x] **Barbell — ZAMKNIĘTY 02.09** (CC-Win 4/4 na 720d): z recentrowaniem
+      wyraźnie ujemny na obu pulach (−447/−458 base-030, −849…−1366
+      cbBTC vs all-in), „nigdy-nie-dotykaj" ≈ neutralny (+72/−86) przy
+      2 NFT per pula. Nie wracać bez nowych danych.
+- [ ] **Krzywy przedział — RUNDA 2 (zlecone CC-Win 02.09)**: runda 1
+      (base-030, cbBTC 720d): bramka nie przechodzi, ale −60/+35 i −65/+30
+      poprawiają śr. vsHODL o ~0.3 pp/okno na OBU pulach (base-030
+      −0.62→−0.31; cbBTC −0.31→+0.13) przy %wygr 64–65, kosztem worst
+      w up (−8…−10 śr. w rajdzie). Test strukturalności: 4 pule (+mainnet
+      -005, +arbitrum-005), warianty pośrednie −50/+40, −55/+40, −45/+35.
+      Kryterium: 4/4 asym > sym na średniej przy %wygr ≥ sym → kandydat
+      24.09 (zmiana = para down/up w bot/config + advisor); 2/4 → zamknąć.
 - [ ] **Aerodrome Slipstream** (emisje AERO): WETH/USDC — NIE (Uni v3 0.3%
       bije, CONTEXT 02.09). cbBTC/WETH CL10 — nierozstrzygnięte (Llama
       apy 177 = 62 fee + 115 AERO, ale vol7=0 i ciasny spacing). Do

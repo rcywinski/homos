@@ -135,6 +135,55 @@ DECYDUJE walkforward 720d u CC-Win (zlecenie w HANDOFF).
 FLAGA silnika (poza zakresem dziś): w `flatOnlyLP` idle:'passive'
 szeroka noga NIGDY nie jest recentrowana po wyjściu z pasma (żywy
 bot proponuje REBALANCE) — backtest hybrydy jest tu pesymistyczny.
+(6) RANKING WIDE DO OBSERWACJI (pytanie Rafała: „czy top 10 w apce
+to już przesiew pod szerokie?" — NIE, to nadal headline APY + lejek
+v1.2; wide-score był tylko skryptem). Decyzja Rafała: dokładna kopia
+Rankingu dnia w UI pod nowe wytyczne, obok starego, do obserwacji.
+ZROBIONE bot-side (Fable, tsc czysty): `wide-score.ts` pisze
+`.bot/wide-ranking.json` w kształcie selector-ranking.json (`apy7d`
+= score %/r + pola rozbicia, streaki w `.bot/wide-ranking-streaks.json`,
+botPoolId po BOT_POOLS); `server.ts` GET `/api/wide-ranking`;
+`pipeline.ts` krok `wide-score` przed lejkiem (1 podejście, porażka
+nie blokuje); `morning-report.ts` sekcja „RANKING WIDE". UI = PARTIA
+21 u Sonneta (prop `variant` na TopRankingPanel, drugi render pod
+starym, etykieta „score %/r"). Deploy: CC-Mac push → CC-Win build +
+restart homos-server + ręczny `npm run wide:score` na start.
+(7) KOLUMNY „365d/720d vs HODL" W TABELACH RANKINGOWYCH (pomysł
+Rafała; ustalenia: ±50 ETH/stable, ±40 KAŻDA para krypto/krypto z
+niezależnymi aktywami, pegged ciasne jak w wide-score; trzy liczby
+LP/HODL/Δ; mediana z okien kroczących; zwężanie w OSOBNEJ kolumnie
+tylko z pełnego przebiegu — model dzienny go nie udźwignie, da za to
+„flat %"). Dwa źródła: (a) model dzienny dla wszystkich pul (DO
+ZBUDOWANIA — następny krok Fable), (b) pełny przebieg = PIĘTRO 2 LEJKA
+— **ZBUDOWANE DZIŚ**: `scripts/wide-collect.ts` (kolejka top-8 per
+klasa z wide-score, v3 only, mapowanie z underlyingTokens przez
+factory.getPool + sanity + decimals on-chain, fetch 720d HyperSync
+wznawialny, walkforward `WF_SET=wide` z szerokością klasy, wynik
+`.bot/wide-backtests.json` → `/api/wide-backtests`; refy BTC/USD
+`ref-*` kolejkowane pierwsze z jawną orientacją `quoteRefAssetIsToken0`
+w load.ts; lock + pauza na czas pipeline'u). Decyzja Rafała: liczy
+SUBAGENT CC-Win w tle, bez blokowania bieżących zmian. Dysk ~0.5 GB/
+pula Base 720d — do sprawdzenia przed startem. tsc czysty; kod bez
+testu na HyperSync (sandbox) — pierwszy `--one` u CC-Win jest testem.
+(8) ODBIÓR PRZEBIEGÓW „KSZTAŁT" (CC-Win 4/4, 720d, ~popołudnie).
+Fullperiod: base-030 (ETH +0.6% end-to-end, 728d) — symetryczne/
+węższe wygrywają (±15 +1429, ±50 +1284, −65/+30 +762); cbBTC (−23%)
+— asymetria w dół wygrywa (−55/+25 +603 vs ±40 +287). Czyli
+fullperiod = ścieżka ceny, zgodnie z zastrzeżeniem CC-Win. Bramka
+walkforward (47/46 okien): NIC nie przechodzi (jak dotąd), ALE
+kierunek spójny na obu pulach: −60/+35 i −65/+30 śr. vsHODL
+base-030 −0.35/−0.31 vs sym −0.62/−0.89; cbBTC **+0.13/+0.06**
+(pierwsze dodatnie średnie w rodzinie kształtu) vs sym −0.31/−0.37;
+%wygr 64–65 vs 60; koszt = worst w up (−8…−10 śr. w rajdzie, 0%
+wygr. up na cbBTC). ≈ +3–4 pp/r mniej dragu vs HODL za grubszy ogon
+w hossie. BARBELL: z recentrowaniem wyraźnie ujemny (koszt swapów),
+never-touch neutralny (+72/−86) — ZAMKNIĘTY. DECYZJA: produkt bez
+zmian; krzywy przedział → runda 2 u CC-Win (4 pule: + mainnet-005,
+arbitrum-005; pośrednie −50/+40, −55/+40, −45/+35; komplet statystyk
+per reżim + recent90). Kryterium: 4/4 asym > sym na średniej przy
+%wygr ≥ sym → kandydat 24.09. Dla pkt (5) SKALA: kształt sam w sobie
+nie zmienia obrazu „yield, nie alfa" — poprawia drag o kilka pp/r,
+nie odwraca znaku vs HODL.
 (5) SKALA: decyzja Rafała — jeśli badania 3/4 (lub 2) poprawią
 % zysku, wchodzimy większą skalą; bez poprawy P&L na $6k nie
 zwraca czasu, wartość = maszyna badawcza. Na agendę 24.09.

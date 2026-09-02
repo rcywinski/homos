@@ -20,7 +20,8 @@
     "pipeline": "tsx scripts/pipeline.ts",
     "scan": "tsx backtest/scan-universe.ts",
     "report:morning": "tsx scripts/morning-report.ts",
-    "wide:score": "tsx scripts/wide-score.ts"
+    "wide:score": "tsx scripts/wide-score.ts",
+    "wide:collect": "tsx scripts/wide-collect.ts"
   },
   "author": "HOMO$",
   "license": "ISC",

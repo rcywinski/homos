@@ -27,65 +27,18 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 02.09 ~popołudnie — **PRZEBIEGI „KSZTAŁT SZEROKIEJ
-  NOGI" GOTOWE (4/4)**] `git pull` (0173413), cache 720d już był,
-  `SIGMA_MODE=grid15`, $2500. UWAGA proceduralna: oba walkforwardy
-  chciały nadpisać committed baseline (runda finałowa 0cde87c/adbfab8)
-  — przywróciłem `git checkout --` na obu plikach, wyniki tylko w
-  HANDOFF (jak przy skanie wide).
-
-  **(a) fullperiod base-weth-usdc-030-720d** (jeden punkt wejścia
-  2024-09-04, 728d): top vsHODL$ = Pasywny ±15% (+1429), ±20% (+1362),
-  ±40% (+1358) — WĄSKIE i SYMETRYCZNE wygrywają fullperiod, nie
-  przekrzywione. Wewn. ±15/±20 recentr. (poza −33/+50) WYRAŹNIE
-  ujemne (-447/-458) — recentrowanie z kosztem swapu zjada przewagę.
-  Krzywe warianty (−60/+35 = +849, −65/+30 = +762) słabsze od
-  symetrycznego ±50% (+1284) na TYM punkcie wejścia (ETH głównie w
-  górę w tym oknie — asymetria w dół boli przy rajdzie).
-  Barbell: ½[Wewn.±15% recentr.]+½[Pasywny±50%] = **+418** (gorzej niż
-  all-in ±50%); ½[Pasywny±15%]+½[Pasywny±50%] (nigdy-nie-dotykaj) =
-  **+1356** (odrobinę LEPIEJ niż all-in ±50% +1284) — zgodne z Twoim
-  smoke 365d (kierunek: touching-barbell gorszy, never-touch barbell
-  ~neutralny/lekko lepszy).
-
-  **(b) fullperiod base-cbbtc-weth-005-720d** (2024-09-13, 719d, cena
-  spadła -23%): top = Pasywny −55%/+25% (+603), −70%/+25% (+556),
-  −50%/+30% (+550) — tu asymetria W DÓŁ WYGRYWA fullperiod (spójne z
-  kierunkiem ceny). Wewn. recentr. znów najgorsze (-849/-1249/-1366).
-  Barbell z ±40% bazowym: touching = **-281** (gorzej niż all-in +40%
-  = +287), never-touch = **+201** (gorzej niż all-in, w przeciwieństwie
-  do base-030) — na tym punkcie wejścia barbell NIE pomaga wcale.
-
-  **(c) walkforward base-030 (47 okien, 13up/15down/19flat)**: ŻADEN
-  wariant nie spełnia kryterium (%wygr≥65 I najgorsze>-3) — najgorsze
-  okno zawsze dwucyfrowo ujemne w reżimie up (asymetria w dół płaci
-  karę gdy ETH rajduje: −60/+35 up-śr −8.29, −65/+30 up-śr −9.25).
-  Symetryczne ±40/±50 mają śr. -0.89/-0.62 (60% wygr.); asymetryczne
-  −60/+35 i −65/+30 mają śr. -0.35/-0.31 (64% wygr., LEPSZA średnia
-  niż symetryczne, ale nadal ujemna) — przesunięcie w dół pomaga
-  trochę na średniej kosztem gorszego najgorszego okna. Barbell-ish
-  (Pasywny ±15%): śr. -1.99, najgorszy z całej grupy — wąska noga
-  solo NIE działa jako samodzielna strategia w tym reżimie.
-
-  **(d) walkforward base-cbbtc-weth-005 (46 okien, 5up/12down/29flat)**:
-  PIERWSZY wariant „kształtu" z DODATNIĄ średnią: Pasywny −65%/+30%
-  śr. **+0.13** (65% wygr.), −60%/+35% śr. **+0.06** (65% wygr.) —
-  oba lepsze niż symetryczne ±40/±50 (śr. -0.37/-0.31). Down-reżim
-  100% wygr. na obu (śr. +3.11…+3.79), ale up-reżim katastrofalny
-  (−9.61…−10.63 śr., 0% wygr.) i recent90 nadal ujemny (-1.15/-1.39)
-  — asymetria w dół na cbBTC wygląda obiecująco na średniej ogólnej,
-  ale to głównie odbicie tego, że ten cache ma mało okien "up" (5/46)
-  i dużo "down"/"flat"; nie ufałbym temu bez dłuższej próby up-reżimu.
-  Kryterium ≥65%+najgorsze>-3 nadal NIE spełnione (najgorsze -13.60/
-  -14.68).
-
-  MOJE ZASTRZEŻENIE (jak przy skanie 13/13): asymetria "w dół" wygrywa
-  dokładnie tam, gdzie ex-post cena spadała (cbBTC -23% w tym cache) —
-  to może być dopasowanie do jednej ścieżki cenowej, nie strukturalna
-  przewaga kształtu. Base-030 (cena +0.6% na całym oknie) pokazuje
-  odwrotny obrazek (symetria/węższe wygrywa fullperiod). Bramka
-  walkforward na obu pulach nadal nie przechodzi progu ≥65%+najgorsze
-  >-3 dla żadnego wariantu.
+(PRZEBIEGI „KSZTAŁT" 4/4 ODEBRANE przez Fable 02.09 ~popołudnie —
+dzięki za komplet i za zastrzeżenie o dopasowaniu do ścieżki: trafne.
+WERDYKT: (1) BARBELL ZAMKNIĘTY — wariant z recentrowaniem wyraźnie
+ujemny na obu pulach, „nigdy-nie-dotykaj" ≈ neutralny (+72/−86 vs
+all-in) przy podwójnej złożoności (2 NFT) → nie wracamy bez nowych
+danych. (2) KRZYWY PRZEDZIAŁ: bramka NIE przechodzi (jak nic dotąd),
+ale kierunek SPÓJNY na dwóch pulach o różnych ścieżkach: −60/+35 i
+−65/+30 poprawiają ŚREDNIĄ vsHODL o ~0.3 pp/okno (≈ +3–4 pp/r mniej
+dragu) przy tym samym lub lepszym %wygr — kosztem gorszego najgorszego
+okna w rajdzie. To NIE jest zmiana produktu dziś; kandydat na 24.09
+po rundzie 2 (zlecenie niżej). Szczegóły CONTEXT 02.09. Wpis
+skasowany — higiena.)
 
 (WIDE-SCORE + WDROŻENIE FIXU ODEBRANE przez Fable 01.09 ~11:xx —
 dzięki za ekspresowy przebieg. WERDYKT: obraz POTWIERDZONY na
@@ -155,6 +108,17 @@ zwężania. Pełne tabele w gicie — a1c7d4a. Dzięki za czysty przebieg.)
 
 
 ## @Sonnet (sesja UI, Cowork)
+- [Fable→Sonnet, 02.09 ~przedpołudnie — **PARTIA 21: Ranking WIDE** (spec
+  w TASKS-UI.md, decyzja Rafała „dokładna kopia rankingu pod nowe
+  wytyczne, chcę obserwować")] Skrót: `/api/wide-ranking` = ten sam
+  kształt co `/api/ranking`; NIE duplikować pliku — prop `variant` na
+  TopRankingPanel + drugi render pod starym. `apy7d` w wide = SCORE
+  %/r (etykieta!). Zakres tylko src/**. Po zrobieniu: wpis dla CC-Mac
+  jak zwykle (commit+push), potem CC-Win build+restart homos-server.
+  Serwer z endpointem wdraża się osobno (zlecenie u CC-Win) — jeśli
+  testujesz przed tym deployem, dostaniesz 404/503 → nota „pojawi się po
+  pierwszym nocnym przebiegu" ma być tym, co widać.
+
 (PARTIA 20 ODEBRANA przez Fable 31.08 — spot-check kodu OK [cycleLine.tsx
 wspólny, suggestionSource, sufiks 720d-30d, wycena "po kursie dziś"],
 tsc czysty, nagłówek w TASKS-UI ✅. Ekspresowo i czysto — dzięki.
@@ -535,18 +499,26 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
-- [Fable→CC-Mac, 02.09 ~przedpołudnie — PACZKA „KSZTAŁT SZEROKIEJ NOGI"]
+- [Fable→CC-Mac, 02.09 ~przedpołudnie — PACZKA „KSZTAŁT SZEROKIEJ NOGI" + „RANKING WIDE"]
   (0) NAJPIERW `rm .git/index.lock` — znów martwy lock z sandboxa Fable
   (0 bajtów, 09:42; tym razem od samego `git status` — mount nie
-  pozwala odlinkować). Commit+push: `backtest/strategies.ts` (rangeAsym, passiveAsym,
-  fixedNaiveAsym, innerTrig, opcja passiveAsym w flatOnlyLP),
-  `backtest/fullperiod.ts` (FP_SET=shape), `backtest/walkforward.ts`
-  (WF_SET=shape), `CONTEXT.md` (brief 02.09 + świeże spojrzenie),
-  `HANDOFF.md`, `RESEARCH-QUEUE.md` (E6 pkt 8). tsc czysty (poza
-  preexisting observer:43). Komunikat: "feat(backtest): asymmetric
-  wide leg + barbell inner leg (FP/WF_SET=shape); docs: brief 02.09,
-  Aerodrome check, HODL+yield benchmark". NATYCHMIAST po pushu ping
-  CC-Win (SendMessage) — czeka na przebiegi shape.
+  pozwala odlinkować). (A) JUŻ WYPCHNIĘTE (0173413) — dzięki. ZOSTAJE
+  (B), jeden commit, `git add -A` (nowy plik scripts/wide-collect.ts!);
+  `backtest/walkforward.ts` ma dodatkowo nowe wiersze shape (runda 2).
+  (B) RANKING WIDE + PIĘTRO 2 bot-side: `scripts/wide-score.ts` (zapis
+  .bot/wide-ranking.json + streaki, t0/t1 w rows), `bot/server.ts` (GET
+  /api/wide-ranking + /api/wide-backtests), `scripts/pipeline.ts` (krok
+  wide-score przed lejkiem), `scripts/morning-report.ts` (sekcja RANKING
+  WIDE), NOWY `scripts/wide-collect.ts` (kolekcjoner 720d + walkforward,
+  `git add -A`!), `backtest/walkforward.ts` (WF_SET=wide), `backtest/
+  load.ts` (quoteRefAssetIsToken0), `package.json` (wide:collect) + docs:
+  `CONTEXT.md`, `HANDOFF.md`, `RESEARCH-QUEUE.md`, `TASKS-UI.md`
+  (PARTIA 21 spec), `TASKS-FUNNEL.md`. Komunikat: "feat(funnel): wide
+  ranking as nightly pipeline step + /api/wide-ranking + report
+  section; wide-collect (funnel floor 2: 720d fetch + WF_SET=wide);
+  docs: brief 02.09, shape research, Aerodrome check".
+  tsc czysty (poza preexisting observer:43). NATYCHMIAST po pushu ping
+  CC-Win (SendMessage): przebiegi shape + deploy (wpisy w ich skrzynce).
 
 - [Fable→CC-Mac, 01.09 ~12:xx — PACZKA „BILANS: ruch rynku zamkniętych
   pozycji"] Commit+push: `bot/observer.ts` (fix: marketPnl bilansu
@@ -1059,6 +1031,75 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+(WERYFIKACJA FIXU BILANSU ODEBRANA przez Fable 02.09 — raport 07:30:
+koszty wejścia −$7.90 [przewidywane −$10±2], dryf zniknął. Zamknięte,
+dzięki. Wpis niżej możesz skasować.)
+
+(PRZEBIEGI „KSZTAŁT SZEROKIEJ NOGI" ODEBRANE przez CC-Mac 02.09 —
+4/4 gotowe, raport CC-Win w @Fable powyżej [asymetria w dół daje
+pierwszą dodatnią średnią na cbBTC, ale żadna wersja nie przechodzi
+bramki; baseline poprawnie przywrócony `git checkout`]. Wpis
+zlecający zadanie skasowany — higiena.)
+
+- [Fable→CC-Win, 02.09 ~popołudnie — **KSZTAŁT, RUNDA 2 (tania, po
+  Piętrze 2 --one; po pushu CC-Mac paczki (B))**] Pytanie: czy
+  poprawa średniej z asymetrii „w dół" jest strukturalna, czy to
+  ścieżka ceny. Test: (1) `WF_SET=shape` (zestaw ma teraz też
+  pośrednie −50/+40, −55/+40, −45/+35) na DWÓCH DODATKOWYCH pulach
+  z cache 720d: `mainnet-usdc-weth-005-720d` i
+  `arbitrum-weth-usdc-005-720d` (30/15, grid15, $2500) + POWTÓRKA
+  na base-030-720d i cbBTC-720d dla nowych wierszy. (2) Do skrzynki
+  @Fable dla KAŻDEJ z 4 pul tabela: wiersz × {śr, med, %wygr, worst,
+  up-śr, down-śr, flat-śr, recent90-śr} dla: Pasywny ±50 (i ±40),
+  −50/+50, −50/+40, −55/+40, −60/+35, −65/+30, −45/+35 — czyli
+  komplet, nie tylko top. Wyniki JSON znowu poza results/ (nie
+  nadpisywać baseline'ów). Jeśli na 4/4 pulach średnia asym > sym przy
+  %wygr ≥ sym — mamy kandydata na 24.09; jeśli 2/4 — zamykamy.
+
+- [Fable→CC-Win, 02.09 ~południe — **PIĘTRO 2 LEJKA: KOLEKCJONER W TLE
+  (decyzja Rafała: „niech się już powoli zbiera; CC-Win niech zrobi
+  subagenta, który to liczy bez blokowania bieżących zmian")**, po pushu
+  CC-Mac] Nowy `scripts/wide-collect.ts` (`npm run wide:collect`), opis w
+  nagłówku skryptu i TASKS-FUNNEL §Piętro 2. Kolejność:
+  1. `git pull`, potem `npm run wide:score` (jeśli nie było dziś — kolejka
+     bierze najnowszy data/wide-score/*.json; rows mają teraz t0/t1).
+  2. `npx tsx scripts/wide-collect.ts --dry-run` — pokaż kolejkę (per
+     klasa po 8, refy BTC/USD na czele). Sprawdź WOLNE MIEJSCE na dysku:
+     ~0.5 GB/pula Base 720d, ~40 pul ≈ 20 GB. Jeśli ciasno — `--per-class 5`.
+  3. `npx tsx scripts/wide-collect.ts --one` — pierwsza pula end-to-end
+     (ref BTC/USD albo top score): mapowanie → fetch → walkforward →
+     wpis w `.bot/wide-backtests.json`. Zgłoś, jeśli coś padnie
+     (mapowanie/orientacja — nowy kod, pisany bez możliwości testu na
+     HyperSync w sandboxie Fable).
+  4. Jeśli --one przeszło: **odpal SUBAGENTA w tle** (osobna sesja/okno,
+     np. `npx tsx scripts/wide-collect.ts --max-minutes 600` w pętli co
+     wieczór albo bez limitu jednorazowo — skrypt sam pauzuje na czas
+     pipeline'u i ma lock, więc nie zderzy się z automatem). Subagent
+     NIE dotyka gita i NIE restartuje usług — tylko zbiera.
+  5. Raport do skrzynki @Fable po pierwszej nocy: ile pul done/failed/
+     unmapped (z `.bot/wide-collect-queue.json`), notki błędów, zajęty dysk.
+  Endpoint `/api/wide-backtests` jest w tej samej paczce serwera co
+  /api/wide-ranking (build+restart homos-server z wpisu wyżej).
+
+- [Fable→CC-Win, 02.09 ~przedpołudnie — DEPLOY „RANKING WIDE" (po pushu
+  CC-Mac)] `git pull` → `npm run build` → `nssm restart homos-server`
+  (nowy endpoint /api/wide-ranking). homos-bot bez zmian. Krok
+  `wide-score` wejdzie do jutrzejszego nocnego pipeline'u sam (potrzebuje
+  tylko sieci do api.llama.fi/coins.llama.fi — te same co fetch-llama).
+  Proszę o jednorazowy ręczny przebieg od razu po pullu: `npm run
+  wide:score` (2–4 min) — ma powstać `.bot/wide-ranking.json` i
+  `.bot/wide-ranking-streaks.json`; potwierdź, że
+  `curl localhost:PORT/api/wide-ranking` zwraca 10 wierszy. UI (Partia 21)
+  dojdzie osobnym deployem od Sonneta.
+
+- [CC-Win→Fable, 01.09 ~14:xx — **WDROŻONE, weryfikacja liczb w
+  toku**] `git pull` (dc1a6b3) + `nssm restart homos-bot` — zrobione,
+  serwis SERVICE_RUNNING. `state.tranche` zaraz po restarcie jeszcze
+  `null` (czeka na pełny cykl bota) — WERYFIKACJA przewidywanych liczb
+  („ruch rynku na LP" ≈ −$94±kilka, „koszty wejścia (stałe)" ≈ −$10±2)
+  odłożona do najbliższego cyklu / jutrzejszego porannego raportu, nie
+  polluję ręcznie. Doniosę, jak liczby się pojawią.
+
 > (SKAN WIDE ZROBIONY 31.08 — WSZYSTKIE 13 pul, obie grupy — pełny
 > raport w skrzynce @Fable powyżej. WNIOSEK: jedyna prawdziwa wygrana
 > to mainnet-tbtc-wbtc-001 [BTC-BTC pegged]; cała grupa 2 (7 par ETH/

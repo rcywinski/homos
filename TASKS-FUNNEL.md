@@ -130,7 +130,13 @@ ETH/BTC/stable, drugi harmonogram. Wszystko przez decyzję człowieka.
 > z niezależnym znaleziskiem E7 (wolumen 5–8× bliźniaka v3).
 > Cały ranking ledwo muska zero od góry — spójne z tezą nadrzędną
 > na 24.09 (produkt = HODL+yield−drag, nie alfa).
-> NASTĘPNE: przebieg produkcyjny u CC-Win (jednorazowo, potem decyzja
+> **STATUS 02.09 (Fable, decyzja Rafała): WPIĘTE DO OBSERWACJI** —
+> krok `wide-score` w nocnym pipeline (przed lejkiem), zapis
+> `.bot/wide-ranking.json` (kształt = selector-ranking.json, `apy7d`
+> = score), GET `/api/wide-ranking`, sekcja w porannym raporcie, UI =
+> Partia 21 (kopia Rankingu dnia pod nowe wytyczne, OBOK starego).
+> Miesiąc obserwacji obu list, potem decyzja o przepięciu eligible/lejka.
+> NASTĘPNE (stare): przebieg produkcyjny u CC-Win (jednorazowo, potem decyzja
 > o wpięciu do pipeline'u po przeglądzie), Piętro 2 dla kandydatów
 > pegged (UWAGA: pule v4 bez naszego fetcha swapów — singleton, inne
 > eventy; dla nich screen tylko z metryk DefiLlama do czasu E7 krok 4).
@@ -159,6 +165,24 @@ ETH/BTC/stable, drugi harmonogram. Wszystko przez decyzję człowieka.
   CSV). Klasy `crypto-stable`/`eth-btc` w rankingu ZOSTAJĄ (uczciwość),
   ale wiemy z pilota, że score wyjdzie im ujemny.
 ### Piętro 2 — FETCH + SCREEN dla top ~50 score (nocami, porcjami)
+> **STATUS 02.09 (Fable, decyzja Rafała „niech się już powoli zbiera"):
+> ZAIMPLEMENTOWANE — `scripts/wide-collect.ts` (`npm run wide:collect`).**
+> Kolejka z najnowszego wide-score: top `--per-class 8` KAŻDEJ klasy
+> (pegged/LST/stable nadreprezentowane z konstrukcji), tylko uniswap-v3
+> na mainnet/base/arbitrum (v4 poza zasięgiem fetcha), pule bota pomijane
+> (mają 720d z pipeline'u). Per pula: mapowanie z `underlyingTokens`
+> (factory.getPool + sanity token0/1 + decimals on-chain) → fetch 720d
+> HyperSync (wznawialny, timeout 180 min) → walkforward 30/15
+> `WF_SET=wide` (szerokość klasy; hybryda ±5% tylko klasy szerokie) →
+> `.bot/wide-backtests.json` {uuid → summary} → GET `/api/wide-backtests`
+> → kolumny „pełny przebieg" w tabelach rankingowych (Partia 22).
+> Referencje USD: quote WETH → USDC/WETH-720d sieci; quote BTC →
+> `ref-<chain>-…-720d` kolejkowane jako pierwsze (BTC/USDC), z jawną
+> orientacją `quoteRefAssetIsToken0` (load.ts). Współbieżność: własny
+> lock + PAUZA gdy biegnie pipeline nocny. Uruchamia SUBAGENT CC-Win w tle
+> (nie pipeline). Dysk: 720d Base ≈ 0.5 GB/pula — ~40 pul ≈ 20 GB, sprawdzić
+> wolne miejsce przed startem. Screen (kryterium pilota) — czyta Fable
+> z wide-backtests.json; PASS/FAIL nie jest jeszcze automatyczny.
 - fetch 365d (istniejący fetch-swaps-hypersync, cache `cand-*`),
   NADREPREZENTACJA klas pegged (kwoty per klasa: pegged/LST/stable
   min. 60% listy — score po APY je zaniża, a to tam pilot znalazł
