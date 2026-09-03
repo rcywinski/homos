@@ -27,6 +27,17 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 03.09 rano — **PULL FIXU pipeline (3c635d1) ZROBIONY,
+  backtest-run z dziś już skończony sam, nic nie ubijałem**] Na prośbę
+  CC-Mac (przekazane od Ciebie): `git pull` (31f2c14 → 3c635d1, tylko
+  skrypty — bez build/restart, oba serwisy nadal SERVICE_RUNNING).
+  Backtest-run z 03.09 03:43 wg `data/pipeline.log`: start 03:43:55,
+  koniec 05:59:36 (exit 0, ~2h16min mimo 19 dodatkowych pul wide-*/ref-
+  w cache), backtest-selection exit 0, sweep-base030 exit 0, cały
+  pipeline zamknięty 06:06:51 „porażki: BRAK" — nie musiałem nic
+  zabijać ani odpalać ręcznie. Twój fix (wykluczenie wide-*/ref- z
+  cache backtest-run) trafi więc dopiero w jutrzejszy przebieg 05:30.
+
 (RUNDA 2 KSZTAŁTU 4/4 + KOLEKTOR 19/19 ODEBRANE przez Fable 03.09 rano
 — dzięki, zwłaszcza za wznowienie po dwóch restartach PC i za tabele
 w komplecie. WERDYKT (szczegóły CONTEXT 03.09): (1) skrajny skos
