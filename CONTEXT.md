@@ -82,6 +82,49 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-03 ~rano — Brief (Fable) + WERDYKT RUNDY 2 KSZTAŁTU: pasmo symetryczne w cenie bije produkt 4/4 + fix cache kolektora
+BRIEF (raport 07:30, PC po wymianie dysku — 195 GB wolne, noc
+przebiegła): fetch/wide-score/wide-daily/lejek OK, ale **backtest-run
+w toku od 03:43 jeszcze o 07:30** — przyczyna: cache `wide-*`/`ref-*`
+Piętra 2 (19 pul × 720d) wpadły do nocnego `backtest/run.ts`, który
+filtrował tylko `cand-` (ta sama klasa co incydent 26.08). FIX: filtr
+`^(cand|wide|ref)-` w run.ts + świeżość cache w pipeline.ts bez nich.
+Bilans transzy **−$243.82 (−4.00%)**: rynek −$231, koszty wejścia
+−$7.90 (stałe ✓), beta bufora −$4.84. vs HODL łącznie −$11.12.
+Pozycje: #5886957 szeroki in-range gap 3.6%, fee $7.41 ($1.09/d);
+#5908083 wąski in-range gap 0.3%, flat ✅, fee $2.70, **$0.97/d —
+3. dzień ≥$0.9/d** (kalibracja #3 trzyma). Selektor: edge −22.6
+(6. dzień maleje; ~1 tydz. do zera). OPEN arbitrum-005 — nieproduktowa,
+ignor. Próg zasady wyjścia: $6 397 — dziś brakuje $549 (~9.4%).
+RANKING WIDE dzień 2: top bez zmian (WBTC-CBBTC v4 +0.85, USDC-USDT
++0.26, GHO-USDC v4 +0.13), reszta pod zerem; kolumny 365/720 z modelu
+dziennego widoczne (USDC-USDT 365d Δ +1.07, med +1.36).
+KOLEKTOR PIĘTRO 2: 19/19 done, 16 pul z pełnym przebiegiem w
+wide-backtests.json (widoczne w UI jako „pełny przebieg").
+WERDYKT RUNDY 2 (CC-Win 4/4 na 720d, 46–47 okien 30/15):
+(a) skrajny skos −65/+30 — ZAMKNIĘTY wg reguły (2/4: base-030 i cbBTC
+spełniają, mainnet i arbitrum nie — %wygr spada);
+(b) **ZNALEZISKO STRUKTURALNE 4/4**: prawdziwie symetryczny w CENIE
+−50/+50 (lo = P/2, hi = 1.5P) bije nasz produktowy „±50%" (log-sym. =
+−33/+50) na średniej vsHODL na każdej puli: mainnet −0.68 vs −0.79,
+arbitrum −0.75 vs −1.09, base-030 −0.37 vs −0.62, cbBTC −0.09 vs −0.31
+(≈ +0.1…+0.34 pp/okno ≈ +1…+4 pp/r mniej dragu), przy %wygr ≥
+(64/62, 66/66, 64/60, 70/63). KOSZT: worst gorszy na 3/4 (−14 vs −12),
+recent90 gorszy na 3/4 (ostatnie 90 dni = rajd ETH, gdzie krótsza
+noga w górę boli). Mechanizm: dzisiejsze pasmo ma 2× mniej miejsca
+w dół niż w górę — w dół tracimy najwięcej (MC), więc wyrównanie
+pomaga; skrajny skos przesadza. Warianty pośrednie (−50/+40,
+−55/+40) = to samo z gorszym worst.
+DECYZJA: produkt BEZ ZMIAN do 24.09 (zysk z przestawienia ≈ +$10 za
+3 tyg. ≈ koszt swapu+gazu; a recent90 mówi „nie teraz"). Zapis jako
+**kandydat „produkt v2"**: gdyby LP miał żyć po 24.09 — szeroka noga
+= −50/+50 w cenie (zmiana: para down/up w bot/config +
+advisor.suggestFixedRange). Kształt zamknięty jako temat badawczy.
+IMPLIKACJA DLA 24.09: nawet najlepszy kształt zostawia średnią
+vsHODL ujemną na 3/4 pul (tylko cbBTC ≈ 0) — teza „yield, nie alfa"
+stoi; zasada wyjścia bez zmian.
+
+
 ### 2026-09-02 ~przedpołudnie — Brief + ŚWIEŻE SPOJRZENIE NA ZYSKI (Fable + Rafał): kształt szerokiej nogi do bramki, Aerodrome sprawdzony, benchmark „HODL+yield"
 BRIEF (raport 07:30): automat czysty, kolejka pusta, down:false 6/6.
 Bilans transzy −$200.86 (−3.30%): rynek −$190.70, reszta −$10.16
@@ -166,6 +209,15 @@ w load.ts; lock + pauza na czas pipeline'u). Decyzja Rafała: liczy
 SUBAGENT CC-Win w tle, bez blokowania bieżących zmian. Dysk ~0.5 GB/
 pula Base 720d — do sprawdzenia przed startem. tsc czysty; kod bez
 testu na HyperSync (sandbox) — pierwszy `--one` u CC-Win jest testem.
+(14) KONIEC DNIA ~wieczór: raport CC-Win (kolektor/runda 2) zostawiony
+do odbioru na 03.09 rano. NOC 02/03.09: Windows wyłączony — wymiana
+dysku (41 GB wolne blokowało Piętro 2; po wymianie 200–300 GB — pełna kolejka `--per-class 8`, ~40 pul ≈ 20 GB), kopiowanie przez noc → brak
+pipeline'u, raportu 07:30 i observera (brak alertów) do włączenia
+rano. Checklista startu po wymianie u CC-Win w HANDOFF. Dzień 02.09
+w liczbach: 6 paczek kodu (shape, wide-ranking, wide-collect,
+wide-daily + fix, UI 21/22), 3 badania odebrane (barbell zamknięty,
+kształt → runda 2, Aerodrome WETH/USDC nie), ranking WIDE z kolumnami
+365/720 na żywo, zasada wyjścia transzy ustalona.
 (13) DECYZJA RAFAŁA — ZASADA WYJŚCIA (wpis w §2): 24.09 wyjście z LP
 niezależnie od kursu; wcześniej przy bilansie transzy ≥ +5% (≥ $6 397)
 — od razu; kapitał → giełda/ETF. Interpretacja tabel dla Rafała

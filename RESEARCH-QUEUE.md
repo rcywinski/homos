@@ -1012,7 +1012,13 @@ rozstrzyga; jeśli nie rozstrzyga niczego, nie odpalamy.
       wyraźnie ujemny na obu pulach (−447/−458 base-030, −849…−1366
       cbBTC vs all-in), „nigdy-nie-dotykaj" ≈ neutralny (+72/−86) przy
       2 NFT per pula. Nie wracać bez nowych danych.
-- [ ] **Krzywy przedział — RUNDA 2 (zlecone CC-Win 02.09)**: runda 1
+- [x] **Krzywy przedział — ZAMKNIĘTY 03.09 po rundzie 2 (4/4 pule)**:
+      skrajny skos −65/+30 → 2/4 → odrzucony. ZNALEZISKO: prawdziwie
+      symetryczny w cenie −50/+50 bije produktowy „±50%" (−33/+50) na
+      średniej vsHODL na 4/4 pul przy %wygr ≥ (koszt: worst, recent90).
+      → **kandydat „produkt v2"** (szeroka noga −50/+50 w cenie), TYLKO
+      jeśli LP żyje po 24.09. Szczegóły CONTEXT 03.09. Poniżej historia:
+- [~] (historia) Krzywy przedział — RUNDA 2 (zlecone CC-Win 02.09): runda 1
       (base-030, cbBTC 720d): bramka nie przechodzi, ale −60/+35 i −65/+30
       poprawiają śr. vsHODL o ~0.3 pp/okno na OBU pulach (base-030
       −0.62→−0.31; cbBTC −0.31→+0.13) przy %wygr 64–65, kosztem worst

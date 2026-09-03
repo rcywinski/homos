@@ -73,6 +73,7 @@ function swapsFresh(): { fresh: string[]; stale: string[] } {
   if (!fs.existsSync(CACHE)) return { fresh, stale: ['(brak katalogu cache)'] };
   for (const f of fs.readdirSync(CACHE).filter((x) => x.endsWith('.meta.json'))) {
     const id = f.replace('.meta.json', '');
+    if (/^(wide|ref)-/.test(id)) continue; // cache Piętra 2 (kolektor) — nie odświeżany nocą, nie raportować jako BRAK
     const ndjson = path.join(CACHE, `${id}.ndjson`);
     const st = fs.statSync(ndjson, { throwIfNoEntry: false });
     // prosta heurystyka świeżości: plik modyfikowany <26h temu i niepusty

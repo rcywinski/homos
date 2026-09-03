@@ -27,106 +27,21 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
-- [CC-Win→Fable, 02.09 wieczór — **KSZTAŁT RUNDA 2, 4/4 GOTOWE** (dysk
-  odblokowany — 195 GB wolne po sprzątaniu Rafała, oba przerwane
-  przebiegi wznowione bez problemów). `SIGMA_MODE=grid15`, `WF_SET=shape`.
-  Kryterium z Twojego zlecenia: **asym śr. > sym śr. ORAZ asym %wygr. ≥
-  sym %wygr.** dla sym = Pasywny −50/+50.
-
-  **1. mainnet-usdc-weth-005-720d** (47 okien, 11up/13down/23flat) —
-  NIE SPEŁNIA: sym −50/+50 ma najlepszą średnią (-0.68, 64%wygr), żaden
-  asym jej nie bije. Pełna tabela już była w poprzednim wpisie (skasowana
-  wyżej, dane w gicie/CONTEXT jeśli potrzebne ponownie).
-
-  **2. arbitrum-weth-usdc-005-720d** (47 okien, 14up/14down/19flat) —
-  NIE SPEŁNIA: średnia POPRAWIA SIĘ ze skosem (sym -0.75 → −65/+30
-  -0.54), ale %wygr. SPADA razem z nią (66% → 60%), nigdy nie trzyma się
-  ≥ sym przy lepszej średniej.
-  | strategia | śr. | med. | %wygr. | worst | up-śr | down-śr | flat-śr | recent90-śr |
-  |---|---|---|---|---|---|---|---|---|
-  | Pasywny ±40% | -1.38 | +0.70 | 66% | -13.57 | -4.39 | -3.01 | +2.03 | -0.59 |
-  | Pasywny ±50% (produkt) | -1.09 | +0.59 | 66% | -12.00 | -3.71 | -2.26 | +1.71 | -0.49 |
-  | Pasywny −50/+50 (symetr.) | -0.75 | +0.75 | **66%** | -14.40 | -5.82 | +1.34 | +1.45 | -2.01 |
-  | Pasywny −50/+40 | -0.78 | +1.45 | 64% | -16.30 | -7.02 | +2.25 | +1.58 | -2.59 |
-  | Pasywny −55/+40 | -0.71 | +1.68 | 62% | -16.76 | -7.46 | +3.05 | +1.50 | -2.93 |
-  | Pasywny −60/+35 | -0.63 | +1.84 | 60% | -17.96 | -8.42 | +4.28 | +1.49 | -3.56 |
-  | Pasywny −65/+30 | **-0.54** | +1.95 | 60% | -18.96 | -9.30 | +5.47 | +1.49 | -4.18 |
-  | Pasywny −40/+40 | -0.96 | +0.52 | 55% | -15.21 | -5.97 | +0.36 | +1.76 | -1.79 |
-  | Pasywny −45/+35 | -0.86 | +1.33 | 62% | -16.73 | -7.19 | +1.92 | +1.75 | -2.58 |
-  | Pasywny −50/+30 | -0.75 | +1.93 | 62% | -18.00 | -8.31 | +3.41 | +1.74 | -3.37 |
-
-  **3. base-weth-usdc-030-720d** (47 okien, 13up/15down/19flat) —
-  SPEŁNIA: −60/+35 bije sym na średniej (-0.35 vs -0.37) przy TYM SAMYM
-  %wygr. (64%=64%).
-  | strategia | śr. | med. | %wygr. | worst | up-śr | down-śr | flat-śr | recent90-śr |
-  |---|---|---|---|---|---|---|---|---|
-  | Pasywny ±40% | -0.89 | +1.22 | 60% | -13.46 | -3.93 | -2.10 | +2.15 | -1.07 |
-  | Pasywny ±50% (produkt) | -0.62 | +1.04 | 60% | -11.70 | -3.25 | -1.41 | +1.81 | -0.92 |
-  | Pasywny −50/+50 (symetr.) | -0.37 | +1.02 | 64% | -14.05 | -5.50 | +1.94 | +1.32 | -2.52 |
-  | Pasywny −50/+40 | -0.40 | +1.27 | 66% | -16.09 | -6.75 | +2.84 | +1.38 | -3.19 |
-  | Pasywny −55/+40 | -0.37 | +1.49 | 64% | -16.51 | -7.22 | +3.52 | +1.25 | -3.54 |
-  | Pasywny −60/+35 | **-0.35** | +1.44 | **64%** | -17.74 | -8.29 | +4.64 | +1.15 | -4.22 |
-  | Pasywny −65/+30 | -0.31 | +1.40 | 60% | -18.72 | -9.25 | +5.71 | +1.06 | -4.92 |
-  | Pasywny −40/+40 | -0.52 | +1.14 | 68% | -15.03 | -5.63 | +1.10 | +1.69 | -2.34 |
-  | Pasywny −45/+35 | -0.46 | +1.22 | 64% | -16.60 | -6.99 | +2.63 | +1.57 | -3.21 |
-  | Pasywny −50/+30 | -0.41 | +1.73 | 64% | -17.84 | (patrz JSON scratchpad) |
-
-  **4. base-cbbtc-weth-005-720d** (46 okien, 5up/12down/29flat) —
-  SPEŁNIA: −50/+40 bije sym na średniej (-0.06 vs -0.09) przy TYM SAMYM
-  %wygr. (70%=70%).
-  | strategia | śr. | med. | %wygr. | worst | up-śr | down-śr | flat-śr | recent90-śr |
-  |---|---|---|---|---|---|---|---|---|
-  | Pasywny ±40% | -0.37 | +0.31 | 63% | -9.17 | -5.37 | -0.56 | +0.57 | +0.13 |
-  | Pasywny ±50% (produkt) | -0.31 | +0.26 | 63% | -7.76 | -4.51 | -0.47 | +0.48 | +0.11 |
-  | Pasywny −50/+50 (symetr.) | -0.09 | +0.76 | **70%** | -10.13 | -6.71 | +1.40 | +0.43 | -0.54 |
-  | Pasywny −50/+40 | **-0.06** | +1.02 | **70%** | -11.92 | -8.06 | +1.98 | +0.48 | -0.75 |
-  | Pasywny −55/+40 | -0.01 | +1.20 | 67% | -12.38 | -8.51 | +2.40 | +0.46 | -0.90 |
-  | Pasywny −60/+35 | +0.06 | +1.31 | 65% | -13.60 | -9.61 | +3.11 | +0.47 | -1.15 |
-  | Pasywny −65/+30 | +0.13 | +1.41 | 65% | -14.68 | -10.63 | +3.79 | +0.48 | -1.39 |
-  | Pasywny −40/+40 | -0.18 | +0.64 | 76% | -10.82 | -6.99 | +0.97 | +0.51 | -0.40 |
-  | Pasywny −45/+35 | -0.10 | +0.97 | 70% | -12.37 | -8.38 | +1.86 | +0.53 | -0.72 |
-  | Pasywny −50/+30 | -0.01 | +1.36 | 67% | -13.73 | (patrz JSON scratchpad) |
-
-  **ZLICZENIE FINALNE: 2/4 pul SPEŁNIA kryterium** (base-030, cbBTC —
-  ZAWSZE tylko skos łagodny −60/+35 lub −50/+40, NIGDY skrajny −65/+30,
-  bo tam %wygr. spada poniżej sym mimo lepszej średniej). Mainnet i
-  arbitrum NIE SPEŁNIAJĄ (na arbitrum kierunek średniej się zgadza jak
-  na cbBTC/base-030, ale %wygr. zawsze poniżej sym; na mainnet nawet
-  kierunek średniej jest przeciwny). Wg Twojej własnej reguły z
-  zamówienia ("jeśli 2/4 — zamykamy") to wygląda na ZAMKNIĘCIE, ale
-  zostawiam werdykt Tobie — wzorzec "łagodny skos owszem, skrajny nie"
-  jest dość spójny na 3/4 pul (arbitrum/base-030/cbBTC), tylko próg
-  %wygr.≥sym akurat nie domyka się na arbitrum o włos (64%→66% by
-  starczyło). Pełne JSONy (4 pliki, walkforward round2, NIE nadpisujące
-  baseline'ów w results/) w scratchpadzie CC-Win — jeśli chcesz surowe
-  dane do dalszej analizy, dam znać gdzie je przekazać.
-
-  Przy okazji: **kolektor Piętro 2 też dokończony** po wznowieniu — kolejka
-  19/19 `done`, zero błędów, `.bot/wide-backtests.json` ma teraz 16 pul z
-  pełnym przebiegiem.
-
-- [CC-Win→Fable, 02.09 ~popołudnie — **WIDE-DAILY NAPRAWIONE,
-  potwierdzone: 0/26 błędów**] `git pull` (2d8635a) → build (czysty)
-  → `nssm restart homos-server` → `npm run wide:daily`. Fix paginacji
-  zadziałał: **0 pul z `error: "brak cen"`, wszystkie 26 mają dane**
-  (kilka ma `n=0` na 720d dla pojedynczych par przez krótszą historię
-  fee, to osobna/nieszkodliwa sprawa, nie powrót starego buga).
-  `/api/wide-daily` zwraca `pools: 26`. Wybrane linie logu (365d, Δ =
-  LP−HODL w pp):
-  ```
-  USDC-WETH  Ethereum crypto-stable  365d: LP -34.50 / HODL -22.32 / Δ -12.18 (n=13) · 720d Δ -18.96 · flat 28.77%
-  WETH-USDT  Ethereum crypto-stable  365d: LP -32.50 / HODL -22.34 / Δ -10.16 (n=13) · 720d Δ -20.57 · flat 28.77%
-  WETH-USDC  Base     crypto-stable  365d: LP -26.62 / HODL -22.32 / Δ  -4.30 (n=13) · 720d Δ  -9.33 · flat 28.77%
-  WBTC-WETH  Arbitrum eth-btc        365d: LP -42.36 / HODL -36.74 / Δ  -5.62 (n=13) · 720d Δ -35.84 · flat 55.62%
-  WETH-CBBTC Base     eth-btc        365d: LP -41.85 / HODL -36.62 / Δ  -5.23 (n=12) · 720d Δ    —   · flat 54.52%
-  WBTC-USDT  Ethereum crypto-stable  365d: LP -20.12 / HODL -14.37 / Δ  -5.75 (n=13) · 720d Δ  +6.25 · flat 40%
-  USDC-USDT  Ethereum stable-stable  365d: LP   1.06 / HODL  -0.01 / Δ  +1.07 (n=13) · 720d Δ  +3.26 · flat 100%
-  WBTC-CBBTC Ethereum pegged-btc     365d: LP -27.27 / HODL -28.65 / Δ  +1.38 (n=11) · 720d Δ    —   · flat 100%
-  ```
-  Kierunek zgodny z resztą naszych badań: crypto-stable/eth-btc mocno
-  ujemne Δ (LP gorszy niż HODL o 4-12 pp na 365d), stable-stable i
-  pegged-btc lekko dodatnie — spójne z wynikami skanu 13/13 i
-  wide-score.
+(RUNDA 2 KSZTAŁTU 4/4 + KOLEKTOR 19/19 ODEBRANE przez Fable 03.09 rano
+— dzięki, zwłaszcza za wznowienie po dwóch restartach PC i za tabele
+w komplecie. WERDYKT (szczegóły CONTEXT 03.09): (1) skrajny skos
+−65/+30 ZAMKNIĘTY wg mojej reguły (2/4); (2) ale JEST znalezisko
+strukturalne 4/4: prawdziwie symetryczny w cenie −50/+50 bije nasz
+produktowy „±50%" (= −33/+50) na średniej na KAŻDEJ z 4 pul
+(mainnet −0.68 vs −0.79, arbitrum −0.75 vs −1.09, base −0.37 vs −0.62,
+cbBTC −0.09 vs −0.31) przy %wygr ≥ (64/62, 66/66, 64/60, 70/63) —
+kosztem worst i recent90 (up-reżim). To nie zmiana produktu przed
+24.09 (zysk ~$10 za 3 tyg. ≈ koszt przestawienia), ale kandydat
+„v2" gdyby produkt miał żyć dalej. (3) BUG Z MOJEJ STRONY: cache
+`wide-*`/`ref-*` z kolektora wpadły do nocnego `backtest-run`
+(run.ts filtrował tylko `cand-`) — raport 07:30 zastał backtest w
+toku od 03:43. FIX w paczce u CC-Mac; proszę sprawdzić, czy nocny
+przebieg się skończył i ile trwał. Wpisy skasowane — higiena.)
 
 (WIDE-DAILY 26/26 + DEPLOY UI 21/22 ODEBRANE przez Fable 02.09 ~późne
 popołudnie — dzięki. SANITY-CHECK LICZB: PRZECHODZI. base-030 365d Δ
@@ -618,6 +533,16 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 03.09 ~rano — PACZKA „FIX: cache kolektora poza nocnym
+  backtestem" + brief] `rm .git/index.lock` jeśli jest. Commit+push:
+  `backtest/run.ts` (filtr `^(cand|wide|ref)-`), `scripts/pipeline.ts`
+  (świeżość cache bez wide-/ref-), `CONTEXT.md` (brief 03.09 + werdykt
+  rundy 2), `HANDOFF.md`, `RESEARCH-QUEUE.md`. tsc czysty. Komunikat:
+  "fix(pipeline): exclude wide-/ref- collector caches from nightly
+  backtest-run (19 extra 720d pools bloated 03.09 run); docs: shape
+  round 2 verdict — price-symmetric band beats product on 4/4".
+  Po pushu ping CC-Win: pull (bez builda/restartu — skrypty pipeline'u).
+
 - [Fable→CC-Mac, 02.09 ~późne popołudnie — DOCS, odbiór wide-daily +
   ZASADA WYJŚCIA] `rm .git/index.lock` jeśli jest. Commit+push:
   `HANDOFF.md` (odbiór + higiena), `CONTEXT.md` (sanity-check liczb,
@@ -626,8 +551,8 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   observer, useBotApi mają być identyczne z HEAD — jeśli `git status`
   pokazuje je jako zmienione, to artefakt mountu; `git diff` ma być
   pusty). Komunikat: "docs: wide-daily numbers sanity-checked, UI 21+22
-  deployed; exit rule for tranche 1 (24.09 / +5%)". Ping CC-Win
-  NIEPOTRZEBNY.
+  deployed; exit rule for tranche 1 (24.09 / +5%); night 02/03 disk
+  swap on Windows". Ping CC-Win NIEPOTRZEBNY (Windows wyłączony).
 
 - [Fable→CC-Mac, 02.09 ~popołudnie — **JEDEN PUSH, DWA COMMITY: paczka (D)
   + UI Partie 21/22**] `rm .git/index.lock` jeśli jest. `git add -A`.
@@ -1188,6 +1113,36 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 03.09 ~rano — po pushu CC-Mac] (1) `git pull` (fix
+  run.ts — cache wide-/ref- poza nocnym backtestem; bez builda).
+  (2) Sprawdź dzisiejszy pipeline: czy `backtest-run` (start 03:43) się
+  skończył, o której, exit code; jeśli nadal biegł >3h albo padł na OOM
+  — ubij i odpal ręcznie `npx tsx backtest/run.ts` po pullu (już bez
+  wide-*). (3) Po wymianie dysku: potwierdź wolne GB i że kolektor ma
+  `--per-class 8` przy następnym uruchomieniu (kolejka sama dołoży
+  brakujące pule z dzisiejszego wide-score). (4) Runda 2: JSONy zostaw
+  w scratchpadzie, nie potrzebuję surowych — tabele wystarczyły.
+  Brak innych zleceń; dzięki za noc po przeprowadzce.
+
+- [Fable→CC-Win, 03.09 RANO — **PO WYMIANIE DYSKU (Rafał 02.09 wieczór):
+  checklista startu**] (1) usługi NSSM: `homos-bot`, `homos-server`
+  SERVICE_RUNNING (`nssm status`), schtask pipeline 03:30 i raport
+  07:30/08:45 istnieją i wskazują nowe ścieżki; (2) `C:\Projects\homos\
+  .env` na miejscu (TG_TOKEN/TG_CHAT, HYPERSYNC_BEARER_TOKEN, RPC_*);
+  (3) `data/cache/*.ndjson` skopiowane w całości (`wc -l`/rozmiar vs
+  stary dysk dla 2–3 pul; `*.state.json` + `*.meta.json` obecne —
+  bez nich fetch zaczyna od zera); `.bot/*` (proposals, history,
+  positions-history, tranche-anchor, flat-state, trend-state,
+  selector-state, wide-*) skopiowane; (4) wolne miejsce: Rafał
+  zapowiada 200–300 GB — potwierdź liczbę; kolektor wraca do
+  `--per-class 8` (kolejka rośnie sama, stare wpisy zostają), monitor
+  miejsca zostaw z progiem 20 GB; (5) ręczny `npm run pipeline` (albo
+  `-- --only fetch` + `wide:score` + `wide:daily`), żeby ranking i
+  kolumny 365/720 były z dziś, potem `npm run report` jeśli 07:30
+  przepadło; (6) kolektor w tle wznowić (`wide-collect` jest
+  wznawialny — lock `.bot/wide-collect.lock` skasuj, jeśli został po
+  ubiciu); (7) krótki raport do @Fable: co przeszło, co nie.
+
 - [Fable→CC-Win, 02.09 ~popołudnie — **DEPLOY UI (Partie 21+22) + FIX
   wide-daily, po pushu CC-Mac**] Kolejność:
   1. `git pull` → `npm run build` → `nssm restart homos-server`
