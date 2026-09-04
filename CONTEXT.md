@@ -82,12 +82,39 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-04 ~rano — Brief (Fable): fix pipeline'u potwierdzony, bilans transzy −0.35% po rajdzie ETH, zmiana na szczycie RANKINGU WIDE
+BRIEF (raport 07:30): automat czysty, kolejka pusta, down:false 6/6.
+**Fix z 03.09 działa**: `backtest-run` 03:43→04:54 (1h11 vs 2h16
+wczoraj — wide-/ref- poza nocnym przebiegiem).
+Bilans transzy **−$21.62 (−0.35%)** (wczoraj −$243.82 / −4.00%) —
+cała różnica to rynek (LP −$20.73 vs −$231), rajd ETH; koszty wejścia
+−$7.90 (stałe ✓), beta bufora +$7.01. vs HODL łącznie −$0.89.
+**Próg wyjścia +5% ($6 396.60): brakuje $326 (~5.4%)**, wczoraj $549;
+do twardej daty 24.09 — 20 dni.
+Pozycje: #5886957 SZEROKI in-range, gap 8.2% (wczoraj 3.6% — oddala
+się od flatu), fee $9.07, $1.16/d; #5908083 WĄSKI in-range, gap −0.1%,
+flat ✅ od 30.08, fee $4.29, **$1.14/d — 4. dzień ≥$0.9/d**.
+Selektor: edge −20.7 (7. dzień maleje, ~2.5 pp/d → zero ~11.09).
+OPEN arbitrum-005 nieproduktowa — ignor.
+RANKING WIDE dzień 3 — **zmiana na szczycie**: USDC-USDT 0.01% +0.47
+(365d Δ +1.07, 720d +3.26), GHO-USDC v4 +0.14; **WBTC-CBBTC v4 spadł
+z +0.85 do −0.14** (σ 2.11 ⚠, drag 0.67 > fee 0.53). Wniosek: score
+pegged-btc jest niestabilny dzień do dnia (σ z krótkiej próbki) —
+„top-of-class" z E7 to nie sygnał, tylko obserwacja; potrzeba tygodnia
+streaków, zanim cokolwiek z tego rankingu wejdzie do rozważań.
+Paper dzień 17: $65 023, vs HODL −$4 669 (informacyjnie).
+Skrzynki: @Fable pusta; CC-Win ma jedno niepilne pytanie (GB po
+wymianie dysku, `--per-class 8`) — bez odpowiedzi; DOCS 03.09 dla
+CC-Mac nadal niewypchnięte (HEAD = auto-raport 91dc7fa).
+DECYZJA DNIA: brak — produkt bez zmian, obserwujemy; brak zleceń
+badawczych (kształt zamknięty, Piętro 2 skompletowane).
+
 ### 2026-09-03 ~rano — Brief (Fable) + WERDYKT RUNDY 2 KSZTAŁTU: pasmo symetryczne w cenie bije produkt 4/4 + fix cache kolektora
 BRIEF (raport 07:30, PC po wymianie dysku — 195 GB wolne, noc
 przebiegła): fetch/wide-score/wide-daily/lejek OK, ale **backtest-run
 w toku od 03:43 jeszcze o 07:30** — przyczyna: cache `wide-*`/`ref-*`
 Piętra 2 (19 pul × 720d) wpadły do nocnego `backtest/run.ts`, który
-filtrował tylko `cand-` (ta sama klasa co incydent 26.08). FIX: filtr
+filtrował tylko `cand-` (ta sama klasa co incydent 26.08); skończył sam 05:59 (2h16, exit 0, cały pipeline „porażki: BRAK" 06:06). FIX: filtr
 `^(cand|wide|ref)-` w run.ts + świeżość cache w pipeline.ts bez nich.
 Bilans transzy **−$243.82 (−4.00%)**: rynek −$231, koszty wejścia
 −$7.90 (stałe ✓), beta bufora −$4.84. vs HODL łącznie −$11.12.
