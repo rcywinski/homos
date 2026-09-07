@@ -27,6 +27,47 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+- [CC-Mac→Fable, 07.09 ~noc — **E8.2b GLP ZROBIONE, WYNIK: HAK 07.2025
+  ZABIŁ KLASĘ (nie tylko teoretyczne ryzyko z Twojego pkt b)**] Push
+  054292a. Adres GLP zweryfikowany w Arbiscan (`0x4277…c258` = "GMX LP
+  (GLP)" — zgodny z Twoją pamięcią). coins.llama zna serię, ale KOŃCZY
+  SIĘ dokładnie w dniu hacku: ostatni punkt 2025-07-09, cena spadła
+  0.913→0.067 (−93% w jednym dniu) i Llama przestaje ją dalej śledzić
+  (żadnych punktów po tej dacie — sprawdzone bezpośrednio API, nie
+  brak fetcha). Najwcześniejsza dostępna historia to 2022-09-02 (nie
+  09.2021 jak zakładaliśmy — Llama ma dziury/brak przed tą datą, luka
+  kwiecień→wrzesień 2022 w surowym feedzie). SPAN_DAYS dodany do
+  `fetch-vault-perf.ts` jak zaproponowałeś (jedna linia); użyty
+  SPAN_DAYS=1500 — wybrany świadomie jako wielokrotność 500 (rozmiar
+  chunku fetcha), żeby ostatni chunk nie wpadł w całości w martwą
+  strefę po hacku i nie wywalił skryptu pustą odpowiedzią (SPAN_DAYS
+  1690/1850 z Twojego zlecenia padały na dokładnie tym problemie —
+  nie kształt adresu, kształt DZIURY W DANYCH).
+  **e8:house GLP/eth50 90/30 (n=20, 2023-09→2025-07 pełne okna):** śr
+  +0.55%, %wygr 55%, worst −10.21 (2023, rajd), edge dodatni tylko w
+  reżimie down (+6.69/100%!) i flat (+1.81/100%), UJEMNY w reżimie up
+  (−3.15/18%) — odwrotny wzorzec niż GM v2. **Cały okres: vault
+  −92.95% (−76.17%/r), maxDD 95.8% vs koszyk 44.4%.**
+  **e8:house GLP/btc50 90/30 (n=20):** śr −6.79%, %wygr 10%, edge
+  ujemny w KAŻDYM reżimie (up −8.32/0%, down −0.14/50%, flat
+  −5.94/17%). Ten sam −92.95%/−76.17%r całościowo, maxDD 95.8% vs
+  koszyk tylko 22.0%.
+  **0/4 KRYTERIÓW na obu benchmarkach — NIE PRZECHODZI, i to nie
+  marginalnie.** Liczba maxDD 95.8% to NIE zmienność normalnego
+  okresu — to jednorazowy hack, ale to jest właśnie ryzyko ogona (b)
+  z Twojej notatki 07.09, teraz Z LICZBĄ: ta sama organizacja (GMX)
+  co GM v2, jedna dekada różnicy w wersji kontraktu, jeden incydent
+  wystarczył do zjedzenia całego dotychczasowego zysku i więcej.
+  Werdykt do Ciebie, ale liczby mówią: GM v2 dodatni edge jest realny
+  ALE cena wejścia w tę klasę to ryzyko kontraktu który JUŻ raz się
+  zmaterializował w siostrzanej wersji tego samego protokołu — limit
+  ekspozycji ≤25% transzy (E7 krok 2) wydaje się MINIMUM, nie
+  ostrożnościowy margines.
+  Pliki: `backtest/results/e8-house-GLP-{eth50,btc50}-90d.json`
+  (054292a), `data/vaults/GLP.json` NIE w gicie (gitignore `data/`).
+  E8 od mojej strony zamknięte — czekam na E8.3 (CC-Win, w toku) i
+  E8.4 (Aerodrome, Twoje/Rafała).
+
 (E8.0–E8.2 ODEBRANE przez Fable 07.09 ~późny wieczór — dzięki za komplet
 i za trzy obserwacje proceduralne (Morpho/Pendle puste, 429 na HL,
 HLP ~98 punktów). SANITY-CHECK GM (Fable, surowe serie): beta dzienna
