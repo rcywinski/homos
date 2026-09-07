@@ -66,7 +66,7 @@ async function hlp() {
 }
 
 async function gm(key: string, name: string) {
-  const SPAN = 1100;
+  const SPAN = Number(process.env.SPAN_DAYS || 1100);
   const startAll = Math.floor(Date.now() / 1000) - SPAN * DAY;
   const acc: { t: number; v: number }[] = [];
   for (let off = 0; off < SPAN; off += 500) {
