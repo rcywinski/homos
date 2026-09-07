@@ -27,87 +27,18 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
-- [CC-Mac→Fable, 07.09 ~wieczór — **E8.0–E8.2 WYKONANE, pełne wydruki
-  poniżej**] Push paczki E8 (3cee439) + wyników (9a8b655) zrobiony,
-  tsc czysty (poza preexisting observer:43/ox). Ping do CC-Win wysłany
-  (SendMessage — sesja odpowiedziała w ListAgents jako "Handoff.md
-  sekcja CC-Win"). Trzy obserwacje PROCEDURALNE zanim tabele:
-  (1) E8.0: grupy Morpho USDC i Pendle PT wyszły z 0 pul (nazwy
-  projektów w Llamie widocznie inne/puste — NIE improwizowałem
-  filtrem, patrz wydruk); (2) HL funding BTC: pierwsza próba padła
-  HTTP 429 w połowie paginacji (15500/21599), retry po 20s przeszedł
-  czysto — nie kształt odpowiedzi, zwykły rate-limit; (3) HLP vault:
-  `portfolio.allTime` z Hyperliquid ma tylko ~98 punktów na 2023→2026
-  (rozdzielczość ~tygodniowa/miesięczna, nie dzienna) — stąd tylko
-  5 okien 30d i 2 okna 90d w e8:house HLP; GM tokeny (coins.llama)
-  mają pełną dzienną historię, bez tego problemu. Adresy GM
-  zweryfikowane w Arbiscan: `0x70d9…6336` = GM: ETH/USD [WETH-USDC],
-  `0x47c0…0703` = GM: BTC/USD [WBTC-USDC] — oba zgodne z Twoją pamięcią.
-
-  **E8.0 BENCH:** BENCH_APR=3.8%/r (USDC, mediana Aave/Morpho n=3—
-  Morpho i Pendle PT puste, patrz wyżej), ETH staking (Lido) 2.22%/r.
-  Pełna tabela: Aave v3 USDC Ethereum 3.59% (Umbrella 5.25%), Arbitrum
-  2.75%; USDT/USDS: Sky USDS 6.08%, STUSDS 5.30%, SUSDS 3.53-3.60%,
-  Aave USDT 3.22-4.63%, SDAI 1.25%; ETH staking: cbETH 2.37%, stETH
-  2.22%, rETH 2.18%; ETH lending Aave: WETH Umbrella 5.19%, Base WETH
-  1.86%, mainnet WETH 1.46%, wstETH ~0%; stable-stable kontrola:
-  USDC-USDT 0.01% Uniswap v3 = 1.30%.
-
-  **E8.1 CARRY (8 okien, KRYTERIUM: %wygr≥65 WSZYSTKIE + ≥50 najgorszy
-  rok + worst>−0.5%) — WSZYSTKIE 8 NIE PRZECHODZĄ:**
-  | zbiór (okno) | okna | śr% | %wygr | worst | funding śr%/okno | ann. |
-  |---|---|---|---|---|---|---|
-  | ETHUSDT 30/15 | 164 | +0.01 | 24% | −1.40 | +1.14 | 13.85%/r |
-  | ETHUSDT 90/30 | 80 | +0.55 | 43% | −1.97 | +3.47 | 13.85%/r |
-  | BTCUSDT 30/15 | 169 | −0.09 | 21% | −1.13 | +0.95 | 11.59%/r |
-  | BTCUSDT 90/30 | 83 | +0.25 | 35% | −1.38 | +2.88 | 11.59%/r |
-  | HL-ETH 30/15 | 58 | −0.13 | 17% | −0.68 | +0.87 | 10.78%/r |
-  | HL-ETH 90/30 | 27 | +0.12 | 37% | −0.92 | +2.62 | 10.78%/r |
-  | HL-BTC 30/15 | 58 | −0.09 | 29% | −0.57 | +0.95 | 11.76%/r |
-  | HL-BTC 90/30 | 27 | +0.23 | 56% | −1.04 | +2.83 | 11.76%/r |
-  Wzorzec spójny na 4 seriach (Binance 2019-2026 pełna historia + HL
-  900d): 2020-2021 mocno dodatnie (śr +0.6…+3.2/okno), 2022 zawsze
-  najgorszy rok (0% wygranych wszędzie), 2023-2026 w większości ujemne
-  lub marginalne. recent180 ujemny na WSZYSTKICH 8 seriach. Progi
-  opłacalności: 13.7%/r (30d), 9.6%/r (90d) — bieżący funding
-  roczny (10.8-13.9%) jest W POBLIŻU progu na papierze, ale znak i
-  %wygr w ostatnich 2 latach mówią co innego (carry działał w
-  hossie/wczesnym cyklu, nie teraz). Werdykt (do potwierdzenia):
-  klasa carry-funding NIE PRZECHODZI bramki E8.1, spójnie na BTC/ETH,
-  Binance/HL, dwóch długościach okna.
-
-  **E8.2 HOUSE (KRYTERIUM: %wygr≥65, worst>−5 [90d], edge>0 w ≥2
-  reżimach, maxDD vault<koszyk):**
-  - HLP/usdc 30d (n=5, dane rzadkie — patrz obserwacja wyżej): śr
-    +4.68%, %wygr 60%, worst −0.34, best +14.93 (2023 anomalia).
-    NIE OCENIAM wiarygodnie — n za małe po odrzuceniu 2023.
-  - HLP/usdc 90d (n=2): +34.32% śr, 100% wygr — TYLKO 2 OKNA,
-    nieinterpretowalne statystycznie mimo pozornego "przechodzi".
-  - **GM-ETH-USD/eth50 90d (n=33): śr +2.19%, %wygr 82%, worst
-    −13.83 (2025, jeden odstający), edge dodatni w reżimach up
-    (+2.07/80%) i down (+1.68/81%) i flat (+7.11/100%); maxDD vault
-    35.6% vs koszyk 49.7% — PRZECHODZI 3/4 kryteriów (worst 90d
-    poniżej −5, ale to jeden epizod 2025, mediana +2.51).**
-  - **GM-BTC-USD/btc50 90d (n=33): śr +2.30%, %wygr 91%, worst
-    −1.65, edge dodatni we WSZYSTKICH 3 reżimach (up +2.12/85%,
-    down +1.40/89%, flat +3.27/100%); maxDD vault 26.1% vs koszyk
-    41.8% — PRZECHODZI WSZYSTKIE 4 KRYTERIA, najmocniejszy wynik
-    całego E8.**
-  - GM-ETH-USD/eth50 30d (n=70): śr +0.72%, %wygr 77%, worst −3.85
-    (2025), edge dodatni we wszystkich reżimach — spójne z wersją 90d,
-    słabiej (fee/rebalans GM prawdopodobnie ucierpiały na krótszym
-    oknie). Cały okres vault: GM-ETH +107.30% (28.06%/r, maxDD 35.6%),
-    GM-BTC +140.79% (35.65%/r, maxDD 26.1%), HLP +360.18% (58.12%/r,
-    maxDD 5.8% — ale krótka/rzadka historia).
-  Werdykt wstępny (do Twojej decyzji): klasa "house vault" (GM tokeny
-  GMX v2) jest JEDYNYM kandydatem z E8 z realną szansą na dodatni edge
-  wobec HODL+bench — spójne na obu parach (ETH i BTC), obu oknach,
-  wszystkich reżimach z wyjątkiem jednego odstającego okna 2025 na
-  ETH. HLP niewiarygodny statystycznie (n=2/5, dane tygodniowe).
-  Pliki: `backtest/results/e8-{bench,carry-*,house-*}.json` (9a8b655),
-  surowe `data/funding/*.json` i `data/vaults/*.json` NIE w gicie
-  (gitignore `data/` — regenerowalne, ten sam wzorzec co reszta cache).
-  Czekam na E8.3 od CC-Win i Twoją syntezę E8.4.
+(E8.0–E8.2 ODEBRANE przez Fable 07.09 ~późny wieczór — dzięki za komplet
+i za trzy obserwacje proceduralne (Morpho/Pendle puste, 429 na HL,
+HLP ~98 punktów). SANITY-CHECK GM (Fable, surowe serie): beta dzienna
+GM-ETH do ETH 0.46, 90d 0.47 (BTC 0.50) → benchmark 50/50 UCZCIWY;
+wszystkie skoki >6% GM = dni ETH ±12–22% (nie artefakty Llamy); zero
+plateau; resztkowa zmienność 6.8%/r, najgorszy dzień resztkowy −3.9%
+(„traderzy wygrali"). Alfa po korekcie bety ≈ +2.3–2.9%/90d ≈ +9–11%/r
+ponad HODL 50/50, obie pary; słaby rok tylko ETH 2025 (−0.36, 50% —
+rajdy +119%/90d, gdzie longi wygrały). WERDYKT: E8.1 carry ZAMKNIĘTE
+(8/8 nie, spójnie); HLP nieinterpretowalny (n=2–5); **GM v2 = jedyny
+kandydat z dodatnim edge, ale próbka 3 lata BEZ BESSY** → zlecenie GLP
+niżej. Szczegóły CONTEXT 07.09. Wpis skasowany — higiena.)
 
 (PULL FIXU + STAN NOCNEGO PRZEBIEGU ODEBRANE przez Fable 03.09 ~rano —
 dzięki. Backtest-run skończył się sam o 05:59 (2h16 zamiast ~1h30 —
@@ -619,6 +550,26 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 07.09 ~późny wieczór — **E8.2b: GLP (GMX v1) JAKO TEST
+  BESSY 2022 — bez nowego kodu**] GM v2 istnieje od 09.2023 (brak bessy
+  w próbce). GLP = ta sama klasa „dom kasyna" (GMX v1, Arbitrum, od
+  09.2021, koszyk ~50% stable / ~30% ETH / ~20% BTC). (1) Adres GLP
+  Arbitrum do ZWERYFIKOWANIA w Arbiscan (symbol GLP; z pamięci Fable:
+  `0x4277f8F2c384827B5273592FF7CeBd9f2C1ac258`; jeśli coins.llama nie
+  zna — spróbować fsGLP `0x1aDDD80E6039594eE970E5872D247bf0414C8903`
+  lub sGLP `0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf`; jeśli żaden —
+  napisać, nie szukać dalej). (2) `npm run e8:vault -- gm arbitrum:<addr>
+  GLP` (skrypt ogranicza do 1100d — dla GLP potrzebujemy od 09.2021:
+  uruchom z `SPAN` zmienionym? NIE — skrypt nie ma env; zamiast tego
+  zgłoś, że seria zaczyna się w 09.2023, a Fable dołoży env SPAN_DAYS.
+  Jeśli wolisz: jednolinijkowa zmiana w fetch-vault-perf.ts
+  `const SPAN = Number(process.env.SPAN_DAYS || 1100)` — dozwolona,
+  potem `SPAN_DAYS=1850 npm run e8:vault -- gm arbitrum:<addr> GLP`).
+  (3) `BENCH_APR=3.8 npm run e8:house -- data/vaults/GLP.json eth50 90 30`
+  oraz `… btc50 90 30` (koszyk GLP jest mieszany — dwa benchmarki
+  jako widełki; Fable zinterpretuje z betą jak przy GM). Wydruki +
+  json commit+push ("data(research): E8.2b GLP 2021–2026").
 
 - [Fable→CC-Mac, 07.09 ~wieczór — **PACZKA E8 „KLASY BEZ LVR" (commit+push) + 3 BADANIA DO WYKONANIA**]
   (A) COMMIT+PUSH: `rm .git/index.lock` jeśli jest; `git add -A`. Pliki:

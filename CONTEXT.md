@@ -82,6 +82,43 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-07 ~późny wieczór — ODBIÓR E8.0–E8.2 (CC-Mac, ~1h od zlecenia): CARRY NIE, HLP n/a, **GM v2 PRZECHODZI (z zastrzeżeniem: bez bessy)**
+E8.0 BENCH: BENCH_APR = 3.8%/r (USDC Aave, Morpho/Pendle puste w
+filtrze Llamy — nazwy projektów do poprawki, niepilne); Lido 2.2%;
+Sky USDS 6.1% (najlepszy nudny stable). HODL+yield 50/50 ≈ +3%/r.
+E8.1 CARRY (Binance 2019–26 ETH/BTC + HL 900d, okna 30/90): 8/8 NIE.
+Funding ann. 10.8–13.9%/r, ale próg opłacalności 9.6–13.7% (koszty
+round-trip + margin 50% bezczynny + bench) → %wygr 17–56, recent180
+ujemny wszędzie; działało tylko 2020–21, 2022 = 0% wygranych. KLASA
+ZAMKNIĘTA (bez nowych danych nie wracać; ew. warunkowo tylko przy
+fundingu >20%/r utrzymanym tygodniami — sygnał, nie strategia).
+E8.2 HOUSE: HLP — Hyperliquid daje ~98 punktów za 3 lata → n=2–5
+okien, NIEINTERPRETOWALNY (+58%/r na papierze, ale bez statystyki).
+**GM v2 (GMX, Arbitrum), 09.2023→09.2026, okna 90/30 n=33:**
+GM-ETH/USD vs HODL 50/50: śr +2.19/okno, %wygr 82, worst −13.8
+(04.2025, ETH +119%/90d — longi wygrały), edge > 0 w up/down/flat,
+maxDD 35.6 vs 49.7; GM-BTC/USD: śr +2.30, %wygr 91, worst −1.65,
+3/3 reżimy, maxDD 26.1 vs 41.8 — 4/4 kryteria. SANITY (Fable, surowe
+serie): beta 0.46–0.50 → benchmark 50/50 uczciwy; skoki GM = dni ETH
+±12–22% (nie artefakty); resztkowa σ 6.8%/r; najgorszy dzień resztkowy
+−3.9%. **Alfa po korekcie bety ≈ +9–11%/r ponad HODL 50/50 na OBU
+parach** — pierwszy dodatni, spójny edge w całej historii projektu.
+Per rok GM-ETH: 2023 +3.7, 2024 +4.4, 2025 −0.4 (50%), 2026 +1.7;
+GM-BTC: 2024 +3.2, 2025 +2.3, 2026 +1.6.
+ZASTRZEŻENIA (do zamknięcia PRZED jakąkolwiek decyzją kapitałowej):
+(a) próbka 3 lata, BEZ bessy — zlecenie E8.2b: GLP (GMX v1, od 2021,
+ta sama klasa) przez 2022; (b) ryzyko kontraktu: GMX v1 zhakowany
+07.2025 (~$40M, GLP); v2 nietknięte, ale to ta sama organizacja —
+limit ekspozycji jak w E7 krok 2 (≤25% transzy) obowiązuje; (c) źródło
+edge = fee+borrow+straty traderów; wraz z TVL może się rozwadniać —
+sprawdzić trend alfy po roku (2024 +4.4 → 2026 +1.7 na ETH — spada?);
+(d) beta 0.5 = pełna połowa bety krypto, jak HODL 50/50 — to nie jest
+„yield bez ryzyka", to HODL z premią; (e) wykonawczo: Arbitrum (most
+z Base), depozyt/wypłata ~0.05–0.07% + price impact, brak NFT/observera
+— nowa klasa w księdze.
+Otwarte: E8.3 (CC-Win, timing), E8.4 (Aerodrome, ręcznie), E8.2b (GLP).
+Werdykt całościowy i decyzja o skali → przegląd 24.09.
+
 ### 2026-09-07 ~wieczór — PRZEGLĄD DZIENNIKA + KOLEJKA PO 24.09 (Fable + Rafał): sekcja E8 w RESEARCH-QUEUE
 Rafał poprosił o świeże spojrzenie na CONTEXT/RESEARCH-QUEUE: co jeszcze warte badania i jak sprawdzić, czy praca może być dochodowa. Wniosek Fable: klasa AMM v3 na parach zmiennych zamknięta (LVR strukturalny; 5 metod zgodnych) — kolejne strojenie kształtu/k = ±2 pp, nie badać. Przy $6k dochodowość niemożliwa niezależnie od strategii ($600/r przy 10%); sens = skala PO znalezieniu klasy z dodatnim edge albo wiedza/pomiar (nisza: podatki DeFi PL, publikacja falsyfikacji). DECYZJA RAFAŁA: „dodajmy wszystkie 4, dla spokojnej głowy" → **E8** (nowa sekcja, przed E7): E8.1 cash-and-carry na fundingu (delta-neutral, infra hedge gotowa), E8.2 „dom kasyna" GM pools/HLP (wycena po oraklach, brak LVR), E8.3 timing LP po zmienności (DVOL vs realized na własnych 720d), E8.4 Aerodrome cbBTC/WETH ręcznie w UI (10 min), + E8.0 benchmark „nudny" HODL+yield przed 24.09. Kolejność 1→2→3→4, zero kapitału i kodu produkcyjnego przed werdyktem liczbami. Wpis H „GM POOLS" przeniesiony do E8.2. Zasada wyjścia 24.09 bez zmian.
 AKTUALIZACJA ~późny wieczór — „rozpiszmy mechanikę i zlećmy" (Rafał): KOD E8 NAPISANY (Fable): `scripts/fetch-funding-hl.ts` (HL funding 1h), `scripts/fetch-dvol.ts` (Deribit DVOL), `scripts/fetch-vault-perf.ts` (HLP indeks z ΔPnL/accountValue; GM cena tokenu z coins.llama), `scripts/e8-bench.ts` (BENCH_APR z Llamy), `backtest/e8-carry.ts` (okna kroczące funding − koszty − bench, per rok, seria ujemna, próg opłacalności), `backtest/e8-house.ts` (vault vs koszyk/USDC, per reżim, maxDD), `backtest/e8-timing.ts` (okna walkforward tagowane RV7/RV30/DVOL/VRP/SHOCK na wejściu → koszyki), `walkforward.ts` + pole `perWindow`. tsc czysty; arytmetyka carry/house/timing przetestowana na syntetyku; fetch'e = pierwszy run u CC-Mac. Mechanika + podział: RESEARCH-QUEUE „E8 — MECHANIKA". Zlecenia: CC-Mac (push + E8.0→E8.1→E8.2), CC-Win (E8.3: 4 WF 720d z perWindow + DVOL + e8:timing), Fable/Rafał (E8.4 ręcznie). **WSTĘPNY WYNIK E8.1 na 400d Binance ETH (13.07.2025→17.08.2026): funding +2.87%/r, edge vs USDC 4.5% ujemny w 100% okien 30/90d; próg opłacalności ≈ 11–15%/r fundingu** — werdykt po pełnej historii 2019–2026 (bessa 2022, hossa 2021/2024).

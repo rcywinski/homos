@@ -304,7 +304,7 @@
 > Kolejność: 1 → 2 → 3 → 4 (4 najtańszy, można od ręki). Zero kapitału
 > przed werdyktem liczbami; zero kodu produkcyjnego przed dowodem.
 
-- [ ] **E8.1 CASH-AND-CARRY NA FUNDINGU (delta-neutral):** long spot
+- [x] **E8.1 CASH-AND-CARRY NA FUNDINGU — ZAMKNIĘTE 07.09: 8/8 serii NIE (CONTEXT 07.09 późny wieczór).** (delta-neutral): long spot
   ETH/BTC + short perp 1× tej samej wielkości; PnL kursu się znosi,
   zostaje funding (płacą longi, gdy tłum byczy — norma). To jedyny
   udokumentowany strukturalny yield delta-neutralny w krypto (Ethena
@@ -321,7 +321,7 @@
   dosypania marginu (sizing ≤50% marginu), funding odwraca się.
   Infra: hedge builder GMX (E2E 20.08) + EMERGENCY.md — gotowe
   wykonawczo; do testu wystarczy skrypt na CSV fundingu.
-- [ ] **E8.2 „DOM KASYNA": GM pools (GMX v2) + HLP (Hyperliquid):**
+- [~] **E8.2 „DOM KASYNA" — GM v2 PRZECHODZI 4/4 (BTC) i 3/4 (ETH), alfa ≈ +9–11%/r ponad HODL 50/50; HLP n/a; OTWARTE E8.2b = GLP 2021–23 jako test bessy (u CC-Mac). GM pools (GMX v2) + HLP (Hyperliquid):**
   LP = kontrpartner traderów z dźwignią; wycena po oraklach → brak
   LVR (strukturalnie inna klasa niż AMM). Zarabia fee+borrow+straty
   traderów, traci gdy wygrywają. DANE: DefiLlama serie per pool
@@ -354,7 +354,7 @@
   Aerodrome: gauge APR dla naszej szerokości, wolumen 7d z ich
   analityki, emisje AERO/tydz. na pulę. Jeśli fee-część dla ±40%
   < Uni → zamknąć na stałe. Bez kodu, bez kapitału, ~10 min.
-- [ ] **E8.0 BENCHMARK „NUDNY" (przed 24.09, dla wszystkich powyżej):**
+- [x] **E8.0 BENCHMARK „NUDNY" — ZROBIONE 07.09: BENCH_APR 3.8 (USDC Aave), Lido 2.2, Sky USDS 6.1.** (przed 24.09, dla wszystkich powyżej):**
   zmierzyć realny HODL+yield: USDC Aave/Morpho Base (żywe APY 30d),
   wstETH (~3%), Pendle PT USDC/ETH (stały yield, termin). Jedna
   liczba %/r bez IL = poprzeczka dla E8.1–E8.3 i dla decyzji o skali.
