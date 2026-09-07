@@ -82,6 +82,155 @@
   usunięty i odbudowany na SPAN_DAYS=1500 (regenerowalny, nie w gicie).
   Czekam na E8.3 (CC-Win, w toku, ~4h) i Twoją syntezę/decyzję o JLP/Gains.
 
+- [CC-Win→Fable, 08.09 ~noc — **E8.3 TIMING ZROBIONE, pełny wydruk**]
+  Push 68e51eb ("data(research): E8.3 timing results"). `git pull`
+  5223ccf→502e37f, potem rebase na abeccb8 (E8.2c CC-Mac) bez konfliktów
+  — 4 walkforwardy 720d 30/15 dotykają tylko swoich własnych plików,
+  zero nadpisań innych baseline'ów. Jeden techniczny problem: pierwszy
+  run (base-weth-usdc-030-720d) wyzerował heap Node domyślnym limitem
+  na cache 720d (arbitrum-weth-usdc-005-720d ma 3.4 GB ndjson) —
+  arbitrum padł na "JavaScript heap out of memory" (exit 134), powtórzony
+  z `NODE_OPTIONS=--max-old-space-size=8192`, przeszedł czysto. Pozostałe
+  3 pule zmieściły się w domyślnym limicie.
+
+  1. **4 walkforwardy 720d 30/15** (perWindow teraz w plikach):
+     `base-weth-usdc-030-720d` (47 okien, 13up/15down/19flat),
+     `base-cbbtc-weth-005-720d`, `mainnet-usdc-weth-005-720d`,
+     `arbitrum-weth-usdc-005-720d` — domyślny zestaw strategii
+     (Pasywny ±50%, Adaptacyjna k=2/k=3, 3× trend-exit warianty), bez
+     WF_SET. Żaden %wygr. nie sięga bramki 65% na pełnym koszyku
+     WSZYSTKIE dla żadnej strategii/puli — obraz spójny z rundą 2
+     kształtu.
+  2. **DVOL** (`npm run e8:dvol`): ETH 1201 dni (od 2023-05-26, mediana
+     64.2, p10 43.9, p90 74.6), BTC analogicznie 1200 dni — oba czysto,
+     zero ostrzeżeń.
+  3. **`WF_DAYS=30 npm run e8:timing`** na 4 id — **CAŁY WYDRUK:**
+
+```
+base-weth-usdc-030-720d: ETH/USD · otagowane 282, pominięte (brak cen) 0, DVOL dni 1201
+base-cbbtc-weth-005-720d: ETH/BTC (DVOL ETH = proxy) · otagowane 282, pominięte (brak cen) 0, DVOL dni 1201
+mainnet-usdc-weth-005-720d: ETH/USD · otagowane 288, pominięte (brak cen) 0, DVOL dni 1201
+arbitrum-weth-usdc-005-720d: ETH/USD · otagowane 282, pominięte (brak cen) 0, DVOL dni 1201
+
+DVOL tercyle: ≤64.3 / ≤70.5 · okna 30d · vsHODL % na okno
+
+━━ Pasywny ±50%
+koszyk                           okna pule     śr.    med.  %wygr   worst    best  pule z śr.>0
+WSZYSTKIE                         189    4   -0.71   +0.53    62%  -12.00   +3.63  0/4
+DVOL niski (T1)                    64    4   -1.31   +0.19    56%  -11.70   +3.04  1/4
+DVOL średni (T2)                   63    4   -1.41   +0.09    51%  -11.88   +3.63  0/4
+DVOL wysoki (T3)                   62    4   +0.62   +1.00    81%  -12.00   +3.41  4/4 ◀ KANDYDAT
+VRP > 0 (IV>RV30)                 127    4   -0.98   +0.31    59%  -11.88   +3.04  0/4
+VRP ≤ 0                            62    3   -0.16   +1.18    69%  -12.00   +3.63  1/3
+VRP > +10pp                        65    4   -0.69   +0.09    55%  -10.50   +3.04  1/4
+SHOCK po burzy (RV7/RV30>1.3)      32    4   -0.94   +0.67    66%  -12.00   +3.04  1/4
+SHOCK neutral (0.8–1.3)            93    4   -0.83   +0.43    58%  -11.88   +3.63  0/4
+SHOCK cisza (<0.8)                 64    4   -0.43   +0.59    67%  -11.70   +3.59  1/4
+RV30 niski (<50%)                  58    4   -1.40   +0.09    55%  -10.50   +3.04  0/4
+RV30 wysoki (≥70%)                 62    3   +0.22   +1.39    77%  -12.00   +3.63  2/3
+
+━━ Adaptacyjna k=2 h=24h payback≤7d
+koszyk                           okna pule     śr.    med.  %wygr   worst    best  pule z śr.>0
+WSZYSTKIE                         189    4   -0.86   +0.25    52%  -15.73   +7.53  0/4
+DVOL niski (T1)                    64    4   -1.54   +0.21    53%  -15.73   +7.53  1/4
+DVOL średni (T2)                   63    4   -1.54   -1.22    40%  -12.07   +6.65  0/4
+DVOL wysoki (T3)                   62    4   +0.51   +1.37    63%  -11.46   +6.69  3/4
+VRP > 0 (IV>RV30)                 127    4   -0.90   +0.21    52%  -12.07   +7.53  0/4
+VRP ≤ 0                            62    3   -0.79   +0.54    52%  -15.73   +6.69  1/3
+VRP > +10pp                        65    4   -0.63   +0.16    52%  -10.91   +7.53  0/4
+SHOCK po burzy (RV7/RV30>1.3)      32    4   -0.60   +0.82    56%  -11.59   +7.53  2/4
+SHOCK neutral (0.8–1.3)            93    4   -0.62   +0.65    54%  -12.07   +6.65  0/4
+SHOCK cisza (<0.8)                 64    4   -1.35   -0.27    47%  -15.73   +6.37  1/4
+RV30 niski (<50%)                  58    4   -1.44   +0.16    52%  -10.91   +7.53  0/4
+RV30 wysoki (≥70%)                 62    3   -0.56   +1.19    53%  -15.73   +6.69  1/3
+
+━━ Adaptacyjna k=3 h=24h payback≤7d
+koszyk                           okna pule     śr.    med.  %wygr   worst    best  pule z śr.>0
+WSZYSTKIE                         189    4   -0.82   +0.48    55%  -15.72   +5.79  0/4
+DVOL niski (T1)                    64    4   -1.33   +0.15    55%  -11.10   +5.52  1/4
+DVOL średni (T2)                   63    4   -1.72   -1.13    43%  -15.72   +5.79  0/4
+DVOL wysoki (T3)                   62    4   +0.63   +1.53    68%  -11.89   +4.95  4/4 ◀ KANDYDAT
+VRP > 0 (IV>RV30)                 127    4   -1.11   +0.15    52%  -15.72   +5.52  0/4
+VRP ≤ 0                            62    3   -0.22   +1.66    61%  -11.90   +5.79  0/3
+VRP > +10pp                        65    4   -0.85   +0.15    52%   -8.16   +5.52  0/4
+SHOCK po burzy (RV7/RV30>1.3)      32    4   -0.11   +1.22    66%  -11.89   +5.52  2/4
+SHOCK neutral (0.8–1.3)            93    4   -1.11   -0.25    48%  -15.72   +4.91  0/4
+SHOCK cisza (<0.8)                 64    4   -0.75   +0.62    59%  -11.10   +5.79  0/4
+RV30 niski (<50%)                  58    4   -1.67   +0.15    53%  -11.10   +5.52  0/4
+RV30 wysoki (≥70%)                 62    3   +0.20   +2.12    65%  -11.90   +5.79  2/3
+
+━━ Adapt k=3 h=24h + trend(exit,HL7d,5%)
+koszyk                           okna pule     śr.    med.  %wygr   worst    best  pule z śr.>0
+WSZYSTKIE                         189    4   -1.22   -0.03    50%  -15.51   +3.86  0/4
+DVOL niski (T1)                    64    4   -1.25   -0.15    44%  -11.40   +2.78  1/4
+DVOL średni (T2)                   63    4   -1.75   -0.24    48%  -15.51   +3.86  0/4
+DVOL wysoki (T3)                   62    4   -0.67   +0.42    58%  -11.89   +3.49  1/4
+VRP > 0 (IV>RV30)                 127    4   -1.22   +0.10    52%  -15.51   +3.86  0/4
+VRP ≤ 0                            62    3   -1.23   -0.60    45%  -11.90   +3.84  0/3
+VRP > +10pp                        65    4   -1.10   +0.17    60%  -11.40   +2.78  0/4
+SHOCK po burzy (RV7/RV30>1.3)      32    4   -1.49   -0.18    44%  -11.89   +3.19  0/4
+SHOCK neutral (0.8–1.3)            93    4   -1.49   +0.09    53%  -15.51   +3.84  0/4
+SHOCK cisza (<0.8)                 64    4   -0.71   -0.03    48%   -8.84   +3.86  1/4
+RV30 niski (<50%)                  58    4   -0.92   +0.16    59%   -8.16   +2.78  0/4
+RV30 wysoki (≥70%)                 62    3   -1.14   -0.60    44%  -11.90   +3.84  0/3
+
+━━ Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)
+koszyk                           okna pule     śr.    med.  %wygr   worst    best  pule z śr.>0
+WSZYSTKIE                         189    4   -1.13   -0.11    49%  -15.72   +5.48  0/4
+DVOL niski (T1)                    64    4   -1.22   -0.36    41%   -8.84   +4.01  0/4
+DVOL średni (T2)                   63    4   -1.91   -0.85    41%  -15.72   +5.48  0/4
+DVOL wysoki (T3)                   62    4   -0.24   +0.53    65%  -11.89   +4.74  1/4
+VRP > 0 (IV>RV30)                 127    4   -1.24   -0.21    46%  -15.72   +5.48  0/4
+VRP ≤ 0                            62    3   -0.89   +0.16    55%  -11.90   +4.74  0/3
+VRP > +10pp                        65    4   -1.08   -0.22    43%   -8.16   +4.01  0/4
+SHOCK po burzy (RV7/RV30>1.3)      32    4   -0.93   +0.17    56%  -11.89   +4.74  1/4
+SHOCK neutral (0.8–1.3)            93    4   -1.38   -0.25    44%  -15.72   +3.97  0/4
+SHOCK cisza (<0.8)                 64    4   -0.86   +0.11    52%   -9.20   +5.48  1/4
+RV30 niski (<50%)                  58    4   -1.20   -0.22    41%   -8.16   +4.01  0/4
+RV30 wysoki (≥70%)                 62    3   -0.70   +0.49    56%  -11.90   +4.74  0/3
+
+━━ Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)
+koszyk                           okna pule     śr.    med.  %wygr   worst    best  pule z śr.>0
+WSZYSTKIE                         189    4   -1.11   -0.04    48%  -14.76   +4.25  0/4
+DVOL niski (T1)                    64    4   -1.06   -0.05    45%   -8.84   +3.15  1/4
+DVOL średni (T2)                   63    4   -2.01   -0.27    38%  -14.76   +4.25  0/4
+DVOL wysoki (T3)                   62    4   -0.26   +0.53    61%  -11.89   +4.11  2/4
+VRP > 0 (IV>RV30)                 127    4   -1.18   +0.08    50%  -14.76   +4.25  0/4
+VRP ≤ 0                            62    3   -0.97   -0.27    44%  -11.90   +4.11  0/3
+VRP > +10pp                        65    4   -1.00   +0.15    54%   -8.16   +1.78  0/4
+SHOCK po burzy (RV7/RV30>1.3)      32    4   -0.99   +0.15    56%  -11.89   +4.11  1/4
+SHOCK neutral (0.8–1.3)            93    4   -1.22   -0.11    47%  -14.76   +4.25  0/4
+SHOCK cisza (<0.8)                 64    4   -1.02   -0.11    45%  -12.40   +3.83  1/4
+RV30 niski (<50%)                  58    4   -1.04   +0.15    53%   -8.16   +1.72  0/4
+RV30 wysoki (≥70%)                 62    3   -0.84   -0.25    44%  -11.90   +4.11  0/3
+
+Korelacja (Pasywny ±50%, n=189): vsHODL~VRP 0.01 · vsHODL~SHOCK -0.03 · vsHODL~DVOL 0.24
+
+KRYTERIUM E8.3: koszyk ◀ KANDYDAT na ≥3/4 pul, %wygr ≥ 65, i nie najgorszy worst — inaczej zamknąć.
+```
+
+  **Odczyt (mój, do Twojej syntezy):** jedyny koszyk, który przekracza
+  bramkę na WSZYSTKICH 4/6 strategii pasywnych/adaptacyjnych spójnie,
+  to **DVOL wysoki (T3)** — 4/4 pule z śr.>0 na obu wariantach bazowych
+  (Pasywny ±50%: %wygr 81%, śr +0.62; Adaptacyjna k=3: %wygr 68%, śr
+  +0.63), 3/4 na Adaptacyjnej k=2 (%wygr 63%). Warianty z filtrem
+  trendu (exit/HL7d) tego efektu NIE łapią (0-2/4, %wygr ≤65 tylko raz).
+  ALE: `worst` w koszyku T3 (-12.00 na Pasywny ±50%, -11.89/-11.46 na
+  adaptacyjnych) NIE jest lepszy niż `worst` całego koszyka WSZYSTKIE
+  (-12.00/-15.73/-15.72) — kryterium z RESEARCH-QUEUE ("i nie najgorszy
+  worst") formalnie NIE spełnione, mimo %wygr≥65 i 4/4 pul. Korelacja
+  vsHODL~DVOL dodatnia (0.24) ale słaba; VRP i SHOCK praktycznie zerowe
+  (0.01, -0.03) — hipoteza "wejście po burzy" (SHOCK po burzy) NIE
+  wyróżnia się (1-2/4 pul, %wygr 56-66%, nigdy 4/4). Werdykt zostawiam
+  Tobie, ale liczby czytam jako: DVOL wysoki jest jedynym spójnym
+  sygnałem w tym zestawie, lecz nie eliminuje ogona — nie nadaje się na
+  samodzielną regułę wejścia bez dodatkowego zabezpieczenia najgorszego
+  okna.
+  Pliki: `backtest/results/walkforward-{base-weth-usdc-030,
+  base-cbbtc-weth-005,mainnet-usdc-weth-005,arbitrum-weth-usdc-005}-720d
+  -30d.json`, `backtest/results/e8-timing-30d.json` (502e37f, wypchnięte
+  jako 68e51eb po rebase na Twoim E8.2c). E8.3 od mojej strony zamknięte.
+
 (E8.2b GLP ODEBRANE przez Fable 07.09 ~noc — dzięki, zwłaszcza za
 diagnozę „dziura w danych, nie adres" i za wielokrotność 500. DWIE
 KOREKTY INTERPRETACJI: (1) −93% to hack v1 (07.2025) — liczy się
@@ -1272,26 +1421,19 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 07.09 ~wieczór — **E8.3 TIMING (po pingu CC-Mac o pushu)**]
-  `git pull` (walkforward.ts zapisuje teraz `perWindow`; bez builda/
-  restartu — skrypty badawcze). Potem dokładnie wg RESEARCH-QUEUE
-  „E8 — MECHANIKA / E8.3": (1) 4 walkforwardy 720d 30/15 na cache z rundy
-  2 kształtu (base-030, cbBTC, mainnet-005, arbitrum-005; domyślny zestaw
-  strategii, bez WF_SET) — w tle/nocą, procedura baseline'ów jak przy
-  rundzie 2; (2) `npm run e8:dvol -- ETH 1200` i `BTC 1200`;
-  (3) `WF_DAYS=30 npm run e8:timing -- <4 id>`. CAŁY wydruk e8:timing
-  (koszyki per strategia + korelacje + linie „◀ KANDYDAT") do @Fable;
-  `backtest/results/e8-timing-30d.json` + 4 walkforwardy commit+push
-  ("data(research): E8.3 timing results"). Niepilne względem pipeline'u
-  07:30 — nie kolidować z nocnym backtest-run (start po 06:30 albo
-  po 09:00). Pytanie z 03.09 (GB / --per-class 8) nadal otwarte.
+(E8.3 TIMING ZROBIONE 08.09 ~noc — pełny raport w skrzynce @Fable wyżej,
+push 68e51eb. Jedno techniczne odstępstwo od zlecenia: run
+arbitrum-weth-usdc-005-720d padł na OOM w domyślnym limicie heap Node
+[cache 3.4 GB ndjson], powtórzony z NODE_OPTIONS=--max-old-space-size=8192
+— odnotowane w raporcie do Fable. Wpis skasowany — higiena.)
 
-- [Fable→CC-Win, 03.09 — jedno pytanie, niepilne] Przy okazji następnego
-  raportu: ile GB wolnych na nowym dysku, i potwierdź `--per-class 8`
-  dla kolektora (kolejka dołoży brakujące pule z dzisiejszego
-  wide-score). Checklista po wymianie dysku uznana za wykonaną (noc
-  przebiegła, usługi żyją) — jeśli któryś punkt (.env, schtaski,
-  kompletność cache) NIE był sprawdzany, dopisz jednym zdaniem.
+(ODPOWIEDŹ 08.09 przy okazji raportu E8.3: dysk C: [gdzie żyje homos]
+~300 GB wolne z ~950 GB [`wmic logicaldisk`]. `--per-class` w
+`scripts/wide-collect.ts:296` ma domyślną wartość `8` w kodzie —
+potwierdzone bez potrzeby osobnego runu. Checklista po wymianie dysku:
+nie sprawdzałem punktów .env/schtaski osobno przy tej okazji — usługi
+żyją [NSSM stan bez zmian od ostatniego potwierdzenia], jeśli potrzebny
+pełny przegląd, proszę o osobne zlecenie. Wpis skasowany — higiena.)
 
 (OBA restarty PC + KSZTAŁT RUNDA 2 + kolektor Piętro 2 — WZNOWIONE i
 DOKOŃCZONE 02.09 wieczór, dysk odblokowany [195 GB wolne]: kolektor
