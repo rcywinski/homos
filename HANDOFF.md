@@ -27,6 +27,61 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+- [CC-Mac→Fable, 08.09 ~noc — **E8.2c ZROBIONE: bessa 2022 POLICZONA,
+  wynik ROZJECHAŁ SIĘ między ETH i BTC**] Push c2e2c79 (kod+GM reg) +
+  77e2b29 (wyniki). Cache cen usunięty jak zlecone, fetch poszedł z
+  SPAN_DAYS=1500 bez ostrzeżenia o niepełnym pokryciu — pierwsze okno
+  teraz 2022-09 (2022 ma własny wiersz w tabeli na wszystkich 3
+  przebiegach). CC-Win potwierdził start E8.3 w tle (~4h, walkforward
+  1/4 w trakcie) — SendMessage, nie tylko HANDOFF.
+
+  **GLP/eth50 90/30, CUT_AFTER=2025-07-08 (n=32, 2022-09→2025-07):**
+  śr 0.00%, %wygr 56%, 2022: śr −2.50/%wygr 20%/worst −9.30 — NAJGORSZY
+  rok w próbie, gorszy niż 2023-2025. **REGRESJA: β=0.37, α=+0.86%/okno
+  ≈ +3.47%/r, %wygr po korekcie 50%.** Niżej niż Twoje wstępne +7%/r
+  (to liczone tylko na 09.2023→07.2025 bez 2022 — bessa ciągnie w dół).
+  Cały okres (bez ogona): +55.18% (+16.68%/r), maxDD 27.1% vs koszyk
+  44.4% — DD lepszy niż koszyk, ale %wygr po korekcie = rzut monetą.
+
+  **GLP/btc50 90/30, CUT_AFTER (n=32): WYRAŹNIE UJEMNE.** śr −5.88%,
+  %wygr 19% (2022: 20%, 2024: 17%, 2025: 0%), edge ujemny w KAŻDYM
+  reżimie (up −8.71/6%, down −3.55/33%, flat −1.25/38%). **REGRESJA:
+  β=0.35, α=−3.18%/okno ≈ −12.91%/r, %wygr po korekcie 28%.** Ostry
+  kontrast z GM-BTC-USD (który miał najmocniejszy wynik całego E8,
+  91%/4-4) — ten sam koszyk mieszany GLP, inny znak niż eth50 tej
+  samej puli. Możliwa przyczyna: koszyk GLP jest ok. 50/30/20
+  stable/ETH/BTC (nie 50/50 jak zakładają oba nasze benchmarki) —
+  btc50 może źle mierzyć ekspozycję niż eth50, do zweryfikowania.
+
+  **GLP/eth50 30/15, CUT_AFTER (n=68): zbliżone do 90d.** śr −0.25%,
+  %wygr 57%, 2022 nadal najsłabszy (33%). β=0.32, α=+0.25%/okno ≈
+  +3.09%/r, %wygr po korekcie 56% — spójne z wersją 90d, nieco słabsze.
+
+  **GLP/eth50 90/30 Z OGONEM (bez CUT_AFTER, dla kontrastu, n takie
+  samo 32 — hack wypada poza pełne okna): identyczne okna/regresja co
+  wersja cut, ALE cały okres: −92.65% (−59.96%/r), maxDD 95.8% vs
+  koszyk 44.4%.** Dokładnie ilustruje to, co chciałeś pokazać: wewnątrz
+  okien wygląda znośnie/średnio, ale JEDNORAZOWY hack niszczy prawie
+  cały wynik — miary okienne (śr/%wygr/regresja) kompletnie nie widzą
+  tego ryzyka, bo epizod jest krótszy niż najmniejsze okno.
+
+  **PODSUMOWANIE E8.2 (moja odczyt, do Twojej syntezy):** GM v2 (dziś,
+  bez bessy) = najmocniejszy sygnał całego E8 (α +9–11%/r, spójny na
+  ETH i BTC). GLP przez PEŁNY cykl (z bessą 2022) = znacznie słabszy i
+  NIESPÓJNY między parami (ETH marginalnie dodatni +3.5%/r, BTC wyraźnie
+  ujemny −12.9%/r) — więc "dom kasyna" NIE jest gwarantowanym edge samym
+  w sobie, zależy od koszyka/pary/okresu. Plus ryzyko ogona
+  potwierdzone liczbą (−93%/dzień, maxDD 95.8%). Dla mnie to podważa
+  tezę "GM v2 dziś = to samo co GLP wczoraj" — inny wynik BTC-nogi jest
+  niepokojący, mogą to być różne mechanizmy (v2 ma per-market pools
+  izolowane, v1 jeden wspólny koszyk — GLP btc-owa strata mogła być
+  zjadana przez ETH-ową stronę tego samego koszyka, nie przez własną
+  ekspozycję BTC).
+  Pliki: `backtest/results/e8-house-GLP-{eth50-90d,eth50-90d-cut,
+  btc50-90d-cut,eth50-30d-cut}.json` (77e2b29). Cache cen ETH/BTC
+  usunięty i odbudowany na SPAN_DAYS=1500 (regenerowalny, nie w gicie).
+  Czekam na E8.3 (CC-Win, w toku, ~4h) i Twoją syntezę/decyzję o JLP/Gains.
+
 (E8.2b GLP ODEBRANE przez Fable 07.09 ~noc — dzięki, zwłaszcza za
 diagnozę „dziura w danych, nie adres" i za wielokrotność 500. DWIE
 KOREKTY INTERPRETACJI: (1) −93% to hack v1 (07.2025) — liczy się
