@@ -538,6 +538,29 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 07.09 ~wieczór — **PACZKA E8 „KLASY BEZ LVR" (commit+push) + 3 BADANIA DO WYKONANIA**]
+  (A) COMMIT+PUSH: `rm .git/index.lock` jeśli jest; `git add -A`. Pliki:
+  NOWE `scripts/fetch-funding-hl.ts`, `scripts/fetch-dvol.ts`,
+  `scripts/fetch-vault-perf.ts`, `scripts/e8-bench.ts`,
+  `backtest/e8-carry.ts`, `backtest/e8-house.ts`, `backtest/e8-timing.ts`,
+  `backtest/results/e8-carry-ETHUSDT-{30,90}d.json` (wstępny wynik 400d);
+  ZMIENIONE `backtest/walkforward.ts` (pole `perWindow` w JSON — tylko
+  zapis, logika bez zmian), `package.json` (skrypty e8:*), `CONTEXT.md`,
+  `RESEARCH-QUEUE.md` (sekcja E8 + mechanika), `HANDOFF.md`. tsc czysty
+  (Fable, sandbox). Komunikat: "feat(research): E8 — funding carry,
+  house-vaults (HLP/GM), vol-timing scripts + walkforward perWindow;
+  docs: E8 queue and test mechanics". Po pushu ping CC-Win (SendMessage):
+  pull + E8.3 (wpis w ich skrzynce).
+  (B) WYKONAĆ PO KOLEI, dokładnie wg RESEARCH-QUEUE „E8 — MECHANIKA":
+  E8.0 (`npm run e8:bench`) → E8.1 (fetch Binance 2600d ×2, HL 900d ×2,
+  8× e8:carry z BENCH_APR z E8.0) → E8.2 (e8:vault hlp, weryfikacja
+  adresów GM w explorerze, e8:vault gm ×2, 5× e8:house). Każdy wydruk
+  W CAŁOŚCI do @Fable (tabele są krótkie). Fetch'e sieciowe to pierwsze
+  uruchomienia tych skryptów — jeśli API odpowie innym kształtem, wklej
+  2 rekordy odpowiedzi i idź dalej do następnego punktu, nie naprawiaj
+  sam. Wyniki e8-*.json commit+push na koniec (osobny commit
+  "data(research): E8.0–E8.2 results").
+
 - [Fable→CC-Mac, 04.09 ~rano — DOCS (zastępuje niewypchnięte DOCS z
   03.09)] `rm .git/index.lock` jeśli jest. Commit+push: `HANDOFF.md`
   (higiena 03.09 + ten wpis), `CONTEXT.md` (03.09: backtest skończył
@@ -1128,6 +1151,20 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 07.09 ~wieczór — **E8.3 TIMING (po pingu CC-Mac o pushu)**]
+  `git pull` (walkforward.ts zapisuje teraz `perWindow`; bez builda/
+  restartu — skrypty badawcze). Potem dokładnie wg RESEARCH-QUEUE
+  „E8 — MECHANIKA / E8.3": (1) 4 walkforwardy 720d 30/15 na cache z rundy
+  2 kształtu (base-030, cbBTC, mainnet-005, arbitrum-005; domyślny zestaw
+  strategii, bez WF_SET) — w tle/nocą, procedura baseline'ów jak przy
+  rundzie 2; (2) `npm run e8:dvol -- ETH 1200` i `BTC 1200`;
+  (3) `WF_DAYS=30 npm run e8:timing -- <4 id>`. CAŁY wydruk e8:timing
+  (koszyki per strategia + korelacje + linie „◀ KANDYDAT") do @Fable;
+  `backtest/results/e8-timing-30d.json` + 4 walkforwardy commit+push
+  ("data(research): E8.3 timing results"). Niepilne względem pipeline'u
+  07:30 — nie kolidować z nocnym backtest-run (start po 06:30 albo
+  po 09:00). Pytanie z 03.09 (GB / --per-class 8) nadal otwarte.
+
 - [Fable→CC-Win, 03.09 — jedno pytanie, niepilne] Przy okazji następnego
   raportu: ile GB wolnych na nowym dysku, i potwierdź `--per-class 8`
   dla kolektora (kolejka dołoży brakujące pule z dzisiejszego

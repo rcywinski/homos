@@ -22,7 +22,14 @@
     "report:morning": "tsx scripts/morning-report.ts",
     "wide:score": "tsx scripts/wide-score.ts",
     "wide:collect": "tsx scripts/wide-collect.ts",
-    "wide:daily": "tsx scripts/wide-daily.ts"
+    "wide:daily": "tsx scripts/wide-daily.ts",
+    "e8:bench": "tsx scripts/e8-bench.ts",
+    "e8:funding:hl": "tsx scripts/fetch-funding-hl.ts",
+    "e8:dvol": "tsx scripts/fetch-dvol.ts",
+    "e8:vault": "tsx scripts/fetch-vault-perf.ts",
+    "e8:carry": "tsx backtest/e8-carry.ts",
+    "e8:house": "tsx backtest/e8-house.ts",
+    "e8:timing": "tsx backtest/e8-timing.ts"
   },
   "author": "HOMO$",
   "license": "ISC",

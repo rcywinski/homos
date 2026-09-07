@@ -415,6 +415,9 @@ const REGIME_THRESHOLD = 0.10; // ±10% zmiany ceny względnej w oknie
   }
   fs.writeFileSync(
     path.join(OUT, `walkforward-${id}-${windowDays}d.json`),
-    JSON.stringify({ id, windowDays, stepDays, windows, regimeThreshold: REGIME_THRESHOLD, regimeCounts, windowMeta, summary, hodlByRegime }, null, 2)
+    // perWindow (E8.3, 07.09): surowe vsHODL per okno per strategia — do
+    // warunkowania okien stanem zmienności na wejściu (backtest/e8-timing.ts).
+    // Dotąd `dist` żył tylko w pamięci; summary nie wystarcza do koszykowania.
+    JSON.stringify({ id, windowDays, stepDays, windows, regimeThreshold: REGIME_THRESHOLD, regimeCounts, windowMeta, summary, hodlByRegime, perWindow: dist }, null, 2)
   );
 })();

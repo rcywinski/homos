@@ -291,6 +291,157 @@
 - [ ] Backfill: dzienne snapshoty rankingu Pool Scannera do SQLite (żeby za rok
   mieć własną, niezależną od DefiLlamy historię selekcji).
 
+## E8. KLASY BEZ LVR + TIMING — kolejka po 24.09 (decyzja Rafała 07.09: „wszystkie 4, dla spokojnej głowy")
+> Kontekst: 5 metod (WF 720d, wide-score, MC, model dzienny, pełny
+> przebieg) zgodnie: LP na parach zmiennych przegrywa z HODL o kilka–
+> kilkanaście pp/r — mechanizm strukturalny (LVR / adverse selection
+> arbitrażu, Milionis et al. 2022). Dalsze strojenie w tej klasie
+> (kształt, k, histerezy) = ±2 pp, nie odwraca znaku → NIE badać.
+> E8 = jedyne klasy, gdzie edge może istnieć, bo nie ma w nich
+> „arbitrażysty w środku" (1, 2) albo LP wchodzi tylko wtedy, gdy
+> premia > drag (3). Wspólna bramka jak dotąd: wynik netto vs HODL /
+> vs USDC-na-Aave, okna kroczące, worst, %wygr, per reżim.
+> Kolejność: 1 → 2 → 3 → 4 (4 najtańszy, można od ręki). Zero kapitału
+> przed werdyktem liczbami; zero kodu produkcyjnego przed dowodem.
+
+- [ ] **E8.1 CASH-AND-CARRY NA FUNDINGU (delta-neutral):** long spot
+  ETH/BTC + short perp 1× tej samej wielkości; PnL kursu się znosi,
+  zostaje funding (płacą longi, gdy tłum byczy — norma). To jedyny
+  udokumentowany strukturalny yield delta-neutralny w krypto (Ethena
+  na tym stoi). DANE: historia fundingu Hyperliquid (API publiczne,
+  od 2023) + Binance/Bybit (od 2019–2020, pełna bessa 2022) — 8h
+  interwały. TEST: funding narosły − koszty (taker open/close, spread,
+  gaz/withdraw) − yield alternatywny (USDC Aave/Morgan ~4–5%) w oknach
+  30/90d kroczących; per reżim (2021 hossa, 2022 bessa, 2024–26).
+  Pytania: (a) % okien z fundingiem > USDC-yield, (b) worst (ujemny
+  funding w bessie — ile miesięcy z rzędu), (c) koszt round-trip vs
+  minimalny horyzont, (d) czy spot na Base + perp na HL/GMX (2 venue,
+  ryzyko rozjazdu) czy oba na jednej giełdzie. RYZYKO klasy: giełda/
+  kontrahent (FTX-lekcja), likwidacja shorta przy rajdzie bez
+  dosypania marginu (sizing ≤50% marginu), funding odwraca się.
+  Infra: hedge builder GMX (E2E 20.08) + EMERGENCY.md — gotowe
+  wykonawczo; do testu wystarczy skrypt na CSV fundingu.
+- [ ] **E8.2 „DOM KASYNA": GM pools (GMX v2) + HLP (Hyperliquid):**
+  LP = kontrpartner traderów z dźwignią; wycena po oraklach → brak
+  LVR (strukturalnie inna klasa niż AMM). Zarabia fee+borrow+straty
+  traderów, traci gdy wygrywają. DANE: DefiLlama serie per pool
+  (GM ETH/USD, BTC/USD; TVL ≥ $10M — pule-groszaki ignor), HLP vault
+  performance (publiczne, od 2023). TEST: annualized PERFORMANCE (nie
+  fee APY!) − beta koszyka (GM ≈ 50% ETH / 50% USDC; HLP ≈ neutral)
+  vs HODL koszyka i vs USDC-Aave; okna kroczące, worst, drawdown
+  „gracz rozbił bank". Uwaga: fee APY 18% vs performance 2% (obserwacja
+  31.08) — różnica = wygrane traderów; liczy się tylko realized.
+  RYZYKO: ogon (seria wygranych traderów), smart-contract, HLP =
+  centralny vault jednej giełdy. Zero kodu do testu — CSV z Llamy.
+  (Przenosi i zamyka wpis H „GM POOLS".)
+- [ ] **E8.3 TIMING PO ZMIENNOŚCI (LP = short gamma):** LP zarabia
+  fee (rosną w burzy), traci ~σ²/8 realized. Hipoteza: po skoku
+  zmienności rynek się uspokaja szybciej niż spadają fee → wejście
+  „po burzy" = jedyne okna, gdy fee > drag. DANE: własne (720d fee/
+  σ w siatce 15 min, base-030/cbBTC/mainnet/arbitrum) + Deribit DVOL
+  (implied vol ETH/BTC, historia publiczna). TEST na istniejących
+  przebiegach: podzielić okna walk-forward wg stanu na wejściu
+  (DVOL percentyl, DVOL−realized, realized 7d vs 30d) i sprawdzić,
+  czy w którymś koszyku średnia vsHODL > 0 przy %wygr ≥ 65 — na
+  ≥3/4 pul, na 720d, nie tylko na roku spadkowym. Jeśli tak: reguła
+  wejścia/wyjścia = prosty filtr do detektora (mamy HL7d, EMA).
+  Zastrzeżenie: to nadal klasa AMM — może co najwyżej zamienić
+  „przegrywa zawsze" na „wygrywa czasem"; sizing pod wynik.
+- [ ] **E8.4 AERODROME cbBTC/WETH (domknięcie z 02.09):** apy 177
+  (62 fee + 115 AERO) na CL10 vs nasza Uni 0.05% apy30 58 — ale
+  vol7=0 (wada danych Llamy) i CL10 = ciasny spacing (emisje do
+  płynności in-range; ±40% dostanie ułamek). SPRAWDZIĆ RĘCZNIE w UI
+  Aerodrome: gauge APR dla naszej szerokości, wolumen 7d z ich
+  analityki, emisje AERO/tydz. na pulę. Jeśli fee-część dla ±40%
+  < Uni → zamknąć na stałe. Bez kodu, bez kapitału, ~10 min.
+- [ ] **E8.0 BENCHMARK „NUDNY" (przed 24.09, dla wszystkich powyżej):**
+  zmierzyć realny HODL+yield: USDC Aave/Morpho Base (żywe APY 30d),
+  wstETH (~3%), Pendle PT USDC/ETH (stały yield, termin). Jedna
+  liczba %/r bez IL = poprzeczka dla E8.1–E8.3 i dla decyzji o skali.
+  LITERATURA (konfrontacja, nie badanie): Milionis, Moallemi, Roughgarden,
+  Zhang „Automated Market Making and Loss-Versus-Rebalancing" (2022);
+  Topaze Blue / Bancor „Impermanent Loss in Uniswap v3" (2021, >50% LP
+  < HODL); Revert Finance — porównać ich wycenę #5886957/#5908083 z
+  naszą księgą (walidacja pomiaru, nie strategii).
+
+### E8 — MECHANIKA TESTÓW + PODZIAŁ PRACY (Fable 07.09 wieczór; kod NAPISANY, tsc czysty, arytmetyka przetestowana na syntetyku w sandboxie; fetch'e sieciowe NIE testowane — sandbox bez sieci, pierwszy run u CC-Mac jest testem)
+> Skrypty (npm): `e8:bench`, `e8:funding:hl`, `e8:dvol`, `e8:vault`,
+> `e8:carry`, `e8:house`, `e8:timing` (+ istniejący `fetch-funding.ts`
+> Binance). Wyniki → `backtest/results/e8-*.json`. Wszystko lokalne,
+> zero kapitału, zero zmian w bocie. Interpretacja: Fable.
+> KOLEJNOŚĆ: E8.0 → E8.1 → E8.2 (CC-Mac, sekwencyjnie, każde ≤ 30 min)
+> ‖ równolegle E8.3 (CC-Win — 4 walkforwardy 720d ≈ 4×~1h) → E8.4 (Fable/Rafał, ręcznie).
+
+**E8.0 BENCH (CC-Mac, 2 min):** `npm run e8:bench` → tabela Aave/Morpho
+USDC, Lido, Pendle PT, stable-LP + `BENCH_APR` (mediana śr30d USDC).
+Odesłać cały wydruk. Liczba `BENCH_APR` idzie do E8.1/E8.2 (env).
+Ryzyko: nazwy projektów w Llamie mogły się zmienić → puste grupy =
+napisać, które; nie improwizować filtrami.
+
+**E8.1 CARRY (CC-Mac, ~15 min):**
+1. `npx tsx scripts/fetch-funding.ts ETHUSDT 2600` i `BTCUSDT 2600`
+   (Binance od 2019 — potrzebujemy bessy 2022 i hossy 2021/2024; skrypt
+   istnieje, paginuje po 1000; ~8 requestów/symbol).
+2. `npm run e8:funding:hl -- ETH 900` i `BTC 900` (Hyperliquid, funding
+   co 1h; API `fundingHistory`; jeśli odpowiedź ma inny kształt niż
+   `{time, fundingRate}` — wkleić 2 rekordy do @Fable, nie zgadywać).
+3. `BENCH_APR=<z E8.0> npm run e8:carry -- data/funding/ETHUSDT.json 30 15`
+   oraz `… 90 30`, to samo dla BTCUSDT, HL-ETH, HL-BTC (8 wywołań).
+   Odesłać wydruki (tabele per rok + „najdłuższa seria ujemna" + próg
+   opłacalności). WSTĘPNY WYNIK (Fable, 400d Binance ETH, 07.09):
+   funding +2.87%/r, edge vs USDC ujemny w 100% okien 30/90d — próg
+   opłacalności 11–15%/r fundingu; werdykt zależy od lat 2020–2024.
+   Model: CAPITAL_SHARE=0.5 (margin 1:1), COST_RT=0.25%/okno, MARGIN_YIELD=0.
+   Kryterium w wydruku.
+
+**E8.2 HOUSE (CC-Mac, ~15 min):**
+1. `npm run e8:vault -- hlp` (Hyperliquid `vaultDetails` HLP
+   0xdfc2…303 → indeks z ΔPnL/accountValue; jeśli brak `portfolio.allTime`
+   skrypt zrzuca odpowiedź — wkleić do @Fable).
+2. GM tokeny: ZWERYFIKOWAĆ adresy w explorerze Arbitrum (symbol „GM",
+   opis rynku) — kandydaci z pamięci Fable (mogą być błędne!):
+   ETH/USD `0x70d95587d40A2caf56bd97485aB3Eec10Bee6336`,
+   BTC/USD `0x47c031236e19d024b42f8AE6780E44A573170703`. Jeśli inne —
+   wziąć z app.gmx.io „Pools" (market token address). Potem
+   `npm run e8:vault -- gm arbitrum:<addr> GM-ETH-USD` (i BTC). Jeśli
+   coins.llama nie zna tokenu → napisać; fallback (Fable zdecyduje):
+   cena GM z readera GMX po blokach.
+3. `BENCH_APR=<E8.0> npm run e8:house -- data/vaults/HLP.json usdc 30 15`,
+   `… HLP.json usdc 90 30`, `… GM-ETH-USD.json eth50 90 30`,
+   `… GM-BTC-USD.json btc50 90 30`, `… GM-ETH-USD.json eth50 30 15`.
+   Odesłać wydruki (per rok, per reżim, maxDD vault vs koszyk).
+   Uwaga interpretacyjna: HLP ma tylko historię od 2023 (brak bessy);
+   GM od 08.2023. Kryterium w wydruku.
+
+**E8.3 TIMING (CC-Win, przebiegi nocne / w tle):**
+1. `git pull` (walkforward.ts pisze teraz `perWindow` — surowe vsHODL
+   per okno; format pliku bez zmian poza nowym polem).
+2. Przeliczyć 4 walkforwardy 720d 30/15 na cache 720d (ten sam zestaw
+   co runda 2 kształtu): `npx tsx backtest/walkforward.ts
+   base-weth-usdc-030-720d 30 15`, `base-cbbtc-weth-005-720d`,
+   `mainnet-usdc-weth-005-720d`, `arbitrum-weth-usdc-005-720d`
+   (domyślny zestaw strategii — zawiera Pasywny ±40/±50/±60 i FlatOnly;
+   to wystarczy, WF_SET nie ustawiać). Procedura jak przy rundzie 2:
+   NIE nadpisywać innych baseline'ów, `git checkout` po runie jeśli
+   dotknięte. Jeśli id cache 720d nazywają się inaczej — użyć tych z
+   rundy 2 i podać nazwy.
+3. `npm run e8:dvol -- ETH 1200` i `BTC 1200` (Deribit publiczne).
+4. `WF_DAYS=30 npm run e8:timing -- <4 id z pkt 2>` (ceny dzienne z
+   coins.llama — cache `data/llama/prices/`, ta sama mechanika co
+   wide-daily). Odesłać CAŁY wydruk (koszyki per strategia, korelacje,
+   linie „◀ KANDYDAT"). Jeśli dla którejś puli „plik bez perWindow" —
+   walkforward poszedł ze starego kodu, powtórzyć po pullu.
+   Kryterium w wydruku (koszyk z śr.>0 i %wygr≥65 na ≥3/4 pul).
+
+**E8.4 AERODROME (Fable w przeglądarce / Rafał, 10 min):** UI Aerodrome
+→ pula cbBTC/WETH CL (tick 10 lub 100): gauge APR, wolumen 7d, emisje
+AERO/tydz.; oszacować fee-część dla ±40% (udział płynności in-range).
+Werdykt wprost do CONTEXT; jeśli fee-część < Uni 0.05% → zamknąć.
+
+**ODBIÓR (Fable):** po komplecie wydruków — werdykt per klasa do CONTEXT
+(§2 jeśli decyzja), E8 odhaczone, agenda 24.09: klasa z dodatnim edge
+→ sizing/skala; brak → „yield, nie alfa" potwierdzone również poza AMM.
+
 ## E7. UNISWAP v4 / HOOKI — po kroku 1 (01.09): PRIORYTET W DÓŁ, krok 3 zawężony do Angstroma
 > **AKTUALIZACJA 01.09 (Fable, krok 1 WYKONANY — szczegóły CONTEXT
 > 01.09 ~10:xx):** v4 TVL ~$1.03 mld (nie $3.4B), Unichain $17M —
