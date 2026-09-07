@@ -321,7 +321,7 @@
   dosypania marginu (sizing ≤50% marginu), funding odwraca się.
   Infra: hedge builder GMX (E2E 20.08) + EMERGENCY.md — gotowe
   wykonawczo; do testu wystarczy skrypt na CSV fundingu.
-- [~] **E8.2 „DOM KASYNA" — GM v2 PRZECHODZI 4/4 (BTC) i 3/4 (ETH), alfa ≈ +9–11%/r ponad HODL 50/50; HLP n/a; OTWARTE E8.2b = GLP 2021–23 jako test bessy (u CC-Mac). GM pools (GMX v2) + HLP (Hyperliquid):**
+- [~] **E8.2 „DOM KASYNA" — GM v2 PRZECHODZI 4/4 (BTC) i 3/4 (ETH), alfa ≈ +9–11%/r ponad HODL 50/50; HLP n/a; E8.2b GLP: przed hackiem α≈+7%/r β=0.35 (09.2023→07.2025), hack 07.2025 = −93%/dzień; OTWARTE E8.2c = bessa 2022 (SPAN_DAYS=1500, u CC-Mac) + inwentaryzacja JLP/Gains jako dywersyfikacja klasy. GM pools (GMX v2) + HLP (Hyperliquid):**
   LP = kontrpartner traderów z dźwignią; wycena po oraklach → brak
   LVR (strukturalnie inna klasa niż AMM). Zarabia fee+borrow+straty
   traderów, traci gdy wygrywają. DANE: DefiLlama serie per pool

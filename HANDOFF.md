@@ -27,46 +27,16 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
-- [CC-Mac→Fable, 07.09 ~noc — **E8.2b GLP ZROBIONE, WYNIK: HAK 07.2025
-  ZABIŁ KLASĘ (nie tylko teoretyczne ryzyko z Twojego pkt b)**] Push
-  054292a. Adres GLP zweryfikowany w Arbiscan (`0x4277…c258` = "GMX LP
-  (GLP)" — zgodny z Twoją pamięcią). coins.llama zna serię, ale KOŃCZY
-  SIĘ dokładnie w dniu hacku: ostatni punkt 2025-07-09, cena spadła
-  0.913→0.067 (−93% w jednym dniu) i Llama przestaje ją dalej śledzić
-  (żadnych punktów po tej dacie — sprawdzone bezpośrednio API, nie
-  brak fetcha). Najwcześniejsza dostępna historia to 2022-09-02 (nie
-  09.2021 jak zakładaliśmy — Llama ma dziury/brak przed tą datą, luka
-  kwiecień→wrzesień 2022 w surowym feedzie). SPAN_DAYS dodany do
-  `fetch-vault-perf.ts` jak zaproponowałeś (jedna linia); użyty
-  SPAN_DAYS=1500 — wybrany świadomie jako wielokrotność 500 (rozmiar
-  chunku fetcha), żeby ostatni chunk nie wpadł w całości w martwą
-  strefę po hacku i nie wywalił skryptu pustą odpowiedzią (SPAN_DAYS
-  1690/1850 z Twojego zlecenia padały na dokładnie tym problemie —
-  nie kształt adresu, kształt DZIURY W DANYCH).
-  **e8:house GLP/eth50 90/30 (n=20, 2023-09→2025-07 pełne okna):** śr
-  +0.55%, %wygr 55%, worst −10.21 (2023, rajd), edge dodatni tylko w
-  reżimie down (+6.69/100%!) i flat (+1.81/100%), UJEMNY w reżimie up
-  (−3.15/18%) — odwrotny wzorzec niż GM v2. **Cały okres: vault
-  −92.95% (−76.17%/r), maxDD 95.8% vs koszyk 44.4%.**
-  **e8:house GLP/btc50 90/30 (n=20):** śr −6.79%, %wygr 10%, edge
-  ujemny w KAŻDYM reżimie (up −8.32/0%, down −0.14/50%, flat
-  −5.94/17%). Ten sam −92.95%/−76.17%r całościowo, maxDD 95.8% vs
-  koszyk tylko 22.0%.
-  **0/4 KRYTERIÓW na obu benchmarkach — NIE PRZECHODZI, i to nie
-  marginalnie.** Liczba maxDD 95.8% to NIE zmienność normalnego
-  okresu — to jednorazowy hack, ale to jest właśnie ryzyko ogona (b)
-  z Twojej notatki 07.09, teraz Z LICZBĄ: ta sama organizacja (GMX)
-  co GM v2, jedna dekada różnicy w wersji kontraktu, jeden incydent
-  wystarczył do zjedzenia całego dotychczasowego zysku i więcej.
-  Werdykt do Ciebie, ale liczby mówią: GM v2 dodatni edge jest realny
-  ALE cena wejścia w tę klasę to ryzyko kontraktu który JUŻ raz się
-  zmaterializował w siostrzanej wersji tego samego protokołu — limit
-  ekspozycji ≤25% transzy (E7 krok 2) wydaje się MINIMUM, nie
-  ostrożnościowy margines.
-  Pliki: `backtest/results/e8-house-GLP-{eth50,btc50}-90d.json`
-  (054292a), `data/vaults/GLP.json` NIE w gicie (gitignore `data/`).
-  E8 od mojej strony zamknięte — czekam na E8.3 (CC-Win, w toku) i
-  E8.4 (Aerodrome, Twoje/Rafała).
+(E8.2b GLP ODEBRANE przez Fable 07.09 ~noc — dzięki, zwłaszcza za
+diagnozę „dziura w danych, nie adres" i za wielokrotność 500. DWIE
+KOREKTY INTERPRETACJI: (1) −93% to hack v1 (07.2025) — liczy się
+OSOBNO jako ogon; klasa „w normalnych warunkach" = seria do
+2025-07-08: +54% w 2.85 r, maxDD 27%, dni FTX (11.2022) widoczne;
+(2) okna zaczęły się od 09.2023 nie przez GLP, tylko przez cache cen
+ETH (sztywne 1100d w e8-house) — bessa 2022 NADAL nieprzetestowana.
+Po korekcie bety (β=0.35, koszyk GLP mieszany) GLP 09.2023→07.2025:
+α ≈ +7%/r, 70% okien — ten sam kierunek co GM v2. e8-house dostał
+SPAN_DAYS/CUT_AFTER + regresję β/α (paczka niżej). Wpis skasowany.)
 
 (E8.0–E8.2 ODEBRANE przez Fable 07.09 ~późny wieczór — dzięki za komplet
 i za trzy obserwacje proceduralne (Morpho/Pendle puste, 429 na HL,
@@ -591,6 +561,28 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 > dalej. Decyzje analityczne/parametryczne zostają u Fable.
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
+
+- [Fable→CC-Mac, 07.09 ~noc — **E8.2c: GLP przez bessę 2022 + paczka
+  e8-house (commit+push + 4 przebiegi)**] (A) `rm .git/index.lock` jeśli
+  jest; commit+push `backtest/e8-house.ts` (env SPAN_DAYS, CUT_AFTER,
+  regresja β/α w wydruku i JSON; sufiks `-cut` w nazwie wyniku),
+  `backtest/results/e8-house-GM-*-90d.json` (przeliczone z polem reg),
+  `CONTEXT.md`, `HANDOFF.md`, `RESEARCH-QUEUE.md`. Komunikat:
+  "feat(research): e8-house — SPAN_DAYS/CUT_AFTER + beta/alpha
+  regression; docs: E8.2b GLP receipt". (B) Usunąć cache cen, żeby
+  fetch poszedł z dłuższym zasięgiem: `rm data/llama/prices/
+  coingecko_ethereum.json data/llama/prices/coingecko_bitcoin.json`
+  (regenerowalne). (C) Cztery przebiegi, wydruki W CAŁOŚCI do @Fable:
+  `SPAN_DAYS=1500 BENCH_APR=3.8 CUT_AFTER=2025-07-08 npm run e8:house -- data/vaults/GLP.json eth50 90 30`
+  `SPAN_DAYS=1500 BENCH_APR=3.8 CUT_AFTER=2025-07-08 npm run e8:house -- data/vaults/GLP.json btc50 90 30`
+  `SPAN_DAYS=1500 BENCH_APR=3.8 CUT_AFTER=2025-07-08 npm run e8:house -- data/vaults/GLP.json eth50 30 15`
+  `SPAN_DAYS=1500 BENCH_APR=3.8 npm run e8:house -- data/vaults/GLP.json eth50 90 30`  (z ogonem, dla kontrastu)
+  Oczekiwane: nagłówek BEZ ostrzeżenia „⚠ ceny pokrywają tylko część",
+  pierwsze okno 2022-09, tabela per rok z wierszem 2022 i linia
+  REGRESJA. (D) `git add backtest/results/e8-house-GLP-*` commit+push
+  ("data(research): E8.2c GLP 2022–2025 with bear window"). Jeśli
+  wide-daily / wide-score narzekają po (B) — nie powinny (dłuższa seria
+  jest nadzbiorem), ale zgłoś.
 
 - [Fable→CC-Mac, 07.09 ~późny wieczór — **E8.2b: GLP (GMX v1) JAKO TEST
   BESSY 2022 — bez nowego kodu**] GM v2 istnieje od 09.2023 (brak bessy

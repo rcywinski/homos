@@ -82,6 +82,27 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-07 ~noc — E8.2b GLP (CC-Mac): hack v1 jako ogon Z LICZBĄ; klasa przed hackiem potwierdza kierunek GM; bessa 2022 jeszcze nie policzona
+GLP (GMX v1, Arbitrum) z coins.llama: seria 2022-09-03 → 2025-07-10,
+urywa się w dniu hacku (0.913 → 0.067, **−93% w jeden dzień**; Llama
+przestaje śledzić). Przed hackiem: +54% w 2.85 r (~16%/r), maxDD 27%
+(04.2025), dni FTX 11.2022 widoczne (−7.5/−9.2/+9.9). CC-Mac policzył
+okna tylko od 09.2023 — nie przez GLP, lecz przez cache cen ETH
+(sztywne 1100d w e8-house) → **bessa 2022 nadal NIE przetestowana**;
+zlecenie E8.2c (SPAN_DAYS=1500, CUT_AFTER=2025-07-08). Fable dodał do
+e8-house regresję β/α po oknach (koszyk GLP ~50% stable/30% ETH/20%
+BTC — sztywne 50/50 nieuczciwe): GLP 09.2023→07.2025 β=0.35, **α ≈
++1.7%/90d ≈ +7%/r, 70% okien po korekcie** — ten sam znak i rząd co
+GM v2 (+9–11%/r). Z ogonem (hack): −76%/r, maxDD 96% — 0/4.
+INTERPRETACJA (Fable): edge klasy „dom kasyna" jest realny i
+powtarzalny na dwóch generacjach protokołu; koszt = ryzyko kontraktu,
+które w tej organizacji już raz zjadło 100% (v1). Dla decyzji 24.09:
+klasa TAK tylko z (a) limitem ekspozycji (≤25% transzy = ok. $1.5k —
+przy alfie 10%/r to $150/r; sens dopiero przy skali), (b) dywersyfikacją
+na ≥2 protokoły tej klasy (kandydaci do inwentaryzacji: Jupiter JLP
+[Solana, od 2023, największy], HLP [dane rzadkie], Gains gDAI/gTrade),
+(c) wynikiem bessy 2022 z E8.2c.
+
 ### 2026-09-07 ~późny wieczór — ODBIÓR E8.0–E8.2 (CC-Mac, ~1h od zlecenia): CARRY NIE, HLP n/a, **GM v2 PRZECHODZI (z zastrzeżeniem: bez bessy)**
 E8.0 BENCH: BENCH_APR = 3.8%/r (USDC Aave, Morpho/Pendle puste w
 filtrze Llamy — nazwy projektów do poprawki, niepilne); Lido 2.2%;

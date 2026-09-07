@@ -11,7 +11,13 @@
  *   eth50 — HODL 50% ETH / 50% USDC (backing GM ETH/USD; USDC na BENCH_APR)
  *   btc50 — HODL 50% BTC / 50% USDC
  * Ceny ETH/BTC: coins.llama (cache data/llama/prices, jak wide-daily).
- * ENV: BENCH_APR=4.5 (z E8.0), OFFLINE=1.
+ * ENV: BENCH_APR=4.5 (z E8.0), OFFLINE=1, SPAN_DAYS=1100 (zasięg cen
+ * coins.llama — dla serii sprzed 09.2023 ustaw np. 1500), CUT_AFTER=YYYY-MM-DD
+ * (odrzuć punkty PO tej dacie — np. hack GLP 2025-07-09: osobno "klasa w
+ * normalnych warunkach", osobno "z ogonem").
+ * REGRESJA po oknach: vault% = α + β·asset% → β = realna ekspozycja (dla
+ * koszyków mieszanych jak GLP sztywne 50/50 nie jest uczciwe), α = edge
+ * po korekcie bety.
  *
  * Per okno [s, s+W): vault% = v(s+W)/v(s) − 1; bench% analogicznie
  * (koszyk rebalansowany raz, na starcie okna — jak HODL 50/50 w silniku);
@@ -31,6 +37,8 @@ const PRICES = path.join(ROOT, 'data', 'llama', 'prices');
 const DAY = 86400;
 const BENCH_APR = process.env.BENCH_APR !== undefined ? Number(process.env.BENCH_APR) : 4.5;
 const OFFLINE = process.env.OFFLINE === '1';
+const SPAN_DAYS = Number(process.env.SPAN_DAYS || 1100);
+const CUT_AFTER = process.env.CUT_AFTER ? Math.floor(Date.parse(process.env.CUT_AFTER) / 1000 / DAY) : null;
 const pct = (v: number) => (v >= 0 ? '+' : '') + v.toFixed(2);
 const dayOf = (tsSec: number) => Math.floor(tsSec / DAY);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -53,7 +61,7 @@ async function loadPrices(key: string): Promise<Map<number, number>> {
   const cached = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
   if (cached && (cached.day === today || OFFLINE)) series = cached.series;
   if (!series) {
-    const SPAN = 1100, startAll = Math.floor(Date.now() / 1000) - SPAN * DAY;
+    const SPAN = SPAN_DAYS, startAll = Math.floor(Date.now() / 1000) - SPAN * DAY;
     const acc: { t: number; p: number }[] = [];
     for (let off = 0; off < SPAN; off += 500) {
       const j = await fetchJson(`https://coins.llama.fi/chart/${key}?start=${startAll + off * DAY}&span=${Math.min(500, SPAN - off)}&period=1d`);
@@ -82,13 +90,13 @@ function maxDD(vals: number[]) { let peak = -Infinity, dd = 0; for (const v of v
   if (!file) { console.error('użycie: e8-house.ts <data/vaults/X.json> usdc|eth50|btc50 [W] [step]'); process.exit(1); }
   const vault = JSON.parse(fs.readFileSync(file, 'utf8')) as { name: string; series: { t: number; v: number }[] };
   const vm = new Map<number, number>();
-  for (const x of vault.series) vm.set(dayOf(x.t / 1000), x.v);
+  for (const x of vault.series) { const d = dayOf(x.t / 1000); if (CUT_AFTER === null || d <= CUT_AFTER) vm.set(d, x.v); }
   const asset = bench === 'eth50' ? 'coingecko:ethereum' : bench === 'btc50' ? 'coingecko:bitcoin' : null;
   const pm = asset ? await loadPrices(asset) : null;
   const days = [...vm.keys()].sort((a, b) => a - b).filter((d) => !pm || pm.has(d));
   if (days.length < W + 1) { console.error(`za mało dni wspólnych (${days.length})`); process.exit(1); }
   const d0 = days[0], d1 = days[days.length - 1];
-  console.log(`${vault.name}: ${days.length} dni (${new Date(d0 * DAY * 1000).toISOString().slice(0, 10)} → ${new Date(d1 * DAY * 1000).toISOString().slice(0, 10)}) · bench ${bench} · BENCH_APR ${BENCH_APR}% · okna ${W}d co ${step}d\n`);
+  console.log(`${vault.name}: ${days.length} dni (${new Date(d0 * DAY * 1000).toISOString().slice(0, 10)} → ${new Date(d1 * DAY * 1000).toISOString().slice(0, 10)}) · bench ${bench} · BENCH_APR ${BENCH_APR}% · okna ${W}d co ${step}d${CUT_AFTER !== null ? ` · CUT_AFTER ${process.env.CUT_AFTER}` : ''}${pm && days.length < vm.size * 0.9 ? ' · ⚠ ceny pokrywają tylko część serii vaultu — zwiększ SPAN_DAYS' : ''}\n`);
 
   const at = (m: Map<number, number>, d: number) => m.get(d) ?? m.get(d - 1) ?? m.get(d + 1);
   type Win = { start: number; year: number; regime: string; vaultPct: number; benchPct: number; edgePct: number; assetPct: number };
@@ -129,10 +137,21 @@ function maxDD(vals: number[]) { let peak = -Infinity, dd = 0; for (const v of v
   const benchDD = pm ? maxDD(days.map((d) => 0.5 * (at(pm, d)! / at(pm, d0)!) + 0.5 * (1 + BENCH_APR / 100 * ((d - d0) / 365)))) : 0;
   const totVault = (at(vm, d1)! / at(vm, d0)! - 1) * 100;
   const annVault = ((at(vm, d1)! / at(vm, d0)!) ** (365 / (d1 - d0)) - 1) * 100;
+  // regresja po oknach: vault% = α + β·asset%  (β = realna ekspozycja; α = edge po korekcie bety)
+  let reg: { beta: number; alphaPct: number; alphaAnnPct: number; winAdj: number } | null = null;
+  if (pm && wins.length >= 8) {
+    const xs = wins.map((w) => w.assetPct), ys = wins.map((w) => w.vaultPct);
+    const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+    const beta = xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0) / xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+    const adj = wins.map((w) => w.vaultPct - beta * w.assetPct - (1 - beta) * BENCH_APR * (W / 365));
+    const alphaPct = adj.reduce((a, b) => a + b, 0) / adj.length;
+    reg = { beta, alphaPct, alphaAnnPct: alphaPct * (365 / W), winAdj: (adj.filter((v) => v > 0).length / adj.length) * 100 };
+    console.log(`\nREGRESJA po oknach: β = ${beta.toFixed(2)} (bench zakłada 0.50) · α = ${pct(alphaPct)}%/okno ≈ ${pct(reg.alphaAnnPct)}%/r ponad HODL o tej samej becie · %wygr po korekcie ${reg.winAdj.toFixed(0)}%`);
+  }
   console.log(`\nCały okres: vault ${pct(totVault)}% (${pct(annVault)}%/r) · maxDD vault ${vaultDD.toFixed(1)}% vs koszyk ${benchDD.toFixed(1)}%`);
   console.log(`KRYTERIUM E8.2: %wygr ≥ 65, worst > −5 (90d), edge > 0 w ≥2 reżimach, maxDD vault < maxDD koszyka.`);
   fs.mkdirSync(OUT, { recursive: true });
-  const out = path.join(OUT, `e8-house-${vault.name}-${bench}-${W}d.json`);
-  fs.writeFileSync(out, JSON.stringify({ file, bench, W, step, BENCH_APR, all, byYear, byRegime, recent180, totVault, annVault, vaultDD, benchDD, perWindow: wins }, null, 2));
+  const out = path.join(OUT, `e8-house-${vault.name}-${bench}-${W}d${CUT_AFTER !== null ? '-cut' : ''}.json`);
+  fs.writeFileSync(out, JSON.stringify({ file, bench, W, step, BENCH_APR, SPAN_DAYS, CUT_AFTER: process.env.CUT_AFTER ?? null, reg, all, byYear, byRegime, recent180, totVault, annVault, vaultDD, benchDD, perWindow: wins }, null, 2));
   console.log(`→ ${out}`);
 })();
