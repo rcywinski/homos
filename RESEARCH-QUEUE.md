@@ -347,7 +347,7 @@
   wejścia/wyjścia = prosty filtr do detektora (mamy HL7d, EMA).
   Zastrzeżenie: to nadal klasa AMM — może co najwyżej zamienić
   „przegrywa zawsze" na „wygrywa czasem"; sizing pod wynik.
-- [ ] **E8.4 AERODROME cbBTC/WETH (domknięcie z 02.09):** apy 177
+- [x] **E8.4 AERODROME cbBTC/WETH — ZAMKNIĘTE 08.09 (Fable, UI): ±40% w gauge ≈ 4–6%/r w AERO (emisje idą do aktywnego ticka ±1) vs Uni ±40% ≈ 5–11%/r fee; Uniswap zostaje. CONTEXT 08.09.** (domknięcie z 02.09): apy 177
   (62 fee + 115 AERO) na CL10 vs nasza Uni 0.05% apy30 58 — ale
   vol7=0 (wada danych Llamy) i CL10 = ciasny spacing (emisje do
   płynności in-range; ±40% dostanie ułamek). SPRAWDZIĆ RĘCZNIE w UI

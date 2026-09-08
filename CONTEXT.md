@@ -82,6 +82,30 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-08 ~00:xx — E8.4 AERODROME cbBTC/WETH ZAMKNIĘTE (Fable, przeglądarka): NIE dla szerokiej pozycji
+Dane z UI Aerodrome (epoka od czw., ~5 dni) + Uniswap explore + docs:
+- Aerodrome WETH/cbBTC **CL10 0.075–0.085%**: TVL $9.77M, wolumen
+  ~$18M/d (v/tvl 1.85), fee APR 52% pool-wide, Emission APR 1 216%;
+  **CL100 0.25%**: TVL $20.8M, ~$2M/d, fee 9.6%, emisje 79% (MIGRATING);
+  CL1 0.0085%: TVL $1.3M.
+- Uniswap v3 cbBTC/ETH 0.05% Base (nasza): TVL $8.9M, $15.5M/d
+  (v/tvl 1.74), fee APR 23.9% dziś (apy30 58 wg Llamy 02.09).
+MECHANIKA (docs + tweet Aerodrome 07.2024): pozycja w gauge dostaje
+TYLKO AERO (0 fee — fee idą do voterów); niestakowana dostaje fee
+minus 10% protokołu; **Emission APR w UI = emisje / płynność stakowana
+w aktywnym ticku ±1 tick** (dla CL10 ≈ pasmo 0.3%). Nasze ±40% ma
+L/$ ≈ 6.5 vs ≈ 1 300 dla pasma 0.3% → udział 0.5% → **≈ 4–6%/r w AERO**
+(CL100: 79% × 6.5/135 ≈ 3.8%/r). Uniswap ±40%: pool-wide 24–58% ×
+empiryczny współczynnik szerokiej nogi ~0.19 (z ETH/USDC) ≈ **5–11%/r
+w fee**, bez tokenu do sprzedaży (AERO: inflacja 10.9%/r, ryzyko kursu).
+Aerodrome ma bogatszą pulę (fee tier 0.075 vs 0.05 przy tym samym
+wolumenie + emisje ≈ 2× fee), ale tłum LP siedzi ~10× ciaśniej, więc
+szeroka pozycja dostaje okruchy. Przewaga Aerodrome istnieje tylko dla
+ultra-wąskich, aktywnie zarządzanych pozycji — klasa „zwężanie/
+gonienie ceny", którą sfalsyfikowaliśmy 26–31.08. WERDYKT: NIE, bez
+kodu i bez kapitału; Uniswap zostaje najlepszym venue dla szerokiego
+LP na tej parze. Zamknięte na stałe (jak WETH/USDC 02.09).
+
 ### 2026-09-07 ~noc — E8.2b GLP (CC-Mac): hack v1 jako ogon Z LICZBĄ; klasa przed hackiem potwierdza kierunek GM; bessa 2022 jeszcze nie policzona
 GLP (GMX v1, Arbitrum) z coins.llama: seria 2022-09-03 → 2025-07-10,
 urywa się w dniu hacku (0.913 → 0.067, **−93% w jeden dzień**; Llama
