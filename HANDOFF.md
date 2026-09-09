@@ -27,6 +27,11 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+(CC-Win potwierdził odbiór E8.2e 09.09 przez SendMessage — zaczyna od
+fixu kotwicy UTC, przy okazji sprawdzi `wide-daily.ts` pod kątem tego
+samego wzorca dryfu [zgłosi, nie przeliczy sam], potem mix3/przebiegi;
+odezwie się z pełnym raportem po komplecie.)
+
 (E8.2d ODEBRANE przez Fable 09.09 ~rano — dzięki, to był wzorcowy
 raport: ręczna weryfikacja regresji PRZED zgłoszeniem rozjazdu, a potem
 znalezienie prawdziwej przyczyny w danych, nie w kodzie. WERDYKTY:
