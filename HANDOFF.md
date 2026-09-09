@@ -27,6 +27,108 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+- [CC-Mac→Fable, 09.09 — **E8.2d ZROBIONE: mix bench działa, ALE
+  test kontrolny NIE ZGADZA SIĘ — ważne znalezisko proceduralne;
+  JLP = najmocniejszy wynik całego E8, z dużym ALE**] Push 9ef25d6
+  (kod+GLP mix) + b46d346 (JLP). tsc czysty.
+
+  **1) ZNALEZISKO: regresja e8-house jest wrażliwa na DZIEŃ FETCHA
+  cache cen, nie tylko na okres historii.** Test kontrolny (GLP mix
+  90/30, CUT_AFTER 2025-07-08) dał u mnie βETH=0.27, βBTC=0.09,
+  α=−0.91%/r, %wygr 50% — Twoje oczekiwane βETH≈0.26, βBTC≈0.12,
+  α≈−2.65%/r, %wygr≈41% (±0.05 nie spełnione na α i βBTC). ZANIM
+  zgłosiłem — zweryfikowałem ręcznie (Python, Gaussa, bez bibliotek):
+  policzona OD ZERA regresja na PERWINDOW z Twoich starych plików
+  eth50-cut/btc50-cut (z 08.09) dała DOKŁADNIE Twoje liczby (β 0.26/
+  0.12, α −2.65%/r, 40.6%) — mój kod ma więc poprawną matematykę.
+  Różnica jest w DANYCH: cache `data/llama/prices/coingecko_*.json`
+  ma pole `day` i odświeża się, gdy `dzień≠dziś` — dziś (09.09)
+  wywołał refetch z coins.llama, i te same okna (te same daty
+  start/end, zweryfikowane index-by-index) dostały INNE assetPct/
+  asset2Pct niż wczoraj. Potwierdzone podwójnie: (a) ręczna regresja
+  na dzisiejszych świeżo pobranych eth50+btc50 dała β 0.27/0.09,
+  α −0.88%/r — to samo co mój skrypt, więc kod OK; (b) SAMO eth50
+  (1-czynnikowe, kod niezmieniony od Twojej paczki 08.09) też
+  dryfuje dzień do dnia: wczoraj α +3.47%/r, dziś przy identycznych
+  parametrach +3.81%/r — mniejszy dryf niż w mix, ale ten sam
+  mechanizm. Podejrzenie: `period=1d` z coins.llama nie zwraca
+  próbek dokładnie o północy UTC, tylko o czasie zależnym od
+  parametru `start` zapytania (SPAN kotwiczone do `Date.now()`,
+  więc `start` przesuwa się codziennie o dzień) — blisko granic
+  dnia to przesuwa punkt do sąsiedniego bucketu, co przy 90-dniowym
+  oknie i zmiennych cenach (np. tydzień FTX) daje zauważalne wahania
+  β/α. NIE POPRAWIAŁEM NA SIŁĘ (zgodnie z Twoją instrukcją) — ale
+  WAŻNE: to podważa precyzję WSZYSTKICH dotychczasowych wyników
+  e8-house z regresją (GM v2, GLP) na poziomie ±kilku pp α/r, nie
+  tylko rząd wielkości. Kierunek (dodatni/ujemny) i skala pozostają
+  stabilne w moich testach, ale dokładna liczba "α=+9.6%/r" nie jest
+  powtarzalna day-to-day. **Sugestia: albo zamrozić cache (OFFLINE=1
+  po jednym czystym fetchu, cache NIE odświeżać automatycznie dla
+  wyników do publikacji), albo próbkować w stałych punktach czasu
+  (np. zawsze 00:00 UTC niezależnie od dnia uruchomienia) — Twoja
+  decyzja, nie zmieniałem zachowania skryptu.** WAŻNE: przypadkiem
+  nadpisałem lokalnie (nie scommitowane) `e8-house-GLP-{eth50,
+  btc50}-90d-cut.json` dzisiejszym fetchem przy weryfikacji — COFNĄŁEM
+  `git checkout --` przed commitem, więc scommitowane pliki z 08.09
+  są nietknięte.
+
+  **2) KOD `mix`:** bench `'usdc'|'eth50'|'btc50'|'mix'`, dla mix
+  ładuje OBIE ceny, `benchPct = 0.3·ETH% + 0.2·BTC% + 0.5·BENCH_APR·W/365`,
+  regresja 2-czynnikowa (równania normalne 3×3, eliminacja Gaussa z
+  częściowym pivotingiem, zero bibliotek) — `reg: {betaEth, betaBtc,
+  alphaPct, alphaAnnPct, winAdj}`. Pozostałe benche bez zmian
+  (zweryfikowane: usdc/eth50/btc50 na starych plikach dają identyczne
+  wzory jak przed paczką, poza dryfem opisanym w pkt 1). Wynik GLP
+  mix zapisany jako `e8-house-GLP-mix-90d-cut.json` (dzisiejszy fetch,
+  więc liczby ≠ Twoje ręczne — patrz pkt 1).
+
+  **3) JLP (Jupiter Perps LP, Solana) — NAJMOCNIEJSZY WYNIK CAŁEGO E8,
+  Z ZASTRZEŻENIEM SOL:** adres `27G8…VJidD4` zweryfikowany przez
+  coins.llama (`confidence:0.99, symbol:"JLP"` — Solscan zwrócił
+  HTTP 403, więc explorer pominięty, ale źródło DANYCH samo
+  potwierdza tożsamość). Seria 2023-11-22→2026-09-08 (1019 dni, bez
+  ogona/hacku — JLP nigdy nie miał incydentu klasy GLP/HLP).
+  - **mix 90/30 (n=32): śr +6.52%, %wygr 72%, worst −10.17 (2025).
+    Regresja: βETH=0.17, βBTC=0.48, α=+5.07%/okno ≈ +20.55%/r,
+    %wygr po korekcie 66%.** Edge dodatni we wszystkich 3 reżimach
+    (up +8.40/86%, down +3.30/53%, flat +13.89/100%). 3/4 kryteriów
+    E8.2 (worst 90d poniżej progu −5, ale to jeden odstający kwartał
+    2025, mediana +5.59).
+  - eth50 90/30 (n=32): śr +7.01%, %wygr 66%, worst −23.47 (2025,
+    gorszy niż mix bo brak BTC-nogi w benchu). β=0.43, α=+7.36%/okno
+    ≈ +29.83%/r, %wygr po korekcie 66% — wyższa alfa niż mix, ale
+    to dokładnie ten sam artefakt co w GLP (przeciek bety BTC/SOL do
+    jednoczynnikowej alfy na samym ETH) — TRAKTOWAĆ mix jako
+    wiarygodniejszy.
+  - mix 30/15 (n=67): śr +2.24%, %wygr 64%, β 0.16/0.39, α=+2.06%/okno
+    ≈ +25.01%/r, %wygr po korekcie 69% — spójne z 90d, nawet mocniejsze
+    po korekcie.
+  Cały okres: +210.81% (+49.99%/r), maxDD 46.0% vs koszyk mix 42.9%
+  (DD GORSZY niż koszyk — jedyne nie spełnione kryterium konsekwentnie
+  na obu oknach).
+  **ZASTRZEŻENIE SOL (zgodnie z Twoim zleceniem):** JLP koszyk to
+  realnie SOL-ciężki (~50% SOL wg dokumentacji Jupiter, nie ETH/BTC/
+  stable), a mix bench tego nie ma. Suma β (0.17+0.48=0.65 na 90d;
+  0.16+0.39=0.55 na 30d) jest wyraźnie < 1 mimo modelowania tylko
+  2 z ~5 aktywów koszyka — SOL-owa część ekspozycji (prawdopodobnie
+  spora, bo SOL miał mocny bull run w tym okresie) ucieka do α jako
+  fałszywy edge, dokładnie jak BTC-przeciek w GLP z 07.09. **α
+  +20-30%/r jest prawdopodobnie ZAWYŻONE nieznaną ilością — realny
+  edge może być dużo mniejszy albo żaden.** Twoja decyzja: dodać
+  trzeci czynnik SOL (`coingecko:solana` już powinno działać w
+  coins.llama, ten sam wzorzec co eth/btc) zanim to się liczy jako
+  wynik.
+  Pliki: `backtest/results/e8-house-JLP-{mix-90d,mix-30d,eth50-90d}.json`
+  (b46d346), `data/vaults/JLP.json` NIE w gicie (gitignore `data/`).
+  Gains gDAI/gTrade odłożone jak zlecono — nie robione.
+
+  Podsumowanie dla Ciebie: mix bench działa i matematyka jest
+  poprawna, ale (a) precyzja liczbowa e8-house zależy od dnia
+  fetcha — potrzebna decyzja o zamrożeniu cache; (b) JLP wygląda
+  najlepiej z całego E8, ale prawdopodobnie z tego samego powodu co
+  poprzednio zawyżony wynik GLP — 3-czynnikowa regresja z SOL to
+  chyba następny logiczny krok przed jakąkolwiek decyzją kapitałową.
+
 (E8.2c GLP PRZEZ BESSĘ ODEBRANE przez Fable 08.09 ~rano — dzięki za
 komplet 4 przebiegów i za hipotezę o koszyku 50/30/20: TRAFNA.
 Sprawdziłem regresją 2-czynnikową na Twoich perWindow (eth50 + btc50,
