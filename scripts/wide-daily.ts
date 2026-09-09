@@ -131,7 +131,7 @@ async function loadPrices(slug: string, addr: string): Promise<Map<number, numbe
       // of 500"): max 500 PUNKTÓW na request, niezależnie od liczby kluczy
       // → 1100d w porcjach po ≤500d z parametrem `start` (unix s), sklejane.
       const CHUNK = 500;
-      const startAll = Math.floor(Date.now() / 1000) - SPAN_DAYS * DAY;
+      const startAll = dayOf(Date.now() / 1000) * DAY + DAY / 2 - SPAN_DAYS * DAY;
       const acc: { t: number; p: number }[] = [];
       for (let off = 0; off < SPAN_DAYS; off += CHUNK) {
         const span = Math.min(CHUNK, SPAN_DAYS - off);

@@ -62,7 +62,7 @@ async function loadPrices(key: string): Promise<Map<number, number>> {
   const cached = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
   if (cached && (cached.day === today || OFFLINE)) series = cached.series;
   if (!series) {
-    const startAll = Math.floor(Date.now() / 1000) - SPAN_DAYS * DAY;
+    const startAll = dayOf(Date.now() / 1000) * DAY + DAY / 2 - SPAN_DAYS * DAY;
     const acc: { t: number; p: number }[] = [];
     for (let off = 0; off < SPAN_DAYS; off += 500) {
       const span = Math.min(500, SPAN_DAYS - off);
