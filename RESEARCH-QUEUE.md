@@ -321,7 +321,7 @@
   dosypania marginu (sizing ≤50% marginu), funding odwraca się.
   Infra: hedge builder GMX (E2E 20.08) + EMERGENCY.md — gotowe
   wykonawczo; do testu wystarczy skrypt na CSV fundingu.
-- [~] **E8.2 „DOM KASYNA" — GM v2 PRZECHODZI 4/4 (BTC) i 3/4 (ETH), alfa ≈ +9–11%/r ponad HODL 50/50; HLP n/a; E8.2b GLP: przed hackiem α≈+7%/r β=0.35 (09.2023→07.2025), hack 07.2025 = −93%/dzień; OTWARTE E8.2c = bessa 2022 (SPAN_DAYS=1500, u CC-Mac) + inwentaryzacja JLP/Gains jako dywersyfikacja klasy. GM pools (GMX v2) + HLP (Hyperliquid):**
+- [~] **E8.2 „DOM KASYNA" — GM v2 PRZECHODZI 4/4 (BTC) i 3/4 (ETH), alfa ≈ +9–11%/r ponad HODL 50/50 (3 lata, BEZ bessy, jeden protokół); HLP n/a; E8.2b/c GLP (GMX v1) ZAMKNIĘTE 08.09: przez pełny cykl 2022-09→2025-07 po regresji 2-czynnikowej (βETH 0.26, βBTC 0.12) **α ≈ −2.65%/r, 41% okien — BRAK EDGE'U** (wcześniejsze „+7%/r" = przeciek bety BTC do alfy), + ogon hacku 07.2025 −93%/dzień. OTWARTE E8.2d (u CC-Mac): bench `mix` (2-czynnikowy) w e8-house + JLP (Jupiter) jako drugi protokół klasy; Gains odłożone. CONTEXT 08.09. GM pools (GMX v2) + HLP (Hyperliquid):**
   LP = kontrpartner traderów z dźwignią; wycena po oraklach → brak
   LVR (strukturalnie inna klasa niż AMM). Zarabia fee+borrow+straty
   traderów, traci gdy wygrywają. DANE: DefiLlama serie per pool
@@ -334,7 +334,7 @@
   RYZYKO: ogon (seria wygranych traderów), smart-contract, HLP =
   centralny vault jednej giełdy. Zero kodu do testu — CSV z Llamy.
   (Przenosi i zamyka wpis H „GM POOLS".)
-- [ ] **E8.3 TIMING PO ZMIENNOŚCI (LP = short gamma):** LP zarabia
+- [x] **E8.3 TIMING PO ZMIENNOŚCI — ZAMKNIĘTE 08.09 (CC-Win 68e51eb, 4 pule 720d, 189 okien 30d): jedyny spójny koszyk DVOL wysoki T3 (Pasywny ±50% +0.62/okno, 81%, 4/4; Adapt k=3 +0.63, 68%, 4/4), ale worst T3 = worst całości, corr vsHODL~DVOL 0.24, VRP/SHOCK ≈ 0 („po burzy" nie wyróżnia się) → kryterium NIE spełnione. Adnotacja: T3 jako filtr detektora do testu out-of-sample tylko gdyby produkt żył po 24.09. CONTEXT 08.09.** (LP = short gamma): LP zarabia
   fee (rosną w burzy), traci ~σ²/8 realized. Hipoteza: po skoku
   zmienności rynek się uspokaja szybciej niż spadają fee → wejście
   „po burzy" = jedyne okna, gdy fee > drag. DANE: własne (720d fee/

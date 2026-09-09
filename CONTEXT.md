@@ -82,6 +82,52 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-08 ~rano — BRIEF (Fable + Rafał): odbiór E8.2c (CC-Mac) + E8.3 (CC-Win); **GLP po regresji 2-czynnikowej = BRAK EDGE'U**, E8.3 ZAMKNIĘTE
+BRIEF (raport 07:30): automat czysty (03:42→04:58, backtest-run 1h09,
+porażki BRAK), zero propozycji, kolejka pusta, down:false 6/6, selektor
+edge −20.5 (rotacja nie grozi). Obie nogi in-range: szeroki base-030
+gap 4.7% (poza flatem, fee $11.98, $1.01/d), wąski cbBTC flat ✅ od
+30.08 (fee $7.65, $0.98/d). **Bilans transzy −1.48% ($6 001.80)**,
+w całości rynek (LP −$86.44), koszty wejścia stałe −$7.90 ✓, vs HODL
+−$2.35. Próg +5% odległy o ~$395 — nierealny; 24.09 za 16 dni.
+ODBIÓR E8.2c (CC-Mac, 77e2b29, GLP 2022-09→2025-07, CUT_AFTER hack,
+n=32): eth50 α +3.5%/r, 50% okien po korekcie (2022 najgorszy: 20%);
+**btc50 α −12.9%/r, 19%, ujemny w każdym reżimie**; z ogonem −93%/dzień,
+maxDD 95.8% — miary okienne ogona nie widzą. CC-Mac trafnie: rozjazd
+może być artefaktem koszyka 50/30/20 stable/ETH/BTC.
+**SPRAWDZONE (Fable, regresja 2-czynnikowa na perWindow z obu plików,
+te same 32 okna: GLP% = α + βETH·ETH% + βBTC·BTC%):** βETH 0.26, βBTC
+0.12, **α ≈ −2.65%/r, 41% okien**; per rok 2022 −2.3/okno (0%), 2023
++0.1 (58%), 2024 −0.2 (50%), 2025 −3.0 (0%). Podokres od 09.2023 (ten,
+na którym 07.09 wyszło „+7%/r"): **α −2.85%/r, 42%**. Wczorajsze +7%/r
+to PRZECIEK BETY BTC do alfy — w tym oknie BTC robił śr. +19%/okno vs
+ETH +7%, regresja na samym ETH zapisała różnicę jako edge; rozjazd
+eth50/btc50 = ten sam artefakt z dwóch stron, nie dwa mechanizmy.
+Zastrzeżenie: okna 90d co 30d nakładają się (n efektywne ~11).
+WNIOSEK: **GLP przez pełny cykl nie miał edge'u (≈ −3%/r ± szum) + ogon
+−93%.** GM v2 (+9.6/+9.3%/r, 79/91% okien) zostaje sam na 3 latach bez
+bessy — pule per-market izolowane, regresja 1-czynnikowa tam uczciwa,
+wynik stoi; ale prekursor tej samej organizacji po poprawnej atrybucji
+klasy NIE potwierdza. Waga GM v2 spada z „pierwszy spójny edge" do
+„3 lata hossy/boku, jeden protokół, bez potwierdzenia na cyklu".
+ODBIÓR E8.3 (CC-Win, 68e51eb, 4 pule 720d, 189 okien 30d): jedyny
+spójny koszyk = **DVOL wysoki (T3)**: Pasywny ±50% śr +0.62/okno, 81%,
+4/4 pule; Adapt k=3 +0.63, 68%, 4/4; k=2 3/4 (63%). ALE worst T3
+(−12.0) = worst całości, korelacja vsHODL~DVOL 0.24, VRP i SHOCK ≈ 0
+(„wejście po burzy" NIE wyróżnia się: 1–2/4, 56–66%). Warianty z
+trendem nie łapią efektu. Kryterium E8.3 („nie najgorszy worst")
+formalnie NIE spełnione. Odczyt Fable: T3 to raczej „wysoka IV =
+wysokie fee w oknie" na nakładających się oknach, nie reguła; nie
+zamienia klasy AMM z „przegrywa" na „wygrywa". **E8.3 ZAMKNIĘTE**;
+adnotacja: gdyby produkt miał żyć po 24.09 — T3 jako filtr detektora
+do testu out-of-sample (nie na tych samych 720d).
+STAN E8: E8.0 ✓, E8.1 NIE, E8.3 NIE, E8.4 NIE, E8.2: GM v2 „tak z
+zastrzeżeniami", GLP „nie". Zero kapitału i kodu produkcyjnego do
+24.09 — bez zmian. ZLECENIA: CC-Mac — bench `mix` (2-czynnikowy) w
+e8-house.ts + JLP (Jupiter) jako drugi protokół klasy (E8.2d); Gains
+odłożone (mały). CC-Win — brak. Pytanie z 03.09 do CC-Win uznane za
+załatwione (odpowiedź dysk/`--per-class` przy raporcie E8.3).
+
 ### 2026-09-08 ~00:xx — E8.4 AERODROME cbBTC/WETH ZAMKNIĘTE (Fable, przeglądarka): NIE dla szerokiej pozycji
 Dane z UI Aerodrome (epoka od czw., ~5 dni) + Uniswap explore + docs:
 - Aerodrome WETH/cbBTC **CL10 0.075–0.085%**: TVL $9.77M, wolumen
