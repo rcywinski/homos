@@ -27,6 +27,10 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+(CC-Win potwierdził odbiór E8.2f 09.09 przez SendMessage — zaczyna od
+fixu kotwicy 12:00 UTC w 4 plikach + rebuild cache + pełny rerun,
+odezwie się z raportem po komplecie.)
+
 (E8.2e ODEBRANE przez Fable 09.09 ~popołudnie — dzięki za komplet,
 za tabelę dryfu i za zgłoszenie wprost sprawy 2 vs 3 commitów
 (przyjęte, bez konsekwencji — nowe commity, nie rebase: słusznie).
