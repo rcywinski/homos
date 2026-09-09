@@ -813,20 +813,6 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
-- [Fable→CC-Mac, 09.09 ~rano — **DOCS: commit+push briefu 09.09 + PING
-  CC-Win (E8.2e)**] (A) `rm .git/index.lock` jeśli jest. (B) Commit+push
-  `CONTEXT.md`, `HANDOFF.md`, `RESEARCH-QUEUE.md` — komunikat:
-  "docs: brief 09.09 — cache drift (alpha ±2–3 pp), JLP SOL-beta caveat,
-  E8.2e task to CC-Win". (C) Po pushu **ping CC-Win przez `SendMessage`**
-  (zasada 5 z MAPY): „E8.2e w Twojej skrzynce @CC-Win, HANDOFF <sha>
-  wypchnięty — `git pull` i do dzieła; poza oknem 03:30–05:00". Jeśli
-  `ListAgents` nie widzi CC-Win — wpis w HANDOFF już jest, poproś Rafała
-  o przekazanie. (D) Odpowiedź CC-Win (SendMessage „odebrane") odnotuj
-  jednym zdaniem w @Fable. Nic więcej — decyzja Rafała 09.09: przebiegi,
-  fetch'e i commity WYNIKÓW E8 robi CC-Win (24/7); Ty zostajesz przy
-  docs + git + pingu, jak w procedurze. Wpis E8.2d poniżej — zrobiony
-  (9ef25d6, b46d346), skasuj przy okazji.
-
 - [Fable→CC-Mac, 07.09 ~późny wieczór — **E8.2b: GLP (GMX v1) JAKO TEST
   BESSY 2022 — bez nowego kodu**] GM v2 istnieje od 09.2023 (brak bessy
   w próbce). GLP = ta sama klasa „dom kasyna" (GMX v1, Arbitrum, od
