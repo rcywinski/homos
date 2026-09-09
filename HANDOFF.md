@@ -809,37 +809,6 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
-- [Fable→CC-Mac, 09.09 ~popołudnie — **DOCS: commit+push odbioru E8.2e +
-  PING CC-Win (E8.2f)**] (A) `rm .git/index.lock` jeśli jest. (B)
-  Commit+push `CONTEXT.md`, `HANDOFF.md`, `RESEARCH-QUEUE.md` —
-  "docs: E8.2e receipt — midnight anchor straddles day boundary (2nd
-  bug), JLP 3-factor + decaying edge, E8.2f task to CC-Win". (C) Ping
-  CC-Win przez `SendMessage`: „E8.2f w skrzynce @CC-Win, HANDOFF <sha>
-  wypchnięty — pull, kotwica 12:00 UTC w 4 plikach + rerun; poza
-  03:30–05:00". Fallback jak zawsze (ListAgents nie widzi → poproś
-  Rafała). (D) „odebrane" od CC-Win → jedno zdanie w @Fable. Tylko
-  docs + git + ping, przebiegi robi CC-Win.
-
-- [Fable→CC-Mac, 07.09 ~późny wieczór — **E8.2b: GLP (GMX v1) JAKO TEST
-  BESSY 2022 — bez nowego kodu**] GM v2 istnieje od 09.2023 (brak bessy
-  w próbce). GLP = ta sama klasa „dom kasyna" (GMX v1, Arbitrum, od
-  09.2021, koszyk ~50% stable / ~30% ETH / ~20% BTC). (1) Adres GLP
-  Arbitrum do ZWERYFIKOWANIA w Arbiscan (symbol GLP; z pamięci Fable:
-  `0x4277f8F2c384827B5273592FF7CeBd9f2C1ac258`; jeśli coins.llama nie
-  zna — spróbować fsGLP `0x1aDDD80E6039594eE970E5872D247bf0414C8903`
-  lub sGLP `0x5402B5F40310bDED796c7D0F3FF6683f5C0cFfdf`; jeśli żaden —
-  napisać, nie szukać dalej). (2) `npm run e8:vault -- gm arbitrum:<addr>
-  GLP` (skrypt ogranicza do 1100d — dla GLP potrzebujemy od 09.2021:
-  uruchom z `SPAN` zmienionym? NIE — skrypt nie ma env; zamiast tego
-  zgłoś, że seria zaczyna się w 09.2023, a Fable dołoży env SPAN_DAYS.
-  Jeśli wolisz: jednolinijkowa zmiana w fetch-vault-perf.ts
-  `const SPAN = Number(process.env.SPAN_DAYS || 1100)` — dozwolona,
-  potem `SPAN_DAYS=1850 npm run e8:vault -- gm arbitrum:<addr> GLP`).
-  (3) `BENCH_APR=3.8 npm run e8:house -- data/vaults/GLP.json eth50 90 30`
-  oraz `… btc50 90 30` (koszyk GLP jest mieszany — dwa benchmarki
-  jako widełki; Fable zinterpretuje z betą jak przy GM). Wydruki +
-  json commit+push ("data(research): E8.2b GLP 2021–2026").
-
 - [Fable→CC-Mac, 04.09 ~rano — DOCS (zastępuje niewypchnięte DOCS z
   03.09)] `rm .git/index.lock` jeśli jest. Commit+push: `HANDOFF.md`
   (higiena 03.09 + ten wpis), `CONTEXT.md` (03.09: backtest skończył
