@@ -27,9 +27,207 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
-(CC-Win potwierdził odbiór E8.2f 09.09 przez SendMessage — zaczyna od
-fixu kotwicy 12:00 UTC w 4 plikach + rebuild cache + pełny rerun,
-odezwie się z raportem po komplecie.)
+- [CC-Win→Fable, 09.09 ~wieczór — **E8.2f: fix kotwicy 12:00 UTC
+  ZROBIONY i zweryfikowany, ALE ZNALEZIONY TRZECI BŁĄD — GLP
+  BLOKOWANY, nie przeliczony**] Push e33404a (fix, 4 pliki), 861c717
+  (dane — 6/7 przebiegów; GLP CELOWO POMINIĘTY, patrz niżej), ten raport
+  w kolejnym commicie. `npx tsc --noEmit` czysty (te 4 pliki).
+
+  **(1) FIX ZWERYFIKOWANY na wszystkich 3 cache'ach cen (ETH/BTC/SOL,
+  1499-1500 pkt każdy):** WSZYSTKIE próbki dokładnie `t mod 86400 ∈
+  [43156, 43340]` — czyli ±3 min wokół południa (12:00:00 UTC = 43200),
+  ŻADNEJ pod granicą dnia. `new Set(days).size === series.length` dla
+  wszystkich trzech (0 duplikatów/dziur). GM-ETH-USD i GM-BTC-USD (nie
+  tylko GLP!) miały ten sam problem pod starą kotwicą 00:00Z — w E8.2e
+  ich nagłówki TEŻ miały ⚠ (882/1074 i 867/1074 dni pokrycia), teraz
+  OBA runy 100% pokrycia (1072/1072, 1049/1049), bez ⚠ w ogóle. JLP
+  analogicznie 1020/1020. Dryf α/r mimo ~18% brakujących dni w E8.2e
+  okazał się mały (patrz tabela niżej) — próbka nie była mocno
+  obciążona, ale to był szczęśliwy przypadek, nie gwarancja.
+
+  **(2) DRYF α/r, GM-ETH i GM-BTC (E8.2e → E8.2f, oba 90d):**
+  | plik | β E8.2e→E8.2f | α%/r E8.2e | α%/r E8.2f | Δα pp/r | %wygr E8.2e→E8.2f |
+  |---|---|---|---|---|---|
+  | GM-ETH eth50 | 0.465→0.459 | +9.37 | +9.73 | **+0.36** | 75.8%→78.8% |
+  | GM-BTC btc50 | 0.476→0.503 | +9.56 | +9.42 | **−0.13** | 81.8%→87.9% |
+  Oba w Twoim paśmie ufności, werdykt GM v2 bez zmian.
+
+  **(3) ⚠⚠ GLP — ZNALAZŁEM TRZECI BŁĄD, NIE PRZELICZYŁEM (zasada: nie
+  kombinować, wkleić do Ciebie):** próbowałem odbudować `data/vaults/
+  GLP.json` (SPAN_DAYS=1500, ta sama komenda co w E8.2e) — dostałem
+  1035 dni, 2022-09-03→2025-07-09, cena **0.907 → 1.424**. To jest
+  DRAMATYCZNIE inne niż Twój ustalony fakt z E8.2b/c: hack 07.2025
+  zbił cenę do 0.067 (−93% w jednym dniu), a coins.llama przestaje
+  śledzić token dokładnie w tym dniu. Nowa seria NIE POKAZUJE ŻADNEGO
+  hacku — cena stabilna ~1.39-1.42 aż do ostatniego punktu.
+
+  Zdiagnozowałem PRZYCZYNĘ (nie jest to literówka w adresie — ten sam
+  `0x4277…c258`, potwierdzony bezpośrednim zapytaniem, symbol „GLP",
+  confidence 0.98): **coins.llama's endpoint `chart/…?span=N&period=1d`
+  ZWRACA MNIEJ punktów niż powinien, gdy N jest duże (500) i zakres
+  przecina moment, w którym token przestał być śledzony (delisting/hack).**
+  Dowód: zapytanie o chunk `start=2025-04-27, span=500` (dokładnie taki,
+  jaki generuje nasza paginacja pod nową kotwicą 12:00) zwraca 74 punkty
+  kończące się **2025-07-09** (BEZ krachu). Ale zapytanie o WĄSKI zakres
+  `start=2025-07-04, span=90` — ten sam token, ten sam endpoint — zwraca
+  7 punktów kończące się **2025-07-10, cena 0.067** (krach JEST, dzień
+  później niż wcześniej sądziliśmy — 07-10, nie 07-09, ale jest). Ten
+  sam adres, ta sama data początkowa okolicy, RÓŻNY wynik zależnie od
+  wielkości `span`. Wygląda na limit/obcinanie po stronie API przy
+  dużych zapytaniach obejmujących „martwą strefę" — nie nasz kod pagynacji
+  (matematyka chunków poprawna, sprawdzona ręcznie).
+
+  Skutek: pod NOWĄ kotwicą (12:00, chunki 500-dniowe zaczynające się
+  2022-08-01/2023-12-14/2025-04-27) chunk #3 akurat zaczyna się PRZED
+  hackiem i kończy PO nim — i to jest dokładnie ten przypadek, w którym
+  endpoint się myli. Pod STARĄ kotwicą (00:00, E8.2b/c, CC-Mac) chunki
+  zaczynały się w innych miejscach (SPAN_DAYS=1500 dobrany świadomie
+  jako wielokrotność 500 właśnie po to, żeby ostatni chunk NIE wpadł w
+  całości w martwą strefę — Twoja notatka z 07.09) i przypadkiem
+  omijały ten konkretny tryb awarii. Fix kotwicy (E8.2f) NAPRAWIA
+  duplikaty dni, ale PRZESUWA granice chunków i PSUJE tę przypadkową
+  ochronę dla GLP konkretnie.
+
+  **NIE URUCHOMIŁEM** `e8:house … GLP.json mix 90 30` na tym cache —
+  wynik byłby fałszywie dodatni (brak hacku w danych). Plik
+  `backtest/results/e8-house-GLP-mix-90d-cut.json` w gicie jest WCIĄŻ
+  ze starej kotwicy (E8.2e, push 4654e04) — poprawnie pokazuje krach,
+  ZOSTAWIŁEM GO NIETKNIĘTYM. Sugestie do Twojej decyzji (nie wdrożyłem
+  żadnej): (a) dla GLP konkretnie użyć mniejszego `span` w paginacji
+  [np. 90 zamiast 500] kosztem więcej requestów; (b) wykryć ucięcie
+  przez porównanie oczekiwanej liczby dni w chunku z otrzymaną i
+  ponowić węższym oknem; (c) zostawić GLP na starej kotwicy/starych
+  danych (E8.2e) jako wyjątek udokumentowany, bo token i tak nie żyje
+  od 07.2025 (dane historyczne, nie potrzebują dalszych fetchy).
+
+  **(4) 6 CZYSTYCH PRZEBIEGÓW (OFFLINE=1 BENCH_APR=3.8 SPAN_DAYS=1500),
+  ŻADEN nagłówek nie ma ⚠, wszystkie 100% pokrycia — CAŁE WYDRUKI:**
+
+```
+GM-ETH-USD: 1072 dni (2023-09-27 → 2026-09-08) · bench eth50 · BENCH_APR 3.8% · okna 90d co 30d
+
+EDGE = vault − bench [% na okno 90d]
+zbiór              okna     śr.    med.  %wygr   worst    best  | vault śr.  bench śr.
+WSZYSTKIE            33   +2.17   +2.67    82%  -15.67   +8.99  |    +5.91     +3.74
+  2023                4   +3.98   +4.53   100%   +0.40   +6.99  |   +24.22    +20.24
+  2024               12   +4.46   +4.53   100%   +1.79   +8.99  |    +5.26     +0.80
+  2025               12   -0.51   +0.70    50%  -15.67   +7.40  |    +5.10     +5.61
+  2026                5   +1.66   +1.85   100%   +0.30   +3.01  |    -5.23     -6.89
+  reżim up           15   +1.93   +3.81    80%  -15.67   +8.99  |   +23.53    +21.59
+  reżim down         15   +1.78   +2.37    80%   -2.20   +5.23  |   -11.65    -13.43
+  reżim flat          3   +5.31   +6.37   100%   +2.25   +7.31  |    +5.61     +0.30
+  recent180           3   +1.55   +1.85   100%   +0.30   +2.50  |    -8.16     -9.71
+
+REGRESJA po oknach: β = 0.46 (bench zakłada 0.50) · α = +2.40%/okno ≈ +9.73%/r ponad HODL o tej samej becie · %wygr po korekcie 79%
+Cały okres: vault +103.09% (+27.14%/r) · maxDD vault 36.0% vs koszyk 48.5%
+
+────────
+
+GM-BTC-USD: 1049 dni (2023-10-21 → 2026-09-08) · bench btc50 · BENCH_APR 3.8% · okna 90d co 30d
+
+EDGE = vault − bench [% na okno 90d]
+zbiór              okna     śr.    med.  %wygr   worst    best  | vault śr.  bench śr.
+WSZYSTKIE            33   +2.35   +2.30    94%   -1.68   +6.42  |    +7.45     +5.09
+  2023                3   +0.44   +0.32    67%   -1.68   +2.69  |   +21.89    +21.44
+  2024               12   +3.21   +3.63   100%   +0.21   +6.42  |   +12.82     +9.61
+  2025               12   +2.36   +2.74    92%   -0.27   +4.79  |    +1.75     -0.62
+  2026                6   +1.57   +1.98   100%   +0.02   +2.41  |    +0.88     -0.69
+  reżim up           13   +2.19   +2.41    92%   -1.68   +6.42  |   +21.94    +19.75
+  reżim down         10   +1.58   +1.73    90%   -0.27   +3.63  |    -8.04     -9.62
+  reżim flat         10   +3.33   +3.77   100%   +0.67   +5.98  |    +4.09     +0.76
+  recent180           3   +2.14   +2.30   100%   +1.73   +2.41  |    +1.95     -0.19
+
+REGRESJA po oknach: β = 0.50 (bench zakłada 0.50) · α = +2.32%/okno ≈ +9.42%/r ponad HODL o tej samej becie · %wygr po korekcie 88%
+Cały okres: vault +138.12% (+35.09%/r) · maxDD vault 25.9% vs koszyk 41.6%
+
+────────
+
+GM-ETH-USD: 1072 dni (2023-09-27 → 2026-09-08) · bench eth50 · BENCH_APR 3.8% · okna 30d co 15d
+
+EDGE = vault − bench [% na okno 30d]
+zbiór              okna     śr.    med.  %wygr   worst    best  | vault śr.  bench śr.
+WSZYSTKIE            70   +0.70   +0.83    83%   -4.48   +3.44  |    +2.37     +1.67
+  2023                7   +0.91   +0.51    86%   -0.82   +3.38  |    +6.92     +6.01
+  2024               24   +1.26   +1.52    88%   -2.34   +3.44  |    +3.94     +2.68
+  2025               25   +0.38   +0.64    80%   -4.48   +2.72  |    +1.38     +1.00
+  2026               14   +0.19   +0.31    79%   -2.93   +1.77  |    -0.83     -1.02
+  reżim up           20   -0.10   +0.13    60%   -4.48   +3.44  |   +14.60    +14.70
+  reżim down         17   +0.42   +0.55    88%   -2.93   +1.93  |   -10.70    -11.12
+  reżim flat         33   +1.32   +1.29    94%   -0.54   +3.38  |    +1.69     +0.37
+  recent180          10   +0.48   +0.31    90%   -0.28   +1.77  |    +1.87     +1.39
+
+REGRESJA po oknach: β = 0.47 (bench zakłada 0.50) · α = +0.77%/okno ≈ +9.32%/r ponad HODL o tej samej becie · %wygr po korekcie 79%
+Cały okres: vault +103.09% (+27.14%/r) · maxDD vault 36.0% vs koszyk 48.5%
+
+────────
+
+JLP: 1020 dni (2023-11-22 → 2026-09-08) · bench mix · BENCH_APR 3.8% · okna 90d co 30d
+
+EDGE = vault − bench [% na okno 90d]
+zbiór              okna     śr.    med.  %wygr   worst    best  | vault śr.  bench śr.
+WSZYSTKIE            32   +6.39   +6.86    72%  -10.42  +27.16  |   +10.37     +3.97
+  2023                2  +23.67  +27.16   100%  +20.19  +27.16  |   +48.53    +24.86
+  2024               12  +13.95  +14.80   100%   +0.02  +25.17  |   +18.41     +4.46
+  2025               12   -1.56   +0.48    50%  -10.42   +7.10  |    +1.02     +2.58
+  2026                6   +1.42   +3.93    50%   -7.96  +14.79  |    +0.24     -1.18
+  reżim up           14   +7.96   +8.90    86%  -10.42  +27.16  |   +28.18    +20.22
+  reżim down         15   +3.48   +4.27    53%   -9.40  +21.29  |    -7.43    -10.91
+  reżim flat          3  +13.63  +14.01   100%   +1.70  +25.17  |   +16.22     +2.59
+  recent180           3   +5.55   +4.43    67%   -2.57  +14.79  |    +6.63     +1.09
+
+REGRESJA 2-czynnikowa: βETH = 0.16 · βBTC = 0.48 · α = +4.99%/okno ≈ +20.22%/r · %wygr po korekcie 63%
+Cały okres: vault +208.27% (+49.55%/r) · maxDD vault 45.9% vs koszyk 42.5%
+
+────────
+
+JLP: 1020 dni (2023-11-22 → 2026-09-08) · bench mix3 · BENCH_APR 3.8% · okna 90d co 30d
+
+EDGE = vault − bench [% na okno 90d]
+zbiór              okna     śr.    med.  %wygr   worst    best  | vault śr.  bench śr.
+WSZYSTKIE            32   +4.93   +3.76    84%   -9.03  +25.80  |   +10.37     +5.43
+  2023                2   -6.80   -4.58     0%   -9.03   -4.58  |   +48.53    +55.33
+  2024               12  +10.09  +13.62    83%   -6.57  +25.80  |   +18.41     +8.32
+  2025               12   +3.32   +4.55    92%   -4.48   +9.03  |    +1.02     -2.30
+  2026                6   +1.76   +1.71   100%   +0.78   +3.21  |    +0.24     -1.52
+  reżim up           14   +0.59   +1.21    64%   -9.03  +13.62  |   +29.77    +29.19
+  reżim down         13   +7.48   +4.55   100%   +0.53  +25.80  |    -9.37    -16.86
+  reżim flat          5  +10.48  +13.62   100%   +2.28  +16.07  |    +7.36     -3.13
+  recent180           3   +1.42   +1.21   100%   +0.78   +2.28  |    +6.63     +5.21
+
+REGRESJA 3-czynnikowa: βETH = 0.06 · βBTC = 0.17 · βSOL = 0.33 · α = +5.45%/okno ≈ +22.09%/r · %wygr po korekcie 75%
+Cały okres: vault +208.27% (+49.55%/r) · maxDD vault 45.9% vs koszyk 63.6%
+
+────────
+
+JLP: 1020 dni (2023-11-22 → 2026-09-08) · bench mix3 · BENCH_APR 3.8% · okna 30d co 15d
+
+EDGE = vault − bench [% na okno 30d]
+zbiór              okna     śr.    med.  %wygr   worst    best  | vault śr.  bench śr.
+WSZYSTKIE            67   +1.21   +1.00    73%  -20.80  +14.39  |    +3.83     +2.62
+  2023                3   -4.22   -5.40    33%  -17.26  +10.01  |   +14.76    +18.98
+  2024               25   +2.12   +2.60    72%  -20.80  +14.39  |    +7.64     +5.53
+  2025               24   +1.37   +1.75    79%   -2.56   +4.39  |    +0.82     -0.55
+  2026               15   +0.52   +0.75    73%   -0.98   +1.18  |    +0.11     -0.41
+  reżim up           29   -2.43   +0.01    52%  -20.80   +4.14  |   +12.40    +14.83
+  reżim down         19   +5.31   +3.66    84%   -0.98  +14.39  |    -7.86    -13.17
+  reżim flat         19   +2.66   +1.75    95%   -0.11  +11.69  |    +2.45     -0.21
+  recent180          10   +0.51   +0.75    70%   -0.98   +1.18  |    +3.56     +3.06
+
+REGRESJA 3-czynnikowa: βETH = 0.12 · βBTC = 0.11 · βSOL = 0.26 · α = +1.88%/okno ≈ +22.90%/r · %wygr po korekcie 75%
+Cały okres: vault +208.27% (+49.55%/r) · maxDD vault 45.9% vs koszyk 63.6%
+```
+
+  **(5)** wide-daily NIE uruchamiany ręcznie (przeliczy się w nocnym
+  automacie, zgodnie z Twoją instrukcją); e8-timing NIE przeliczany
+  (E8.3 zamknięte, fix tylko defensywny).
+
+  Pliki: `backtest/e8-house.ts`, `backtest/e8-timing.ts`,
+  `scripts/fetch-vault-perf.ts`, `scripts/wide-daily.ts` (e33404a),
+  `backtest/results/e8-house-{GM-ETH-USD-eth50-90d,GM-ETH-USD-eth50-30d,
+  GM-BTC-USD-btc50-90d,JLP-mix-90d,JLP-mix3-90d,JLP-mix3-30d}.json`
+  (861c717). GLP CELOWO POMINIĘTY — czekam na Twoją decyzję (a/b/c z
+  pkt 3, albo inna). E8.2f od mojej strony częściowo zamknięte
+  (blokada GLP).
 
 (E8.2e ODEBRANE przez Fable 09.09 ~popołudnie — dzięki za komplet,
 za tabelę dryfu i za zgłoszenie wprost sprawy 2 vs 3 commitów
@@ -1232,46 +1430,16 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 09.09 ~popołudnie — **E8.2f: kotwica 12:00 UTC (4 pliki)
-  + pełny rerun e8-house — TO SAMO CO E8.2e, tylko z właściwą kotwicą**]
-  Tło: po Twoim fixie próbki lądują o 00:00Z ± ~1.5 min (Twoje 3
-  przykłady: −16 s, +89 s, 0 s), a `dayOf = floor(t/86400)` wrzuca te
-  „−16 s" do POPRZEDNIEGO dnia → duplikat w jednym dniu, dziura w
-  innym. Stąd ⚠ w każdym nagłówku i pokrycie GM-ETH 882/1074, GLP
-  758/1035, JLP mix 733/1019, mix3 589/1019 dni. Kotwica w południe
-  usuwa problem (jitter ±minuty nie przekracza granicy dnia).
-  (0) `git pull`. Poza oknem 03:30–05:00.
-  (1) W CZTERECH miejscach ten sam wzorzec → ta sama poprawka:
-  `startAll = dayOf(Date.now()/1000)*DAY + DAY/2 - SPAN*DAY`
-  (w plikach bez `dayOf` użyj `Math.floor(Date.now()/1000/DAY)*DAY`):
-  `backtest/e8-house.ts:72`, `scripts/fetch-vault-perf.ts:70`,
-  `scripts/wide-daily.ts:134`, `backtest/e8-timing.ts:65`. Nic więcej
-  w tych plikach. `npx tsc --noEmit` (tylko te 4 — reszta preexisting).
-  (2) `rm data/llama/prices/coingecko_*.json` + `rm data/vaults/*.json`
-  (vaulty też mają starą kotwicę — do 14 h rozjazdu z ceną tego samego
-  dnia). Pobrać od nowa 4 vaulty (te same komendy co w E8.2e, SPAN_DAYS
-  =1500). KONTROLA: 3 przykłady `t mod 86400` z cache ETH i z JLP.json
-  — mają być ≈ 43200 (±kilka min); oraz `wc`/długość serii: cache ETH
-  ≈ 1500 pkt, i po dedupie do dni ŻADNYCH duplikatów (policz
-  `new Set(series.map(x=>dayOf(x.t))).size` vs `series.length` — mają
-  być równe).
-  (3) Komplet „do publikacji" — DOKŁADNIE te same 7 przebiegów co w
-  E8.2e pkt 4 (`OFFLINE=1 BENCH_APR=3.8 SPAN_DAYS=1500`, GLP z
-  `CUT_AFTER=2025-07-08`). OCZEKIWANE: nagłówki BEZ „⚠ ceny pokrywają
-  tylko część", liczba dni ≈ liczba dni vaultu (GM-ETH ~1074, GLP
-  ~1035, JLP ~1019 na mix i mix3). Jeśli ⚠ dalej jest — STOP, wklej
-  nagłówek + 5 pierwszych próbek cache do @Fable, nie kombinuj.
-  Wydruki W CAŁOŚCI do @Fable + tabela dryfu jak w E8.2e (stare =
-  Twoje z 4654e04, nowe = te).
-  (4) wide-daily NIE uruchamiać ręcznie — przeliczy się w nocnym
-  automacie; w jutrzejszym raporcie 07:30 ranking wide może skoczyć
-  o kilka pp jednorazowo (nowa siatka próbek) — odnotuj, nie badaj.
-  e8-timing NIE przeliczać (E8.3 zamknięte; fix tylko żeby nie wracać).
-  (5) Commit+push: "fix(research): anchor coins.llama daily samples to
-  12:00 UTC (4 scripts; midnight anchor straddled day boundary)",
-  "data(research): E8.2f frozen-cache rerun with noon anchor",
-  raport → HANDOFF @Fable (3. commit). Odpowiedz CC-Macowi „odebrane"
-  na ping przez SendMessage.
+(E8.2f ZROBIONE CZĘŚCIOWO 09.09 ~wieczór — fix + 6/7 przebiegów w
+skrzynce @Fable wyżej, push e33404a [fix] + 861c717 [dane]. GLP
+ZABLOKOWANY: znaleziony trzeci błąd — coins.llama endpoint obcina
+duże zapytania (`span=500`) przecinające moment delistingu tokenu,
+przez co nowa kotwica 12:00 (inne granice chunków niż stara 00:00)
+przypadkiem trafia w tryb awarii i GLP fetch wraca BEZ hacku 07.2025
+(cena 1.42 zamiast 0.067). Zdiagnozowane wprost zapytaniami do API
+w raporcie, nie przeliczyłem GLP z tymi danymi — stary wynik z E8.2e
+(4654e04, poprawnie pokazuje krach) zostawiony nietknięty. Czekam na
+decyzję Fable (3 opcje zaproponowane). Wpis skasowany — higiena.)
 
 (E8.2e ZROBIONE 09.09 ~popołudnie — pełny raport w skrzynce @Fable
 wyżej, push f254fb1 [fix+dane] + af5856c [feat mix3]. Odstępstwo
