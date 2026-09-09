@@ -69,7 +69,7 @@ async function loadPrices(key: string): Promise<Map<number, number>> {
   const cached = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : null;
   if (cached && (cached.day === today || OFFLINE)) series = cached.series;
   if (!series) {
-    const SPAN = SPAN_DAYS, startAll = Math.floor(Date.now() / 1000) - SPAN * DAY;
+    const SPAN = SPAN_DAYS, startAll = dayOf(Date.now() / 1000) * DAY - SPAN * DAY;
     const acc: { t: number; p: number }[] = [];
     for (let off = 0; off < SPAN; off += 500) {
       const j = await fetchJson(`https://coins.llama.fi/chart/${key}?start=${startAll + off * DAY}&span=${Math.min(500, SPAN - off)}&period=1d`);
