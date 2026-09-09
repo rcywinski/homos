@@ -92,31 +92,39 @@ function maxDD(vals: number[]) { let peak = -Infinity, dd = 0; for (const v of v
 
 (async () => {
   const file = process.argv[2];
-  const bench = (process.argv[3] || 'usdc') as 'usdc' | 'eth50' | 'btc50' | 'mix';
+  const bench = (process.argv[3] || 'usdc') as 'usdc' | 'eth50' | 'btc50' | 'mix' | 'mix3';
   const W = Number(process.argv[4] || 30);
   const step = Number(process.argv[5] || 15);
-  if (!file) { console.error('użycie: e8-house.ts <data/vaults/X.json> usdc|eth50|btc50|mix [W] [step]'); process.exit(1); }
+  if (!file) { console.error('użycie: e8-house.ts <data/vaults/X.json> usdc|eth50|btc50|mix|mix3 [W] [step]'); process.exit(1); }
   const vault = JSON.parse(fs.readFileSync(file, 'utf8')) as { name: string; series: { t: number; v: number }[] };
   const vm = new Map<number, number>();
   for (const x of vault.series) { const d = dayOf(x.t / 1000); if (CUT_AFTER === null || d <= CUT_AFTER) vm.set(d, x.v); }
   const asset = bench === 'eth50' ? 'coingecko:ethereum' : bench === 'btc50' ? 'coingecko:bitcoin' : null;
   const pm = asset ? await loadPrices(asset) : null;
-  const pmEth = bench === 'mix' ? await loadPrices('coingecko:ethereum') : null;
-  const pmBtc = bench === 'mix' ? await loadPrices('coingecko:bitcoin') : null;
-  const hasPrices = pm !== null || bench === 'mix';
-  const days = [...vm.keys()].sort((a, b) => a - b).filter((d) => (!pm || pm.has(d)) && (!pmEth || pmEth.has(d)) && (!pmBtc || pmBtc.has(d)));
+  const pmEth = bench === 'mix' || bench === 'mix3' ? await loadPrices('coingecko:ethereum') : null;
+  const pmBtc = bench === 'mix' || bench === 'mix3' ? await loadPrices('coingecko:bitcoin') : null;
+  const pmSol = bench === 'mix3' ? await loadPrices('coingecko:solana') : null;
+  const hasPrices = pm !== null || bench === 'mix' || bench === 'mix3';
+  const days = [...vm.keys()].sort((a, b) => a - b).filter((d) => (!pm || pm.has(d)) && (!pmEth || pmEth.has(d)) && (!pmBtc || pmBtc.has(d)) && (!pmSol || pmSol.has(d)));
   if (days.length < W + 1) { console.error(`za mało dni wspólnych (${days.length})`); process.exit(1); }
   const d0 = days[0], d1 = days[days.length - 1];
   console.log(`${vault.name}: ${days.length} dni (${new Date(d0 * DAY * 1000).toISOString().slice(0, 10)} → ${new Date(d1 * DAY * 1000).toISOString().slice(0, 10)}) · bench ${bench} · BENCH_APR ${BENCH_APR}% · okna ${W}d co ${step}d${CUT_AFTER !== null ? ` · CUT_AFTER ${process.env.CUT_AFTER}` : ''}${hasPrices && days.length < vm.size * 0.9 ? ' · ⚠ ceny pokrywają tylko część serii vaultu — zwiększ SPAN_DAYS' : ''}\n`);
 
   const at = (m: Map<number, number>, d: number) => m.get(d) ?? m.get(d - 1) ?? m.get(d + 1);
-  type Win = { start: number; year: number; regime: string; vaultPct: number; benchPct: number; edgePct: number; assetPct: number; asset2Pct: number };
+  type Win = { start: number; year: number; regime: string; vaultPct: number; benchPct: number; edgePct: number; assetPct: number; asset2Pct: number; asset3Pct: number };
   const wins: Win[] = [];
   for (let s = d0; s + W <= d1; s += step) {
     const v0 = at(vm, s), v1 = at(vm, s + W);
     if (!v0 || !v1) continue;
-    let assetPct = 0, asset2Pct = 0, benchPct = BENCH_APR * (W / 365);
-    if (bench === 'mix') {
+    let assetPct = 0, asset2Pct = 0, asset3Pct = 0, benchPct = BENCH_APR * (W / 365);
+    if (bench === 'mix3') {
+      const pe0 = at(pmEth!, s), pe1 = at(pmEth!, s + W), pb0 = at(pmBtc!, s), pb1 = at(pmBtc!, s + W), ps0 = at(pmSol!, s), ps1 = at(pmSol!, s + W);
+      if (!pe0 || !pe1 || !pb0 || !pb1 || !ps0 || !ps1) continue;
+      assetPct = (pe1 / pe0 - 1) * 100;
+      asset2Pct = (pb1 / pb0 - 1) * 100;
+      asset3Pct = (ps1 / ps0 - 1) * 100;
+      benchPct = 0.10 * assetPct + 0.11 * asset2Pct + 0.44 * asset3Pct + 0.35 * BENCH_APR * (W / 365);
+    } else if (bench === 'mix') {
       const pe0 = at(pmEth!, s), pe1 = at(pmEth!, s + W), pb0 = at(pmBtc!, s), pb1 = at(pmBtc!, s + W);
       if (!pe0 || !pe1 || !pb0 || !pb1) continue;
       assetPct = (pe1 / pe0 - 1) * 100;
@@ -129,8 +137,9 @@ function maxDD(vals: number[]) { let peak = -Infinity, dd = 0; for (const v of v
       benchPct = 0.5 * assetPct + 0.5 * BENCH_APR * (W / 365);
     }
     const vaultPct = (v1 / v0 - 1) * 100;
-    const regime = hasPrices ? (assetPct > 10 ? 'up' : assetPct < -10 ? 'down' : 'flat') : 'n/a';
-    wins.push({ start: s * DAY, year: new Date(s * DAY * 1000).getUTCFullYear(), regime, vaultPct, benchPct, edgePct: vaultPct - benchPct, assetPct, asset2Pct });
+    const regimeAsset = bench === 'mix3' ? asset3Pct : assetPct;
+    const regime = hasPrices ? (regimeAsset > 10 ? 'up' : regimeAsset < -10 ? 'down' : 'flat') : 'n/a';
+    wins.push({ start: s * DAY, year: new Date(s * DAY * 1000).getUTCFullYear(), regime, vaultPct, benchPct, edgePct: vaultPct - benchPct, assetPct, asset2Pct, asset3Pct });
   }
   if (!wins.length) { console.error('brak okien'); process.exit(1); }
   const hdr = 'zbiór'.padEnd(18) + 'okna'.padStart(5) + 'śr.'.padStart(8) + 'med.'.padStart(8) + '%wygr'.padStart(7) + 'worst'.padStart(8) + 'best'.padStart(8) + '  | vault śr.  bench śr.';
@@ -151,14 +160,44 @@ function maxDD(vals: number[]) { let peak = -Infinity, dd = 0; for (const v of v
 
   const vSeries = days.map((d) => at(vm, d)!);
   const vaultDD = maxDD(vSeries);
-  const benchDD = bench === 'mix'
+  const benchDD = bench === 'mix3'
+    ? maxDD(days.map((d) => 0.10 * (at(pmEth!, d)! / at(pmEth!, d0)!) + 0.11 * (at(pmBtc!, d)! / at(pmBtc!, d0)!) + 0.44 * (at(pmSol!, d)! / at(pmSol!, d0)!) + 0.35 * (1 + BENCH_APR / 100 * ((d - d0) / 365))))
+    : bench === 'mix'
     ? maxDD(days.map((d) => 0.3 * (at(pmEth!, d)! / at(pmEth!, d0)!) + 0.2 * (at(pmBtc!, d)! / at(pmBtc!, d0)!) + 0.5 * (1 + BENCH_APR / 100 * ((d - d0) / 365))))
     : pm ? maxDD(days.map((d) => 0.5 * (at(pm, d)! / at(pm, d0)!) + 0.5 * (1 + BENCH_APR / 100 * ((d - d0) / 365)))) : 0;
   const totVault = (at(vm, d1)! / at(vm, d0)! - 1) * 100;
   const annVault = ((at(vm, d1)! / at(vm, d0)!) ** (365 / (d1 - d0)) - 1) * 100;
   // regresja po oknach: vault% = α + β·asset%  (β = realna ekspozycja; α = edge po korekcie bety)
-  let reg: { beta: number; alphaPct: number; alphaAnnPct: number; winAdj: number } | { betaEth: number; betaBtc: number; alphaPct: number; alphaAnnPct: number; winAdj: number } | null = null;
-  if (bench === 'mix' && wins.length >= 8) {
+  let reg: { beta: number; alphaPct: number; alphaAnnPct: number; winAdj: number } | { betaEth: number; betaBtc: number; alphaPct: number; alphaAnnPct: number; winAdj: number } | { betaEth: number; betaBtc: number; betaSol: number; alphaPct: number; alphaAnnPct: number; winAdj: number } | null = null;
+  if (bench === 'mix3' && wins.length >= 10) {
+    // OLS trzyczynnikowa: vault% = a + b1·ETH% + b2·BTC% + b3·SOL% — równania normalne 4×4, eliminacja Gaussa z pivotingiem
+    const x1 = wins.map((w) => w.assetPct), x2 = wins.map((w) => w.asset2Pct), x3 = wins.map((w) => w.asset3Pct), y = wins.map((w) => w.vaultPct);
+    const n = x1.length;
+    const sum = (a: number[]) => a.reduce((p, v) => p + v, 0);
+    const dot = (a: number[], b: number[]) => a.reduce((p, v, i) => p + v * b[i], 0);
+    const M = [
+      [n, sum(x1), sum(x2), sum(x3), sum(y)],
+      [sum(x1), dot(x1, x1), dot(x1, x2), dot(x1, x3), dot(x1, y)],
+      [sum(x2), dot(x1, x2), dot(x2, x2), dot(x2, x3), dot(x2, y)],
+      [sum(x3), dot(x1, x3), dot(x2, x3), dot(x3, x3), dot(x3, y)],
+    ];
+    for (let col = 0; col < 4; col++) {
+      let piv = col;
+      for (let r = col + 1; r < 4; r++) if (Math.abs(M[r][col]) > Math.abs(M[piv][col])) piv = r;
+      [M[col], M[piv]] = [M[piv], M[col]];
+      for (let r = 0; r < 4; r++) {
+        if (r === col) continue;
+        const f = M[r][col] / M[col][col];
+        for (let c = col; c < 5; c++) M[r][c] -= f * M[col][c];
+      }
+    }
+    const a = M[0][4] / M[0][0], b1 = M[1][4] / M[1][1], b2 = M[2][4] / M[2][2], b3 = M[3][4] / M[3][3];
+    const alphaPct = a - (1 - b1 - b2 - b3) * BENCH_APR * (W / 365);
+    const adj = wins.map((w) => w.vaultPct - b1 * w.assetPct - b2 * w.asset2Pct - b3 * w.asset3Pct - (1 - b1 - b2 - b3) * BENCH_APR * (W / 365));
+    const winAdj = (adj.filter((v) => v > 0).length / adj.length) * 100;
+    reg = { betaEth: b1, betaBtc: b2, betaSol: b3, alphaPct, alphaAnnPct: alphaPct * (365 / W), winAdj };
+    console.log(`\nREGRESJA 3-czynnikowa: βETH = ${b1.toFixed(2)} · βBTC = ${b2.toFixed(2)} · βSOL = ${b3.toFixed(2)} · α = ${pct(alphaPct)}%/okno ≈ ${pct(reg.alphaAnnPct)}%/r · %wygr po korekcie ${winAdj.toFixed(0)}%`);
+  } else if (bench === 'mix' && wins.length >= 8) {
     // OLS dwuczynnikowa: vault% = a + b1·ETH% + b2·BTC% — równania normalne 3×3, eliminacja Gaussa (bez bibliotek)
     const x1 = wins.map((w) => w.assetPct), x2 = wins.map((w) => w.asset2Pct), y = wins.map((w) => w.vaultPct);
     const n = x1.length;
