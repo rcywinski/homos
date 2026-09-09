@@ -82,6 +82,51 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-09 ~rano — BRIEF (Fable + Rafał): odbiór E8.2d (CC-Mac) — DRYF CACHE CEN (precyzja α ±2–3 pp/r), JLP „najmocniejszy" ale z przeciekiem SOL; DECYZJA: zlecenia E8 idą do CC-Win
+BRIEF (raport 07:30): automat czysty (koniec 04:59, porażki BRAK),
+down:false 6/6, selektor edge −17.5. Obie nogi in-range: szeroki
+base-030 gap 5.1% (fee $12.88, $1.00/d), wąski cbBTC flat ✅ (gap
+−1.7%, fee $8.55, $0.97/d). **Bilans transzy −0.93% ($6 035.64)**,
+rynek −$54.71, koszty wejścia stałe −$7.90 ✓. Próg +5% ~$361 daleko;
+24.09 za 15 dni. **Pierwsza od tygodni propozycja OPEN** (04:35Z):
+„OTWÓRZ USDC-WETH 0.3% @ Ethereum, 7d śr. 18% APR, w topie 3d", bez
+statystyk doradcy — wynik rankingu APR po ruchu ETH, nie produktu;
+zasada 24.09 + zero nowego kapitału → **NIE podpisujemy, wygasa z TTL**.
+ODBIÓR E8.2d (CC-Mac, 9ef25d6 + b46d346): bench `mix` (2-czynnikowy)
+wdrożony, matematyka ZWERYFIKOWANA (ręczna regresja na starych
+perWindow = moje liczby co do 0.01). ZNALEZISKO 1 — **DRYF CACHE
+CEN:** test kontrolny na GLP dał β 0.27/0.09, α −0.9%/r (vs 0.26/0.12,
+−2.65%/r z 08.09), bo cache coins.llama odświeża się co dzień, a
+`start` zapytania kotwiczony do `Date.now()` → próbki `period=1d`
+przesuwają się o godzinę runu i przy granicach dnia wpadają do
+sąsiedniego bucketu; nawet eth50 1-czynnikowe dryfuje (+3.47 →
++3.81%/r). WNIOSEK: **precyzja α w e8-house = ±2–3 pp/r**; znak i rząd
+(GM v2 ≈ +9–10, GLP ≈ 0 ± 3) stoją, dokładne liczby nie. FIX
+(jednoliniowy): kotwiczyć `startAll` do północy UTC + wyniki „do
+publikacji" liczyć na zamrożonym cache (OFFLINE=1), jeden spójny
+zestaw z tego samego dnia. ZNALEZISKO 2 — **JLP (Jupiter, Solana,
+2023-11→2026-09, 1019 dni, bez incydentów):** mix 90/30 śr +6.52%/okno,
+72%, worst −10.17 (2025), βETH 0.17, βBTC 0.48, **α +20.6%/r, 66% po
+korekcie**, dodatni w 3/3 reżimach; 30/15 spójne (+25%/r); cały okres
++211% (+50%/r), **maxDD 46.0% > koszyk 42.9%** (jedyne kryterium
+konsekwentnie niespełnione). ALE suma β = 0.65 przy koszyku, który
+realnie jest ~44% SOL (wagi Jupitera: SOL 44 / ETH 10 / WBTC 11 /
+stable 35) — rajd SOL ucieka do α, ten sam artefakt co „+7%/r" GLP,
+tylko solowy i prawdopodobnie większy. WERDYKT: **JLP = nierozstrzygnięte,
+prawdopodobnie zawyżone** — wymaga regresji 3-czynnikowej z SOL.
+STAN E8: bez zmian poza szerszym przedziałem ufności GM v2 i JLP jako
+kandydatem do korekty. Zero kapitału i kodu produkcyjnego do 24.09.
+**DECYZJA RAFAŁA (organizacyjna): zlecenia E8 (fetch + przebiegi +
+commit) idą do CC-Win (Windows 24/7), nie do CC-Mac — CC-Mac bywa
+zamknięty, Rafał nie chce przerw.** CC-Win ma sieć, node/tsx i push
+(68e51eb); `data/` jest poza gitem, więc vaulty pobiera od nowa.
+CC-Mac ZAWSZE (procedura): commit+push docs Fable + ping CC-Win przez
+SendMessage — bez tego CC-Win nie widzi zlecenia (docs lądują na Macu).
+ZLECENIE E8.2e (CC-Win): fix kotwicy UTC + bench `mix3` (ETH/BTC/SOL)
++ komplet przebiegów do publikacji na zamrożonym cache (GM-ETH/BTC,
+GLP mix cut, JLP mix/mix3) + różnica vs poprzednie liczby jako miara
+dryfu. Poza godzinami automatu (03:30–05:00).
+
 ### 2026-09-08 ~rano — BRIEF (Fable + Rafał): odbiór E8.2c (CC-Mac) + E8.3 (CC-Win); **GLP po regresji 2-czynnikowej = BRAK EDGE'U**, E8.3 ZAMKNIĘTE
 BRIEF (raport 07:30): automat czysty (03:42→04:58, backtest-run 1h09,
 porażki BRAK), zero propozycji, kolejka pusta, down:false 6/6, selektor
