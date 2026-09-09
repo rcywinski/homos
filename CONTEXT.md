@@ -82,6 +82,54 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-09 ~popołudnie — ODBIÓR E8.2e (CC-Win): fix dryfu DZIAŁA, ale odsłonił drugi błąd (próbki na granicy dnia → ~20–30% dni ginie); JLP po 3 czynnikach α ≈ +22%/r, ale EDGE GAŚNIE 2024→2026; werdykt klasy „dom kasyna" na 24.09 wstępnie sformułowany
+Odbiór raportu CC-Win (f254fb1 fix+dane, af5856c mix3, 4654e04
+raport; uwaga proceduralna o 2 zamiast 3 commitów — przyjęta, bez
+konsekwencji). MIARA DRYFU (stare 9ef25d6 vs nowe): GM-ETH +9.60 →
++9.37, GM-BTC +9.27 → +9.56, GLP mix-cut −0.91 → −2.61%/r — wszystko
+w przedziale ±1–3 pp, werdykty klas bez zmian. GM-BTC %wygr 91 → 82
+przy Δα +0.3 = ~3 okna przy krawędzi zera, nie sygnał.
+**BŁĄD NR 2 (Fable, z nagłówków wydruków):** po kotwicy północy UTC
+próbki coins.llama lądują o 00:00Z ± ~1.5 min (CC-Win: −16 s, +89 s,
+0 s), więc `dayOf = floor(t/86400)` wrzuca część próbek do
+POPRZEDNIEGO dnia → duplikaty w jednym dniu i dziury w innym. Stąd
+„⚠ ceny pokrywają tylko część serii" na KAŻDYM przebiegu i pokrycie
+GM-ETH 882/1074 dni, GLP 758/1035, JLP mix 733/1019, JLP mix3 589/1019
+(SOL najgorzej). Przed fixem próbki były o stałej godzinie runu, więc
+dziur nie było — fix zamienił dryf na dziury. Skutek: okna przeżywają
+(`at()` toleruje ±1 dzień; n=31–33 jak wcześniej), Δα mała, ale maxDD
+koszyka liczone na rzadkiej siatce i pokrycie <60% na SOL — liczby
+NIE są jeszcze „do publikacji". FIX: kotwica na **12:00 UTC** (start =
+dayOf(now)·DAY + DAY/2 − SPAN·DAY) — jitter ±minuty nigdy nie
+przekracza granicy dnia; ten sam wzorzec w `fetch-vault-perf.ts:70`
+(vaulty pobrane o godzinie runu → do 14 h rozjazdu z ceną tego samego
+dnia), `wide-daily.ts:134`, `e8-timing.ts:65`. Zlecenie E8.2f (CC-Win):
+poprawka w 4 miejscach, rm cache + vaulty, komplet e8-house od nowa;
+wide-daily przeliczy się samo w nocy (jednorazowy skok modelu ±kilka
+pp — odnotować, nie badać); e8-timing NIE przeliczać (E8.3 zamknięte).
+**JLP PO 3 CZYNNIKACH (na obecnych, dziurawych danych — kierunkowo):**
+mix3 90/30 n=31: śr +5.45/okno, 84%, worst −11.19 (2024), βETH 0.04 /
+βBTC 0.22 / βSOL 0.35 (Σβ 0.61), **α ≈ +22%/r, 84% po korekcie**, edge
+w 3/3 reżimach, maxDD 46.2 < koszyk 60.9 → 3/4 kryteriów (pada worst).
+Bez regresji, wprost vs koszyk nominalny 0.10/0.11/0.44/0.35: to samo
+(+5.45/okno) — α nie jest artefaktem regresji. 30/15 słabsze (59%,
+worst −25.9 w 2023 przy n=3, „up" 32% — JLP przegrywa w rajdach SOL,
+wygrywa 95% w spadkach; profil kontrpartnera longów, jak GM).
+**NAJWAŻNIEJSZE: EDGE GAŚNIE.** Per rok α/okno: 2024 +9.15 (83%) →
+2025 +3.56 (83%) → 2026 +1.51 (80%); recent180 +1.58/okno ≈ **+6%/r**.
+GM-ETH ten sam kształt: 2024 +4.29 → 2025 −0.51 → 2026 +1.59 (≈ +6%/r);
+GM-BTC 2024 +3.23 → 2025 +2.57 → 2026 +1.29 (≈ +5%/r). Rok 2024
+(memecoiny na Solanie, rekordowe wolumeny perp) zawyża średnie; bieżące
+tempo klasy to **ok. +5–7%/r ponad HODL koszyka**, z trendem w dół
+(rozwadnianie przez TVL — zastrzeżenie (c) z 07.09 potwierdzone).
+WSTĘPNY WERDYKT KLASY NA 24.09 (do potwierdzenia po E8.2f): „dom
+kasyna" ma realny, powtarzalny (3 protokoły, 2 łańcuchy) edge ~5–7%/r
+bieżąco, przy pełnej becie koszyka (0.5–0.6), ryzyku kontraktu (GLP
+−93%) i ogonie „traderzy wygrali" (worst −11…−15/okno). Przy $6k to
+$300–400/r — sens tylko przy skali; jako klasa do obserwacji TAK, do
+kapitału transzy 1 NIE. Propozycja OPEN mainnet 0.3% z rana — nie
+podpisana, zgodnie z planem.
+
 ### 2026-09-09 ~rano — BRIEF (Fable + Rafał): odbiór E8.2d (CC-Mac) — DRYF CACHE CEN (precyzja α ±2–3 pp/r), JLP „najmocniejszy" ale z przeciekiem SOL; DECYZJA: zlecenia E8 idą do CC-Win
 BRIEF (raport 07:30): automat czysty (koniec 04:59, porażki BRAK),
 down:false 6/6, selektor edge −17.5. Obie nogi in-range: szeroki
