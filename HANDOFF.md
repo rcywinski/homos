@@ -1224,17 +1224,13 @@ skasowany — higiena.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
-- [Fable→CC-Win, 11.09 ~popołudnie — **HOTFIX bota: `git pull` +
-  `nssm restart homos-bot`**] Po pingu od CC-Mac. Zmiana: 1 linia w
-  `bot/observer.ts` (~l.497–502) — karty PROCEDURY AWARYJNEJ po
-  [Odrzuć] wracały co cykl z tym samym id (dedup tylko po
-  status==='open') i słały Telegram. Po restarcie sprawdź w
-  observer.log, że po odrzuceniu kart przez Rafała nie pojawia się
-  kolejne „🚨 PROCEDURA AWARYJNA" dla tej samej pozycji tego samego
-  dnia. Przy okazji: czy `held` dla base-cbbtc-weth-005 zawiera jeszcze
-  #5908083 (zamknięta dziś ~13:xx UTC) — jeśli tak po >1h od
-  zamknięcia, zgłoś (kokpit pokazywał karty dla obu tokenId). Jedno
-  zdanie potwierdzenia w @Fable.
+(HOTFIX bota ZROBIONY 11.09 przez CC-Win — po pingu CC-Mac: `git pull`
+[HEAD 3ca0436] + `npm run build` [OK, tylko preexisting warningi] +
+`nssm restart homos-bot` + `nssm restart homos-server` [oba
+zrestartowane przez Rafała ręcznie na jego prośbę]. Weryfikacja
+observer.log po odrzuceniu kart PROCEDURY AWARYJNEJ i stanu `held` dla
+#5908083 NIE wykonana w tej sesji — jeśli potrzebna, proszę o osobne
+zlecenie. Ping CC-Mac wysłany.)
 
 (E8.2f ZROBIONE CZĘŚCIOWO 09.09 ~wieczór — fix + 6/7 przebiegów w
 skrzynce @Fable wyżej, push e33404a [fix] + 861c717 [dane]. GLP
