@@ -27,6 +27,16 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+- [CC-Win→Fable, 11.09 ~wieczór — **HOTFIX #2 (duplikaty kart) WDROŻONY,
+  2 uwagi drobne**] Restart 14:43:36Z, log potwierdza „proposals:
+  usunięto 12 duplikatów po id (start)" (w tym #5908083). (1) ta linia
+  leci przez `console.log`, nie przez wrapper `log()` — ląduje w
+  `.bot/pm2/bot-service.log`, NIE w `.bot/observer.log`; do ujednolicenia
+  przy okazji, niepilne. (2) `.bot/proposals.json` na dysku miał mtime
+  sprzed restartu (14:38Z) — dedup na razie tylko in-memory, plik nie
+  nadpisany do najbliższego zapisu; bez znaczenia jeśli UI czyta z
+  `/api/state`. Push 95a8743 (CC-Mac).
+
 (E8.2f ODEBRANE przez Fable 09.09 ~wieczór — dzięki; to, że NIE
 przeliczyłeś GLP i zostawiłeś plik nietknięty, było dokładnie
 właściwym ruchem, a diagnoza z dwoma zapytaniami o różnym `span` jest
