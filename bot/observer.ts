@@ -197,6 +197,22 @@ interface Proposal {
 const live: Record<string, PoolLive> = {};
 let positions: WatchedPosition[] = [];
 let proposals: Proposal[] = fs.existsSync(PROPOSALS_PATH) ? JSON.parse(fs.readFileSync(PROPOSALS_PATH, 'utf8')) : [];
+// FIX 11.09 #2: sprzątanie duplikatów po id z okresu przed fixem dedup
+// (ta sama karta wielokrotnie w pliku; [Odrzuć] trafiało tylko w pierwszą
+// kopię, więc kolejne wracały po odświeżeniu). Zostaje JEDNA kopia per id;
+// jeśli którakolwiek była odrzucona — odrzucona.
+{
+  const byId = new Map<string, Proposal>();
+  for (const p of proposals) {
+    const prev = byId.get(p.id);
+    if (!prev) byId.set(p.id, p);
+    else if (prev.status === 'open' && p.status === 'dismissed') byId.set(p.id, p);
+  }
+  if (byId.size !== proposals.length) {
+    console.log(`proposals: usunięto ${proposals.length - byId.size} duplikatów po id (start)`);
+    proposals = [...byId.values()];
+  }
+}
 
 // --- śledzenie REALNYCH pozycji jak w paper (20.08, decyzja Rafała):
 // equity + HODL per tokenId, próbki co cykl refreshPositions (5 min).
@@ -313,11 +329,12 @@ function applyProposalCommands() {
       try {
         const c = JSON.parse(line);
         if (c.action === 'dismiss') {
-          const p = proposals.find((x) => x.id === c.id);
-          if (p && p.status === 'open') {
-            p.status = 'dismissed';
+          // FIX 11.09 #2: odrzuć WSZYSTKIE kopie o tym id (nie tylko pierwszą)
+          let n = 0;
+          for (const p of proposals) if (p.id === c.id && p.status === 'open') { p.status = 'dismissed'; n++; }
+          if (n) {
             changed = true;
-            log(`proposal ${c.id}: odrzucona (komenda z UI)`);
+            log(`proposal ${c.id}: odrzucona (komenda z UI${n > 1 ? `, ${n} kopii` : ''})`);
           }
         }
       } catch { /* uszkodzona linia — pomiń */ }

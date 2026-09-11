@@ -625,6 +625,21 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 11.09 ~wieczór #2 — **HOTFIX #2 bota: duplikaty kart
+  awaryjnych — commit+push + ping CC-Win**] Po restarcie karty A/B dla
+  starej #5908083 wracały po odświeżeniu mimo [Odrzuć]: w
+  `.bot/proposals.json` jest KILKA kopii tej samej karty pod jednym id
+  (nabite przed fixem 48df567), a handler dismiss robił `find` → trafiał
+  w pierwszą (już odrzuconą) kopię i nic nie zmieniał. FIX (Fable,
+  `bot/observer.ts`): (a) przy starcie zbicie duplikatów po id do jednej
+  kopii (odrzucona wygrywa), (b) dismiss oznacza WSZYSTKIE kopie o danym
+  id. tsc: tylko preexisting :43. (A) `rm .git/index.lock` jeśli jest.
+  (B) Commit+push `bot/observer.ts` + `CONTEXT.md` + `HANDOFF.md`:
+  "fix(bot): collapse duplicate proposals by id on load; dismiss marks all
+  copies". (C) Ping CC-Win: „`git pull` + `nssm restart homos-bot`; w
+  observer.log przy starcie linia `proposals: usunięto N duplikatów`;
+  1 zdanie w @Fable".
+
 (FIX BOTA „karty awaryjne wracają po Odrzuć" ZROBIONE 11.09 przez
 CC-Mac — commit 48df567, ping CC-Win wysłany. Wpis skasowany —
 higiena.)
@@ -1224,6 +1239,13 @@ skasowany — higiena.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 11.09 ~wieczór #2 — **HOTFIX #2: `git pull` +
+  `nssm restart homos-bot`**] Po pingu CC-Mac. Zmiana w `bot/observer.ts`:
+  zbicie duplikatów propozycji po id przy starcie + dismiss dla
+  wszystkich kopii. Sprawdź w observer.log linię
+  `proposals: usunięto N duplikatów po id (start)` i podaj N. Jedno
+  zdanie w @Fable.
+
 (HOTFIX bota ZROBIONY 11.09 przez CC-Win — po pingu CC-Mac: `git pull`
 [HEAD 3ca0436] + `npm run build` [OK, tylko preexisting warningi] +
 `nssm restart homos-bot` + `nssm restart homos-server` [oba

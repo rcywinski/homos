@@ -170,6 +170,18 @@ bojowa pkt 1 = następny rebalans z ruchem > 0.5%. Wdrożenie: CC-Mac
 commit+push, CC-Win pull + `npm run build` + restart bota (razem z
 hotfixem kart awaryjnych 48df567).
 
+AKTUALIZACJA ~wieczór #2 — po restarcie karty A/B (stara #5908083,
+−5.5%) nadal wracały po odświeżeniu mimo [Odrzuć]. PRZYCZYNA: przed
+fixem 48df567 bot nabił w `proposals.json` kilka kopii tej samej karty
+pod jednym id; handler dismiss (`applyProposalCommands`) robił
+`proposals.find(id)` → trafiał w pierwszą, już odrzuconą kopię i nic nie
+zmieniał — otwarte duplikaty były nieusuwalne z UI. HOTFIX #2 (Fable):
+zbicie duplikatów po id przy starcie (odrzucona wygrywa) + dismiss
+oznacza wszystkie kopie. Paczka: CC-Mac commit+push+ping, CC-Win
+pull+restart. Do backlogu bota: `proposals.push` powinno być
+idempotentne po id w JEDNYM miejscu (helper `upsertProposal`), żeby ta
+klasa nie wróciła w innym rodzaju propozycji.
+
 ### 2026-09-09 ~wieczór — ODBIÓR E8.2f (CC-Win): kotwica 12:00 UTC DZIAŁA (100% pokrycia, 0 duplikatów), GM v2 i JLP potwierdzone na czystych danych; GLP zostaje na danych E8.2e (wyjątek udokumentowany, 3. błąd = obcinanie Llamy przy delistingu); **E8.2 ZAMKNIĘTE — werdykt klasy „dom kasyna"**
 Odbiór (7805756 fix 4 plików, 95474c1 dane 6/7, 4c4959c raport).
 FIX: wszystkie 3 cache cen 1499–1500 pkt, `t mod 86400 ∈ [43156,
