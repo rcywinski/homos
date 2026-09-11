@@ -22,6 +22,7 @@ import { getWalletClient } from 'wagmi/actions';
 import { Pool } from '@uniswap/v3-sdk';
 import { Address, encodeFunctionData, erc20Abi } from 'viem';
 import { RotatePlan, buildMintStep } from '../utils/rebalanceBuilder';
+import { fetchFreshPool } from '../utils/uniswap';
 import { addTransaction } from '../components/TransactionHistory';
 import { config } from '../config/wallet';
 // HOTFIX 31.08: receipt best-effort (ta sama klasa co useRebalanceExecution —
@@ -137,11 +138,16 @@ export function useRotateExecution() {
           if (step.kind === 'mint') {
             // Przebuduj mint z FAKTYCZNYCH sald NOWEJ puli (po krokach swap
             // portfel trzyma tokeny nowej pary, nie starej) — patrz nagłówek.
+            // FIX 11.09 (HANDOFF @Sonnet, ten sam bug co useRebalanceExecution):
+            // `newPool` jest zamrożony z momentu otwarcia modala — dociągamy
+            // świeży slot0+liquidity tuż przed przebudową kroku, żeby uniknąć
+            // "Price slippage check" przy ruchu ceny > ok. 0.5%.
+            const freshPool = await fetchFreshPool(client, newPool, plan.chainId);
             const [bal0, bal1] = await Promise.all([
               client.readContract({ address: newPool.token0.address as Address, abi: erc20Abi, functionName: 'balanceOf', args: [address] }) as Promise<bigint>,
               client.readContract({ address: newPool.token1.address as Address, abi: erc20Abi, functionName: 'balanceOf', args: [address] }) as Promise<bigint>,
             ]);
-            const rebuilt = buildMintStep({ pool: newPool, chainId: plan.chainId, newTickLower, newTickUpper, amount0: bal0, amount1: bal1, recipient: address, slippageBps });
+            const rebuilt = buildMintStep({ pool: freshPool, chainId: plan.chainId, newTickLower, newTickUpper, amount0: bal0, amount1: bal1, recipient: address, slippageBps });
             tx = rebuilt.tx;
             const manager = tx.to;
             const wants: Array<[Address, bigint, string]> = [

@@ -284,6 +284,63 @@ export const getExistingPool = async (
   }
 };
 
+// FIX 11.09 (Fable→Sonnet HANDOFF): kotwica fabryki per-chain, żeby przed
+// wysyłką kroku 'mint' (rebalance/rotate) dało się dociągnąć ŚWIEŻY stan
+// puli (slot0+liquidity) zamiast używać `pool` sprzed otwarcia modala —
+// patrz fetchFreshPool niżej.
+const FACTORY_BY_CHAIN: Record<number, Address> = {
+  [NETWORKS.MAINNET.chainId]: NETWORKS.MAINNET.poolFactoryAddress,
+  [NETWORKS.BASE.chainId]: NETWORKS.BASE.poolFactoryAddress,
+  [NETWORKS.ARBITRUM.chainId]: NETWORKS.ARBITRUM.poolFactoryAddress,
+};
+
+/**
+ * Rebuduje `pool` (te same token0/token1/fee) ze ŚWIEŻO odczytanego
+ * slot0+liquidity, zamiast reużywać obiekt Pool zamrożony w momencie
+ * otwarcia modala rebalansu. Bez tego, przy ruchu ceny między otwarciem
+ * modala a krokiem mint (> ok. 0.5%), Position.fromAmounts w buildMintStep
+ * liczy z nieaktualnej ceny i symulacja mintu pada na "Price slippage
+ * check" — użytkownik musi klikać [Zatwierdź] drugi raz. Jeśli adres puli
+ * nie da się ustalić (nieznany chainId / fabryka nic nie zwraca), zwraca
+ * PIERWOTNY `pool` niezmieniony (fail-open — wywołujący dostaje to, co
+ * miał, zamiast wywalonego wyjątku w środku sekwencji).
+ */
+export const fetchFreshPool = async (
+  publicClient: PublicClient,
+  pool: Pool,
+  chainId: number
+): Promise<Pool> => {
+  const factory = FACTORY_BY_CHAIN[chainId];
+  if (!factory) return pool;
+  try {
+    const poolAddress = (await publicClient.readContract({
+      address: factory,
+      abi: POOL_FACTORY_ABI,
+      functionName: 'getPool',
+      args: [pool.token0.address as Address, pool.token1.address as Address, pool.fee],
+    })) as Address;
+    if (!poolAddress || poolAddress === '0x0000000000000000000000000000000000000000') return pool;
+
+    const [slot0Data, liquidity] = await Promise.all([
+      publicClient.readContract({
+        address: poolAddress,
+        abi: POOL_ABI,
+        functionName: 'slot0',
+      }) as Promise<readonly [bigint, number, number, number, number, number, boolean]>,
+      publicClient.readContract({
+        address: poolAddress,
+        abi: POOL_ABI,
+        functionName: 'liquidity',
+      }) as Promise<bigint>,
+    ]);
+
+    return new Pool(pool.token0, pool.token1, pool.fee, slot0Data[0].toString(), liquidity.toString(), slot0Data[1]);
+  } catch (error) {
+    console.warn('fetchFreshPool: falling back to stale pool', chainId, error);
+    return pool;
+  }
+};
+
 // The Graph API endpoints
 export const GRAPH_API_ENDPOINTS = {
   MAINNET: 'https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v3'

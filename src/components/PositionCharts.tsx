@@ -64,20 +64,24 @@ export const ethIsToken0 = (poolId: string): boolean => {
 // (ta sama konwencja duplikacji co reszta tego pliku/BOT_POOL_META).
 const STABLE_SYMBOLS = new Set(['USDC', 'USDT', 'DAI', 'USDBC', 'USDE', 'FRAX', 'LUSD']);
 
-/** Formatuje wartość `suggestedRange.usdLo/usdHi` propozycji bota w
- *  jednostce WŁAŚCIWEJ dla puli — "usd" w nazwie pola jest myląca dla par
- *  bez nogi stablecoina (np. cbBTC/WETH: wartość to cbBTC-za-WETH, nie USD).
- *  Fallback na "$" gdy poolId nieznane (bezpieczny default — reszta pul
- *  configu jest ETH/stable). */
+/** Formatuje wartość `suggestedRange.usdLo/usdHi` propozycji bota.
+ *  FIX 11.09 (HANDOFF Fable→Sonnet, karta FLAT_EXIT/ROZSZERZENIE + tekst
+ *  Telegrama): dla par BEZ nogi stablecoina (dziś: cbBTC/WETH) ta funkcja
+ *  dotąd traktowała `value` jako surowy stosunek puli (cbBTC-za-WETH) i
+ *  doklejała jednostkę "otherSide/ethSide" — źle. Bot (tickToUsd w
+ *  bot/observer.ts, `quote: 'WETH'`) dla tych pul JUŻ przelicza tick na
+ *  realny USD przez kurs referencyjny (refEthUsd, usdRefPoolId ⇒ patrz
+ *  botPools.ts komentarz przy base-cbbtc-weth-005) — `usdLo`/`usdHi` to
+ *  USD ZA 1 JEDNOSTKĘ otherSide (np. $56 793 za 1 cbBTC), nie stosunek
+ *  cbBTC/WETH (~34). Etykieta teraz mówi to wprost: "$/cbBTC". Fallback na
+ *  goły "$" gdy poolId nieznane lub para ma nogę stablecoina. */
 export function fmtQuoteForPool(poolId: string, value: number): string {
   const meta = BOT_POOL_META.find((m) => m.id === poolId);
-  if (!meta) return `$${value.toLocaleString()}`;
-  const ethSide = meta.sym0.includes('ETH') ? meta.sym0 : meta.sym1;
+  const usd = `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  if (!meta) return usd;
   const otherSide = meta.sym0.includes('ETH') ? meta.sym1 : meta.sym0;
-  if (STABLE_SYMBOLS.has(otherSide.toUpperCase())) {
-    return `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
-  }
-  return `${value.toLocaleString(undefined, { maximumSignificantDigits: 6 })} ${otherSide}/${ethSide}`;
+  if (STABLE_SYMBOLS.has(otherSide.toUpperCase())) return usd;
+  return `${usd}/${otherSide}`;
 }
 
 // Transformuje pojedynczą surową wartość (price/lo/hi) do orientacji

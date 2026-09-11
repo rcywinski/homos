@@ -30,6 +30,7 @@ import { getWalletClient } from 'wagmi/actions';
 import { Pool } from '@uniswap/v3-sdk';
 import { Address, encodeFunctionData, erc20Abi } from 'viem';
 import { RebalancePlan, buildMintStep, saveProgress, loadProgress, clearProgress, RebalanceProgress } from '../utils/rebalanceBuilder';
+import { fetchFreshPool } from '../utils/uniswap';
 import { addTransaction } from '../components/TransactionHistory';
 import { config } from '../config/wallet';
 // HOTFIX 31.08 (pierwsza bojowa sekwencja FLAT_NARROW, #5887690): surowe
@@ -114,12 +115,18 @@ export function useRebalanceExecution() {
           let tx = step.tx;
           if (step.kind === 'mint') {
             // Przebuduj mint z FAKTYCZNYCH sald (nie z estymaty w planie) —
-            // patrz nagłówek pliku i rebalanceBuilder.ts.
+            // patrz nagłówek pliku i rebalanceBuilder.ts. FIX 11.09 (HANDOFF
+            // @Sonnet): `pool` tu jest ten sam obiekt co przekazany do modala
+            // przy jego otwarciu — jeśli cena ruszyła się od tamtej chwili
+            // (> ok. 0.5%), Position.fromAmounts liczy z nieaktualnej ceny i
+            // symulacja mintu pada na "Price slippage check". Dociągamy
+            // świeży slot0+liquidity tuż przed przebudową kroku.
+            const freshPool = await fetchFreshPool(client, pool, plan.chainId);
             const [bal0, bal1] = await Promise.all([
               client.readContract({ address: pool.token0.address as Address, abi: erc20Abi, functionName: 'balanceOf', args: [address] }) as Promise<bigint>,
               client.readContract({ address: pool.token1.address as Address, abi: erc20Abi, functionName: 'balanceOf', args: [address] }) as Promise<bigint>,
             ]);
-            const rebuilt = buildMintStep({ pool, chainId: plan.chainId, newTickLower, newTickUpper, amount0: bal0, amount1: bal1, recipient: address, slippageBps });
+            const rebuilt = buildMintStep({ pool: freshPool, chainId: plan.chainId, newTickLower, newTickUpper, amount0: bal0, amount1: bal1, recipient: address, slippageBps });
             tx = rebuilt.tx;
             const manager = tx.to;
             const wants: Array<[Address, bigint, string]> = [
