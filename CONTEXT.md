@@ -182,6 +182,44 @@ pull+restart. Do backlogu bota: `proposals.push` powinno być
 idempotentne po id w JEDNYM miejscu (helper `upsertProposal`), żeby ta
 klasa nie wróciła w innym rodzaju propozycji.
 
+AKTUALIZACJA ~wieczór #3 — po wdrożeniu hotfixu #2 kokpit: „Brak
+aktywnych propozycji" ✓ (duplikaty zbite). Stan końcowy dnia: transza
+$6 136.83 (+0.7%), pozycje $5 891 + portfel $245, obie nogi in-range
+(gap 8.5% / 6.0%), fee do zebrania $17.05. Znane kosmetyki bez zmian:
+kotwica nowej #5978579 zawyżona o dust (~$11; „PnL od startu −$18" =
+−$7 rynek − $11 dust), rozbicie bilansu po rebalansie („reszta"
++$46.72). Nic do działania.
+
+AKTUALIZACJA ~wieczór #4 — KOSZTY REBALANSU Z HISTORII TX (Rafał,
+Rabby/explorer) + KOREKTA mojej notatki o „dust": sekwencja on-chain:
+5 approve ($0.0017–0.0024 każdy; z tego 4 z pierwszego, nieudanego
+podejścia: 0.0025 cbBTC, 0.4869 WETH, 0.0140, 0.0137 — plus 2× 0.0160
+przy retry, drobna nadmiarowość UI), multicall burn+collect starej
+#5908083 → **+0.0297 cbBTC + 0.0024 WETH** (wąska pozycja była ~100%
+w cbBTC, jak przewidziano; gaz $0.0115), swap exactInputSingle
+0.0137 cbBTC → 0.4125 WETH (gaz $0.009; fee puli 0.05% ≈ $0.54 +
+impact), mint #5978579 = 0.0160 cbBTC + 0.4145 WETH (gaz $0.0326).
+GAZ ŁĄCZNIE ≈ $0.065; koszt całkowity (gaz + fee swapu + impact) ≈
+**$0.6–0.7 vs plan $1.23** — model kosztu (obrót × (fee + 5 bps
+slippage) + GAS_USD 0.08) jest ~1.8× konserwatywny na puli 0.05%
+(na 0.3% fee dominuje i model jest trafny). Backtesty/walkforwardy
+NIE wymagają korekty: koszt rebalansu to ~0.03% wartości pozycji,
+bramki padają o punkty procentowe; kierunek błędu = pesymistyczny.
+DUST po mincie: cbBTC 0.0297−0.0137−0.0160 = 0; WETH 0.0024+0.4125
+−0.4145 = **0.0004 WETH ≈ $1** — moja wcześniejsza interpretacja
+„−$11 to dust" była BŁĘDNA: −$11/−$18 na nowej nodze to realny ruch
+rynku (BTC słabnie także w USD, gdy ETH rośnie), a wzrost portfela
+$230→$246 to beta bufora WETH (0.0857 WETH × ETH +8%). Kotwica nowej
+pozycji jest więc poprawna. KSIĘGA: tx-ledger łapie gaz tylko z
+transakcji NFT (burn/collect/mint) — gaz swapu i approve'ów (~$0.02)
+poza księgą; fee swapu i impact siedzą implicite w kwotach tokenów →
+w „reszcie" bilansu. Do wyjaśnienia (dane na Windows): rozbicie
+„ruch rynku −$1.89 / reszta +$46.72" — po sumie kotwic wychodzi mi
+ruch rynku ≈ +$50 (A +41, stara cbBTC ~+14…+30, nowa −18), więc
+FIX 01.09 dla zamkniętej pozycji chyba nie zadziałał (ostatnia próbka
+#5908083 w positions-history mogła być zapisana PO burnie z valueUsd
+≈ 0?). Zlecenie diagnostyczne u CC-Win (tylko odczyt).
+
 ### 2026-09-09 ~wieczór — ODBIÓR E8.2f (CC-Win): kotwica 12:00 UTC DZIAŁA (100% pokrycia, 0 duplikatów), GM v2 i JLP potwierdzone na czystych danych; GLP zostaje na danych E8.2e (wyjątek udokumentowany, 3. błąd = obcinanie Llamy przy delistingu); **E8.2 ZAMKNIĘTE — werdykt klasy „dom kasyna"**
 Odbiór (7805756 fix 4 plików, 95474c1 dane 6/7, 4c4959c raport).
 FIX: wszystkie 3 cache cen 1499–1500 pkt, `t mod 86400 ∈ [43156,

@@ -635,20 +635,10 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
-- [Fable→CC-Mac, 11.09 ~wieczór #2 — **HOTFIX #2 bota: duplikaty kart
-  awaryjnych — commit+push + ping CC-Win**] Po restarcie karty A/B dla
-  starej #5908083 wracały po odświeżeniu mimo [Odrzuć]: w
-  `.bot/proposals.json` jest KILKA kopii tej samej karty pod jednym id
-  (nabite przed fixem 48df567), a handler dismiss robił `find` → trafiał
-  w pierwszą (już odrzuconą) kopię i nic nie zmieniał. FIX (Fable,
-  `bot/observer.ts`): (a) przy starcie zbicie duplikatów po id do jednej
-  kopii (odrzucona wygrywa), (b) dismiss oznacza WSZYSTKIE kopie o danym
-  id. tsc: tylko preexisting :43. (A) `rm .git/index.lock` jeśli jest.
-  (B) Commit+push `bot/observer.ts` + `CONTEXT.md` + `HANDOFF.md`:
-  "fix(bot): collapse duplicate proposals by id on load; dismiss marks all
-  copies". (C) Ping CC-Win: „`git pull` + `nssm restart homos-bot`; w
-  observer.log przy starcie linia `proposals: usunięto N duplikatów`;
-  1 zdanie w @Fable".
+(HOTFIX #2 bota ZROBIONY i WDROŻONY 11.09 — commit+push 95a8743,
+restart potwierdzony przez CC-Win [12 duplikatów usuniętych], raport
+w @Fable. Dodatkowy ping wysłany o zaległej DIAGNOSTYCE w skrzynce
+@CC-Win. Wpis skasowany — higiena.)
 
 (FIX BOTA „karty awaryjne wracają po Odrzuć" ZROBIONE 11.09 przez
 CC-Mac — commit 48df567, ping CC-Win wysłany. Wpis skasowany —
@@ -1249,6 +1239,18 @@ skasowany — higiena.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 11.09 ~wieczór #3 — **DIAGNOSTYKA (tylko odczyt, bez
+  zmian): rozbicie bilansu transzy po rebalansie**] Kokpit pokazuje
+  „ruch rynku −$1.89 / reszta +$46.72", a z kotwic wychodzi ruch rynku
+  ≈ +$50. Proszę o wydruk do @Fable: (1) z `.bot/positions-history.ndjson`
+  dla tokenId 5886957, 5908083, 5978579: PIERWSZA linia (ts, valueUsd,
+  hodlUsd) i OSTATNIA linia (ts, valueUsd, hodlUsd) każdego — plus dla
+  5908083 trzy ostatnie linie w całości (podejrzenie: próbka po burnie z
+  valueUsd≈0 albo z pustą pozycją); (2) `grep 5908083\|5978579
+  .bot/tx-ledger.ndjson` — wszystkie wpisy z 11.09 w całości; (3) z
+  `.bot/state.json` obiekt `tranche` w całości. Nic nie zmieniać, nie
+  restartować. Wklej do @Fable.
+
 - [Fable→CC-Win, 11.09 ~wieczór #2 — **HOTFIX #2: `git pull` +
   `nssm restart homos-bot`**] Po pingu CC-Mac. Zmiana w `bot/observer.ts`:
   zbicie duplikatów propozycji po id przy starcie + dismiss dla
