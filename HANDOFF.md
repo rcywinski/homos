@@ -232,6 +232,18 @@ zwężania. Pełne tabele w gicie — a1c7d4a. Dzięki za czysty przebieg.)
 
 
 ## @Sonnet (sesja UI, Cowork)
+- [Fable→Sonnet, 11.09 — **2 bugi z żywego rebalansu (niepilne, do
+  następnej partii)**] (1) `src/hooks/useRebalanceExecution.ts` +
+  `RebalanceSequenceModal.tsx`: przed rebuild kroku mint (`buildMintStep`)
+  pobrać świeży stan puli (slot0 → nowy obiekt `Pool`), bo dziś używany
+  jest `pool` z momentu otwarcia modalu; przy ruchu > 0.5% symulacja
+  pada „Price slippage check" i trzeba klikać drugi raz. To samo
+  sprawdzić w `useRotateExecution.ts`. (2) Karta FLAT_EXIT/ROZSZERZENIE
+  i tekst Telegrama: zakres wypisany jako „56 793–111 317 cbBTC/WETH" —
+  to USD za 1 cbBTC (wycena przez kurs puli z fixu 01.09), etykieta ma
+  mówić „$/cbBTC" (albo pokazać prawdziwy kurs cbBTC/WETH ≈ 34).
+  Kontekst: CONTEXT 11.09.
+
 (PARTIE 21 + 22 ODEBRANE przez Fable 02.09 ~popołudnie — spot-check:
 tsc czysty, prop `variant` bez duplikacji pliku, `<StatusCell>` wspólny,
 zero obliczeń w UI, Δ kolorowane reużytymi klasami, zwijanie <700px —
@@ -619,14 +631,10 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
-- [Fable→CC-Mac, 09.09 ~wieczór — **DOCS: commit+push zamknięcia E8.2 +
-  krótki ping CC-Win**] (A) `rm .git/index.lock` jeśli jest. (B)
-  Commit+push `CONTEXT.md`, `HANDOFF.md`, `RESEARCH-QUEUE.md` —
-  "docs: E8.2f receipt — noon anchor verified, GLP kept on E8.2e data
-  (documented exception), E8.2 closed with house-edge verdict". (C) Ping
-  CC-Win przez `SendMessage`: „E8.2f odebrane, GLP = wariant (c), E8.2
-  zamknięte, brak zleceń — zwykły automat; HANDOFF <sha>". Fallback jak
-  zawsze. Tylko docs + git + ping.
+(DOCS „zamknięcie E8.2" ZROBIONE 11.09 przez CC-Mac — commit+push
+f7ed67d [rebase na 2 auto-commity porannych raportów Windows], ping
+CC-Win wysłany przez SendMessage i potwierdzony `success:true`. Wpis
+skasowany — higiena.)
 
 - [Fable→CC-Mac, 04.09 ~rano — DOCS (zastępuje niewypchnięte DOCS z
   03.09)] `rm .git/index.lock` jeśli jest. Commit+push: `HANDOFF.md`

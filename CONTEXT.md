@@ -82,6 +82,44 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-11 ~popołudnie — EPIZOD FLAT cbBTC ZAMKNIĘTY: FLAT_WIDEN podpisany (nowa pozycja #5978579), fałszywy alarm procedury awaryjnej odrzucony; 2 bugi UI do backlogu
+ALARM (Telegram ~13:xx UTC): DOWN na base-cbbtc-weth-005 (cena −5.1%
+pod EMA7d) + FLAT ZAKOŃCZONY + propozycja ROZSZERZENIA. Odczyt wg
+EMERGENCY.md §0: sygnał tylko na cbBTC/WETH (BTC słabszy względem ETH),
+BEZ sygnału na WETH/USDC → nie krach, opcje A (short BTC $1 824 na GMX)
+i B (exit) ODRZUCONE. Pytanie Rafała „nie lepiej wyjść do WETH i BTC,
+skoro rynek rośnie?" — odpowiedź: na parze krypto/krypto LP i HODL mają
+tę samą betę do USD; różnica szeroki LP vs tokeny do 24.09 ≈ +$13 fee
+− $1.23; intuicja dotyczy nogi ETH/USDC, gdzie obowiązuje zasada 24.09
+(ustalona na chłodno, nie zmieniamy w dniu rajdu). Decyzja: podpisać
+FLAT_WIDEN, produkt bez zmian.
+WYKONANIE: rebalans 3-krokowy; przy pierwszym podejściu krok 3 (mint)
+padł na symulacji — „Execution reverted: Price slippage check" (NFPM
+Base 0x03a5…34f1). Przyczyna: `buildMintStep` dostaje `pool` ze stanu
+modalu (kurs z momentu otwarcia okna), a kurs cbBTC/WETH ruszał się
+> 0.5% — miny po slippage nie do spełnienia. Środki bezpieczne (tokeny
+w portfelu), zero kosztu (symulacja przed podpisem). Ponowne [Zatwierdź]
+przeszło. WYNIK: stara #5908083 (wąska ±5%, 31.08→11.09, **11 dni w
+flacie**, fee ~$8.6 wg 09.09) zamknięta; **nowa #5978579 WETH/cbBTC
+0.05% Base, SZEROKA ±40%, $2 341.81, in-range pośrodku**; koszt planowany
+$1.23. Eksperyment operacyjny z 31.08 (zwężenie→rozszerzenie na żywo)
+DOMKNIĘTY — pełny cykl zmierzony; bilans epizodu do policzenia z ledgera
+(fee wąskiej vs koszt wejścia+wyjścia, ~$1.7 + ~$1.2) na przegląd 24.09.
+BILANS TRANSZY (kokpit po wykonaniu): $6 126.44, **+0.6% (+$34.44)** —
+pierwszy raz nad kreską (ruch rynku +$9.63); noga A #5886957 $3 551.47,
+PnL od 4.09 +$103, vs HODL +$5.28, fee narosłe $17, gap 8.4%.
+UWAGA: pasek bilansu pokazywał „w pozycjach $3 544.94 + w portfelu
+$2 581.50" = snapshot sprzed mintu (nowa pozycja jeszcze nie w state) —
+sprawdzić w raporcie 07:30 12.09, czy #5978579 weszła do POZYCJE
+REALNE i bilansu transzy (jeśli nie → bug śledzenia nowego tokenId).
+BUGI UI DO BACKLOGU (Sonnet): (1) krok mint w `useRebalanceExecution`/
+`RebalanceSequenceModal` powinien odświeżyć stan puli (slot0) tuż przed
+rebuild+symulacją, zamiast używać `pool` z momentu otwarcia modalu —
+przy ruchliwej parze pierwsze podejście pada z „Price slippage check";
+(2) karta FLAT_EXIT pokazuje zakres „56 793–111 317 cbBTC/WETH" — to
+wycena USD/cbBTC, etykieta jednostki błędna (kurs cbBTC/WETH ≈ 34).
+Analogicznie w Telegramie.
+
 ### 2026-09-09 ~wieczór — ODBIÓR E8.2f (CC-Win): kotwica 12:00 UTC DZIAŁA (100% pokrycia, 0 duplikatów), GM v2 i JLP potwierdzone na czystych danych; GLP zostaje na danych E8.2e (wyjątek udokumentowany, 3. błąd = obcinanie Llamy przy delistingu); **E8.2 ZAMKNIĘTE — werdykt klasy „dom kasyna"**
 Odbiór (7805756 fix 4 plików, 95474c1 dane 6/7, 4c4959c raport).
 FIX: wszystkie 3 cache cen 1499–1500 pkt, `t mod 86400 ∈ [43156,
