@@ -120,6 +120,41 @@ przy ruchliwej parze pierwsze podejście pada z „Price slippage check";
 wycena USD/cbBTC, etykieta jednostki błędna (kurs cbBTC/WETH ≈ 34).
 Analogicznie w Telegramie.
 
+AKTUALIZACJA ~popołudnie #2 — **karty awaryjne wracają po [Odrzuć]**:
+kokpit pokazał 2×(A+B) — dla #5908083 (stara, 0.0287 cbBTC ≈ $2 252 =
+cała wąska pozycja, jeszcze w `held`) i #5978579 (nowa, 0.0160 ≈
+$1 267 = noga cbBTC szerokiej). Rafał odrzucał, wracały. PRZYCZYNA
+(observer.ts ~l.497): dedup HEDGE/EXIT_TREND tylko po `status==='open'`
+→ po dismiss każdy cykl tworzy propozycję od nowa z TYM SAMYM id
+(`trend-hedge-{pool}-{tokenId}-{day}`) i wysyła Telegram. FIX (Fable,
+1 linia): dedup także po `id` — odrzucona karta nie wraca tego samego
+dnia. Paczka: CC-Mac commit+push+ping, CC-Win pull+restart. Do czasu
+restartu: karty ignorować (nic nie wykonują same). Dodatkowo
+propozycja OPEN WETH-USDC 0.05% @ Arbitrum (18.6% APR) — jak 09.09:
+nie podpisywać, wygasa z TTL 48h. Bilans transzy w tym momencie
+$6 166.96, **+1.2%**.
+
+AKTUALIZACJA ~popołudnie #3 — ZGODNOŚĆ Z UNISWAP + KSIĘGOWOŚĆ PO
+REBALANSIE: Uniswap $5 894.01 / fee $16.94 vs kokpit pozycje $5 902.70
+/ fee $17 + $0.11 — różnica 0.15% (źródło cen), OK. Nowa #5978579
+JEST już w bilansie transzy ($6 148.70, +0.9%; portfel $246). Dwie
+rzeczy do sprawdzenia w raporcie 07:30 12.09, NIE do działania:
+(1) nowa pozycja „PnL od startu −$11" po 10 min in-range — to nie
+strata, tylko resztka tokenów po mincie (Position.fromAmounts zostawia
+nadwyżkę jednego tokena w portfelu: portfel $230 → $246); kotwica
+pozycji policzona od kwoty PRZED mintem. Kosmetyka księgi, ale myląca —
+kandydat do backlogu (kotwica = wartość pozycji po mincie, dust do
+bufora). (2) dekompozycja bilansu: „reszta (koszty wejścia + beta
+bufora)" skoczyła z −$1.65 na **+$47.32**, „ruch rynku" tylko +$9.38
+mimo ETH +8% — po rebalansie zrealizowany PnL starej #5908083 i reset
+kotwicy nowej wypadły z „ruchu rynku" i wylądowały w „reszcie". Suma
+($6 148.70) jest poprawna (pozycje + portfel), rozbicie po rebalansie
+nie — ta sama klasa co „dryf kosztów wejścia" z 01.09, fix z 01.09 nie
+obejmuje zamkniętej pozycji. Do naprawy przed przeglądem 24.09
+(bilans końcowy transzy musi mieć czyste rozbicie), nie dziś. vs HODL
+base-030 +$5.28 → −$4.25 w godzinę = szybki rajd ETH, LP odstaje od
+HODL — zgodne z oczekiwaniem.
+
 ### 2026-09-09 ~wieczór — ODBIÓR E8.2f (CC-Win): kotwica 12:00 UTC DZIAŁA (100% pokrycia, 0 duplikatów), GM v2 i JLP potwierdzone na czystych danych; GLP zostaje na danych E8.2e (wyjątek udokumentowany, 3. błąd = obcinanie Llamy przy delistingu); **E8.2 ZAMKNIĘTE — werdykt klasy „dom kasyna"**
 Odbiór (7805756 fix 4 plików, 95474c1 dane 6/7, 4c4959c raport).
 FIX: wszystkie 3 cache cen 1499–1500 pkt, `t mod 86400 ∈ [43156,

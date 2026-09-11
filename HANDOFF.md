@@ -631,6 +631,20 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 11.09 ~popołudnie — **PILNE-MAŁE: commit+push fixu bota
+  (karty awaryjne wracają po Odrzuć) + docs + ping CC-Win**] (A)
+  `rm .git/index.lock` jeśli jest. (B) Commit+push: `bot/observer.ts`
+  (1 linia: dedup propozycji HEDGE/EXIT_TREND także po `id`, żeby
+  odrzucona karta nie wracała co cykl tego samego dnia i nie spamowała
+  Telegrama) + `CONTEXT.md`, `HANDOFF.md`, `RESEARCH-QUEUE.md` (zaległe
+  docs 09.09 wieczór + epizod 11.09). Komunikaty: "fix(bot): trend
+  emergency proposals — dedup by id so dismissed cards do not respawn
+  same day" i osobno "docs: E8.2 closed, 11.09 flat episode + false
+  emergency alarm, UI bugs to Sonnet". (C) Ping CC-Win (SendMessage):
+  „fix bota w <sha> — `git pull` + `nssm restart homos-bot`; potem
+  w kokpicie odrzucić ponownie karty A/B, mają NIE wracać; CC-Win
+  potwierdza 1 zdaniem w @Fable". Fallback jak zawsze.
+
 (DOCS „zamknięcie E8.2" ZROBIONE 11.09 przez CC-Mac — commit+push
 f7ed67d [rebase na 2 auto-commity porannych raportów Windows], ping
 CC-Win wysłany przez SendMessage i potwierdzony `success:true`. Wpis
@@ -1226,6 +1240,18 @@ skasowany — higiena.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 11.09 ~popołudnie — **HOTFIX bota: `git pull` +
+  `nssm restart homos-bot`**] Po pingu od CC-Mac. Zmiana: 1 linia w
+  `bot/observer.ts` (~l.497–502) — karty PROCEDURY AWARYJNEJ po
+  [Odrzuć] wracały co cykl z tym samym id (dedup tylko po
+  status==='open') i słały Telegram. Po restarcie sprawdź w
+  observer.log, że po odrzuceniu kart przez Rafała nie pojawia się
+  kolejne „🚨 PROCEDURA AWARYJNA" dla tej samej pozycji tego samego
+  dnia. Przy okazji: czy `held` dla base-cbbtc-weth-005 zawiera jeszcze
+  #5908083 (zamknięta dziś ~13:xx UTC) — jeśli tak po >1h od
+  zamknięcia, zgłoś (kokpit pokazywał karty dla obu tokenId). Jedno
+  zdanie potwierdzenia w @Fable.
+
 (E8.2f ZROBIONE CZĘŚCIOWO 09.09 ~wieczór — fix + 6/7 przebiegów w
 skrzynce @Fable wyżej, push e33404a [fix] + 861c717 [dane]. GLP
 ZABLOKOWANY: znaleziony trzeci błąd — coins.llama endpoint obcina
