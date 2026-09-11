@@ -495,8 +495,11 @@ function proposeExitTrend(pool: BotPool, gap: number) {
     let announced = false;
     for (const kind of kinds) {
       // dedup PER KIND (produkt emituje dwie równoległe opcje)
-      if (proposals.some((x) => x.kind === kind && x.tokenId === pos.tokenId && x.status === 'open')) continue;
       const key = `trend-${kind === 'HEDGE' ? 'hedge-' : ''}${pool.id}-${pos.tokenId}-${day}`;
+      // FIX 11.09: odrzucona karta NIE wraca w tym samym dniu — dedup także po id
+      // (dotąd tylko po status==='open', więc każdy cykl po [Odrzuć] tworzył
+      // ją na nowo z TYM SAMYM id i słał Telegram; obserwacja Rafała 11.09)
+      if (proposals.some((x) => x.id === key || (x.kind === kind && x.tokenId === pos.tokenId && x.status === 'open'))) continue;
       let prop: Proposal;
       if (kind === 'HEDGE') {
         const isRelative = (pool.quote ?? 'USD') === 'WETH'; // cbBTC/WETH: sygnał względny
