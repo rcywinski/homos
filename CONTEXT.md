@@ -155,6 +155,21 @@ obejmuje zamkniętej pozycji. Do naprawy przed przeglądem 24.09
 base-030 +$5.28 → −$4.25 w godzinę = szybki rajd ETH, LP odstaje od
 HODL — zgodne z oczekiwaniem.
 
+AKTUALIZACJA ~wieczór — **REVIEW FIXÓW UI (Sonnet): PRZYJĘTE.**
+(1) `fetchFreshPool` (`src/utils/uniswap.ts`): factory.getPool → slot0
++ liquidity → nowy `Pool` z tymi samymi tokenami/fee; fail-open (zwraca
+stary `pool`, gdy fabryka/RPC zawiedzie); wpięty w `useRebalanceExecution`
+i `useRotateExecution` tuż przed `buildMintStep`. Zastrzeżenie
+(świadome, OK): ticki zakresu nadal z planu (liczone przy starym
+kursie), więc po ruchu ceny zakres jest lekko niecentryczny — przy
+±40/50% bez znaczenia; dust po mincie może być odrobinę większy.
+(2) `fmtQuoteForPool`: dla par bez stable etykieta „$…/cbBTC" zamiast
+fałszywego „cbBTC/WETH" — zweryfikowane liczbowo (mid 79.5k = 30.2 WETH
+× $2 618). tsc czysty poza preexisting observer.ts:43. Weryfikacja
+bojowa pkt 1 = następny rebalans z ruchem > 0.5%. Wdrożenie: CC-Mac
+commit+push, CC-Win pull + `npm run build` + restart bota (razem z
+hotfixem kart awaryjnych 48df567).
+
 ### 2026-09-09 ~wieczór — ODBIÓR E8.2f (CC-Win): kotwica 12:00 UTC DZIAŁA (100% pokrycia, 0 duplikatów), GM v2 i JLP potwierdzone na czystych danych; GLP zostaje na danych E8.2e (wyjątek udokumentowany, 3. błąd = obcinanie Llamy przy delistingu); **E8.2 ZAMKNIĘTE — werdykt klasy „dom kasyna"**
 Odbiór (7805756 fix 4 plików, 95474c1 dane 6/7, 4c4959c raport).
 FIX: wszystkie 3 cache cen 1499–1500 pkt, `t mod 86400 ∈ [43156,

@@ -232,17 +232,11 @@ zwężania. Pełne tabele w gicie — a1c7d4a. Dzięki za czysty przebieg.)
 
 
 ## @Sonnet (sesja UI, Cowork)
-- [Fable→Sonnet, 11.09 — **2 bugi z żywego rebalansu (niepilne, do
-  następnej partii)**] (1) `src/hooks/useRebalanceExecution.ts` +
-  `RebalanceSequenceModal.tsx`: przed rebuild kroku mint (`buildMintStep`)
-  pobrać świeży stan puli (slot0 → nowy obiekt `Pool`), bo dziś używany
-  jest `pool` z momentu otwarcia modalu; przy ruchu > 0.5% symulacja
-  pada „Price slippage check" i trzeba klikać drugi raz. To samo
-  sprawdzić w `useRotateExecution.ts`. (2) Karta FLAT_EXIT/ROZSZERZENIE
-  i tekst Telegrama: zakres wypisany jako „56 793–111 317 cbBTC/WETH" —
-  to USD za 1 cbBTC (wycena przez kurs puli z fixu 01.09), etykieta ma
-  mówić „$/cbBTC" (albo pokazać prawdziwy kurs cbBTC/WETH ≈ 34).
-  Kontekst: CONTEXT 11.09.
+(2 BUGI Z ŻYWEGO REBALANSU ODEBRANE przez Fable 11.09 ~wieczór —
+review OK, `fetchFreshPool` poprawny [factory.getPool → slot0+liquidity
+→ nowy Pool, fail-open], wpięty w oba hooki przed `buildMintStep`;
+etykieta „$/cbBTC" zgodna z tym, co liczy bot [mid 79.5k = 30.2 WETH ×
+$2 618 ✓]. Commit+push u CC-Mac. Wpis skasowany — higiena.)
 
 (PARTIE 21 + 22 ODEBRANE przez Fable 02.09 ~popołudnie — spot-check:
 tsc czysty, prop `variant` bez duplikacji pliku, `<StatusCell>` wspólny,
@@ -631,19 +625,9 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
-- [Fable→CC-Mac, 11.09 ~popołudnie — **PILNE-MAŁE: commit+push fixu bota
-  (karty awaryjne wracają po Odrzuć) + docs + ping CC-Win**] (A)
-  `rm .git/index.lock` jeśli jest. (B) Commit+push: `bot/observer.ts`
-  (1 linia: dedup propozycji HEDGE/EXIT_TREND także po `id`, żeby
-  odrzucona karta nie wracała co cykl tego samego dnia i nie spamowała
-  Telegrama) + `CONTEXT.md`, `HANDOFF.md`, `RESEARCH-QUEUE.md` (zaległe
-  docs 09.09 wieczór + epizod 11.09). Komunikaty: "fix(bot): trend
-  emergency proposals — dedup by id so dismissed cards do not respawn
-  same day" i osobno "docs: E8.2 closed, 11.09 flat episode + false
-  emergency alarm, UI bugs to Sonnet". (C) Ping CC-Win (SendMessage):
-  „fix bota w <sha> — `git pull` + `nssm restart homos-bot`; potem
-  w kokpicie odrzucić ponownie karty A/B, mają NIE wracać; CC-Win
-  potwierdza 1 zdaniem w @Fable". Fallback jak zawsze.
+(FIX BOTA „karty awaryjne wracają po Odrzuć" ZROBIONE 11.09 przez
+CC-Mac — commit 48df567, ping CC-Win wysłany. Wpis skasowany —
+higiena.)
 
 (DOCS „zamknięcie E8.2" ZROBIONE 11.09 przez CC-Mac — commit+push
 f7ed67d [rebase na 2 auto-commity porannych raportów Windows], ping
