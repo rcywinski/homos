@@ -82,6 +82,52 @@
 
 ## 4. Dziennik sesji
 
+### 2026-09-09 ~wieczór — ODBIÓR E8.2f (CC-Win): kotwica 12:00 UTC DZIAŁA (100% pokrycia, 0 duplikatów), GM v2 i JLP potwierdzone na czystych danych; GLP zostaje na danych E8.2e (wyjątek udokumentowany, 3. błąd = obcinanie Llamy przy delistingu); **E8.2 ZAMKNIĘTE — werdykt klasy „dom kasyna"**
+Odbiór (7805756 fix 4 plików, 95474c1 dane 6/7, 4c4959c raport).
+FIX: wszystkie 3 cache cen 1499–1500 pkt, `t mod 86400 ∈ [43156,
+43340]` (±3 min od południa), zero duplikatów/dziur; GM-ETH 1072/1072,
+GM-BTC 1049/1049, JLP 1020/1020 dni, żadnego ⚠. Dryf E8.2e→E8.2f:
+GM-ETH +9.37 → +9.73, GM-BTC +9.56 → +9.42 — czyli ~18% brakujących
+dni w E8.2e prawie nic nie zmieniało (szczęście, nie gwarancja).
+**TRZECI BŁĄD (CC-Win, GLP):** odbudowa GLP.json pod nową kotwicą dała
+serię 0.907 → 1.424 BEZ hacku — coins.llama `chart?span=500` obcina
+odpowiedź, gdy chunk przecina moment delistingu (chunk od 2025-04-27
+kończy się 09.07 bez krachu; wąskie `span=90` od 04.07 pokazuje krach
+10.07, cena 0.067). Pod starą kotwicą chunki przypadkiem omijały ten
+tryb. CC-Win NIE przeliczył GLP i zostawił plik z E8.2e nietknięty —
+wzorowo. DECYZJA (Fable): wariant (c) — **GLP zostaje na danych E8.2e
+jako udokumentowany wyjątek** (token martwy od 07.2025, dane
+historyczne, werdykt „brak edge'u ≈ −2.6%/r + ogon −93%" nie zależy od
+kotwicy; 758/1035 dni pokrycia przy Δα vs moje ręczne 2-czynnikowe
+0.04 pp). Do backlogu (niepilne): ostrzeżenie w paginacji, gdy chunk
+zwraca mniej punktów niż `span` — bez wdrożenia teraz.
+**LICZBY „DO PUBLIKACJI" (czysty cache, 90/30):**
+- GM-ETH/USD: α +9.7%/r, 79% po korekcie, β 0.46, worst −15.7 (2025),
+  maxDD 36 vs 48.5; per rok +4.0 / +4.5 / −0.5 / +1.7 (2023–26).
+- GM-BTC/USD: α +9.4%/r, 88%, β 0.50, worst −1.7, maxDD 26 vs 42; per
+  rok +0.4 / +3.2 / +2.4 / +1.6 — 4/4 kryteria.
+- JLP mix3: α +22.1%/r, 75%, βETH 0.06 / βBTC 0.17 / βSOL 0.33 (Σ 0.56),
+  worst −9.0 (2023, n=2), maxDD 45.9 vs 63.6; **per rok +10.1 / +3.3 /
+  +1.8 (2024–26), recent180 +1.4/okno ≈ +6%/r**; 30/15 spójne (+22.9%/r,
+  75%, ale „up" 52%/worst −20.8 — JLP przegrywa w rajdach SOL).
+**WERDYKT E8.2 (ZAMKNIĘTE):** klasa „dom kasyna" (LP kontrpartner
+perp, wycena po oraklach, brak LVR) ma realny, powtarzalny edge nad
+HODL koszyka o tej samej becie — 3 protokoły (GM v2 ETH/BTC, JLP), 2
+łańcuchy, spójny znak; GLP (v1, pełny cykl 2022–25) NIE. Bieżące tempo
+**≈ +5–7%/r** (recent180: GM-ETH +1.55, GM-BTC +2.14, JLP +1.42/okno),
+malejące rok do roku (rozwadnianie przez TVL); średnie historyczne
+(+9–22%/r) zawyżone przez 2024. Koszt: pełna beta koszyka (0.5–0.6),
+ryzyko kontraktu/organizacji (GLP −93% w dzień), ogon „traderzy
+wygrali" (worst −9…−16/okno), wykonawczo Arbitrum/Solana (most,
+brak observera, nowa klasa w księdze). Przy $6k ≈ $300–400/r → **do
+obserwacji TAK, do kapitału transzy 1 NIE**; kandydat na skalę tylko
+z limitem ≤25% na protokół i dywersyfikacją ≥2. Trafia na przegląd
+24.09 jako jedyna klasa z dodatnim edge'em w historii projektu.
+E8 KOMPLET: E8.0 ✓, E8.1 NIE, E8.2 TAK-warunkowo (wyżej), E8.3 NIE,
+E8.4 NIE. Zero kapitału i kodu produkcyjnego do 24.09 — bez zmian.
+Jutro 07:30: ranking wide może skoczyć o kilka pp (nowa siatka
+próbek wide-daily) — jednorazowe, nie badać.
+
 ### 2026-09-09 ~popołudnie — ODBIÓR E8.2e (CC-Win): fix dryfu DZIAŁA, ale odsłonił drugi błąd (próbki na granicy dnia → ~20–30% dni ginie); JLP po 3 czynnikach α ≈ +22%/r, ale EDGE GAŚNIE 2024→2026; werdykt klasy „dom kasyna" na 24.09 wstępnie sformułowany
 Odbiór raportu CC-Win (f254fb1 fix+dane, af5856c mix3, 4654e04
 raport; uwaga proceduralna o 2 zamiast 3 commitów — przyjęta, bez
