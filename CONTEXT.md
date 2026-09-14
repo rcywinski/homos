@@ -220,6 +220,45 @@ FIX 01.09 dla zamkniętej pozycji chyba nie zadziałał (ostatnia próbka
 #5908083 w positions-history mogła być zapisana PO burnie z valueUsd
 ≈ 0?). Zlecenie diagnostyczne u CC-Win (tylko odczyt).
 
+AKTUALIZACJA ~noc — DIAGNOZA ROZBICIA BILANSU (z wydruku CC-Win, 43f7214):
+**księga jest poprawna, „koszty wejścia" chwilowo wchłonęły 10 minut
+ruchu rynku między zamknięciem starej a otwarciem nowej pozycji.**
+Liczby: marketPnl −7.25 = A #5886957 (+40.91: 3548.40 − 3507.49) +
+noga B we wszystkich wcieleniach (27.08 szeroka → 31.08 wąska #5908083
+→ 11.09 szeroka #5978579): stara wcielenia ≈ −68 (beta cbBTC 27–31.08,
+ta sama liczba co w FIX 01.09) + #5908083 +40.30 (2322.74 − 2282.44)
++ #5978579 −20.34 (2337.67 − 2358.01). Suma się zgadza. Residual
++46.50 = beta bufora +19.13 (portfel 245.18 − kotwica 226.05, ETH +8%)
++ „entryCost" +27.37. entryCost skoczył z −7.90 na +27.37 = **+35.27 =
+dokładnie 2358.01 (pierwsza próbka nowej, 14:06Z) − 2322.74 (ostatnia
+próbka starej, 13:56Z)**: burn 14:00:45Z, mint 14:01:41Z — cbBTC
+podrożał w tym oknie, a próbki co 5 min nie widzą ani burnu, ani
+mintu, więc ten ruch nie ma właściciela i ląduje w „reszcie". Prawdziwy
+koszt rebalansu (~$0.65) siedzi w środku tej liczby, niewidoczny.
+FIX DO ZROBIENIA PRZED 24.09 (Fable, observer.ts, mała paczka):
+łańcuch kotwic — gdy w tx-ledger DECREASE(stara) i MINT(nowa) na tej
+samej puli produktowej są w oknie ≤15 min, kotwica nowej = ostatnia
+próbka starej (zamiast pierwszej próbki nowej); wtedy dryf okna
+rebalansu idzie do „ruchu rynku" nowej pozycji, a „koszty wejścia"
+zmieniają się tylko o rzeczywisty koszt (gaz + fee swapu + impact).
+Alternatywa prostsza: próbka positions-history natychmiast po każdym
+zdarzeniu ledgera (burn/mint), nie tylko co 5 min. Wybór przy
+implementacji. Bez tego bilans końcowy transzy będzie miał sumę dobrą,
+a rozbicie mylące. Drobiazgi CC-Win przyjęte: log dedupu przez
+console.log → do wrappera `log()` (razem z fixem), proposals.json
+zapisany dopiero przy najbliższym saveProposals — OK.
+
+WYNIK EKSPERYMENTU ZWĘŻENIA (31.08→11.09, n=1) z księgi ZAMKNIĘTE
+POZYCJE (#5908083 pojawiła się po jednym cyklu ledgera): wpłacone
+0.552189 WETH + 0.011872 cbBTC, wypłacone 0.002356 WETH + 0.029696 cbBTC
+(100% w cbBTC — wyjście przez krawędź), fee 0.002356 WETH + 0.000081
+cbBTC ≈ $12.6; **netto vs HODL wkładu po kursie dziś: −$32.08** (fee
++$12.6 < IL ≈ −$45 przy ruchu 5% do krawędzi ±5%). PnL w USD +$40
+(beta BTC), nie zasługa strategii. Zgodne z falsyfikacją 720d („flat
+kończy się przez krawędź"); jeden epizod = ilustracja, nie test.
+Materiał na przegląd 24.09. Kolumny USD w księdze puste dla par bez
+stable — znany brak (iteracja 2 ledgera).
+
 ### 2026-09-09 ~wieczór — ODBIÓR E8.2f (CC-Win): kotwica 12:00 UTC DZIAŁA (100% pokrycia, 0 duplikatów), GM v2 i JLP potwierdzone na czystych danych; GLP zostaje na danych E8.2e (wyjątek udokumentowany, 3. błąd = obcinanie Llamy przy delistingu); **E8.2 ZAMKNIĘTE — werdykt klasy „dom kasyna"**
 Odbiór (7805756 fix 4 plików, 95474c1 dane 6/7, 4c4959c raport).
 FIX: wszystkie 3 cache cen 1499–1500 pkt, `t mod 86400 ∈ [43156,
