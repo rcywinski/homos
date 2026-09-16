@@ -69,7 +69,8 @@
 | 2026-08-26 | KAPITAŁ: transza 1 (6 092 USDC, Base) **CZEKA W USDC** do wyników rekalibracji i eksperymentu "LP tylko we flat"; bez parkingu Aave | Wejście w wąski LP na kalibracji, którą sami uznaliśmy za zepsutą, bez sensu; 720d=0/21; horyzont czekania 1–2 tyg. |
 | 2026-08-26 | hUp48 → tylko paper; histereza ujednolicona na "udział czasu w oknie" (3 miejsca); cbBTC k2/k3 i GAS_USD-backtest w paczce; WETH-CBBTC 0.3% Base → BOT_POOLS (paper); żywy gaz w observerze od razu | Decyzje Rafała na przeglądzie 26.08 — szczegóły i uzasadnienia w DECYZJE-2026-08-26 |
 | 2026-08-26 | Godziny operacyjne: podpisy 9–20 pn–pt, **EXIT_TREND alarm 24/7 również w weekend**; pomiar kosztu zwłoki od 1. dnia | Tryb PROPONUJ nic nie wykonuje sam; zwłoka podpisu = jedyne ryzyko (noc ~13h, weekend ~61h); przegląd pomiaru po 2 tyg. |
-| 2026-09-02 | **ZASADA WYJŚCIA TRANSZY 1** (decyzja Rafała po kolumnach 365/720 w rankingach): (1) **24.09 wychodzimy z LP niezależnie od kursu**; (2) **wcześniej, jeśli bilans transzy ≥ +5%** (≥ $6 396.60 przy wpłaconych $6 092) — wychodzimy od razu; kapitał wraca na giełdę → ETF. Monitoring RĘCZNY, dzienny (Rafał, pasek BILANS TRANSZY w kokpicie / raport 07:30) — ŚWIADOMIE bez automatu w bocie. Zasada może zostać zrewidowana, jeśli do 24.09 pełne przebiegi (Piętro 2, runda 2 kształtu) pokażą coś nowego | Produkt na parach zmiennych nie bije HODL w żadnym z 5 sposobów liczenia (13/13, wide-score, MC, model dzienny, pełny przebieg); benchmark HODL+yield ~4%/r bez oporu wygrywa. Zasada ustalona na chłodno, nie w dniu skoku |
+| 2026-09-02 | **[ZREWIDOWANA 16.09 — patrz wiersz 2026-09-16]** ZASADA WYJŚCIA TRANSZY 1 (decyzja Rafała po kolumnach 365/720 w rankingach): (1) **24.09 wychodzimy z LP niezależnie od kursu**; (2) **wcześniej, jeśli bilans transzy ≥ +5%** (≥ $6 396.60 przy wpłaconych $6 092) — wychodzimy od razu; kapitał wraca na giełdę → ETF. Monitoring RĘCZNY, dzienny (Rafał, pasek BILANS TRANSZY w kokpicie / raport 07:30) — ŚWIADOMIE bez automatu w bocie. Zasada może zostać zrewidowana, jeśli do 24.09 pełne przebiegi (Piętro 2, runda 2 kształtu) pokażą coś nowego | Produkt na parach zmiennych nie bije HODL w żadnym z 5 sposobów liczenia (13/13, wide-score, MC, model dzienny, pełny przebieg); benchmark HODL+yield ~4%/r bez oporu wygrywa. Zasada ustalona na chłodno, nie w dniu skoku |
+| 2026-09-16 | **ZASADA WYJŚCIA TRANSZY 1 — REWIZJA (decyzja Rafała na briefie 16.09):** (1) **wyjście z LP, gdy bilans transzy ≥ $6 092 (0%, wpłacone)** — twarde wyjście 24.09 SKREŚLONE, próg +5% SKREŚLONY; (2) **24.09 zostaje jako PRZEGLĄD** (bilans epizodu zwężenia, werdykt produktu, kolejka E8), nie jako exit; (3) **DÓŁ: bilans ≤ −10% (~$5 480) = obowiązek ponownej decyzji** o wyjściu (nie stop-loss, nie automat); (4) **przegląd zakładu 24.10** — jeśli zero nie padło, decyzja świadoma od nowa, nie z rozpędu; (5) zwężanie (FLAT_NARROW) NADAL NIE — dłuższy horyzont nie zmienia asymetrii (+$1 vs −$30/epizod), falsyfikacja 720d w mocy. Monitoring ręczny, dzienny (raport 07:30), bez automatu | Strata −4.3% (16.09) to w całości beta ETH/BTC (vs HODL −$12), nie strategia; Rafał podtrzymuje zakład na odbicie ETH/BTC i nie chce wychodzić poniżej wpłaty. Szeroki LP ≈ HODL + fee ~$1.37/d − mały IL, więc jako wehikuł tego zakładu jest OK (przy gwałtownym rajdzie zostaje kilkanaście $ za HODL). Pkt 3–4 dodane na wniosek Fable jako mechanizm ochronny (zasada bez horyzontu i bez dołu = „poczekamy"). Świadoma notatka: zasada 02.09 była ustalona „na chłodno" i zmieniana jest dzień po spadku — zapisane dla uczciwości przeglądu |
 | 2026-08-26 ~10:3x | REWIZJA kapitału: zamiast "czeka" — **wejście warunkowe TEGO SAMEGO dnia**, jeśli pula przejdzie bramkę 720d+recent90 na przebiegach recal (grid15); wejście = jednoczesne przełączenie bota na grid15+nowe k (algoVersion) | Decyzja Rafała: rynek boczny (potwierdzony przez bota), mała stawka $6k, wartość eksperymentu operacyjnego; pełny zapis z notatką FOMO w DECYZJE-2026-08-26 pkt 8-REWIZJA |
 
 ## 3. Rzeczy do zweryfikowania na aktualnych danych (nie z pamięci AI)
@@ -81,6 +82,37 @@
 - [ ] Istniejące otwarte pozycje użytkownika w Uniswap (podpiąć w F2 jako pierwsze dane żywe)
 
 ## 4. Dziennik sesji
+
+### 2026-09-16 ~09:xx — BRIEF (Fable + Rafał): automat czysty, bilans −4.29% (cała beta), 2× FLAT_NARROW NIE; **REWIZJA ZASADY WYJŚCIA: exit przy bilansie ≥ 0 zamiast twardego 24.09**
+AUTOMAT (raporty 07:30 z 15 i 16.09): obie noce „porażki: BRAK",
+backtest-run ~1h18, swap-cache OK, lejek pusty, selektor „rotacja
+nieopłacalna" (edge −19 → −14.6 pp), down:false 6/6, karty A/B z
+12.09 i OPEN z 13.09 wygasły. Ranking wide bez zmian. Nic do działania.
+BILANS: 15.09 $5 966.88 (−2.05%) → 16.09 **$5 830.92 (−4.29%)**;
+różnica = „ruch rynku na LP" (−$160 → −$288), vs HODL obu nóg −$11.86.
+Koszty wejścia +$27.37 (znane zniekształcenie po rebalansie 11.09,
+fix łańcucha kotwic nadal do zrobienia). Fee narosłe $22.13 + $1.15.
+FLAT: cbBTC/WETH gap −0.2%, flat potwierdzony od 15.09 03:03Z →
+**FLAT_NARROW na #5978579** (±40→±5%, koszt $1.18, +$0.30/d, payback
+4 d) wystawiony 15:04Z; noga A gap −1.4%, zegar od 18:53Z → druga karta
+(ETH/USDC) spodziewana ~08:53 PL. DECYZJA: **NIE podpisujemy żadnej**,
+wygasają z TTL. Uzasadnienie: (a) asymetria — najlepszy scenariusz
+~+$0.5–1, wypadnięcie z ±5% −$25…45 (epizod 31.08→11.09: −$32 vs
+HODL), mediana epizodu 7.7 d; (b) przegląd 31.08 zamknął temat
+(eksperyment „tylko cbBTC, tylko ten epizod", detektor→pomiar = paczka
+D0 jeszcze niewdrożona — stąd karty); (c) noga ETH/USDC = większa
+kwota i zmienność, dzień po spadku. Jedyny argument ZA (bojowy test
+`fetchFreshPool`) nie wart ryzyka.
+**REWIZJA ZASADY WYJŚCIA (decyzja Rafała, „potwierdzamy z
+poprawkami"):** szczegóły w tabeli §2 wiersz 2026-09-16. Skrót:
+exit gdy bilans ≥ $6 092; 24.09 = przegląd, nie exit; ≤ −10% =
+obowiązek ponownej decyzji; przegląd zakładu 24.10; zwężanie nadal NIE.
+Fable zgłosił wprost, że to zmiana reguły „na chłodno" w dniu po
+spadku (efekt progu rentowności) i że czekanie nie jest darmowe (ETF-y
+też się ruszają); Rafał podtrzymał zakład na betę ETH/BTC świadomie.
+KONSEKWENCJE: D0 (detektor→pomiar) i fix łańcucha kotwic nadal
+do zrobienia, ale bez presji daty 24.09 — przed przeglądem 24.09 mile
+widziane. HANDOFF: nota w @Fable + docs do wypchnięcia przez CC-Mac.
 
 ### 2026-09-11 ~popołudnie — EPIZOD FLAT cbBTC ZAMKNIĘTY: FLAT_WIDEN podpisany (nowa pozycja #5978579), fałszywy alarm procedury awaryjnej odrzucony; 2 bugi UI do backlogu
 ALARM (Telegram ~13:xx UTC): DOWN na base-cbbtc-weth-005 (cena −5.1%

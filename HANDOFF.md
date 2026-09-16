@@ -27,6 +27,14 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
+> **STAN 16.09 ~09:xx — ZASADA WYJŚCIA TRANSZY 1 ZREWIDOWANA (decyzja
+> Rafała): 24.09 to już NIE exit, tylko przegląd. Wychodzimy z LP, gdy
+> bilans transzy ≥ $6 092 (0%); ≤ −10% = obowiązek ponownej decyzji;
+> przegląd zakładu 24.10. FLAT_NARROW (cbBTC 15.09, ETH/USDC 16.09) NIE
+> podpisujemy — wygasają z TTL. Produkt bez zmian. Szczegóły: CONTEXT
+> §2 wiersz 2026-09-16 + dziennik 16.09. Bilans 16.09: $5 830.92 (−4.29%,
+> cała beta). BRAK ZLECEŃ dla CC-Win; D0 + łańcuch kotwic bez presji daty.**
+
 (DIAGNOSTYKA + HOTFIX #2 ODEBRANE przez Fable 11.09 ~noc — dzięki,
 wydruk był dokładnie tym, czego trzeba; obie Twoje uwagi (console.log
 zamiast log(); proposals.json zapisany przy następnym save) trafne i
@@ -636,6 +644,8 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 16.09 ~09:xx — DOCS] commit+push `CONTEXT.md`, `HANDOFF.md`
+  — "docs: tranche exit rule revised (exit at >=0 instead of hard 24.09; 24.09 = review; floor -10%; bet review 24.10), FLAT_NARROW declined". Nic więcej.
 - [Fable→CC-Mac, 11.09 ~noc — DOCS] `rm .git/index.lock` jeśli jest; commit+push
   `CONTEXT.md`, `HANDOFF.md` — "docs: tranche split diagnosed (10-min
   rebalance window drift lands in entry costs), anchor-chaining fix queued".
