@@ -1,44 +1,44 @@
 /**
- * PaperTradingPanel.tsx — wizualizacja paper-tradingu (TASKS-UI.md Partia 5,
- * zlecone przez Fable 18.08, decyzja Rafała). Bot prowadzi wirtualny portfel
- * $10k/pula (bot/paper.ts) wg ALGORITHM v1.2 na żywych danych — zero
- * transakcji, czysta symulacja. Rafał chce widzieć dziennie ile algorytm
- * wirtualnie zarabia/traci per pula i łącznie, zwłaszcza vs HODL 50/50.
+ * PaperTradingPanel.tsx — paper-trading visualization (TASKS-UI.md Batch 5,
+ * commissioned by Fable 18.08, owner's decision). The bot runs a virtual portfolio
+ * of $10k/pool (bot/paper.ts) per ALGORITHM v1.2 on live data — zero
+ * transactions, pure simulation. The owner wants to see daily how much the algorithm
+ * virtually earns/loses per pool and in total, especially vs HODL 50/50.
  *
- * Dane: `bot.paper` / `bot.paperStatus` z useBotApi.ts (GET /api/paper?hours=168,
- * osobny wolniejszy poller niż /api/state — patrz komentarz w useBotApi.ts).
- * Kształt odpowiedzi (HANDOFF Fable→CC-Mac 2026-08-18 ~11:3x, wklejony też
- * do TASKS-UI.md Partia 5):
+ * Data: `bot.paper` / `bot.paperStatus` from useBotApi.ts (GET /api/paper?hours=168,
+ * a separate slower poller than /api/state — see the comment in useBotApi.ts).
+ * Response shape (HANDOFF Fable→CC-Mac 2026-08-18 ~11:3x, also pasted
+ * into TASKS-UI.md Batch 5):
  *   state.positions[poolId]: {status, capitalUsd, feesUsd, costsUsd,
  *     rebalances, hedge, hedgePnlRealizedUsd, ...}
  *   history[]: {ts, poolId, equityUsd, hodlUsd, feesUsd, costsUsd, inRange,
- *     trendDown, rebalances} — snapshoty co ~15 min, użyte tu do (a) "teraz"
- *     equity/hodl (ostatni punkt per pula — dokładniejszy niż capitalUsd ze
- *     state, bo niesie też hodlUsd potrzebny do "vs HODL") i (b) sparkline.
- *   events[]: {ts, poolId, kind} — lista ostatnich zdarzeń.
+ *     trendDown, rebalances} — snapshots every ~15 min, used here for (a) "now"
+ *     equity/hodl (last point per pool — more accurate than capitalUsd from
+ *     state, because it also carries hodlUsd needed for "vs HODL") and (b) the sparkline.
+ *   events[]: {ts, poolId, kind} — list of recent events.
  *
- * TASKS-UI.md Partia 7 (pomysł Rafała 20.08, zlecone przez Fable) — widoczność
- * ZAKRESU i momentów wypadnięcia: 19–20.08 ETH +18.7%, 3 pule ETH/stable
- * wypadły z zakresu górą, cbBTC poszła w EXIT_TREND, a na samym sparkline
- * equity-vs-HODL nie było WIDAĆ kiedy. Dodane: (a) cieniowanie stanów
- * (poza zakresem / cash) na sparkline equity-vs-HODL — działa na całej
- * historii, nawet sprzed 20.08 (inRange/status są od zawsze); (b) drugi
- * mini-wykres "cena vs pasmo zakresu bota" — TYLKO gdy pula ma ≥2 próbki
- * z polem `price` (dodane w bot/paper.ts 20.08; starsze próbki go nie mają —
- * feature-detect, nie zakładać obecności); (c) znaczniki zdarzeń
- * EXIT_TREND/REENTRY/REBALANCE na osi czasu obu wykresów.
+ * TASKS-UI.md Batch 7 (owner's idea 20.08, commissioned by Fable) — visibility
+ * of the RANGE and the moments of falling out: 19–20.08 ETH +18.7%, 3 ETH/stable pools
+ * fell out of range at the top, cbBTC went into EXIT_TREND, and on the equity-vs-HODL
+ * sparkline itself you could NOT SEE when. Added: (a) state shading
+ * (out of range / cash) on the equity-vs-HODL sparkline — works on the whole
+ * history, even from before 20.08 (inRange/status have always been there); (b) a second
+ * mini-chart "price vs bot range band" — ONLY when the pool has ≥2 samples
+ * with the `price` field (added in bot/paper.ts 20.08; older samples lack it —
+ * feature-detect, do not assume presence); (c) event markers
+ * EXIT_TREND/REENTRY/REBALANCE on the time axis of both charts.
  *
- * ZAKRES TWARDY: bot/** tylko do czytania (tu: nie dotknięty w ogóle — panel
- * czyta wyłącznie to, co już przynosi useBotApi.ts). Żadnych przycisków akcji
- * (to symulacja, nic do zatwierdzania), żadnego drugiego pollera /api/state.
- * Wykres jako inline SVG polyline bez nowych zależności — wzorzec
- * ObservationAnalysis.tsx (PoolHistoryChart).
+ * HARD SCOPE: bot/** read-only (here: not touched at all — the panel
+ * reads exclusively what useBotApi.ts already brings). No action buttons
+ * (it is a simulation, nothing to approve), no second /api/state poller.
+ * Chart as inline SVG polyline without new dependencies — the
+ * ObservationAnalysis.tsx pattern (PoolHistoryChart).
  *
- * Partia 10 (20.08): logika wykresów (Sparkline/PriceRangeChart/EventMarkers/
- * stateBands/orientacja ceny) wyekstrahowana do PositionCharts.tsx — używana
- * teraz też przez karty REALNYCH pozycji w MorningCockpit.tsx. Tu zostaje
- * tylko import + mapowanie PaperHistoryPoint→EquityChartPoint (structural
- * typing — PaperHistoryPoint ma equityUsd, więc pasuje bez zmian).
+ * Batch 10 (20.08): chart logic (Sparkline/PriceRangeChart/EventMarkers/
+ * stateBands/price orientation) extracted to PositionCharts.tsx — now also used
+ * by the REAL position cards in MorningCockpit.tsx. Only the import + the
+ * PaperHistoryPoint→EquityChartPoint mapping stays here (structural
+ * typing — PaperHistoryPoint has equityUsd, so it fits without changes).
  */
 import React, { FC } from 'react';
 import { UseBotApi, PaperHistoryPoint, PaperEvent, PaperPosition } from '../hooks/useBotApi';
@@ -62,22 +62,22 @@ const STATUS_ICON: Record<string, string> = {
   pending: '⏳',
 };
 
-/** Ikona stanu pozycji. WAŻNE (prośba Rafała 21.08): pozycja OTWARTA, ale poza
- *  zakresem, nie zarabia opłat — a do tej pory świeciła tą samą zieloną kropką
- *  co zdrowa. Dlatego out-of-range PODMIENIA ikonę (jedna ikona = jeden stan),
- *  zamiast dokładać drugi znaczek obok. */
+/** Position state icon. IMPORTANT (owner's request 21.08): a position that is OPEN but
+ *  out of range earns no fees — and until now it lit up with the same green dot
+ *  as a healthy one. Hence out-of-range REPLACES the icon (one icon = one state),
+ *  instead of adding a second mark next to it. */
 const statusIcon = (status: string, inRange: boolean | undefined): string =>
   status === 'open' && inRange === false ? '⚠️' : (STATUS_ICON[status] ?? '·');
 
-/** Histereza rebalansu w paper-tradingu: 24h NIEPRZERWANIE poza zakresem
- *  (bot/paper.ts HYSTERESIS_MS). Trzymamy tu kopię stałej, bo UI nie importuje
- *  kodu bota — gdyby zmieniła się tam, trzeba poprawić i tu. */
+/** Rebalance hysteresis in paper trading: 24h CONTINUOUSLY out of range
+ *  (bot/paper.ts HYSTERESIS_MS). We keep a copy of the constant here, because the UI
+ *  does not import bot code — if it changes there, it must be fixed here too. */
 const HYSTERESIS_MS = 24 * 3600 * 1000;
 
 const statusTitle = (status: string, inRange: boolean | undefined): string => {
-  if (status === 'open') return inRange === false ? 'POZA zakresem — pozycja nie nalicza opłat' : 'W zakresie — pozycja zarabia';
-  if (status === 'cash') return 'W gotówce po bezpieczniku trendu — czeka na powrót';
-  if (status === 'pending') return 'Przed pierwszym otwarciem';
+  if (status === 'open') return inRange === false ? 'OUT of range — the position accrues no fees' : 'In range — the position is earning';
+  if (status === 'cash') return 'In cash after the trend safety switch — waiting for re-entry';
+  if (status === 'pending') return 'Before the first open';
   return status;
 };
 
@@ -90,7 +90,7 @@ const EVENT_ICON: Record<string, string> = {
   HEDGE_CLOSE: '🛡',
 };
 
-/** Ostatni punkt historii danej puli (ts rosnąco lub malejąco — sortujemy tu, żeby nie zakładać porządku endpointu). */
+/** Last history point of a given pool (ts ascending or descending — we sort here so as not to assume the endpoint's order). */
 function latestFor(history: PaperHistoryPoint[], poolId: string): PaperHistoryPoint | null {
   const pts = history.filter((h) => h.poolId === poolId);
   if (pts.length === 0) return null;
@@ -119,7 +119,7 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
         <span>
           <span title={statusTitle(position.status, last?.inRange)}>{statusIcon(position.status, last?.inRange)}</span> {poolLabel(poolId)}
           {trendDown && (
-            <span className="paper-badge-trend-down" title="Sygnał bezpiecznika trendu (cena pod EMA)">
+            <span className="paper-badge-trend-down" title="Trend safety-switch signal (price below EMA)">
               {' '}
               ⛔
             </span>
@@ -128,9 +128,9 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
         <span className="paper-pool-equity">{fmtUsd(equity)}</span>
       </div>
 
-      {/* Licznik wypadnięcia (prośba Rafała 21.08). Pokazujemy TYLKO gdy
-          pozycja jest otwarta i poza zakresem. `outOfRangeSince` zeruje się
-          przy każdym powrocie do zakresu — to licznik CIĄGŁEGO wypadnięcia. */}
+      {/* Out-of-range timer (owner's request 21.08). Shown ONLY when the
+          position is open and out of range. `outOfRangeSince` resets
+          on every return to range — it is a CONTINUOUS out-of-range timer. */}
       {position.status === 'open' && last?.inRange === false && (
         <div className="out-of-range-timer">
           {position.outOfRangeSince ? (
@@ -139,34 +139,34 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
               const left = HYSTERESIS_MS - elapsed;
               return (
                 <>
-                  <span className="out-of-range-elapsed">Poza zakresem: {formatDuration(elapsed)}</span>
+                  <span className="out-of-range-elapsed">Out of range: {formatDuration(elapsed)}</span>
                   {left > 0 ? (
-                    <span className="muted" title="Po upływie 24h bot sprawdzi jeszcze, czy koszt rebalansu zwróci się z opłat w ≤7 dni. Powrót do zakresu zeruje licznik.">
+                    <span className="muted" title="After 24h the bot will additionally check whether the rebalance cost pays back from fees within ≤7 days. Returning to range resets the timer.">
                       {' '}
-                      · próg rebalansu za {formatDuration(left)}
+                      · rebalance threshold in {formatDuration(left)}
                     </span>
                   ) : (
-                    <span className="muted" title="Próg 24h minięty — rebalans czeka już tylko na warunek opłacalności (payback ≤7 dni).">
+                    <span className="muted" title="24h threshold passed — the rebalance now only waits for the profitability condition (payback ≤7 days).">
                       {' '}
-                      · próg 24h minięty, czeka na opłacalność
+                      · 24h threshold passed, waiting for profitability
                     </span>
                   )}
                 </>
               );
             })()
           ) : (
-            <span className="out-of-range-elapsed" title="Bot jeszcze nie zapisał momentu wypadnięcia (licznik ustawia się w najbliższym cyklu 15-minutowym).">
-              Poza zakresem (licznik startuje w najbliższym cyklu)
+            <span className="out-of-range-elapsed" title="The bot has not yet recorded the moment of falling out (the timer is set in the next 15-minute cycle).">
+              Out of range (timer starts in the next cycle)
             </span>
           )}
         </div>
       )}
 
-      {/* Partia 14: pasek metryk wyekstrahowany do PositionCharts.tsx
-          (PositionStatsBar) — reużywany też przez karty REALNYCH pozycji w
-          MorningCockpit.tsx, żeby wzorzec wizualny był 1:1 bez duplikacji.
-          Paper ma wszystkie 6 pól dostępnych od zawsze, więc zachowanie tu
-          bez zmian (żadne pole nigdy nie renderuje "—"). */}
+      {/* Batch 14: metrics bar extracted to PositionCharts.tsx
+          (PositionStatsBar) — also reused by the REAL position cards in
+          MorningCockpit.tsx, so the visual pattern is 1:1 without duplication.
+          Paper has all 6 fields available from the start, so behavior here is
+          unchanged (no field ever renders "—"). */}
       <PositionStatsBar
         pnlUsd={pnl}
         vsHodlUsd={vsHodl}
@@ -188,7 +188,7 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
           <PriceRangeChart poolId={poolId} points={poolHistory} events={poolEvents} />
         </>
       ) : (
-        <div className="morning-note muted">za mało punktów historii jeszcze zebranych dla tej puli.</div>
+        <div className="morning-note muted">too few history points collected yet for this pool.</div>
       )}
     </div>
   );
@@ -202,13 +202,13 @@ const PaperTradingPanel: FC<Props> = ({ bot }) => {
   const { paper, paperStatus } = bot;
 
   if (paperStatus === 'not-started') {
-    return <div className="morning-note">Paper trading wystartuje po najbliższym restarcie bota.</div>;
+    return <div className="morning-note">Paper trading will start after the next bot restart.</div>;
   }
   if (paperStatus === 'error') {
-    return <div className="morning-note muted">Paper trading niedostępny (błąd sieci lub serwera).</div>;
+    return <div className="morning-note muted">Paper trading unavailable (network or server error).</div>;
   }
   if (paperStatus === 'loading' || !paper) {
-    return <div className="morning-note muted">wczytywanie paper-tradingu…</div>;
+    return <div className="morning-note muted">loading paper trading…</div>;
   }
 
   const { state, history, events } = paper;
@@ -242,14 +242,14 @@ const PaperTradingPanel: FC<Props> = ({ bot }) => {
       <div className="paper-total-header">
         <div className="paper-total-stat">
           <span className="paper-total-value">{fmtUsd(totalEquity)}</span>
-          <span className="muted">Equity łącznie</span>
+          <span className="muted">Total equity</span>
         </div>
         <div className="paper-total-stat">
           <span className={`paper-total-value ${totalPnl < 0 ? 'forecast-negative' : 'paper-positive'}`}>
             {fmtSigned(totalPnl)} ({totalPnlPct >= 0 ? '+' : ''}
             {totalPnlPct.toFixed(1)}%)
           </span>
-          <span className="muted">PnL od startu</span>
+          <span className="muted">PnL since start</span>
         </div>
         <div className="paper-total-stat">
           <span className={`paper-total-value ${totalVsHodl < 0 ? 'forecast-negative' : 'paper-positive'}`}>{fmtSigned(totalVsHodl)}</span>
@@ -257,14 +257,14 @@ const PaperTradingPanel: FC<Props> = ({ bot }) => {
         </div>
       </div>
       <div className="muted paper-subtitle">
-        symulacja ${state.capitalPerPoolUsd.toLocaleString()}/pula, start {new Date(state.startedAt).toLocaleDateString('pl-PL')}
+        simulation ${state.capitalPerPoolUsd.toLocaleString()}/pool, started {new Date(state.startedAt).toLocaleDateString('pl-PL')}
       </div>
       <div className="muted status-legend">
-        🟢 w zakresie · ⚠️ poza zakresem (nie zarabia) · 💤 w gotówce · ⏳ przed startem · ⛔ sygnał trendu
+        🟢 in range · ⚠️ out of range (not earning) · 💤 in cash · ⏳ before start · ⛔ trend signal
       </div>
 
       {poolIds.length === 0 ? (
-        <div className="morning-note muted">brak pul w paper-tradingu.</div>
+        <div className="morning-note muted">no pools in paper trading.</div>
       ) : (
         <div className="paper-pool-grid">
           {poolIds.map((poolId) => (
@@ -280,9 +280,9 @@ const PaperTradingPanel: FC<Props> = ({ bot }) => {
         </div>
       )}
 
-      <div className="morning-section-title paper-events-title">Ostatnie zdarzenia</div>
+      <div className="morning-section-title paper-events-title">Recent events</div>
       {recentEvents.length === 0 ? (
-        <div className="morning-note muted">brak zdarzeń jeszcze.</div>
+        <div className="morning-note muted">no events yet.</div>
       ) : (
         <div className="paper-events-list">
           {recentEvents.map((e, i) => (
@@ -297,8 +297,8 @@ const PaperTradingPanel: FC<Props> = ({ bot }) => {
       )}
 
       <div className="muted paper-disclaimer">
-        Symulacja na żywych danych rynkowych. Fees liczone z trailing fee-yieldu pasma (model doradcy), nie per-swap. To nie są prawdziwe pieniądze ani
-        gwarancja wyników.
+        Simulation on live market data. Fees are computed from the band's trailing fee yield (advisor model), not per swap. This is not real money nor
+        a guarantee of results.
       </div>
     </div>
   );

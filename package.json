@@ -1,25 +1,23 @@
 {
   "name": "homos",
-  "version": "1.0.0",
-  "description": "get rich or die tryin",
-  "main": "server.js",
+  "version": "2.0.0",
+  "description": "Uniswap v3 concentrated-liquidity research stack: exact bigint math, walk-forward backtesting, propose-only bot and cockpit UI (case study, project closed 2026-09)",
   "scripts": {
     "start": "webpack-dev-server --config webpack.config.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "myWallet": "ts-node scripts/wallet.ts",
-    "fetch:swaps": "tsx scripts/fetch-swaps.ts",
-    "backtest": "tsx backtest/run.ts",
-    "backtest:validate": "tsx backtest/validate.ts",
+    "build": "webpack --mode production --config webpack.config.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "npm run typecheck && npm run test:math && npm run backtest:validate",
     "test:math": "tsx test/v3math.test.ts",
-    "agent": "tsx scripts/agent-runner.ts",
+    "backtest:validate": "tsx backtest/validate.ts",
+    "backtest": "tsx backtest/run.ts",
+    "backtest:selection": "tsx backtest/selection.ts",
+    "scan": "tsx backtest/scan-universe.ts",
     "bot": "tsx bot/observer.ts",
     "bot:server": "tsx bot/server.ts",
-    "build": "webpack --mode production --config webpack.config.js",
-    "fetch:llama": "tsx scripts/fetch-llama-history.ts",
-    "backtest:selection": "tsx backtest/selection.ts",
     "pipeline": "tsx scripts/pipeline.ts",
-    "scan": "tsx backtest/scan-universe.ts",
     "report:morning": "tsx scripts/morning-report.ts",
+    "fetch:swaps": "tsx scripts/fetch-swaps.ts",
+    "fetch:llama": "tsx scripts/fetch-llama-history.ts",
     "wide:score": "tsx scripts/wide-score.ts",
     "wide:collect": "tsx scripts/wide-collect.ts",
     "wide:daily": "tsx scripts/wide-daily.ts",
@@ -29,10 +27,12 @@
     "e8:vault": "tsx scripts/fetch-vault-perf.ts",
     "e8:carry": "tsx backtest/e8-carry.ts",
     "e8:house": "tsx backtest/e8-house.ts",
-    "e8:timing": "tsx backtest/e8-timing.ts"
+    "e8:timing": "tsx backtest/e8-timing.ts",
+    "agent": "tsx scripts/agent-runner.ts",
+    "wallet": "tsx scripts/wallet.ts"
   },
-  "author": "HOMO$",
-  "license": "ISC",
+  "author": "Rafał Cywiński",
+  "license": "MIT",
   "dependencies": {
     "@babel/preset-react": "^7.26.3",
     "@envio-dev/hypersync-client": "1.0.0",
@@ -74,5 +74,13 @@
     "webpack": "^5.92.0",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^5.0.4"
+  },
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rcywinski/homos.git"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

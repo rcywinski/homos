@@ -1,20 +1,20 @@
 /**
- * useRotateExecution.ts — wykonuje `RotatePlan` z utils/rebalanceBuilder.ts
- * (TASKS-UI.md Partia 8: [Zatwierdź] na kartach propozycji ROTATE, cross-pool
- * w TEJ SAMEJ sieci). Kopia wzorca useRebalanceExecution.ts 1:1 (freshWalletClient
- * po ewentualnym przełączeniu sieci, client.call przed sendTransaction,
- * addTransaction do historii, resume po awarii) — jedyna różnica: krok 'mint'
- * jest przebudowywany z faktycznych sald NOWEJ puli (nie starej — po krokach
- * swap portfel trzyma tokeny nowej pary), więc `execute()` przyjmuje `newPool`
- * zamiast pojedynczego `pool`. `oldPool` nie jest execute() w ogóle potrzebny —
- * krok 1 (decrease+collect) jest już w pełni zakodowany w `plan.steps[0].tx`.
+ * useRotateExecution.ts — executes a `RotatePlan` from utils/rebalanceBuilder.ts
+ * (TASKS-UI.md Batch 8: [Confirm] on ROTATE proposal cards, cross-pool
+ * within the SAME network). A 1:1 copy of the useRebalanceExecution.ts pattern (freshWalletClient
+ * after an optional network switch, client.call before sendTransaction,
+ * addTransaction to the history, resume after a failure) — the only difference: the 'mint' step
+ * is rebuilt from the actual balances of the NEW pool (not the old one — after the
+ * swap steps the wallet holds tokens of the new pair), so `execute()` takes `newPool`
+ * instead of a single `pool`. `oldPool` is not needed by execute() at all —
+ * step 1 (decrease+collect) is already fully encoded in `plan.steps[0].tx`.
  *
- * Postęp (localStorage) trzymany pod OSOBNYM prefiksem `homos_rotate_progress_`
- * (nie przez saveProgress/loadProgress z rebalanceBuilder.ts, które piszą pod
- * `homos_rebalance_${chainId}_${tokenId}`) — żeby nie kolidować z progresem
- * zwykłego REBALANCE na tym samym tokenId, gdyby user kiedyś odpalił oba typy
- * sekwencji na tej samej pozycji. rebalanceBuilder.ts NIE jest tu edytowany
- * (poza zakresem tej partii) — progres lokalny żyje w tym pliku.
+ * Progress (localStorage) is kept under a SEPARATE prefix `homos_rotate_progress_`
+ * (not via saveProgress/loadProgress from rebalanceBuilder.ts, which write under
+ * `homos_rebalance_${chainId}_${tokenId}`) — so as not to collide with the progress
+ * of a regular REBALANCE on the same tokenId, should the user ever run both types
+ * of sequence on the same position. rebalanceBuilder.ts is NOT edited here
+ * (outside this batch's scope) — the local progress lives in this file.
  */
 import { useCallback, useState } from 'react';
 import { useAccount, usePublicClient, useChainId, useSwitchChain } from 'wagmi';
@@ -25,8 +25,8 @@ import { RotatePlan, buildMintStep } from '../utils/rebalanceBuilder';
 import { fetchFreshPool } from '../utils/uniswap';
 import { addTransaction } from '../components/TransactionHistory';
 import { config } from '../config/wallet';
-// HOTFIX 31.08: receipt best-effort (ta sama klasa co useRebalanceExecution —
-// patrz komentarz tam; błąd Rabby+publicnode 'Invalid parameters').
+// HOTFIX 31.08: best-effort receipt (the same class as useRebalanceExecution —
+// see the comment there; Rabby+publicnode 'Invalid parameters' error).
 import { waitReceiptBestEffort } from './useCockpitActions';
 
 export interface RotateExecStatus {
@@ -38,7 +38,7 @@ export interface RotateExecStatus {
 
 const IDLE: RotateExecStatus = { phase: 'idle', stepIndex: 0, totalSteps: 0, message: '' };
 
-// --- progres sekwencji ROTATE, prefiks osobny od rebalanceBuilder.ts (patrz nagłówek) ---
+// --- ROTATE sequence progress, prefix separate from rebalanceBuilder.ts (see header) ---
 export interface RotateProgress {
   tokenId: string;
   chainId: number;
@@ -101,7 +101,7 @@ export function useRotateExecution() {
       const total = plan.steps.length;
       try {
         const wc = await freshWalletClient(plan.chainId);
-        if (!wc || !client) throw new Error('Brak połączenia z siecią pozycji');
+        if (!wc || !client) throw new Error('No connection to the position network');
 
         const progress: RotateProgress = loadRotateProgress(plan.chainId, plan.tokenId) ?? {
           tokenId: plan.tokenId,
@@ -114,8 +114,8 @@ export function useRotateExecution() {
           updatedAt: new Date().toISOString(),
         };
 
-        // --- approvals z planu (approve tylko gdy allowance nie wystarcza) ---
-        setStatus({ phase: 'approving', stepIndex: 0, totalSteps: total, message: 'Sprawdzanie approvals…' });
+        // --- approvals from the plan (approve only when the allowance is insufficient) ---
+        setStatus({ phase: 'approving', stepIndex: 0, totalSteps: total, message: 'Checking approvals…' });
         for (const appr of plan.approvals) {
           const allowance = (await client.readContract({
             address: appr.token,
@@ -130,18 +130,18 @@ export function useRotateExecution() {
           addTransaction(address, hash, plan.chainId, appr.label);
         }
 
-        // --- kroki 1..N (resume: pomiń już potwierdzone) ---
+        // --- steps 1..N (resume: skip the ones already confirmed) ---
         for (const step of plan.steps) {
           if (progress.completed.includes(step.index)) continue;
 
           let tx = step.tx;
           if (step.kind === 'mint') {
-            // Przebuduj mint z FAKTYCZNYCH sald NOWEJ puli (po krokach swap
-            // portfel trzyma tokeny nowej pary, nie starej) — patrz nagłówek.
-            // FIX 11.09 (HANDOFF @Sonnet, ten sam bug co useRebalanceExecution):
-            // `newPool` jest zamrożony z momentu otwarcia modala — dociągamy
-            // świeży slot0+liquidity tuż przed przebudową kroku, żeby uniknąć
-            // "Price slippage check" przy ruchu ceny > ok. 0.5%.
+            // Rebuild the mint from the ACTUAL balances of the NEW pool (after the swap
+            // steps the wallet holds tokens of the new pair, not the old one) — see header.
+            // FIX 11.09 (HANDOFF @Sonnet, the same bug as useRebalanceExecution):
+            // `newPool` is frozen from the moment the modal was opened — we fetch
+            // fresh slot0+liquidity right before rebuilding the step, to avoid
+            // "Price slippage check" on a price move > approx. 0.5%.
             const freshPool = await fetchFreshPool(client, newPool, plan.chainId);
             const [bal0, bal1] = await Promise.all([
               client.readContract({ address: newPool.token0.address as Address, abi: erc20Abi, functionName: 'balanceOf', args: [address] }) as Promise<bigint>,
@@ -158,19 +158,19 @@ export function useRotateExecution() {
               if (amt <= 0n) continue;
               const allowance = (await client.readContract({ address: tok, abi: erc20Abi, functionName: 'allowance', args: [address, manager] })) as bigint;
               if (allowance >= amt) continue;
-              setStatus({ phase: 'approving', stepIndex: step.index, totalSteps: total, message: `Approve ${sym} (realne saldo różni się od estymaty) przed mintem…` });
+              setStatus({ phase: 'approving', stepIndex: step.index, totalSteps: total, message: `Approve ${sym} (real balance differs from the estimate) before the mint…` });
               const approveData = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [manager, amt] });
               const hash = await wc.sendTransaction({ to: tok, data: approveData, value: 0n, account: address, chain: wc.chain });
               await waitReceiptBestEffort(client, hash);
-              addTransaction(address, hash, plan.chainId, `Approve ${sym} dla NFT managera (mint, dociągnięcie)`);
+              addTransaction(address, hash, plan.chainId, `Approve ${sym} for the NFT manager (mint, top-up)`);
             }
           }
 
-          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — symulacja…` });
+          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — simulating…` });
           await client.call({ to: tx.to, data: tx.data, account: address });
-          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — podpis w Rabby…` });
+          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — sign in Rabby…` });
           const hash = await wc.sendTransaction({ to: tx.to, data: tx.data, value: tx.value, account: address, chain: wc.chain });
-          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — potwierdzanie…` });
+          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — confirming…` });
           await waitReceiptBestEffort(client, hash);
           addTransaction(address, hash, plan.chainId, step.label);
 
@@ -181,11 +181,11 @@ export function useRotateExecution() {
         }
 
         clearRotateProgress(plan.chainId, plan.tokenId);
-        setStatus({ phase: 'done', stepIndex: total, totalSteps: total, message: 'Rotacja zakończona ✓' });
+        setStatus({ phase: 'done', stepIndex: total, totalSteps: total, message: 'Rotation complete ✓' });
         onDone?.();
       } catch (e) {
         const msg = e instanceof Error ? e.message.slice(0, 220) : String(e);
-        setError(`Sekwencja przerwana — środki bezpieczne (żaden krok nie zostawia funduszy w locie), dokończ pozostałe kroki ponownym [Zatwierdź]: ${msg}`);
+        setError(`Sequence interrupted — funds are safe (no step leaves funds in flight), finish the remaining steps by clicking [Confirm] again: ${msg}`);
         setStatus((s) => ({ ...s, phase: 'error', message: msg }));
       }
     },

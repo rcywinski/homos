@@ -46,16 +46,16 @@ export const addTransaction = (
 };
 
 /**
- * FIX 21.08 (crash „Rendered more hooks than during the previous render",
- * odtworzony na localhost przy rozwijaniu sekcji „Zarządzaj"):
- * poprzednia wersja wołała `useTransaction`/`useWaitForTransactionReceipt`/
- * `useEffect` WEWNĄTRZ `transactions.forEach(...)`. Liczba hooków zależała
- * więc od liczby transakcji w stanie „pending" i zmieniała się między
- * renderami — złamana pierwsza zasada hooków, React wywalał całe drzewo.
+ * FIX 21.08 (crash "Rendered more hooks than during the previous render",
+ * reproduced on localhost when expanding the "Manage" section):
+ * the previous version called `useTransaction`/`useWaitForTransactionReceipt`/
+ * `useEffect` INSIDE `transactions.forEach(...)`. The number of hooks thus
+ * depended on the number of transactions in the "pending" state and changed
+ * between renders — the first rule of hooks broken, React tore down the whole tree.
  *
- * Poprawka: obserwator JEDNEJ transakcji jako osobny komponent. Hooki są
- * na najwyższym poziomie komponentu (liczba stała), a zmienna jest liczba
- * ZAMONTOWANYCH komponentów — co jest w Reakcie legalne. Nic nie renderuje.
+ * Fix: the watcher for ONE transaction as a separate component. Hooks are
+ * at the top level of the component (constant count), and what varies is the
+ * number of MOUNTED components — which is legal in React. Renders nothing.
  */
 const PendingTxWatcher: FC<{
   tx: Transaction;
@@ -69,7 +69,7 @@ const PendingTxWatcher: FC<{
     if (transaction && (isSuccess || isError)) {
       onResolved(storeTransaction(address, { ...tx, status: isSuccess ? 'confirmed' : 'failed' }));
     }
-    // `tx` celowo po `hash` — obiekt jest odtwarzany przy każdym renderze rodzica
+    // `tx` deliberately tracked via `hash` — the object is recreated on every parent render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transaction, isSuccess, isError, address, tx.hash]);
 
@@ -108,7 +108,7 @@ const TransactionHistory: FC = () => {
 
   return (
     <ExpandableSection title="Transaction History">
-      {/* obserwatory transakcji w locie — nic nie renderują, patrz komentarz wyżej */}
+      {/* in-flight transaction watchers — they render nothing, see comment above */}
       {pending.map((tx) => (
         <PendingTxWatcher key={`watch-${tx.hash}`} tx={tx} address={address} onResolved={setTransactions} />
       ))}
@@ -116,7 +116,7 @@ const TransactionHistory: FC = () => {
         <div className="transaction-header">
           <h3>Transaction History</h3>
           {transactions.length > 0 && (
-            <button 
+            <button
               onClick={handleClearHistory}
               className="clear-history-button"
               title="Clear transaction history"
@@ -125,7 +125,7 @@ const TransactionHistory: FC = () => {
             </button>
           )}
         </div>
-        
+
         {transactions.length === 0 ? (
           <div className="no-transactions">
             <p>No transactions yet</p>
@@ -139,8 +139,8 @@ const TransactionHistory: FC = () => {
                   <div className="transaction-info">
                     <span className="transaction-hash">
                       <a
-                        href={`${tx.chainId === mainnet.id 
-                          ? 'https://etherscan.io/tx/' 
+                        href={`${tx.chainId === mainnet.id
+                          ? 'https://etherscan.io/tx/'
                           : 'https://sepolia.etherscan.io/tx/'}${tx.hash}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -173,4 +173,4 @@ const TransactionHistory: FC = () => {
   );
 };
 
-export default TransactionHistory; 
+export default TransactionHistory;

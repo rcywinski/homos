@@ -1,10 +1,10 @@
 /**
- * fetch-llama-history.ts — pobiera HISTORYCZNE serie APY/TVL z DefiLlama
- * dla uniwersum pul Uniswapa. Dane do meta-backtestu WARSTWY SELEKCJI
- * (czy polityka "kupuj top rankingu" działa — bez lookahead bias).
+ * fetch-llama-history.ts — fetches HISTORICAL APY/TVL series from DefiLlama
+ * for the Uniswap pool universe. Data for the meta-backtest of the SELECTION
+ * LAYER (does the "buy the top of the ranking" policy work — without lookahead bias).
  *
- *   npm run fetch:llama     (lekki — kilka minut, same API calls)
- * Wyjście: data/llama/universe.json + data/llama/history/<poolId>.json
+ *   npm run fetch:llama     (lightweight — a few minutes, API calls only)
+ * Output: data/llama/universe.json + data/llama/history/<poolId>.json
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -20,7 +20,7 @@ const MAX_POOLS = 300;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 (async () => {
-  console.log('Pobieram listę pul…');
+  console.log('Fetching pool list…');
   const res = await fetch('https://yields.llama.fi/pools');
   if (!res.ok) throw new Error(`pools HTTP ${res.status}`);
   const all = (await res.json()).data as any[];
@@ -35,7 +35,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     .sort((a, b) => b.tvlUsd - a.tvlUsd)
     .slice(0, MAX_POOLS)
     .map((p) => ({
-      pool: p.pool, // uuid DefiLlama
+      pool: p.pool, // DefiLlama uuid
       symbol: p.symbol,
       chain: p.chain,
       project: p.project,
@@ -48,15 +48,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     }));
 
   fs.writeFileSync(path.join(OUT, 'universe.json'), JSON.stringify(universe, null, 2));
-  console.log(`Uniwersum: ${universe.length} pul (TVL≥$1M, ETH/Base/Arb). Pobieram historie…`);
+  console.log(`Universe: ${universe.length} pools (TVL≥$1M, ETH/Base/Arb). Fetching histories…`);
 
   let done = 0;
   for (const p of universe) {
     const f = path.join(HIST, `${p.pool}.json`);
-    // resume: pomijaj tylko pliki odświeżone DZISIAJ (data kalendarzowa UTC, jak w swap-cache).
-    // Heurystyka „mtime < 24h" ZAWIODŁA: cron chodzi w odstępach blisko 24h, więc raz
-    // zsynchronizowane mtime'y całego uniwersum permanentnie łapały się w okno i historia
-    // przestawała się odświeżać (dowód: ranking 23.08 i 24.08 identyczny co do cyfry).
+    // resume: skip only files refreshed TODAY (UTC calendar date, as in swap-cache).
+    // The "mtime < 24h" heuristic FAILED: the cron runs at intervals close to 24h, so once
+    // the mtimes of the whole universe got synchronized they permanently fell inside the
+    // window and the history stopped refreshing (proof: rankings of 23.08 and 24.08 identical to the digit).
     const st = fs.statSync(f, { throwIfNoEntry: false });
     const todayUtc = new Date().toISOString().slice(0, 10);
     if (st && new Date(st.mtimeMs).toISOString().slice(0, 10) === todayUtc) {
@@ -70,7 +70,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         if (r.status === 429) {
           const ra = Number(r.headers.get('retry-after')) || 0;
           const wait = Math.max(ra * 1000, 5000 * 2 ** attempt); // 5s,10s,20s,40s,80s
-          process.stdout.write(`\r429 — czekam ${(wait / 1000).toFixed(0)}s (${p.symbol})   `);
+          process.stdout.write(`\r429 — waiting ${(wait / 1000).toFixed(0)}s (${p.symbol})   `);
           await sleep(wait);
           continue;
         }
@@ -86,7 +86,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     }
     done++;
     process.stdout.write(`\r${done}/${universe.length}  `);
-    await sleep(1500); // szanuj API (limit ~40-60/min na /chart)
+    await sleep(1500); // respect the API (limit ~40-60/min on /chart)
   }
-  console.log('\nGotowe → data/llama/');
+  console.log('\nDone → data/llama/');
 })();

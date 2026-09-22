@@ -1,81 +1,81 @@
 /**
- * hedgeBuilder.ts — plan transakcji hedge'a SHORT ETH-perp na GMX v2 (Arbitrum).
- * Krok 2 planu automatyzacji hedge (RESEARCH-QUEUE H, zaakceptowany kierunkowo
- * 17.08; zlecenie Rafała 20.08): [Zatwierdź hedge] w kokpicie = JEDEN podpis
- * w Rabby (multicall ExchangeRoutera), rozmiar z propozycji HEDGE bota, 1×,
- * limity poślizgu. Zamknięcie shorta analogicznym multicallem (MarketDecrease).
+ * hedgeBuilder.ts — transaction plan for a SHORT ETH-perp hedge on GMX v2 (Arbitrum).
+ * Step 2 of the hedge automation plan (RESEARCH-QUEUE H, accepted in principle
+ * 17.08; owner's brief 20.08): [Confirm hedge] in the cockpit = ONE signature
+ * in Rabby (ExchangeRouter multicall), size from the bot's HEDGE proposal, 1×,
+ * slippage limits. Closing the short with an analogous multicall (MarketDecrease).
  *
- * MECHANIKA GMX v2 (synthetics): zlecenia są DWUFAZOWE — my tworzymy order
- * (createOrder) i wpłacamy collateral + execution fee do OrderVault, a keeper
- * GMX wykonuje go w następnym bloku po cenie oracle. Stąd:
- *  - acceptablePrice = nasz limit poślizgu (keeper nie wykona gorzej),
- *  - executionFee = ETH dla keepera (nadpłata wraca na wallet),
- *  - JEDEN multicall: [sendWnt(fee), sendTokens(collateral), createOrder] —
- *    transfer i createOrder MUSZĄ być w jednej tx (inaczej środki w vaultcie
- *    może przejąć kto inny — ostrzeżenie wprost z docs GMX).
+ * GMX v2 MECHANICS (synthetics): orders are TWO-PHASE — we create the order
+ * (createOrder) and deposit collateral + execution fee into the OrderVault, and the GMX
+ * keeper executes it in the next block at the oracle price. Hence:
+ *  - acceptablePrice = our slippage limit (the keeper will not execute worse),
+ *  - executionFee = ETH for the keeper (the overpayment returns to the wallet),
+ *  - ONE multicall: [sendWnt(fee), sendTokens(collateral), createOrder] —
+ *    the transfer and createOrder MUST be in one tx (otherwise the funds in the vault
+ *    can be claimed by someone else — an explicit warning from the GMX docs).
  *
- * ŹRÓDŁA (zweryfikowane 2026-08-20 przez Fable):
- *  - adresy: gmx-synthetics/docs/contracts.json (sekcja "arbitrum") — commit
- *    bieżący na 20.08; OrderVault i Router zgodne z wcześniejszą wiedzą,
- *    ExchangeRouter to NAJNOWSZY deploy (adres zmienia się między wersjami!),
- *  - rynek ETH/USD: żywe API https://arbitrum-api.gmxinfra.io/markets
- *    (indexToken=WETH, shortToken=USDC natywne),
+ * SOURCES (verified 2026-08-20 by Fable):
+ *  - addresses: gmx-synthetics/docs/contracts.json (section "arbitrum") — commit
+ *    current as of 20.08; OrderVault and Router consistent with earlier knowledge,
+ *    ExchangeRouter is the LATEST deploy (the address changes between versions!),
+ *  - ETH/USD market: live API https://arbitrum-api.gmxinfra.io/markets
+ *    (indexToken=WETH, shortToken=native USDC),
  *  - struct CreateOrderParams: contracts/order/IBaseOrderUtils.sol @ main
- *    (wersja z cancellationReceiver/validFromTime/autoCancel/dataList).
+ *    (version with cancellationReceiver/validFromTime/autoCancel/dataList).
  *
- * KONWENCJE JEDNOSTEK GMX v2 (łatwo się wyłożyć):
+ * GMX v2 UNIT CONVENTIONS (easy to get wrong):
  *  - sizeDeltaUsd: USD × 1e30,
- *  - ceny (triggerPrice/acceptablePrice): USD za 1 jednostkę index tokena
- *    × 10^(30 − decimals_indexu) → dla ETH (18 dec) = USD × 1e12,
+ *  - prices (triggerPrice/acceptablePrice): USD per 1 unit of the index token
+ *    × 10^(30 − index_decimals) → for ETH (18 dec) = USD × 1e12,
  *  - collateral (USDC): raw 6 dec,
- *  - executionFee: wei (natywny ETH przez sendWnt).
+ *  - executionFee: wei (native ETH via sendWnt).
  *
- * BEZPIECZEŃSTWO (zasady projektu): moduł TYLKO buduje tx — wysyłka przez
- * Rabby po JAWNYM kliknięciu człowieka; przed wysłaniem hook MUSI zrobić
- * symulację eth_call (jak w rebalanceBuilder) — ABI structa weryfikuje się
- * wtedy o żywy kontrakt; pierwszy realny test na MINIMALNEJ kwocie (~$15,
- * min size GMX ~$11 collateral przy 1×).
+ * SAFETY (project rules): the module ONLY builds the tx — sending goes through
+ * Rabby after an EXPLICIT human click; before sending, the hook MUST run an
+ * eth_call simulation (as in rebalanceBuilder) — the struct ABI is then verified
+ * against the live contract; the first real test on a MINIMAL amount (~$15,
+ * GMX min size ~$11 collateral at 1×).
  */
 import { Address, Hex, encodeFunctionData, erc20Abi } from 'viem';
 
-// --- adresy (Arbitrum One, chainId 42161) ---
+// --- addresses (Arbitrum One, chainId 42161) ---
 export const GMX_ARBITRUM = {
   chainId: 42161,
-  /** NAJNOWSZY ExchangeRouter (contracts.json 20.08) — po aktualizacji GMX
-   *  trzeba podmienić TYLKO ten adres (vault/router/market są stabilne) */
+  /** LATEST ExchangeRouter (contracts.json 20.08) — after a GMX update
+   *  ONLY this address needs replacing (vault/router/market are stable) */
   exchangeRouter: '0x1C3fa76e6E1088bCE750f23a5BFcffa1efEF6A41' as Address,
   orderVault: '0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5' as Address,
-  /** spender dla approve USDC (Router, NIE ExchangeRouter!) */
+  /** spender for the USDC approve (Router, NOT ExchangeRouter!) */
   router: '0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6' as Address,
-  /** rynek ETH/USD [ETH-USDC] — marketToken */
+  /** ETH/USD market [ETH-USDC] — marketToken */
   ethUsdMarket: '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336' as Address,
-  usdc: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' as Address, // natywne USDC
+  usdc: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' as Address, // native USDC
   weth: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1' as Address,
-  // odczyt pozycji (bot/observer śledzi realny hedge — dodane 20.08 po
-  // teście E2E, gdy wyszło że short nie jest widoczny nigdzie poza GMX):
+  // position read (bot/observer tracks the real hedge — added 20.08 after
+  // the E2E test, when it turned out the short was not visible anywhere outside GMX):
   reader: '0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789' as Address,
   dataStore: '0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8' as Address,
 } as const;
 
-/** domyślna opłata keepera; nadpłata wraca — lepiej dać zapas niż utknąć.
- *  UI może nadpisać (odczyt estymaty z DataStore to przyszłe ulepszenie). */
+/** default keeper fee; the overpayment returns — better to leave headroom than get stuck.
+ *  The UI may override (reading the estimate from DataStore is a future improvement). */
 export const DEFAULT_EXECUTION_FEE_WEI = 700_000_000_000_000n; // 0.0007 ETH
 
 // Order.OrderType (gmx-synthetics Order.sol)
 export const ORDER_TYPE = { MarketIncrease: 2, MarketDecrease: 4 } as const;
-// DecreasePositionSwapType: 1 = wypłać PnL w tokenie collateralu (USDC)
+// DecreasePositionSwapType: 1 = pay out PnL in the collateral token (USDC)
 const SWAP_PNL_TO_COLLATERAL = 1;
 
-// UWAGA: NIE używać `**` na BigIntach — babel (transform-exponentiation-operator)
-// transpiluje `**` na `Math.pow()` bez rozróżniania typu operandów, a
-// `Math.pow(10n, 30n)` rzuca "Cannot convert a BigInt value to a number" w
-// runtime (build/tsc tego nie łapie — pada dopiero w przeglądarce). Ten sam
-// bug był już raz naprawiony gdzie indziej (build CC-Win, P7) — literały
-// zamiast `**` są tu odporne na powrót problemu.
+// NOTE: do NOT use `**` on BigInts — babel (transform-exponentiation-operator)
+// transpiles `**` to `Math.pow()` without distinguishing operand types, and
+// `Math.pow(10n, 30n)` throws "Cannot convert a BigInt value to a number" at
+// runtime (build/tsc does not catch it — it fails only in the browser). The same
+// bug was already fixed once elsewhere (CC-Win build, P7) — literals
+// instead of `**` are immune to the problem's return here.
 const USD_1E30 = 1_000_000_000_000_000_000_000_000_000_000n; // 10n ** 30n
-const PRICE_1E12 = 1_000_000_000_000n; // 10n ** 12n, dla indexu 18 dec: 30-18
+const PRICE_1E12 = 1_000_000_000_000n; // 10n ** 12n, for an 18 dec index: 30-18
 
-// --- ABI (tylko używane funkcje ExchangeRoutera) ---
+// --- ABI (only the ExchangeRouter functions in use) ---
 const EXCHANGE_ROUTER_ABI = [
   {
     name: 'multicall', type: 'function', stateMutability: 'payable',
@@ -141,9 +141,9 @@ const ZERO32 = `0x${'0'.repeat(64)}` as Hex;
 export interface HedgeTx { to: Address; data: Hex; value: bigint }
 export interface HedgePlan {
   chainId: number;
-  /** multicall do podpisania (value = executionFee w ETH) */
+  /** multicall to sign (value = executionFee in ETH) */
   tx: HedgeTx;
-  /** approve USDC→Router, jeśli allowance nie starcza (UI porównuje) */
+  /** approve USDC→Router, if the allowance is insufficient (the UI compares) */
   approval: { token: Address; spender: Address; amount: bigint; tx: HedgeTx } | null;
   summary: string;
   preview: {
@@ -187,7 +187,7 @@ function buildCreateOrderCall(p: {
       },
       orderType: p.orderType,
       decreasePositionSwapType: p.decreaseSwapType,
-      isLong: false, // zawsze short — to hedge nadwyżki ETH
+      isLong: false, // always short — this hedges the ETH excess
       shouldUnwrapNativeToken: false,
       autoCancel: false,
       referralCode: ZERO32,
@@ -197,31 +197,31 @@ function buildCreateOrderCall(p: {
 }
 
 /**
- * OTWARCIE shorta 1× (hedge-excess z propozycji bota).
- * `sizeEth` — z propozycji HEDGE (nadwyżka ETH >50% wartości pozycji);
- * `ethPriceUsd` — bieżąca cena (z puli/observera); collateral USDC ≈ notional
- * (1×; GMX policzy leverage z size/collateral).
+ * OPENING a 1× short (hedge-excess from the bot's proposal).
+ * `sizeEth` — from the HEDGE proposal (ETH excess >50% of the position value);
+ * `ethPriceUsd` — current price (from the pool/observer); USDC collateral ≈ notional
+ * (1×; GMX computes leverage from size/collateral).
  */
 export function planHedgeOpen(params: {
   sizeEth: number;
   ethPriceUsd: number;
   recipient: Address;
-  slippageBps?: number;       // domyślnie 30 bps
-  executionFeeWei?: bigint;   // domyślnie DEFAULT_EXECUTION_FEE_WEI
-  /** collateral w USD; domyślnie = notional (dźwignia 1×) */
+  slippageBps?: number;       // default 30 bps
+  executionFeeWei?: bigint;   // default DEFAULT_EXECUTION_FEE_WEI
+  /** collateral in USD; default = notional (1× leverage) */
   collateralUsd?: number;
 }): HedgePlan {
   const { sizeEth, ethPriceUsd, recipient } = params;
-  if (!(sizeEth > 0) || !(ethPriceUsd > 0)) throw new Error('planHedgeOpen: sizeEth i ethPriceUsd muszą być > 0');
+  if (!(sizeEth > 0) || !(ethPriceUsd > 0)) throw new Error('planHedgeOpen: sizeEth and ethPriceUsd must be > 0');
   const bips = Math.min(Math.max(Math.round(params.slippageBps ?? 30), 5), 300);
   const fee = params.executionFeeWei ?? DEFAULT_EXECUTION_FEE_WEI;
   const sizeUsd = sizeEth * ethPriceUsd;
   const collateralUsd = params.collateralUsd ?? sizeUsd; // 1×
-  if (sizeUsd < 11) throw new Error(`planHedgeOpen: notional $${sizeUsd.toFixed(2)} poniżej min. GMX (~$11)`);
+  if (sizeUsd < 11) throw new Error(`planHedgeOpen: notional $${sizeUsd.toFixed(2)} below the GMX minimum (~$11)`);
   const collateralRaw = raw6(collateralUsd);
   const sizeDeltaUsd = BigInt(Math.round(sizeUsd * 1e6)) * (USD_1E30 / 1_000_000n);
-  // short increase: wykonanie po cenie NIŻSZEJ niż acceptable jest OK,
-  // acceptable = dolny limit ceny wejścia
+  // short increase: execution at a price LOWER than acceptable is OK,
+  // acceptable = lower limit of the entry price
   const acceptable = BigInt(Math.round(ethPriceUsd * (1 - bips / 10_000) * 1e6)) * (PRICE_1E12 / 1_000_000n);
 
   const calls: Hex[] = [
@@ -248,7 +248,7 @@ export function planHedgeOpen(params: {
         value: 0n,
       },
     },
-    summary: `SHORT ${sizeEth.toFixed(4)} ETH (~$${sizeUsd.toFixed(0)}) @ 1× na GMX ETH/USD; collateral ${collateralUsd.toFixed(0)} USDC; acceptable ≥ $${(ethPriceUsd * (1 - bips / 10_000)).toFixed(2)}`,
+    summary: `SHORT ${sizeEth.toFixed(4)} ETH (~$${sizeUsd.toFixed(0)}) @ 1× on GMX ETH/USD; collateral ${collateralUsd.toFixed(0)} USDC; acceptable ≥ $${(ethPriceUsd * (1 - bips / 10_000)).toFixed(2)}`,
     preview: {
       direction: 'open-short', sizeEth, sizeUsd,
       collateralUsdc: collateralUsd, leverage: sizeUsd / collateralUsd,
@@ -259,10 +259,10 @@ export function planHedgeOpen(params: {
 }
 
 /**
- * ZAMKNIĘCIE shorta (po zgaśnięciu sygnału trendu). `sizeUsd`/`collateralUsd`
- * — z otwartej pozycji (UI: odczyt z Readera GMX to przyszłe ulepszenie;
- * do tego czasu wartości z propozycji zamknięcia / zapisanego stanu).
- * PnL wypłacany w USDC (decreasePositionSwapType=1).
+ * CLOSING the short (after the trend signal fades). `sizeUsd`/`collateralUsd`
+ * — from the open position (UI: reading from the GMX Reader is a future improvement;
+ * until then, values from the close proposal / saved state).
+ * PnL paid out in USDC (decreasePositionSwapType=1).
  */
 export function planHedgeClose(params: {
   sizeUsd: number;
@@ -273,13 +273,13 @@ export function planHedgeClose(params: {
   executionFeeWei?: bigint;
 }): HedgePlan {
   const { sizeUsd, collateralUsd, ethPriceUsd, recipient } = params;
-  if (!(sizeUsd > 0) || !(ethPriceUsd > 0)) throw new Error('planHedgeClose: sizeUsd i ethPriceUsd muszą być > 0');
+  if (!(sizeUsd > 0) || !(ethPriceUsd > 0)) throw new Error('planHedgeClose: sizeUsd and ethPriceUsd must be > 0');
   const bips = Math.min(Math.max(Math.round(params.slippageBps ?? 30), 5), 300);
   const fee = params.executionFeeWei ?? DEFAULT_EXECUTION_FEE_WEI;
   const sizeDeltaUsd = BigInt(Math.round(sizeUsd * 1e6)) * (USD_1E30 / 1_000_000n);
   const collateralRaw = raw6(collateralUsd);
-  // short decrease (odkup): wykonanie po cenie WYŻSZEJ niż acceptable = strata
-  // ponad limit — acceptable to górny limit ceny odkupu
+  // short decrease (buyback): execution at a price HIGHER than acceptable = a loss
+  // beyond the limit — acceptable is the upper limit of the buyback price
   const acceptable = BigInt(Math.round(ethPriceUsd * (1 + bips / 10_000) * 1e6)) * (PRICE_1E12 / 1_000_000n);
 
   const calls: Hex[] = [
@@ -297,8 +297,8 @@ export function planHedgeClose(params: {
       data: encodeFunctionData({ abi: EXCHANGE_ROUTER_ABI, functionName: 'multicall', args: [calls] }),
       value: fee,
     },
-    approval: null, // zamknięcie nie wpłaca collateralu
-    summary: `CLOSE short ~$${sizeUsd.toFixed(0)} na GMX ETH/USD; acceptable ≤ $${(ethPriceUsd * (1 + bips / 10_000)).toFixed(2)}; PnL w USDC`,
+    approval: null, // closing does not deposit collateral
+    summary: `CLOSE short ~$${sizeUsd.toFixed(0)} on GMX ETH/USD; acceptable ≤ $${(ethPriceUsd * (1 + bips / 10_000)).toFixed(2)}; PnL in USDC`,
     preview: {
       direction: 'close-short', sizeEth: sizeUsd / ethPriceUsd, sizeUsd,
       collateralUsdc: collateralUsd, leverage: sizeUsd / Math.max(collateralUsd, 1e-9),

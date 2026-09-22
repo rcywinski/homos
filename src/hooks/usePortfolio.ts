@@ -111,39 +111,39 @@ export interface PortfolioPosition {
   inRange: boolean;
   advice: RebalanceAssessment['action'] | null;
   paybackDays: number | null;
-  // --- Partia 3 (TASKS-UI.md): dane surowe potrzebne dla akcji na kartach
-  // kokpitu (Zbierz fees / Zamknij / Rebalans ręczny — zob. useCockpitActions.ts).
-  // Wszystko poniżej pochodzi z odczytów już wykonanych powyżej w tej pętli —
-  // żadnych dodatkowych zapytań RPC.
+  // --- Batch 3 (TASKS-UI.md): raw data needed for the actions on cockpit
+  // cards (Collect fees / Close / Manual rebalance — see useCockpitActions.ts).
+  // Everything below comes from reads already performed above in this loop —
+  // no additional RPC queries.
   positionManager: Address;
   poolAddress: Address;
   fee: number;
   tickLower: number;
   tickUpper: number;
-  liquidity: string; // bigint (płynność TEJ pozycji, nie całej puli) jako string
+  liquidity: string; // bigint (liquidity of THIS position, not the whole pool) as a string
   token0: { address: Address; symbol: string; decimals: number };
   token1: { address: Address; symbol: string; decimals: number };
-  /** SDK Pool zbudowany raz tutaj — używany przez prepareRemoveLiquidityTransaction
-   *  / createPosition w useCockpitActions.ts. null gdy budowa się nie powiodła
-   *  (np. brakujące metadane tokenu) — akcje wymagające Pool są wtedy wyłączone. */
+  /** SDK Pool built once here — used by prepareRemoveLiquidityTransaction
+   *  / createPosition in useCockpitActions.ts. null when construction failed
+   *  (e.g. missing token metadata) — actions requiring Pool are then disabled. */
   pool: Pool | null;
-  amount0: number; // aktualne kwoty w pozycji (human units)
+  amount0: number; // current amounts in the position (human units)
   amount1: number;
-  feeAmount0: number; // nieodebrane fee (human units, nie USD)
+  feeAmount0: number; // uncollected fees (human units, not USD)
   feeAmount1: number;
-  /** Te same nieodebrane fee co feeAmount0/1, ale jako bigint (string) w
-   *  jednostkach raw — Partia 4b: rebalanceBuilder.ts's planRebalance()
-   *  chce feesOwed0/1 dokładnie (bigint), nie zaokrąglone Number(). '0' gdy
-   *  odczyt fee się nie powiódł (patrz catch niżej — feeAmount0/1 też wtedy 0). */
+  /** The same uncollected fees as feeAmount0/1, but as bigint (string) in
+   *  raw units — Batch 4b: rebalanceBuilder.ts's planRebalance()
+   *  wants feesOwed0/1 exactly (bigint), not a rounded Number(). '0' when
+   *  the fee read failed (see the catch below — feeAmount0/1 are then 0 too). */
   feesOwed0Raw: string;
   feesOwed1Raw: string;
-  suggestion: RangeSuggestion | null; // sugerowany zakres doradcy — do rebalansu ręcznego
-  /** PARTIA 20 pkt 1: skąd pochodzi `suggestion` — 'bot' gdy pula jest
-   *  ŚLEDZONA przez bota i mieliśmy jego gotową sugestię (bot.state.pools[].suggestion,
-   *  ta sama liczba co bot faktycznie gra, SIGMA_MODE bota włącznie); 'ui-estimate'
-   *  gdy to własne liczenie tego hooka (suggestRange/assessPosition, estymator
-   *  swapowy przeglądarki) — jedyny wypadek TERAZ to pula spoza konfiguracji
-   *  bota (findBotPoolByAddress nic nie znalazł). `null` = brak sugestii w ogóle. */
+  suggestion: RangeSuggestion | null; // advisor's suggested range — for the manual rebalance
+  /** BATCH 20 item 1: where `suggestion` comes from — 'bot' when the pool is
+   *  TRACKED by the bot and we had its ready suggestion (bot.state.pools[].suggestion,
+   *  the same number the bot actually plays, including the bot's SIGMA_MODE); 'ui-estimate'
+   *  when it is this hook's own computation (suggestRange/assessPosition, the browser's
+   *  swap estimator) — the only case NOW is a pool outside the bot's configuration
+   *  (findBotPoolByAddress found nothing). `null` = no suggestion at all. */
   suggestionSource: 'bot' | 'ui-estimate' | null;
 }
 
@@ -160,11 +160,11 @@ export interface PortfolioSummary {
   hasUnknownValue: boolean;
   positions: PortfolioPosition[];
   refresh: () => void;
-  /** Referencyjny kurs ETH/USD wyprowadzony z pierwszej napotkanej puli
-   *  stable/ETH wśród pozycji (patrz `derivedEthUsd` niżej) — null, gdy
-   *  użytkownik nie ma żadnej takiej pozycji. Reużywany przez
-   *  useCockpitActions.ts (Fix 25.08: żywy próg [Zbierz fees]) zamiast
-   *  osobnego odczytu kursu. */
+  /** Reference ETH/USD price derived from the first stable/ETH pool
+   *  encountered among the positions (see `derivedEthUsd` below) — null when
+   *  the user has no such position. Reused by
+   *  useCockpitActions.ts (Fix 25.08: live [Collect fees] threshold) instead of
+   *  a separate price read. */
   ethUsd: number | null;
 }
 
@@ -192,14 +192,14 @@ const usdValueOf = (amount0: number, amount1: number, sym0: string, sym1: string
 };
 
 /**
- * FIX 01.09 (Fable): wycena przez KURS PULI dla par bez ścieżki w usdValueOf
- * (np. cbBTC/WETH — brak nogi stabilnej). Objaw: karta kokpitu pokazywała
- * „Fee narosłe $0.00" na wąskiej nodze eksperymentu (#5908083), podczas gdy
- * bot i Uniswap widziały ~$0.7 — feesUsd robiło `?? 0` na null z usdValueOf.
- * Nieznaną nogę sprowadzamy kursem puli (sqrtPriceX96) do nogi ETH/stabilnej,
- * potem do USD. Naprawia też wartość pozycji (znika fallback „(wycena bota)").
- * Uwaga: gałęzie ETH wymagają derivedEthUsd — wyprowadzanego z wcześniej
- * przetworzonej puli stable/ETH (kolejność pętli, jak dotychczas).
+ * FIX 01.09 (Fable): valuation via the POOL PRICE for pairs with no path in usdValueOf
+ * (e.g. cbBTC/WETH — no stable leg). Symptom: the cockpit card showed
+ * "Accrued fees $0.00" on the narrow leg of the experiment (#5908083), while
+ * the bot and Uniswap saw ~$0.7 — feesUsd did `?? 0` on the null from usdValueOf.
+ * The unknown leg is converted via the pool price (sqrtPriceX96) to the ETH/stable leg,
+ * then to USD. Also fixes the position value (the "(bot valuation)" fallback disappears).
+ * Note: the ETH branches require derivedEthUsd — derived from a previously
+ * processed stable/ETH pool (loop order, as before).
  */
 const usdValueViaPool = (
   amount0: number,
@@ -213,16 +213,16 @@ const usdValueViaPool = (
 ): number | null => {
   const direct = usdValueOf(amount0, amount1, sym0, sym1, ethUsd);
   if (direct !== null) return direct;
-  // Noga ETH + noga niewyceniana (cbBTC/WETH): drugą nogę przeliczamy kursem puli na ETH.
+  // ETH leg + unpriced leg (cbBTC/WETH): the other leg is converted to ETH via the pool price.
   if (isEth(sym0) && ethUsd !== null) {
-    const p1InEth = humanPriceQuotePerBase(sqrtPriceX96, d0, d1, false); // ETH (token0) za 1 token1
+    const p1InEth = humanPriceQuotePerBase(sqrtPriceX96, d0, d1, false); // ETH (token0) per 1 token1
     return (amount0 + amount1 * p1InEth) * ethUsd;
   }
   if (isEth(sym1) && ethUsd !== null) {
-    const p0InEth = humanPriceQuotePerBase(sqrtPriceX96, d0, d1, true); // ETH (token1) za 1 token0
+    const p0InEth = humanPriceQuotePerBase(sqrtPriceX96, d0, d1, true); // ETH (token1) per 1 token0
     return (amount1 + amount0 * p0InEth) * ethUsd;
   }
-  // Noga stabilna + noga niewyceniana (np. WBTC/USDC): kurs puli daje USD wprost.
+  // Stable leg + unpriced leg (e.g. WBTC/USDC): the pool price gives USD directly.
   if (isStable(sym0)) {
     const p1InUsd = humanPriceQuotePerBase(sqrtPriceX96, d0, d1, false);
     return amount0 + amount1 * p1InUsd;
@@ -241,14 +241,14 @@ export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
   const clientArbitrum = usePublicClient({ chainId: 42161 });
   const clients: Record<number, ReturnType<typeof usePublicClient>> = { 1: clientMainnet, 8453: clientBase, 42161: clientArbitrum };
 
-  // Salda portfela — WSZYSTKIE TRZY SIECI.
-  // BŁĄD ZNALEZIONY 21.08: do tej pory liczony był wyłącznie mainnet (komentarz
-  // brzmiał „Mirrors CompactWalletInfo's balance fetch (mainnet ETH/WETH/USDC)"),
-  // podczas gdy pozycje czytamy z mainnet+Base+Arbitrum. Efekt: „Wartość łączna"
-  // w kokpicie ZANIŻAŁA stan portfela o wszystko, co leży na L2 — u Rafała
-  // ukrywało to 152 USDC na Arbitrum.
-  // Hooki wypisane jawnie (nie w pętli): ich liczba musi być stała między
-  // renderami — patrz dwa dzisiejsze crashe „Rendered more hooks…".
+  // Wallet balances — ALL THREE NETWORKS.
+  // BUG FOUND 21.08: until now only mainnet was counted (the comment
+  // read "Mirrors CompactWalletInfo's balance fetch (mainnet ETH/WETH/USDC)"),
+  // while positions are read from mainnet+Base+Arbitrum. Effect: "Total value"
+  // in the cockpit UNDERSTATED the wallet by everything sitting on L2 — for the
+  // owner this hid 152 USDC on Arbitrum.
+  // Hooks listed explicitly (not in a loop): their count must be constant between
+  // renders — see today's two "Rendered more hooks…" crashes.
   const { data: ethBalM } = useBalance({ address, chainId: 1 });
   const { data: wethBalM } = useBalance({ address, token: NETWORKS.MAINNET.tokens.WETH.address, chainId: 1 });
   const { data: usdcBalM } = useBalance({ address, token: NETWORKS.MAINNET.tokens.USDC.address, chainId: 1 });
@@ -423,28 +423,28 @@ export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
 
             let advice: RebalanceAssessment['action'] | null = null;
             let paybackDays: number | null = null;
-            // Sugerowany zakres doradcy — liczony gdy mamy statystyki, niezależnie
-            // od tego, czy dało się wycenić pozycję w USD (rebalans ręczny nadal
-            // ma sens, tylko bez oceny opłacalności/payback).
-            // PARTIA 20 pkt 1: to liczenie (suggestRange/assessPosition, estymator
-            // swapowy przeglądarki — SIGMA_MODE bota tu NIE obowiązuje) jest teraz
-            // TYLKO fallbackiem dla pul spoza konfiguracji bota. Dla pul ŚLEDZONYCH
-            // przez bota nadpisujemy `suggestion` gotową liczbą z bot.state.pools[]
-            // niżej (w useMemo po tej pętli, żeby nie triggerować ponownego RPC
-            // przy każdym pollu /api/state — patrz komentarz przy `positionsWithBotSuggestion`).
+            // Advisor's suggested range — computed when we have stats, regardless
+            // of whether the position could be valued in USD (a manual rebalance still
+            // makes sense, just without the profitability/payback assessment).
+            // BATCH 20 item 1: this computation (suggestRange/assessPosition, the browser's
+            // swap estimator — the bot's SIGMA_MODE does NOT apply here) is now
+            // ONLY a fallback for pools outside the bot's configuration. For pools TRACKED
+            // by the bot we override `suggestion` with the ready number from bot.state.pools[]
+            // below (in a useMemo after this loop, so as not to trigger another RPC pass
+            // on every /api/state poll — see the comment at `positionsWithBotSuggestion`).
             let suggestion: RangeSuggestion | null = null;
             if (stats) {
-              // SPÓJNOŚĆ PROGNOZY cbBTC (HANDOFF Fable→Sonnet 26.08/28.08 rano):
-              // ADVISOR_PARAMS.k=3 to domyślne dla par ETH/stable — pary
-              // skorelowane (cbBTC/WETH) grają na żywo z zamrożonym profilem
-              // v1.2 bota, k=2 (bot/config.ts BotPool.advisorK). Ten hook był
-              // JEDYNYM call site'em suggestRange/assessPosition w całej UI
-              // (Doradca ±X% w RebalanceModal, REBALANCE/WAIT_NOT_PROFITABLE
-              // na kartach) i zawsze spadał na globalne k=3, nawet dla cbBTC —
-              // do czasu rekalibracji UI ma pokazywać to, co faktycznie gra
-              // bot, nie osobną (bardziej agresywną) matematykę. Override
-              // per pula przez BOT_POOL_META.advisorK (duplikat bot/config.ts,
-              // ta sama konwencja co reszta botPools.ts), zero nowych requestów.
+              // cbBTC FORECAST CONSISTENCY (HANDOFF Fable→Sonnet 26.08/28.08 morning):
+              // ADVISOR_PARAMS.k=3 is the default for ETH/stable pairs — correlated
+              // pairs (cbBTC/WETH) play live with the bot's frozen v1.2
+              // profile, k=2 (bot/config.ts BotPool.advisorK). This hook was
+              // the ONLY call site of suggestRange/assessPosition in the whole UI
+              // (Advisor ±X% in RebalanceModal, REBALANCE/WAIT_NOT_PROFITABLE
+              // on cards) and always fell back to the global k=3, even for cbBTC —
+              // until recalibration the UI should show what the bot actually
+              // plays, not separate (more aggressive) math. Per-pool override
+              // via BOT_POOL_META.advisorK (duplicate of bot/config.ts,
+              // the same convention as the rest of botPools.ts), zero new requests.
               const botMeta = findBotPoolByAddress(chainId, poolInfo.address);
               const advisorParams = botMeta?.advisorK ? { ...ADVISOR_PARAMS, k: botMeta.advisorK } : ADVISOR_PARAMS;
               try {
@@ -464,9 +464,9 @@ export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
               }
             }
 
-            // SDK Pool — zbudowany raz tutaj z danych już odczytanych powyżej,
-            // reużywany przez useCockpitActions.ts (Zamknij/Rebalans) bez
-            // dodatkowych zapytań RPC ani duplikowania konstrukcji Pool.
+            // SDK Pool — built once here from data already read above,
+            // reused by useCockpitActions.ts (Close/Rebalance) without
+            // additional RPC queries or duplicating the Pool construction.
             let sdkPool: Pool | null = null;
             try {
               const t0Token = new Token(chainId, token0, d0, sym0 || undefined);
@@ -523,32 +523,32 @@ export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, isConnected, tick]);
 
-  // PARTIA 20 pkt 1: override sugestii dla pul ŚLEDZONYCH przez bota — osobny
-  // useMemo NAD efektem z RPC, nie w jego zależnościach, żeby poll /api/state
-  // (co 60s, useBotApi) NIE triggerował ponownego przejścia po wszystkich
-  // pozycjach on-chain (drogie RPC) — tylko przelicza istniejące `positions`
-  // z najświeższym bot.state.pools[].suggestion. Zero nowych requestów: dane
-  // z bota już są w pamięci (useBotApi), tu tylko dopasowanie po adresie puli.
+  // BATCH 20 item 1: suggestion override for pools TRACKED by the bot — a separate
+  // useMemo ON TOP of the RPC effect, not in its dependencies, so that the /api/state poll
+  // (every 60s, useBotApi) does NOT trigger another pass over all
+  // on-chain positions (expensive RPC) — it only recomputes the existing `positions`
+  // with the latest bot.state.pools[].suggestion. Zero new requests: the bot's
+  // data is already in memory (useBotApi), here only matching by pool address.
   const positionsWithBotSuggestion = useMemo<PortfolioPosition[]>(() => {
     const botPools = bot?.state?.pools;
     if (!botPools || !botPools.length) return positions;
     return positions.map((p) => {
       const botMeta = findBotPoolByAddress(p.chainId, p.poolAddress);
-      if (!botMeta) return p; // pula spoza konfiguracji bota — zostaje własna estymata (albo brak)
+      if (!botMeta) return p; // pool outside the bot's configuration — keep our own estimate (or none)
       const botLive = botPools.find((pl) => pl.id === botMeta.id);
-      if (!botLive?.suggestion) return p; // bot jeszcze nie ma świeżej sugestii dla tej puli — zostaje fallback
+      if (!botLive?.suggestion) return p; // the bot has no fresh suggestion for this pool yet — keep the fallback
       return { ...p, suggestion: { ...botLive.suggestion }, suggestionSource: 'bot' as const };
     });
   }, [positions, bot?.state?.pools]);
 
   const num = (b?: { formatted: string }) => Number(b?.formatted ?? 0);
-  // ETH i WETH sumujemy przez wszystkie sieci (ten sam kurs), USDC to 1:1 USD.
-  // cbBTC na Base świadomie POMINIĘTE — wymagałoby kursu BTC, którego UI nie
-  // ma (bot liczy go przez pulę referencyjną). Jeśli kiedyś trzymamy tam realny
-  // kapitał, trzeba dociągnąć cenę, inaczej „Wartość łączna" znów będzie zaniżać.
+  // ETH and WETH are summed across all networks (same price), USDC is 1:1 USD.
+  // cbBTC on Base deliberately OMITTED — it would require a BTC price, which the UI
+  // does not have (the bot computes it via the reference pool). If we ever hold real
+  // capital there, the price must be fetched, otherwise "Total value" will understate again.
   const ethLike = num(ethBalM) + num(wethBalM) + num(ethBalB) + num(wethBalB) + num(ethBalA) + num(wethBalA);
   const stables = num(usdcBalM) + num(usdcBalB) + num(usdcBalA);
-  const walletUsd = ethUsd !== null ? ethLike * ethUsd + stables : stables; // bez kursu ETH pokazujemy chociaż stablecoiny
+  const walletUsd = ethUsd !== null ? ethLike * ethUsd + stables : stables; // without an ETH price we at least show the stablecoins
 
   const positionsUsd = positions.reduce((sum, p) => sum + (p.valueUsd ?? 0), 0);
   const feesUsd = positions.reduce((sum, p) => sum + p.feesUsd, 0);

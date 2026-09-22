@@ -1,26 +1,26 @@
 /**
- * rebalanceBuilder.ts — sekwencja transakcji rebalansu (UX-COCKPIT.md §3).
+ * rebalanceBuilder.ts — rebalance transaction sequence (UX-COCKPIT.md §3).
  *
- * Zatwierdzenie propozycji = 2–3 podpisy w Rabby, sekwencyjnie:
- *   1. multicall na NFT managerze: decreaseLiquidity(100%) + collect(MAX)
- *      — JEDNA transakcja (manager wspiera multicall); zamyka starą pozycję
- *      i odbiera kapitał + narosłe fee.
- *   2. swap wyrównujący proporcje pod nowy zakres (SwapRouter02, exactInputSingle
- *      W TEJ SAMEJ PULI, w której robimy LP — najlepsza płynność dla tej pary,
- *      a zapłacone fee wraca częściowo do LP-ów tej puli) — POMIJANY, gdy
- *      proporcje są bliżej niż SWAP_SKIP_PCT.
- *   3. mint nowego zakresu — budowany PO krokach 1–2 z FAKTYCZNYCH sald
- *      portfela (buildMintStep), nie z estymat — estymaty służą tylko podglądowi.
+ * Confirming a proposal = 2-3 signatures in Rabby, sequentially:
+ *   1. multicall on the NFT manager: decreaseLiquidity(100%) + collect(MAX)
+ *      — ONE transaction (the manager supports multicall); closes the old position
+ *      and collects the capital + accrued fees.
+ *   2. swap balancing the proportions for the new range (SwapRouter02, exactInputSingle
+ *      IN THE SAME POOL where we provide LP — best liquidity for this pair,
+ *      and the fee paid partially flows back to this pool's LPs) — SKIPPED when
+ *      the proportions are closer than SWAP_SKIP_PCT.
+ *   3. mint of the new range — built AFTER steps 1-2 from the ACTUAL wallet
+ *      balances (buildMintStep), not from estimates — estimates are for preview only.
  *
- * Failure w środku sekwencji = stan bezpieczny: po kroku 1 środki są w cash na
- * walletcie (albo w tokensOwed pozycji, odbieralne przez collect), po kroku 2
- * tylko w innych proporcjach. UI zapisuje postęp (saveProgress) i pokazuje
- * "dokończ krok 2/3" po powrocie.
+ * Failure mid-sequence = safe state: after step 1 the funds are in cash in the
+ * wallet (or in the position's tokensOwed, collectable via collect), after step 2
+ * only in different proportions. The UI saves progress (saveProgress) and shows
+ * "finish step 2/3" on return.
  *
- * Moduł czysty (bez Reacta, bez RPC) — wszystkie dane wejściowe podaje UI
- * (usePortfolio ma pool/liquidity/ticki/fees; salda przez readBalanceAndAllowance).
- * Wysyłka i symulacja przed wysłaniem (client.call) — po stronie hooka, jak
- * w useCockpitActions.openPositionAtRange.
+ * Pure module (no React, no RPC) — all inputs are supplied by the UI
+ * (usePortfolio has pool/liquidity/ticks/fees; balances via readBalanceAndAllowance).
+ * Sending and pre-send simulation (client.call) — on the hook side, as
+ * in useCockpitActions.openPositionAtRange.
  */
 import { Pool, Position } from '@uniswap/v3-sdk';
 import { Fraction, Percent } from '@uniswap/sdk-core';
@@ -28,21 +28,21 @@ import { Address, Hex, encodeFunctionData, erc20Abi } from 'viem';
 import { getAmountsForLiquidity, MAX_UINT128 } from './v3math';
 import { POSITION_MANAGER_ADDRESSES } from './liquidityManagement';
 
-// SwapRouter02 (Uniswap oficjalny; NIE stary SwapRouter — inne ABI exactInputSingle)
+// SwapRouter02 (official Uniswap; NOT the old SwapRouter — different exactInputSingle ABI)
 export const SWAP_ROUTER_02: Record<number, Address> = {
   1: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
   8453: '0x2626664c2603336E57B271c5C0b26F421741e481',
-  // Arbitrum: kanoniczny deploy SwapRouter02 pod TYM SAMYM adresem co mainnet
-  // (Base jest wyjątkiem). Dodane 2026-08-11 (Fable) po wejściu Arbitrum do UI;
-  // przed pierwszą realną sekwencją [Zatwierdź] na Arbitrum: sanity-check
-  // symulacją eth_call (builder i tak ją robi przed mintem).
+  // Arbitrum: canonical SwapRouter02 deployment at THE SAME address as mainnet
+  // (Base is the exception). Added 2026-08-11 (Fable) after Arbitrum entered the UI;
+  // before the first real [Confirm] sequence on Arbitrum: sanity-check
+  // with an eth_call simulation (the builder does it before the mint anyway).
   42161: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
 };
 
-/** poniżej tego odchylenia proporcji (jako % wartości pozycji) krok swap pomijamy */
+/** below this proportion deviation (as % of position value) the swap step is skipped */
 export const SWAP_SKIP_PCT = 2;
 
-// --- ABI (tylko używane funkcje) ---
+// --- ABI (only the functions used) ---
 const MULTICALL_ABI = [
   {
     name: 'multicall', type: 'function', stateMutability: 'payable',
@@ -80,7 +80,7 @@ const COLLECT_ABI = [
 
 const EXACT_INPUT_SINGLE_ABI = [
   {
-    // SwapRouter02: ExactInputSingleParams BEZ pola deadline (inaczej niż SwapRouter v1)
+    // SwapRouter02: ExactInputSingleParams WITHOUT the deadline field (unlike SwapRouter v1)
     name: 'exactInputSingle', type: 'function', stateMutability: 'payable',
     inputs: [{
       name: 'params', type: 'tuple', components: [
@@ -114,26 +114,26 @@ const MINT_ABI = [
   },
 ] as const;
 
-// --- typy planu ---
+// --- plan types ---
 export interface PlannedTx {
   to: Address;
   data: Hex;
   value: bigint;
 }
 export interface RebalanceStep {
-  /** 1-based, po pominięciu swapa numeracja jest ciągła (1..2) */
+  /** 1-based; when the swap is skipped the numbering stays contiguous (1..2) */
   index: number;
   kind: 'decreaseCollect' | 'swap' | 'mint';
   label: string;
-  /** dla kind='mint' to tylko ESTYMATA do podglądu — przed wysłaniem zbuduj
-   *  ponownie przez buildMintStep z faktycznych sald (patrz nagłówek pliku) */
+  /** for kind='mint' this is only an ESTIMATE for preview — before sending, rebuild
+   *  via buildMintStep from the actual balances (see file header) */
   tx: PlannedTx;
   detail: string;
 }
 export interface RequiredApproval {
   token: Address;
   spender: Address;
-  /** wartość, na którą approve musi opiewać (UI porównuje z allowance i pomija spełnione) */
+  /** the amount the approve must cover (UI compares with allowance and skips satisfied ones) */
   amount: bigint;
   tx: PlannedTx;
   label: string;
@@ -144,12 +144,12 @@ export interface RebalancePlan {
   steps: RebalanceStep[];
   approvals: RequiredApproval[];
   swapSkipped: boolean;
-  /** estymaty do podglądu w karcie/modalu (jednostki ludzkie) */
+  /** estimates for preview in the card/modal (human units) */
   preview: {
-    withdraw0: number; withdraw1: number; // z kroku 1 (kapitał + fee)
+    withdraw0: number; withdraw1: number; // from step 1 (capital + fees)
     swapDirection: '0to1' | '1to0' | null;
     swapIn: number; swapOutMin: number;
-    mint0: number; mint1: number; // estymowane wejście do minta
+    mint0: number; mint1: number; // estimated mint input
   };
 }
 
@@ -160,8 +160,8 @@ const raw = (x: number, decimals: number): bigint => {
 const human = (x: bigint, decimals: number): number => Number(x) / 10 ** decimals;
 
 /**
- * Buduje pełny plan rebalansu (krok 1 dokładny, kroki 2–3 estymowane).
- * `feesOwed0/1` — nieodebrane fee z symulacji statycznego collect (UI już to ma).
+ * Builds the full rebalance plan (step 1 exact, steps 2-3 estimated).
+ * `feesOwed0/1` — uncollected fees from the static collect simulation (UI already has it).
  */
 export function planRebalance(params: {
   pool: Pool;
@@ -192,7 +192,7 @@ export function planRebalance(params: {
   const d0 = pool.token0.decimals;
   const d1 = pool.token1.decimals;
 
-  // ---- KROK 1: multicall(decrease 100% + collect MAX) — dokładny ----
+  // ---- STEP 1: multicall(decrease 100% + collect MAX) — exact ----
   const position = new Position({ pool, tickLower, tickUpper, liquidity: liquidity.toString() });
   const amount0Min = BigInt(position.amount0.multiply(keep).quotient.toString());
   const amount1Min = BigInt(position.amount1.multiply(keep).quotient.toString());
@@ -209,21 +209,21 @@ export function planRebalance(params: {
   const withdraw0 = BigInt(position.amount0.quotient.toString()) + feesOwed0;
   const withdraw1 = BigInt(position.amount1.quotient.toString()) + feesOwed1;
 
-  // ---- KROK 2: swap wyrównujący (estymata; float — miny chronią) ----
-  // docelowa proporcja raw a1/a0 dla nowego zakresu przy bieżącej cenie
+  // ---- STEP 2: balancing swap (estimate; float — the mins protect) ----
+  // target raw a1/a0 proportion for the new range at the current price
   const sqrtP = BigInt(pool.sqrtRatioX96.toString());
-  // literał zamiast `10n ** 18n` — babel transpiluje `**` na Math.pow() bez
-  // rozróżniania typu, co dla BigIntów rzuca w runtime (patrz hedgeBuilder.ts)
+  // literal instead of `10n ** 18n` — babel transpiles `**` to Math.pow() without
+  // distinguishing the type, which throws at runtime for BigInts (see hedgeBuilder.ts)
   const PROBE_L = 1_000_000_000_000_000_000n; // 10n ** 18n
   const probe = getAmountsForLiquidity(sqrtP, newTickLower, newTickUpper, PROBE_L);
-  const pRaw = (Number(sqrtP) / 2 ** 96) ** 2; // token1_raw za token0_raw
+  const pRaw = (Number(sqrtP) / 2 ** 96) ** 2; // token1_raw per token0_raw
   const h0 = Number(withdraw0);
   const h1 = Number(withdraw1);
-  const totalV1 = h0 * pRaw + h1; // wartość całości w token1_raw
+  const totalV1 = h0 * pRaw + h1; // total value in token1_raw
 
   let target0: number;
-  if (probe.amount0 === 0n) target0 = 0; // cena nad zakresem → sam token1
-  else if (probe.amount1 === 0n) target0 = totalV1 / pRaw; // pod zakresem → sam token0
+  if (probe.amount0 === 0n) target0 = 0; // price above the range → token1 only
+  else if (probe.amount1 === 0n) target0 = totalV1 / pRaw; // below the range → token0 only
   else {
     const r = Number(probe.amount1) / Number(probe.amount0); // a1/a0 raw
     target0 = totalV1 / (pRaw + r);
@@ -231,7 +231,7 @@ export function planRebalance(params: {
   const target1 = totalV1 - target0 * pRaw;
 
   const feeFrac = pool.fee / 1_000_000;
-  const imbalanceV1 = Math.abs(h0 - target0) * pRaw; // niedomiar/nadmiar w token1_raw
+  const imbalanceV1 = Math.abs(h0 - target0) * pRaw; // shortfall/excess in token1_raw
   const swapNeeded = totalV1 > 0 && (imbalanceV1 / totalV1) * 100 > SWAP_SKIP_PCT;
 
   let swapDirection: '0to1' | '1to0' | null = null;
@@ -269,9 +269,9 @@ export function planRebalance(params: {
     };
   }
 
-  // ---- KROK 3 (ESTYMATA do podglądu): mint z est. sald po swapie ----
-  // margines bezpieczeństwa na nodze z swapa (faktyczny out może być niższy);
-  // wykonawczy mint budowany przez buildMintStep z realnych sald.
+  // ---- STEP 3 (ESTIMATE for preview): mint from est. balances after the swap ----
+  // safety margin on the swap leg (the actual out may be lower);
+  // the executable mint is built by buildMintStep from real balances.
   const SAFETY = 0.998;
   const estMint0 = raw(est0AfterSwap * (swapDirection === '1to0' ? SAFETY : 1), 0);
   const estMint1 = raw(est1AfterSwap * (swapDirection === '0to1' ? SAFETY : 1), 0);
@@ -280,7 +280,7 @@ export function planRebalance(params: {
     amount0: estMint0, amount1: estMint1, recipient, slippageBps: bips, deadlineSeconds,
   });
 
-  // ---- approvals (UI filtruje po faktycznym allowance) ----
+  // ---- approvals (UI filters by actual allowance) ----
   const approvals: RequiredApproval[] = [];
   const addApproval = (token: Address, spender: Address, amount: bigint, label: string) => {
     if (amount <= 0n) return;
@@ -292,25 +292,25 @@ export function planRebalance(params: {
   if (swapTx && swapDirection) {
     addApproval(
       (swapDirection === '0to1' ? pool.token0.address : pool.token1.address) as Address,
-      router, swapInRaw, `Approve ${swapDirection === '0to1' ? pool.token0.symbol : pool.token1.symbol} dla routera (swap)`
+      router, swapInRaw, `Approve ${swapDirection === '0to1' ? pool.token0.symbol : pool.token1.symbol} for the router (swap)`
     );
   }
-  addApproval(pool.token0.address as Address, manager, estMint0, `Approve ${pool.token0.symbol} dla NFT managera (mint)`);
-  addApproval(pool.token1.address as Address, manager, estMint1, `Approve ${pool.token1.symbol} dla NFT managera (mint)`);
+  addApproval(pool.token0.address as Address, manager, estMint0, `Approve ${pool.token0.symbol} for the NFT manager (mint)`);
+  addApproval(pool.token1.address as Address, manager, estMint1, `Approve ${pool.token1.symbol} for the NFT manager (mint)`);
 
-  // ---- złożenie planu ----
+  // ---- plan assembly ----
   const steps: RebalanceStep[] = [];
   const total = swapTx ? 3 : 2;
   steps.push({
     index: 1, kind: 'decreaseCollect',
-    label: `Krok 1/${total}: zamknij starą pozycję #${tokenId} (decrease + collect w jednej tx)`,
+    label: `Step 1/${total}: close old position #${tokenId} (decrease + collect in one tx)`,
     tx: { to: manager, data: step1Data, value: 0n },
-    detail: `otrzymasz ~${human(withdraw0, d0).toFixed(6)} ${pool.token0.symbol} + ${human(withdraw1, d1).toFixed(6)} ${pool.token1.symbol} (kapitał + fee; min. po slippage na kapitale)`,
+    detail: `you will receive ~${human(withdraw0, d0).toFixed(6)} ${pool.token0.symbol} + ${human(withdraw1, d1).toFixed(6)} ${pool.token1.symbol} (capital + fees; min. after slippage on the capital)`,
   });
   if (swapTx && swapDirection) {
     steps.push({
       index: 2, kind: 'swap',
-      label: `Krok 2/${total}: swap wyrównujący proporcje (w tej samej puli)`,
+      label: `Step 2/${total}: swap balancing the proportions (in the same pool)`,
       tx: swapTx,
       detail: swapDirection === '0to1'
         ? `${human(swapInRaw, d0).toFixed(6)} ${pool.token0.symbol} → min. ${human(swapOutMinRaw, d1).toFixed(6)} ${pool.token1.symbol}`
@@ -319,9 +319,9 @@ export function planRebalance(params: {
   }
   steps.push({
     index: total, kind: 'mint',
-    label: `Krok ${total}/${total}: otwórz nową pozycję [${newTickLower}, ${newTickUpper}]`,
+    label: `Step ${total}/${total}: mint new position [${newTickLower}, ${newTickUpper}]`,
     tx: mintStep.tx,
-    detail: `ESTYMATA: ~${human(estMint0, d0).toFixed(6)} ${pool.token0.symbol} + ${human(estMint1, d1).toFixed(6)} ${pool.token1.symbol} — przed wysłaniem przebuduj z faktycznych sald (buildMintStep)`,
+    detail: `ESTIMATE: ~${human(estMint0, d0).toFixed(6)} ${pool.token0.symbol} + ${human(estMint1, d1).toFixed(6)} ${pool.token1.symbol} — rebuild from actual balances before sending (buildMintStep)`,
   });
 
   return {
@@ -338,10 +338,10 @@ export function planRebalance(params: {
 }
 
 /**
- * Wykonawczy krok mint — wołany PO potwierdzeniu kroków 1–2, z FAKTYCZNYMI
- * saldami (readBalanceAndAllowance), nie estymatami. Wewnątrz Position.fromAmounts
- * (SDK dobierze maksymalne L mieszczące się w podanych kwotach) + miny po slippage
- * — ta sama droga co prepareAddLiquidityTransaction w AddLiquidity.tsx.
+ * Executable mint step — called AFTER steps 1-2 are confirmed, with ACTUAL
+ * balances (readBalanceAndAllowance), not estimates. Uses Position.fromAmounts
+ * internally (the SDK picks the maximum L that fits the given amounts) + mins after slippage
+ * — the same path as prepareAddLiquidityTransaction in AddLiquidity.tsx.
  */
 export function buildMintStep(params: {
   pool: Pool;
@@ -381,22 +381,22 @@ export function buildMintStep(params: {
 }
 
 // ---------------------------------------------------------------------------
-// ROTATE cross-pool (20.08, domknięcie TODO z Partii 4b): stara i nowa pozycja
-// w RÓŻNYCH pulach. Ograniczenia v1 (świadome):
-//  - TA SAMA sieć (sekwencja tx nie zbridguje; rotacje cross-chain zostają na
-//    ręcznych krokach 1/2 jak dotychczas — UI ma to komunikować),
-//  - pary: identyczna (zmiana tieru, np. mainnet 030→005) albo z JEDNYM
-//    wspólnym tokenem (np. WETH/USDC → cbBTC/WETH przez wspólny WETH);
-//    pary rozłączne → throw (wybór trasy swapu to inna klasa problemu,
-//    a w BOT_POOLS taki przypadek nie występuje).
-// Sekwencja: 1) decrease+collect w starej puli → 2) swap "przelewający"
-// CAŁY unikalny token starej pary do wspólnego (w STAREJ puli — tam jest
-// płynność dla tej pary) → 3) swap wyrównujący proporcje pod nowy zakres
-// (w NOWEJ puli) → 4) mint w nowej puli. Kroki 2/3 pomijane, gdy zbędne
-// (ta sama para → tylko wyrównanie; zakres jednostronny → bez wyrównania).
-// Failure w środku = środki w cash na walletcie (stan bezpieczny, jak w
-// planRebalance); mint wykonawczo przebudować przez buildMintStep z
-// FAKTYCZNYCH sald (te same zasady co plan bazowy).
+// ROTATE cross-pool (20.08, closing the TODO from Batch 4b): old and new position
+// in DIFFERENT pools. v1 limitations (deliberate):
+//  - THE SAME network (a tx sequence will not bridge; cross-chain rotations stay
+//    on the manual steps 1/2 as before — the UI must communicate this),
+//  - pairs: identical (tier change, e.g. mainnet 030→005) or with ONE
+//    shared token (e.g. WETH/USDC → cbBTC/WETH via the shared WETH);
+//    disjoint pairs → throw (swap route selection is a different class of problem,
+//    and no such case occurs in BOT_POOLS).
+// Sequence: 1) decrease+collect in the old pool → 2) a "bridging" swap of
+// the ENTIRE unique token of the old pair into the shared one (in the OLD pool — that
+// is where the liquidity for this pair is) → 3) swap balancing the proportions for the new range
+// (in the NEW pool) → 4) mint in the new pool. Steps 2/3 are skipped when unnecessary
+// (same pair → balancing only; one-sided range → no balancing).
+// Failure mid-way = funds in cash in the wallet (safe state, as in
+// planRebalance); the executable mint must be rebuilt via buildMintStep from
+// ACTUAL balances (same rules as the base plan).
 // ---------------------------------------------------------------------------
 
 export interface RotatePlan {
@@ -404,13 +404,13 @@ export interface RotatePlan {
   tokenId: string;
   steps: RebalanceStep[];
   approvals: RequiredApproval[];
-  /** pula, w której robimy mint (do buildMintStep po krokach swap) */
+  /** the pool we mint in (for buildMintStep after the swap steps) */
   mintPool: 'new';
   preview: {
-    withdraw0: number; withdraw1: number; // tokeny STAREJ puli
-    bridgeSwap: string | null;  // opis swapu unikalny→wspólny (null gdy ta sama para)
-    balanceSwap: string | null; // opis swapu wyrównującego w nowej puli
-    mint0: number; mint1: number; // ESTYMATA wejścia do minta (tokeny NOWEJ puli)
+    withdraw0: number; withdraw1: number; // tokens of the OLD pool
+    bridgeSwap: string | null;  // description of the unique→shared swap (null when same pair)
+    balanceSwap: string | null; // description of the balancing swap in the new pool
+    mint0: number; mint1: number; // ESTIMATE of the mint input (tokens of the NEW pool)
   };
 }
 
@@ -440,13 +440,13 @@ export function planRotate(params: {
   const router = SWAP_ROUTER_02[chainId];
   if (!manager || !router) throw new Error(`Unsupported chain: ${chainId}`);
   if (oldPool.chainId !== newPool.chainId) {
-    throw new Error('planRotate: pule na różnych sieciach — rotacja cross-chain wymaga ręcznych kroków (zamknij → przenieś → otwórz)');
+    throw new Error('planRotate: pools on different networks — a cross-chain rotation requires manual steps (close → move → open)');
   }
   const bips = Math.min(Math.max(Math.round(slippageBps), 5), 500);
   const keep = new Fraction(10_000 - bips, 10_000);
   const deadline = BigInt(Math.floor(Date.now() / 1000) + (params.deadlineSeconds ?? 1800));
 
-  // ---- KROK 1: decrease 100% + collect w STAREJ puli (dokładny) ----
+  // ---- STEP 1: decrease 100% + collect in the OLD pool (exact) ----
   const position = new Position({ pool: oldPool, tickLower, tickUpper, liquidity: liquidity.toString() });
   const step1Data = encodeFunctionData({
     abi: MULTICALL_ABI, functionName: 'multicall',
@@ -469,13 +469,13 @@ export function planRotate(params: {
   const withdraw0 = BigInt(position.amount0.quotient.toString()) + feesOwed0;
   const withdraw1 = BigInt(position.amount1.quotient.toString()) + feesOwed1;
 
-  // ---- mapowanie tokenów stara→nowa para ----
+  // ---- token mapping old→new pair ----
   const o = [oldPool.token0, oldPool.token1];
   const n = [newPool.token0, newPool.token1];
   const feeFracOld = oldPool.fee / 1_000_000;
   const feeFracNew = newPool.fee / 1_000_000;
-  const pRawOld = (Number(BigInt(oldPool.sqrtRatioX96.toString())) / 2 ** 96) ** 2; // o1_raw za o0_raw
-  const pRawNew = (Number(BigInt(newPool.sqrtRatioX96.toString())) / 2 ** 96) ** 2; // n1_raw za n0_raw
+  const pRawOld = (Number(BigInt(oldPool.sqrtRatioX96.toString())) / 2 ** 96) ** 2; // o1_raw per o0_raw
+  const pRawNew = (Number(BigInt(newPool.sqrtRatioX96.toString())) / 2 ** 96) ** 2; // n1_raw per n0_raw
 
   const samePair =
     (addrEq(o[0].address, n[0].address) && addrEq(o[1].address, n[1].address)) ||
@@ -498,51 +498,51 @@ export function planRotate(params: {
     value: 0n,
   });
 
-  // salda robocze w tokenach NOWEJ puli (raw, float — miny chronią)
+  // working balances in the NEW pool's tokens (raw, float — the mins protect)
   let bal0 = 0; // n0
   let bal1 = 0; // n1
   let bridgeSwapDesc: string | null = null;
   const swapSteps: Array<Omit<RebalanceStep, 'index' | 'label'> & { shortLabel: string }> = [];
 
   if (samePair) {
-    // przełóż salda na porządek tokenów nowej puli
+    // map the balances onto the new pool's token order
     if (addrEq(o[0].address, n[0].address)) { bal0 = Number(withdraw0); bal1 = Number(withdraw1); }
     else { bal0 = Number(withdraw1); bal1 = Number(withdraw0); }
   } else {
-    // wspólny token: dokładnie jeden
+    // shared token: exactly one
     const sharedIdxOld = addrEq(o[0].address, n[0].address) || addrEq(o[0].address, n[1].address) ? 0
       : addrEq(o[1].address, n[0].address) || addrEq(o[1].address, n[1].address) ? 1 : -1;
     if (sharedIdxOld === -1) {
-      throw new Error(`planRotate: pary ${o[0].symbol}/${o[1].symbol} i ${n[0].symbol}/${n[1].symbol} nie mają wspólnego tokena — rotacja ręczna (2 kroki)`);
+      throw new Error(`planRotate: pairs ${o[0].symbol}/${o[1].symbol} and ${n[0].symbol}/${n[1].symbol} have no shared token — manual rotation (2 steps)`);
     }
     const shared = o[sharedIdxOld];
     const uniqueOld = o[1 - sharedIdxOld];
     const uniqueIn = [Number(withdraw0), Number(withdraw1)][1 - sharedIdxOld];
     let sharedBal = [Number(withdraw0), Number(withdraw1)][sharedIdxOld];
 
-    // KROK: cały unikalny stary token → wspólny, w STAREJ puli
+    // STEP: the entire unique old token → shared, in the OLD pool
     if (uniqueIn > 0) {
-      // cena wspólnego za unikalny w starej puli (raw): uwzględnij orientację
+      // price of shared per unique in the old pool (raw): account for orientation
       const sharedPerUnique = sharedIdxOld === 1 ? pRawOld : 1 / pRawOld;
       const outEst = uniqueIn * sharedPerUnique * (1 - feeFracOld);
       const inRaw = raw(uniqueIn, 0);
       const outMinRaw = (raw(outEst, 0) * BigInt(10_000 - bips)) / 10_000n;
       swapSteps.push({
         kind: 'swap',
-        shortLabel: 'swap: stara para → wspólny token (w starej puli)',
+        shortLabel: 'swap: old pair → shared token (in the old pool)',
         tx: mkSwapTx(uniqueOld.address as Address, shared.address as Address, oldPool.fee, inRaw, outMinRaw),
         detail: `${human(inRaw, uniqueOld.decimals).toFixed(6)} ${uniqueOld.symbol} → min. ${human(outMinRaw, shared.decimals).toFixed(6)} ${shared.symbol}`,
       });
-      addApproval(uniqueOld.address as Address, uniqueOld.symbol, router, inRaw, 'dla routera (swap do wspólnego tokena)');
+      addApproval(uniqueOld.address as Address, uniqueOld.symbol, router, inRaw, 'for the router (swap to the shared token)');
       sharedBal += outEst;
-      bridgeSwapDesc = `${uniqueOld.symbol}→${shared.symbol} w starej puli`;
+      bridgeSwapDesc = `${uniqueOld.symbol}→${shared.symbol} in the old pool`;
     }
-    // całość w tokenie wspólnym — przypisz do właściwej nogi nowej puli
+    // everything in the shared token — assign to the right leg of the new pool
     if (addrEq(shared.address, n[0].address)) { bal0 = sharedBal; bal1 = 0; }
     else { bal0 = 0; bal1 = sharedBal; }
   }
 
-  // ---- swap WYRÓWNUJĄCY pod nowy zakres (w NOWEJ puli) — logika jak w planRebalance ----
+  // ---- BALANCING swap for the new range (in the NEW pool) — same logic as planRebalance ----
   const sqrtPNew = BigInt(newPool.sqrtRatioX96.toString());
   const probe = getAmountsForLiquidity(sqrtPNew, newTickLower, newTickUpper, 1_000_000_000_000_000_000n); // 10n ** 18n
   const totalV1 = bal0 * pRawNew + bal1;
@@ -566,18 +566,18 @@ export function planRotate(params: {
     const tout = zeroToOne ? n[1] : n[0];
     swapSteps.push({
       kind: 'swap',
-      shortLabel: 'swap wyrównujący proporcje (w nowej puli)',
+      shortLabel: 'swap balancing the proportions (in the new pool)',
       tx: mkSwapTx(tin.address as Address, tout.address as Address, newPool.fee, inRaw, outMinRaw),
       detail: `${human(inRaw, tin.decimals).toFixed(6)} ${tin.symbol} → min. ${human(outMinRaw, tout.decimals).toFixed(6)} ${tout.symbol}`,
     });
-    addApproval(tin.address as Address, tin.symbol, router, inRaw, 'dla routera (swap wyrównujący)');
+    addApproval(tin.address as Address, tin.symbol, router, inRaw, 'for the router (balancing swap)');
     if (zeroToOne) { est0 = target0; est1 = bal1 + outEst; }
     else { est0 = bal0 + outEst; est1 = target1; }
-    balanceSwapDesc = `${tin.symbol}→${tout.symbol} w nowej puli`;
+    balanceSwapDesc = `${tin.symbol}→${tout.symbol} in the new pool`;
   }
 
-  // ---- mint w NOWEJ puli (ESTYMATA — wykonawczo buildMintStep z realnych sald) ----
-  const SAFETY = 0.998; // margines na nogach zasilanych swapami (realny out może być niższy)
+  // ---- mint in the NEW pool (ESTIMATE — executable via buildMintStep from real balances) ----
+  const SAFETY = 0.998; // margin on the legs fed by swaps (the real out may be lower)
   const estMint0 = raw(est0 * SAFETY, 0);
   const estMint1 = raw(est1 * SAFETY, 0);
   const mintStep = buildMintStep({
@@ -585,25 +585,25 @@ export function planRotate(params: {
     amount0: estMint0, amount1: estMint1, recipient, slippageBps: bips,
     deadlineSeconds: params.deadlineSeconds,
   });
-  addApproval(n[0].address as Address, n[0].symbol, manager, estMint0, 'dla NFT managera (mint)');
-  addApproval(n[1].address as Address, n[1].symbol, manager, estMint1, 'dla NFT managera (mint)');
+  addApproval(n[0].address as Address, n[0].symbol, manager, estMint0, 'for the NFT manager (mint)');
+  addApproval(n[1].address as Address, n[1].symbol, manager, estMint1, 'for the NFT manager (mint)');
 
-  // ---- złożenie kroków ----
+  // ---- step assembly ----
   const total = 1 + swapSteps.length + 1;
   const steps: RebalanceStep[] = [{
     index: 1, kind: 'decreaseCollect',
-    label: `Krok 1/${total}: zamknij starą pozycję #${tokenId} (${o[0].symbol}/${o[1].symbol}, decrease + collect)`,
+    label: `Step 1/${total}: close old position #${tokenId} (${o[0].symbol}/${o[1].symbol}, decrease + collect)`,
     tx: { to: manager, data: step1Data, value: 0n },
-    detail: `otrzymasz ~${human(withdraw0, o[0].decimals).toFixed(6)} ${o[0].symbol} + ${human(withdraw1, o[1].decimals).toFixed(6)} ${o[1].symbol} (kapitał + fee)`,
+    detail: `you will receive ~${human(withdraw0, o[0].decimals).toFixed(6)} ${o[0].symbol} + ${human(withdraw1, o[1].decimals).toFixed(6)} ${o[1].symbol} (capital + fees)`,
   }];
   swapSteps.forEach((s, i) => steps.push({
-    index: 2 + i, kind: s.kind, label: `Krok ${2 + i}/${total}: ${s.shortLabel}`, tx: s.tx, detail: s.detail,
+    index: 2 + i, kind: s.kind, label: `Step ${2 + i}/${total}: ${s.shortLabel}`, tx: s.tx, detail: s.detail,
   }));
   steps.push({
     index: total, kind: 'mint',
-    label: `Krok ${total}/${total}: otwórz pozycję w NOWEJ puli ${n[0].symbol}/${n[1].symbol} [${newTickLower}, ${newTickUpper}]`,
+    label: `Step ${total}/${total}: mint position in the NEW pool ${n[0].symbol}/${n[1].symbol} [${newTickLower}, ${newTickUpper}]`,
     tx: mintStep.tx,
-    detail: `ESTYMATA: ~${human(estMint0, n[0].decimals).toFixed(6)} ${n[0].symbol} + ${human(estMint1, n[1].decimals).toFixed(6)} ${n[1].symbol} — przed wysłaniem przebuduj z faktycznych sald (buildMintStep, pool=NOWA)`,
+    detail: `ESTIMATE: ~${human(estMint0, n[0].decimals).toFixed(6)} ${n[0].symbol} + ${human(estMint1, n[1].decimals).toFixed(6)} ${n[1].symbol} — rebuild from actual balances before sending (buildMintStep, pool=NEW)`,
   });
 
   return {
@@ -617,8 +617,8 @@ export function planRotate(params: {
 }
 
 // ---------------------------------------------------------------------------
-// Postęp sekwencji — przeżywa odświeżenie strony ("dokończ krok 2/3").
-// localStorage jak homos_api_base; klucz per pozycja.
+// Sequence progress — survives a page refresh ("finish step 2/3").
+// localStorage like homos_api_base; key per position.
 // ---------------------------------------------------------------------------
 export interface RebalanceProgress {
   tokenId: string;
@@ -626,7 +626,7 @@ export interface RebalanceProgress {
   newTickLower: number;
   newTickUpper: number;
   totalSteps: number;
-  /** indeksy kroków POTWIERDZONYCH on-chain (receipt), np. [1] albo [1,2] */
+  /** indices of steps CONFIRMED on-chain (receipt), e.g. [1] or [1,2] */
   completed: number[];
   txHashes: Record<number, string>;
   updatedAt: string;

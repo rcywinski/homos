@@ -79,9 +79,9 @@ export function formatPercentage(percentage: number): string {
   return Math.round(percentage) + '%';
 } 
 /**
- * Czas trwania w formie zwięzłej: "48min", "6h 12min", "3d 4h".
- * Bez sekund — bot próbkuje co 15 minut, więc większa precyzja byłaby fikcją.
- * Dodane 21.08 pod licznik "ile pozycja jest poza zakresem" (paper + realne).
+ * Duration in compact form: "48min", "6h 12min", "3d 4h".
+ * No seconds — the bot samples every 15 minutes, so more precision would be fiction.
+ * Added 21.08 for the "how long the position has been out of range" counter (paper + real).
  */
 export function formatDuration(ms: number): string {
   const min = Math.max(0, Math.round(ms / 60000));

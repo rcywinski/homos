@@ -1,13 +1,13 @@
 /**
- * BotTelemetry.tsx — "Telemetria bota" (TASKS-UI.md Partia 3, UX-COCKPIT.md §1.A.4).
- * Zwijana sekcja w kokpicie, domyślnie zwinięta. Pokazuje state.pools /
- * state.positions z bot/observer.ts — dane już przychodzą przez useBotApi
- * (60s polling w App.tsx), nic nowego nie jest tu fetchowane.
+ * BotTelemetry.tsx — "Bot telemetry" (TASKS-UI.md Batch 3, UX-COCKPIT.md §1.A.4).
+ * Collapsible section in the cockpit, collapsed by default. Shows state.pools /
+ * state.positions from bot/observer.ts — the data already arrives via useBotApi
+ * (60s polling in App.tsx), nothing new is fetched here.
  *
- * Poprawka z 401 (TASKS-UI.md): zamiast linku "surowy JSON" (bezpośredni link
- * nie może nieść nagłówka Authorization, więc dla chronionego API kończyłby
- * się błędem 401) — przycisk otwierający modal z już posiadanym `bot.state`,
- * sformatowanym jako JSON. Zero dodatkowych zapytań.
+ * Fix for 401 (TASKS-UI.md): instead of a "raw JSON" link (a direct link cannot
+ * carry the Authorization header, so for a protected API it would end in a 401)
+ * — a button opening a modal with the already-held `bot.state`, formatted as
+ * JSON. Zero additional requests.
  */
 import React, { FC, useState } from 'react';
 import { UseBotApi, BotPoolLive } from '../hooks/useBotApi';
@@ -22,9 +22,9 @@ const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { maximumFractionD
 
 const ageLabel = (updatedAt: string): string => {
   const mins = Math.max(0, Math.round((Date.now() - new Date(updatedAt).getTime()) / 60000));
-  if (mins < 1) return 'przed chwilą';
-  if (mins < 60) return `${mins} min temu`;
-  return `${Math.round(mins / 60)} h temu`;
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  return `${Math.round(mins / 60)} h ago`;
 };
 
 const ADVICE_ICON: Record<string, string> = {
@@ -34,14 +34,14 @@ const ADVICE_ICON: Record<string, string> = {
 };
 
 /**
- * suggestion.priceLower/priceUpper są w orientacji "token1 za token0" (surowej,
- * bez wiedzy który token to stable/ETH — ta metadana nie jest zapisywana w
- * state.pools). Ale wiemy `ethUsd` (już poprawnie zorientowane przez bota) —
- * i wiemy, że cena bieżąca leży między priceLower a priceUpper (sugestia
- * zawsze obejmuje aktualny tick). Więc: sprawdzamy, czy ethUsd leży bliżej
- * (w skali logarytmicznej — ceny WETH/USDC różnią się rzędami wielkości od
- * ich odwrotności) przedziału [priceLower,priceUpper] czy jego odwrotności
- * [1/priceUpper,1/priceLower], i na tej podstawie wybieramy właściwą orientację.
+ * suggestion.priceLower/priceUpper are in the raw "token1 per token0" orientation
+ * (without knowing which token is the stable/ETH — that metadata is not stored in
+ * state.pools). But we know `ethUsd` (already correctly oriented by the bot) —
+ * and we know the current price lies between priceLower and priceUpper (the
+ * suggestion always covers the current tick). So: we check whether ethUsd lies
+ * closer (on a log scale — WETH/USDC prices differ by orders of magnitude from
+ * their inverse) to the interval [priceLower,priceUpper] or to its inverse
+ * [1/priceUpper,1/priceLower], and pick the right orientation on that basis.
  */
 const suggestedUsdRange = (pool: BotPoolLive): { lo: number; hi: number } | null => {
   const s = pool.suggestion;
@@ -63,26 +63,26 @@ const BotTelemetry: FC<Props> = ({ bot }) => {
   return (
     <div className="telemetry-section">
       <div className="telemetry-header" onClick={() => setExpanded((e) => !e)}>
-        <span className="morning-section-title telemetry-title">Telemetria bota</span>
+        <span className="morning-section-title telemetry-title">Bot telemetry</span>
         <span className="morning-toggle">{expanded ? '▼' : '▶'}</span>
       </div>
 
       {expanded && (
         <div className="telemetry-body">
           {pools.length === 0 ? (
-            <div className="morning-note">Brak danych z bota (offline albo jeszcze nie zebrał pierwszej próbki).</div>
+            <div className="morning-note">No data from the bot (offline or first sample not collected yet).</div>
           ) : (
             <div className="telemetry-table-wrap">
               <table className="telemetry-table">
                 <thead>
                   <tr>
-                    <th>Pula</th>
-                    <th>cena USD</th>
+                    <th>Pool</th>
+                    <th>USD price</th>
                     <th>Tick</th>
-                    <th>Zmienność %/d</th>
+                    <th>Volatility %/d</th>
                     <th>Fee-yield %/d</th>
-                    <th>Sugerowany zakres $</th>
-                    <th>Wiek danych</th>
+                    <th>Suggested range $</th>
+                    <th>Data age</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -107,17 +107,17 @@ const BotTelemetry: FC<Props> = ({ bot }) => {
 
           {positions.length > 0 && (
             <>
-              <div className="morning-section-title">Pozycje obserwowane przez bota</div>
+              <div className="morning-section-title">Positions watched by the bot</div>
               <div className="morning-advice-list">
                 {positions.map((p) => {
-                  // PARTIA 20 pkt 2: kolumna "Doradca" mówiła językiem v1.2
-                  // (IN_RANGE_HOLD/REBALANCE) nawet dla pul PRODUKTOWYCH, gdzie
-                  // bot od Partii 17 gra zupełnie inny cykl (postura SZEROKI/
-                  // WĄSKI + detektor flatu) — dla nich zastąpione linią CYKLU
-                  // (te same źródła i jednostki co karty pozycji w
-                  // MorningCockpit.tsx, wspólny helper w cycleLine.tsx, żeby
-                  // liczby się nie rozjechały). Pule nie-produktowe (posture
-                  // null/nieobecne) zostają po staremu — ikona doradcy v1.2.
+                  // BATCH 20 item 2: the "Advisor" column spoke the v1.2 language
+                  // (IN_RANGE_HOLD/REBALANCE) even for PRODUCT pools, where the
+                  // bot since Batch 17 plays a completely different cycle (posture
+                  // WIDE/NARROW + flat detector) — for those it is replaced by the
+                  // CYCLE line (same sources and units as the position cards in
+                  // MorningCockpit.tsx, shared helper in cycleLine.tsx, so the
+                  // numbers never drift apart). Non-product pools (posture
+                  // null/absent) stay as before — v1.2 advisor icon.
                   const isProduct = p.posture === 'wide' || p.posture === 'narrow';
                   const botMeta = findBotPoolById(p.poolId);
                   const poolLive = pools.find((pl) => pl.id === p.poolId);
@@ -142,9 +142,9 @@ const BotTelemetry: FC<Props> = ({ bot }) => {
           )}
 
           <div className="telemetry-footer">
-            <span className="telemetry-observe-badge">👁 OBSERWUJ — bot niczego nie wykonuje</span>
+            <span className="telemetry-observe-badge">👁 OBSERVE — the bot executes nothing</span>
             <button className="action-button" onClick={() => setShowJson(true)} disabled={!bot.state}>
-              Surowy JSON
+              Raw JSON
             </button>
           </div>
         </div>
@@ -154,7 +154,7 @@ const BotTelemetry: FC<Props> = ({ bot }) => {
         <div className="modal-overlay" onClick={() => setShowJson(false)}>
           <div className="modal-content telemetry-json-modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>state.json (surowe)</h3>
+              <h3>state.json (raw)</h3>
               <button className="close-button" onClick={() => setShowJson(false)}>
                 ×
               </button>

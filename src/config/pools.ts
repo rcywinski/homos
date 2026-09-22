@@ -39,8 +39,8 @@ const bWETH = t(8453, B.tokens.WETH);
 const bUSDC = t(8453, B.tokens.USDC);
 const bCBBTC = t(8453, (B.tokens as any).cbBTC);
 
-// Arbitrum tokens (dodane 2026-08-11, Fable→Sonnet HANDOFF — walk-forward pass,
-// decyzja Rafała: sieć dodana do analizy; wzorzec dokładnie jak Base w sesji 2e)
+// Arbitrum tokens (added 2026-08-11, Fable→Sonnet HANDOFF — walk-forward pass,
+// owner's decision: network added to the analysis; pattern exactly like Base in session 2e)
 const aWETH = t(42161, A.tokens.WETH);
 const aUSDC = t(42161, A.tokens.USDC);
 
@@ -91,8 +91,8 @@ export const OBSERVED_PAIRS: ObservedPair[] = [
 ];
 
 export const ROLE_LABELS: Record<string, string> = {
-  core: 'rdzeń',
-  correlated: 'skorelowana',
+  core: 'core',
+  correlated: 'correlated',
   stable: 'stable',
   legacy: 'legacy',
 };

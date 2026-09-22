@@ -38,16 +38,16 @@ function AppShell() {
       <div className="app-content">
         <div className="main-content">
           <MorningCockpit bot={bot} />
-          {/* USUNIĘTE 21.08 (decyzja Rafała): sekcja „Zarządzaj (zaawansowane)"
+          {/* REMOVED 21.08 (owner's decision): the "Manage (advanced)" section
               — PoolBrowser/UniswapPool/LiquidityManager/MyPositions/TopPools/
-              MarketVolatility. Ręczne zarządzanie płynnością zastąpił kokpit
-              (openPositionAtRange / rebalans / rotacja / hedge), a ranking pul
-              przychodzi z bota, nie z DefiLlamy w przeglądarce.
-              `TransactionHistory` NIE zniknął — jest modułem ZAPISU dla akcji
-              kokpitu (`addTransaction` w use*Execution/useCockpitActions).
-              Jego widok jest tu odpięty świadomie: to localStorage, ostatnie
-              10 wpisów, bez eksportu — do zastąpienia księgą po stronie bota
-              (UI-VISION.md: SQLite + CSV pod rozliczenia podatkowe). */}
+              MarketVolatility. Manual liquidity management was replaced by the
+              cockpit (openPositionAtRange / rebalance / rotation / hedge), and
+              the pool ranking comes from the bot, not from DefiLlama in the browser.
+              `TransactionHistory` did NOT go away — it is the WRITE module for
+              cockpit actions (`addTransaction` in use*Execution/useCockpitActions).
+              Its view is deliberately unmounted here: it is localStorage, the last
+              10 entries, no export — to be replaced by the bot-side ledger
+              (UI-VISION.md: SQLite + CSV for tax accounting). */}
         </div>
       </div>
     </div>

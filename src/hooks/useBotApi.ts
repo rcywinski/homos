@@ -12,79 +12,79 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const BASE_KEY = 'homos_api_base';
 const TOKEN_KEY = 'homos_api_token';
-// Domyślnie ORIGIN strony — UI jest serwowane z tego samego serwera co API
-// (homos-server :8787), więc localhost jako default psuł dostęp z każdego
-// urządzenia poza samym serwerem (Mac ~14:2x i iPhone ~15:4x 19.08 —
-// puste panele mimo zapisanego tokena). localhost zostaje tylko dla
-// dev-serwera na :3000 (webpack-dev), gdzie origin nie ma API.
+// Default to the page ORIGIN — the UI is served from the same server as the
+// API (homos-server :8787), so localhost as the default broke access from every
+// device other than the server itself (Mac ~14:2x and iPhone ~15:4x on 19.08 —
+// empty panels despite a saved token). localhost remains only for the
+// dev server on :3000 (webpack-dev), where the origin has no API.
 const DEFAULT_BASE =
   typeof window !== 'undefined' && window.location.origin.includes(':8787')
     ? window.location.origin
     : 'http://localhost:8787';
 const POLL_MS = 60_000;
 const STALE_MS = 5 * 60_000;
-// Paper trading (bot/paper.ts, TASKS-UI.md Partia 5) — dane zmieniają się co
-// 15 min (cykl statystyk observer.ts), więc osobny, WOLNIEJSZY timer niż
-// /api/state (60s) — zgodnie z zadaniem "żadnego drugiego pollera /api/state".
+// Paper trading (bot/paper.ts, TASKS-UI.md Batch 5) — data changes every
+// 15 min (observer.ts stats cycle), so a separate, SLOWER timer than
+// /api/state (60s) — per the task: "no second /api/state poller".
 const PAPER_POLL_MS = 5 * 60_000;
-const PAPER_HOURS = 168; // 7 dni
-// Ranking dnia (bot/selector.ts, TASKS-UI.md Partia 6) — plik odświeżany raz
-// dziennie (po 8:00) — poll RZADKI, wyraźnie wolniejszy niż paper/state.
+const PAPER_HOURS = 168; // 7 days
+// Daily ranking (bot/selector.ts, TASKS-UI.md Batch 6) — file refreshed once
+// a day (after 8:00) — INFREQUENT poll, clearly slower than paper/state.
 const RANKING_POLL_MS = 30 * 60_000;
-// Historia REALNYCH pozycji (bot/observer.ts refreshPositions, TASKS-UI.md
-// Partia 10) — próbki co ~5 min, ten sam interwał pollingu co paper.
+// History of REAL positions (bot/observer.ts refreshPositions, TASKS-UI.md
+// Batch 10) — samples every ~5 min, same polling interval as paper.
 const POSITIONS_HISTORY_POLL_MS = 5 * 60_000;
-const POSITIONS_HISTORY_HOURS = 168; // 7 dni, jak paper
-// Werdykty walidacji kandydatów (bot/candidates.ts, TASKS-UI.md Partia 12) —
-// zmieniają się raz na dobę (nocny lejek) — poll RZADKI, osobny stan, NIE
-// ruszamy istniejących pollerów.
+const POSITIONS_HISTORY_HOURS = 168; // 7 days, like paper
+// Candidate validation verdicts (bot/candidates.ts, TASKS-UI.md Batch 12) —
+// change once a day (nightly funnel) — INFREQUENT poll, separate state, we do
+// NOT touch the existing pollers.
 const CANDIDATES_POLL_MS = 60 * 60_000;
-// Księga transakcji + zamknięte pozycje (bot/ledger.ts, TASKS-LEDGER.md §3) —
-// observer dociąga nowe zdarzenia co cykl (~5 min), ale z perspektywy
-// użytkownika zmienia się rzadko (kolejna transakcja/zamknięcie pozycji) —
-// poll wolniejszy niż paper/positions, szybszy niż candidates (raz na dobę),
-// żeby świeżo zamknięta pozycja pojawiła się bez ręcznego odświeżania strony.
+// Transaction ledger + closed positions (bot/ledger.ts, TASKS-LEDGER.md §3) —
+// the observer pulls new events every cycle (~5 min), but from the user's
+// perspective it changes rarely (next transaction / position close) —
+// poll slower than paper/positions, faster than candidates (once a day),
+// so a freshly closed position shows up without a manual page refresh.
 const LEDGER_POLL_MS = 15 * 60_000;
 const LEDGER_DAYS = 90;
 
 export interface BotProposal {
   id: string;
   createdAt: string;
-  tokenId: string; // '' dla propozycji OPEN z selektora (brak istniejącej pozycji)
-  poolId?: string; // BOT_POOLS id, '' gdy pula spoza konfiguracji bota
-  /** REBALANCE (doradca pozycji, jak dotychczas) | OPEN/ROTATE (warstwa
-   *  selekcji pul — bot/selector.ts, Partia 4) | EXIT_TREND (bezpiecznik trendu
-   *  ALGORITHM.md §4 — "wyjdź z LP do cash 50/50" gdy cena < EMA7d o 5%;
-   *  HANDOFF Fable→Sonnet 2026-08-11). Brak pola = traktuj jak REBALANCE
-   *  (kompatybilność wstecz ze starszymi wpisami w proposals.json). Karty w
-   *  MorningCockpit.tsx renderują nieznane wartości `kind` jako szarą notę,
-   *  zamiast crashować, na wypadek kolejnych rozszerzeń schematu.
-   *  FLAT_NARROW/FLAT_WIDEN (Partia 16, produkt FlatWide): zwężenie do k×σ w
-   *  POTWIERDZONYM flacie (`flatConfirmed` na state.pools[]) / powrót do
-   *  szerokiego ±productIdleWidthPct po końcu flatu — obie dotyczą pozycji
-   *  już trzymanej (tokenId istniejący), ten sam mechanizm co REBALANCE
-   *  (suggestedRange + istniejący modal rebalansu). */
+  tokenId: string; // '' for OPEN proposals from the selector (no existing position)
+  poolId?: string; // BOT_POOLS id, '' when the pool is outside the bot's configuration
+  /** REBALANCE (position advisor, as before) | OPEN/ROTATE (pool selection
+   *  layer — bot/selector.ts, Batch 4) | EXIT_TREND (trend circuit breaker
+   *  ALGORITHM.md §4 — "exit LP to cash 50/50" when price < EMA7d by 5%;
+   *  HANDOFF Fable→Sonnet 2026-08-11). Missing field = treat as REBALANCE
+   *  (backward compatibility with older entries in proposals.json). Cards in
+   *  MorningCockpit.tsx render unknown `kind` values as a grey note instead
+   *  of crashing, in case of further schema extensions.
+   *  FLAT_NARROW/FLAT_WIDEN (Batch 16, FlatWide product): narrowing to k×σ in
+   *  a CONFIRMED flat (`flatConfirmed` on state.pools[]) / return to the wide
+   *  ±productIdleWidthPct after the flat ends — both concern a position
+   *  already held (existing tokenId), same mechanism as REBALANCE
+   *  (suggestedRange + the existing rebalance modal). */
   kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND' | 'HEDGE' | 'FLAT_NARROW' | 'FLAT_WIDEN';
   action: string;
   suggestedRange?: { tickLower?: number; tickUpper?: number; usdLo: number; usdHi: number };
   costUsd?: number;
   paybackDays?: number | null;
-  // Partia 16b (procedura awaryjna, bot/observer.ts): DOWN na pulach
-  // PRODUKTOWYCH emituje DWIE propozycje naraz (HEDGE = opcja A preferowana,
-  // EXIT_TREND = opcja B "zwykle NIE podpisuj"), obie oznaczone tym polem.
-  // Karty bez `emergency` (albo `false`/nieobecne) renderują się jak
-  // dotychczas — bez zmian wizualnych. Dokument procedury: EMERGENCY.md.
+  // Batch 16b (emergency procedure, bot/observer.ts): DOWN on PRODUCT pools
+  // emits TWO proposals at once (HEDGE = option A, preferred,
+  // EXIT_TREND = option B "usually do NOT sign"), both flagged with this field.
+  // Cards without `emergency` (or `false`/absent) render as before —
+  // no visual changes. Procedure document: EMERGENCY.md.
   emergency?: boolean;
-  // Pola selektora (OPEN/ROTATE) — bot/selector.ts SelectorProposal:
+  // Selector fields (OPEN/ROTATE) — bot/selector.ts SelectorProposal:
   llamaPool?: string;
   symbol?: string;
-  chain?: string; // etykieta z DefiLlama ("Ethereum"/"Base"), nie chainId
+  chain?: string; // label from DefiLlama ("Ethereum"/"Base"), not chainId
   apy7d?: number;
-  heldApy7d?: number; // przy ROTATE: 7d APY puli, którą rotujemy
-  breakEvenDays?: number; // przy ROTATE: dni do pokrycia kosztu przejścia
-  // HEDGE (ALGORITHM.md v1.2 — hedge-excess dla base-030, HANDOFF Fable→Sonnet
-  // 2026-08-17 ~15:0x): bot proponuje SHORT perp na Arbitrum/GMX zamiast wyjścia
-  // z LP. Wykonanie ręczne (poza appką, przez Rabby) — brak auto-execute.
+  heldApy7d?: number; // for ROTATE: 7d APY of the pool we are rotating out of
+  breakEvenDays?: number; // for ROTATE: days to cover the transition cost
+  // HEDGE (ALGORITHM.md v1.2 — hedge-excess for base-030, HANDOFF Fable→Sonnet
+  // 2026-08-17 ~15:0x): the bot proposes a SHORT perp on Arbitrum/GMX instead of
+  // exiting the LP. Manual execution (outside the app, via Rabby) — no auto-execute.
   hedgeSizeEth?: number;
   hedgeNotionalUsd?: number;
   note?: string;
@@ -93,9 +93,9 @@ export interface BotProposal {
   status: 'open' | 'dismissed' | string;
 }
 
-// Kształt state.pools / state.positions — powielony z bot/observer.ts (PoolLive /
-// WatchedPosition), ten plik jest poza zakresem edycji tej sesji UI. Używane w
-// MorningCockpit.tsx / BotTelemetry.tsx (TASKS-UI.md Partia 3, sekcja "Telemetria bota").
+// Shape of state.pools / state.positions — duplicated from bot/observer.ts (PoolLive /
+// WatchedPosition), that file is outside this UI session's edit scope. Used in
+// MorningCockpit.tsx / BotTelemetry.tsx (TASKS-UI.md Batch 3, section "Bot telemetry").
 export interface BotPoolLive {
   id: string;
   ethUsd: number;
@@ -104,21 +104,20 @@ export interface BotPoolLive {
   stats: { volDaily: number; feeYieldDaily: number; swapsAnalyzed: number; hoursCovered: number } | null;
   suggestion: { tickLower: number; tickUpper: number; widthPct: number; priceLower: number; priceUpper: number } | null;
   updatedAt: string;
-  // Detektor flatu (Partia 16, bot/observer.ts FLAT_ENTER/FLAT_EXIT) — tylko
-  // pule produktowe (BotPool.productIdleWidthPct ustawione) mają te pola
-  // wypełnione; reszta zostaje undefined (feature-detect, nie osobna lista
-  // "czy to pula produktowa" duplikowana w UI). `flatSince`: moment startu
-  // NIEPRZERWANEGO flatu (ISO) albo `null`, gdy pula nie jest w flacie teraz.
-  // `flatConfirmed`: true dopiero po progu potwierdzenia (12h) — dopiero
-  // wtedy bot faktycznie proponuje FLAT_NARROW.
+  // Flat detector (Batch 16, bot/observer.ts FLAT_ENTER/FLAT_EXIT) — only
+  // product pools (BotPool.productIdleWidthPct set) have these fields
+  // populated; the rest stay undefined (feature-detect, not a separate
+  // "is this a product pool" list duplicated in the UI). `flatSince`: start of
+  // the UNINTERRUPTED flat (ISO) or `null` when the pool is not in a flat now.
+  // `flatConfirmed`: true only after the confirmation threshold (12h) — only
+  // then does the bot actually propose FLAT_NARROW.
   flatSince?: string | null;
   flatConfirmed?: boolean;
-  /** Partia 17: gap ceny vs EMA (%, wartość podpisana) — używane do linii
-   *  CYKLU na kartach ("czekam na stabilizację: |gap| X.X%" / "powrót do
-   *  szerokiego przy |gap|>exitGap%, teraz X.X%"). Ta sama liczba co
-   *  emaGapPct w /api/history (ObservationAnalysis.tsx), tu jako "teraz",
-   *  bez potrzeby osobnego fetchu historii. Feature-detect jak reszta pól
-   *  detektora flatu. */
+  /** Batch 17: price gap vs EMA (%, signed value) — used for the CYCLE line
+   *  on cards ("waiting for stabilization: |gap| X.X%" / "return to wide
+   *  at |gap|>exitGap%, now X.X%"). Same number as emaGapPct in /api/history
+   *  (ObservationAnalysis.tsx), here as "now", without needing a separate
+   *  history fetch. Feature-detect like the rest of the flat detector fields. */
   trendGapPct?: number;
 }
 
@@ -133,28 +132,28 @@ export interface BotWatchedPosition {
   inRange: boolean;
   advice: string;
   paybackDays: number | null;
-  /** agregaty księgi bota (PARTIA 14 bot-side, 27.08): opcjonalne —
-   *  starsze wersje bota ich nie wysyłają (feature-detect w UI).
-   *  0 = poprawne zero świeżej pozycji; null = księga nie umie wycenić. */
+  /** bot ledger aggregates (BATCH 14 bot-side, 27.08): optional —
+   *  older bot versions do not send them (feature-detect in the UI).
+   *  0 = a valid zero for a fresh position; null = the ledger cannot value it. */
   collectedFeesUsd?: number | null;
   costsUsd?: number | null;
   rebalances?: number | null;
-  /** Cykl produktu FlatWide (Partia 17 bot-side): 'wide' = szeroki pasywny
-   *  ±productIdleWidthPct% (idle), 'narrow' = zwężony k×σ (potwierdzony
-   *  flat). `null`/nieobecne = pula nie-produktowa (nie ma cyklu) —
-   *  feature-detect, karta wtedy nie renderuje linii CYKLU w ogóle. */
+  /** FlatWide product cycle (Batch 17 bot-side): 'wide' = wide passive
+   *  ±productIdleWidthPct% (idle), 'narrow' = narrowed k×σ (confirmed
+   *  flat). `null`/absent = non-product pool (no cycle) —
+   *  feature-detect, the card then does not render the CYCLE line at all. */
   posture?: 'wide' | 'narrow' | null;
 }
 
-// Hedge REALNY na GMX (Arbitrum) — odczyt Readerem co cykl observera,
-// HANDOFF Fable→Sonnet 2026-08-20 późny wieczór, TASKS-UI.md Partia 11
-// (uwaga Rafała po teście E2E: short istniał tylko na app.gmx.io i w
-// localStorage jednej przeglądarki, nie było go widać nigdzie w apce).
-// Kształt zweryfikowany wprost wobec `interface HedgeLive` w bot/observer.ts.
-// `null` = bot potwierdza brak pozycji (Reader nie widzi nic) — odróżnione
-// od `undefined`/pola nieobecnego (starszy state.json sprzed tej zmiany, albo
-// jeszcze niewczytany stan) — TYLKO `null` jest podstawą do auto-czyszczenia
-// fallbacku localStorage (patrz MorningCockpit.tsx).
+// REAL hedge on GMX (Arbitrum) — read via the Reader every observer cycle,
+// HANDOFF Fable→Sonnet 2026-08-20 late evening, TASKS-UI.md Batch 11
+// (owner's note after the E2E test: the short existed only on app.gmx.io and in
+// one browser's localStorage, it was not visible anywhere in the app).
+// Shape verified directly against `interface HedgeLive` in bot/observer.ts.
+// `null` = the bot confirms there is no position (Reader sees nothing) — distinct
+// from `undefined`/absent field (older state.json from before this change, or
+// state not yet loaded) — ONLY `null` is grounds for auto-clearing the
+// localStorage fallback (see MorningCockpit.tsx).
 export interface BotHedgeLive {
   isLong: boolean;
   sizeUsd: number;
@@ -174,19 +173,19 @@ export interface BotStateShape {
   positions?: BotWatchedPosition[];
   proposals?: BotProposal[];
   hedge?: BotHedgeLive | null;
-  /** Partia 17: parametry ŻYWE detektora flatu (bot/config.ts FLAT, może się
-   *  zmienić na przeglądzie 1.09) — UI NIE WOLNO hardkodować 12h/2%/5%,
-   *  czytać stąd z feature-detectem (fallback na te wartości TYLKO gdy pole
-   *  całkiem nieobecne — stary bot sprzed tej paczki). Jednostki: enterGap/
-   *  exitGap w procentach (jak trendGapPct), confirmH w godzinach. */
+  /** Batch 17: LIVE flat detector parameters (bot/config.ts FLAT, may change
+   *  at the 1.09 review) — the UI MUST NOT hardcode 12h/2%/5%,
+   *  read from here with feature-detect (fallback to those values ONLY when the
+   *  field is entirely absent — old bot from before this batch). Units: enterGap/
+   *  exitGap in percent (like trendGapPct), confirmH in hours. */
   flatParams?: { enterGap: number; exitGap: number; confirmH: number };
-  /** Partia 18: bilans TRANSZY (bot/observer.ts trancheLive, 29.08) — druga,
-   *  niezależna miara obok panelu zbiorczego Partii 17 (ten mierzy jakość
-   *  strategii od kotwic pozycji; to tutaj mierzy ile z faktycznie
-   *  wpłaconych USDC dziś jest, licząc bufor w portfelu i koszty wejścia).
-   *  KAŻDE pole poza label/depositedUsd/startedAt może być `null` (nieudany
-   *  odczyt sald albo brak kursu) — renderować „—", NIGDY $0 ani liczyć
-   *  sumy samodzielnie w UI, bot już to policzył. */
+  /** Batch 18: TRANCHE balance (bot/observer.ts trancheLive, 29.08) — a second,
+   *  independent measure next to the Batch 17 summary panel (that one measures
+   *  strategy quality from position anchors; this one measures how much of the
+   *  actually deposited USDC exists today, counting the wallet buffer and entry costs).
+   *  EVERY field other than label/depositedUsd/startedAt may be `null` (failed
+   *  balance read or missing price) — render "—", NEVER $0, and never compute
+   *  sums in the UI yourself, the bot has already done that. */
   tranche?: {
     label: string;
     depositedUsd: number;
@@ -206,8 +205,8 @@ export interface BotStateShape {
 export type BotStatus = 'loading' | 'online' | 'stale' | 'offline';
 
 // Paper trading — GET /api/paper?hours=N (bot/paper.ts, HANDOFF Fable→CC-Mac
-// 2026-08-18 ~11:3x, wpięte pod TASKS-UI.md Partia 5). Wirtualny portfel
-// $10k/pula wg ALGORITHM v1.2, zero prawdziwych transakcji.
+// 2026-08-18 ~11:3x, wired under TASKS-UI.md Batch 5). Virtual portfolio
+// $10k/pool per ALGORITHM v1.2, zero real transactions.
 export interface PaperHedge {
   sizeBase: number;
   entryUsd: number;
@@ -221,9 +220,9 @@ export interface PaperPosition {
   tickUpper: number;
   capitalUsd: number;
   feesUsd: number;
-  /** fees od ostatniego collect/rebalansu (bot/paper.ts:69) — reinwestowane
-   *  przy najbliższym rebalansie. Partia 10: `feesUsd - feesSinceRebalanceUsd`
-   *  = już reinwestowane, `feesSinceRebalanceUsd` = narosłe od tamtej pory. */
+  /** fees since the last collect/rebalance (bot/paper.ts:69) — reinvested
+   *  at the next rebalance. Batch 10: `feesUsd - feesSinceRebalanceUsd`
+   *  = already reinvested, `feesSinceRebalanceUsd` = accrued since then. */
   feesSinceRebalanceUsd: number;
   costsUsd: number;
   rebalances: number;
@@ -231,11 +230,11 @@ export interface PaperPosition {
   hedgePnlRealizedUsd: number;
   openedAt: string;
   startedAt: string;
-  /** ms — moment, od którego pozycja jest NIEPRZERWANIE poza zakresem
-   *  (bot/paper.ts:72). Zeruje się przy każdym powrocie do zakresu, więc
-   *  licznik w UI jest licznikiem CIĄGŁEGO wypadnięcia, nie sumy. Pole było
-   *  zawsze w JSON z /api/paper (serwer oddaje cały paper-state.json),
-   *  brakowało go tylko w tym typie — dodane 21.08 pod licznik w UI. */
+  /** ms — the moment since which the position has been CONTINUOUSLY out of range
+   *  (bot/paper.ts:72). Resets on every return into range, so the counter in
+   *  the UI is a CONTINUOUS out-of-range counter, not a cumulative one. The field
+   *  was always in the JSON from /api/paper (the server returns the whole
+   *  paper-state.json), it was only missing from this type — added 21.08 for the UI counter. */
   outOfRangeSince?: number | null;
 }
 
@@ -257,10 +256,10 @@ export interface PaperHistoryPoint {
   inRange: boolean;
   trendDown: boolean;
   rebalances: number;
-  // Od 20.08 (bot/paper.ts, TASKS-UI.md Partia 7) — cena (human) i granice
-  // zakresu bota (human), TYLKO gdy status==='open' (w cash zakresu nie ma).
-  // Starsze próbki z historii (sprzed 20.08) tych pól NIE mają — UI musi to
-  // przeżyć (feature-detect po typeof, nie zakładać obecności).
+  // Since 20.08 (bot/paper.ts, TASKS-UI.md Batch 7) — price (human) and the
+  // bot's range bounds (human), ONLY when status==='open' (no range in cash).
+  // Older history samples (before 20.08) do NOT have these fields — the UI must
+  // survive that (feature-detect via typeof, do not assume presence).
   price?: number;
   lo?: number;
   hi?: number;
@@ -279,14 +278,14 @@ export interface PaperData {
   events: PaperEvent[];
 }
 
-// 'not-started' == 503 z /api/paper (paper jeszcze nie ruszył na serwerze,
-// np. świeży restart bota przed pierwszym cyklem statystyk) — odróżnione od
-// 'error' (sieć/token/inny błąd), żeby panel pokazał właściwy komunikat.
+// 'not-started' == 503 from /api/paper (paper has not started on the server yet,
+// e.g. a fresh bot restart before the first stats cycle) — distinct from
+// 'error' (network/token/other error), so the panel shows the right message.
 export type PaperStatus = 'loading' | 'ok' | 'not-started' | 'error';
 
-// Ranking dnia — GET /api/ranking (bot/selector.ts, HANDOFF Fable→Sonnet
-// 2026-08-18, TASKS-UI.md Partia 6). TOP 10 pul wg polityki ALGORITHM,
-// zapisywane raz dziennie do .bot/selector-ranking.json.
+// Daily ranking — GET /api/ranking (bot/selector.ts, HANDOFF Fable→Sonnet
+// 2026-08-18, TASKS-UI.md Batch 6). TOP 10 pools per the ALGORITHM policy,
+// written once a day to .bot/selector-ranking.json.
 export interface RankingRow {
   rank: number;
   symbol: string;
@@ -298,10 +297,10 @@ export interface RankingRow {
   tvlUsd: number;
   botPoolId: string | null;
   llamaUuid?: string;
-  // Pola dodatkowe rankingu WIDE (GET /api/wide-ranking, Partia 21,
-  // HANDOFF Fable→Sonnet 02.09) — nieobecne w starym /api/ranking, stąd
-  // opcjonalne (feature-detect). UWAGA: w rankingu wide `apy7d` (wyżej)
-  // niesie SCORE %/r, nie APY 7d — etykieta w UI musi o tym mówić.
+  // Additional fields of the WIDE ranking (GET /api/wide-ranking, Batch 21,
+  // HANDOFF Fable→Sonnet 02.09) — absent in the old /api/ranking, hence
+  // optional (feature-detect). NOTE: in the wide ranking `apy7d` (above)
+  // carries SCORE %/yr, not 7d APY — the UI label must say so.
   cls?: string;
   feeAprWide?: number | null;
   dragPct?: number | null;
@@ -325,15 +324,15 @@ export interface RankingData {
   rows: RankingRow[];
 }
 
-// 'not-started' == 503 (selektor jeszcze nie zapisał pierwszego rankingu —
-// oczekiwane do pierwszego przebiegu po 8:00).
+// 'not-started' == 503 (the selector has not written the first ranking yet —
+// expected until the first run after 8:00).
 export type RankingStatus = 'loading' | 'ok' | 'not-started' | 'error';
 
-// Model dzienny szerokiego pasma — GET /api/wide-daily (scripts/wide-daily.ts,
-// HANDOFF Fable→Sonnet 02.09, TASKS-UI.md Partia 22). Klucz mapy `pools` =
-// `RankingRow.llamaUuid`. `latest` = okno zaczynające się dokładnie N dni
-// temu ("od dziś wstecz"); `med*`/`worstDeltaPct`/`winPct` = statystyki z
-// okien kroczących co 30 dni (n okien).
+// Wide-range daily model — GET /api/wide-daily (scripts/wide-daily.ts,
+// HANDOFF Fable→Sonnet 02.09, TASKS-UI.md Batch 22). Key of the `pools` map =
+// `RankingRow.llamaUuid`. `latest` = the window starting exactly N days
+// ago ("from today backwards"); `med*`/`worstDeltaPct`/`winPct` = statistics from
+// rolling windows every 30 days (n windows).
 export interface WideDailyWindowLatest {
   lpPct: number;
   hodlPct: number;
@@ -373,10 +372,10 @@ export interface WideDailyData {
   pools: Record<string, WideDailyPool>;
 }
 
-// Pełny przebieg silnika (walkforward 720d, okna 30/15) — GET
-// /api/wide-backtests (scripts/wide-collect.ts, lejek v2 piętro 2). Tylko
-// pule, które kolekcjoner już pobrał — mapa rzadsza niż wide-daily. Wartości
-// w pp vs HODL na okno 30d (jak w Analizie obserwacji/ObservationAnalysis).
+// Full engine run (walkforward 720d, windows 30/15) — GET
+// /api/wide-backtests (scripts/wide-collect.ts, funnel v2 tier 2). Only
+// pools the collector has already fetched — a sparser map than wide-daily. Values
+// in pp vs HODL per 30d window (as in Observation analysis/ObservationAnalysis).
 export interface WideBacktestSummary {
   mean: number;
   med: number;
@@ -400,14 +399,14 @@ export interface WideBacktestEntry {
 
 export type WideBacktestsData = Record<string, WideBacktestEntry>;
 
-// Historia REALNYCH pozycji — GET /api/positions-history?hours=N (bot/observer.ts
-// refreshPositions, HANDOFF Fable→Sonnet 2026-08-20, TASKS-UI.md Partia 10:
-// redesign kart pozycji wg wzorca paper). Kształt próbki JAK PaperHistoryPoint,
-// ale bez `status` (realna pozycja nie ma stanu cash/pending — jest "otwarta"
-// dopóki bot ją widzi) i z `tokenId` zamiast tego; price/lo/hi ZAWSZE obecne
-// (obserwator pisze je bezwarunkowo, w odróżnieniu od paper, gdzie lo/hi
-// zależą od status==='open'). Endpoint zwraca zwykłą tablicę JSON (jak
-// /api/history), nie {state,history,events} jak /api/paper.
+// History of REAL positions — GET /api/positions-history?hours=N (bot/observer.ts
+// refreshPositions, HANDOFF Fable→Sonnet 2026-08-20, TASKS-UI.md Batch 10:
+// position card redesign after the paper pattern). Sample shape LIKE PaperHistoryPoint,
+// but without `status` (a real position has no cash/pending state — it is "open"
+// as long as the bot sees it) and with `tokenId` instead; price/lo/hi ALWAYS present
+// (the observer writes them unconditionally, unlike paper, where lo/hi
+// depend on status==='open'). The endpoint returns a plain JSON array (like
+// /api/history), not {state,history,events} like /api/paper.
 export interface PositionHistoryPoint {
   ts: string;
   tokenId: string;
@@ -420,15 +419,15 @@ export interface PositionHistoryPoint {
   hi?: number;
 }
 
-// 'not-started' nie jest tu spodziewane (endpoint zawsze zwraca [] gdy plik
-// jeszcze nie istnieje — 200, nie 503) ale trzymane dla spójności z
-// paper/ranking i na wypadek przyszłej zmiany serwera.
+// 'not-started' is not expected here (the endpoint always returns [] when the file
+// does not exist yet — 200, not 503) but kept for consistency with
+// paper/ranking and in case of a future server change.
 export type PositionsHistoryStatus = 'loading' | 'ok' | 'not-started' | 'error';
 
-// Werdykty walidacji kandydatów — GET /api/candidates (bot/candidates.ts,
-// HANDOFF Fable→Sonnet 24.08, TASKS-UI.md Partia 12). Kształt 1:1 z
-// `CandidateVerdict` w bot/candidates.ts (poza zakresem edycji tej sesji UI).
-// Dopasowanie do wierszy rankingu po `llamaPool` (uuid) === `RankingRow.llamaUuid`.
+// Candidate validation verdicts — GET /api/candidates (bot/candidates.ts,
+// HANDOFF Fable→Sonnet 24.08, TASKS-UI.md Batch 12). Shape 1:1 with
+// `CandidateVerdict` in bot/candidates.ts (outside this UI session's edit scope).
+// Matched to ranking rows by `llamaPool` (uuid) === `RankingRow.llamaUuid`.
 export interface CandidateVerdict {
   llamaPool: string;
   chain: string;
@@ -441,17 +440,17 @@ export interface CandidateVerdict {
   note?: string;
 }
 
-// Endpoint zawsze zwraca 200 + tablicę (seed w kodzie, nigdy 503) — 'error'
-// tylko na sieć/token. Werdykty to wzbogacenie rankingu, nie zależność
-// krytyczna — brak danych NIE ma prawa czerwienić tabeli.
+// The endpoint always returns 200 + an array (seeded in code, never 503) — 'error'
+// only on network/token. Verdicts are an enrichment of the ranking, not a critical
+// dependency — missing data must NOT turn the table red.
 export type CandidatesStatus = 'loading' | 'ok' | 'error';
 
-// Księga transakcji + zamknięte pozycje — GET /api/ledger?days=N i
+// Transaction ledger + closed positions — GET /api/ledger?days=N and
 // GET /api/closed-positions (bot/ledger.ts, TASKS-LEDGER.md §3, HANDOFF
-// Fable→Sonnet 25.08). Kształty 1:1 z bot/ledger.ts (poza zakresem edycji
-// tej sesji UI, tylko odczyt typu) — KAŻDE pole liczbowe może być `null`
-// (brak metadanych spalonego NFT albo noga niewyceniana w USD) — renderować
-// "—", NIGDY 0 (0 to realna wartość, null to "nie wiemy").
+// Fable→Sonnet 25.08). Shapes 1:1 with bot/ledger.ts (outside this UI session's
+// edit scope, type read only) — EVERY numeric field may be `null`
+// (missing metadata of a burned NFT or a leg not valued in USD) — render
+// "—", NEVER 0 (0 is a real value, null is "we don't know").
 export type LedgerKind = 'MINT' | 'INCREASE' | 'DECREASE' | 'COLLECT' | 'BURN' | 'TRANSFER_IN' | 'TRANSFER_OUT';
 
 export interface LedgerEntry {
@@ -491,11 +490,11 @@ export interface ClosedPosition {
   txCount: number;
 }
 
-// Oba endpointy zawsze zwracają 200 (array, ewentualnie pusty — server.ts
-// nie ma dla nich 503 jak paper/ranking), więc 'not-started' nie jest tu
-// spodziewane, ale trzymane dla spójności (na wypadek 404 przed wdrożeniem
-// dzisiejszej wieczornej paczki na serwer — patrz HANDOFF: "degradacja
-// łagodna, 404/błąd → spokojna notka, nie error").
+// Both endpoints always return 200 (array, possibly empty — server.ts
+// has no 503 for them like paper/ranking), so 'not-started' is not
+// expected here, but kept for consistency (in case of a 404 before today's
+// evening batch is deployed to the server — see HANDOFF: "graceful
+// degradation, 404/error → a calm note, not an error").
 export type LedgerStatus = 'loading' | 'ok' | 'not-started' | 'error';
 
 export interface UseBotApi {
@@ -507,8 +506,8 @@ export interface UseBotApi {
   setApiBase: (v: string) => void;
   setApiToken: (v: string) => void;
   dismissProposal: (id: string) => Promise<void>;
-  /** Komunikat po akcji na propozycji (np. nieudane odrzucenie) — do
-   *  pokazania przy liście propozycji; null gdy ostatnia akcja OK. */
+  /** Message after an action on a proposal (e.g. a failed dismissal) — to be
+   *  shown next to the proposal list; null when the last action was OK. */
   actionNotice: string | null;
   refresh: () => void;
   paper: PaperData | null;
@@ -550,9 +549,9 @@ export function useBotApi(): UseBotApi {
   const [rankingStatus, setRankingStatus] = useState<RankingStatus>('loading');
   const [wideRanking, setWideRanking] = useState<RankingData | null>(null);
   const [wideRankingStatus, setWideRankingStatus] = useState<RankingStatus>('loading');
-  // Wide-daily/wide-backtests (Partia 22) — wzbogacenie rankingów, nie
-  // zależność krytyczna: brak/404/pusty → null po cichu, bez czerwonego
-  // błędu (jak candidates/werdykty).
+  // Wide-daily/wide-backtests (Batch 22) — an enrichment of the rankings, not a
+  // critical dependency: missing/404/empty → null quietly, without a red
+  // error (like candidates/verdicts).
   const [wideDaily, setWideDaily] = useState<WideDailyData | null>(null);
   const [wideBacktests, setWideBacktests] = useState<WideBacktestsData | null>(null);
   const [positionsHistory, setPositionsHistory] = useState<PositionHistoryPoint[] | null>(null);
@@ -563,15 +562,15 @@ export function useBotApi(): UseBotApi {
   const [closedPositionsStatus, setClosedPositionsStatus] = useState<LedgerStatus>('loading');
   const [ledger, setLedger] = useState<LedgerEntry[] | null>(null);
   const [ledgerStatus, setLedgerStatus] = useState<LedgerStatus>('loading');
-  // Odrzucenia zastosowane optymistycznie po stronie UI (fix 26.08: server
-  // tylko KOLEJKUJE komendę, observer aplikuje ją w ≤30 s, a poll stanu idzie
-  // co 60 s — bez tego propozycja wisiała do ~90 s po kliknięciu i przycisk
-  // wyglądał na zepsuty). Wpis żyje, dopóki propozycja nie zniknie z
-  // fetchowanego stanu (wtedy reconciliation ją czyści).
-  // Fix 26.08(2) — zgłoszenie Rafała "po odświeżeniu wracają": lista jest
-  // dodatkowo trzymana w localStorage z TTL 15 min, żeby przeżyła reload
-  // strony w oknie zanim observer zastosuje komendę (server też filtruje
-  // widok /api/state o kolejkę komend — to pas i szelki).
+  // Dismissals applied optimistically on the UI side (fix 26.08: the server
+  // only QUEUES the command, the observer applies it within ≤30 s, and the state
+  // poll runs every 60 s — without this the proposal hung around for ~90 s after
+  // the click and the button looked broken). The entry lives until the proposal
+  // disappears from the fetched state (then reconciliation clears it).
+  // Fix 26.08(2) — owner's report "they come back after refresh": the list is
+  // additionally kept in localStorage with a 15 min TTL, so it survives a page
+  // reload in the window before the observer applies the command (the server
+  // also filters the /api/state view by the command queue — belt and braces).
   const DISMISSED_LS_KEY = 'homos.dismissedProposals';
   const DISMISSED_TTL_MS = 15 * 60 * 1000;
   const [locallyDismissed, setLocallyDismissed] = useState<string[]>(() => {
@@ -586,7 +585,7 @@ export function useBotApi(): UseBotApi {
     try {
       localStorage.setItem(DISMISSED_LS_KEY, JSON.stringify(locallyDismissed.map((id) => ({ id, ts: Date.now() }))));
     } catch {
-      /* localStorage niedostępny — zostaje wersja in-memory */
+      /* localStorage unavailable — the in-memory version remains */
     }
   }, [locallyDismissed]);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -601,14 +600,14 @@ export function useBotApi(): UseBotApi {
       if (!res.ok) {
         setState(null);
         setStatus('offline');
-        setError(res.status === 401 ? 'Zły token dostępu' : `HTTP ${res.status}`);
+        setError(res.status === 401 ? 'Invalid access token' : `HTTP ${res.status}`);
         return;
       }
       const data: BotStateShape = await res.json();
       setState(data);
-      // reconciliation optymistycznych odrzuceń: gdy observer zastosował
-      // komendę, propozycja znika ze stanu — wpis lokalny przestaje być
-      // potrzebny (i nie rośnie w nieskończoność).
+      // reconciliation of optimistic dismissals: once the observer has applied
+      // the command, the proposal disappears from the state — the local entry
+      // is no longer needed (and does not grow without bound).
       setLocallyDismissed((prev) =>
         prev.length ? prev.filter((id) => (data.proposals ?? []).some((p) => p.id === id)) : prev
       );
@@ -619,7 +618,7 @@ export function useBotApi(): UseBotApi {
       // network error (server down, wrong address, CORS) — expected in dev without a bot running
       setState(null);
       setStatus('offline');
-      setError('Brak połączenia z serwerem bota');
+      setError('No connection to the bot server');
     }
   }, [apiBase, apiToken]);
 
@@ -635,7 +634,7 @@ export function useBotApi(): UseBotApi {
       if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
       const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/paper?hours=${PAPER_HOURS}`, { headers });
       if (res.status === 503) {
-        // paper jeszcze nie ruszył na serwerze (świeży restart, przed pierwszym cyklem statystyk)
+        // paper has not started on the server yet (fresh restart, before the first stats cycle)
         setPaper(null);
         setPaperStatus('not-started');
         return;
@@ -649,7 +648,7 @@ export function useBotApi(): UseBotApi {
       setPaper(data);
       setPaperStatus('ok');
     } catch {
-      // sieć niedostępna — jak przy /api/state, cicho (bot offline w dev bywa normą)
+      // network unavailable — as with /api/state, quietly (bot offline in dev is often the norm)
       setPaper(null);
       setPaperStatus('error');
     }
@@ -667,7 +666,7 @@ export function useBotApi(): UseBotApi {
       if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
       const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/ranking`, { headers });
       if (res.status === 503) {
-        // selektor jeszcze nie zapisał pierwszego rankingu (przed pierwszym przebiegiem po 8:00)
+        // the selector has not written the first ranking yet (before the first run after 8:00)
         setRanking(null);
         setRankingStatus('not-started');
         return;
@@ -681,7 +680,7 @@ export function useBotApi(): UseBotApi {
       setRanking(data);
       setRankingStatus('ok');
     } catch {
-      // sieć niedostępna — jak przy /api/state/paper, cicho
+      // network unavailable — as with /api/state/paper, quietly
       setRanking(null);
       setRankingStatus('error');
     }
@@ -693,16 +692,16 @@ export function useBotApi(): UseBotApi {
     return () => clearInterval(id);
   }, [fetchRanking, tick]);
 
-  // Ranking WIDE — GET /api/wide-ranking (scripts/wide-score.ts, lejek v2
-  // piętro 1, HANDOFF Fable→Sonnet 02.09, TASKS-UI.md Partia 21). Ten sam
-  // kształt co /api/ranking (RankingData) — poller i statusy 1:1.
+  // WIDE ranking — GET /api/wide-ranking (scripts/wide-score.ts, funnel v2
+  // tier 1, HANDOFF Fable→Sonnet 02.09, TASKS-UI.md Batch 21). Same
+  // shape as /api/ranking (RankingData) — poller and statuses 1:1.
   const fetchWideRanking = useCallback(async () => {
     try {
       const headers: Record<string, string> = {};
       if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
       const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/wide-ranking`, { headers });
       if (res.status === 503) {
-        // wide-score jeszcze nie zapisał pierwszego rankingu (przed pierwszym nocnym przebiegiem po deployu)
+        // wide-score has not written the first ranking yet (before the first nightly run after deploy)
         setWideRanking(null);
         setWideRankingStatus('not-started');
         return;
@@ -716,7 +715,7 @@ export function useBotApi(): UseBotApi {
       setWideRanking(data);
       setWideRankingStatus('ok');
     } catch {
-      // sieć niedostępna — jak przy pozostałych pollerach, cicho
+      // network unavailable — as with the other pollers, quietly
       setWideRanking(null);
       setWideRankingStatus('error');
     }
@@ -728,9 +727,9 @@ export function useBotApi(): UseBotApi {
     return () => clearInterval(id);
   }, [fetchWideRanking, tick]);
 
-  // Model dzienny (wide-daily) + pełny przebieg (wide-backtests) — Partia 22,
-  // HANDOFF Fable→Sonnet 02.09. Ten sam poller co ranking (30 min); brak/404/
-  // pusty → null po cichu (wzbogacenie tabel rankingowych, nie zależność).
+  // Daily model (wide-daily) + full run (wide-backtests) — Batch 22,
+  // HANDOFF Fable→Sonnet 02.09. Same poller as the ranking (30 min); missing/404/
+  // empty → null quietly (an enrichment of the ranking tables, not a dependency).
   const fetchWideDaily = useCallback(async () => {
     try {
       const headers: Record<string, string> = {};
@@ -794,7 +793,7 @@ export function useBotApi(): UseBotApi {
       setPositionsHistory(data);
       setPositionsHistoryStatus('ok');
     } catch {
-      // sieć niedostępna — jak przy /api/state/paper, cicho
+      // network unavailable — as with /api/state/paper, quietly
       setPositionsHistory(null);
       setPositionsHistoryStatus('error');
     }
@@ -820,9 +819,9 @@ export function useBotApi(): UseBotApi {
       setCandidates(data);
       setCandidatesStatus('ok');
     } catch {
-      // sieć niedostępna — jak przy /api/state/paper, cicho (werdykty to
-      // wzbogacenie, nie zależność krytyczna — TopRankingPanel po prostu
-      // nie pokaże badge'y)
+      // network unavailable — as with /api/state/paper, quietly (verdicts are
+      // an enrichment, not a critical dependency — TopRankingPanel simply
+      // will not show the badges)
       setCandidates(null);
       setCandidatesStatus('error');
     }
@@ -840,8 +839,8 @@ export function useBotApi(): UseBotApi {
       if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
       const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/closed-positions`, { headers });
       if (res.status === 404) {
-        // serwer jeszcze bez wdrożenia dzisiejszej paczki (TASKS-LEDGER.md) —
-        // spokojny stan, nie error (HANDOFF: "degradacja łagodna")
+        // server not yet running today's batch (TASKS-LEDGER.md) —
+        // a calm state, not an error (HANDOFF: "graceful degradation")
         setClosedPositions(null);
         setClosedPositionsStatus('not-started');
         return;
@@ -906,25 +905,25 @@ export function useBotApi(): UseBotApi {
           headers,
         });
         if (!res.ok) {
-          // Fix 26.08: dotąd błąd był POŁYKANY (catch bez treści) i przycisk
-          // "nic nie robił" bez śladu. 401 = zły token, 404 = propozycja już
-          // nie istnieje po stronie bota (np. wygasła) — pokazujemy wprost.
+          // Fix 26.08: until now the error was SWALLOWED (empty catch) and the button
+          // "did nothing" without a trace. 401 = invalid token, 404 = the proposal no
+          // longer exists on the bot side (e.g. expired) — we show it explicitly.
           setActionNotice(
             res.status === 401
-              ? 'Odrzucenie nieprzyjęte: zły token dostępu (ustawienia API).'
+              ? 'Dismissal rejected: invalid access token (API settings).'
               : res.status === 404
-                ? 'Ta propozycja już nie istnieje po stronie bota — odświeżam stan.'
-                : `Odrzucenie nieprzyjęte: HTTP ${res.status}.`
+                ? 'This proposal no longer exists on the bot side — refreshing state.'
+                : `Dismissal rejected: HTTP ${res.status}.`
           );
           refresh();
           return;
         }
-        // Sukces = komenda ZAKOLEJKOWANA (observer aplikuje w ≤30 s) —
-        // ukrywamy propozycję od razu, żeby przycisk działał "na oko".
+        // Success = command QUEUED (the observer applies it within ≤30 s) —
+        // we hide the proposal immediately so the button visibly works.
         setActionNotice(null);
         setLocallyDismissed((prev) => (prev.includes(id) ? prev : [...prev, id]));
       } catch {
-        setActionNotice('Odrzucenie nie doszło do serwera (sieć/adres API) — spróbuj ponownie.');
+        setActionNotice('Dismissal did not reach the server (network/API address) — try again.');
       }
       refresh();
     },
@@ -932,9 +931,9 @@ export function useBotApi(): UseBotApi {
   );
 
   const setApiBase = useCallback((v: string) => {
-    // Normalizacja: bez końcowych ukośników (baza+'/api/...' dawałaby
-    // '//api/...' → 404 w Expressie; iOS Safari lubi doklejać '/'),
-    // spacje out, brak schematu → doklej http:// (LAN bez TLS).
+    // Normalization: no trailing slashes (base+'/api/...' would give
+    // '//api/...' → 404 in Express; iOS Safari likes to append '/'),
+    // spaces out, no scheme → prepend http:// (LAN without TLS).
     let norm = v.trim().replace(/\/+$/, '');
     if (norm && !/^https?:\/\//i.test(norm)) norm = `http://${norm}`;
     try {
@@ -954,8 +953,8 @@ export function useBotApi(): UseBotApi {
     setApiTokenState(v);
   }, []);
 
-  // Stan widoczny dla UI: propozycje odrzucone optymistycznie są ukryte od
-  // razu (observer i tak zdejmie je ze stanu w ≤30 s — patrz dismissProposal).
+  // State visible to the UI: optimistically dismissed proposals are hidden
+  // immediately (the observer removes them from the state within ≤30 s anyway — see dismissProposal).
   const visibleState = useMemo<BotStateShape | null>(() => {
     if (!state || !locallyDismissed.length) return state;
     return { ...state, proposals: (state.proposals ?? []).filter((p) => !locallyDismissed.includes(p.id)) };

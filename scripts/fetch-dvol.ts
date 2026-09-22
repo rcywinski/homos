@@ -1,14 +1,14 @@
 /**
- * fetch-dvol.ts — dzienna historia indeksu zmienności implikowanej DVOL
- * z Deribit (publiczne API, bez klucza). E8.3 (timing LP po zmienności).
+ * fetch-dvol.ts — daily history of the DVOL implied volatility index
+ * from Deribit (public API, no key). E8.3 (LP timing by volatility).
  *
  *   npx tsx scripts/fetch-dvol.ts ETH 1200
  *   npx tsx scripts/fetch-dvol.ts BTC 1200
  *
- * Wyjście: data/dvol/<ccy>.json — [{t: ms (początek dnia UTC), o,h,l,c}]
- * rosnąco po t; c = DVOL zamknięcia dnia w %/r (np. 65 = 65% ann. vol).
- * API: public/get_volatility_index_data, resolution 1D, limit ~1000 pkt
- * na request → paginacja po end_timestamp wstecz.
+ * Output: data/dvol/<ccy>.json — [{t: ms (start of UTC day), o,h,l,c}]
+ * ascending by t; c = day's closing DVOL in %/yr (e.g. 65 = 65% ann. vol).
+ * API: public/get_volatility_index_data, resolution 1D, limit ~1000 pts
+ * per request → paginate backwards by end_timestamp.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -36,13 +36,13 @@ const DAY = 86400_000;
     for (const [t, o, h, l, c] of data) all.set(t, { t, o, h, l, c });
     const oldest = Math.min(...data.map((d) => d[0]));
     if (oldest <= start) { end = start - 1; } else { end = oldest - 1; }
-    process.stdout.write(`\rDVOL ${ccy}: ${all.size} dni (od ${new Date(oldest).toISOString().slice(0, 10)})  `);
+    process.stdout.write(`\rDVOL ${ccy}: ${all.size} days (since ${new Date(oldest).toISOString().slice(0, 10)})  `);
     await new Promise((r) => setTimeout(r, 300));
   }
   const rows = [...all.values()].sort((a, b) => a.t - b.t);
   const out = path.join(OUT_DIR, `${ccy}.json`);
   fs.writeFileSync(out, JSON.stringify(rows));
   const cs = rows.map((r) => r.c).sort((a, b) => a - b);
-  console.log(`\nDVOL ${ccy}: ${rows.length} dni → ${out}`);
-  if (rows.length) console.log(`zakres ${new Date(rows[0].t).toISOString().slice(0, 10)} → ${new Date(rows[rows.length - 1].t).toISOString().slice(0, 10)} · mediana ${cs[cs.length >> 1].toFixed(1)} · p10 ${cs[Math.floor(cs.length * 0.1)].toFixed(1)} · p90 ${cs[Math.floor(cs.length * 0.9)].toFixed(1)}`);
+  console.log(`\nDVOL ${ccy}: ${rows.length} days → ${out}`);
+  if (rows.length) console.log(`range ${new Date(rows[0].t).toISOString().slice(0, 10)} → ${new Date(rows[rows.length - 1].t).toISOString().slice(0, 10)} · median ${cs[cs.length >> 1].toFixed(1)} · p10 ${cs[Math.floor(cs.length * 0.1)].toFixed(1)} · p90 ${cs[Math.floor(cs.length * 0.9)].toFixed(1)}`);
 })();

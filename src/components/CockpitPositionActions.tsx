@@ -1,15 +1,15 @@
 /**
- * CockpitPositionActions.tsx — [💰 Zbierz fees] / [⏹ Zamknij] / [🔄 Rebalans
- * ręczny] akcje + ich dwa modale, renderowane per pozycja w porannym kokpicie
- * (TASKS-UI.md Partia 3, UX-COCKPIT.md §1.A.3). Cała logika zapisu żyje w
- * useCockpitActions.ts — ten komponent jest prezentacyjny plus lokalny stan
- * modali (suwak procentu, slippage, kwoty tokenów).
+ * CockpitPositionActions.tsx — [💰 Collect fees] / [⏹ Close] / [🔄 Manual
+ * rebalance] actions + their two modals, rendered per position in the morning
+ * cockpit (TASKS-UI.md Batch 3, UX-COCKPIT.md §1.A.3). All write logic lives in
+ * useCockpitActions.ts — this component is presentational plus local modal
+ * state (percentage slider, slippage, token amounts).
  *
- * Partia 10 (20.08, redesign kart wg wzorca paper): trzy przyciski w rzędzie
- * zamienione na menu ⋮ (dropdown, bez bibliotek) — SAME handlery/logika,
- * tylko przeniesiony trigger UI (karty realnych pozycji mają teraz dwa
- * wykresy zamiast miejsca na rząd przycisków). `CloseModal`/`RebalanceModal`
- * (eksportowane, reużywane gdzie indziej) BEZ zmian.
+ * Batch 10 (20.08, card redesign after the paper pattern): three buttons in a
+ * row replaced by a ⋮ menu (dropdown, no libraries) — SAME handlers/logic,
+ * only the UI trigger moved (real position cards now have two charts instead
+ * of room for a button row). `CloseModal`/`RebalanceModal` (exported, reused
+ * elsewhere) UNCHANGED.
  */
 import React, { FC, useEffect, useMemo, useRef, useState } from 'react';
 import { formatUnits, parseUnits } from 'viem';
@@ -25,26 +25,26 @@ interface Props {
   position: PortfolioPosition;
   actions: ReturnType<typeof useCockpitActions>;
   onChanged: () => void;
-  /** Do fallbacku "Doradca (z bota)" w modalu rebalansu (Partia 4, fix z odbioru
-   *  P3) — opcjonalne, MorningCockpit zawsze je przekazuje z tego samego
-   *  useBotApi(), zero nowych zapytań. */
+  /** For the "Advisor (from bot)" fallback in the rebalance modal (Batch 4, fix
+   *  from the P3 review) — optional, MorningCockpit always passes it from the
+   *  same useBotApi(), zero new requests. */
   bot?: UseBotApi;
-  /** Kurs ETH/USD z usePortfolio.ts (FIX 25.08: żywy próg [Zbierz fees]) —
-   *  null, gdy portfel nie ma pozycji w puli stable/ETH, z której dałoby się
-   *  go wyprowadzić. `actions.collectThresholdUsdLive`/`isCollectWorthwhileLive`
-   *  wtedy same spadają na stałą GAS_USD (patrz useCockpitActions.ts). */
+  /** ETH/USD rate from usePortfolio.ts (FIX 25.08: live [Collect fees] threshold) —
+   *  null when the portfolio has no position in a stable/ETH pool from which it
+   *  could be derived. `actions.collectThresholdUsdLive`/`isCollectWorthwhileLive`
+   *  then fall back to the constant GAS_USD on their own (see useCockpitActions.ts). */
   ethUsd: number | null;
 }
 
 const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// Punkt 5 (Partia 13): saldo wyświetlane w modalu NIE może zaokrąglać w górę —
-// `toFixed(dp)` (poprzedni kod) zaokrągla ARYTMETYCZNIE, więc 1827.49x z realnego
-// salda potrafiło pokazać się jako "1827.50", user wpisywał 1827.50 i dostawał
-// "Za mało środków" bez wytłumaczenia skąd brakuje 0.01x. Truncacja na STRINGU z
-// formatUnits (dokładna reprezentacja dziesiętna z viem, bez konwersji przez
-// float) zamiast Math.floor na Number — unika też błędów precyzji float przy
-// dużych saldach. Padded zerami, żeby szerokość pola się nie skakała.
+// Item 5 (Batch 13): the balance displayed in the modal must NOT round up —
+// `toFixed(dp)` (previous code) rounds ARITHMETICALLY, so 1827.49x from a real
+// balance could show as "1827.50", the user typed 1827.50 and got
+// "Insufficient funds" with no explanation where the 0.01x was missing. Truncation
+// on the STRING from formatUnits (exact decimal representation from viem, no
+// float conversion) instead of Math.floor on a Number — also avoids float
+// precision errors with large balances. Zero-padded so the field width does not jump.
 const floorBalanceStr = (raw: bigint, decimals: number, dp: number): string => {
   const full = formatUnits(raw, decimals);
   const [intPart, fracPart = ''] = full.split('.');
@@ -63,8 +63,8 @@ const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bo
   const busyClose = actions.busyKey === `${p.chainId}-${p.tokenId}-close`;
   const busyRebalance = actions.busyKey === `${p.chainId}-${p.tokenId}-rebalance`;
 
-  // Zamykanie menu klikiem poza / Esc — bez bibliotek (wzorzec: nasłuch na
-  // document, sprzątany w cleanupie efektu).
+  // Close the menu on outside click / Esc — no libraries (pattern: listener on
+  // document, cleaned up in the effect cleanup).
   useEffect(() => {
     if (!menuOpen) return;
     const onDocClick = (e: MouseEvent) => {
@@ -83,7 +83,7 @@ const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bo
 
   return (
     <div className="cockpit-position-actions cockpit-position-actions-menu" ref={menuRef}>
-      <button className="cockpit-menu-trigger" aria-label="Akcje pozycji" onClick={() => setMenuOpen((v) => !v)}>
+      <button className="cockpit-menu-trigger" aria-label="Position actions" onClick={() => setMenuOpen((v) => !v)}>
         ⋮
       </button>
       {menuOpen && (
@@ -91,13 +91,13 @@ const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bo
           <button
             className="cockpit-menu-item"
             disabled={!worthwhile || busyCollect}
-            title={worthwhile ? undefined : `nieopłacalne: fee ${fmtUsd(p.feesUsd)} < próg ${fmtUsd(actions.collectThresholdUsdLive(p.chainId, ethUsd))}`}
+            title={worthwhile ? undefined : `not worth it: fees ${fmtUsd(p.feesUsd)} < threshold ${fmtUsd(actions.collectThresholdUsdLive(p.chainId, ethUsd))}`}
             onClick={() => {
               setMenuOpen(false);
               actions.collectFees(p).then(onChanged);
             }}
           >
-            {busyCollect ? 'Zbieranie…' : '💰 Zbierz fees'}
+            {busyCollect ? 'Collecting…' : '💰 Collect fees'}
           </button>
           <button
             className="cockpit-menu-item"
@@ -106,18 +106,18 @@ const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bo
               setCloseOpen(true);
             }}
           >
-            ⏹ Zamknij
+            ⏹ Close
           </button>
           <button
             className="cockpit-menu-item"
             disabled={!p.pool}
-            title={p.pool ? undefined : 'brak danych puli (spróbuj odświeżyć)'}
+            title={p.pool ? undefined : 'no pool data (try refreshing)'}
             onClick={() => {
               setMenuOpen(false);
               setRebalanceOpen(true);
             }}
           >
-            🔄 Rebalans ręczny
+            🔄 Manual rebalance
           </button>
         </div>
       )}
@@ -151,12 +151,12 @@ const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bo
         />
       )}
 
-      {/* FIX 25.08 (zgłoszenie Rafała): message.key === posKey tej karty — bez
-          tego sprawdzenia toast z JUŻ ZAMKNIĘTEJ (i zniknietej z listy) karty
-          renderował się na następnej karcie w kolejności, bo `actions` (a
-          więc i `message`) jest jednym stanem współdzielonym przez wszystkie
-          karty. Auto-znika po 10s (useCockpitActions.ts), więc nawet gdyby
-          klucz się kiedyś nie zgodził, nic nie wisi tu bez końca. */}
+      {/* FIX 25.08 (owner's report): message.key === posKey of this card — without
+          this check a toast from an ALREADY CLOSED (and vanished from the list) card
+          rendered on the next card in order, because `actions` (and thus
+          `message`) is a single state shared by all cards. Auto-hides after
+          10s (useCockpitActions.ts), so even if the key ever failed to match,
+          nothing hangs here forever. */}
       {actions.message && actions.message.key === `${p.chainId}-${p.tokenId}` && (
         <div className={`message ${actions.message.kind === 'ok' ? 'success' : 'error'} cockpit-action-message`}>{actions.message.text}</div>
       )}
@@ -164,20 +164,20 @@ const CockpitPositionActions: FC<Props> = ({ position: p, actions, onChanged, bo
   );
 };
 
-// --- Modal: Zamknij pozycję ---
+// --- Modal: Close position ---
 // Exported: reused directly by MorningCockpit.tsx for ROTATE proposal cards'
-// [1. Zamknij starą →] step (Partia 4) — same modal, matched to a held
+// [1. Close old →] step (Batch 4) — same modal, matched to a held
 // PortfolioPosition by tokenId, no changes needed to the modal itself.
-// Skrót hasha do wyświetlenia — jak formatTxHash w TransactionHistory.tsx,
-// świadomie NIE reużywany stamtąd (ten plik poza zakresem tej sesji poza
-// odczytem, patrz komentarz przy EXPLORER_TX_URL w useCockpitActions.ts).
+// Short hash for display — like formatTxHash in TransactionHistory.tsx,
+// deliberately NOT reused from there (that file is outside this session's scope
+// except for reading, see the comment at EXPLORER_TX_URL in useCockpitActions.ts).
 const shortHash = (h: string) => `${h.slice(0, 6)}…${h.slice(-4)}`;
 
-/** Lista kroków [⏹ Zamknij] (FIX 25.08, zgłoszenie Rafała po 1. bojowym
- *  zamknięciu #953427 — sam guzik "Przetwarzanie…" przez ~30s między 2
- *  podpisami w Rabby nie mówił nic o tym, na którym jest kroku). Wzorzec
- *  `.sequence-step*` z RebalanceSequenceModal.tsx (Partia 4b) — tu tylko 2
- *  stałe kroki zamiast dynamicznej listy z RebalancePlan. */
+/** Step list for [⏹ Close] (FIX 25.08, owner's report after the 1st live
+ *  close of #953427 — the bare "Processing…" button for ~30s between 2
+ *  signatures in Rabby said nothing about which step it was on). Pattern
+ *  `.sequence-step*` from RebalanceSequenceModal.tsx (Batch 4b) — here only 2
+ *  fixed steps instead of a dynamic list from RebalancePlan. */
 const CloseSteps: FC<{ chainId: number; status: CloseStepStatus }> = ({ chainId, status }) => {
   const step1Done = status.step > 1 || status.done;
   const step1Active = status.step === 1 && !status.done;
@@ -189,37 +189,37 @@ const CloseSteps: FC<{ chainId: number; status: CloseStepStatus }> = ({ chainId,
     <div className="sequence-steps">
       <div className={`sequence-step ${step1Done ? 'sequence-step-done' : ''} ${step1Active ? 'sequence-step-active' : ''}`}>
         <div className="sequence-step-label">
-          {icon(step1Done, step1Active)} Krok 1/2: wycofanie płynności (decrease)
+          {icon(step1Done, step1Active)} Step 1/2: withdraw liquidity (decrease)
         </div>
         {status.hash1 && (
           <div className="sequence-step-detail muted">
             <a href={explorerTxUrl(chainId, status.hash1)} target="_blank" rel="noopener noreferrer">
               {shortHash(status.hash1)} ↗
             </a>
-            {step1Done ? ' — potwierdzona' : ' — czekam na potwierdzenie…'}
+            {step1Done ? ' — confirmed' : ' — waiting for confirmation…'}
           </div>
         )}
       </div>
       <div className={`sequence-step ${step2Done ? 'sequence-step-done' : ''} ${step2Active ? 'sequence-step-active' : ''}`}>
         <div className="sequence-step-label">
-          {icon(step2Done, step2Active)} Krok 2/2: odbiór środków + fee (collect)
+          {icon(step2Done, step2Active)} Step 2/2: collect funds + fees (collect)
         </div>
         {status.hash2 ? (
           <div className="sequence-step-detail muted">
             <a href={explorerTxUrl(chainId, status.hash2)} target="_blank" rel="noopener noreferrer">
               {shortHash(status.hash2)} ↗
             </a>
-            {step2Done ? ' — potwierdzona' : ' — czekam na potwierdzenie…'}
+            {step2Done ? ' — confirmed' : ' — waiting for confirmation…'}
           </div>
         ) : (
-          // Notka TYLKO gdy krok faktycznie czeka na podpis (nie po realnym
-          // błędzie — status.error dostaje własny, prawdziwy komunikat niżej,
-          // podszywanie się reassurance pod prawdziwą awarię byłoby mylące).
+          // Note ONLY when the step is actually waiting for a signature (not after
+          // a real error — status.error gets its own, real message below;
+          // reassurance masquerading as a real failure would be misleading).
           step2Active &&
           !status.error && (
             <div className="sequence-step-detail muted">
-              Rabby może pokazać „Simulation failed" przy TYM podpisie — to symulacja na stanie sprzed
-              potwierdzenia kroku 1. Krok 1 ma potwierdzenie (link wyżej) — podpis jest bezpieczny.
+              Rabby may show "Simulation failed" for THIS signature — it is a simulation on the state from before
+              step 1 was confirmed. Step 1 is confirmed (link above) — the signature is safe.
             </div>
           )
         )}
@@ -244,7 +244,7 @@ export const CloseModal: FC<{
     <div className="modal-overlay" onClick={busy ? undefined : onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Zamknij pozycję #{p.tokenId}</h3>
+          <h3>Close position #{p.tokenId}</h3>
           {!busy && (
             <button className="close-button" onClick={onClose}>
               ×
@@ -255,7 +255,7 @@ export const CloseModal: FC<{
           <p className="muted">{p.poolLabel}</p>
 
           <div className="remove-percentage">
-            <label>Procent do zamknięcia:</label>
+            <label>Percentage to close:</label>
             <div className="percentage-slider-container">
               <input type="range" min="1" max="100" value={pct} onChange={(e) => setPct(parseInt(e.target.value, 10))} disabled={!!status} />
               <span>{pct}%</span>
@@ -286,50 +286,50 @@ export const CloseModal: FC<{
           </div>
 
           <div className="expected-receive">
-            <h4>Oczekiwane do otrzymania (krok 1: decrease + krok 2: collect fee):</h4>
+            <h4>Expected to receive (step 1: decrease + step 2: collect fees):</h4>
             {preview ? (
               <>
                 <div className="token-amount">
                   <span>
-                    {preview.amount0.toFixed(6)} {p.token0.symbol} <span className="muted">(min po slippage: {preview.amount0Min.toFixed(6)})</span>
+                    {preview.amount0.toFixed(6)} {p.token0.symbol} <span className="muted">(min after slippage: {preview.amount0Min.toFixed(6)})</span>
                   </span>
                 </div>
                 <div className="token-amount">
                   <span>
-                    {preview.amount1.toFixed(6)} {p.token1.symbol} <span className="muted">(min po slippage: {preview.amount1Min.toFixed(6)})</span>
+                    {preview.amount1.toFixed(6)} {p.token1.symbol} <span className="muted">(min after slippage: {preview.amount1Min.toFixed(6)})</span>
                   </span>
                 </div>
                 {p.feesUsd > 0.001 && (
                   <div className="token-amount muted">
-                    + narosłe fee: {p.feeAmount0.toFixed(6)} {p.token0.symbol} / {p.feeAmount1.toFixed(6)} {p.token1.symbol} (~{fmtUsd(p.feesUsd)})
+                    + accrued fees: {p.feeAmount0.toFixed(6)} {p.token0.symbol} / {p.feeAmount1.toFixed(6)} {p.token1.symbol} (~{fmtUsd(p.feesUsd)})
                   </div>
                 )}
               </>
             ) : (
-              <div className="morning-note">Brak danych do podglądu (Pool niedostępny) — kwoty wyliczy sama transakcja.</div>
+              <div className="morning-note">No preview data (Pool unavailable) — the transaction itself will compute the amounts.</div>
             )}
           </div>
 
-          {/* Postęp renderuje się dopiero po pierwszym kliknięciu [Zamknij] —
-              status jest undefined, dopóki onConfirm nie ruszy sekwencję. */}
+          {/* Progress renders only after the first click on [Close] —
+              status is undefined until onConfirm starts the sequence. */}
           {status && <CloseSteps chainId={p.chainId} status={status} />}
           {status?.error && (
             <div className="message error">
-              Zamykanie nieudane — środki bezpieczne (spróbuj ponownie albo zbierz fee ręcznie przyciskiem [💰 Zbierz fees]): {status.error}
+              Close failed — funds are safe (try again or collect fees manually with the [💰 Collect fees] button): {status.error}
             </div>
           )}
 
           <div className="modal-actions">
             <button className="secondary-button" onClick={onClose} disabled={busy}>
-              {status?.done ? 'Zamknij okno' : 'Anuluj'}
+              {status?.done ? 'Close window' : 'Cancel'}
             </button>
             {!status?.done && (
               <button className="primary-button" disabled={busy} onClick={() => onConfirm(pct, slippage)}>
                 {busy
-                  ? `Przetwarzanie… (krok ${status?.step ?? 1}/2)`
+                  ? `Processing… (step ${status?.step ?? 1}/2)`
                   : status?.error
-                  ? `Ponów (krok ${status.step}/2)`
-                  : `Zamknij ${pct}% (2 podpisy w Rabby)`}
+                  ? `Retry (step ${status.step}/2)`
+                  : `Close ${pct}% (2 signatures in Rabby)`}
               </button>
             )}
           </div>
@@ -339,24 +339,24 @@ export const CloseModal: FC<{
   );
 };
 
-// --- Modal: Rebalans ręczny / nowa pozycja ---
-// Domyślnie w zakresie sugerowanym przez doradcę, gdy jest dostępny — ale
-// NIE jest to wymagane. Gdy position.suggestion === null (brak statystyk:
-// mało swapów w 24h, pula spoza OBSERVED_PAIRS, albo chwilowy błąd RPC),
-// modal przełącza się na tryb "Własny zakres" (ceny USD, jak w
-// AddLiquidity.tsx), żeby przycisk nigdy nie był całkowicie zablokowany
-// brakiem danych doradcy. Fix z odbioru P3 (Partia 4): gdy front nie ma
-// statystyk, ale `bot` (useBotApi) ma świeżą sugestię dla tej samej puli
-// (state.pools[].suggestion, mapowanie po adresie puli → botPoolId), opcja
-// "Doradca" pokazuje "Doradca (z bota)" zamiast być wyszarzona — dane już są
-// w pamięci (bot.state), zero nowych zapytań.
+// --- Modal: Manual rebalance / new position ---
+// Defaults to the range suggested by the advisor when available — but this
+// is NOT required. When position.suggestion === null (no statistics: too few
+// swaps in 24h, pool outside OBSERVED_PAIRS, or a transient RPC error), the
+// modal switches to "Custom range" mode (USD prices, as in
+// AddLiquidity.tsx), so the button is never fully blocked by missing advisor
+// data. Fix from the P3 review (Batch 4): when the frontend has no
+// statistics but `bot` (useBotApi) has a fresh suggestion for the same pool
+// (state.pools[].suggestion, mapped by pool address → botPoolId), the
+// "Advisor" option shows "Advisor (from bot)" instead of being greyed out — the
+// data is already in memory (bot.state), zero new requests.
 //
-// Exported + typowany na RebalanceTarget (nie PortfolioPosition) od Partii 4:
-// MorningCockpit reużywa ten sam modal dla kart propozycji bota (REBALANCE
-// "Modyfikuj", OPEN "Otwórz", ROTATE krok 2 "Otwórz nową") — te mogą wskazywać
-// na pulę, w której użytkownik jeszcze nie ma pozycji (tokenId === ''),
-// prefillowane zakresem z propozycji (`initialUsdRange`, ticki+USD z
-// suggestedRange w bot/observer.ts / bot/selector.ts).
+// Exported + typed on RebalanceTarget (not PortfolioPosition) since Batch 4:
+// MorningCockpit reuses the same modal for bot proposal cards (REBALANCE
+// "Modify", OPEN "Open", ROTATE step 2 "Open new") — these may point to
+// a pool where the user has no position yet (tokenId === ''),
+// prefilled with the range from the proposal (`initialUsdRange`, ticks+USD from
+// suggestedRange in bot/observer.ts / bot/selector.ts).
 export const RebalanceModal: FC<{
   position: RebalanceTarget;
   actions: ReturnType<typeof useCockpitActions>;
@@ -366,17 +366,17 @@ export const RebalanceModal: FC<{
   bot?: UseBotApi;
   title?: string;
   initialUsdRange?: { usdLo: number; usdHi: number };
-  /** Partia 16: nadpisuje domyślne ostrzeżenie "to NIE jest produktowe
-   *  ±40/50%" (Partia 13b) przy wąskim prefillu (<30%) — dla FLAT_NARROW
-   *  wąski zakres jest ZAMIERZONY (zwężenie do k×σ w potwierdzonym flacie),
-   *  nie objawem starej propozycji. `undefined` = zachowanie bez zmian. */
+  /** Batch 16: overrides the default warning "this is NOT the product
+   *  ±40/50%" (Batch 13b) for a narrow prefill (<30%) — for FLAT_NARROW
+   *  the narrow range is INTENDED (narrowing to k×σ in a confirmed flat),
+   *  not a symptom of a stale proposal. `undefined` = behavior unchanged. */
   narrowRangeNote?: string;
 }> = ({ position: p, actions, busy, onClose, onDone, bot, title, initialUsdRange, narrowRangeNote }) => {
-  // Sugestia frontendowego doradcy (position.suggestion) albo, gdy jej brak,
-  // fallback na świeżą sugestię bota dla tej samej puli (mapowanie po adresie —
-  // działa tylko dla pozycji trzymanych, position.poolAddress istnieje tylko
-  // na PortfolioPosition; RebalanceTarget go nie ma, więc fallback dotyczy
-  // wyłącznie zwykłego użycia z karty pozycji, nie propozycji bota).
+  // Frontend advisor suggestion (position.suggestion) or, when missing,
+  // fallback to the bot's fresh suggestion for the same pool (mapped by address —
+  // works only for held positions, position.poolAddress exists only on
+  // PortfolioPosition; RebalanceTarget lacks it, so the fallback applies
+  // solely to regular use from a position card, not to bot proposals).
   const heldPoolAddress = (p as { poolAddress?: string }).poolAddress;
   const botPoolMeta = heldPoolAddress ? findBotPoolByAddress(p.chainId, heldPoolAddress) : undefined;
   const botLive = botPoolMeta ? bot?.state?.pools?.find((bp) => bp.id === botPoolMeta.id) : undefined;
@@ -387,21 +387,21 @@ export const RebalanceModal: FC<{
     ? [botSuggestion.tickLower, botSuggestion.tickUpper]
     : null;
   const advisorWidthPct = p.suggestion ? p.suggestion.widthPct : botSuggestion ? botSuggestion.widthPct : null;
-  // PARTIA 20 pkt 1: dla pul ŚLEDZONYCH przez bota `p.suggestion` jest już
-  // sourcowane z bot.state.pools[] przez usePortfolio.ts (suggestionSource
-  // === 'bot') — sama liczba jest tu tylko wyświetlana, nie liczona od nowa.
-  // Jedyny wypadek "ui-estimate" to pula spoza konfiguracji bota (nie ma jej
-  // w BOT_POOL_META) — dopisek "(estymata UI)" ostrzega, że to własne liczenie
-  // przeglądarki, nie to samo, co bot faktycznie gra. `suggestionSource` jest
-  // opcjonalne (RebalanceTarget z resolveBotPool go nie niesie — target dla
-  // propozycji OPEN/ROTATE nie przechodzi przez usePortfolio).
+  // BATCH 20 item 1: for pools TRACKED by the bot, `p.suggestion` is already
+  // sourced from bot.state.pools[] via usePortfolio.ts (suggestionSource
+  // === 'bot') — the number itself is only displayed here, not recomputed.
+  // The only "ui-estimate" case is a pool outside the bot's configuration (not
+  // in BOT_POOL_META) — the "(UI estimate)" suffix warns that it is the
+  // browser's own calculation, not what the bot actually plays. `suggestionSource` is
+  // optional (RebalanceTarget from resolveBotPool does not carry it — the target for
+  // OPEN/ROTATE proposals does not go through usePortfolio).
   const suggestionSource = (p as { suggestionSource?: 'bot' | 'ui-estimate' | null }).suggestionSource ?? null;
   const advisorLabel = p.suggestion
     ? suggestionSource === 'ui-estimate'
-      ? 'Doradca (estymata UI)'
-      : 'Doradca'
+      ? 'Advisor (UI estimate)'
+      : 'Advisor'
     : botSuggestion
-    ? 'Doradca (z bota)'
+    ? 'Advisor (from bot)'
     : null;
 
   const [mode, setMode] = useState<'suggested' | 'custom'>(initialUsdRange ? 'custom' : advisorTicks ? 'suggested' : 'custom');
@@ -413,9 +413,9 @@ export const RebalanceModal: FC<{
   const [allow0, setAllow0] = useState<bigint>(0n);
   const [allow1, setAllow1] = useState<bigint>(0n);
   const [approving, setApproving] = useState<0 | 1 | null>(null);
-  // Punkt 2 (Partia 13): fallback ręczny — odczyt przy KAŻDYM otwarciu modala
-  // (mount, effect niżej) już jest, ale gdy RPC akurat nawali w tamtym
-  // momencie, user nie ma innej opcji niż zamknąć i otworzyć modal od nowa.
+  // Item 2 (Batch 13): manual fallback — the read on EVERY modal open
+  // (mount, effect below) already exists, but when the RPC happens to fail at
+  // that moment, the user has no option other than closing and reopening the modal.
   const [refreshing, setRefreshing] = useState(false);
 
   const refreshBalances = async () => {
@@ -448,23 +448,23 @@ export const RebalanceModal: FC<{
     return ethT0 ? raw : 1 / raw;
   };
 
-  // Punkt 2 (Partia 13b): `usdAt` w rzeczywistości liczy cenę "drugiego"
-  // (nie-ETH) tokenu WYRAŻONĄ w tokenie ETH-owym (raw = token1 per token0,
-  // odwrócone gdy ETH jest po stronie token1) — nazwa "usd" jest myląca, ale
-  // matematyka jest poprawna. Dla par ETH/stable "drugi" token JEST USD-em,
-  // więc etykieta "$"/"USD" była trafna. Dla base-cbbtc-weth-005 (WETH/cbBTC,
-  // ŻADEN nie jest stablecoinem) ta sama liczba to "cbBTC za WETH" (~0.031),
-  // a placeholder "Min (USD)"/prefiks "$" pokazywał fałszywą jednostkę —
-  // zgłoszenie Rafała po otwarciu nogi cbBTC 27.08. Etykieta jest teraz
-  // dynamiczna: USD dla par ze stablecoinem, w przeciwnym razie
-  // "{symbol drugiego tokenu} za {symbol ETH-owego tokenu}".
+  // Item 2 (Batch 13b): `usdAt` actually computes the price of the "other"
+  // (non-ETH) token EXPRESSED in the ETH-side token (raw = token1 per token0,
+  // inverted when ETH is on the token1 side) — the name "usd" is misleading, but
+  // the math is correct. For ETH/stable pairs the "other" token IS USD,
+  // so the "$"/"USD" label was accurate. For base-cbbtc-weth-005 (WETH/cbBTC,
+  // NEITHER is a stablecoin) the same number is "cbBTC per WETH" (~0.031),
+  // and the "Min (USD)" placeholder / "$" prefix showed a false unit —
+  // owner's report after opening the cbBTC leg 27.08. The label is now
+  // dynamic: USD for pairs with a stablecoin, otherwise
+  // "{other token symbol} per {ETH-side token symbol}".
   const STABLE_SYMBOLS = new Set(['USDC', 'USDT', 'DAI', 'USDBC', 'USDE', 'FRAX', 'LUSD']);
   const ethSideToken = ethT0 ? p.token0 : p.token1;
   const otherSideToken = ethT0 ? p.token1 : p.token0;
   const isStableQuote = STABLE_SYMBOLS.has(otherSideToken.symbol.toUpperCase());
   const quoteUnitPrefix = isStableQuote ? '$' : '';
   const quoteUnitSuffix = isStableQuote ? '' : ` ${otherSideToken.symbol}/${ethSideToken.symbol}`;
-  const quoteUnitPlaceholder = isStableQuote ? 'USD' : `${otherSideToken.symbol} za ${ethSideToken.symbol}`;
+  const quoteUnitPlaceholder = isStableQuote ? 'USD' : `${otherSideToken.symbol} per ${ethSideToken.symbol}`;
   const fmtQuote = (v: number) => `${quoteUnitPrefix}${v.toLocaleString(undefined, { maximumSignificantDigits: 6 })}${quoteUnitSuffix}`;
 
   const spacing = p.pool ? TICK_SPACINGS[p.fee as keyof typeof TICK_SPACINGS] : 60;
@@ -472,10 +472,10 @@ export const RebalanceModal: FC<{
   const suggestedUsdHi = advisorTicks ? usdAt(ethT0 ? advisorTicks[1] : advisorTicks[0]) : null;
   const currentQuotePrice = p.pool ? usdAt(p.pool.tickCurrent) : null;
 
-  // Domyślne wypełnienie pól "Własny zakres": zakres z propozycji bota, gdy
-  // modal otwarto z karty propozycji (initialUsdRange — Partia 4); inaczej
-  // ±15% wokół aktualnej ceny puli (ten sam domyślny szeroki zakres co
-  // AddLiquidity.tsx dla trybu "±15%").
+  // Default fill of the "Custom range" fields: the range from the bot proposal when
+  // the modal was opened from a proposal card (initialUsdRange — Batch 4); otherwise
+  // ±15% around the current pool price (the same default wide range as
+  // AddLiquidity.tsx for the "±15%" mode).
   const defaultCustom = useMemo(() => {
     if (initialUsdRange) return { lo: initialUsdRange.usdLo.toPrecision(6), hi: initialUsdRange.usdHi.toPrecision(6) };
     if (!p.pool) return { lo: '', hi: '' };
@@ -486,12 +486,12 @@ export const RebalanceModal: FC<{
   const [customLo, setCustomLo] = useState(defaultCustom.lo);
   const [customHi, setCustomHi] = useState(defaultCustom.hi);
 
-  // Punkt 3 (Partia 13b): przy prefillu z propozycji bota (initialUsdRange —
-  // zawsze trafia do trybu "custom", patrz stan `mode` niżej) pokazać od razu
-  // wyliczoną szerokość ±%, żeby user WIDZIAŁ, że to nie jest produktowe
-  // ±40/50% — zgłoszenie po incydencie 27.08 (modal zassał starą wąską
-  // propozycję ±16% z 25.08 po restarcie bota, wyglądało jak normalny
-  // "Własny zakres" bez żadnego ostrzeżenia o skali).
+  // Item 3 (Batch 13b): when prefilling from a bot proposal (initialUsdRange —
+  // always lands in "custom" mode, see the `mode` state below) show the computed
+  // ±% width right away, so the user SEES it is not the product
+  // ±40/50% — report after the 27.08 incident (the modal sucked in a stale narrow
+  // ±16% proposal from 25.08 after a bot restart, and it looked like a normal
+  // "Custom range" with no warning about the scale).
   const initialRangeWidthPct = useMemo(() => {
     if (!initialUsdRange) return null;
     const { usdLo, usdHi } = initialUsdRange;
@@ -529,7 +529,7 @@ export const RebalanceModal: FC<{
       if (lastEdited === 0 && r.amount1 !== amount1) setAmount1(r.amount1);
       if (lastEdited === 1 && r.amount0 !== amount0) setAmount0(r.amount0);
     } catch {
-      /* niepełny input */
+      /* incomplete input */
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [amount0, amount1, lastEdited, effectiveTicks?.[0], effectiveTicks?.[1]]);
@@ -552,15 +552,15 @@ export const RebalanceModal: FC<{
   const needApprove1 = parsed1 > 0n && allow1 < parsed1;
   const insufficient = parsed0 > bal0 || parsed1 > bal1;
 
-  // Punkt 6 (Partia 13): gdy auto-przeliczenie (calculateOptimalAmounts, efekt
-  // wyżej) podniesie kwotę PONAD już zatwierdzone allowance, przycisk Approve
-  // po prostu "wraca" (needApprove* przełącza się z powrotem na true) — bez
-  // wyjaśnienia user myśli, że jego wcześniejszy podpis przepadł. Dopisek przy
-  // przycisku pokazuje, że część allowance NADAL stoi (zatwierdzone > 0), tylko
-  // potrzeba więcej — różnica między "podpis przepadł" a "podpisz jeszcze raz
-  // na wyższą kwotę".
-  const approveNote0 = needApprove0 && allow0 > 0n ? `zatwierdzone: ${formatUnits(allow0, p.token0.decimals)}, potrzebne: ${formatUnits(parsed0, p.token0.decimals)}` : null;
-  const approveNote1 = needApprove1 && allow1 > 0n ? `zatwierdzone: ${formatUnits(allow1, p.token1.decimals)}, potrzebne: ${formatUnits(parsed1, p.token1.decimals)}` : null;
+  // Item 6 (Batch 13): when the auto-recalculation (calculateOptimalAmounts, effect
+  // above) raises the amount ABOVE the already approved allowance, the Approve button
+  // simply "comes back" (needApprove* flips back to true) — without an
+  // explanation the user thinks their earlier signature was lost. The note next to
+  // the button shows that part of the allowance STILL stands (approved > 0), only
+  // more is needed — the difference between "signature lost" and "sign once more
+  // for a higher amount".
+  const approveNote0 = needApprove0 && allow0 > 0n ? `approved: ${formatUnits(allow0, p.token0.decimals)}, needed: ${formatUnits(parsed0, p.token0.decimals)}` : null;
+  const approveNote1 = needApprove1 && allow1 > 0n ? `approved: ${formatUnits(allow1, p.token1.decimals)}, needed: ${formatUnits(parsed1, p.token1.decimals)}` : null;
 
   const approve = async (which: 0 | 1) => {
     setApproving(which);
@@ -578,7 +578,7 @@ export const RebalanceModal: FC<{
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>{title ?? 'Rebalans ręczny — nowa pozycja'}</h3>
+          <h3>{title ?? 'Manual rebalance — new position'}</h3>
           <button className="close-button" onClick={onClose}>
             ×
           </button>
@@ -590,38 +590,38 @@ export const RebalanceModal: FC<{
             <div className={`range-option ${mode === 'suggested' ? 'selected' : ''} ${!advisorTicks ? 'disabled' : ''}`} onClick={() => advisorTicks && setMode('suggested')}>
               <div className="range-option-radio"></div>
               <div className="range-option-label">
-                {advisorTicks && advisorWidthPct !== null ? `${advisorLabel} ±${advisorWidthPct.toFixed(1)}%` : 'Doradca (brak danych)'}
+                {advisorTicks && advisorWidthPct !== null ? `${advisorLabel} ±${advisorWidthPct.toFixed(1)}%` : 'Advisor (no data)'}
               </div>
             </div>
             <div className={`range-option ${mode === 'custom' ? 'selected' : ''}`} onClick={() => setMode('custom')}>
               <div className="range-option-radio"></div>
-              <div className="range-option-label">Własny zakres</div>
+              <div className="range-option-label">Custom range</div>
             </div>
           </div>
 
           {!advisorTicks && (
             <div className="morning-note">
               {initialUsdRange
-                ? 'Doradca nie ma własnych statystyk dla tej puli — pola niżej wypełnione zakresem z propozycji bota (możesz zmienić).'
-                : 'Doradca nie ma statystyk dla tej puli (za mało swapów w ostatnich 24h, albo pula spoza obserwowanej listy) — wpisz zakres ręcznie.'}
+                ? 'The advisor has no statistics of its own for this pool — the fields below are prefilled with the range from the bot proposal (you can change it).'
+                : 'The advisor has no statistics for this pool (too few swaps in the last 24h, or the pool is outside the observed list) — enter the range manually.'}
             </div>
           )}
 
-          {/* Punkt 3 (Partia 13b): szerokość prefillowanego zakresu z propozycji
-              bota, WIDOCZNA niezależnie od aktualnie wybranego trybu — user ma
-              to zobaczyć od razu, zanim ewentualnie przełączy się na "Doradca"
-              i z powrotem, tracąc kontekst. */}
+          {/* Item 3 (Batch 13b): width of the prefilled range from the bot
+              proposal, VISIBLE regardless of the currently selected mode — the user
+              should see it right away, before possibly switching to "Advisor"
+              and back and losing context. */}
           {initialRangeWidthPct !== null && (
             <div className="morning-note">
-              Zakres z propozycji: <b>±{initialRangeWidthPct.toFixed(1)}%</b> wokół środka
-              {initialRangeWidthPct < 30 ? ` — ${narrowRangeNote ?? 'WĄSKI, to NIE jest produktowe ±40/50% (sprawdź źródło propozycji)'}` : ''}.
+              Range from proposal: <b>±{initialRangeWidthPct.toFixed(1)}%</b> around the midpoint
+              {initialRangeWidthPct < 30 ? ` — ${narrowRangeNote ?? 'NARROW, this is NOT the product ±40/50% (check the proposal source)'}` : ''}.
             </div>
           )}
 
           {mode === 'suggested' && advisorTicks ? (
             <div className="range-preview">
-              Zakres: <b>{fmtQuote(suggestedUsdLo!)} – {fmtQuote(suggestedUsdHi!)}</b>{' '}
-              <span className="muted">(ticki {advisorTicks[0]} … {advisorTicks[1]})</span>
+              Range: <b>{fmtQuote(suggestedUsdLo!)} – {fmtQuote(suggestedUsdHi!)}</b>{' '}
+              <span className="muted">(ticks {advisorTicks[0]} … {advisorTicks[1]})</span>
             </div>
           ) : (
             <>
@@ -629,27 +629,27 @@ export const RebalanceModal: FC<{
                 <input placeholder={`Min (${quoteUnitPlaceholder})`} value={customLo} onChange={(e) => setCustomLo(e.target.value)} />
                 <input placeholder={`Max (${quoteUnitPlaceholder})`} value={customHi} onChange={(e) => setCustomHi(e.target.value)} />
               </div>
-              {/* Punkt 2 (Partia 13b): podpowiedź bieżącej ceny w tej samej,
-                  dynamicznie dobranej jednostce co placeholdery powyżej —
-                  bez tego "0.031" wyglądało jak literówka, nie jak realna
-                  cena cbBTC-za-WETH. */}
+              {/* Item 2 (Batch 13b): current price hint in the same,
+                  dynamically chosen unit as the placeholders above —
+                  without it "0.031" looked like a typo, not like a real
+                  cbBTC-per-WETH price. */}
               {currentQuotePrice !== null && (
                 <div className="muted" style={{ marginTop: -4, marginBottom: 8 }}>
-                  obecna cena: {fmtQuote(currentQuotePrice)}
+                  current price: {fmtQuote(currentQuotePrice)}
                 </div>
               )}
             </>
           )}
-          {mode === 'custom' && !customTicks && <div className="message error">Podaj poprawny zakres (min &lt; max, obie wartości &gt; 0)</div>}
+          {mode === 'custom' && !customTicks && <div className="message error">Enter a valid range (min &lt; max, both values &gt; 0)</div>}
 
           <div className="morning-note">
             {p.tokenId ? (
               <>
-                Otwiera NOWĄ pozycję w tym zakresie (stara #{p.tokenId} zostaje — zamknij ją osobno przyciskiem [⏹ Zamknij], jeśli chcesz w pełni
-                zrebalansować; automatyczny builder zamknij+swap+mint w jednej sekwencji przyjdzie później — UX-COCKPIT.md §3).
+                Opens a NEW position in this range (the old #{p.tokenId} stays — close it separately with the [⏹ Close] button if you want a full
+                rebalance; an automatic close+swap+mint builder in one sequence will come later — UX-COCKPIT.md §3).
               </>
             ) : (
-              <>Otwiera NOWĄ pozycję w tej puli, w wybranym zakresie.</>
+              <>Opens a NEW position in this pool, in the selected range.</>
             )}
           </div>
 
@@ -657,13 +657,13 @@ export const RebalanceModal: FC<{
             <div className="token-input">
               <label>
                 {p.token0.symbol}{' '}
-                <span className="muted" title={`dokładnie: ${formatUnits(bal0, p.token0.decimals)} ${p.token0.symbol}`}>
-                  saldo: {floorBalanceStr(bal0, p.token0.decimals, p.token0.decimals === 6 ? 2 : 6)}
+                <span className="muted" title={`exactly: ${formatUnits(bal0, p.token0.decimals)} ${p.token0.symbol}`}>
+                  balance: {floorBalanceStr(bal0, p.token0.decimals, p.token0.decimals === 6 ? 2 : 6)}
                 </span>{' '}
-                {/* Punkt 4 (Partia 13): MAX wpisuje DOKŁADNE saldo (formatUnits
-                    bez zaokrąglenia) — nie wartość obok, która jest ucięta w
-                    dół do wyświetlenia (punkt 5) i wpisanie jej ręcznie
-                    zostawiałoby resztki tokenu nieużyte. */}
+                {/* Item 4 (Batch 13): MAX enters the EXACT balance (formatUnits
+                    without rounding) — not the value next to it, which is truncated
+                    down for display (item 5) and typing it manually
+                    would leave token dust unused. */}
                 <button
                   type="button"
                   className="chip"
@@ -688,8 +688,8 @@ export const RebalanceModal: FC<{
             <div className="token-input">
               <label>
                 {p.token1.symbol}{' '}
-                <span className="muted" title={`dokładnie: ${formatUnits(bal1, p.token1.decimals)} ${p.token1.symbol}`}>
-                  saldo: {floorBalanceStr(bal1, p.token1.decimals, p.token1.decimals === 6 ? 2 : 6)}
+                <span className="muted" title={`exactly: ${formatUnits(bal1, p.token1.decimals)} ${p.token1.symbol}`}>
+                  balance: {floorBalanceStr(bal1, p.token1.decimals, p.token1.decimals === 6 ? 2 : 6)}
                 </span>{' '}
                 <button
                   type="button"
@@ -714,13 +714,13 @@ export const RebalanceModal: FC<{
             </div>
           </div>
 
-          {insufficient && <div className="message error">Za mało środków na saldzie</div>}
+          {insufficient && <div className="message error">Insufficient balance</div>}
 
-          {/* Punkt 1 (Partia 13b): przycisk "↻ odśwież salda" wyniesiony z
-              głównego rzędu akcji do własnej, cichej linii — w modal-actions
-              razem z Anuluj/Approve×2(+dopiski)/Otwórz było za ciasno nawet z
-              flex-wrap (screenshot Rafała: rozjeżdżało się nieczytelnie).
-              Punkt 2 (Partia 13) sam fallback zostaje, tylko inne miejsce. */}
+          {/* Item 1 (Batch 13b): the "↻ refresh balances" button moved out of the
+              main action row into its own quiet line — in modal-actions
+              together with Cancel/Approve×2(+notes)/Open it was too cramped even with
+              flex-wrap (owner's screenshot: it wrapped illegibly).
+              Item 2 (Batch 13) the fallback itself stays, just in a different place. */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
             <button
               type="button"
@@ -728,21 +728,21 @@ export const RebalanceModal: FC<{
               style={{ padding: '4px 10px', fontSize: 12 }}
               onClick={manualRefreshBalances}
               disabled={refreshing || busy}
-              title="Wymuś ponowny odczyt salda i allowance"
+              title="Force a re-read of balance and allowance"
             >
-              {refreshing ? 'Odświeżanie…' : '↻ odśwież salda'}
+              {refreshing ? 'Refreshing…' : '↻ refresh balances'}
             </button>
           </div>
 
           <div className="modal-actions" style={{ flexWrap: 'wrap', rowGap: 8 }}>
             <button className="secondary-button" onClick={onClose} disabled={busy}>
-              Anuluj
+              Cancel
             </button>
             {needApprove0 && (
-              // Inline zamiast nowej klasy CSS — patrz uzasadnienie w
-              // useCockpitActions.ts (styles.css poza twardym zakresem Partii
-              // 13/13b, choć .modal-actions dostał flex-wrap inline tutaj i tak
-              // wystarcza bez dotykania pliku CSS).
+              // Inline instead of a new CSS class — see the rationale in
+              // useCockpitActions.ts (styles.css is outside the hard scope of Batch
+              // 13/13b, though .modal-actions got flex-wrap inline here and that
+              // is enough without touching the CSS file).
               <span style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
                 <button className="action-button" disabled={approving !== null} onClick={() => approve(0)}>
                   {approving === 0 ? 'Approving…' : `Approve ${p.token0.symbol}`}
@@ -771,7 +771,7 @@ export const RebalanceModal: FC<{
               disabled={busy || !effectiveTicks || needApprove0 || needApprove1 || insufficient || (parsed0 === 0n && parsed1 === 0n)}
               onClick={() => effectiveTicks && actions.openPositionAtRange(p, effectiveTicks[0], effectiveTicks[1], amount0 || '0', amount1 || '0', 50, onDone)}
             >
-              {busy ? 'Otwieranie…' : 'Otwórz pozycję'}
+              {busy ? 'Opening…' : 'Open position'}
             </button>
           </div>
         </div>

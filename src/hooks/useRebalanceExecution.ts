@@ -1,28 +1,28 @@
 /**
- * useRebalanceExecution.ts — wykonuje `RebalancePlan` z utils/rebalanceBuilder.ts
- * (TASKS-UI.md Partia 4b: [Zatwierdź] na kartach propozycji REBALANCE).
+ * useRebalanceExecution.ts — executes a `RebalancePlan` from utils/rebalanceBuilder.ts
+ * (TASKS-UI.md Batch 4b: [Confirm] on REBALANCE proposal cards).
  *
- * rebalanceBuilder.ts jest czystym modułem (bez Reacta, bez RPC) — cała
- * wysyłka/symulacja/odczyty żyją tutaj, tym samym wzorcem co
- * useCockpitActions.ts (freshWalletClient po ewentualnym przełączeniu sieci,
- * client.call przed sendTransaction, addTransaction do historii).
+ * rebalanceBuilder.ts is a pure module (no React, no RPC) — all
+ * sending/simulation/reads live here, with the same pattern as
+ * useCockpitActions.ts (freshWalletClient after an optional network switch,
+ * client.call before sendTransaction, addTransaction to the history).
  *
- * Sekwencja: approvals z planu (pomijane, gdy allowance już wystarcza) →
- * krok 1 (decrease+collect, dokładny) → krok 2 (swap, pomijany gdy
- * swapSkipped) → krok 3 (mint) — PRZEBUDOWANY tuż przed wysłaniem z
- * FAKTYCZNYCH sald portfela (buildMintStep), bo krok 2 to tylko estymata z
- * min-po-slippage; realny balans po swapie może się nieznacznie różnić od
- * mint0/mint1 w podglądzie planu. Jeśli realne saldo przekracza kwotę
- * wcześniej zaaprobowaną (approvals w planie liczone od estymaty), tuż przed
- * mintem dociągamy approve do faktycznej potrzeby — inaczej mint mógłby
- * zrewertować mimo że krok 1–2 się powiodły.
+ * Sequence: approvals from the plan (skipped when the allowance already suffices) →
+ * step 1 (decrease+collect, exact) → step 2 (swap, skipped when
+ * swapSkipped) → step 3 (mint) — REBUILT right before sending from the
+ * ACTUAL wallet balances (buildMintStep), because step 2 is only an estimate with
+ * post-slippage minimums; the real balance after the swap may differ slightly from
+ * mint0/mint1 in the plan preview. If the real balance exceeds the amount
+ * approved earlier (approvals in the plan are computed from the estimate), right before
+ * the mint we top up the approve to the actual need — otherwise the mint could
+ * revert even though steps 1–2 succeeded.
  *
- * Postęp (saveProgress/loadProgress/clearProgress, localStorage per
- * chainId+tokenId) przeżywa odświeżenie strony — execute() pomija kroki już
- * potwierdzone (progress.completed), więc ponowne kliknięcie [Zatwierdź] po
- * przerwanej sekwencji "dokończa" zamiast zaczynać od nowa. Failure w środku
- * = środki bezpieczne (patrz nagłówek rebalanceBuilder.ts) — modal pokazuje
- * to explicite w komunikacie błędu.
+ * Progress (saveProgress/loadProgress/clearProgress, localStorage per
+ * chainId+tokenId) survives a page refresh — execute() skips steps already
+ * confirmed (progress.completed), so clicking [Confirm] again after an
+ * interrupted sequence "finishes" instead of starting over. A failure in the middle
+ * = funds are safe (see the rebalanceBuilder.ts header) — the modal says
+ * so explicitly in the error message.
  */
 import { useCallback, useState } from 'react';
 import { useAccount, usePublicClient, useChainId, useSwitchChain } from 'wagmi';
@@ -33,18 +33,18 @@ import { RebalancePlan, buildMintStep, saveProgress, loadProgress, clearProgress
 import { fetchFreshPool } from '../utils/uniswap';
 import { addTransaction } from '../components/TransactionHistory';
 import { config } from '../config/wallet';
-// HOTFIX 31.08 (pierwsza bojowa sekwencja FLAT_NARROW, #5887690): surowe
-// waitForTransactionReceipt przerywało sekwencję na błędzie Rabby+publicnode
-// "Invalid parameters" (ta sama klasa co useHedgeExecution FIX 20.08 i
-// Partia 13) — każdy klik [Zatwierdź] wysyłał jedną tx i padał na odczycie
-// jej potwierdzenia, w kółko od kroku 1. Receipt to best-effort: tx po
-// sendTransaction JEST na łańcuchu; pre-flight symulacja (client.call) przed
-// każdym krokiem chroni przed wysłaniem kroku, który by zrewertował.
+// HOTFIX 31.08 (first live FLAT_NARROW sequence, #5887690): raw
+// waitForTransactionReceipt aborted the sequence on the Rabby+publicnode
+// "Invalid parameters" error (the same class as useHedgeExecution FIX 20.08 and
+// Batch 13) — every [Confirm] click sent one tx and failed on reading
+// its confirmation, over and over from step 1. The receipt is best-effort: after
+// sendTransaction the tx IS on chain; the pre-flight simulation (client.call) before
+// each step protects against sending a step that would revert.
 import { waitReceiptBestEffort } from './useCockpitActions';
 
 export interface ExecStatus {
   phase: 'idle' | 'approving' | 'step' | 'done' | 'error';
-  stepIndex: number; // 0 podczas approvals z planu; potem numer bieżącego kroku
+  stepIndex: number; // 0 during the plan's approvals; then the number of the current step
   totalSteps: number;
   message: string;
 }
@@ -79,7 +79,7 @@ export function useRebalanceExecution() {
       const total = plan.steps.length;
       try {
         const wc = await freshWalletClient(plan.chainId);
-        if (!wc || !client) throw new Error('Brak połączenia z siecią pozycji');
+        if (!wc || !client) throw new Error('No connection to the position network');
 
         const progress: RebalanceProgress = loadProgress(plan.chainId, plan.tokenId) ?? {
           tokenId: plan.tokenId,
@@ -92,8 +92,8 @@ export function useRebalanceExecution() {
           updatedAt: new Date().toISOString(),
         };
 
-        // --- approvals z planu (approve tylko gdy allowance nie wystarcza) ---
-        setStatus({ phase: 'approving', stepIndex: 0, totalSteps: total, message: 'Sprawdzanie approvals…' });
+        // --- approvals from the plan (approve only when the allowance is insufficient) ---
+        setStatus({ phase: 'approving', stepIndex: 0, totalSteps: total, message: 'Checking approvals…' });
         for (const appr of plan.approvals) {
           const allowance = (await client.readContract({
             address: appr.token,
@@ -108,19 +108,19 @@ export function useRebalanceExecution() {
           addTransaction(address, hash, plan.chainId, appr.label);
         }
 
-        // --- kroki 1..N (resume: pomiń już potwierdzone) ---
+        // --- steps 1..N (resume: skip the ones already confirmed) ---
         for (const step of plan.steps) {
           if (progress.completed.includes(step.index)) continue;
 
           let tx = step.tx;
           if (step.kind === 'mint') {
-            // Przebuduj mint z FAKTYCZNYCH sald (nie z estymaty w planie) —
-            // patrz nagłówek pliku i rebalanceBuilder.ts. FIX 11.09 (HANDOFF
-            // @Sonnet): `pool` tu jest ten sam obiekt co przekazany do modala
-            // przy jego otwarciu — jeśli cena ruszyła się od tamtej chwili
-            // (> ok. 0.5%), Position.fromAmounts liczy z nieaktualnej ceny i
-            // symulacja mintu pada na "Price slippage check". Dociągamy
-            // świeży slot0+liquidity tuż przed przebudową kroku.
+            // Rebuild the mint from ACTUAL balances (not from the estimate in the plan) —
+            // see the file header and rebalanceBuilder.ts. FIX 11.09 (HANDOFF
+            // @Sonnet): `pool` here is the same object as passed to the modal
+            // when it was opened — if the price has moved since then
+            // (> approx. 0.5%), Position.fromAmounts computes from a stale price and
+            // the mint simulation fails with "Price slippage check". We fetch
+            // fresh slot0+liquidity right before rebuilding the step.
             const freshPool = await fetchFreshPool(client, pool, plan.chainId);
             const [bal0, bal1] = await Promise.all([
               client.readContract({ address: pool.token0.address as Address, abi: erc20Abi, functionName: 'balanceOf', args: [address] }) as Promise<bigint>,
@@ -137,22 +137,22 @@ export function useRebalanceExecution() {
               if (amt <= 0n) continue;
               const allowance = (await client.readContract({ address: tok, abi: erc20Abi, functionName: 'allowance', args: [address, manager] })) as bigint;
               if (allowance >= amt) continue;
-              setStatus({ phase: 'approving', stepIndex: step.index, totalSteps: total, message: `Approve ${sym} (realne saldo różni się od estymaty) przed mintem…` });
+              setStatus({ phase: 'approving', stepIndex: step.index, totalSteps: total, message: `Approve ${sym} (real balance differs from the estimate) before the mint…` });
               const approveData = encodeFunctionData({ abi: erc20Abi, functionName: 'approve', args: [manager, amt] });
               const hash = await wc.sendTransaction({ to: tok, data: approveData, value: 0n, account: address, chain: wc.chain });
               await waitReceiptBestEffort(client, hash);
-              addTransaction(address, hash, plan.chainId, `Approve ${sym} dla NFT managera (mint, dociągnięcie)`);
+              addTransaction(address, hash, plan.chainId, `Approve ${sym} for the NFT manager (mint, top-up)`);
             }
           }
 
-          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — symulacja…` });
+          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — simulating…` });
           await client.call({ to: tx.to, data: tx.data, account: address });
-          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — podpis w Rabby…` });
+          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — sign in Rabby…` });
           const hash = await wc.sendTransaction({ to: tx.to, data: tx.data, value: tx.value, account: address, chain: wc.chain });
-          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — potwierdzanie…` });
-          // HOTFIX 31.08: best-effort (nie throw) + progress zapisywany także
-          // bez receiptu — tx jest wysłana, a brak zapisu postępu powodował
-          // ponowne wysyłanie TEGO SAMEGO kroku przy kolejnym [Zatwierdź].
+          setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — confirming…` });
+          // HOTFIX 31.08: best-effort (no throw) + progress saved even
+          // without a receipt — the tx is sent, and not saving progress caused
+          // THE SAME step to be re-sent on the next [Confirm].
           await waitReceiptBestEffort(client, hash);
           addTransaction(address, hash, plan.chainId, step.label);
 
@@ -163,11 +163,11 @@ export function useRebalanceExecution() {
         }
 
         clearProgress(plan.chainId, plan.tokenId);
-        setStatus({ phase: 'done', stepIndex: total, totalSteps: total, message: 'Rebalans zakończony ✓' });
+        setStatus({ phase: 'done', stepIndex: total, totalSteps: total, message: 'Rebalance complete ✓' });
         onDone?.();
       } catch (e) {
         const msg = e instanceof Error ? e.message.slice(0, 220) : String(e);
-        setError(`Sekwencja przerwana — środki bezpieczne (żaden krok nie zostawia funduszy w locie), dokończ pozostałe kroki ponownym [Zatwierdź]: ${msg}`);
+        setError(`Sequence interrupted — funds are safe (no step leaves funds in flight), finish the remaining steps by clicking [Confirm] again: ${msg}`);
         setStatus((s) => ({ ...s, phase: 'error', message: msg }));
       }
     },

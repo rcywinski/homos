@@ -4,40 +4,39 @@ import { formatEther, formatUnits, isAddress } from 'viem';
 import { NETWORKS } from '../utils/uniswap';
 
 /**
- * PRZEBUDOWA 21.08 (uwagi Rafała: „przełącznik Sepolia do usunięcia",
- * „może powinny być wyświetlane wszystkie waluty, a nie tylko wybrane 3").
+ * REBUILD 21.08 (owner's remarks: "the Sepolia switch should be removed",
+ * "maybe all currencies should be displayed, not just the chosen 3").
  *
- * Co było źle — nie tylko kosmetycznie:
- *  1. Etykieta sieci była BINARNA (`isMainnet ? 'Mainnet' : 'Sepolia'`), więc
- *     na Base i Arbitrum nagłówek pokazywał „Sepolia". Kłamał o tym, na jakiej
- *     sieci jesteś, a bot pracuje właśnie na Base/Arbitrum.
- *  2. Adresy WETH/USDC też były binarne: poza mainnetem brane były adresy
- *     SEPOLII, więc na Base/Arbitrum salda ZAWSZE pokazywały 0, nawet gdy
- *     tokeny tam były.
- *  3. Przycisk ⇄ przełączał wyłącznie mainnet↔Sepolia.
+ * What was wrong — not just cosmetically:
+ *  1. The network label was BINARY (`isMainnet ? 'Mainnet' : 'Sepolia'`), so
+ *     on Base and Arbitrum the header showed "Sepolia". It lied about which
+ *     network you are on, and the bot works precisely on Base/Arbitrum.
+ *  2. WETH/USDC addresses were binary too: outside mainnet the SEPOLIA
+ *     addresses were used, so on Base/Arbitrum balances ALWAYS showed 0, even
+ *     when the tokens were there.
+ *  3. The ⇄ button only switched mainnet↔Sepolia.
  *
- * Jak jest teraz: lista tokenów pochodzi z `NETWORKS` (utils/uniswap.ts) —
- * czyli dokładnie z tych, którymi operuje bot na danej sieci (Base ma cbBTC,
- * mainnet USDT itd.), plus natywny ETH. Zero adresów wpisanych na sztywno.
+ * How it is now: the token list comes from `NETWORKS` (utils/uniswap.ts) —
+ * i.e. exactly the ones the bot operates with on a given network (Base has cbBTC,
+ * mainnet USDT etc.), plus native ETH. Zero hard-coded addresses.
  *
- * DLACZEGO NIE „wszystkie tokeny z portfela": po ERC-20 nie da się
- * wylistować sald bez indeksera (Alchemy/Covalent/Moralis) — RPC odpowiada
- * tylko na pytanie „ile mam TEGO tokena". Do tego dochodzą tokeny-śmieci,
- * których nikt nie chce oglądać w nagłówku. Jeśli kiedyś chcemy pełny widok
- * portfela, trzeba dołożyć klucz do indeksera — wtedy ta lista staje się
- * fallbackiem.
+ * WHY NOT "all tokens in the wallet": ERC-20 balances cannot be listed
+ * without an indexer (Alchemy/Covalent/Moralis) — RPC only answers the
+ * question "how much of THIS token do I have". On top of that come junk tokens
+ * nobody wants to see in the header. If we ever want a full wallet view,
+ * an indexer key has to be added — this list then becomes the fallback.
  */
 
 const SUPPORTED = [NETWORKS.MAINNET, NETWORKS.BASE, NETWORKS.ARBITRUM];
 
-/** Tokeny warte pokazania na danej sieci — te, w których bot trzyma pozycje. */
+/** Tokens worth showing on a given network — the ones the bot holds positions in. */
 const tokensForChain = (chainId: number) => {
   const net = SUPPORTED.find((n) => n.chainId === chainId);
   if (!net) return [];
   return Object.values(net.tokens as Record<string, { address: `0x${string}`; decimals: number; symbol: string }>);
 };
 
-/** Salda: krótko, ale bez mylącego zaokrąglenia do zera przy małych kwotach. */
+/** Balances: short, but without misleading rounding to zero for small amounts. */
 const fmtAmount = (value: bigint, decimals: number): string => {
   const n = parseFloat(formatUnits(value, decimals));
   if (n === 0) return '0';
@@ -60,7 +59,7 @@ const TokenBalance: React.FC<{
   );
 };
 
-/** Kolumna jednej sieci: natywny ETH + tokeny, którymi bot na niej operuje. */
+/** One network's column: native ETH + the tokens the bot operates with on it. */
 const ChainColumn: React.FC<{ address: `0x${string}`; net: (typeof SUPPORTED)[number] }> = ({ address, net }) => {
   const { data: native } = useBalance({ address, chainId: net.chainId });
   return (
@@ -78,16 +77,16 @@ export const CompactWalletInfo: React.FC = () => {
   const { address } = useAccount();
   if (!address) return null;
 
-  // BEZ przełącznika sieci (pytanie Rafała 21.08: „czy trzeba mieć ten
-  // przełącznik?"). Nie trzeba — i to nie jest kwestia gustu:
-  //  • do OGLĄDANIA nic nie wnosił: `usePortfolio` i tak czyta pozycje ze
-  //    wszystkich trzech sieci naraz (`usePublicClient({chainId: 1/8453/42161})`),
-  //    a salda też da się czytać cross-chain (`useBalance({chainId})`);
-  //  • do DZIAŁANIA jest zbędny, bo każda akcja przełącza sieć sama przed
-  //    podpisem (`switchChainAsync` w useCockpitActions / useRebalanceExecution
+  // NO network switch (owner's question 21.08: "do we need this
+  // switch?"). We don't — and it's not a matter of taste:
+  //  • for VIEWING it added nothing: `usePortfolio` reads positions from
+  //    all three networks at once anyway (`usePublicClient({chainId: 1/8453/42161})`),
+  //    and balances can also be read cross-chain (`useBalance({chainId})`);
+  //  • for ACTING it is redundant, because every action switches the network
+  //    itself before signing (`switchChainAsync` in useCockpitActions / useRebalanceExecution
   //    / useRotateExecution / useHedgeExecution).
-  // Ręczny przełącznik mógł więc tylko wprowadzać w błąd („jestem na złej
-  // sieci, to pewnie dlatego nie widzę środków").
+  // A manual switch could therefore only mislead ("I'm on the wrong
+  // network, that's probably why I don't see my funds").
   return (
     <div className="wallet-container">
       <div className="wallet-chains">
@@ -100,9 +99,9 @@ export const CompactWalletInfo: React.FC = () => {
 };
 
 /**
- * Stary, rozbudowany widok portfela — był wyłącznie panelem testnetowym
- * (przełączniki Mainnet/Sepolia + linki do faucetów Sepolii). Nigdzie nie
- * importowany (App używa `CompactWalletInfo`), a po decyzji o usunięciu
- * Sepolii nie ma czego pokazywać. Usunięty 21.08 razem z `FaucetSection`.
+ * The old, extended wallet view — it was exclusively a testnet panel
+ * (Mainnet/Sepolia switches + links to Sepolia faucets). Imported nowhere
+ * (App uses `CompactWalletInfo`), and after the decision to drop Sepolia
+ * there is nothing left to show. Removed 21.08 together with `FaucetSection`.
  */
 export default CompactWalletInfo;

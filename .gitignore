@@ -3,8 +3,8 @@ node_modules/
 /.pnp
 .pnp.js
 
-# Environment Variables — sekrety NIE trafiają do repo; .env.example (szablon
-# bez wartości) MUSI zostać w repo, więc nie jest tu wykluczony.
+# Environment variables — secrets never go into the repo; .env.example (a template
+# without values) MUST stay in the repo, so it is not excluded here.
 .env
 .env.local
 .env.development.local
@@ -59,3 +59,6 @@ yarn-error.log*
 .agent-queue/
 public/*.bundle.js
 public/*.bundle.js.LICENSE.txt
+
+# private working journal (kept locally / in HOMOS-private, not in the public HEAD)
+private-journal/

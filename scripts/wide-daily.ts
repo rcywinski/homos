@@ -1,36 +1,36 @@
 /**
- * wide-daily.ts — MODEL DZIENNY: „ile nasze szerokie pasmo zarobiłoby na tej
- * puli przez ostatnie 365/720 dni" dla KAŻDEJ puli z obu rankingów
- * (APY selektora i WIDE), bez danych swap-po-swapie.
- * (pomysł Rafała 02.09: kolumny % zysku/straty 365d i 720d w tabelach
- * rankingowych; ustalenia: trzy liczby LP / HODL / Δ vs HODL, mediana z
- * okien kroczących, szerokość wg klasy pary, zwężanie NIE modelowane —
- * zamiast tego „flat %"; pełny przebieg = osobna kolumna z wide-collect).
+ * wide-daily.ts — DAILY MODEL: "how much would our wide range have earned on this
+ * pool over the last 365/720 days" for EVERY pool from both rankings
+ * (selector APY and WIDE), without swap-by-swap data.
+ * (Rafal's idea 02.09: 365d and 720d profit/loss % columns in the ranking
+ * tables; agreed: three numbers LP / HODL / Δ vs HODL, median over rolling
+ * windows, width by pair class, narrowing NOT modelled —
+ * instead "flat %"; full run = separate column from wide-collect).
  *
- *   npx tsx scripts/wide-daily.ts             (krok pipeline'u po wide-score, ~1-3 min)
- *   npx tsx scripts/wide-daily.ts --limit 5   (szybki test)
+ *   npx tsx scripts/wide-daily.ts             (pipeline step after wide-score, ~1-3 min)
+ *   npx tsx scripts/wide-daily.ts --limit 5   (quick test)
  *
- * Wyjście: .bot/wide-daily.json {generatedAt, params, pools: {uuid → wynik}}
- *          → GET /api/wide-daily → kolumny w obu tabelach rankingowych (Partia 22).
+ * Output: .bot/wide-daily.json {generatedAt, params, pools: {uuid → result}}
+ *          → GET /api/wide-daily → columns in both ranking tables (Batch 22).
  *
- * DANE: ceny dzienne tokenów z coins.llama.fi (span 1100d, cache
- * data/llama/prices/, odświeżane raz dziennie), dzienne apyBase puli z
+ * DATA: daily token prices from coins.llama.fi (span 1100d, cache
+ * data/llama/prices/, refreshed once a day), daily pool apyBase from
  * data/llama/history/<uuid>.json (fetch-llama-history; fallback: chart API).
  *
- * MODEL (ten sam co Monte Carlo 01.09, tylko na historii zamiast na
- * losowanych ścieżkach): pasywne pasmo v3 [P0/(1+w), P0·(1+w)] (konwencja
- * produktu: log-symetryczne) w cenie WZGLĘDNEJ pary asset/quote; wartość
- * pozycji z formuł v3 (x = L(1/√P − 1/√Pb), y = L(√P − √Pa)); fee dnia =
- * wartość pozycji × apyBase/365 × c_klasy × [w zakresie] (c = udział fee
- * szerokiego pasma vs typowy LP klasy — kalibracja jak w wide-score);
- * po ≥7 dniach poza pasmem recentrowanie z kosztem 0.15% (swap+gaz) — jak
- * MC; HODL 50/50 w USD z chwili wejścia. Wynik w USD (quote wyceniane
- * ceną USD z coins.llama). Okna kroczące: start = dziś−W, dziś−W−30, …
- * (max 13) → mediana/worst/%wygr Δ vs HODL + „dziś" (start dokładnie W dni
- * temu). Flat % = udział dni z |log P − EMA_HL7d| < 2% (ostatnie 365d).
- * DOKŁADNOŚĆ: ±kilka pp/r (dzienna siatka nie widzi wyjść z pasma w ciągu
- * dnia, fee = średnia puli × stały współczynnik) — do porównań pul między
- * sobą, nie do księgowości. Pełny przebieg (wide-collect) jest sędzią.
+ * MODEL (same as the Monte Carlo of 01.09, only on history instead of
+ * sampled paths): passive v3 range [P0/(1+w), P0·(1+w)] (product
+ * convention: log-symmetric) in the RELATIVE price of the asset/quote pair; position
+ * value from v3 formulas (x = L(1/√P − 1/√Pb), y = L(√P − √Pa)); day's fee =
+ * position value × apyBase/365 × c_class × [in range] (c = fee share of the
+ * wide range vs a typical LP of the class — calibration as in wide-score);
+ * after ≥7 days out of range, recentering at a 0.15% cost (swap+gas) — as in
+ * MC; HODL 50/50 in USD from the moment of entry. Result in USD (quote valued
+ * at the USD price from coins.llama). Rolling windows: start = today−W, today−W−30, …
+ * (max 13) → median/worst/%win Δ vs HODL + "today" (start exactly W days
+ * ago). Flat % = share of days with |log P − EMA_HL7d| < 2% (last 365d).
+ * ACCURACY: ±a few pp/yr (the daily grid does not see intraday range exits,
+ * fee = pool average × constant coefficient) — for comparing pools with each
+ * other, not for accounting. The full run (wide-collect) is the judge.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -67,8 +67,8 @@ const LST_SYMS = new Set(['WSTETH', 'WEETH', 'CBETH', 'RETH', 'EZETH', 'RSETH'])
 const STABLE_SYMS = new Set(['USDC', 'USDT', 'DAI', 'USDS', 'PYUSD', 'USDE', 'LUSD', 'GHO', 'FRAX', 'USDBC']);
 
 type Cls = 'pegged-btc' | 'lst-eth' | 'stable-stable' | 'eth-btc' | 'crypto-stable' | 'crypto-crypto';
-/** szerokość NASZA (w) i typowego LP klasy (wTyp) → c = g(w)/g(wTyp); jak wide-score.ts
- *  (crypto-crypto: decyzja Rafała 02.09 — każda para dwóch niezależnych aktywów = ±40%) */
+/** OUR width (w) and that of a typical LP of the class (wTyp) → c = g(w)/g(wTyp); as in wide-score.ts
+ *  (crypto-crypto: Rafal's decision 02.09 — every pair of two independent assets = ±40%) */
 const CLASS_PARAMS: Record<Cls, { w: number; wTyp: number }> = {
   'crypto-stable': { w: 0.5, wTyp: 0.15 },
   'eth-btc': { w: 0.4, wTyp: 0.02 },
@@ -91,7 +91,7 @@ function classify(symbol: string): Cls | null {
   if (stb(a) || stb(b)) return 'crypto-stable';
   return 'crypto-crypto';
 }
-/** która noga kwotuje: stable > WETH > BTC > druga; zwraca indeks nogi QUOTE */
+/** which leg quotes: stable > WETH > BTC > the other; returns the index of the QUOTE leg */
 function quoteIndex(syms: string[]): number {
   const s = syms.map((x) => x.toUpperCase());
   for (const pred of [(x: string) => STABLE_SYMS.has(x), (x: string) => ETH_SYMS.has(x), (x: string) => BTC_SYMS.has(x)]) {
@@ -118,7 +118,7 @@ async function fetchJson(url: string, tries = 5): Promise<any> {
 const dayOf = (tsSec: number) => Math.floor(tsSec / DAY);
 const today = dayOf(Date.now() / 1000);
 
-/** ceny dzienne tokena: Map<dzień, cena USD>; cache per token odświeżany raz dziennie */
+/** daily token prices: Map<day, USD price>; per-token cache refreshed once a day */
 async function loadPrices(slug: string, addr: string): Promise<Map<number, number> | null> {
   const key = `${slug}:${addr.toLowerCase()}`;
   const f = path.join(PRICES, `${key.replace(':', '_')}.json`);
@@ -127,9 +127,9 @@ async function loadPrices(slug: string, addr: string): Promise<Map<number, numbe
   if (cached && cached.day === today) series = cached.series;
   if (!series) {
     try {
-      // LIMIT API (znalezisko CC-Win 02.09, HTTP 400 „exceeds the maximum
-      // of 500"): max 500 PUNKTÓW na request, niezależnie od liczby kluczy
-      // → 1100d w porcjach po ≤500d z parametrem `start` (unix s), sklejane.
+      // API LIMIT (CC-Win finding 02.09, HTTP 400 "exceeds the maximum
+      // of 500"): max 500 POINTS per request, regardless of the number of keys
+      // → 1100d in chunks of ≤500d with the `start` parameter (unix s), stitched.
       const CHUNK = 500;
       const startAll = dayOf(Date.now() / 1000) * DAY + DAY / 2 - SPAN_DAYS * DAY;
       const acc: { t: number; p: number }[] = [];
@@ -142,13 +142,13 @@ async function loadPrices(slug: string, addr: string): Promise<Map<number, numbe
       }
       series = acc;
       if (series.length) fs.writeFileSync(f, JSON.stringify({ day: today, key, series }));
-    } catch (e) { log(`ceny ${key}: ${String(e).slice(0, 80)}`); return cached?.series ? toMap(cached.series) : null; }
+    } catch (e) { log(`prices ${key}: ${String(e).slice(0, 80)}`); return cached?.series ? toMap(cached.series) : null; }
   }
   return series && series.length ? toMap(series) : null;
 }
 const toMap = (s: { t: number; p: number }[]) => { const m = new Map<number, number>(); for (const x of s) if (x.p > 0) m.set(dayOf(x.t), x.p); return m; };
 
-/** dzienne apyBase puli: Map<dzień, apy%> */
+/** daily pool apyBase: Map<day, apy%> */
 async function loadFees(uuid: string): Promise<Map<number, number> | null> {
   let series: any[] | null = readJson(path.join(HIST, `${uuid}.json`))?.series ?? null;
   if (!series || !series.length) {
@@ -164,9 +164,9 @@ async function loadFees(uuid: string): Promise<Map<number, number> | null> {
   return m;
 }
 
-// ── symulacja ───────────────────────────────────────────────────────────────
+// ── simulation ──────────────────────────────────────────────────────────────
 type Day = { d: number; pA: number; pB: number; apy: number };
-/** wspólna oś dni: wymaga cen obu nóg; fee — carry-forward do 7 dni, dalej 0 */
+/** common day axis: requires prices of both legs; fee — carry-forward up to 7 days, then 0 */
 export function buildDays(pa: Map<number, number>, pb: Map<number, number>, fees: Map<number, number>, from: number, to: number): Day[] {
   const out: Day[] = [];
   let lastApy = 0, lastApyDay = -1e9;
@@ -184,14 +184,14 @@ export function buildDays(pa: Map<number, number>, pb: Map<number, number>, fees
 }
 
 export function simulate(days: Day[], s: number, e: number, w: number, c: number) {
-  // ceny WZGLĘDNE: P = asset/quote; wartość w quote, USD = × pB
+  // RELATIVE prices: P = asset/quote; value in quote, USD = × pB
   const P = (i: number) => days[i].pA / days[i].pB;
   let lo = P(s) / (1 + w), hi = P(s) * (1 + w);
   const capUsd = 1;
-  let quoteCap = capUsd / days[s].pB; // kapitał w quote
+  let quoteCap = capUsd / days[s].pB; // capital in quote
   const setL = (p: number, valQ: number) => { const u = unitVal(p); return valQ / u; };
   const unitVal = (p: number): number => {
-    // wartość (w quote) pozycji o L=1 przy cenie p w [lo,hi]
+    // value (in quote) of a position with L=1 at price p in [lo,hi]
     const sp = Math.sqrt(Math.min(Math.max(p, lo), hi)), sa = Math.sqrt(lo), sb = Math.sqrt(hi);
     const x = 1 / sp - 1 / sb, y = sp - sa;
     return x * p + y;
@@ -247,7 +247,7 @@ if (require.main === module) (async () => {
   const limitArg = process.argv.indexOf('--limit');
   const limit = limitArg > -1 ? Number(process.argv[limitArg + 1]) : Infinity;
 
-  // pule: unia obu rankingów (po llamaUuid)
+  // pools: union of both rankings (by llamaUuid)
   const wanted = new Map<string, { symbol: string; chain: string; poolMeta: string; src: string[] }>();
   for (const [file, src] of [['selector-ranking.json', 'apy'], ['wide-ranking.json', 'wide']] as const) {
     const r = readJson(path.join(BOT, file));
@@ -258,17 +258,17 @@ if (require.main === module) (async () => {
       else wanted.set(row.llamaUuid, { symbol: row.symbol, chain: row.chain, poolMeta: row.poolMeta, src: [src] });
     }
   }
-  const poolsArg = process.argv.indexOf('--pools'); // test: lista uuid po przecinku
+  const poolsArg = process.argv.indexOf('--pools'); // test: comma-separated list of uuids
   if (poolsArg > -1) for (const u of process.argv[poolsArg + 1].split(',')) if (!wanted.has(u)) wanted.set(u, { symbol: '', chain: '', poolMeta: '', src: ['manual'] });
-  if (!wanted.size) { log('brak rankingów w .bot — nic do policzenia'); process.exit(0); }
-  // meta (underlyingTokens) z universe.json; brakujące dociągnij z listy pul
+  if (!wanted.size) { log('no rankings in .bot — nothing to compute'); process.exit(0); }
+  // meta (underlyingTokens) from universe.json; fetch missing ones from the pool list
   const universe: any[] = readJson(UNIVERSE) ?? [];
   const meta = new Map(universe.map((p) => [p.pool, p]));
   const missing = [...wanted.keys()].filter((u) => !meta.get(u)?.underlyingTokens);
   if (missing.length) {
-    log(`${missing.length} pul spoza universe.json — pobieram listę pul DefiLlamy`);
+    log(`${missing.length} pools outside universe.json — fetching the DefiLlama pool list`);
     try { for (const p of (await fetchJson('https://yields.llama.fi/pools')).data ?? []) if (wanted.has(p.pool)) meta.set(p.pool, p); }
-    catch (e) { log(`lista pul: ${String(e).slice(0, 80)}`); }
+    catch (e) { log(`pool list: ${String(e).slice(0, 80)}`); }
   }
 
   const prev = readJson(OUT_PATH)?.pools ?? {};
@@ -283,18 +283,18 @@ if (require.main === module) (async () => {
     const cls = classify(symbol);
     const base = { symbol, chain, poolMeta: m?.poolMeta ?? wrow.poolMeta, src: wrow.src, cls };
     const toks: string[] = (m?.underlyingTokens ?? []).map((t: string) => (/^0x0+$/.test(t) ? WETH[slug] : t.toLowerCase()));
-    if (!slug || !cls || toks.length !== 2) { pools[uuid] = { ...base, error: !slug ? 'sieć bez cen' : !cls ? 'para nieklasyfikowalna' : 'brak underlyingTokens' }; continue; }
+    if (!slug || !cls || toks.length !== 2) { pools[uuid] = { ...base, error: !slug ? 'chain without prices' : !cls ? 'unclassifiable pair' : 'missing underlyingTokens' }; continue; }
     const syms = symbol.toUpperCase().split('-');
     const qi = quoteIndex(syms), ai = 1 - qi;
     const [pa, pb, fees] = await Promise.all([loadPrices(slug, toks[ai]), loadPrices(slug, toks[qi]), loadFees(uuid)]);
-    if (!pa || !pb || !fees) { pools[uuid] = { ...base, error: !fees ? 'brak historii fee' : 'brak cen' }; continue; }
+    if (!pa || !pb || !fees) { pools[uuid] = { ...base, error: !fees ? 'no fee history' : 'no prices' }; continue; }
     const { w, wTyp } = CLASS_PARAMS[cls];
     const c = g(w) / g(wTyp);
     const from = Math.max(Math.min(...pa.keys()), Math.min(...pb.keys()), Math.min(...fees.keys()));
     const days = buildDays(pa, pb, fees, from, today - 1);
     const e = days.length - 1;
     const res: any = { ...base, quoteSym: syms[qi], assetSym: syms[ai], widthPct: w * 100, feeCapture: r2(c), ageDays: days.length, windows: {} };
-    if (e < 30) { res.error = 'za krótka historia'; pools[uuid] = res; continue; }
+    if (e < 30) { res.error = 'history too short'; pools[uuid] = res; continue; }
     for (const W of WINDOWS) {
       const runs: any[] = [];
       for (let k = 0; k < MAX_WINDOWS; k++) {
@@ -321,7 +321,7 @@ if (require.main === module) (async () => {
     const w3 = res.windows.w365, w7 = res.windows.w720;
     log(`${symbol.padEnd(14)} ${chain.padEnd(9)} ${cls.padEnd(13)} 365d: LP ${w3?.latest.lpPct ?? '—'} / HODL ${w3?.latest.hodlPct ?? '—'} / Δ ${w3?.latest.deltaPct ?? '—'} (med Δ ${w3?.medDeltaPct ?? '—'}, n=${w3?.n ?? 0}) · 720d Δ ${w7?.latest.deltaPct ?? '—'} · flat ${res.flatPct365}%`);
   }
-  // pule, których dziś nie liczyliśmy (limit/błąd sieci) — zachowaj poprzedni wynik
+  // pools not computed today (limit/network error) — keep the previous result
   for (const [u, v] of Object.entries(prev)) if (!pools[u]) pools[u] = { ...(v as any), stale: true };
   fs.mkdirSync(BOT, { recursive: true });
   fs.writeFileSync(OUT_PATH, JSON.stringify({
@@ -329,5 +329,5 @@ if (require.main === module) (async () => {
     params: { WINDOWS, STEP_DAYS, MAX_WINDOWS, RECENTER_AFTER_DAYS, RECENTER_COST, FLAT_GAP, FLAT_HL_DAYS, CLASS_PARAMS },
     pools,
   }, null, 1));
-  log(`zapisano ${Object.keys(pools).length} pul → ${path.relative(ROOT, OUT_PATH)}`);
+  log(`saved ${Object.keys(pools).length} pools → ${path.relative(ROOT, OUT_PATH)}`);
 })();

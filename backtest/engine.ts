@@ -1,77 +1,77 @@
 /**
- * engine.ts — symulator pozycji LP Uniswap v3, swap-po-swapie.
+ * engine.ts — Uniswap v3 LP position simulator, swap by swap.
  *
- * KONWENCJA DOKŁADNOŚCI: symulator liczy na float (double, ~15 cyfr) — to
- * wystarcza do PORÓWNYWANIA strategii. Ale sqrt(price) dla ticków bierzemy
- * z dokładnego v3math (bigint → Number, błąd 1 ulp), więc geometria pozycji
- * jest identyczna z produkcją. Silnik produkcyjny (bot) pozostaje bigint-only.
+ * PRECISION CONVENTION: the simulator computes in float (double, ~15 digits) —
+ * enough for COMPARING strategies. But sqrt(price) for ticks is taken from the
+ * exact v3math (bigint → Number, 1 ulp error), so position geometry is
+ * identical to production. The production engine (bot) remains bigint-only.
  *
- * ZNANE PRZYBLIŻENIA (świadome, do wyostrzenia w v2):
- *  - naliczanie fee używa ticku PO swapie (swap przecinający granicę zakresu
- *    jest zaliczany w całości albo wcale) — błąd maleje z liczbą swapów;
- *  - nasz udział w fee = L/(L_pool + L); zakładamy, że nasza płynność nie
- *    zmienia ścieżki cen (prawda przy $5-25k w pulach $5M+);
- *  - koszt swapu przy rebalansie = fee tier puli + slippageBps na obrocie.
+ * KNOWN APPROXIMATIONS (deliberate, to be sharpened in v2):
+ *  - fee accrual uses the tick AFTER the swap (a swap crossing a range boundary
+ *    is credited in full or not at all) — the error shrinks with swap count;
+ *  - our fee share = L/(L_pool + L); we assume our liquidity does not change
+ *    the price path (true at $5-25k in $5M+ pools);
+ *  - swap cost on rebalance = pool fee tier + slippageBps on turnover.
  */
 import { getSqrtRatioAtTick, MIN_TICK, MAX_TICK } from '../src/utils/v3math';
 
 export interface SwapEv {
   b: number; // block
-  ts: number; // unix (interpolowany z anchorów)
-  a0: number; // amount0 (human units, znak: >0 = wpłynęło do puli)
+  ts: number; // unix (interpolated from anchors)
+  a0: number; // amount0 (human units, sign: >0 = flowed into the pool)
   a1: number;
-  sqrtP: number; // sqrt(raw price) — bez korekty decimals
-  L: number; // aktywna płynność puli (raw)
-  t: number; // tick po swapie
+  sqrtP: number; // sqrt(raw price) — no decimals correction
+  L: number; // active pool liquidity (raw)
+  t: number; // tick after the swap
 }
 
 export interface PoolSpec {
   id: string;
-  feeRate: number; // 0.0005 dla 0.05%
+  feeRate: number; // 0.0005 for 0.05%
   ethIsToken0: boolean;
   d0: number;
   d1: number;
   tickSpacing: number;
-  gasUsdPerRebalance: number; // pełny cykl: burn+collect+swap+mint
-  slippageBps: number; // dodatkowy koszt obrotu przy rebalansie
-  /** kwotowanie pary: 'USD' (domyślne, noga stable=$1) albo 'WETH' (np. cbBTC/WETH) */
+  gasUsdPerRebalance: number; // full cycle: burn+collect+swap+mint
+  slippageBps: number; // extra turnover cost on rebalance
+  /** pair quote: 'USD' (default, stable leg=$1) or 'WETH' (e.g. cbBTC/WETH) */
   quote?: 'USD' | 'WETH';
-  /** dla quote:'WETH': USD za 1 WETH po bloku (step-function z cache referencyjnego) */
+  /** for quote:'WETH': USD per 1 WETH by block (step-function from the reference cache) */
   usdPerEth?: (block: number) => number;
-  /** wewnętrzne: aktualna wartość usdPerEth, aktualizowana per event przez runStrategy */
+  /** internal: current usdPerEth value, updated per event by runStrategy */
   usdPerEthNow?: number;
 }
 
-/** sqrt(raw) dla ticku — z dokładnego v3math */
+/** sqrt(raw) for a tick — from the exact v3math */
 export const tickSqrt = (tick: number): number => Number(getSqrtRatioAtTick(tick)) / 2 ** 96;
 
-/** human price token1/token0 z raw sqrt */
+/** human price token1/token0 from raw sqrt */
 export const humanP = (sqrtP: number, spec: PoolSpec) => sqrtP * sqrtP * 10 ** (spec.d0 - spec.d1);
 
-/** cena ETH w USD wg orientacji puli (para ETH/stable) */
+/** ETH price in USD according to pool orientation (ETH/stable pair) */
 export const ethUsd = (sqrtP: number, spec: PoolSpec) => {
   const p = humanP(sqrtP, spec);
   return spec.ethIsToken0 ? p : 1 / p;
 };
 
-/** ceny jednostkowe token0/token1 w USD.
- *  - quote 'USD' (domyślne): para ETH/stable, noga stable = $1;
- *  - quote 'WETH' (np. cbBTC/WETH): USD-za-WETH z zewnętrznej referencji
- *    (spec.usdPerEthNow, aktualizowane per event przez runStrategy). */
+/** unit prices of token0/token1 in USD.
+ *  - quote 'USD' (default): ETH/stable pair, stable leg = $1;
+ *  - quote 'WETH' (e.g. cbBTC/WETH): USD-per-WETH from an external reference
+ *    (spec.usdPerEthNow, updated per event by runStrategy). */
 export const unitPrices = (sqrtP: number, spec: PoolSpec): { px0: number; px1: number } => {
   if (spec.quote === 'WETH') {
     const E = spec.usdPerEthNow;
-    if (E === undefined) throw new Error(`${spec.id}: quote WETH bez usdPerEthNow — brak referencji USD`);
+    if (E === undefined) throw new Error(`${spec.id}: quote WETH without usdPerEthNow — no USD reference`);
     const p = humanP(sqrtP, spec); // token1 per token0
-    // WETH jest token0 → px1 = USD/token1 = (USD/WETH)/(token1/WETH) = E/p
-    // WETH jest token1 → px0 = USD/token0 = (WETH/token0)×(USD/WETH) = p×E
+    // WETH is token0 → px1 = USD/token1 = (USD/WETH)/(token1/WETH) = E/p
+    // WETH is token1 → px0 = USD/token0 = (WETH/token0)x(USD/WETH) = pxE
     return spec.ethIsToken0 ? { px0: E, px1: E / p } : { px0: p * E, px1: E };
   }
   const E = ethUsd(sqrtP, spec);
   return spec.ethIsToken0 ? { px0: E, px1: 1 } : { px0: 1, px1: E };
 };
 
-/** ilości tokenów (human units) dla płynności L_raw w zakresie [lo,hi] przy sqrtP */
+/** token amounts (human units) for liquidity L_raw in range [lo,hi] at sqrtP */
 export function amountsForL(
   Lraw: number,
   lo: number,
@@ -87,7 +87,7 @@ export function amountsForL(
   return { a0: raw0 / 10 ** spec.d0, a1: raw1 / 10 ** spec.d1 };
 }
 
-/** maksymalna L_raw osiągalna z budżetu (a0,a1 human) w zakresie [lo,hi] */
+/** maximum L_raw attainable from the budget (a0,a1 human) in range [lo,hi] */
 export function liquidityForBudget(
   a0: number,
   a1: number,
@@ -110,15 +110,15 @@ export interface Position {
   L: number; // raw liquidity
   lo: number;
   hi: number;
-  fees0: number; // human units, nieodebrane
+  fees0: number; // human units, uncollected
   fees1: number;
 }
 
 export interface PortfolioState {
-  cash0: number; // human units poza pozycją
+  cash0: number; // human units outside the position
   cash1: number;
   pos: Position | null;
-  // statystyki
+  // statistics
   feesUsd: number;
   gasUsd: number;
   swapCostUsd: number;
@@ -129,18 +129,18 @@ export interface Ctx {
   spec: PoolSpec;
   state: PortfolioState;
   ev: SwapEv;
-  /** EWMA zmienności dziennej log-returnów ceny ETH */
+  /** EWMA of daily volatility of ETH price log-returns */
   volDaily: number;
-  /** trailing: fee wolumen puli / wartość aktywnej płynności (dzienny yield estymowany) */
+  /** trailing: pool fee volume / value of active liquidity (estimated daily yield) */
   poolFeeYieldDaily: number;
   valueUsd(): number;
-  /** zamknij pozycję do cash (bez kosztu gazu — składnik rebalansu) */
+  /** close the position to cash (no gas cost — it is a component of rebalance) */
   closePosition(): void;
-  /** otwórz pozycję na CAŁYM dostępnym cash w zakresie [lo,hi]; auto-swap do proporcji */
+  /** open a position with ALL available cash in range [lo,hi]; auto-swap to the target ratio */
   openPosition(lo: number, hi: number): void;
-  /** pełny rebalans = close + open + koszty gazu */
+  /** full rebalance = close + open + gas costs */
   rebalance(lo: number, hi: number): void;
-  /** wyrównaj cash do 50/50 USD (używane przez HODL na starcie) */
+  /** even out cash to 50/50 USD (used by HODL at start) */
   toHalfHalf(): void;
   alignTick(tick: number): number;
 }
@@ -156,14 +156,14 @@ export interface RunResult {
   finalUsd: number;
   startUsd: number;
   aprPct: number;
-  vsHodlPct: number; // wypełniane przez runner po przebiegu HODL
+  vsHodlPct: number; // filled in by the runner after the HODL run
   maxDrawdownPct: number;
   feesUsd: number;
   gasUsd: number;
   swapCostUsd: number;
   rebalances: number;
   inRangePct: number;
-  equity: Array<{ ts: number; usd: number; eth: number }>; // krzywa kapitału (probkowana)
+  equity: Array<{ ts: number; usd: number; eth: number }>; // equity curve (sampled)
 }
 
 export function runStrategy(
@@ -173,17 +173,17 @@ export function runStrategy(
   startCapitalUsd: number
 ): RunResult {
   const s0 = swaps[0];
-  // referencja USD dla par WETH-owych: ustaw PRZED pierwszym unitPrices
+  // USD reference for WETH-quoted pairs: set BEFORE the first unitPrices
   const updateUsdRef = (b: number) => {
     if (spec.quote === 'WETH') {
-      if (!spec.usdPerEth) throw new Error(`${spec.id}: quote WETH wymaga spec.usdPerEth`);
+      if (!spec.usdPerEth) throw new Error(`${spec.id}: quote WETH requires spec.usdPerEth`);
       spec.usdPerEthNow = spec.usdPerEth(b);
     }
   };
   updateUsdRef(s0.b);
   const px = unitPrices(s0.sqrtP, spec);
   const state: PortfolioState = {
-    // start: 50/50 USD w obu tokenach
+    // start: 50/50 USD in both tokens
     cash0: (startCapitalUsd / 2) / px.px0,
     cash1: (startCapitalUsd / 2) / px.px1,
     pos: null,
@@ -193,26 +193,26 @@ export function runStrategy(
     rebalances: 0,
   };
 
-  let volDaily = 0.03; // start prior 3%/dzień
-  // --- σ w siatce 15 min (TASKS-RECAL §1, decyzja przeglądu 26.08) ---
-  // Estymator swap-po-swapie mierzy mikrostrukturę puli, nie zmienność
-  // aktywa (CONTEXT/DECYZJE 11: to samo ETH, ta sama doba, rozrzut σ 4.5×
-  // między pulami; w siatce czasu 1.4×). Tryb 'grid15': zwrot liczony
-  // między CENAMI ZAMKNIĘCIA kubełków 15-min, EMA jak dotąd (HL 12h).
-  // Default 'swap' = zachowanie sprzed zmiany — v1.2 zamrożony; przebiegi
-  // rekalibracyjne odpala się z SIGMA_MODE=grid15 (env), a przełączenie
-  // defaultu = decyzja Rafała po paczce + podbicie algoVersion.
+  let volDaily = 0.03; // starting prior 3%/day
+  // --- σ on a 15-min grid (TASKS-RECAL §1, review decision of 26.08) ---
+  // The swap-by-swap estimator measures pool microstructure, not asset
+  // volatility (CONTEXT/DECISIONS 11: same ETH, same day, σ spread of 4.5x
+  // between pools; on a time grid 1.4x). Mode 'grid15': return computed
+  // between CLOSING PRICES of 15-min buckets, EMA as before (HL 12h).
+  // Default 'swap' = behaviour before the change — v1.2 frozen; recalibration
+  // runs are launched with SIGMA_MODE=grid15 (env), and switching the default
+  // = Rafal's decision after the batch + an algoVersion bump.
   const SIGMA_GRID15 = process.env.SIGMA_MODE === 'grid15';
   const GRID_SEC = 900;
-  let gridCurBucket = -1; // kubełek, w którym właśnie jesteśmy
-  let gridCurLast = 0; // ostatnia cena widziana w bieżącym kubełku
-  let gridCloseP = 0; // cena zamknięcia poprzedniego zamkniętego kubełka
+  let gridCurBucket = -1; // bucket we are currently in
+  let gridCurLast = 0; // last price seen in the current bucket
+  let gridCloseP = 0; // closing price of the previous closed bucket
   let gridCloseBucket = -1;
   let lastTs = s0.ts;
   let lastP = ethUsd(s0.sqrtP, spec);
-  let prevTick = s0.t; // tick sprzed bieżącego swapu (do ścieżki fee)
-  let prevL = s0.L; // L puli sprzed bieżącego swapu (konserwatywny share)
-  // trailing yield puli (fee/aktywna płynność) — EWMA dzienna
+  let prevTick = s0.t; // tick before the current swap (for the fee path)
+  let prevL = s0.L; // pool L before the current swap (conservative share)
+  // trailing pool yield (fee/active liquidity) — daily EWMA
   let poolFeeYieldDaily = 0;
   let inRangeEvents = 0;
   let posEvents = 0;
@@ -241,27 +241,27 @@ export function runStrategy(
     },
     openPosition: (lo: number, hi: number) => {
       if (state.pos) throw new Error('position already open');
-      // clamp do domeny v3 (fix 26.08 po crashu "Tick out of bounds: -887332"
-      // na cand-base-weth-cbbtc-030-720d): anomalne ticki z początku życia
-      // puli potrafią zepchnąć zakres poza MIN/MAX_TICK — v3math celowo
-      // rzuca (ma być bit-exact z Uniswapem), więc granice pilnujemy tutaj.
+      // clamp to the v3 domain (fix 26.08 after the crash "Tick out of bounds: -887332"
+      // on cand-base-weth-cbbtc-030-720d): anomalous ticks from the early life of
+      // a pool can push the range beyond MIN/MAX_TICK — v3math throws on purpose
+      // (it must be bit-exact with Uniswap), so we guard the bounds here.
       lo = Math.max(lo, MIN_TICK);
       hi = Math.min(hi, MAX_TICK);
       if (hi <= lo) hi = Math.min(lo + spec.tickSpacing, MAX_TICK);
       const { px0, px1 } = unitPrices(ev.sqrtP, spec);
       const totalUsd = state.cash0 * px0 + state.cash1 * px1;
-      // docelowe proporcje dla zakresu
+      // target proportions for the range
       const unit = amountsForL(1e18, lo, hi, ev.sqrtP, spec);
       const unitUsd = unit.a0 * px0 + unit.a1 * px1;
       const Ltarget = (totalUsd / unitUsd) * 1e18;
       let need0 = (Ltarget / 1e18) * unit.a0;
       let need1 = (Ltarget / 1e18) * unit.a1;
-      // koszt swapu: obrót |delta| od aktualnego cash do proporcji docelowych
-      const delta0 = need0 - state.cash0; // >0 = musimy dokupić token0
+      // swap cost: turnover |delta| from current cash to the target proportions
+      const delta0 = need0 - state.cash0; // >0 = we must buy token0
       const turnoverUsd = Math.abs(delta0) * px0;
       const costUsd = turnoverUsd * (spec.feeRate + spec.slippageBps / 10_000);
       state.swapCostUsd += costUsd;
-      // koszt zdejmujemy proporcjonalnie z obu stron (upraszczenie)
+      // the cost is taken proportionally from both sides (simplification)
       const eff = Math.max(totalUsd - costUsd, 0) / totalUsd;
       need0 *= eff;
       need1 *= eff;
@@ -274,7 +274,7 @@ export function runStrategy(
       const c = mkCtx(ev);
       c.closePosition();
       state.gasUsd += spec.gasUsdPerRebalance;
-      // gas płacony "z zewnątrz"? NIE — uczciwie: z kapitału (proporcjonalnie w tokenie stable)
+      // gas paid "from outside"? NO — honestly: from capital (preferably in the stable token)
       const { px0, px1 } = unitPrices(ev.sqrtP, spec);
       const gasInToken0 = spec.gasUsdPerRebalance / px0;
       if (state.cash0 >= gasInToken0) state.cash0 -= gasInToken0;
@@ -302,25 +302,25 @@ export function runStrategy(
 
   for (const ev of swaps) {
     updateUsdRef(ev.b);
-    // 1. aktualizacja zmienności (EWMA na log-returnach, half-life ~12h)
-    // Uwaga quote:'WETH': P to cena WZGLĘDNA pary (nie USD) — właściwa dla
-    // vol/zakresów/IL; wycena USD idzie wyłącznie przez unitPrices.
+    // 1. volatility update (EWMA on log-returns, half-life ~12h)
+    // Note for quote:'WETH': P is the RELATIVE price of the pair (not USD) — the
+    // right one for vol/ranges/IL; USD valuation goes exclusively through unitPrices.
     const P = ethUsd(ev.sqrtP, spec);
     const dt = Math.max(ev.ts - lastTs, 1);
     if (!SIGMA_GRID15) {
-      // tryb 'swap' (historyczny): EWMA kwadratów zwrotów swap-po-swapie
+      // mode 'swap' (historical): EWMA of squared swap-by-swap returns
       if (P > 0 && lastP > 0 && dt > 0) {
         const r = Math.log(P / lastP);
-        const perDay = (r * r * 86400) / dt; // wariancja przeskalowana na dzień
+        const perDay = (r * r * 86400) / dt; // variance rescaled to one day
         const alpha = 1 - Math.exp(-dt / (43200 / Math.LN2));
         volDaily = Math.sqrt((1 - alpha) * volDaily * volDaily + alpha * perDay);
       }
     } else if (P > 0) {
-      // tryb 'grid15': zwrot między zamknięciami kubełków 15-min
+      // mode 'grid15': return between closes of 15-min buckets
       const bucket = Math.floor(ev.ts / GRID_SEC);
       if (bucket !== gridCurBucket) {
         if (gridCurBucket >= 0 && gridCurLast > 0) {
-          // kubełek gridCurBucket właśnie się zamknął ceną gridCurLast
+          // bucket gridCurBucket has just closed at price gridCurLast
           if (gridCloseP > 0 && gridCloseBucket >= 0) {
             const dtg = (gridCurBucket - gridCloseBucket) * GRID_SEC;
             const r = Math.log(gridCurLast / gridCloseP);
@@ -336,14 +336,14 @@ export function runStrategy(
       gridCurLast = P;
     }
 
-    // 2. trailing fee yield puli: fee wolumenu / wartość aktywnej płynności
+    // 2. trailing pool fee yield: volume fees / value of active liquidity
     {
       const { px0, px1 } = unitPrices(ev.sqrtP, spec);
       const feeUsd = (ev.a0 > 0 ? ev.a0 * px0 : ev.a1 * px1) * spec.feeRate;
-      // wartość aktywnej płynności w wąskim paśmie: przybliżenie ±1 tickSpacing
+      // value of active liquidity in a narrow band: approximation ±1 tickSpacing
       const t = ev.t;
-      // clamp pasma do domeny v3 (fix 26.08 — crash "Tick out of bounds":
-      // swap z tickiem przy samym MIN/MAX_TICK dawał t±spacing poza domeną)
+      // clamp the band to the v3 domain (fix 26.08 — crash "Tick out of bounds":
+      // a swap with a tick right at MIN/MAX_TICK gave t±spacing outside the domain)
       const act = amountsForL(
         ev.L,
         Math.max(t - spec.tickSpacing, MIN_TICK),
@@ -353,17 +353,18 @@ export function runStrategy(
       const actUsd = act.a0 * px0 + act.a1 * px1;
       if (actUsd > 0 && feeUsd >= 0) {
         const instDaily = (feeUsd / actUsd) * (86400 / dt);
-        const alpha = 1 - Math.exp(-dt / (86400 / Math.LN2)); // half-life 1 dzień
+        const alpha = 1 - Math.exp(-dt / (86400 / Math.LN2)); // half-life 1 day
         poolFeeYieldDaily = (1 - alpha) * poolFeeYieldDaily + alpha * instDaily;
       }
     }
 
-    // 3. naliczenie fee dla naszej pozycji.
-    // v2 (2026-08-11): kredyt proporcjonalny do NAKŁADANIA SIĘ ścieżki swapu
-    // [prevTick, ev.t] z naszym zakresem — poprzednio swap liczył się w całości
-    // albo wcale wg ticku PO swapie. Na parach ETH/stable różnica kosmetyczna
-    // (ścieżki krótkie vs zakres), na parach spiętych stara wersja kredytowała
-    // całe wycieczki przez puste ticki pozycjom szerokim (fees zawyżone ×10+).
+    // 3. fee accrual for our position.
+    // v2 (2026-08-11): credit proportional to the OVERLAP of the swap path
+    // [prevTick, ev.t] with our range — previously a swap counted in full or
+    // not at all based on the tick AFTER the swap. On ETH/stable pairs the
+    // difference is cosmetic (paths short vs range); on pegged pairs the old
+    // version credited entire excursions through empty ticks to wide positions
+    // (fees overstated x10+).
     if (state.pos && ev.L > 0) {
       const lo = Math.min(prevTick, ev.t);
       const hi = Math.max(prevTick, ev.t);
@@ -377,12 +378,13 @@ export function runStrategy(
         frac = ovHi > ovLo ? (ovHi - ovLo) / pathLen : 0;
       }
       if (frac > 0) {
-        // Lpool: 'max' (domyślnie, konserwatywnie) = max(L przed, L po) —
-        // wycieczka przez puste ticki nie dostaje share≈1 za wolumen wykonany
-        // przy pegu (gdzie L duże); 'end' (optymistycznie) = L po swapie.
-        // Prawda leży między — env FEE_SHARE_L=end daje górną granicę.
-        // Na parach ETH/stable oba modele dają identyczne wyniki (L zmienia
-        // się wolno); różnica dotyczy pul spiętych z wycieczkami (sekcja F).
+        // Lpool: 'max' (default, conservative) = max(L before, L after) —
+        // an excursion through empty ticks does not get share≈1 for volume
+        // executed at the peg (where L is large); 'end' (optimistic) = L after
+        // the swap. The truth lies in between — env FEE_SHARE_L=end gives the
+        // upper bound. On ETH/stable pairs both models give identical results
+        // (L changes slowly); the difference concerns pegged pools with
+        // excursions (section F).
         const Lpool = process.env.FEE_SHARE_L === 'end' ? ev.L : Math.max(ev.L, prevL);
         const share = (state.pos.L / (Lpool + state.pos.L)) * frac;
         const { px0, px1 } = unitPrices(ev.sqrtP, spec);
@@ -402,13 +404,13 @@ export function runStrategy(
     prevTick = ev.t;
     prevL = ev.L;
 
-    // 4. strategia
+    // 4. strategy
     const ctx = mkCtx(ev);
     ctx.volDaily = volDaily;
     ctx.poolFeeYieldDaily = poolFeeYieldDaily;
     strategy.onEvent(ctx);
 
-    // 5. próbkowanie equity (co ~1h) + drawdown
+    // 5. equity sampling (every ~1h) + drawdown
     const v = ctx.valueUsd();
     if (v > peak) peak = v;
     const dd = (peak - v) / peak;

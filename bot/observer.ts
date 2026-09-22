@@ -1,18 +1,19 @@
 /**
- * bot/observer.ts — bot w trybie OBSERWUJ (krok C z UI-VISION.md).
- *   npm run bot          (docelowo: pm2 start "npm run bot" --name homos-bot na Windows)
+ * bot/observer.ts — bot in OBSERVE mode (step C from UI-VISION.md).
+ *   npm run bot          (target: pm2 start "npm run bot" --name homos-bot on Windows)
  *
- * NIE wykonuje żadnych transakcji. Pętle:
- *  - co 60s: ceny/ticki obserwowanych pul,
- *  - co 15min: statystyki doradcy (zmienność, fee-yield, sugerowane zakresy),
- *  - co 5min: pozycje NFT obserwowanego portfela + rekomendacje,
- *  → stan do .bot/state.json (czyta go UI przez bot/server.ts),
- *  → nowe propozycje do .bot/proposals.json + log + (opcjonalnie) Telegram.
+ * Executes NO transactions. Loops:
+ *  - every 60s: prices/ticks of watched pools,
+ *  - every 15min: advisor statistics (volatility, fee-yield, suggested ranges),
+ *  - every 5min: NFT positions of the watched wallet + recommendations,
+ *  → state to .bot/state.json (read by the UI via bot/server.ts),
+ *  → new proposals to .bot/proposals.json + log + (optionally) Telegram.
  */
 import 'dotenv/config';
 import * as fs from 'fs';
 import * as path from 'path';
-import { createPublicClient, http, fallback, PublicClient, formatUnits } from 'viem';
+import { createPublicClient, http, fallback, formatUnits, type PublicClient } from 'viem';
+
 import { mainnet, base, arbitrum } from 'viem/chains';
 import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR, TREND, FLAT, TRANCHE } from './config';
 import { ADVISOR_PARAMS } from '../src/utils/advisor';
@@ -37,40 +38,40 @@ const log = (msg: string) => {
 
 const TICK_SPACING: Record<number, number> = { 100: 1, 500: 10, 3000: 60, 10000: 200 };
 
-// --- klienci per chain (fallback wielu RPC) ---
-const clients: Record<string, PublicClient> = {
+// --- clients per chain (fallback across multiple RPCs) ---
+const clients = {
   mainnet: createPublicClient({ chain: mainnet, transport: fallback(RPC.mainnet.map((u) => http(u))) }),
   base: createPublicClient({ chain: base, transport: fallback(RPC.base.map((u) => http(u))) }),
   arbitrum: createPublicClient({ chain: arbitrum, transport: fallback(RPC.arbitrum.map((u) => http(u))) }),
 };
 
-// --- żywy gaz (decyzja przeglądu 26.08 — DECYZJE 6a / TASKS-RECAL §4) ---
-// Stała $8 na mainnet karała payback 4-8× przy realnym gazie 0.3-1.4 Gwei
-// (potwierdzone bojowo 25.08: collect $0.27 przy progu liczonym ze stałej).
-// Koszt cyklu = eth_gasPrice × GAS_UNITS_CYCLE × kurs ETH; podłoga chroni
-// przed zaniżeniem na L2 (opłata L1-data niewidoczna w gasPrice egzekucji),
-// stara stała zostaje WYŁĄCZNIE jako fallback przed pierwszym odczytem.
-// Backtest/paper celowo NIE ruszane — koszt per-reżim wchodzi w paczce
-// rekalibracyjnej (rekalibracja = podbicie algoVersion).
-const GAS_UNITS_CYCLE = 800_000; // decrease+collect+swap+mint+approvals (~zgodne z pomiarem $1-2 przy 0.3-1.4 Gwei)
+// --- live gas (review decision 26.08 — DECISIONS 6a / TASKS-RECAL §4) ---
+// The $8 constant on mainnet penalised payback 4-8x at real gas of 0.3-1.4 Gwei
+// (confirmed in the field 25.08: collect $0.27 against a threshold computed from the constant).
+// Cycle cost = eth_gasPrice × GAS_UNITS_CYCLE × ETH rate; the floor protects
+// against underestimation on L2 (the L1-data fee is invisible in execution gasPrice),
+// the old constant remains ONLY as a fallback before the first read.
+// Backtest/paper deliberately NOT touched — per-regime cost comes in the
+// recalibration batch (recalibration = bump of algoVersion).
+const GAS_UNITS_CYCLE = 800_000; // decrease+collect+swap+mint+approvals (~consistent with the measured $1-2 at 0.3-1.4 Gwei)
 const GAS_FLOOR_USD: Record<string, number> = { mainnet: 0.5, base: 0.08, arbitrum: 0.1 };
 const GAS_STATIC_USD: Record<string, number> = { mainnet: 8, base: 0.08, arbitrum: 0.1 };
 const gasUsdLive: Record<string, number> = {};
 const gasUsdFor = (chain: BotPool['chain']): number => gasUsdLive[chain] ?? GAS_STATIC_USD[chain] ?? 5;
 async function refreshGas() {
-  // kurs ETH z pierwszej żywej puli kwotowanej w USD (bez własnego zapytania)
+  // ETH rate from the first live pool quoted in USD (no separate query)
   const ethUsd = BOT_POOLS
     .filter((p) => (p.quote ?? 'USD') === 'USD')
     .map((p) => live[p.id]?.ethUsd)
     .find((v): v is number => typeof v === 'number' && v > 0);
-  if (!ethUsd) return; // przed pierwszym odczytem cen — spróbujemy za 5 min
+  if (!ethUsd) return; // before the first price read — we will try again in 5 min
   for (const chain of [...new Set(BOT_POOLS.map((p) => p.chain))]) {
     try {
       const wei = await clients[chain].getGasPrice();
       const usd = (Number(wei) / 1e18) * GAS_UNITS_CYCLE * ethUsd;
       gasUsdLive[chain] = Math.max(usd, GAS_FLOOR_USD[chain] ?? 0.05);
     } catch {
-      /* zostaje ostatni znany / fallback statyczny — awaria RPC nie kładzie cyklu */
+      /* last known value / static fallback stays — an RPC failure does not take the cycle down */
     }
   }
 }
@@ -101,10 +102,10 @@ const PM_ABI = [
       { name: 'tokensOwed0', type: 'uint128' }, { name: 'tokensOwed1', type: 'uint128' },
     ],
   },
-  // collect() TYLKO do symulacji (29.08): `tokensOwed0/1` z positions() jest
-  // ZEROWE do pierwszego burn/collect, więc świeża pozycja pokazywałaby
-  // "fee $0" mimo narastających opłat. Ta sama sztuczka „static collect", co
-  // w UI (src/hooks/usePortfolio.ts) — eth_call, nic nie podpisujemy.
+  // collect() ONLY for simulation (29.08): `tokensOwed0/1` from positions() is
+  // ZERO until the first burn/collect, so a fresh position would show
+  // "fee $0" despite accruing fees. The same "static collect" trick as
+  // in the UI (src/hooks/usePortfolio.ts) — eth_call, we sign nothing.
   {
     name: 'collect', type: 'function', stateMutability: 'nonpayable',
     inputs: [{
@@ -118,7 +119,7 @@ const PM_ABI = [
 ] as const;
 const MAX_U128 = 2n ** 128n - 1n;
 
-// --- stan w pamięci ---
+// --- in-memory state ---
 interface PoolLive {
   id: string;
   ethUsd: number;
@@ -127,11 +128,11 @@ interface PoolLive {
   stats: PoolStats | null;
   suggestion: ReturnType<typeof suggestRange> | null;
   updatedAt: string;
-  /** bezpiecznik trendu (v1.1): odchylenie log-ceny od EMA7d w % i stan sygnału */
+  /** trend circuit breaker (v1.1): deviation of log-price from EMA7d in % and signal state */
   trendGapPct?: number;
   trendDown?: boolean;
-  /** detektor flatu (produkt FlatWide, 28.08): od kiedy |gap|<enterGap
-   *  nieprzerwanie (ISO, null=zegar nie biegnie) i czy flat potwierdzony */
+  /** flat detector (FlatWide product, 28.08): since when |gap|<enterGap
+   *  uninterrupted (ISO, null=clock not running) and whether flat is confirmed */
   flatSince?: string | null;
   flatConfirmed?: boolean;
 }
@@ -146,39 +147,39 @@ interface WatchedPosition {
   inRange: boolean;
   advice: string;
   paybackDays: number | null;
-  /** agregaty z księgi (PARTIA 14, 27.08): fees odebrane COLLECT−DECREASE
-   *  w USD (null gdy księga nie umie wycenić — np. noga cbBTC w v1 księgi
-   *  albo backfill bez kursu); rebalanse = liczba DECREASE. costsUsd
-   *  celowo null do czasu indeksowania gazu (TASKS-LEDGER §3). */
+  /** aggregates from the ledger (BATCH 14, 27.08): fees collected COLLECT−DECREASE
+   *  in USD (null when the ledger cannot price it — e.g. the cbBTC leg in ledger v1
+   *  or a backfill without a rate); rebalances = number of DECREASE. costsUsd
+   *  deliberately null until gas is indexed (TASKS-LEDGER §3). */
   collectedFeesUsd: number | null;
   costsUsd: number | null;
   rebalances: number | null;
-  /** fee NAROSŁE, jeszcze nieodebrane (29.08, brief Rafała: raport nie
-   *  pokazywał tempa zarabiania nóg produktu). Symulacja collect() —
-   *  suma w USD po kursach z tego samego cyklu; null gdy RPC odmówi. */
+  /** ACCRUED fees, not yet collected (29.08, Rafal's brief: the report did not
+   *  show the earning pace of the product legs). Simulated collect() —
+   *  sum in USD at the rates of the same cycle; null when RPC refuses. */
   feesUsd: number | null;
-  /** cykl produktu FlatWide (PARTIA 17): 'wide' = postura idle
-   *  (±productIdleWidthPct), 'narrow' = zwężenie flatowe (k×σ);
-   *  null = pula nie-produktowa (cykl nie dotyczy) */
+  /** FlatWide product cycle (BATCH 17): 'wide' = idle posture
+   *  (±productIdleWidthPct), 'narrow' = flat narrowing (k×σ);
+   *  null = non-product pool (cycle does not apply) */
   posture: 'wide' | 'narrow' | null;
 }
 interface Proposal {
   id: string;
   createdAt: string;
-  tokenId: string; // '' dla propozycji OPEN z selektora
-  poolId: string; // '' gdy pula spoza BOT_POOLS (selektor → note)
-  /** REBALANCE (doradca) | OPEN/ROTATE (selektor) | EXIT_TREND / HEDGE
-   *  (bezpiecznik v1.2) | FLAT_NARROW / FLAT_WIDEN (produkt FlatWide 28.08:
-   *  zwężenie w potwierdzonym flacie / powrót do szerokiego po flacie) */
+  tokenId: string; // '' for OPEN proposals from the selector
+  poolId: string; // '' when the pool is outside BOT_POOLS (selector → note)
+  /** REBALANCE (advisor) | OPEN/ROTATE (selector) | EXIT_TREND / HEDGE
+   *  (circuit breaker v1.2) | FLAT_NARROW / FLAT_WIDEN (FlatWide product 28.08:
+   *  narrowing in a confirmed flat / return to wide after the flat) */
   kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND' | 'HEDGE' | 'FLAT_NARROW' | 'FLAT_WIDEN';
-  /** dla kind HEDGE: sugerowany rozmiar shorta (nadwyżka ETH ponad 50% wartości) */
+  /** for kind HEDGE: suggested short size (ETH excess above 50% of value) */
   hedgeSizeEth?: number;
   hedgeNotionalUsd?: number;
   action: string;
   suggestedRange?: { tickLower: number; tickUpper: number; usdLo: number; usdHi: number };
   costUsd?: number;
   paybackDays?: number | null;
-  // pola selektora (OPEN/ROTATE):
+  // selector fields (OPEN/ROTATE):
   llamaPool?: string;
   symbol?: string;
   chain?: string;
@@ -186,10 +187,10 @@ interface Proposal {
   heldApy7d?: number;
   breakEvenDays?: number;
   note?: string;
-  /** PROCEDURA AWARYJNA (decyzja Rafała 27.08, paczka #2 28.08): propozycja
-   *  obrony na puli PRODUKTOWEJ — hybryda świadomie trzyma betę, więc
-   *  EXIT/HEDGE przy sygnale DOWN to opcje awaryjne ("zwykle NIE podpisuj"),
-   *  nie rekomendacje. UI: czerwona ramka + odesłanie do EMERGENCY.md. */
+  /** EMERGENCY PROCEDURE (Rafal's decision 27.08, batch #2 28.08): a defence
+   *  proposal on a PRODUCT pool — the hybrid deliberately holds beta, so
+   *  EXIT/HEDGE on a DOWN signal are emergency options ("usually do NOT sign"),
+   *  not recommendations. UI: red frame + reference to EMERGENCY.md. */
   emergency?: boolean;
   status: 'open' | 'dismissed';
 }
@@ -197,10 +198,10 @@ interface Proposal {
 const live: Record<string, PoolLive> = {};
 let positions: WatchedPosition[] = [];
 let proposals: Proposal[] = fs.existsSync(PROPOSALS_PATH) ? JSON.parse(fs.readFileSync(PROPOSALS_PATH, 'utf8')) : [];
-// FIX 11.09 #2: sprzątanie duplikatów po id z okresu przed fixem dedup
-// (ta sama karta wielokrotnie w pliku; [Odrzuć] trafiało tylko w pierwszą
-// kopię, więc kolejne wracały po odświeżeniu). Zostaje JEDNA kopia per id;
-// jeśli którakolwiek była odrzucona — odrzucona.
+// FIX 11.09 #2: cleanup of duplicates by id from the period before the dedup fix
+// (the same card multiple times in the file; [Dismiss] hit only the first
+// copy, so the others came back after a refresh). ONE copy per id remains;
+// if any of them was dismissed — dismissed.
 {
   const byId = new Map<string, Proposal>();
   for (const p of proposals) {
@@ -209,34 +210,34 @@ let proposals: Proposal[] = fs.existsSync(PROPOSALS_PATH) ? JSON.parse(fs.readFi
     else if (prev.status === 'open' && p.status === 'dismissed') byId.set(p.id, p);
   }
   if (byId.size !== proposals.length) {
-    console.log(`proposals: usunięto ${proposals.length - byId.size} duplikatów po id (start)`);
+    console.log(`proposals: removed ${proposals.length - byId.size} duplicates by id (startup)`);
     proposals = [...byId.values()];
   }
 }
 
-// --- śledzenie REALNYCH pozycji jak w paper (20.08, decyzja Rafała):
-// equity + HODL per tokenId, próbki co cykl refreshPositions (5 min).
-// HODL = kwoty tokenów ZAMROŻONE przy pierwszym zauważeniu pozycji przez
-// bota (kotwica w .bot/positions-hodl.json — restart jej nie zeruje);
-// UWAGA uczciwości: dla pozycji starszych niż wdrożenie kotwica = stan z
-// dziś, nie z prawdziwego otwarcia — porównanie biegnie "od teraz".
-// Wykresy UI (redesign kart pozycji wg wzorca paper) czytają
-// /api/positions-history. Format próbki jak paper-history (price/lo/hi
-// human) — UI reużywa te same komponenty.
+// --- tracking REAL positions like in paper (20.08, Rafal's decision):
+// equity + HODL per tokenId, samples every refreshPositions cycle (5 min).
+// HODL = token amounts FROZEN when the bot first notices the position
+// (anchor in .bot/positions-hodl.json — a restart does not reset it);
+// HONESTY NOTE: for positions older than the deployment the anchor = state as of
+// today, not the real opening — the comparison runs "from now".
+// UI charts (redesign of position cards after the paper pattern) read
+// /api/positions-history. Sample format like paper-history (price/lo/hi
+// human) — the UI reuses the same components.
 const POS_HIST_PATH = path.join(DIR, 'positions-history.ndjson');
 const POS_HODL_PATH = path.join(DIR, 'positions-hodl.json');
 
-// --- śledzenie REALNEGO hedge'a na GMX (20.08, uwaga Rafała po teście E2E:
-// short istniał tylko na app.gmx.io i w localStorage jednej przeglądarki —
-// bot go nie widział, więc nie było go na wykresach/raporcie/iPhone i nikt
-// nie ostrzegłby "sygnał zgasł, a short wisi"). Odczyt przez GMX Reader
-// (getAccountPositions) co cykl refreshPositions; stan w state.json
-// (pole `hedge`), próbka equity do positions-history pod tokenId
-// 'gmx-eth-short' (UI: karta bez pasma zakresu — perp nie ma zakresu).
-// UWAGA ABI: struct Position.Props wg MAIN gmx-synthetics (10 pól w
-// numbers, w tym pendingImpactAmount int256) — przy aktualizacji GMX
-// zweryfikować kształt, zły decode przesuwa pola; sanity-check niżej
-// (market/skala) łapie rozjazd i loguje zamiast podawać śmieci.
+// --- tracking the REAL hedge on GMX (20.08, Rafal's note after the E2E test:
+// the short existed only on app.gmx.io and in the localStorage of one browser —
+// the bot did not see it, so it was absent from charts/report/iPhone and nobody
+// would warn "signal is gone but the short is still hanging"). Read via GMX Reader
+// (getAccountPositions) every refreshPositions cycle; state in state.json
+// (field `hedge`), equity sample to positions-history under tokenId
+// 'gmx-eth-short' (UI: card without a range band — a perp has no range).
+// ABI NOTE: struct Position.Props per MAIN gmx-synthetics (10 fields in
+// numbers, including pendingImpactAmount int256) — on a GMX upgrade
+// verify the shape, a wrong decode shifts the fields; the sanity check below
+// (market/scale) catches the mismatch and logs instead of reporting garbage.
 const GMX = {
   reader: '0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789',
   dataStore: '0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8',
@@ -285,12 +286,12 @@ export interface HedgeLive {
   sizeEth: number;
   collateralUsd: number;
   entryPriceUsd: number;
-  pnlUsd: number; // vs bieżący mark (ethUsd z telemetrii)
+  pnlUsd: number; // vs current mark (ethUsd from telemetry)
   equityUsd: number; // collateral + pnl
   updatedAt: string;
 }
 let hedgeLive: HedgeLive | null = null;
-let hedgeWasOpen = false; // do powiadomień na przejściach open/close
+let hedgeWasOpen = false; // for notifications on open/close transitions
 interface PosHodlAnchor { a0: number; a1: number; poolId: string; anchoredAt: string }
 const posHodl: Record<string, PosHodlAnchor> = fs.existsSync(POS_HODL_PATH)
   ? JSON.parse(fs.readFileSync(POS_HODL_PATH, 'utf8'))
@@ -303,10 +304,10 @@ const saveState = () => {
   fs.writeFileSync(
     STATE_PATH,
     JSON.stringify(
-      // flatParams: żywe parametry detektora flatu dla UI (countdown do
-      // potwierdzenia, progi w opisach) — jedna prawda z bot/config.ts,
-      // UI nie hardkoduje 12h/2%/5% (PARTIA 17; wartości mogą się zmienić
-      // decyzją przeglądu 1.09)
+      // flatParams: live flat-detector parameters for the UI (countdown to
+      // confirmation, thresholds in descriptions) — single truth from bot/config.ts,
+      // the UI does not hardcode 12h/2%/5% (BATCH 17; values may change
+      // by the review decision of 1.09)
       { updatedAt: new Date().toISOString(), mode: 'OBSERVE', watch: WATCH_ADDRESS, flatParams: FLAT, tranche: trancheLive, pools: Object.values(live), positions, hedge: hedgeLive, gasUsd: gasUsdLive, proposals: proposals.filter((p) => p.status === 'open') },
       bigintReplacer, 2
     )
@@ -314,9 +315,9 @@ const saveState = () => {
 };
 const saveProposals = () => fs.writeFileSync(PROPOSALS_PATH, JSON.stringify(proposals, bigintReplacer, 2));
 
-// Komendy z UI (server tylko kolejkuje — fix dual-writer 25.08: wcześniej
-// server pisał do proposals.json, a observer nadpisywał go z pamięci i
-// odrzucenia ginęły). Konsumpcja: przeczytaj → skasuj plik → zastosuj.
+// Commands from the UI (the server only queues — dual-writer fix 25.08: previously
+// the server wrote to proposals.json while the observer overwrote it from memory and
+// dismissals were lost). Consumption: read → delete the file → apply.
 const COMMANDS_PATH = path.join(DIR, 'proposal-commands.ndjson');
 function applyProposalCommands() {
   try {
@@ -329,15 +330,15 @@ function applyProposalCommands() {
       try {
         const c = JSON.parse(line);
         if (c.action === 'dismiss') {
-          // FIX 11.09 #2: odrzuć WSZYSTKIE kopie o tym id (nie tylko pierwszą)
+          // FIX 11.09 #2: dismiss ALL copies with this id (not only the first one)
           let n = 0;
           for (const p of proposals) if (p.id === c.id && p.status === 'open') { p.status = 'dismissed'; n++; }
           if (n) {
             changed = true;
-            log(`proposal ${c.id}: odrzucona (komenda z UI${n > 1 ? `, ${n} kopii` : ''})`);
+            log(`proposal ${c.id}: dismissed (command from UI${n > 1 ? `, ${n} copies` : ''})`);
           }
         }
-      } catch { /* uszkodzona linia — pomiń */ }
+      } catch { /* corrupted line — skip */ }
     }
     if (changed) { saveProposals(); saveState(); }
   } catch (e) {
@@ -345,10 +346,10 @@ function applyProposalCommands() {
   }
 }
 
-// TTL propozycji selektora (dodane 17.08 po analizie OBSERWUJ): OPEN/ROTATE
-// opierają się na dziennym rankingu — po 48h ranking jest nieaktualny i wisząca
-// propozycja wprowadza w błąd (widzieliśmy wpisy z 10.08 żywe 17.08).
-// REBALANCE/EXIT_TREND nie wygasają (bazują na stanie pozycji, nie rankingu).
+// TTL of selector proposals (added 17.08 after the OBSERVE analysis): OPEN/ROTATE
+// rely on the daily ranking — after 48h the ranking is stale and a hanging
+// proposal is misleading (we saw entries from 10.08 still alive on 17.08).
+// REBALANCE/EXIT_TREND do not expire (they are based on position state, not the ranking).
 const PROPOSAL_TTL_MS = 48 * 3600 * 1000;
 function expireStaleProposals() {
   let changed = false;
@@ -356,9 +357,9 @@ function expireStaleProposals() {
     if (p.status !== 'open') continue;
     if ((p.kind === 'OPEN' || p.kind === 'ROTATE') && Date.now() - new Date(p.createdAt).getTime() > PROPOSAL_TTL_MS) {
       p.status = 'dismissed';
-      p.note = `${p.note ? p.note + ' · ' : ''}[auto-wygaszona po 48h — ranking nieaktualny]`;
+      p.note = `${p.note ? p.note + ' · ' : ''}[auto-expired after 48h — ranking stale]`;
       changed = true;
-      log(`proposal ${p.id}: auto-wygaszona (TTL 48h)`);
+      log(`proposal ${p.id}: auto-expired (TTL 48h)`);
     }
   }
   if (changed) {
@@ -367,16 +368,16 @@ function expireStaleProposals() {
   }
 }
 
-// --- Telegram: BUFOR 15 min (decyzja Rafała 18.08) ---
-// Wiadomości NIE wychodzą od razu: zbierają się w kolejce i co 15 min lecą
-// JEDNĄ zbiorczą wiadomością. Powody: (1) anty-spam — seria zdarzeń z jednego
-// cyklu to jeden komunikat; (2) limit Telegrama ~1 msg/s per czat — burst
-// >1 dostawał 429 bez retry i przepadał (18.08: z 5 STARTów paper doszedł 1).
-// Koszt: opóźnienie do 15 min — akceptowalne w trybie OBSERWUJ (człowiek
-// i tak zatwierdza w Rabby, nic nie wykonuje się samo).
+// --- Telegram: 15 min BUFFER (Rafal's decision 18.08) ---
+// Messages do NOT go out immediately: they collect in a queue and every 15 min go
+// as ONE aggregated message. Reasons: (1) anti-spam — a series of events from one
+// cycle is a single message; (2) Telegram limit ~1 msg/s per chat — a burst
+// >1 got 429 without retry and was lost (18.08: of 5 paper STARTs, 1 arrived).
+// Cost: delay up to 15 min — acceptable in OBSERVE mode (a human
+// approves in Rabby anyway, nothing executes by itself).
 const tgQueue: string[] = [];
 const TG_FLUSH_MS = 15 * 60 * 1000;
-const TG_CHUNK = 3900; // twardy limit Telegrama: 4096 znaków/wiadomość
+const TG_CHUNK = 3900; // hard Telegram limit: 4096 chars/message
 
 async function telegramSendNow(text: string) {
   const t = process.env.TG_TOKEN, c = process.env.TG_CHAT;
@@ -391,7 +392,7 @@ async function telegramSendNow(text: string) {
   }
 }
 
-/** publiczny interfejs (używany wszędzie) — tylko dokłada do kolejki */
+/** public interface (used everywhere) — only appends to the queue */
 async function telegram(text: string) {
   tgQueue.push(text);
 }
@@ -399,7 +400,7 @@ async function telegram(text: string) {
 async function flushTelegram() {
   if (!tgQueue.length) return;
   const msgs = tgQueue.splice(0, tgQueue.length);
-  // sklejanie w paczki ≤TG_CHUNK bez cięcia pojedynczych wiadomości w pół
+  // joining into batches ≤TG_CHUNK without cutting individual messages in half
   const batches: string[] = [];
   let cur = '';
   for (const m of msgs) {
@@ -411,31 +412,31 @@ async function flushTelegram() {
     await telegramSendNow(b);
     if (batches.length > 1) await new Promise((r) => setTimeout(r, 1500)); // limit 1 msg/s
   }
-  log(`telegram: wysłano ${msgs.length} wiadomości w ${batches.length} paczce/paczkach`);
+  log(`telegram: sent ${msgs.length} messages in ${batches.length} batch(es)`);
 }
 
-// --- orientacja cen per pula ---
-// Dla pul quote:'USD' pole ethUsd = USD za ETH (jak dotąd). Dla quote:'WETH'
-// (np. cbBTC/WETH) ethUsd = USD za TOKEN BAZOWY (nie-WETH), liczony jako
-// (cena bazowego w WETH) × (ETH/USD z puli referencyjnej usdRefPoolId).
-/** USD za WETH dla danej puli (1 dla samej referencji nie ma sensu — to kurs) */
+// --- price orientation per pool ---
+// For quote:'USD' pools the ethUsd field = USD per ETH (as before). For quote:'WETH'
+// (e.g. cbBTC/WETH) ethUsd = USD per BASE TOKEN (non-WETH), computed as
+// (price of base in WETH) × (ETH/USD from the reference pool usdRefPoolId).
+/** USD per WETH for a given pool (1 for the reference itself makes no sense — it is the rate) */
 const refEthUsd = (p: BotPool): number | null => {
-  if ((p.quote ?? 'USD') === 'USD') return null; // nie dotyczy
+  if ((p.quote ?? 'USD') === 'USD') return null; // not applicable
   const ref = p.usdRefPoolId ? live[p.usdRefPoolId] : undefined;
   return ref && (BOT_POOLS.find((b) => b.id === p.usdRefPoolId)?.quote ?? 'USD') === 'USD' ? ref.ethUsd : null;
 };
-/** surowa cena human (token1/token0) → USD za token bazowy puli */
+/** raw human price (token1/token0) → USD per the pool's base token */
 const humanToBaseUsd = (p: BotPool, human: number): number | null => {
   if ((p.quote ?? 'USD') === 'USD') return p.ethIsToken0 ? human : 1 / human;
-  const inWeth = p.ethIsToken0 ? 1 / human : human; // WETH za token bazowy
+  const inWeth = p.ethIsToken0 ? 1 / human : human; // WETH per base token
   const ref = refEthUsd(p);
   return ref ? inWeth * ref : null;
 };
 
-// --- bezpiecznik trendu (ALGORITHM.md v1.1 §4) ---
-// EMA log-ceny WZGLĘDNEJ pary (HL 7d), sygnał DOWN gdy gap < −5%.
-// Powrót: 'aboveEma' (domyślny) — gap > 0; 'half' (cbBTC) — gap > −2.5%.
-// Stan persystowany (.bot/trend-state.json) — restart usługi nie zeruje EMA.
+// --- trend circuit breaker (ALGORITHM.md v1.1 §4) ---
+// EMA of the pair's RELATIVE log-price (HL 7d), DOWN signal when gap < −5%.
+// Re-entry: 'aboveEma' (default) — gap > 0; 'half' (cbBTC) — gap > −2.5%.
+// State persisted (.bot/trend-state.json) — a service restart does not reset the EMA.
 const TREND_STATE_PATH = path.join(DIR, 'trend-state.json');
 interface TrendState { ema: number; lastTs: number; down: boolean }
 const trend: Record<string, TrendState> = fs.existsSync(TREND_STATE_PATH)
@@ -446,18 +447,18 @@ const saveTrend = () => {
   fs.writeFileSync(TREND_STATE_PATH, JSON.stringify(trend, null, 2));
   lastTrendSaveMs = Date.now();
 };
-// Zapis okresowy (dławik 15 min) — bez niego EMA żyła tylko w pamięci
-// (zapis wyłącznie przy seedzie/flipie), więc każdy restart usługi cofał
-// kotwicę do ostatniego flipa (wykryte 19.08: lastTs=12.08 mimo 4 restartów).
+// Periodic save (15 min throttle) — without it the EMA lived only in memory
+// (save exclusively on seed/flip), so every service restart rolled the
+// anchor back to the last flip (detected 19.08: lastTs=12.08 despite 4 restarts).
 const TREND_SAVE_MS = 15 * 60 * 1000;
 const TREND_TAU_MS = (TREND.hlDays * 86400 * 1000) / Math.LN2;
 
-/** cena względna pary do detekcji trendu: dla quote USD = USD za bazowy;
- *  dla quote WETH = cena bazowego W WETH (bez szumu kursu ETH/USD) */
+/** relative price of the pair for trend detection: for quote USD = USD per base;
+ *  for quote WETH = price of base IN WETH (without the ETH/USD rate noise) */
 const trendPrice = (p: BotPool, human: number): number =>
   (p.quote ?? 'USD') === 'USD' ? (p.ethIsToken0 ? human : 1 / human) : (p.ethIsToken0 ? 1 / human : human);
 
-/** aktualizacja EMA + detekcja sygnału; zwraca gap w % (log) */
+/** EMA update + signal detection; returns the gap in % (log) */
 function updateTrend(p: BotPool, price: number, nowMs: number): number {
   const logP = Math.log(price);
   const st = trend[p.id];
@@ -479,60 +480,60 @@ function updateTrend(p: BotPool, price: number, nowMs: number): number {
     if (gap > backAt) st.down = false;
   }
   if (st.down !== wasDown) {
-    log(`trend ${p.id}: ${st.down ? '⛔ DOWN (gap ' + (gap * 100).toFixed(1) + '%)' : '✅ koniec sygnału (gap ' + (gap * 100).toFixed(1) + '%)'}`);
+    log(`trend ${p.id}: ${st.down ? '⛔ DOWN (gap ' + (gap * 100).toFixed(1) + '%)' : '✅ signal over (gap ' + (gap * 100).toFixed(1) + '%)'}`);
     saveTrend();
     if (st.down) proposeExitTrend(p, gap);
   }
   return gap * 100;
 }
 
-/** propozycja obrony dla każdej naszej pozycji w puli z sygnałem DOWN.
- *  Pule NIE-produktowe: jak dotąd — EXIT_TREND lub HEDGE-excess wg
+/** defence proposal for each of our positions in a pool with a DOWN signal.
+ *  NON-product pools: as before — EXIT_TREND or HEDGE-excess per
  *  pool.trendAction (ALGORITHM v1.2 §4).
- *  Pule PRODUKTOWE (productIdleWidthPct — hybryda FlatWide): decyzja
- *  Rafała 27.08 wieczór — sygnału NIE wyciszamy, ale przebrandowujemy na
- *  PROCEDURĘ AWARYJNĄ: DWIE propozycje obok siebie, obie emergency:true:
- *  (1) HEDGE delta-neutral (short PEŁNEJ ekspozycji nogi zmiennej, LP
- *  zostaje — odwracalny), (2) EXIT_TREND ("dane mówią: zwykle NIE
- *  podpisuj" — backtesty: exit na trendzie średnio pogarsza). Kolejność,
- *  kryteria i koszty: EMERGENCY.md. Niuans: sygnał DOWN na cbBTC/WETH
- *  mierzy cenę WZGLĘDNĄ — czujnikiem krachu USD dla OBU nóg jest sygnał
- *  na WETH/USDC. */
+ *  PRODUCT pools (productIdleWidthPct — FlatWide hybrid): Rafal's decision
+ *  27.08 evening — we do NOT mute the signal, but rebrand it as an
+ *  EMERGENCY PROCEDURE: TWO proposals side by side, both emergency:true:
+ *  (1) delta-neutral HEDGE (short of the FULL exposure of the volatile leg, LP
+ *  stays — reversible), (2) EXIT_TREND ("the data says: usually do NOT
+ *  sign" — backtests: exiting on a trend makes things worse on average). Order,
+ *  criteria and costs: EMERGENCY.md. Nuance: the DOWN signal on cbBTC/WETH
+ *  measures the RELATIVE price — the USD crash sensor for BOTH legs is the signal
+ *  on WETH/USDC. */
 function proposeExitTrend(pool: BotPool, gap: number) {
   const held = positions.filter((x) => x.poolId === pool.id);
   if (!held.length) return;
   const isProduct = !!pool.productIdleWidthPct;
-  const gapTxt = `cena ${(gap * 100).toFixed(1)}% pod EMA${TREND.hlDays}d (próg −${TREND.thresh * 100}%)`;
-  const backTxt = (pool.trendReentry ?? 'aboveEma') === 'aboveEma' ? 'powrocie ceny NAD EMA' : `gap > −${TREND.thresh * 50}%`;
+  const gapTxt = `price ${(gap * 100).toFixed(1)}% below EMA${TREND.hlDays}d (threshold −${TREND.thresh * 100}%)`;
+  const backTxt = (pool.trendReentry ?? 'aboveEma') === 'aboveEma' ? 'price returning ABOVE the EMA' : `gap > −${TREND.thresh * 50}%`;
   for (const pos of held) {
     const day = new Date().toISOString().slice(0, 10);
     const kinds: Array<'EXIT_TREND' | 'HEDGE'> = isProduct
-      ? ['HEDGE', 'EXIT_TREND'] // hedge PIERWSZY — preferowana (odwracalna) opcja awaryjna
+      ? ['HEDGE', 'EXIT_TREND'] // hedge FIRST — the preferred (reversible) emergency option
       : [(pool.trendAction ?? 'exit') === 'hedge' ? 'HEDGE' : 'EXIT_TREND'];
     let announced = false;
     for (const kind of kinds) {
-      // dedup PER KIND (produkt emituje dwie równoległe opcje)
+      // dedup PER KIND (the product emits two parallel options)
       const key = `trend-${kind === 'HEDGE' ? 'hedge-' : ''}${pool.id}-${pos.tokenId}-${day}`;
-      // FIX 11.09: odrzucona karta NIE wraca w tym samym dniu — dedup także po id
-      // (dotąd tylko po status==='open', więc każdy cykl po [Odrzuć] tworzył
-      // ją na nowo z TYM SAMYM id i słał Telegram; obserwacja Rafała 11.09)
+      // FIX 11.09: a dismissed card does NOT come back on the same day — dedup also by id
+      // (so far only by status==='open', so every cycle after [Dismiss] created
+      // it anew with THE SAME id and sent a Telegram; Rafal's observation 11.09)
       if (proposals.some((x) => x.id === key || (x.kind === kind && x.tokenId === pos.tokenId && x.status === 'open'))) continue;
       let prop: Proposal;
       if (kind === 'HEDGE') {
-        const isRelative = (pool.quote ?? 'USD') === 'WETH'; // cbBTC/WETH: sygnał względny
-        // sizing: produkt = delta-neutral (PEŁNA ekspozycja nogi zmiennej);
-        // nie-produkt = excess (nadwyżka ETH ponad 50% wartości, v1.2)
-        const P = live[pool.id]?.ethUsd ?? 0; // USD za token BAZOWY puli
+        const isRelative = (pool.quote ?? 'USD') === 'WETH'; // cbBTC/WETH: relative signal
+        // sizing: product = delta-neutral (FULL exposure of the volatile leg);
+        // non-product = excess (ETH surplus above 50% of value, v1.2)
+        const P = live[pool.id]?.ethUsd ?? 0; // USD per the pool's BASE token
         let sizeTok: number; let tokSym: string; let market: string;
         if (!isRelative) {
           const ethAmt = pool.ethIsToken0 ? pos.amount0 : pos.amount1;
           sizeTok = isProduct ? ethAmt : P > 0 ? Math.max(0, ethAmt - pos.valueUsd / 2 / P) : 0;
           tokSym = 'ETH'; market = 'ETH/USD';
         } else {
-          // sygnał = token bazowy (cbBTC) słabnie WZGLĘDEM WETH → neutralizacja
-          // przez short nogi BAZOWEJ na rynku BTC/USD (ręcznie na app.gmx.io —
-          // 1-podpisowy builder obsługuje dziś tylko ETH/USD)
-          sizeTok = pool.ethIsToken0 ? pos.amount1 : pos.amount0; // noga cbBTC
+          // signal = base token (cbBTC) weakening RELATIVE to WETH → neutralisation
+          // by shorting the BASE leg on the BTC/USD market (manually on app.gmx.io —
+          // the 1-signature builder handles only ETH/USD today)
+          sizeTok = pool.ethIsToken0 ? pos.amount1 : pos.amount0; // cbBTC leg
           tokSym = pool.ethIsToken0 ? pool.sym1 : pool.sym0; market = 'BTC/USD';
         }
         const notional = sizeTok * P;
@@ -543,8 +544,8 @@ function proposeExitTrend(pool: BotPool, gap: number) {
           hedgeSizeEth: tokSym === 'ETH' ? sizeTok : undefined, hedgeNotionalUsd: notional,
           emergency: isProduct || undefined,
           note: isProduct
-            ? `OPCJA AWARYJNA A (preferowana — odwracalna): ${gapTxt}. SHORT ${sizeTok.toFixed(4)} ${tokSym} (~$${notional.toFixed(0)}, delta-neutral pozycji) na GMX v2 ${market}${tokSym === 'ETH' ? ' — 1 podpis w kokpicie' : ' — ręcznie na app.gmx.io (builder 1-podpisowy obsługuje tylko ETH/USD)'}; LP ZOSTAJE i zbiera fees. Zamknij short po zgaśnięciu sygnału (${backTxt}). Koszt ~$0.5-1 + funding (hist. śr. +4.8%/r dla shorta). Kiedy podpisywać a kiedy NIE: EMERGENCY.md.${isRelative ? ' UWAGA: ten sygnał mierzy cenę WZGLĘDNĄ cbBTC/WETH — krach USD wykrywa sygnał na WETH/USDC.' : ''}`
-            : `Bezpiecznik v1.2 (hedge-excess): ${gapTxt}. Sugestia: SHORT ${sizeTok.toFixed(4)} ${tokSym} (~$${notional.toFixed(0)}) na GMX v2 (Arbitrum, app.gmx.io) — pozycja LP ZOSTAJE i zbiera fees. Zamknij short po zgaśnięciu sygnału (cena nad EMA). Fallback bez konta perp: zamknij pozycję do cash 50/50 (exit).`,
+            ? `EMERGENCY OPTION A (preferred — reversible): ${gapTxt}. SHORT ${sizeTok.toFixed(4)} ${tokSym} (~$${notional.toFixed(0)}, delta-neutral for the position) on GMX v2 ${market}${tokSym === 'ETH' ? ' — 1 signature in the cockpit' : ' — manually on app.gmx.io (the 1-signature builder handles only ETH/USD)'}; the LP STAYS and keeps collecting fees. Close the short once the signal is gone (${backTxt}). Cost ~$0.5-1 + funding (hist. avg +4.8%/yr for a short). When to sign and when NOT to: EMERGENCY.md.${isRelative ? ' NOTE: this signal measures the RELATIVE cbBTC/WETH price — a USD crash is detected by the signal on WETH/USDC.' : ''}`
+            : `Circuit breaker v1.2 (hedge-excess): ${gapTxt}. Suggestion: SHORT ${sizeTok.toFixed(4)} ${tokSym} (~$${notional.toFixed(0)}) on GMX v2 (Arbitrum, app.gmx.io) — the LP position STAYS and keeps collecting fees. Close the short once the signal is gone (price above the EMA). Fallback without a perp account: close the position to cash 50/50 (exit).`,
           status: 'open',
         };
       } else {
@@ -554,8 +555,8 @@ function proposeExitTrend(pool: BotPool, gap: number) {
           symbol: `${pool.sym0}-${pool.sym1}`,
           emergency: isProduct || undefined,
           note: isProduct
-            ? `OPCJA AWARYJNA B — dane mówią: zwykle NIE PODPISUJ. ${gapTxt}. Hybryda FlatWide ŚWIADOMIE trzyma betę (backtesty 26-27.08, 40+ przebiegów: exit na trendzie średnio POGARSZA wynik vs trzymanie; cash wygrywa tylko w silnych crashach, których nie znasz ex-ante). Zamknięcie do cash 50/50 tylko przy twardych kryteriach z EMERGENCY.md (krach systemowy, depeg, utrata zaufania do venue). Powrót po ${backTxt}. Preferowana alternatywa: opcja A (hedge, odwracalna).`
-            : `Bezpiecznik trendu (ALGORITHM v1.2 §4): ${gapTxt}. Sugestia: zamknij pozycję do cash 50/50; powrót po ${backTxt}.`,
+            ? `EMERGENCY OPTION B — the data says: usually do NOT SIGN. ${gapTxt}. The FlatWide hybrid DELIBERATELY holds beta (backtests 26-27.08, 40+ runs: exiting on a trend on average WORSENS the result vs holding; cash wins only in strong crashes, which you do not know ex-ante). Closing to cash 50/50 only under the hard criteria from EMERGENCY.md (systemic crash, depeg, loss of trust in the venue). Return after ${backTxt}. Preferred alternative: option A (hedge, reversible).`
+            : `Trend circuit breaker (ALGORITHM v1.2 §4): ${gapTxt}. Suggestion: close the position to cash 50/50; return after ${backTxt}.`,
           status: 'open',
         };
       }
@@ -563,13 +564,13 @@ function proposeExitTrend(pool: BotPool, gap: number) {
       saveProposals();
       if (!isProduct) {
         const msg = kind === 'HEDGE'
-          ? `🛡 HOMOS: HEDGE — ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Propozycja: short (szczegóły w kokpicie); LP zostaje. [tryb OBSERWUJ — nic nie wykonano]`
-          : `⛔ HOMOS: BEZPIECZNIK TRENDU — ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Propozycja: wyjdź do cash 50/50. [tryb OBSERWUJ — nic nie wykonano]`;
+          ? `🛡 HOMOS: HEDGE — ${pool.id}, position #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Proposal: short (details in the cockpit); LP stays. [OBSERVE mode — nothing executed]`
+          : `⛔ HOMOS: TREND CIRCUIT BREAKER — ${pool.id}, position #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Proposal: exit to cash 50/50. [OBSERVE mode — nothing executed]`;
         log(msg);
         telegram(msg);
       } else if (!announced) {
         announced = true;
-        const msg = `🚨 HOMOS: PROCEDURA AWARYJNA — sygnał DOWN na ${pool.id}, pozycja #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Dwie opcje w kokpicie: (A) hedge delta-neutral [preferowana, odwracalna] / (B) exit [zwykle NIE podpisuj]. Zajrzyj do EMERGENCY.md. [tryb OBSERWUJ — nic nie wykonano]`;
+        const msg = `🚨 HOMOS: EMERGENCY PROCEDURE — DOWN signal on ${pool.id}, position #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): ${gapTxt}. Two options in the cockpit: (A) delta-neutral hedge [preferred, reversible] / (B) exit [usually do NOT sign]. See EMERGENCY.md. [OBSERVE mode — nothing executed]`;
         log(msg);
         telegram(msg);
       }
@@ -577,14 +578,14 @@ function proposeExitTrend(pool: BotPool, gap: number) {
   }
 }
 
-// --- FLAT_ENTER / FLAT_EXIT (produkt FlatWide — decyzja Rafała 27-28.08) ---
-// Maszyna stanów per pula produktowa: |gap|<enterGap nieprzerwanie przez
-// confirmH godzin → flat POTWIERDZONY → propozycja zwężenia do k×σ
-// (FLAT_NARROW). Koniec flatu: |gap|>exitGap → propozycja powrotu do
-// szerokiego ±productIdleWidthPct (FLAT_WIDEN, alarm 24/7). Strefa środkowa
-// (enter..exit) NIE kończy potwierdzonego flatu (histereza jak w
-// backtest/flatwindows.ts). Stan persystowany — restart nie zeruje zegara
-// confirm (ta sama klasa fixu co trend-state 19.08).
+// --- FLAT_ENTER / FLAT_EXIT (FlatWide product — Rafal's decision 27-28.08) ---
+// State machine per product pool: |gap|<enterGap uninterrupted for
+// confirmH hours → flat CONFIRMED → proposal to narrow to k×σ
+// (FLAT_NARROW). End of flat: |gap|>exitGap → proposal to return to
+// wide ±productIdleWidthPct (FLAT_WIDEN, 24/7 alarm). The middle zone
+// (enter..exit) does NOT end a confirmed flat (hysteresis as in
+// backtest/flatwindows.ts). State persisted — a restart does not reset the
+// confirm clock (the same class of fix as trend-state 19.08).
 const FLAT_STATE_PATH = path.join(DIR, 'flat-state.json');
 interface FlatPoolState { flatSince: number | null; confirmed: boolean }
 const flat: Record<string, FlatPoolState> = fs.existsSync(FLAT_STATE_PATH)
@@ -592,13 +593,13 @@ const flat: Record<string, FlatPoolState> = fs.existsSync(FLAT_STATE_PATH)
   : {};
 const saveFlat = () => fs.writeFileSync(FLAT_STATE_PATH, JSON.stringify(flat, null, 2));
 
-/** połówkowa szerokość pozycji w % (geometrycznie: √(hi/lo)−1) */
+/** half-width of the position in % (geometrically: √(hi/lo)−1) */
 const posHalfWidthPct = (pos: { tickLower: number; tickUpper: number }): number =>
   (Math.sqrt(Math.pow(1.0001, pos.tickUpper - pos.tickLower)) - 1) * 100;
 const isNarrowPos = (p: BotPool, pos: { tickLower: number; tickUpper: number }): boolean =>
   p.productIdleWidthPct ? posHalfWidthPct(pos) < FLAT.narrowFrac * p.productIdleWidthPct : false;
 
-/** auto-zamknięcie otwartych propozycji danego rodzaju w puli (stale = błędne) */
+/** auto-close of open proposals of a given kind in a pool (stale = wrong) */
 function dismissOpenByKind(kind: Proposal['kind'], poolId: string, why: string) {
   let changed = false;
   for (const pr of proposals) {
@@ -606,23 +607,23 @@ function dismissOpenByKind(kind: Proposal['kind'], poolId: string, why: string) 
       pr.status = 'dismissed';
       pr.note = `${pr.note ? pr.note + ' · ' : ''}[auto: ${why}]`;
       changed = true;
-      log(`proposal ${pr.id}: zamknięta automatycznie — ${why}`);
+      log(`proposal ${pr.id}: closed automatically — ${why}`);
     }
   }
   if (changed) { saveProposals(); saveState(); }
 }
 
-/** aktualizacja detektora flatu (wołana z refreshPrices, co 60 s) */
+/** flat detector update (called from refreshPrices, every 60 s) */
 function updateFlat(p: BotPool, gapFrac: number, nowMs: number) {
-  if (!p.productIdleWidthPct) return; // tylko pule produktowe
+  if (!p.productIdleWidthPct) return; // product pools only
   const vol = live[p.id]?.stats?.volDaily;
   if (vol != null && vol < FLAT.minVolDaily) {
-    // guard LST/stable (lekcja wstETH/WETH 27.08): przy martwej zmienności
-    // "flat" to stan bazowy, nie sygnał — detektor wyłączony, stan zerowany
+    // LST/stable guard (wstETH/WETH lesson 27.08): with dead volatility
+    // "flat" is the base state, not a signal — detector disabled, state reset
     if (flat[p.id]?.flatSince != null || flat[p.id]?.confirmed) {
       flat[p.id] = { flatSince: null, confirmed: false };
       saveFlat();
-      log(`flat ${p.id}: vol ${(vol * 100).toFixed(2)}%/d < ${FLAT.minVolDaily * 100}%/d — detektor wyłączony (klasa LST/stable)`);
+      log(`flat ${p.id}: vol ${(vol * 100).toFixed(2)}%/d < ${FLAT.minVolDaily * 100}%/d — detector disabled (LST/stable class)`);
     }
     return;
   }
@@ -633,56 +634,56 @@ function updateFlat(p: BotPool, gapFrac: number, nowMs: number) {
       st.confirmed = false;
       st.flatSince = null;
       saveFlat();
-      const msg = `📉 HOMOS: FLAT ZAKOŃCZONY — ${p.id}, |gap| ${(abs * 100).toFixed(1)}% > ${FLAT.exitGap * 100}%. Jeśli pozycja jest wąska: wróć do szerokiego ±${p.productIdleWidthPct}% (propozycja w kokpicie). [tryb OBSERWUJ — nic nie wykonano]`;
+      const msg = `📉 HOMOS: FLAT ENDED — ${p.id}, |gap| ${(abs * 100).toFixed(1)}% > ${FLAT.exitGap * 100}%. If the position is narrow: return to wide ±${p.productIdleWidthPct}% (proposal in the cockpit). [OBSERVE mode — nothing executed]`;
       log(msg);
       telegram(msg);
-      dismissOpenByKind('FLAT_NARROW', p.id, 'flat zakończony (|gap|>exitGap)');
+      dismissOpenByKind('FLAT_NARROW', p.id, 'flat ended (|gap|>exitGap)');
       for (const pos of positions.filter((x) => x.poolId === p.id && isNarrowPos(p, x))) proposeFlatWiden(p, pos);
     }
-    // strefa enter..exit: potwierdzony flat TRWA (histereza)
+    // enter..exit zone: a confirmed flat CONTINUES (hysteresis)
   } else if (abs < FLAT.enterGap) {
     if (st.flatSince == null) {
       st.flatSince = nowMs;
       saveFlat();
-      log(`flat ${p.id}: zegar confirm startuje (gap ${(gapFrac * 100).toFixed(2)}%, próg ${FLAT.confirmH}h)`);
+      log(`flat ${p.id}: confirm clock starts (gap ${(gapFrac * 100).toFixed(2)}%, threshold ${FLAT.confirmH}h)`);
     } else if (nowMs - st.flatSince >= FLAT.confirmH * 3600e3) {
       st.confirmed = true;
       saveFlat();
-      const msg = `🎯 HOMOS: FLAT POTWIERDZONY — ${p.id} (|gap|<${FLAT.enterGap * 100}% nieprzerwanie ≥${FLAT.confirmH}h). Produkt FlatWide: pora rozważyć zwężenie do k×σ — propozycja w kokpicie przy najbliższym cyklu pozycji (≤5 min). [tryb OBSERWUJ — nic nie wykonano]`;
+      const msg = `🎯 HOMOS: FLAT CONFIRMED — ${p.id} (|gap|<${FLAT.enterGap * 100}% uninterrupted ≥${FLAT.confirmH}h). FlatWide product: time to consider narrowing to k×σ — proposal in the cockpit at the next positions cycle (≤5 min). [OBSERVE mode — nothing executed]`;
       log(msg);
       telegram(msg);
     }
   } else if (st.flatSince != null) {
-    log(`flat ${p.id}: zegar wyzerowany po ${((nowMs - st.flatSince) / 3600e3).toFixed(1)}h (gap ${(gapFrac * 100).toFixed(2)}%)`);
+    log(`flat ${p.id}: clock reset after ${((nowMs - st.flatSince) / 3600e3).toFixed(1)}h (gap ${(gapFrac * 100).toFixed(2)}%)`);
     st.flatSince = null;
     saveFlat();
   }
 }
 
-/** FLAT_NARROW: propozycja zwężenia szerokiej pozycji do k×σ w potwierdzonym flacie */
+/** FLAT_NARROW: proposal to narrow a wide position to k×σ in a confirmed flat */
 function proposeFlatNarrow(pool: BotPool, pos: WatchedPosition) {
   const st = flat[pool.id];
   const lv = live[pool.id];
   if (!st?.confirmed || !lv?.stats) return;
   if (proposals.some((x) => x.kind === 'FLAT_NARROW' && x.tokenId === pos.tokenId && x.status === 'open')) return;
-  // SZEROKOŚĆ ZWĘŻENIA (zmiana 29.08, uwaga Rafała): stała szerokość
-  // produktu zamiast k×σ×√7 z doradcy v1.2. Powód: horyzont 7 dni
-  // pochodzi ze strategii „zakres ma przeżyć tydzień bez rebalansu",
-  // a w hybrydzie pozycję i tak chroni FLAT_WIDEN przy |gap|>exitGap.
-  // Przy k×σ (dziś ±16%) sygnał wyjścia padał po 32% drogi do krawędzi
-  // pasma — dwie trzecie płynności leżałoby tam, gdzie cena nigdy nie
-  // dojdzie. Fallback na k×σ zostaje dla pul bez ustawionej szerokości.
+  // NARROWING WIDTH (change 29.08, Rafal's note): fixed product width
+  // instead of k×σ×√7 from advisor v1.2. Reason: the 7-day horizon
+  // comes from the strategy "the range should survive a week without a rebalance",
+  // while in the hybrid the position is protected anyway by FLAT_WIDEN at |gap|>exitGap.
+  // With k×σ (today ±16%) the exit signal fired after 32% of the way to the edge
+  // of the band — two thirds of the liquidity would sit where the price never
+  // gets. The k×σ fallback remains for pools without a configured width.
   const sug = pool.productNarrowWidthPct
     ? suggestFixedRange(lv.stats, pool.feeBps as any, pool.d0, pool.d1, pool.productNarrowWidthPct)
     : suggestRange(lv.stats, pool.feeBps as any, pool.d0, pool.d1, {
         ...ADVISOR_PARAMS, k: pool.advisorK ?? ADVISOR_PARAMS.k,
       });
   const zrodloSzerokosci = pool.productNarrowWidthPct
-    ? `stała szerokość produktu ±${pool.productNarrowWidthPct}% (${(pool.productNarrowWidthPct / (FLAT.exitGap * 100)).toFixed(1)}× próg wyjścia)`
+    ? `fixed product width ±${pool.productNarrowWidthPct}% (${(pool.productNarrowWidthPct / (FLAT.exitGap * 100)).toFixed(1)}× the exit threshold)`
     : `k×σ ±${sug.widthPct.toFixed(0)}% (k=${pool.advisorK ?? ADVISOR_PARAMS.k})`;
   const toUsd = (t: number) => tickToUsd(pool, t);
   const [usdLo, usdHi] = [toUsd(sug.tickLower), toUsd(sug.tickUpper)].sort((a, b) => a - b);
-  // EV zwężenia: przyrost fee z węższego pasma (skalowanie jak w assessPosition)
+  // EV of narrowing: fee gain from the narrower band (scaling as in assessPosition)
   const spacing = TICK_SPACING[pool.feeBps];
   const ticksNarrow = Math.max(sug.tickUpper - sug.tickLower, 2 * spacing);
   const ticksCur = Math.max(pos.tickUpper - pos.tickLower, 2 * spacing);
@@ -696,17 +697,17 @@ function proposeFlatNarrow(pool: BotPool, pos: WatchedPosition) {
     symbol: `${pool.sym0}-${pool.sym1}`,
     suggestedRange: { tickLower: sug.tickLower, tickUpper: sug.tickUpper, usdLo, usdHi },
     costUsd, paybackDays: payback,
-    note: `Produkt FlatWide: flat POTWIERDZONY (|gap|<${FLAT.enterGap * 100}% ≥${FLAT.confirmH}h) — zwężenie z ±${posHalfWidthPct(pos).toFixed(0)}% do ±${sug.widthPct.toFixed(0)}%: ${zrodloSzerokosci}. Dodatkowe fee ~$${extraDailyUsd.toFixed(2)}/d, koszt ~$${costUsd.toFixed(2)}, payback ~${payback?.toFixed(1) ?? '—'}d. E1: epizod musi potrwać ≥~${pool.id.includes('cbbtc') ? '5' : '2'}d, by zwężenie się opłaciło — mediana epizodów na tej puli za progiem. Powrót do szerokiego zaproponuję przy |gap|>${FLAT.exitGap * 100}%.`,
+    note: `FlatWide product: flat CONFIRMED (|gap|<${FLAT.enterGap * 100}% ≥${FLAT.confirmH}h) — narrowing from ±${posHalfWidthPct(pos).toFixed(0)}% to ±${sug.widthPct.toFixed(0)}%: ${zrodloSzerokosci}. Extra fee ~$${extraDailyUsd.toFixed(2)}/d, cost ~$${costUsd.toFixed(2)}, payback ~${payback?.toFixed(1) ?? '—'}d. E1: the episode must last ≥~${pool.id.includes('cbbtc') ? '5' : '2'}d for the narrowing to pay off — the median episode on this pool is past the threshold. I will propose the return to wide at |gap|>${FLAT.exitGap * 100}%.`,
     status: 'open',
   };
   proposals.push(prop);
   saveProposals();
-  const msg = `🎯 HOMOS: propozycja ZWĘŻENIA (flat) — ${pool.id} #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}) → zakres $${usdLo.toFixed(usdLo < 1 ? 4 : 0)}–$${usdHi.toFixed(usdHi < 1 ? 4 : 0)} (±${sug.widthPct.toFixed(0)}%), extra fee ~$${extraDailyUsd.toFixed(2)}/d, payback ~${payback?.toFixed(1) ?? '—'}d. [tryb OBSERWUJ — nic nie wykonano]`;
+  const msg = `🎯 HOMOS: NARROWING proposal (flat) — ${pool.id} #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}) → range $${usdLo.toFixed(usdLo < 1 ? 4 : 0)}–$${usdHi.toFixed(usdHi < 1 ? 4 : 0)} (±${sug.widthPct.toFixed(0)}%), extra fee ~$${extraDailyUsd.toFixed(2)}/d, payback ~${payback?.toFixed(1) ?? '—'}d. [OBSERVE mode — nothing executed]`;
   log(msg);
   telegram(msg);
 }
 
-/** FLAT_WIDEN: propozycja powrotu wąskiej pozycji do szerokiego ±idle po końcu flatu */
+/** FLAT_WIDEN: proposal to return a narrow position to wide ±idle after the end of a flat */
 function proposeFlatWiden(pool: BotPool, pos: WatchedPosition) {
   const lv = live[pool.id];
   if (!lv?.stats || !pool.productIdleWidthPct) return;
@@ -723,19 +724,19 @@ function proposeFlatWiden(pool: BotPool, pos: WatchedPosition) {
     symbol: `${pool.sym0}-${pool.sym1}`,
     suggestedRange: { tickLower: sug.tickLower, tickUpper: sug.tickUpper, usdLo, usdHi },
     costUsd, paybackDays: null,
-    note: `FLAT_EXIT: |gap| ${gapNow}% > ${FLAT.exitGap * 100}% — flat skończony, wąska pozycja łapie IL na trendzie. Powrót do postury idle: szeroki ±${pool.productIdleWidthPct}%. Koszt ~$${costUsd.toFixed(2)}. To propozycja OCHRONNA (alarm 24/7) — im dłużej wąsko na trendzie, tym większy koszt.`,
+    note: `FLAT_EXIT: |gap| ${gapNow}% > ${FLAT.exitGap * 100}% — flat over, a narrow position catches IL on a trend. Return to idle posture: wide ±${pool.productIdleWidthPct}%. Cost ~$${costUsd.toFixed(2)}. This is a PROTECTIVE proposal (24/7 alarm) — the longer narrow on a trend, the higher the cost.`,
     status: 'open',
   };
   proposals.push(prop);
   saveProposals();
-  const msg = `⚠️ HOMOS: propozycja ROZSZERZENIA (koniec flatu) — ${pool.id} #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): gap ${gapNow}% > ${FLAT.exitGap * 100}%, wróć do ±${pool.productIdleWidthPct}% ($${usdLo.toFixed(usdLo < 1 ? 4 : 0)}–$${usdHi.toFixed(usdHi < 1 ? 4 : 0)}). [tryb OBSERWUJ — nic nie wykonano]`;
+  const msg = `⚠️ HOMOS: WIDENING proposal (end of flat) — ${pool.id} #${pos.tokenId} ($${pos.valueUsd.toFixed(0)}): gap ${gapNow}% > ${FLAT.exitGap * 100}%, return to ±${pool.productIdleWidthPct}% ($${usdLo.toFixed(usdLo < 1 ? 4 : 0)}–$${usdHi.toFixed(usdHi < 1 ? 4 : 0)}). [OBSERVE mode — nothing executed]`;
   log(msg);
   telegram(msg);
 }
 
-// --- pętla cen (60s) ---
+// --- price loop (60s) ---
 async function refreshPrices() {
-  // pule USD najpierw — pule kwotowane w WETH potrzebują ich kursu jako referencji
+  // USD pools first — pools quoted in WETH need their rate as a reference
   const ordered = [...BOT_POOLS].sort((a, b) => ((a.quote ?? 'USD') === 'USD' ? 0 : 1) - ((b.quote ?? 'USD') === 'USD' ? 0 : 1));
   for (const p of ordered) {
     try {
@@ -744,7 +745,7 @@ async function refreshPrices() {
       const prev = live[p.id];
       const baseUsd = humanToBaseUsd(p, human);
       if (baseUsd === null) {
-        log(`price ${p.id}: brak kursu referencyjnego ${p.usdRefPoolId} — pomijam tick`);
+        log(`price ${p.id}: no reference rate ${p.usdRefPoolId} — skipping tick`);
         continue;
       }
       live[p.id] = {
@@ -758,7 +759,7 @@ async function refreshPrices() {
       };
       live[p.id].trendGapPct = updateTrend(p, trendPrice(p, human), Date.now());
       live[p.id].trendDown = trend[p.id]?.down ?? false;
-      // detektor flatu (produkt FlatWide) — ta sama EMA/gap co bezpiecznik trendu
+      // flat detector (FlatWide product) — the same EMA/gap as the trend circuit breaker
       try {
         updateFlat(p, (live[p.id].trendGapPct ?? 0) / 100, Date.now());
       } catch (e) {
@@ -773,7 +774,7 @@ async function refreshPrices() {
   saveState();
 }
 
-// --- pętla statystyk (15min) ---
+// --- statistics loop (15min) ---
 const HISTORY_PATH = path.join(DIR, 'history.ndjson');
 
 async function refreshStats() {
@@ -783,8 +784,8 @@ async function refreshStats() {
       const stats = computeStats(swaps, p.chainId, p.d0, p.d1, p.feeBps / 1_000_000, TICK_SPACING[p.feeBps]);
       if (live[p.id] && stats) {
         live[p.id].stats = stats;
-        // PRODUKT 27.08 (hybryda FlatWide): pula produktowa dostaje STAŁĄ
-        // szerokość ±N% (postura idle); inaczej k per pula (ALGORITHM v1.1)
+        // PRODUCT 27.08 (FlatWide hybrid): a product pool gets a FIXED
+        // width ±N% (idle posture); otherwise k per pool (ALGORITHM v1.1)
         live[p.id].suggestion = p.productIdleWidthPct
           ? suggestFixedRange(stats, p.feeBps as any, p.d0, p.d1, p.productIdleWidthPct)
           : suggestRange(stats, p.feeBps as any, p.d0, p.d1, {
@@ -792,7 +793,7 @@ async function refreshStats() {
             });
         log(`stats ${p.id}: vol=${(stats.volDaily * 100).toFixed(2)}%/d feeYield=${(stats.feeYieldDaily * 100).toFixed(3)}%/d swaps=${stats.swapsAnalyzed}`);
       }
-      // snapshot do historii (dashboard "Analiza obserwacji" w UI) — co cykl 15min
+      // snapshot to history (the "Observation analysis" dashboard in the UI) — every 15min cycle
       const lv = live[p.id];
       if (lv) {
         const toUsd = (t: number) => tickToUsd(p, t);
@@ -812,7 +813,7 @@ async function refreshStats() {
       log(`stats ${p.id} failed: ${String(e).slice(0, 120)}`);
     }
   }
-  // paper trading: wirtualny portfel wg ALGORITHM v1.2 (po odświeżeniu statystyk)
+  // paper trading: virtual portfolio per ALGORITHM v1.2 (after the statistics refresh)
   try {
     paperTick({
       log,
@@ -821,9 +822,9 @@ async function refreshStats() {
         const p = BOT_POOLS.find((b) => b.id === poolId);
         const lv = p ? live[poolId] : undefined;
         if (!p || !lv) return null;
-        // tick ze slot0 (60 s, refreshPrices) OSOBNO od stats: fix 25.08 —
-        // przy awarii RPC stats zamarzały i paper widział "poza zakresem"
-        // ze starego lastTick, mimo świeżej ceny w zakresie
+        // tick from slot0 (60 s, refreshPrices) SEPARATE from stats: fix 25.08 —
+        // on an RPC failure stats froze and paper saw "out of range"
+        // from the old lastTick despite a fresh in-range price
         return { stats: lv.stats, tick: typeof lv.tick === 'number' ? lv.tick : null, prices: legPrices(p), trendDown: lv.trendDown ?? false };
       },
     });
@@ -833,14 +834,14 @@ async function refreshStats() {
   saveState();
 }
 
-// --- KOSZTY GAZU (29.08, decyzja Rafała: gaz ma być kosztem POZYCJI, nie
-// tylko domniemaną częścią PnL). Źródło: receipty transakcji z księgi —
-// `gasUsed × effectiveGasPrice`, dokładne co do wei, więc kolumna „Koszty"
-// przestaje być pusta. Cache w .bot/tx-costs.json: receipt pobieramy RAZ
-// na transakcję (są niezmienne), więc backfill nie powtarza się co cykl.
-// Wycena: gaz trzymamy w ETH, na USD przeliczamy dopiero przy odczycie —
-// kurs z chwili zdarzenia mielibyśmy tylko z dodatkowego zapytania o blok,
-// a na Base gaz to centy (na mainnecie stare pyłki i tak są historią).
+// --- GAS COSTS (29.08, Rafal's decision: gas is to be a cost of the POSITION, not
+// merely an implied part of PnL). Source: transaction receipts from the ledger —
+// `gasUsed × effectiveGasPrice`, exact to the wei, so the "Costs" column
+// stops being empty. Cache in .bot/tx-costs.json: we fetch a receipt ONCE
+// per transaction (they are immutable), so the backfill does not repeat every cycle.
+// Pricing: we keep gas in ETH and convert to USD only on read —
+// the rate at the moment of the event would need an extra block query,
+// and on Base gas is cents (on mainnet the old dust is history anyway).
 const TX_COSTS_PATH = path.join(DIR, 'tx-costs.json');
 interface TxCost { chain: string; gasEth: number; block: number }
 const txCosts: Record<string, TxCost> = fs.existsSync(TX_COSTS_PATH)
@@ -848,16 +849,16 @@ const txCosts: Record<string, TxCost> = fs.existsSync(TX_COSTS_PATH)
   : {};
 const saveTxCosts = () => fs.writeFileSync(TX_COSTS_PATH, JSON.stringify(txCosts, null, 2));
 
-/** Dociąga receipty dla transakcji z księgi, których jeszcze nie wyceniliśmy.
- *  Limit na cykl — backfill starych pyłków nie może zjeść pętli pozycji. */
+/** Fetches receipts for ledger transactions we have not priced yet.
+ *  Limit per cycle — backfill of old dust must not eat the positions loop. */
 async function refreshTxCosts(maxPerCycle = 25) {
   let added = 0;
   let failed = 0;
-  // KOLEJNOŚĆ MA ZNACZENIE (fix 29.08 po zgłoszeniu CC-Win: `costsUsd`
-  // null mimo działającego backfillu): księga jest posortowana od
-  // najstarszych, a najstarsze to pyłki z mainnetu sprzed ~519 dni —
-  // przy 25 tx na cykl nasze dwie nogi doczekałyby się receiptów dopiero
-  // po wielu cyklach. Transakcje ŻYWYCH pozycji idą więc pierwsze.
+  // ORDER MATTERS (fix 29.08 after the CC-Win report: `costsUsd`
+  // null despite a working backfill): the ledger is sorted from the
+  // oldest, and the oldest is mainnet dust from ~519 days ago —
+  // at 25 tx per cycle our two legs would get their receipts only
+  // after many cycles. Transactions of LIVE positions therefore go first.
   const liveIds = new Set(positions.map((p) => p.tokenId));
   const all = readLedger();
   const queue = liveIds.size
@@ -866,56 +867,56 @@ async function refreshTxCosts(maxPerCycle = 25) {
   for (const e of queue) {
     if (added >= maxPerCycle) break;
     if (txCosts[e.txHash]) continue;
-    const client = clients[e.chain];
+    const client = clients[e.chain as keyof typeof clients];
     if (!client) continue;
     try {
       const r = await client.getTransactionReceipt({ hash: e.txHash as `0x${string}` });
-      const wei = (r.gasUsed ?? 0n) * (r.effectiveGasPrice ?? 0n);
+      const wei = BigInt(r.gasUsed ?? 0n) * BigInt(r.effectiveGasPrice ?? 0n);
       txCosts[e.txHash] = { chain: e.chain, gasEth: +formatUnits(wei, 18), block: Number(r.blockNumber) };
       added++;
     } catch {
-      failed++; // brak receiptu na tym RPC (pruning/limit) — spróbujemy w kolejnym cyklu
+      failed++; // no receipt on this RPC (pruning/limit) — we will try in the next cycle
     }
   }
   if (added) {
     saveTxCosts();
-    log(`koszty gazu: +${added} transakcji (razem ${Object.keys(txCosts).length}${failed ? `, nieudane ${failed}` : ''})`);
+    log(`gas costs: +${added} transactions (total ${Object.keys(txCosts).length}${failed ? `, failed ${failed}` : ''})`);
   }
 }
 
-/** USD za natywny ETH — do wyceny gazu (ta sama zasada co refreshGas:
- *  kurs z pierwszej żywej puli kwotowanej w USD, bez dodatkowego zapytania) */
+/** USD per native ETH — for gas pricing (the same rule as refreshGas:
+ *  rate from the first live pool quoted in USD, without an extra query) */
 const nativeEthUsd = (): number | null =>
   BOT_POOLS.filter((p) => (p.quote ?? 'USD') === 'USD')
     .map((p) => live[p.id]?.ethUsd)
     .find((v): v is number => typeof v === 'number' && v > 0) ?? null;
 
-// --- BILANS TRANSZY (29.08). Panel kokpitu mierzy jakość STRATEGII (PnL od
-// kotwic, vs HODL) i taki ma zostać — porównywalny z walkforwardem. Ta
-// sekcja mierzy co innego: ile z WPŁACONYCH USDC realnie dziś jest.
-// Różnica między nimi to bufor w portfelu (poza pozycjami) + jednorazowe
-// koszty wejścia (swapy, poślizg, gaz mintów) — do 29.08 nikt tego nie
-// pilnował, stąd wrażenie „matematyka się nie zgadza".
+// --- TRANCHE BALANCE (29.08). The cockpit panel measures the quality of the STRATEGY (PnL from
+// anchors, vs HODL) and is to stay that way — comparable with the walk-forward. This
+// section measures something else: how much of the DEPOSITED USDC really exists today.
+// The difference between them is the buffer in the wallet (outside positions) + one-off
+// entry costs (swaps, slippage, mint gas) — until 29.08 nobody
+// tracked this, hence the impression "the math does not add up".
 interface TrancheState {
   label: string; depositedUsd: number; startedAt: string;
   lpUsd: number; walletUsd: number | null; totalUsd: number | null;
   diffUsd: number | null; diffPct: number | null;
   marketPnlUsd: number | null; residualUsd: number | null; gasUsd: number | null;
-  /** rozbicie „reszty" (29.08, po pierwszym pomiarze): koszty wejścia są
-   *  STAŁE, beta bufora pływa z ceną — bez tego podziału reszta ruszałaby
-   *  się z rynkiem i przestała być testem poprawności księgowania. */
+  /** breakdown of the "residual" (29.08, after the first measurement): entry costs are
+   *  FIXED, the buffer's beta floats with price — without this split the residual would
+   *  move with the market and stop being a test of accounting correctness. */
   entryCostUsd: number | null; bufferBetaUsd: number | null;
-  /** skład portfela per token — żeby dało się AUDYTOWAĆ, co bot wliczył
-   *  (pierwszy pomiar dał $226 zamiast szacowanych $150; bez rozbicia nie
-   *  wiadomo, czy to bufor transzy, czy stary ETH na gaz spoza niej) */
+  /** wallet composition per token — so it is possible to AUDIT what the bot counted
+   *  (the first measurement gave $226 instead of the estimated $150; without the breakdown
+   *  you cannot tell whether it is the tranche buffer or old ETH for gas from outside it) */
   walletParts: Array<{ sym: string; amount: number; usd: number }> | null;
   updatedAt: string;
 }
 let trancheLive: TrancheState | null = null;
-// kotwica bufora: kwoty w portfelu nie zmieniają się bez swapów, więc
-// wartość z pierwszego udanego odczytu pozwala oddzielić betę bufora od
-// jednorazowych kosztów wejścia. UCZCIWOŚĆ: kotwica powstaje DZIŚ, więc
-// beta bufora z 27–29.08 zostaje po stronie entryCostUsd.
+// buffer anchor: wallet amounts do not change without swaps, so the
+// value from the first successful read lets us separate the buffer's beta from
+// the one-off entry costs. HONESTY: the anchor is created TODAY, so
+// the buffer's beta from 27–29.08 stays on the entryCostUsd side.
 const TRANCHE_ANCHOR_PATH = path.join(DIR, 'tranche-anchor.json');
 interface TrancheAnchor { anchoredAt: string; walletUsd: number }
 let trancheAnchor: TrancheAnchor | null = fs.existsSync(TRANCHE_ANCHOR_PATH)
@@ -925,13 +926,13 @@ const ERC20_ABI = [
   { name: 'balanceOf', type: 'function', stateMutability: 'view', inputs: [{ name: 'a', type: 'address' }], outputs: [{ name: '', type: 'uint256' }] },
 ] as const;
 
-/** Wartość tokenów transzy leżących w PORTFELU (poza pozycjami LP) —
- *  bez tego bilans transzy pokazywałby bufor jako stratę. */
+/** Value of the tranche's tokens sitting in the WALLET (outside LP positions) —
+ *  without it the tranche balance would show the buffer as a loss. */
 async function walletValueUsd(): Promise<{ usd: number; parts: Array<{ sym: string; amount: number; usd: number }> } | null> {
   const pools = BOT_POOLS.filter((p) => p.chain === TRANCHE.chain && p.productIdleWidthPct && live[p.id]);
   if (!pools.length) return null;
   const client = clients[TRANCHE.chain];
-  // cena USD per ADRES tokenu — ta sama logika co wycena pozycji
+  // USD price per token ADDRESS — the same logic as position pricing
   const priceByAddr = new Map<string, number>();
   const decByAddr = new Map<string, number>();
   const symByAddr = new Map<string, string>();
@@ -957,31 +958,31 @@ async function walletValueUsd(): Promise<{ usd: number; parts: Array<{ sym: stri
       sum += usd;
       if (amount > 0) parts.push({ sym: symByAddr.get(addr) ?? addr.slice(0, 8), amount: +amount.toFixed(8), usd: +usd.toFixed(2) });
     }
-    // natywny ETH na gaz też jest częścią transzy (kupiony za USDC)
+    // native ETH for gas is also part of the tranche (bought with USDC)
     const eth = nativeEthUsd();
     if (eth) {
       const amount = parseFloat(formatUnits(await client.getBalance({ address: WATCH_ADDRESS as `0x${string}` }), 18));
       sum += amount * eth;
-      if (amount > 0) parts.push({ sym: 'ETH (natywny)', amount: +amount.toFixed(8), usd: +(amount * eth).toFixed(2) });
+      if (amount > 0) parts.push({ sym: 'ETH (native)', amount: +amount.toFixed(8), usd: +(amount * eth).toFixed(2) });
     }
     return { usd: +sum.toFixed(2), parts: parts.sort((a, b) => b.usd - a.usd) };
   } catch (e) {
-    log(`portfel transzy: ${String(e).slice(0, 120)}`);
+    log(`tranche wallet: ${String(e).slice(0, 120)}`);
     return null;
   }
 }
 
-// --- pętla pozycji (5min) ---
-/** Agregaty księgi per chain:tokenId dla ŻYWYCH pozycji (PARTIA 14).
- *  fees = COLLECT − DECREASE (obie strony null-guarded: brak metadanych
- *  albo usd:null w którymkolwiek wpisie → null, nie zgadujemy).
- *  rebalances = liczba zdarzeń DECREASE (zwężenie/rebalans/partial close). */
+// --- positions loop (5min) ---
+/** Ledger aggregates per chain:tokenId for LIVE positions (BATCH 14).
+ *  fees = COLLECT − DECREASE (both sides null-guarded: missing metadata
+ *  or usd:null in any entry → null, we do not guess).
+ *  rebalances = number of DECREASE events (narrowing/rebalance/partial close). */
 function ledgerAggregates(): Map<string, { feesUsd: number | null; rebalances: number; gasEth: number | null }> {
   const map = new Map<string, { feesUsd: number | null; rebalances: number; gasEth: number | null }>();
   try {
     const byToken = new Map<string, LedgerEntry[]>();
-    // txHash → ile RÓŻNYCH pozycji dotknęła ta transakcja: gaz dzielimy po
-    // równo, żeby jeden tx obsługujący dwie nogi nie policzył się podwójnie
+    // txHash → how many DIFFERENT positions this transaction touched: gas is split
+    // evenly, so that one tx serving two legs is not counted twice
     const tokensPerTx = new Map<string, Set<string>>();
     for (const e of readLedger()) {
       const k = `${e.chain}:${e.tokenId}`;
@@ -1000,8 +1001,8 @@ function ledgerAggregates(): Map<string, { feesUsd: number | null; rebalances: n
       };
       const col = sumUsd('COLLECT');
       const dec = sumUsd('DECREASE');
-      // gaz: suma po UNIKALNYCH txHash tej pozycji, z podziałem gdy tx
-      // dotyczył kilku pozycji; null gdy żaden receipt jeszcze nie pobrany
+      // gas: sum over UNIQUE txHash of this position, split when the tx
+      // concerned several positions; null when no receipt fetched yet
       let gasEth: number | null = null;
       for (const h of new Set(evs.map((e) => e.txHash))) {
         const c = txCosts[h];
@@ -1022,7 +1023,7 @@ function ledgerAggregates(): Map<string, { feesUsd: number | null; rebalances: n
 
 async function refreshPositions() {
   const found: WatchedPosition[] = [];
-  await refreshTxCosts(); // receipty → gaz per transakcja (kolumna „Koszty")
+  await refreshTxCosts(); // receipts → gas per transaction (the "Costs" column)
   const ledgerAgg = ledgerAggregates();
   const ethUsdForGas = nativeEthUsd();
   for (const chainId of [...new Set(BOT_POOLS.map((p) => p.chainId))]) {
@@ -1036,9 +1037,9 @@ async function refreshPositions() {
         const pos = (await client.readContract({ address: pm, abi: PM_ABI, functionName: 'positions', args: [tokenId] })) as readonly [bigint, string, string, string, number, number, number, bigint, bigint, bigint, bigint, bigint];
         const [, , t0, t1, fee, lo, hi, L] = pos;
         if (L === 0n) continue;
-        // dopasowanie po ADRESACH tokenów gdy pula ma t0/t1 w konfiguracji
-        // (jednoznaczne przy wielu parach na tym samym tierze — np. cbBTC/WETH
-        // 0.05% i USDC/WETH 0.05% na Base); fallback: chain+fee jak dotąd.
+        // matching by token ADDRESSES when the pool has t0/t1 in the configuration
+        // (unambiguous with multiple pairs on the same tier — e.g. cbBTC/WETH
+        // 0.05% and USDC/WETH 0.05% on Base); fallback: chain+fee as before.
         const eq = (a: string, b?: string) => !!b && a.toLowerCase() === b.toLowerCase();
         const match =
           BOT_POOLS.find((p) => p.chainId === chainId && p.feeBps === Number(fee) && eq(t0, p.t0) && eq(t1, p.t1)) ??
@@ -1048,8 +1049,8 @@ async function refreshPositions() {
         const { amount0, amount1 } = getAmountsForLiquidity(BigInt(lv.sqrtPriceX96), Number(lo), Number(hi), L);
         const a0 = parseFloat(formatUnits(amount0, match.d0));
         const a1 = parseFloat(formatUnits(amount1, match.d1));
-        // wycena USD: ethUsd = USD za token bazowy (dla quote:'WETH' to np. cbBTC);
-        // druga noga: USD-stable = 1, WETH = kurs z puli referencyjnej.
+        // USD pricing: ethUsd = USD per base token (for quote:'WETH' that is e.g. cbBTC);
+        // the other leg: USD-stable = 1, WETH = rate from the reference pool.
         let px0: number, px1: number;
         if ((match.quote ?? 'USD') === 'USD') {
           px0 = match.ethIsToken0 ? lv.ethUsd : 1;
@@ -1060,20 +1061,20 @@ async function refreshPositions() {
           px1 = match.ethIsToken0 ? lv.ethUsd : ref;
         }
         const valueUsd = a0 * px0 + a1 * px1;
-        let advice = 'BRAK_DANYCH';
+        let advice = 'BRAK_DANYCH'; // data contract — enum-like `advice` value written to .bot/state.json (= NO_DATA), kept unchanged
         let payback: number | null = null;
         if (lv.stats) {
           const a = assessPosition(
             { tickLower: Number(lo), tickUpper: Number(hi), valueUsd },
             lv.stats, chainId, match.feeBps as any, match.feeBps / 1_000_000, match.d0, match.d1,
-            ADVISOR_PARAMS, gasUsdFor(match.chain) // żywy gaz (26.08) zamiast stałej $8
+            ADVISOR_PARAMS, gasUsdFor(match.chain) // live gas (26.08) instead of the $8 constant
           );
           advice = a.action;
           payback = a.paybackDays;
           if (a.action === 'REBALANCE') maybePropose(tokenId.toString(), match, a, valueUsd);
         }
-        // fee narosłe (nieodebrane) — static collect, best-effort: błąd RPC
-        // zostawia null (raport pokaże "—"), nie wywala cyklu pozycji.
+        // accrued (uncollected) fees — static collect, best-effort: an RPC error
+        // leaves null (the report will show "—"), does not crash the positions cycle.
         let feesUsd: number | null = null;
         try {
           const { result } = await client.simulateContract({
@@ -1098,10 +1099,10 @@ async function refreshPositions() {
           advice, paybackDays: payback,
           collectedFeesUsd: la?.feesUsd ?? null,
           feesUsd,
-          // KOSZTY = gaz transakcji tej pozycji (mint/zwiększenie/zwężenie/
-          // collect) z receiptów. Koszty swapów wejściowych NIE wchodzą tu
-          // świadomie (decyzja Rafała 29.08) — nie należą do żadnej nogi,
-          // liczy je bilans transzy.
+          // COSTS = gas of this position's transactions (mint/increase/narrowing/
+          // collect) from receipts. Entry swap costs deliberately do NOT go here
+          // (Rafal's decision 29.08) — they belong to no leg,
+          // the tranche balance counts them.
           costsUsd: la?.gasEth != null && ethUsdForGas ? +(la.gasEth * ethUsdForGas).toFixed(2) : null,
           rebalances: la ? la.rebalances : null,
           posture: match.productIdleWidthPct
@@ -1109,13 +1110,13 @@ async function refreshPositions() {
             : null,
         });
 
-        // próbka equity/HODL realnej pozycji (wzorzec paper-history)
+        // equity/HODL sample of the real position (paper-history pattern)
         try {
           const id = tokenId.toString();
           if (!posHodl[id]) {
             posHodl[id] = { a0, a1, poolId: match.id, anchoredAt: new Date().toISOString() };
             savePosHodl();
-            log(`positions: kotwica HODL dla #${id} (${match.id}): ${a0.toFixed(6)} + ${a1.toFixed(6)}`);
+            log(`positions: HODL anchor for #${id} (${match.id}): ${a0.toFixed(6)} + ${a1.toFixed(6)}`);
           }
           const anchor = posHodl[id];
           const hodlUsd = anchor.a0 * px0 + anchor.a1 * px1;
@@ -1140,11 +1141,11 @@ async function refreshPositions() {
   }
   positions = found;
 
-  // BILANS TRANSZY (29.08) — druga, niezależna miara: ile z wpłaconych USDC
-  // realnie dziś jest. Rozbicie: różnica = ruch rynku na LP (PnL od kotwic)
-  // + RESZTA, gdzie reszta ≈ jednorazowe koszty wejścia (swapy/poślizg/gaz
-  // mintów) plus beta bufora w portfelu. Reszta powinna być mniej więcej
-  // STAŁA — jej dryf w czasie oznacza, że coś w księgowaniu się rozjeżdża.
+  // TRANCHE BALANCE (29.08) — a second, independent measure: how much of the deposited USDC
+  // really exists today. Breakdown: difference = market move on the LP (PnL from anchors)
+  // + RESIDUAL, where residual ≈ one-off entry costs (swaps/slippage/mint
+  // gas) plus the buffer's beta in the wallet. The residual should be roughly
+  // CONSTANT — its drift over time means something in the accounting is diverging.
   try {
     const prodPositions = found.filter((p) => p.posture !== null);
     const lpUsd = +prodPositions.reduce((s, p) => s + p.valueUsd, 0).toFixed(2);
@@ -1154,23 +1155,23 @@ async function refreshPositions() {
     if (walletUsd !== null && !trancheAnchor) {
       trancheAnchor = { anchoredAt: new Date().toISOString(), walletUsd };
       fs.writeFileSync(TRANCHE_ANCHOR_PATH, JSON.stringify(trancheAnchor, null, 2));
-      log(`transza: kotwica bufora zapisana ($${walletUsd.toFixed(2)})`);
+      log(`tranche: buffer anchor saved ($${walletUsd.toFixed(2)})`);
     }
-    // UWAGA na pułapkę (złapana przy pisaniu): kotwica wyceniona DZISIEJSZYMI
-    // cenami daje „vs HODL" (~$0), a nie ruch rynku. Ruch rynku = wartość
-    // dziś − wartość w CHWILI zakotwiczenia, czyli hodlUsd PIERWSZEJ próbki
-    // positions-history (ta sama konwencja co „PnL od kotwicy" w raporcie/UI).
+    // BEWARE of the trap (caught while writing): an anchor priced at TODAY'S
+    // prices gives "vs HODL" (~$0), not the market move. Market move = value
+    // today − value at the MOMENT of anchoring, i.e. hodlUsd of the FIRST
+    // positions-history sample (the same convention as "PnL from anchor" in the report/UI).
     const firstAnchorUsd = new Map<string, number>();
-    // FIX 01.09 (Fable, znalezisko z porannego raportu): rebalans
-    // #5887690→#5908083 sprawił, że „koszty wejścia (stałe)" skoczyły
-    // −$8.58→−$76.02. Mechanizm: marketPnl liczył TYLKO otwarte pozycje,
-    // więc zrealizowany ruch rynku ZAMKNIĘTEJ pozycji (−$66 bety starej
-    // nogi cbBTC z 27–31.08) wypadał z „ruchu rynku" i lądował w
-    // resztowych „kosztach wejścia". Naprawa: dla zamkniętych pozycji
-    // produktowych doliczamy (ostatnia próbka − pierwsza kotwica) z
-    // positions-history. Hedge (poolId gmx-*) odfiltrowany przez zbiór
-    // pul produktowych. Koszt swapa/poślizgu rundy NADAL zostaje w
-    // kosztach wejścia (to prawdziwy koszt, nie ruch rynku).
+    // FIX 01.09 (Fable, finding from the morning report): the rebalance
+    // #5887690→#5908083 made "entry costs (fixed)" jump
+    // −$8.58→−$76.02. Mechanism: marketPnl counted ONLY open positions,
+    // so the realised market move of the CLOSED position (−$66 of beta of the old
+    // cbBTC leg from 27–31.08) dropped out of the "market move" and landed in
+    // the residual "entry costs". Fix: for closed product positions
+    // we add (last sample − first anchor) from
+    // positions-history. The hedge (poolId gmx-*) is filtered out by the set of
+    // product pools. The round's swap/slippage cost STILL stays in
+    // entry costs (that is a real cost, not a market move).
     const lastSample = new Map<string, { poolId: string; valueUsd: number }>();
     try {
       for (const lineRaw of fs.readFileSync(POS_HIST_PATH, 'utf8').trimEnd().split('\n')) {
@@ -1178,14 +1179,14 @@ async function refreshPositions() {
         if (!firstAnchorUsd.has(r.tokenId) && typeof r.hodlUsd === 'number') firstAnchorUsd.set(r.tokenId, r.hodlUsd);
         if (typeof r.valueUsd === 'number') lastSample.set(r.tokenId, { poolId: r.poolId, valueUsd: r.valueUsd });
       }
-    } catch { /* brak historii (świeży start) → marketPnl zostanie null */ }
+    } catch { /* no history (fresh start) → marketPnl stays null */ }
     let marketPnl: number | null = null;
     for (const p of prodPositions) {
       const anchorUsd = firstAnchorUsd.get(p.tokenId);
       if (anchorUsd === undefined) continue;
       marketPnl = (marketPnl ?? 0) + (p.valueUsd - anchorUsd);
     }
-    // zamknięte pozycje produktowe (zrealizowany ruch rynku)
+    // closed product positions (realised market move)
     const productPoolIds = new Set(BOT_POOLS.filter((p) => p.productIdleWidthPct).map((p) => p.id));
     const openIds = new Set(prodPositions.map((p) => p.tokenId));
     for (const [id, rec] of Array.from(lastSample.entries())) {
@@ -1204,44 +1205,44 @@ async function refreshPositions() {
       marketPnlUsd: marketPnl === null ? null : +marketPnl.toFixed(2),
       residualUsd: diffUsd === null || marketPnl === null ? null : +(diffUsd - marketPnl).toFixed(2),
       gasUsd: ethUsdForGas ? +(gasEthTotal * ethUsdForGas).toFixed(2) : null,
-      entryCostUsd: null, bufferBetaUsd: null, // wypełniane niżej, gdy jest kotwica
+      entryCostUsd: null, bufferBetaUsd: null, // filled in below, when there is an anchor
       walletParts: wallet?.parts ?? null,
       updatedAt: new Date().toISOString(),
     };
-    // rozbicie „reszty": beta bufora (pływa z ceną) vs koszty wejścia (stałe)
+    // breakdown of the "residual": buffer beta (floats with price) vs entry costs (fixed)
     if (trancheLive.residualUsd !== null && walletUsd !== null && trancheAnchor) {
       trancheLive.bufferBetaUsd = +(walletUsd - trancheAnchor.walletUsd).toFixed(2);
       trancheLive.entryCostUsd = +(trancheLive.residualUsd - trancheLive.bufferBetaUsd).toFixed(2);
     }
   } catch (e) {
-    log(`bilans transzy: ${String(e).slice(0, 140)}`);
+    log(`tranche balance: ${String(e).slice(0, 140)}`);
   }
 
-  // PRODUKT 27.08 (rozstrzygnięcie Rafała po wejściu #5886957): propozycja
-  // OPEN znika automatycznie, gdy w tej puli JEST już nasza pozycja —
-  // wisząca "otwórz" po wejściu to zaproszenie do podwójnego wejścia.
-  // Kolejną pozycję w tej samej puli proponuje selektor (nowa propozycja
-  // następnego dnia, jeśli zasadna) albo otwiera się ręcznie.
+  // PRODUCT 27.08 (Rafal's ruling after entering #5886957): the OPEN proposal
+  // disappears automatically when we ALREADY have a position in this pool —
+  // a hanging "open" after entry is an invitation to a double entry.
+  // Another position in the same pool is proposed by the selector (a new proposal
+  // the next day, if justified) or opened manually.
   try {
     const heldPools = new Set(found.map((x) => x.poolId).filter(Boolean));
     let autoClosed = 0;
     for (const pr of proposals) {
       if (pr.status === 'open' && pr.kind === 'OPEN' && pr.poolId && heldPools.has(pr.poolId)) {
         pr.status = 'dismissed';
-        pr.note = `${pr.note ? pr.note + ' · ' : ''}zamknięta automatycznie — pozycja w tej puli już otwarta`;
+        pr.note = `${pr.note ? pr.note + ' · ' : ''}closed automatically — position in this pool already open`;
         autoClosed++;
-        log(`proposal ${pr.id}: zamknięta automatycznie — pozycja w ${pr.poolId} już otwarta`);
+        log(`proposal ${pr.id}: closed automatically — position in ${pr.poolId} already open`);
       }
-      // sprzątanie po v1.2 (29.08): REBALANCE z doradcy na puli PRODUKTOWEJ
-      // nie ma prawa wisieć — szerokością rządzi cykl FLAT_*. Sam guard w
-      // maybePropose blokuje tylko NOWE; te zapisane w proposals.json przed
-      // fixem przeżyłyby restart (klasa incydentu z 27.08).
+      // cleanup after v1.2 (29.08): an advisor REBALANCE on a PRODUCT pool
+      // has no right to hang — width is governed by the FLAT_* cycle. The guard in
+      // maybePropose alone blocks only NEW ones; those saved in proposals.json before
+      // the fix would survive a restart (the incident class of 27.08).
       if (pr.status === 'open' && pr.kind === 'REBALANCE' && pr.poolId &&
           BOT_POOLS.find((b) => b.id === pr.poolId)?.productIdleWidthPct) {
         pr.status = 'dismissed';
-        pr.note = `${pr.note ? pr.note + ' · ' : ''}zamknięta automatycznie — pula produktowa, zwężaniem rządzi cykl FLAT_NARROW/FLAT_WIDEN`;
+        pr.note = `${pr.note ? pr.note + ' · ' : ''}closed automatically — product pool, narrowing is governed by the FLAT_NARROW/FLAT_WIDEN cycle`;
         autoClosed++;
-        log(`proposal ${pr.id}: REBALANCE odrzucony — ${pr.poolId} jest pulą produktową (hybryda FlatWide)`);
+        log(`proposal ${pr.id}: REBALANCE dismissed — ${pr.poolId} is a product pool (FlatWide hybrid)`);
       }
     }
     if (autoClosed) saveProposals();
@@ -1249,10 +1250,10 @@ async function refreshPositions() {
     log(`auto-close OPEN: ${String(e).slice(0, 100)}`);
   }
 
-  // --- produkt FlatWide: propozycje zwężenia/rozszerzenia wg stanu flatu ---
-  // (transition-only w updateFlat by ominął pozycje otwarte/wykryte PO
-  // przejściu i restart w trakcie epizodu — ten sweep domyka oba przypadki;
-  // dedup w propose* gwarantuje brak dubli)
+  // --- FlatWide product: narrowing/widening proposals per flat state ---
+  // (transition-only in updateFlat would miss positions opened/detected AFTER
+  // the transition and a restart mid-episode — this sweep closes both cases;
+  // dedup in propose* guarantees no duplicates)
   try {
     for (const p of BOT_POOLS) {
       if (!p.productIdleWidthPct) continue;
@@ -1265,15 +1266,15 @@ async function refreshPositions() {
         if (!st?.confirmed && narrow && Math.abs((live[p.id]?.trendGapPct ?? 0) / 100) > FLAT.exitGap)
           proposeFlatWiden(p, pos);
       }
-      // sprzątanie po ręcznym podpisie: propozycja zrealizowana = zamknij
-      if (held.some((pos) => isNarrowPos(p, pos))) dismissOpenByKind('FLAT_NARROW', p.id, 'pozycja już wąska');
-      if (held.some((pos) => !isNarrowPos(p, pos))) dismissOpenByKind('FLAT_WIDEN', p.id, 'pozycja już szeroka');
+      // cleanup after a manual signature: proposal executed = close it
+      if (held.some((pos) => isNarrowPos(p, pos))) dismissOpenByKind('FLAT_NARROW', p.id, 'position already narrow');
+      if (held.some((pos) => !isNarrowPos(p, pos))) dismissOpenByKind('FLAT_WIDEN', p.id, 'position already wide');
     }
   } catch (e) {
     log(`flat sweep: ${String(e).slice(0, 100)}`);
   }
 
-  // --- realny hedge na GMX (Arbitrum) — odczyt Readerem, patrz komentarz przy GMX ---
+  // --- real hedge on GMX (Arbitrum) — read via the Reader, see the comment at GMX ---
   try {
     const arb = clients['arbitrum'];
     const ethUsdNow = Object.values(live).find((l) => typeof l.ethUsd === 'number' && l.ethUsd > 0)?.ethUsd ?? 0;
@@ -1287,7 +1288,7 @@ async function refreshPositions() {
         const sizeUsd = Number(p.numbers.sizeInUsd) / 1e30;
         const sizeEth = Number(p.numbers.sizeInTokens) / 1e18;
         const collateralUsd = Number(p.numbers.collateralAmount) / 1e6; // USDC
-        // sanity (zły decode po aktualizacji ABI GMX → absurdalne skale)
+        // sanity (a wrong decode after a GMX ABI upgrade → absurd scales)
         if (sizeUsd > 0.01 && sizeUsd < 1e7 && sizeEth > 0 && collateralUsd < 1e7) {
           const entry = sizeUsd / sizeEth;
           const pnl = (p.flags.isLong ? ethUsdNow - entry : entry - ethUsdNow) * sizeEth;
@@ -1300,28 +1301,28 @@ async function refreshPositions() {
             POS_HIST_PATH,
             JSON.stringify({
               ts: new Date().toISOString(), tokenId: 'gmx-eth-short', poolId: 'gmx-eth-usd',
-              valueUsd: +hedgeLive.equityUsd.toFixed(2), hodlUsd: +collateralUsd.toFixed(2), // benchmark: cash (collateral bez shorta)
+              valueUsd: +hedgeLive.equityUsd.toFixed(2), hodlUsd: +collateralUsd.toFixed(2), // benchmark: cash (collateral without the short)
               inRange: true, price: +ethUsdNow.toFixed(2),
             }) + '\n'
           );
           if (!hedgeWasOpen) {
             hedgeWasOpen = true;
-            void telegram(`🛡 HOMOS: wykryto ${p.flags.isLong ? 'LONG' : 'SHORT'} na GMX ETH/USD — $${sizeUsd.toFixed(0)} @ $${entry.toFixed(0)}, collateral $${collateralUsd.toFixed(0)} (odczyt on-chain, obserwuję co cykl)`);
+            void telegram(`🛡 HOMOS: detected ${p.flags.isLong ? 'LONG' : 'SHORT'} on GMX ETH/USD — $${sizeUsd.toFixed(0)} @ $${entry.toFixed(0)}, collateral $${collateralUsd.toFixed(0)} (on-chain read, observing every cycle)`);
           }
-          // ostrzeżenie o sierocie: short wisi, a ŻADNA pula nie ma sygnału DOWN
+          // orphan warning: the short is hanging while NO pool has a DOWN signal
           const anyDown = Object.values(trend).some((t) => t.down);
           if (!p.flags.isLong && !anyDown && Math.random() < 0.017) {
-            // ~raz na dobę przy cyklu 5 min (288 cykli * 0.017 ≈ 5; wystarczająco rzadko, zero dodatkowego stanu)
-            void telegram(`⚠️ HOMOS: short GMX $${sizeUsd.toFixed(0)} otwarty, a sygnał trendu NIE jest DOWN na żadnej puli — sprawdź, czy nie zostawić/zamknąć (PnL $${pnl.toFixed(2)})`);
+            // ~once a day at a 5 min cycle (288 cycles * 0.017 ≈ 5; rare enough, zero extra state)
+            void telegram(`⚠️ HOMOS: GMX short $${sizeUsd.toFixed(0)} open, but the trend signal is NOT DOWN on any pool — check whether to keep/close it (PnL $${pnl.toFixed(2)})`);
           }
         } else {
-          log(`gmx hedge: odczyt poza skalą (sizeUsd=${sizeUsd}, sizeEth=${sizeEth}) — możliwa zmiana ABI Readera, pomijam`);
+          log(`gmx hedge: read out of scale (sizeUsd=${sizeUsd}, sizeEth=${sizeEth}) — possible Reader ABI change, skipping`);
           hedgeLive = null;
         }
       } else {
         if (hedgeWasOpen) {
           hedgeWasOpen = false;
-          void telegram('🛡 HOMOS: pozycja hedge na GMX ZAMKNIĘTA (Reader nie widzi już pozycji)');
+          void telegram('🛡 HOMOS: hedge position on GMX CLOSED (the Reader no longer sees the position)');
         }
         hedgeLive = null;
       }
@@ -1330,8 +1331,8 @@ async function refreshPositions() {
     log(`gmx hedge read failed: ${String(e).slice(0, 140)}`);
   }
 
-  // pozycja otwarta/wykryta w TRAKCIE trwającego sygnału DOWN też dostaje
-  // propozycję (transition-only by ją ominął; dedup w proposeExitTrend)
+  // a position opened/detected DURING an ongoing DOWN signal also gets
+  // a proposal (transition-only would miss it; dedup in proposeExitTrend)
   for (const p of BOT_POOLS) {
     if (trend[p.id]?.down && positions.some((x) => x.poolId === p.id)) {
       const gap = (live[p.id]?.trendGapPct ?? 0) / 100;
@@ -1341,8 +1342,8 @@ async function refreshPositions() {
   saveState();
 }
 
-/** ceny USD obu nóg puli + cena human — dla paper-tradingu (ta sama logika
- *  wyceny co refreshPositions; respektuje quote:'WETH') */
+/** USD prices of both legs of the pool + human price — for paper trading (the same pricing
+ *  logic as refreshPositions; respects quote:'WETH') */
 function legPrices(p: BotPool): LegPrices | null {
   const lv = live[p.id];
   if (!lv) return null;
@@ -1360,7 +1361,7 @@ function legPrices(p: BotPool): LegPrices | null {
   return { px0, px1, human };
 }
 
-/** tick → cena USD tokena bazowego puli (respektuje quote:'WETH' przez kurs referencyjny) */
+/** tick → USD price of the pool's base token (respects quote:'WETH' via the reference rate) */
 function tickToUsd(pool: BotPool, t: number): number {
   const raw = Math.pow(1.0001, t) * Math.pow(10, pool.d0 - pool.d1);
   if ((pool.quote ?? 'USD') === 'USD') return pool.ethIsToken0 ? raw : 1 / raw;
@@ -1369,14 +1370,14 @@ function tickToUsd(pool: BotPool, t: number): number {
 }
 
 function maybePropose(tokenId: string, pool: BotPool, a: ReturnType<typeof assessPosition>, valueUsd: number) {
-  // PULE PRODUKTOWE NIE DOSTAJĄ REBALANSU Z DORADCY (fix 29.08, znaleziony
-  // przy przeglądzie sekcji UI). Hybryda FlatWide ma JEDEN organ decydujący
-  // o szerokości: cykl FLAT_NARROW/FLAT_WIDEN (|gap| 2%/5% + confirm).
-  // Doradca k×σ to logika v1.2 — bez tego wyjątku bot mógł wystawić
-  // propozycję zwężenia POZA cyklem, czyli dokładnie klasę incydentu
-  // z 27.08 (stara wąska propozycja ±16% wyglądająca jak normalna).
-  // Sam `advice` z assessPosition zostaje w state (telemetria/diagnostyka),
-  // ale nie zamienia się już w propozycję do podpisu.
+  // PRODUCT POOLS DO NOT GET AN ADVISOR REBALANCE (fix 29.08, found
+  // while reviewing the UI section). The FlatWide hybrid has ONE body deciding
+  // on width: the FLAT_NARROW/FLAT_WIDEN cycle (|gap| 2%/5% + confirm).
+  // The k×σ advisor is v1.2 logic — without this exception the bot could issue
+  // a narrowing proposal OUTSIDE the cycle, i.e. exactly the incident class
+  // of 27.08 (an old narrow ±16% proposal looking like a normal one).
+  // The `advice` from assessPosition itself stays in state (telemetry/diagnostics),
+  // but no longer turns into a proposal to sign.
   if (pool.productIdleWidthPct) return;
   const key = `${tokenId}-${a.suggestion.tickLower}-${a.suggestion.tickUpper}`;
   if (proposals.some((p) => p.id === key && p.status === 'open')) return;
@@ -1390,12 +1391,12 @@ function maybePropose(tokenId: string, pool: BotPool, a: ReturnType<typeof asses
   };
   proposals.push(prop);
   saveProposals();
-  const msg = `🤖 HOMOS: propozycja REBALANS pozycji #${tokenId} (${pool.id}, $${valueUsd.toFixed(0)}) → zakres $${usdLo.toFixed(0)}–$${usdHi.toFixed(0)}, koszt ~$${a.costUsd.toFixed(2)}, payback ~${a.paybackDays?.toFixed(1)}d. [tryb OBSERWUJ — nic nie wykonano]`;
+  const msg = `🤖 HOMOS: REBALANCE proposal for position #${tokenId} (${pool.id}, $${valueUsd.toFixed(0)}) → range $${usdLo.toFixed(0)}–$${usdHi.toFixed(0)}, cost ~$${a.costUsd.toFixed(2)}, payback ~${a.paybackDays?.toFixed(1)}d. [OBSERVE mode — nothing executed]`;
   log(msg);
   telegram(msg);
 }
 
-// --- selektor pul (raz dziennie po 8:00, po pipeline 07:30) ---
+// --- pool selector (once a day after 8:00, after the 07:30 pipeline) ---
 function runSelector() {
   try {
     runSelectorIfDue({
@@ -1416,23 +1417,23 @@ function runSelector() {
         const [usdLo, usdHi] = [toUsd(lv.suggestion.tickLower), toUsd(lv.suggestion.tickUpper)].sort((x, y) => x - y);
         return { tickLower: lv.suggestion.tickLower, tickUpper: lv.suggestion.tickUpper, usdLo, usdHi };
       },
-      getGasUsd: (chain: string) => gasUsdLive[chain] ?? null, // żywy gaz (26.08)
+      getGasUsd: (chain: string) => gasUsdLive[chain] ?? null, // live gas (26.08)
     });
   } catch (e) {
     log(`selector crashed: ${String(e).slice(0, 160)}`);
   }
 }
 
-// --- księga transakcji (TASKS-LEDGER.md; ndjson w .bot/, wznawialny backfill) ---
+// --- transaction ledger (TASKS-LEDGER.md; ndjson in .bot/, resumable backfill) ---
 let ledgerBusy = false;
 async function runLedger() {
-  if (ledgerBusy) return; // backfill może przeciągnąć cykl — bez nakładania
+  if (ledgerBusy) return; // backfill may stretch beyond a cycle — no overlapping
   ledgerBusy = true;
   try {
     await updateLedger(clients as unknown as Record<string, any>, {
       log,
-      // kurs ETH z żywych cen pul kwotowanych w USD (patrz nagłówek ledger.ts:
-      // wycena z chwili indeksowania — dla backfillu updateLedger da usd:null)
+      // ETH rate from live prices of pools quoted in USD (see the header of ledger.ts:
+      // pricing as of indexing time — for the backfill updateLedger will give usd:null)
       ethUsd: () => {
         for (const p of BOT_POOLS) {
           if ((p.quote ?? 'USD') !== 'USD') continue;
@@ -1443,7 +1444,7 @@ async function runLedger() {
       },
     });
   } catch (e) {
-    log(`ledger crashed: ${String(e).slice(0, 160)}`); // nigdy nie kładzie cyklu
+    log(`ledger crashed: ${String(e).slice(0, 160)}`); // never takes the cycle down
   } finally {
     ledgerBusy = false;
   }
@@ -1451,23 +1452,23 @@ async function runLedger() {
 
 // --- start ---
 (async () => {
-  log(`observer start — watch=${WATCH_ADDRESS}, pools=${BOT_POOLS.map((p) => p.id).join(', ')}, tryb=OBSERWUJ`);
+  log(`observer start — watch=${WATCH_ADDRESS}, pools=${BOT_POOLS.map((p) => p.id).join(', ')}, mode=OBSERVE`);
   await refreshPrices();
   await refreshStats();
-  await refreshGas(); // żywy gaz PRZED pierwszą oceną pozycji (payback)
+  await refreshGas(); // live gas BEFORE the first position assessment (payback)
   await refreshPositions();
   runSelector();
   setInterval(refreshPrices, INTERVALS.priceSec * 1000);
-  setInterval(refreshGas, 5 * 60 * 1000); // żywy gaz co 5 min (takt pozycji)
+  setInterval(refreshGas, 5 * 60 * 1000); // live gas every 5 min (positions cadence)
   setInterval(refreshStats, INTERVALS.statsSec * 1000);
   setInterval(refreshPositions, INTERVALS.positionsSec * 1000);
   runLedger();
-  setInterval(runLedger, INTERVALS.positionsSec * 1000); // księga: ten sam takt co pozycje
-  setInterval(runSelector, 60 * 60 * 1000); // co godzinę sprawdza, czy dziś już był
+  setInterval(runLedger, INTERVALS.positionsSec * 1000); // ledger: the same cadence as positions
+  setInterval(runSelector, 60 * 60 * 1000); // checks every hour whether it already ran today
   expireStaleProposals();
   setInterval(expireStaleProposals, 60 * 60 * 1000);
   applyProposalCommands();
-  setInterval(applyProposalCommands, 30 * 1000); // komendy z UI (odrzucenia) w ≤30 s
-  setInterval(flushTelegram, TG_FLUSH_MS); // zbiorcza wiadomość TG co 15 min
-  log('pętle uruchomione (60s ceny / 15min statystyki / 5min pozycje / selektor 1×dziennie po 8:00)');
+  setInterval(applyProposalCommands, 30 * 1000); // commands from the UI (dismissals) within ≤30 s
+  setInterval(flushTelegram, TG_FLUSH_MS); // aggregated TG message every 15 min
+  log('loops started (60s prices / 15min statistics / 5min positions / selector 1x daily after 8:00)');
 })();

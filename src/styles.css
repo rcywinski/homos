@@ -72,9 +72,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  /* 21.08: było `max-height:140px; overflow:hidden` — po rozbiciu sald na trzy
-     sieci obcinało nagłówki kolumn (MAINNET/BASE/ARBITRUM). Panel jest teraz
-     kompaktowy sam z siebie, więc limit jest zbędny. */
+  /* 21.08: used to be `max-height:140px; overflow:hidden` — after splitting balances into three
+     networks it clipped the column headers (MAINNET/BASE/ARBITRUM). The panel is now
+     compact on its own, so the limit is unnecessary. */
 }
 
 .app-content {
@@ -996,7 +996,7 @@
   font-size: 12px;
 }
 
-/* --- Top Pools ranking + multichain browser (Faza 0+) --- */
+/* --- Top Pools ranking + multichain browser (Phase 0+) --- */
 .top-pools { background: #fff; border-radius: 10px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
 .top-pools-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; cursor: pointer; }
 .top-pools-header h4 { margin: 0; font-size: 15px; }
@@ -1037,10 +1037,10 @@
 .action-button { flex:1; padding:12px; border-radius:8px; border:1px solid #1a6ae0; background:#fff; color:#1a6ae0; cursor:pointer; font-size:14px; }
 .action-button.primary { background:#1a6ae0; color:#fff; }
 .action-button:disabled { opacity:0.45; cursor:not-allowed; }
-/* action-button jako <a> (karta HEDGE — link zewnętrzny do GMX, nie button) */
+/* action-button as <a> (HEDGE card — external link to GMX, not a button) */
 a.action-button { text-decoration:none; text-align:center; box-sizing:border-box; }
 
-/* --- UI session: karta propozycji kind='HEDGE' (HANDOFF Fable→Sonnet 2026-08-17 ~15:0x) --- */
+/* --- UI session: proposal card kind='HEDGE' (HANDOFF Fable→Sonnet 2026-08-17 ~15:0x) --- */
 .morning-hedge-size { font-weight:600; color:#1a6ae0; }
 
 /* --- UI session --- */
@@ -1174,10 +1174,10 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   }
 }
 
-/* --- UI session (Partia 2): morning cockpit, bot status dot, PWA --- */
+/* --- UI session (Batch 2): morning cockpit, bot status dot, PWA --- */
 
 /* Bot status dot — header (App.tsx) + cockpit header (MorningCockpit.tsx),
-   TASKS-UI.md Partia 2 #3. */
+   TASKS-UI.md Batch 2 #3. */
 .bot-dot {
   display: inline-block;
   width: 10px;
@@ -1309,8 +1309,8 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
 }
 .morning-proposal-card button { flex-shrink: 0; }
 
-/* --- UI session (Partia 16b): sekcja "Procedura awaryjna" — czerwony akcent
-   dla kart emergency + grupowanie A/B obok siebie per pozycja. --- */
+/* --- UI session (Batch 16b): "Emergency procedure" section — red accent
+   for emergency cards + A/B grouping side by side per position. --- */
 .morning-emergency-groups { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
 .morning-emergency-group { display: flex; gap: 10px; flex-wrap: wrap; }
 .morning-emergency-group .morning-proposal-card { flex: 1 1 320px; }
@@ -1328,9 +1328,9 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   font-size: 13px;
   padding: 6px 0;
 }
-/* PARTIA 20 pkt 2: wrapper wokół .morning-advice-row + linia CYKLU (pule
-   produktowe, BotTelemetry.tsx) — border-bottom przeniesiony tutaj, żeby
-   grupować wiersz z jego linią cyklu zamiast rysować kreskę między nimi. */
+/* BATCH 20 item 2: wrapper around .morning-advice-row + CYCLE line (product
+   pools, BotTelemetry.tsx) — border-bottom moved here, so that
+   the row is grouped with its cycle line instead of drawing a line between them. */
 .morning-advice-row-wrap { border-bottom: 1px solid #f5f5f5; }
 .morning-advice-row-wrap:last-child { border-bottom: none; }
 .morning-advice-row-wrap .cockpit-cycle-line { padding: 0 0 6px; font-size: 12px; }
@@ -1341,7 +1341,7 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   .morning-proposal-card { flex-direction: column; align-items: flex-start; }
 }
 
-/* --- UI session (Partia 3): akcje na kartach kokpitu, telemetria bota --- */
+/* --- UI session (Batch 3): actions on cockpit cards, bot telemetry --- */
 
 .cockpit-position-cards {
   display: flex;
@@ -1354,7 +1354,7 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   border: 1px solid #eef1f5;
   border-radius: 10px;
   padding: 12px 14px;
-  position: relative; /* zakotwiczenie menu ⋮ (Partia 10) */
+  position: relative; /* anchor for the ⋮ menu (Batch 10) */
 }
 
 .cockpit-position-card-header {
@@ -1362,7 +1362,7 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   justify-content: space-between;
   font-size: 13px;
   margin-bottom: 8px;
-  padding-right: 34px; /* miejsce na menu ⋮ zakotwiczone w rogu karty (Partia 10) */
+  padding-right: 34px; /* room for the ⋮ menu anchored in the card corner (Batch 10) */
 }
 
 .cockpit-range-bar {
@@ -1393,9 +1393,9 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   font-size: 12px;
 }
 
-/* Menu ⋮ (Partia 10, zastępuje rząd 3 przycisków — karty pozycji mają teraz
-   dwa wykresy zamiast miejsca na rząd). Zakotwiczone w prawym górnym rogu
-   karty (.cockpit-position-card ma position:relative). */
+/* ⋮ menu (Batch 10, replaces the row of 3 buttons — position cards now have
+   two charts instead of room for the row). Anchored in the top-right corner
+   of the card (.cockpit-position-card has position:relative). */
 .cockpit-position-actions-menu {
   position: absolute;
   top: 10px;
@@ -1453,7 +1453,7 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   cursor: not-allowed;
 }
 
-/* Telemetria bota — zwijana sekcja wewnątrz kokpitu (domyślnie zwinięta) */
+/* Bot telemetry — collapsible section inside the cockpit (collapsed by default) */
 .telemetry-section {
   margin-top: 16px;
   border-top: 1px solid #f0f0f0;
@@ -1531,13 +1531,13 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   font-size: 12px;
 }
 
-/* --- Szkielet modali (fix bug produkcyjny 25.08 — HANDOFF Fable→Sonnet:
-   6 modali (CockpitPositionActions ×2, BotTelemetry, HedgeConfirmModal,
-   RebalanceSequenceModal, RotateSequenceModal) używały tych klas od
-   początku, ale CSS dla nich nigdy nie istniał — modal renderował się
-   bez tła/layoutu, przycisk potwierdzenia poza zasięgiem. `.app {
-   text-align: center }` kaskaduje w dół, więc modal-content/modal-body
-   jawnie wracają do text-align:left (jak .telemetry-json-pre wyżej). --- */
+/* --- Modal skeleton (production bug fix 25.08 — HANDOFF Fable→Sonnet:
+   6 modals (CockpitPositionActions ×2, BotTelemetry, HedgeConfirmModal,
+   RebalanceSequenceModal, RotateSequenceModal) had used these classes from
+   the start, but the CSS for them never existed — the modal rendered
+   without a backdrop/layout, the confirm button out of reach. `.app {
+   text-align: center }` cascades down, so modal-content/modal-body
+   explicitly go back to text-align:left (like .telemetry-json-pre above). --- */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -1648,8 +1648,8 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   font-size: 11px;
   white-space: pre-wrap;
   word-break: break-all;
-  /* Fix z odbioru P3 (Partia 4): .app { text-align: center } kaskaduje w dół
-     do <pre> tutaj, więc bez tej reguły JSON renderuje się wyśrodkowany. */
+  /* Fix from the P3 review (Batch 4): .app { text-align: center } cascades down
+     to the <pre> here, so without this rule the JSON renders centered. */
   text-align: left;
 }
 
@@ -1658,7 +1658,7 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   .telemetry-footer { flex-direction: column; align-items: flex-start; }
 }
 
-/* --- UI session (Partia 4): karty propozycji wg kind (OPEN/ROTATE/REBALANCE) --- */
+/* --- UI session (Batch 4): proposal cards by kind (OPEN/ROTATE/REBALANCE) --- */
 .morning-proposal-card--stacked {
   flex-direction: column;
   align-items: stretch;
@@ -1678,10 +1678,10 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
 }
 .morning-proposal-line { font-size: 13px; }
 
-/* --- UI session: Partia 8/9 (ROTATE [Zatwierdź] + hedge GMX) — HANDOFF
-   Fable→Sonnet 2026-08-20. Status "otwarty short" — niebieski, nie żółty
-   (żółty = ostrzeżenie bota, tu to neutralny stan), reużywa layout
-   morning-proposal-note/-actions. --- */
+/* --- UI session: Batch 8/9 (ROTATE [Confirm] + GMX hedge) — HANDOFF
+   Fable→Sonnet 2026-08-20. "Open short" status — blue, not yellow
+   (yellow = bot warning, here it is a neutral state), reuses the
+   morning-proposal-note/-actions layout. --- */
 .morning-hedge-open-note {
   background: #eef4fd;
   color: #1a4d8f;
@@ -1691,7 +1691,7 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   .morning-proposal-actions .action-button { min-width: 100%; }
 }
 
-/* --- UI session (Partia 4b): modal sekwencji [Zatwierdź] --- */
+/* --- UI session (Batch 4b): [Confirm] sequence modal --- */
 .sequence-steps {
   display: flex;
   flex-direction: column;
@@ -1713,15 +1713,15 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   cursor: not-allowed;
 }
 
-/* --- UI session: "Analiza obserwacji" (ObservationAnalysis.tsx), wzorzec
-   telemetry-* z BotTelemetry.tsx — HANDOFF Fable→Sonnet 2026-08-11 --- */
+/* --- UI session: "Observation analysis" (ObservationAnalysis.tsx), the
+   telemetry-* pattern from BotTelemetry.tsx — HANDOFF Fable→Sonnet 2026-08-11 --- */
 .observation-pool-block {
   margin-top: 14px;
 }
 .observation-pool-title {
   margin-bottom: 4px;
 }
-/* Partia 16 pkt 3: badge stanu flatu przy tytule puli produktowej. */
+/* Batch 16 item 3: flat-state badge next to the product pool title. */
 .observation-flat-badge { font-size: 12px; font-weight: 500; }
 .observation-flat-badge--confirmed { color: #2e7d32; }
 .observation-section-title {
@@ -1792,16 +1792,16 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   margin-top: 16px;
 }
 
-/* .forecast-negative — JEDYNA pozostałość po usuniętym ForecastPanel.tsx
-   (29.08): klasa czerwonego koloru dla liczb ujemnych, reużywana w
-   MorningCockpit/PaperTradingPanel/PositionCharts. Reszta stylów
-   .forecast-* poszła razem z panelem — historia w gicie. */
+/* .forecast-negative — the ONLY remnant of the removed ForecastPanel.tsx
+   (29.08): red color class for negative numbers, reused in
+   MorningCockpit/PaperTradingPanel/PositionCharts. The rest of the
+   .forecast-* styles went away with the panel — history in git. */
 .forecast-negative {
   color: #e04334;
 }
 
-/* --- UI session: PaperTradingPanel.tsx (TASKS-UI.md Partia 5) — wizualizacja
-   paper-tradingu (bot/paper.ts). Wzorzec morning-*/telemetry-*/forecast-* --- */
+/* --- UI session: PaperTradingPanel.tsx (TASKS-UI.md Batch 5) — paper-trading
+   visualization (bot/paper.ts). The morning-*/telemetry-*/forecast-* pattern --- */
 .paper-positive {
   color: #1a7a3c;
 }
@@ -1825,10 +1825,10 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   margin-bottom: 12px;
 }
 
-/* --- Partia 18: pasek BILANS TRANSZY (MorningCockpit.tsx, NAD panelem
-   zbiorczy Partii 17) — miara osobna, celowo "spokojniejsza" wizualnie
-   (mniejsza czcionka, bez zielono-czerwonych kafli jak PnL) niż
-   .paper-total-header, żeby nie mylić dwóch różnych miar. --- */
+/* --- Batch 18: TRANCHE BALANCE bar (MorningCockpit.tsx, ABOVE the Batch 17
+   summary panel) — a separate measure, deliberately "calmer" visually
+   (smaller font, no green/red tiles like PnL) than
+   .paper-total-header, so as not to confuse two different measures. --- */
 .tranche-bar {
   display: flex;
   gap: 18px;
@@ -1873,21 +1873,21 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
 .paper-badge-trend-down {
   color: #e04334;
 }
-/* Legenda ikon stanu (paper + "Pozycje — akcje"); dodana 21.08 razem
-   z ikoną ⚠️ dla pozycji poza zakresem. */
+/* Status icon legend (paper + "Positions — actions"); added 21.08 together
+   with the ⚠️ icon for out-of-range positions. */
 .status-legend {
   font-size: 11px;
   line-height: 1.5;
   margin: 2px 0 8px;
 }
-/* Licznik "ile pozycja jest poza zakresem" (paper + realne pozycje). */
+/* "How long the position has been out of range" counter (paper + real positions). */
 .out-of-range-timer {
   font-size: 11px;
   line-height: 1.4;
   margin: -2px 0 6px;
 }
-/* Partia 17: linia CYKLU (postura SZEROKI/WĄSKI + status detektora flatu) i
-   badge POZA ZAKRESEM na kartach pozycji REALNYCH produktowych. */
+/* Batch 17: CYCLE line (WIDE/NARROW posture + flat detector status) and
+   OUT OF RANGE badge on REAL product position cards. */
 .cockpit-cycle-line {
   font-size: 11px;
   line-height: 1.4;
@@ -1952,9 +1952,9 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   vector-effect: non-scaling-stroke;
 }
 
-/* --- UI session: Partia 7 "widoczność zakresu" (PaperTradingPanel.tsx) —
-   HANDOFF Fable→Sonnet 2026-08-20. Pasy tła + wykres cena-vs-zakres +
-   znaczniki zdarzeń, współdzielone przez sparkline i mini-wykres ceny --- */
+/* --- UI session: Batch 7 "range visibility" (PaperTradingPanel.tsx) —
+   HANDOFF Fable→Sonnet 2026-08-20. Background bands + price-vs-range chart +
+   event markers, shared by the sparkline and the mini price chart --- */
 .paper-range-band-out {
   fill: #f9a825;
   fill-opacity: 0.22;
@@ -1978,10 +1978,10 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   height: 54px;
 }
 .paper-range-band {
-  /* POPRAWKA po odbiorze P7 (Fable→Sonnet 2026-08-20): przy opacity 0.12
-     pasmo myliło się z szarym tłem cash ("szare na żółtym to wyjście do
-     cash też?" — pytanie Rafała). Wyraźnie nasycony niebieski + delikatna
-     obwódka, żeby czytelnie odróżnić od paper-range-band-cash/out. */
+  /* FIX after the P7 review (Fable→Sonnet 2026-08-20): at opacity 0.12
+     the band was confused with the gray cash background ("is gray on yellow an exit to
+     cash too?" — Rafal's question). Clearly saturated blue + a subtle
+     outline, to distinguish it legibly from paper-range-band-cash/out. */
   fill: #1a6ae0;
   fill-opacity: 0.28;
   stroke: #1a6ae0;
@@ -2051,11 +2051,11 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   .paper-event-row { flex-wrap: wrap; }
 }
 
-/* --- UI session: TopRankingPanel.tsx (TASKS-UI.md Partia 6, ranking dnia
-   TOP 10) — HANDOFF Fable→Sonnet 2026-08-18. Wzorzec telemetry-table --- */
-/* linia „data · kryteria" pod nagłówkiem sekcji (21.08: ranking dostał ten sam
-   szkielet co Telemetria/Prognoza/Analiza, więc kryteria zeszły z tytułu
-   do osobnej linijki w ciele sekcji) */
+/* --- UI session: TopRankingPanel.tsx (TASKS-UI.md Batch 6, daily ranking
+   TOP 10) — HANDOFF Fable→Sonnet 2026-08-18. The telemetry-table pattern --- */
+/* "date · criteria" line under the section header (21.08: the ranking got the same
+   skeleton as Telemetry/Forecast/Analysis, so the criteria moved from the title
+   to a separate line in the section body) */
 .topranking-criteria-line {
   font-size: 11px;
   margin-bottom: 6px;
@@ -2071,8 +2071,8 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   font-weight: 600;
   white-space: nowrap;
 }
-/* Werdykty walidacji (Partia 12, 24.08) — prawdziwy status per pula
-   zamiast mylącego "poza konfiguracją". */
+/* Validation verdicts (Batch 12, 24.08) — the real status per pool
+   instead of the misleading "outside configuration". */
 .topranking-status-fail {
   color: #c62828;
   white-space: nowrap;
@@ -2095,8 +2095,8 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   padding-top: 8px;
   border-top: 1px dashed #ddd;
 }
-/* Ranking WIDE (Partia 21, 02.09) — score %/r: >0 zielony, ≤0 muted (spec —
-   NIE czerwony, score ujemny to normalny wynik pary zmiennej, nie błąd). */
+/* WIDE ranking (Batch 21, 02.09) — score %/yr: >0 green, ≤0 muted (spec —
+   NOT red, a negative score is a normal result for a volatile pair, not an error). */
 .wideranking-score-pos {
   color: #1a7a3c;
   font-weight: 600;
@@ -2108,8 +2108,8 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   color: #8a6d00;
   white-space: nowrap;
 }
-/* Kolumna „pełny przebieg" (Partia 22) — druga linijka hybrydy pod
-   wartością pasywną, mniejsza i wyciszona jak reszta tooltipowych detali. */
+/* "Full run" column (Batch 22) — second line of the hybrid under
+   the passive value, smaller and muted like the rest of the tooltip details. */
 .wideranking-hybrid-line {
   font-size: 10px;
   white-space: nowrap;
@@ -2118,16 +2118,16 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   .topranking-table { font-size: 12px; }
 }
 @media (max-width: 700px) {
-  /* Partia 22, spec pkt 4: na wąskim ekranie kolumny modelu dziennego
-     zwężone do samego Δ — LP/HODL dostępne w tooltipie, nie na ekranie. */
+  /* Batch 22, spec item 4: on a narrow screen the daily-model columns
+     are narrowed to just the Δ — LP/HODL available in the tooltip, not on screen. */
   .topranking-table .wideranking-hybrid-line { display: none; }
   .topranking-table .wideranking-lphodl { display: none; }
 }
 
-/* 21.08: kokpit jako główny layout — nagłówek stracił tytuł i strzałkę
-   (patrz komentarz w MorningCockpit.tsx), został sam ⚙ dosunięty do prawej.
-   Bez `cursor:pointer` i bez podświetlenia na hover, bo nie jest już
-   klikalnym przełącznikiem zwijania. */
+/* 21.08: cockpit as the main layout — the header lost its title and arrow
+   (see the comment in MorningCockpit.tsx), only the ⚙ remains, pushed to the right.
+   No `cursor:pointer` and no hover highlight, because it is no longer
+   a clickable collapse toggle. */
 .morning-header-bare {
   justify-content: flex-end;
   padding: 10px 20px 0;
@@ -2137,9 +2137,9 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   background-color: transparent;
 }
 
-/* Wybór sieci w nagłówku portfela (21.08: zastąpił przełącznik
-   Mainnet↔Sepolia — Sepolia usunięta, a przełącznik binarny i tak
-   pokazywał „Sepolia" na Base/Arbitrum). */
+/* Network selector in the wallet header (21.08: replaced the
+   Mainnet↔Sepolia toggle — Sepolia removed, and the binary toggle
+   showed "Sepolia" on Base/Arbitrum anyway). */
 .network-select {
   background-color: #e9ecef;
   border: none;
@@ -2151,10 +2151,10 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   text-align: center;
 }
 
-/* Nagłówek portfela 21.08: trzy sieci obok siebie zamiast przełącznika.
-   Aplikacja i tak czyta pozycje ze wszystkich trzech naraz (usePortfolio),
-   a akcje przełączają sieć same przed podpisem — ręczny przełącznik tylko
-   mylił. */
+/* Wallet header 21.08: three networks side by side instead of a toggle.
+   The app reads positions from all three at once anyway (usePortfolio),
+   and actions switch the network themselves before signing — the manual toggle only
+   confused. */
 .wallet-chains {
   display: flex;
   gap: 10px;
@@ -2186,8 +2186,8 @@ a.action-button { text-decoration:none; text-align:center; box-sizing:border-box
   .wallet-chain + .wallet-chain { border-left: none; padding-left: 0; border-top: 1px solid #e9ecef; padding-top: 8px; }
 }
 
-/* --- ClosedPositionsPanel.tsx (TASKS-LEDGER.md §3, 25.08) — reużywa
-   .cockpit-position-card jako bazę karty, dokłada tylko layout treści. --- */
+/* --- ClosedPositionsPanel.tsx (TASKS-LEDGER.md §3, 25.08) — reuses
+   .cockpit-position-card as the card base, only adds the content layout. --- */
 .closed-positions-list {
   display: flex;
   flex-direction: column;

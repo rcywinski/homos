@@ -23,7 +23,7 @@ export const config = createConfig(
     appDescription: "Market Making Bot for Uniswap V3",
     appUrl: "https://homos.finance", // your app's url
     appIcon: "https://homos.finance/logo.png", // your app's icon, no bigger than 1024x1024px (max. 1MB)
-    chains: [mainnet, base, arbitrum], // Sepolia usunięta 21.08 — testnet nie jest już do niczego używany
+    chains: [mainnet, base, arbitrum], // Sepolia removed 21.08 — the testnet is no longer used for anything
     transports: {
       [mainnet.id]: http('https://ethereum-rpc.publicnode.com'),
       [base.id]: http('https://base-rpc.publicnode.com'),

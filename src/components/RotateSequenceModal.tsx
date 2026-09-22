@@ -1,10 +1,10 @@
 /**
- * RotateSequenceModal.tsx — [Zatwierdź] na kartach propozycji ROTATE
- * (TASKS-UI.md Partia 8, cross-pool w tej samej sieci). Bliźniak
- * RebalanceSequenceModal.tsx — różnica: `RotatePlan` operuje na DWÓCH pulach
- * (stara/nowa), więc execute() z useRotateExecution.ts przyjmuje `newPool`
- * zamiast pojedynczego `pool`, i podgląd pokazuje `preview.bridgeSwap`/
- * `preview.balanceSwap` zamiast `swapSkipped`.
+ * RotateSequenceModal.tsx — [Approve] on ROTATE proposal cards
+ * (TASKS-UI.md Batch 8, cross-pool on the same chain). Twin of
+ * RebalanceSequenceModal.tsx — difference: `RotatePlan` operates on TWO pools
+ * (old/new), so execute() from useRotateExecution.ts takes `newPool`
+ * instead of a single `pool`, and the preview shows `preview.bridgeSwap`/
+ * `preview.balanceSwap` instead of `swapSkipped`.
  */
 import React, { FC, useMemo } from 'react';
 import { Pool } from '@uniswap/v3-sdk';
@@ -22,8 +22,8 @@ interface Props {
 }
 
 const RotateSequenceModal: FC<Props> = ({ plan, newPool, newTickLower, newTickUpper, execution, onClose, onDone }) => {
-  // Tylko do wyświetlenia "dokończ krok N/M" — execute() sam sprawdza to
-  // ponownie wewnątrz przed wysłaniem każdego kroku.
+  // Only for displaying "finish step N/M" — execute() re-checks this
+  // internally before sending each step.
   const progress = useMemo(() => loadRotateProgress(plan.chainId, plan.tokenId), [plan.chainId, plan.tokenId]);
   const running = execution.status.phase === 'approving' || execution.status.phase === 'step';
   const doneCount = progress?.completed.length ?? 0;
@@ -32,7 +32,7 @@ const RotateSequenceModal: FC<Props> = ({ plan, newPool, newTickLower, newTickUp
     <div className="modal-overlay" onClick={running ? undefined : onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Zatwierdź rotację #{plan.tokenId}</h3>
+          <h3>Approve rotation #{plan.tokenId}</h3>
           {!running && (
             <button className="close-button" onClick={onClose}>
               ×
@@ -56,16 +56,16 @@ const RotateSequenceModal: FC<Props> = ({ plan, newPool, newTickLower, newTickUp
           </div>
 
           {!plan.preview.bridgeSwap && !plan.preview.balanceSwap && (
-            <div className="morning-note">Ta sama para (zmiana tieru) i proporcje już bliskie docelowym — bez dodatkowych swapów.</div>
+            <div className="morning-note">Same pair (tier change) and proportions already close to target — no extra swaps.</div>
           )}
-          {plan.preview.bridgeSwap && <div className="morning-note">Krok pomostowy: {plan.preview.bridgeSwap}.</div>}
-          {plan.preview.balanceSwap && <div className="morning-note">Wyrównanie proporcji: {plan.preview.balanceSwap}.</div>}
-          <div className="morning-note">Approvals (jeśli potrzebne) wysyłane automatycznie tuż przed odpowiednim krokiem — nic do zrobienia ręcznie.</div>
+          {plan.preview.bridgeSwap && <div className="morning-note">Bridge step: {plan.preview.bridgeSwap}.</div>}
+          {plan.preview.balanceSwap && <div className="morning-note">Proportion balancing: {plan.preview.balanceSwap}.</div>}
+          <div className="morning-note">Approvals (if needed) are sent automatically right before the relevant step — nothing to do manually.</div>
 
           {execution.status.message && execution.status.phase !== 'idle' && (
             <div className="morning-note">
               {execution.status.phase === 'approving' && `Approvals: `}
-              {execution.status.phase === 'step' && `Krok ${execution.status.stepIndex}/${execution.status.totalSteps}: `}
+              {execution.status.phase === 'step' && `Step ${execution.status.stepIndex}/${execution.status.totalSteps}: `}
               {execution.status.message}
             </div>
           )}
@@ -73,7 +73,7 @@ const RotateSequenceModal: FC<Props> = ({ plan, newPool, newTickLower, newTickUp
 
           <div className="modal-actions">
             <button className="secondary-button" onClick={onClose} disabled={running}>
-              Anuluj
+              Cancel
             </button>
             <button
               className="primary-button"
@@ -81,12 +81,12 @@ const RotateSequenceModal: FC<Props> = ({ plan, newPool, newTickLower, newTickUp
               onClick={() => execution.execute(newPool, plan, newTickLower, newTickUpper, 50, onDone)}
             >
               {execution.status.phase === 'done'
-                ? 'Zakończono ✓'
+                ? 'Done ✓'
                 : running
-                ? 'W trakcie…'
+                ? 'In progress…'
                 : doneCount > 0
-                ? `Dokończ (krok ${doneCount + 1}/${plan.steps.length})`
-                : 'Wykonaj sekwencję'}
+                ? `Finish (step ${doneCount + 1}/${plan.steps.length})`
+                : 'Run sequence'}
             </button>
           </div>
         </div>

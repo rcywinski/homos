@@ -1,26 +1,26 @@
-﻿# deploy/deploy.ps1 - wdrozenie/aktualizacja HOMOS na serwerze Windows.
-# Uruchamiaj z katalogu glownego repo (tam gdzie jest package.json):
+﻿# deploy/deploy.ps1 - deployment/update of HOMOS on the Windows server.
+# Run from the repo root directory (where package.json is):
 #   cd C:\Projects\homos
 #   .\deploy\deploy.ps1
 #
-# KODOWANIE (incydent 21.08, DRUGI raz w tym projekcie): ten plik MUSI byc
-# zapisany jako UTF-8 Z BOM. Windows PowerShell 5.1 czyta .ps1 bez BOM w
-# systemowej stronie kodowej, wiec polskie znaki rozjezdzaja cudzyslowy i
-# psuja caly parser (TerminatorExpectedAtEndOfString). To samo zdarzylo sie
-# 10.08 na backup.ps1/deploy.ps1 i zostalo wtedy naprawione - a ja wrocilem
-# z tym bledem, pisac skrypt na Macu. Druga linia obrony: WSZYSTKIE literaly
-# stringow sa tu ASCII-only, wiec nawet gdyby ktos zgubil BOM, zepsute znaki
-# siedza wylacznie w komentarzach i nie ruszaja parsera.
+# ENCODING (incident 21.08, the SECOND time in this project): this file MUST be
+# saved as UTF-8 WITH BOM. Windows PowerShell 5.1 reads a .ps1 without BOM in
+# the system code page, so non-ASCII characters break the quotes and
+# wreck the whole parser (TerminatorExpectedAtEndOfString). The same happened
+# on 10.08 to backup.ps1/deploy.ps1 and was fixed back then - and I came back
+# with this bug, writing the script on a Mac. Second line of defense: ALL string
+# literals here are ASCII-only, so even if someone loses the BOM, the broken characters
+# sit exclusively in comments and do not touch the parser.
 #
-# HISTORIA (zeby nie cofnac tego po raz kolejny): wersja z 10.08 konczyla sie
-# `pm2 startOrReload` + `pm2 save`, ale tego samego dnia projekt przeszedl
-# z pm2 na uslugi NSSM (TASKS-WINDOWS-ADDENDUM.md: "boty maja byc
-# NIEWIDOCZNE" - pm2 na Windows trzyma procesy w sesji uzytkownika).
-# Skrypt nie zostal wtedy zaktualizowany, wiec kazde wdrozenie po cichu
-# wracalo do pm2. Od 21.08 operujemy WYLACZNIE na uslugach NSSM.
+# HISTORY (so this is not reverted yet again): the 10.08 version ended with
+# `pm2 startOrReload` + `pm2 save`, but the same day the project moved
+# from pm2 to NSSM services (TASKS-WINDOWS-ADDENDUM.md: "bots must be
+# INVISIBLE" - pm2 on Windows keeps processes in the user session).
+# The script was not updated back then, so every deployment silently
+# went back to pm2. Since 21.08 we operate EXCLUSIVELY on NSSM services.
 #
-# Kolejnosc: pobierz kod -> zaleznosci wg lock -> build UI -> restart uslug
-# TYLKO jesli zmienilo sie cos poza UI -> sanity check /health.
+# Order: fetch code -> dependencies per lock -> build UI -> restart services
+# ONLY if something outside the UI changed -> sanity check /health.
 
 $ErrorActionPreference = 'Stop'
 
@@ -29,7 +29,7 @@ function Write-Step($msg) {
     Write-Host "==> $msg" -ForegroundColor Cyan
 }
 
-# NSSM bywa poza PATH (instalacja przez winget - patrz CONTEXT 10.08).
+# NSSM is sometimes outside PATH (installed via winget - see CONTEXT 10.08).
 function Get-NssmPath {
     $cmd = Get-Command nssm -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
@@ -49,10 +49,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "git pull failed (exit $LASTEXITCODE)" }
     $after = (git rev-parse HEAD).Trim()
 
-    # Co sie zmienilo? UI (src/**) da sie wdrozyc SAMYM buildem - bot/server.ts
-    # serwuje `public/` przez express.static, czyli czyta pliki przy kazdym
-    # zadaniu. Restart uslug jest potrzebny tylko dla zmian w bot/**,
-    # w zaleznosciach albo w samym deployu.
+    # What changed? The UI (src/**) can be deployed with JUST the build - bot/server.ts
+    # serves `public/` via express.static, i.e. reads the files on every
+    # request. A service restart is only needed for changes in bot/**,
+    # in dependencies or in the deployment itself.
     $changed = @()
     if ($before -ne $after) { $changed = (git diff --name-only $before $after) }
     $needsRestart = $false

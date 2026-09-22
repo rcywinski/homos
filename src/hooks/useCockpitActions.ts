@@ -1,7 +1,7 @@
 /**
  * useCockpitActions.ts — write-transactions for the morning cockpit's
- * per-position actions (TASKS-UI.md Partia 3, UX-COCKPIT.md §1.A.3):
- * [💰 Zbierz fees] / [⏹ Zamknij] / [🔄 Rebalans ręczny].
+ * per-position actions (TASKS-UI.md Batch 3, UX-COCKPIT.md §1.A.3):
+ * [💰 Collect fees] / [⏹ Close] / [🔄 Manual rebalance].
  *
  * Deliberately reuses the same building blocks MyPositions.tsx / AddLiquidity.tsx
  * already use (prepareRemoveLiquidityTransaction, createPosition,
@@ -11,14 +11,14 @@
  * usePortfolio.ts, which already carries the SDK `Pool` object each position
  * needs (built once there from data already fetched, no extra RPC round trip).
  *
- * "Zamknij pozycję" is two on-chain calls, not one: NonfungiblePositionManager's
+ * "Close position" is two on-chain calls, not one: NonfungiblePositionManager's
  * decreaseLiquidity only moves the withdrawn amounts into the position's
  * tokensOwed bucket — a separate collect() is required to actually receive them
  * (it also picks up any already-accrued fees in the same call, via
- * amount0Max/amount1Max = MAX_UINT128, same as the "Zbierz fees" action and
+ * amount0Max/amount1Max = MAX_UINT128, same as the "Collect fees" action and
  * MyPositions.tsx's fetchUnclaimedFees trick). The two are sent sequentially:
  * if the wallet confirms step 1 but rejects step 2, funds simply sit as
- * tokensOwed on the position — recoverable any time via "Zbierz fees" — so a
+ * tokensOwed on the position — recoverable any time via "Collect fees" — so a
  * partial failure never puts funds at risk, it just needs a retry.
  *
  * Cross-chain note: a position's chain may differ from the wallet's currently
@@ -54,7 +54,7 @@ import { PortfolioPosition } from './usePortfolio';
  * in range [lo, hi]" actually needs (openPositionAtRange / the rebalance
  * modal / balance+allowance helpers below). PortfolioPosition satisfies this
  * structurally, so every existing call site (a held position) keeps working
- * unchanged. Partia 4 adds a second producer: resolveBotPool(), for bot
+ * unchanged. Batch 4 adds a second producer: resolveBotPool(), for bot
  * proposals (OPEN / ROTATE step 2) that target a pool the user doesn't hold
  * a position in yet — tokenId is '' in that case.
  */
@@ -71,32 +71,32 @@ export interface RebalanceTarget {
 
 const CHAIN_LABEL: Record<number, string> = { 1: 'Ethereum', 8453: 'Base', 42161: 'Arbitrum' };
 
-// Klucz spójny z `busyKey` (bez sufiksu akcji) — łączy CockpitMessage/
-// CloseStepStatus z konkretną pozycją, żeby karta X nigdy nie pokazała
-// wyniku akcji z karty Y (FIX 25.08, zgłoszenie Rafała: toast zamknięcia
-// #953427 wyrenderował się na karcie #953465 po zniknięciu zamkniętej
-// karty — `message` było jedną globalną wartością współdzieloną przez
-// WSZYSTKIE karty, bez sprawdzania, do której pozycji należy).
+// Key consistent with `busyKey` (without the action suffix) — ties CockpitMessage/
+// CloseStepStatus to a specific position, so card X never shows the result
+// of an action from card Y (FIX 25.08, owner's report: the close toast for
+// #953427 rendered on card #953465 after the closed card disappeared —
+// `message` was a single global value shared by ALL cards, without
+// checking which position it belonged to).
 const posKey = (chainId: number, tokenId: string): string => `${chainId}-${tokenId}`;
 
-// --- Globalny toast (Partia 13, punkt 3) ---
-// `message` (state poniżej) jest renderowany dziś TYLKO wewnątrz
-// CockpitPositionActions.tsx, keyed po posKey(chainId, tokenId) — działa dla
-// akcji na TRZYMANEJ pozycji (karta z tym tokenId istnieje w drzewie). Ale
-// modal „Otwórz pozycję" wywoływany z karty PROPOZYCJI bota (MorningCockpit.tsx,
-// `proposalModal?.type==='open'`, RebalanceModal z initialUsdRange) dotyczy
-// puli, w której user NIE MA jeszcze pozycji — tokenId==='', więc żadna karta
-// pozycji nigdy nie pasuje kluczem i toast nigdy się nie renderuje. Do tego
-// modal i tak znika natychmiast po sukcesie (onDone→onClose), więc nawet
-// gdyby jakiś toast żył wewnątrz niego, zniknąłby razem z modalem, zanim user
-// zdążyłby go przeczytać — stąd zgłoszenie "modal się zamyka, nie wiadomo czy
-// się udało". Zakres tej sesji to tylko ten plik + CockpitPositionActions.tsx
-// (nie MorningCockpit.tsx), więc zamiast przepychać nowy render-target przez
-// drzewo React, toast montuje się jako mały, samodzielny element na
-// document.body — żyje tak długo jak karta, niezależnie od tego, który modal
-// go wywołał i czy zdążył się już odmontować. Używa tych samych klas CSS co
-// istniejący `.message` (styles.css, poza zakresem tej sesji) — inline tylko
-// pozycjonowanie/z-index, żeby nie dotykać CSS.
+// --- Global toast (Batch 13, item 3) ---
+// `message` (state below) is rendered today ONLY inside
+// CockpitPositionActions.tsx, keyed by posKey(chainId, tokenId) — it works for
+// actions on a HELD position (a card with that tokenId exists in the tree). But
+// the "Open position" modal invoked from a bot PROPOSAL card (MorningCockpit.tsx,
+// `proposalModal?.type==='open'`, RebalanceModal with initialUsdRange) concerns
+// a pool in which the user does NOT yet have a position — tokenId==='', so no
+// position card ever matches the key and the toast never renders. On top of that
+// the modal disappears immediately after success anyway (onDone→onClose), so even
+// if some toast lived inside it, it would vanish together with the modal before the
+// user could read it — hence the report "the modal closes, no idea whether it
+// succeeded". The scope of this session is only this file + CockpitPositionActions.tsx
+// (not MorningCockpit.tsx), so instead of threading a new render target through
+// the React tree, the toast mounts as a small, standalone element on
+// document.body — it lives as long as the card, regardless of which modal
+// invoked it and whether it has already unmounted. Uses the same CSS classes as
+// the existing `.message` (styles.css, outside this session's scope) — inline only
+// positioning/z-index, so as not to touch the CSS.
 let globalToastEl: HTMLDivElement | null = null;
 let globalToastHideTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -119,31 +119,31 @@ function showGlobalToast(kind: 'ok' | 'err', text: string) {
   globalToastEl.style.display = 'block';
   globalToastEl.textContent = text;
   if (globalToastHideTimer) clearTimeout(globalToastHideTimer);
-  // Ten sam czas co auto-znikanie karcianego `message` (10s, FIX 25.08) —
-  // spójne zachowanie, jeden termin do pamiętania.
+  // Same duration as the auto-hide of the per-card `message` (10s, FIX 25.08) —
+  // consistent behaviour, one number to remember.
   globalToastHideTimer = setTimeout(() => {
     if (globalToastEl) globalToastEl.style.opacity = '0';
   }, 10_000);
 }
 
-// Best-effort odczyt potwierdzenia transakcji (Partia 13, punkty 1+3): hash
-// JEST już wysłany w momencie wywołania — sama transakcja żyje na łańcuchu
-// niezależnie od tego, czy `waitForTransactionReceipt` tu zdąży/zdoła ją
-// zobaczyć. Rzucanie w tym miejscu (jak poprzednio) traktowało "RPC nie
-// odpowiedziało w porę" identycznie jak "transakcja się nie udała" — co przy
-// realnym kapitale prowadziło do: (approve) allowance zostaje stare mimo
-// podpisanej zgody, przycisk "wraca"; (otwarcie pozycji) pozycja otwiera się
-// na łańcuchu, ale UI raportuje błąd i modal zostaje otwarty, bo `onDone()`
-// nigdy nie jest wołane. Ta sama klasa fixu co useHedgeExecution (20.08):
-// 2 próby po 5s, a po ich wyczerpaniu ZWRACAMY (nie rzucamy) — wywołujący
-// kontynuuje tak, jakby transakcja przeszła (hash trafi na łańcuch prędzej
-// czy później; kolejny odczyt salda/allowance i tak to pokaże poprawnie).
-// HOTFIX 31.08 (pierwsze bojowe FLAT_NARROW): eksportowany — używany też przez
-// useRebalanceExecution/useRotateExecution (sekwencje [Zatwierdź] miały wciąż
-// surowe waitForTransactionReceipt i przerywały się na tym samym błędzie
-// Rabby+publicnode "Invalid parameters" co useHedgeExecution 20.08). Dodatkowo
-// walidacja formatu hasha jak w useHedgeExecution — nietypowy hash od portfela
-// pomija czekanie zamiast wysadzać sekwencję.
+// Best-effort read of the transaction confirmation (Batch 13, items 1+3): the hash
+// IS already sent at the moment of the call — the transaction itself lives on
+// chain regardless of whether `waitForTransactionReceipt` here manages to
+// see it in time. Throwing at this point (as before) treated "RPC did not
+// respond in time" identically to "the transaction failed" — which with
+// real capital led to: (approve) the allowance stays old despite the
+// signed approval, the button "comes back"; (position open) the position opens
+// on chain, but the UI reports an error and the modal stays open, because `onDone()`
+// is never called. The same class of fix as useHedgeExecution (20.08):
+// 2 attempts 5s apart, and once exhausted we RETURN (do not throw) — the caller
+// continues as if the transaction went through (the hash will land on chain sooner
+// or later; the next balance/allowance read will show it correctly anyway).
+// HOTFIX 31.08 (first live FLAT_NARROW): exported — also used by
+// useRebalanceExecution/useRotateExecution (the [Confirm] sequences still had
+// raw waitForTransactionReceipt and aborted on the same Rabby+publicnode
+// "Invalid parameters" error as useHedgeExecution on 20.08). Additionally
+// hash format validation as in useHedgeExecution — an unusual hash from the wallet
+// skips the wait instead of blowing up the sequence.
 export async function waitReceiptBestEffort(
   client: { waitForTransactionReceipt: (args: { hash: `0x${string}` }) => Promise<unknown> },
   hash: `0x${string}`,
@@ -151,7 +151,7 @@ export async function waitReceiptBestEffort(
   delayMs = 5_000
 ): Promise<void> {
   if (typeof hash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(hash)) {
-    console.warn('waitReceiptBestEffort: nietypowy hash od portfela — pomijam receipt:', String(hash).slice(0, 80));
+    console.warn('waitReceiptBestEffort: unusual hash from the wallet — skipping receipt:', String(hash).slice(0, 80));
     return;
   }
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -160,7 +160,7 @@ export async function waitReceiptBestEffort(
       return;
     } catch (e) {
       if (attempt === retries) {
-        console.warn('waitReceiptBestEffort: receipt nie potwierdzony po retry, kontynuuję (hash wysłany):', hash, e);
+        console.warn('waitReceiptBestEffort: receipt not confirmed after retry, continuing (hash sent):', hash, e);
         return;
       }
       await new Promise((r) => setTimeout(r, delayMs));
@@ -168,10 +168,10 @@ export async function waitReceiptBestEffort(
   }
 }
 
-// Link do eksploratora bloków per sieć (Partia: widoczny postęp CloseModal,
-// 25.08) — TransactionHistory.tsx ma podobny, ale binarny mainnet/Sepolia
-// (Sepolia usunięta 21.08, plik poza zakresem tej sesji) — świadomie NIE
-// reużywany, osobna mała stała tutaj zamiast dziedziczenia tamtego długu.
+// Block explorer link per network (Batch: visible CloseModal progress,
+// 25.08) — TransactionHistory.tsx has a similar one, but binary mainnet/Sepolia
+// (Sepolia removed 21.08, file outside this session's scope) — deliberately NOT
+// reused, a separate small constant here instead of inheriting that debt.
 const EXPLORER_TX_URL: Record<number, string> = {
   1: 'https://etherscan.io/tx/',
   8453: 'https://basescan.org/tx/',
@@ -179,32 +179,32 @@ const EXPLORER_TX_URL: Record<number, string> = {
 };
 export const explorerTxUrl = (chainId: number, hash: string): string => `${EXPLORER_TX_URL[chainId] ?? EXPLORER_TX_URL[1]}${hash}`;
 
-// Przybliżony koszt gazu w USD per sieć — powielone z prywatnej (nieeksportowanej)
-// stałej GAS_USD w utils/advisor.ts. Ten plik jest poza twardym zakresem tej
-// sesji UI (nie wolno go edytować, nawet żeby dodać export), więc liczby są
-// zduplikowane świadomie — trzymać w zgodzie ręcznie, jeśli szacunek się zmieni.
-// Arbitrum (42161): 0.10 — skalibrowane przez sesję analityczną (Fable,
-// HANDOFF 2026-08-11) na podstawie backtest/load.ts (GAS_USD arbitrum: 0.1),
-// żeby zachować "jedną prawdę" z backtestami. Poprzednio 0.15 (zgrubny
-// szacunek L2, advisor.ts nadal nie ma osobnej wartości dla tego chainId —
-// fallback tam to `?? 5`).
-// FIX 25.08 (HANDOFF Fable→Sonnet): te stałe okazały się fałszywie wysokie
-// na mainnecie przy niskim gazie — realny koszt collectu $0.27 (0.75 Gwei)
-// vs próg liczony z tej stałej: $64. Od teraz GAS_USD to WYŁĄCZNIE fallback,
-// używany gdy `getGasPrice()` padnie albo kurs ETH jest nieznany (patrz
-// `collectThresholdUsdLive` niżej) — sama stała i próg oparty na niej
-// (`collectThresholdUsd`/`isCollectWorthwhile`) zostają nietknięte, żeby
-// zachować deterministyczny fallback.
+// Approximate gas cost in USD per network — duplicated from the private (non-exported)
+// GAS_USD constant in utils/advisor.ts. That file is outside the hard scope of this
+// UI session (must not be edited, not even to add an export), so the numbers are
+// duplicated deliberately — keep in sync manually if the estimate changes.
+// Arbitrum (42161): 0.10 — calibrated by the analytics session (Fable,
+// HANDOFF 2026-08-11) based on backtest/load.ts (GAS_USD arbitrum: 0.1),
+// to keep "one truth" with the backtests. Previously 0.15 (rough
+// L2 estimate, advisor.ts still has no separate value for this chainId —
+// the fallback there is `?? 5`).
+// FIX 25.08 (HANDOFF Fable→Sonnet): these constants turned out to be falsely high
+// on mainnet at low gas — real collect cost $0.27 (0.75 Gwei)
+// vs the threshold computed from this constant: $64. From now on GAS_USD is EXCLUSIVELY a fallback,
+// used when `getGasPrice()` fails or the ETH price is unknown (see
+// `collectThresholdUsdLive` below) — the constant itself and the threshold based on it
+// (`collectThresholdUsd`/`isCollectWorthwhile`) remain untouched, to
+// keep a deterministic fallback.
 const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08, 42161: 0.1 };
-// UX-COCKPIT.md §1.A.3 mówił o progu "50x gaz" (~$400 na mainnecie, ~$4 na
-// Base) — w praktyce prawie nigdy nieosiągalne dla zwykłych pozycji, więc
-// przycisk wyglądał na zepsuty. Obniżone do ~8x (mainnet: $64, Base: $0.64)
-// — nadal chroni przed zbieraniem groszy droższych niż sam gas, ale nie
-// blokuje realistycznych kwot fee. Zgłoszone przez użytkownika 2026-08-10.
+// UX-COCKPIT.md §1.A.3 spoke of a "50x gas" threshold (~$400 on mainnet, ~$4 on
+// Base) — in practice almost never reachable for ordinary positions, so the
+// button looked broken. Lowered to ~8x (mainnet: $64, Base: $0.64)
+// — still protects against collecting pennies that cost more than the gas itself, but does not
+// block realistic fee amounts. Reported by the user 2026-08-10.
 export const COLLECT_THRESHOLD_MULT = 8;
 
-// Fallback (stała) — używane tylko wewnątrz `*Live` poniżej, gdy żywy odczyt
-// nie jest dostępny. Zostają eksportowane na wypadek innych call site'ów.
+// Fallback (constant) — used only inside `*Live` below, when the live read
+// is not available. They remain exported in case of other call sites.
 export const isCollectWorthwhile = (p: PortfolioPosition): boolean => {
   const gas = GAS_USD[p.chainId] ?? 5;
   return p.feesUsd > gas * COLLECT_THRESHOLD_MULT;
@@ -212,12 +212,12 @@ export const isCollectWorthwhile = (p: PortfolioPosition): boolean => {
 
 export const collectThresholdUsd = (chainId: number): number => (GAS_USD[chainId] ?? 5) * COLLECT_THRESHOLD_MULT;
 
-// Gaz zużywany przez jedno wywołanie collect() (NonfungiblePositionManager) —
-// zgrubne, stabilne dla tego jednego typu wywołania (bez pętli/swapów).
+// Gas consumed by a single collect() call (NonfungiblePositionManager) —
+// rough, stable for this one call type (no loops/swaps).
 const COLLECT_GAS_UNITS = 150_000n;
-// Cena gazu zmienia się szybko, ale to tylko brama do przycisku (nie krytyczny
-// odczyt przed podpisem — sama transakcja i tak płaci aktualny gaz w portfelu),
-// więc odświeżanie co 2 min wystarcza i nie zasypuje RPC.
+// Gas price changes quickly, but this is only a gate for the button (not a critical
+// read before signing — the transaction itself pays the current gas in the wallet anyway),
+// so refreshing every 2 min is enough and does not flood the RPC.
 const GAS_PRICE_POLL_MS = 2 * 60_000;
 
 const COLLECT_ABI = [
@@ -255,7 +255,7 @@ export interface CloseAmounts {
 /**
  * Pure preview helper (no RPC calls) — same formula prepareRemoveLiquidityTransaction
  * uses internally (Position.amount0/1 reduced by the slippage fraction), just
- * surfaced a step earlier so the "Zamknij" modal can show expected amounts
+ * surfaced a step earlier so the "Close" modal can show expected amounts
  * before the user confirms. The actual transaction is still built by calling
  * prepareRemoveLiquidityTransaction itself (see closePosition below) — this
  * function never produces calldata, only a display preview.
@@ -286,25 +286,25 @@ export const previewClose = (p: PortfolioPosition, percentage: number, slippageP
 export interface CockpitMessage {
   kind: 'ok' | 'err';
   text: string;
-  /** posKey(chainId, tokenId) źródłowej pozycji (FIX 25.08) — konsument
-   *  (CockpitPositionActions.tsx) renderuje wiadomość TYLKO na karcie
-   *  z pasującym kluczem, więc nie "przeskakuje" na inną kartę, gdy
-   *  źródłowa karta zniknie (np. pozycja zamknięta w 100%). */
+  /** posKey(chainId, tokenId) of the source position (FIX 25.08) — the consumer
+   *  (CockpitPositionActions.tsx) renders the message ONLY on the card
+   *  with the matching key, so it does not "jump" to another card when
+   *  the source card disappears (e.g. position closed 100%). */
   key: string;
 }
 
-/** Postęp sekwencji [⏹ Zamknij] (2 transakcje: decrease → collect) — osobny
- *  od `message` (który jest tylko końcowym podsumowaniem ok/err), żeby
- *  CloseModal mógł pokazać KROK PO KROKU co się dzieje zamiast jednego
- *  gubionego "Przetwarzanie…" (zgłoszenie Rafała po 1. bojowym zamknięciu
- *  #953427 25.08 wieczorem: 2 podpisy w Rabby w odstępie ~30s, użytkownik
- *  nie wiedział, na którym jest kroku). Trzymane w Record per pozycja
- *  (posKey) — tak jak `message` może dotyczyć wielu kart naraz w teorii
- *  (choć w praktyce modal jest jeden na raz), więc klucz zapobiega temu
- *  samemu przeciekowi między kartami co przy `message`. */
+/** Progress of the [⏹ Close] sequence (2 transactions: decrease → collect) — separate
+ *  from `message` (which is only the final ok/err summary), so that
+ *  CloseModal can show STEP BY STEP what is happening instead of a single
+ *  lost "Processing…" (owner's report after the 1st live close of
+ *  #953427 on the evening of 25.08: 2 signatures in Rabby ~30s apart, the user
+ *  did not know which step they were on). Kept in a Record per position
+ *  (posKey) — just like `message` it may concern multiple cards at once in theory
+ *  (though in practice there is one modal at a time), so the key prevents the
+ *  same leak between cards as with `message`. */
 export interface CloseStepStatus {
-  step: 1 | 2; // aktualny/ostatni krok w toku
-  hash1?: string; // decrease — ustawiane od razu po wysłaniu, przed potwierdzeniem
+  step: 1 | 2; // current/last step in progress
+  hash1?: string; // decrease — set immediately after sending, before confirmation
   hash2?: string; // collect
   done: boolean;
   error?: string;
@@ -322,22 +322,22 @@ export function useCockpitActions() {
 
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [message, setMessage] = useState<CockpitMessage | null>(null);
-  // Krok CloseModal per pozycja (FIX 25.08) — patrz docstring CloseStepStatus.
+  // CloseModal step per position (FIX 25.08) — see the CloseStepStatus docstring.
   const [closeStatus, setCloseStatus] = useState<Record<string, CloseStepStatus>>({});
-  // Żywa cena gazu per sieć (FIX 25.08) — poll niezależny od `clients` (obiekt
-  // odtwarzany co render), dep na trzech konkretnych referencjach z wagmi.
+  // Live gas price per network (FIX 25.08) — poll independent of `clients` (object
+  // recreated every render), dep on the three specific references from wagmi.
   const [gasPriceWei, setGasPriceWei] = useState<Partial<Record<number, bigint>>>({});
 
-  // Auto-znikanie toasta po ~10s (FIX 25.08, zgłoszenie Rafała) — niezależnie
-  // od przeskakiwania między kartami (patrz `posKey`/`CockpitMessage.key`),
-  // stary komunikat nie ma prawa wisieć w nieskończoność.
+  // Toast auto-hide after ~10s (FIX 25.08, owner's report) — regardless
+  // of jumping between cards (see `posKey`/`CockpitMessage.key`),
+  // an old message must never hang around forever.
   useEffect(() => {
     if (!message) return;
-    // Punkt 3 (Partia 13): każdy `message` pokazuje się też jako globalny
-    // toast na document.body — patrz komentarz przy showGlobalToast wyżej.
-    // Nie zastępuje per-kartowego renderu w CockpitPositionActions.tsx (ten
-    // zostaje dla kontekstu przy konkretnej karcie), tylko dokłada wersję,
-    // która przeżywa zamknięcie/odmontowanie dowolnego modala.
+    // Item 3 (Batch 13): every `message` is also shown as a global
+    // toast on document.body — see the comment at showGlobalToast above.
+    // It does not replace the per-card render in CockpitPositionActions.tsx (that
+    // stays for context next to the specific card), it only adds a version
+    // that survives closing/unmounting of any modal.
     showGlobalToast(message.kind, message.text);
     const id = setTimeout(() => setMessage(null), 10_000);
     return () => clearTimeout(id);
@@ -357,7 +357,7 @@ export function useCockpitActions() {
           try {
             return [chainId, await client.getGasPrice()] as const;
           } catch {
-            // odczyt padł (RPC/sieć) — collectThresholdUsdLive spadnie na fallback GAS_USD
+            // read failed (RPC/network) — collectThresholdUsdLive falls back to GAS_USD
             return null;
           }
         })
@@ -377,9 +377,9 @@ export function useCockpitActions() {
     };
   }, [clientMainnet, clientBase, clientArbitrum]);
 
-  // Żywy koszt jednego collect() w USD — null gdy brakuje odczytu gazu LUB
-  // kursu ETH (ethUsd z usePortfolio.ts, pochodny z puli stable/ETH
-  // użytkownika — może nie istnieć, gdy nie ma takiej pozycji).
+  // Live cost of a single collect() in USD — null when the gas read OR the
+  // ETH price is missing (ethUsd from usePortfolio.ts, derived from the user's
+  // stable/ETH pool — may not exist when there is no such position).
   const liveGasCostUsd = useCallback(
     (chainId: number, ethUsd: number | null): number | null => {
       const priceWei = gasPriceWei[chainId];
@@ -389,10 +389,10 @@ export function useCockpitActions() {
     [gasPriceWei]
   );
 
-  // Próg [Zbierz fees] liczony z żywego gazu (FIX 25.08) — spada na stałą
-  // GAS_USD tylko gdy `liveGasCostUsd` zwróci null (odczyt padł / brak kursu
-  // ETH). Mnożnik zostaje ten sam (COLLECT_THRESHOLD_MULT=8), sensowny
-  // dopiero przy urealnionej podstawie.
+  // [Collect fees] threshold computed from live gas (FIX 25.08) — falls back to the
+  // GAS_USD constant only when `liveGasCostUsd` returns null (read failed / no ETH
+  // price). The multiplier stays the same (COLLECT_THRESHOLD_MULT=8), sensible
+  // only with a realistic base.
   const collectThresholdUsdLive = useCallback(
     (chainId: number, ethUsd: number | null): number => {
       const live = liveGasCostUsd(chainId, ethUsd);
@@ -428,7 +428,7 @@ export function useCockpitActions() {
       try {
         const wc = await freshWalletClient(p.chainId);
         const client = clients[p.chainId];
-        if (!wc || !client) throw new Error('Brak połączenia z siecią pozycji');
+        if (!wc || !client) throw new Error('No connection to the position network');
         const data = encodeFunctionData({
           abi: COLLECT_ABI,
           functionName: 'collect',
@@ -436,12 +436,12 @@ export function useCockpitActions() {
         });
         const hash = await wc.sendTransaction({ to: p.positionManager, data, account: address, chain: wc.chain });
         await client.waitForTransactionReceipt({ hash });
-        addTransaction(address, hash, p.chainId, `Zbierz fee #${p.tokenId} (kokpit)`);
-        setMessage({ kind: 'ok', text: `Fee zebrane z pozycji #${p.tokenId} ✓`, key: posKey(p.chainId, p.tokenId) });
+        addTransaction(address, hash, p.chainId, `Collect fees #${p.tokenId} (cockpit)`);
+        setMessage({ kind: 'ok', text: `Fees collected from position #${p.tokenId} ✓`, key: posKey(p.chainId, p.tokenId) });
       } catch (e) {
         setMessage({
           kind: 'err',
-          text: `Zbieranie fee nieudane: ${e instanceof Error ? e.message.slice(0, 160) : String(e)}`,
+          text: `Fee collection failed: ${e instanceof Error ? e.message.slice(0, 160) : String(e)}`,
           key: posKey(p.chainId, p.tokenId),
         });
       } finally {
@@ -462,18 +462,18 @@ export function useCockpitActions() {
       try {
         const wc = await freshWalletClient(p.chainId);
         const client = clients[p.chainId];
-        if (!wc || !client) throw new Error('Brak połączenia z siecią pozycji');
+        if (!wc || !client) throw new Error('No connection to the position network');
 
         const liquidityToRemove = (BigInt(p.liquidity) * BigInt(Math.round(percentage))) / 100n;
-        if (liquidityToRemove <= 0n) throw new Error('Nic do zamknięcia');
+        if (liquidityToRemove <= 0n) throw new Error('Nothing to close');
 
-        // Krok 1/2: decreaseLiquidity — dokładnie ta sama funkcja co
-        // MyPositions.tsx (utils/liquidityManagement.ts), z pełnym Pool do
-        // wyliczenia min-po-slippage. Postęp teraz w `closeStatus` (FIX 25.08,
-        // zgłoszenie po 1. bojowym zamknięciu #953427: samo "Przetwarzanie…"
-        // przez ~30s między 2 podpisami w Rabby nie mówiło, na czym stoimy) —
-        // CloseModal czyta ten stan i renderuje listę kroków z linkiem do
-        // eksploratora, `message` zostaje tylko na końcowe podsumowanie ok/err.
+        // Step 1/2: decreaseLiquidity — exactly the same function as
+        // MyPositions.tsx (utils/liquidityManagement.ts), with the full Pool to
+        // compute the post-slippage minimums. Progress now in `closeStatus` (FIX 25.08,
+        // report after the 1st live close of #953427: a bare "Processing…"
+        // for ~30s between 2 signatures in Rabby did not say where we stood) —
+        // CloseModal reads this state and renders the step list with an explorer
+        // link, `message` remains only for the final ok/err summary.
         const decreaseTx = await prepareRemoveLiquidityTransaction(
           p.tokenId,
           liquidityToRemove.toString(),
@@ -491,13 +491,13 @@ export function useCockpitActions() {
         });
         setCloseStatus((prev) => ({ ...prev, [sKey]: { step: 1, hash1, done: false } }));
         await client.waitForTransactionReceipt({ hash: hash1 });
-        addTransaction(address, hash1, p.chainId, `Zamknij ${percentage}% #${p.tokenId} — krok 1/2 (decrease)`);
+        addTransaction(address, hash1, p.chainId, `Close ${percentage}% #${p.tokenId} — step 1/2 (decrease)`);
 
-        // Krok 2/2: collect — odbiera wycofany kapitał ORAZ narosłe fee w
-        // jednej transakcji (amount0Max/1Max = MAX_UINT128). Krok 1 ma już
-        // potwierdzenie w tym momencie — Rabby czasem pokazuje "Simulation
-        // failed" przy TYM podpisie (symuluje na stanie chwilę sprzed
-        // potwierdzenia kroku 1), CloseModal tłumaczy to przy hash1.
+        // Step 2/2: collect — receives the withdrawn capital AND the accrued fees in
+        // one transaction (amount0Max/1Max = MAX_UINT128). Step 1 already has
+        // its confirmation at this point — Rabby sometimes shows "Simulation
+        // failed" on THIS signature (it simulates against state from just before
+        // step 1 was confirmed), CloseModal explains this next to hash1.
         setCloseStatus((prev) => ({ ...prev, [sKey]: { ...prev[sKey], step: 2 } }));
         const collectData = encodeFunctionData({
           abi: COLLECT_ABI,
@@ -507,22 +507,22 @@ export function useCockpitActions() {
         const hash2 = await wc.sendTransaction({ to: p.positionManager, data: collectData, account: address, chain: wc.chain });
         setCloseStatus((prev) => ({ ...prev, [sKey]: { ...prev[sKey], step: 2, hash2 } }));
         await client.waitForTransactionReceipt({ hash: hash2 });
-        addTransaction(address, hash2, p.chainId, `Zamknij ${percentage}% #${p.tokenId} — krok 2/2 (collect)`);
+        addTransaction(address, hash2, p.chainId, `Close ${percentage}% #${p.tokenId} — step 2/2 (collect)`);
 
         setCloseStatus((prev) => ({ ...prev, [sKey]: { ...prev[sKey], step: 2, done: true } }));
-        setMessage({ kind: 'ok', text: `Pozycja #${p.tokenId} zamknięta w ${percentage}% ✓`, key: sKey });
+        setMessage({ kind: 'ok', text: `Position #${p.tokenId} closed ${percentage}% ✓`, key: sKey });
         onDone?.();
       } catch (e) {
         const errText = e instanceof Error ? e.message.slice(0, 160) : String(e);
-        // Awaria w środku sekwencji NIE oznacza utraty środków — decreaseLiquidity
-        // (krok 1, jeśli potwierdzony) przenosi wypłatę do tokensOwed na pozycji,
-        // odzyskiwalną w każdej chwili przez [💰 Zbierz fees]. `closeStatus`
-        // zostaje z krokiem, na którym stanęło (hash1/step widoczne dalej w
-        // modalu — user widzi które podpisy przeszły), tylko dopisujemy błąd.
+        // A failure mid-sequence does NOT mean loss of funds — decreaseLiquidity
+        // (step 1, if confirmed) moves the withdrawal to tokensOwed on the position,
+        // recoverable at any time via [💰 Collect fees]. `closeStatus`
+        // stays at the step where it stopped (hash1/step still visible in the
+        // modal — the user sees which signatures went through), we only append the error.
         setCloseStatus((prev) => ({ ...prev, [sKey]: { ...(prev[sKey] ?? { step: 1, done: false }), error: errText } }));
         setMessage({
           kind: 'err',
-          text: `Zamykanie nieudane — środki bezpieczne (spróbuj ponownie albo zbierz fee ręcznie): ${errText}`,
+          text: `Close failed — funds are safe (try again or collect fees manually): ${errText}`,
           key: sKey,
         });
       } finally {
@@ -532,18 +532,18 @@ export function useCockpitActions() {
     [address, freshWalletClient, clients]
   );
 
-  // Rebalans ręczny: otwiera NOWĄ pozycję w tej samej puli — domyślnie w
-  // zakresie sugerowanym przez doradcę (p.suggestion), ale to NIE jest
-  // wymagane: gdy doradca nie ma statystyk (mało swapów w 24h / pula spoza
-  // OBSERVED_PAIRS / chwilowy błąd RPC — patrz CONTEXT.md o limitach
-  // publicznych RPC), CockpitPositionActions.tsx pozwala wpisać zakres
-  // ręcznie zamiast całkowicie blokować przycisk (zgłoszone przez
-  // użytkownika 2026-08-10 — "rebalans ręczny też" [nieaktywny]). Dlatego
-  // ticki są jawnym argumentem, nie czytane z p.suggestion tutaj.
-  // Reużywa createPosition / prepareAddLiquidityTransaction, te same funkcje
-  // co AddLiquidity.tsx. Docelowy builder z UX-COCKPIT.md §3 (zamknij+swap+
-  // mint w jednej sekwencji) to zadanie sesji analitycznej — do tego czasu
-  // jest to zamknij starą pozycję osobno, otwórz nową tutaj (§5 kolejności wdrożenia).
+  // Manual rebalance: opens a NEW position in the same pool — by default in
+  // the range suggested by the advisor (p.suggestion), but this is NOT
+  // required: when the advisor has no stats (few swaps in 24h / pool outside
+  // OBSERVED_PAIRS / transient RPC error — see CONTEXT.md on public RPC
+  // limits), CockpitPositionActions.tsx allows entering the range
+  // manually instead of blocking the button entirely (reported by the
+  // user 2026-08-10 — "manual rebalance too" [inactive]). That is why
+  // the ticks are an explicit argument, not read from p.suggestion here.
+  // Reuses createPosition / prepareAddLiquidityTransaction, the same functions
+  // as AddLiquidity.tsx. The target builder from UX-COCKPIT.md §3 (close+swap+
+  // mint in one sequence) is a task for the analytics session — until then
+  // it is: close the old position separately, open the new one here (§5 rollout order).
   const openPositionAtRange = useCallback(
     async (p: RebalanceTarget, tickLower: number, tickUpper: number, amount0: string, amount1: string, slippageBps: number, onDone?: () => void) => {
       if (!address || !p.pool) return;
@@ -553,10 +553,10 @@ export function useCockpitActions() {
       try {
         const wc = await freshWalletClient(p.chainId);
         const client = clients[p.chainId];
-        if (!wc || !client) throw new Error('Brak połączenia z siecią pozycji');
+        if (!wc || !client) throw new Error('No connection to the position network');
         const position = createPosition(p.pool, tickLower, tickUpper, amount0 || '0', amount1 || '0');
         const tx = prepareAddLiquidityTransaction(position, slippageBps, 1800, p.chainId, address);
-        // symulacja przed wysłaniem — rewert łapiemy zanim zapłacisz gas (jak AddLiquidity.tsx)
+        // simulation before sending — we catch a revert before you pay gas (like AddLiquidity.tsx)
         await client.call({ to: tx.to as Address, data: tx.data as `0x${string}`, account: address });
         const hash = await wc.sendTransaction({
           to: tx.to as Address,
@@ -565,24 +565,24 @@ export function useCockpitActions() {
           account: address,
           chain: wc.chain,
         });
-        // Punkt 3 (Partia 13): best-effort, NIE throw — sam send już przeszedł
-        // symulację (client.call wyżej) i wysłał hash; poprzednio twardy throw
-        // tutaj (gdy RPC nie zdążyło z receiptem) lądował w catch niżej, mimo że
-        // pozycja otwierała się poprawnie na łańcuchu — user widział błąd, modal
-        // zostawał otwarty (onDone?.() nigdy nie wołane), bo wyjątek przerywał
-        // wykonanie przed tą linią.
+        // Item 3 (Batch 13): best-effort, do NOT throw — the send itself already passed
+        // simulation (client.call above) and sent the hash; previously a hard throw
+        // here (when the RPC did not deliver the receipt in time) landed in the catch below, even though
+        // the position opened correctly on chain — the user saw an error, the modal
+        // stayed open (onDone?.() never called), because the exception interrupted
+        // execution before this line.
         await waitReceiptBestEffort(client, hash);
-        addTransaction(address, hash, p.chainId, `Rebalans ręczny (nowa pozycja) ${p.poolLabel}`);
-        setMessage({ kind: 'ok', text: 'Nowa pozycja otwarta ✓', key: posKey(p.chainId, p.tokenId) });
-        // Modal ma się ZAMKNĄĆ po sukcesie (punkt 3) — onDone przekazany przez
-        // wywołującego (RebalanceModal→CockpitPositionActions/MorningCockpit)
-        // zawsze wiąże się z onClose po swojej stronie; toast survives dzięki
-        // showGlobalToast w useEffect powyżej, niezależnie od odmontowania modala.
+        addTransaction(address, hash, p.chainId, `Manual rebalance (new position) ${p.poolLabel}`);
+        setMessage({ kind: 'ok', text: 'New position opened ✓', key: posKey(p.chainId, p.tokenId) });
+        // The modal must CLOSE after success (item 3) — onDone passed by the
+        // caller (RebalanceModal→CockpitPositionActions/MorningCockpit)
+        // is always tied to onClose on its side; the toast survives thanks to
+        // showGlobalToast in the useEffect above, regardless of the modal unmounting.
         onDone?.();
       } catch (e) {
         setMessage({
           kind: 'err',
-          text: `Otwarcie pozycji nieudane: ${e instanceof Error ? e.message.slice(0, 200) : String(e)}`,
+          text: `Position open failed: ${e instanceof Error ? e.message.slice(0, 200) : String(e)}`,
           key: posKey(p.chainId, p.tokenId),
         });
       } finally {
@@ -592,7 +592,7 @@ export function useCockpitActions() {
     [address, freshWalletClient, clients]
   );
 
-  // Saldo + allowance tokenu pozycji (do modala rebalansu — approve jak w AddLiquidity.tsx).
+  // Balance + allowance of a position token (for the rebalance modal — approve as in AddLiquidity.tsx).
   const readBalanceAndAllowance = useCallback(
     async (p: RebalanceTarget, which: 0 | 1): Promise<{ balance: bigint; allowance: bigint }> => {
       const client = clients[p.chainId];
@@ -617,10 +617,10 @@ export function useCockpitActions() {
       if (!wc || !client || !manager) return;
       const token = which === 0 ? p.token0.address : p.token1.address;
       const hash = await wc.writeContract({ address: token, abi: erc20Abi, functionName: 'approve', args: [manager, amount], account: address, chain: wc.chain });
-      // Punkt 1 (Partia 13): best-effort, NIE throw — patrz waitReceiptBestEffort.
-      // Hash jest już wysłany; wywołujący (RebalanceModal.approve()) zawsze
-      // odświeża saldo+allowance zaraz po powrocie stąd, więc nawet gdy ten
-      // odczyt nie zdąży, kolejny refreshBalances() i tak pokaże prawdę.
+      // Item 1 (Batch 13): best-effort, do NOT throw — see waitReceiptBestEffort.
+      // The hash is already sent; the caller (RebalanceModal.approve()) always
+      // refreshes balance+allowance right after returning from here, so even if this
+      // read does not make it in time, the next refreshBalances() will show the truth anyway.
       await waitReceiptBestEffort(client, hash);
     },
     [address, freshWalletClient, clients]
@@ -633,7 +633,7 @@ export function useCockpitActions() {
   // instances (address/decimals) come from OBSERVED_PAIRS, which already has
   // the same USDC/WETH pairs the bot watches (both are "core" role) — no new
   // token metadata to maintain. Only 2 extra RPC reads (slot0 + liquidity),
-  // done on demand when the user clicks [Otwórz →], not on every render.
+  // done on demand when the user clicks [Open →], not on every render.
   const resolveBotPool = useCallback(
     async (botPoolId: string): Promise<RebalanceTarget | null> => {
       const meta = findBotPoolById(botPoolId);

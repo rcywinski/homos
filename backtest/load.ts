@@ -1,13 +1,13 @@
 /**
- * load.ts — WSPÓLNY loader cache'ów swapów dla run/walkforward/sweep
- * (wcześniej trzy zduplikowane kopie loadPool; jedna prawda tutaj).
+ * load.ts — SHARED swap-cache loader for run/walkforward/sweep
+ * (previously three duplicated copies of loadPool; one source of truth here).
  *
- * NOWE: wsparcie par kwotowanych w WETH (quote:'WETH'), np. cbBTC/WETH,
- * WTAO/WETH. Silnik zakładał parę ETH/stable (nie-ETH-owa noga = $1) —
- * dla par WETH-owych dawało to bezsensowne jednostki (patrz CONTEXT
- * 2026-08-11). Naprawa: cena USD-za-WETH brana PO BLOKACH z równoległego
- * cache USDC/WETH na TEJ SAMEJ sieci (te same numery bloków — join po bloku,
- * step-function z próbkowaniem co SAMPLE_EVERY swapów).
+ * NEW: support for WETH-quoted pairs (quote:'WETH'), e.g. cbBTC/WETH,
+ * WTAO/WETH. The engine assumed an ETH/stable pair (non-ETH leg = $1) —
+ * for WETH pairs that produced nonsensical units (see CONTEXT
+ * 2026-08-11). Fix: the USD-per-WETH price is taken PER BLOCK from a parallel
+ * USDC/WETH cache on THE SAME chain (same block numbers — join by block,
+ * step-function sampled every SAMPLE_EVERY swaps).
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -18,36 +18,36 @@ const CACHE = path.join(__dirname, '..', 'data', 'cache');
 export const TICK_SPACING: Record<number, number> = { 100: 1, 500: 10, 3000: 60, 10000: 200 };
 export const GAS_USD: Record<string, number> = { mainnet: 8, base: 0.08, arbitrum: 0.1, optimism: 0.05 };
 
-/** pule kwotowane w WETH → id referencyjnego cache USDC/WETH na tej samej sieci */
+/** WETH-quoted pools → id of the reference USDC/WETH cache on the same chain */
 export const QUOTE_WETH_REF: Record<string, string> = {
   'base-cbbtc-weth-005': 'base-weth-usdc-030',
   'base-cbbtc-weth-005-365d': 'base-weth-usdc-030-365d',
-  'base-cbbtc-weth-005-720d': 'base-weth-usdc-030-720d', // eksperyment 720d (25.08)
+  'base-cbbtc-weth-005-720d': 'base-weth-usdc-030-720d', // 720d experiment (25.08)
   'mainnet-wtao-weth-100': 'mainnet-usdc-weth-005',
   'mainnet-wsteth-weth-001': 'mainnet-usdc-weth-005-365d', // F.B: LST, token1=WETH
 };
 
-/** QUOTE_REF (20.08): pule kwotowane w INNYM aktywie niż WETH/stable (np.
- *  tbtc-wbtc → USD-za-WBTC). Silnikowo identyczne z quote:'WETH' — spec.quote
- *  znaczy tak naprawdę "noga kwotująca wyceniana zewnętrzną referencją USD".
- *  `assetIsToken0`: czy wyceniany asset jest token0 W PULI REFERENCYJNEJ —
- *  jawnie, bo cfg.ethIsToken0 referencji mówi o ETH, nie o naszym assecie
- *  (wbtc-usdc-030 ma ethIsToken0:false, a WBTC JEST token0). */
+/** QUOTE_REF (20.08): pools quoted in an asset OTHER than WETH/stable (e.g.
+ *  tbtc-wbtc → USD-per-WBTC). Engine-wise identical to quote:'WETH' — spec.quote
+ *  really means "quote leg priced by an external USD reference".
+ *  `assetIsToken0`: whether the priced asset is token0 IN THE REFERENCE POOL —
+ *  explicit, because the reference's cfg.ethIsToken0 speaks about ETH, not our
+ *  asset (wbtc-usdc-030 has ethIsToken0:false, while WBTC IS token0). */
 export const QUOTE_REF_EXT: Record<string, { ref: string; assetIsToken0: boolean }> = {
-  // token0=tBTC(d18), token1=WBTC(d8) → quote asset WBTC = token1 (spec.ethIsToken0:false z cfg ✓)
+  // token0=tBTC(d18), token1=WBTC(d8) → quote asset WBTC = token1 (spec.ethIsToken0:false from cfg ✓)
   'mainnet-tbtc-wbtc-001': { ref: 'mainnet-wbtc-usdc-030', assetIsToken0: true },
 };
 
-const SAMPLE_EVERY = 100; // próbkowanie serii referencyjnej (co N-ty swap)
+const SAMPLE_EVERY = 100; // sampling of the reference series (every N-th swap)
 
-/** step-function USD-za-<asset> po bloku, z cache pary <asset>/stable.
- *  `assetIsToken0` — jawny override orientacji (domyślnie cfg.ethIsToken0,
- *  poprawne dla referencji USDC/WETH; dla innych assetów podać jawnie). */
+/** step-function USD-per-<asset> by block, from the <asset>/stable pair cache.
+ *  `assetIsToken0` — explicit orientation override (default cfg.ethIsToken0,
+ *  correct for USDC/WETH references; for other assets pass explicitly). */
 async function loadUsdRef(refId: string, assetIsToken0?: boolean): Promise<(b: number) => number> {
   const metaPath = path.join(CACHE, `${refId}.meta.json`);
   const dataPath = path.join(CACHE, `${refId}.ndjson`);
   if (!fs.existsSync(metaPath) || !fs.existsSync(dataPath)) {
-    throw new Error(`Brak referencyjnego cache ${refId} (potrzebny do wyceny USD pary WETH-owej)`);
+    throw new Error(`Missing reference cache ${refId} (needed for USD pricing of a WETH-quoted pair)`);
   }
   const cfg = JSON.parse(fs.readFileSync(metaPath, 'utf8')).cfg;
   const blocks: number[] = [];
@@ -64,10 +64,10 @@ async function loadUsdRef(refId: string, assetIsToken0?: boolean): Promise<(b: n
     blocks.push(j.b);
     prices.push(usd);
   }
-  if (!blocks.length) throw new Error(`Referencyjny cache ${refId} pusty`);
-  // uwaga: append-only ndjson jest posortowany po bloku (fetch idzie rosnąco)
+  if (!blocks.length) throw new Error(`Reference cache ${refId} is empty`);
+  // note: the append-only ndjson is sorted by block (fetch goes ascending)
   return (b: number): number => {
-    // binary search: ostatnia próbka o bloku ≤ b (przed zakresem → pierwsza)
+    // binary search: last sample with block ≤ b (before the range → the first one)
     let lo = 0;
     let hi = blocks.length - 1;
     if (b <= blocks[0]) return prices[0];
@@ -81,8 +81,8 @@ async function loadUsdRef(refId: string, assetIsToken0?: boolean): Promise<(b: n
   };
 }
 
-/** funding perp (F4): step-function ts(sec) → rate za okres 8h (Binance).
- *  Konwencja: r > 0 → short DOSTAJE funding. */
+/** perp funding (F4): step-function ts(sec) → rate per 8h period (Binance).
+ *  Convention: r > 0 → the short RECEIVES funding. */
 export function loadFunding(symbol = 'ETHUSDT'): ((tsSec: number) => number) | null {
   const p = path.join(__dirname, '..', 'data', 'funding', `${symbol}.json`);
   if (!fs.existsSync(p)) return null;
@@ -135,16 +135,16 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
     spec.quote = 'WETH';
     spec.usdPerEth = await loadUsdRef(QUOTE_WETH_REF[id]);
   } else if (QUOTE_REF_EXT[id]) {
-    // silnikowo to samo co quote:'WETH' — zewnętrzna referencja USD nogi kwotującej
+    // engine-wise the same as quote:'WETH' — external USD reference for the quote leg
     spec.quote = 'WETH';
     spec.usdPerEth = await loadUsdRef(QUOTE_REF_EXT[id].ref, QUOTE_REF_EXT[id].assetIsToken0);
   } else if (cfg.quoteRefId) {
-    // DYNAMICZNA referencja z meta.cfg (kandydaci auto-lejka: candidate-funnel
-    // wpisuje quoteRefId do cfg, fetch-swaps-hypersync przenosi do meta.json) —
-    // statyczne mapy wyżej nie znają id `cand-*`. Refy to USDC/WETH, więc
-    // domyślna orientacja (cfg.ethIsToken0 referencji) jest poprawna.
-    // 02.09 (wide-collect): `quoteRefAssetIsToken0` = jawna orientacja
-    // referencji innej niż USDC/WETH (np. BTC/USDC, gdzie BTC bywa token0).
+    // DYNAMIC reference from meta.cfg (auto-funnel candidates: candidate-funnel
+    // writes quoteRefId into cfg, fetch-swaps-hypersync carries it into meta.json) —
+    // the static maps above do not know `cand-*` ids. Refs are USDC/WETH, so the
+    // default orientation (the reference's cfg.ethIsToken0) is correct.
+    // 02.09 (wide-collect): `quoteRefAssetIsToken0` = explicit orientation of a
+    // reference other than USDC/WETH (e.g. BTC/USDC, where BTC may be token0).
     spec.quote = 'WETH';
     spec.usdPerEth = await loadUsdRef(cfg.quoteRefId, cfg.quoteRefAssetIsToken0);
   }
@@ -165,13 +165,13 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
     });
   }
   swaps.sort((a, b) => a.b - b.b);
-  // dedup (resume może zdublować ostatni chunk) — PER BLOK, nie globalnym
-  // Setem: klucz oryginalnego Seta i tak zaczynał się od numeru bloku,
-  // więc semantyka jest identyczna, a globalny Set padał z RangeError
-  // "Set maximum size exceeded" przy >16.7M wpisów (limit V8; pierwszy
-  // przypadek: arbitrum-weth-usdc-005-720d, 25.6M swapów — CC-Win 25.08).
-  // Set resetowany na granicy bloku → pamięć O(swapów w bloku), kolejność
-  // zdarzeń w bloku nietknięta (sort jest stabilny).
+  // dedup (resume can duplicate the last chunk) — PER BLOCK, not with a global
+  // Set: the key of the original Set started with the block number anyway,
+  // so the semantics are identical, while the global Set crashed with RangeError
+  // "Set maximum size exceeded" at >16.7M entries (V8 limit; first case:
+  // arbitrum-weth-usdc-005-720d, 25.6M swaps — CC-Win 25.08).
+  // The Set is reset at the block boundary → memory O(swaps per block), event
+  // order within a block untouched (the sort is stable).
   const dedup: SwapEv[] = [];
   let blockSeen = new Set<string>();
   let curBlock = -1;
@@ -185,13 +185,13 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
     blockSeen.add(k);
     dedup.push(s);
   }
-  // FILTR PROBE-SWAPÓW (17.08, po anomalii WETH-USDT 0.01%: sondy przez puste
-  // ticki ±13–20k ticków od rynku wybijały fałszywy sygnał trendu i strategia
-  // "wychodziła" po absurdalnej cenie → −100%). Odrzucamy eventy odchylone
-  // > 1000 ticków (~10.5%) od rolling-mediany 201 swapów — prawdziwe ruchy
-  // (nawet flash-crashe) nie skaczą o 10% w obrębie ~200 swapów na pulach,
-  // które analizujemy; dla głębokich pul filtr to no-op (zweryfikowane:
-  // wyniki mainnet-030 identyczne). pegged.ts ma własny, ostrzejszy (300).
+  // PROBE-SWAP FILTER (17.08, after the WETH-USDT 0.01% anomaly: probes through
+  // empty ticks ±13–20k ticks away from the market fired a false trend signal
+  // and the strategy "exited" at an absurd price → −100%). We drop events
+  // deviating > 1000 ticks (~10.5%) from the rolling median of 201 swaps — real
+  // moves (even flash crashes) do not jump 10% within ~200 swaps on the pools we
+  // analyze; for deep pools the filter is a no-op (verified: mainnet-030 results
+  // identical). pegged.ts has its own, stricter one (300).
   const OUTLIER_TICKS = 1000;
   const W = 201;
   const win: number[] = [];
@@ -218,6 +218,6 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
     ins(s.t);
     if (win.length > W) del(win.shift()!);
   }
-  if (dropped) console.log(`[${id}] filtr probe-swapów: odrzucono ${dropped} (${((dropped / dedup.length) * 100).toFixed(4)}%)`);
+  if (dropped) console.log(`[${id}] probe-swap filter: dropped ${dropped} (${((dropped / dedup.length) * 100).toFixed(4)}%)`);
   return { swaps: filtered, spec };
 }

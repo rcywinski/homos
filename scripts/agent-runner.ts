@@ -1,20 +1,20 @@
 /**
- * agent-runner.ts — mostek automatyzacji między sesją Claude a Twoją maszyną.
+ * agent-runner.ts — automation bridge between a Claude session and your machine.
  *
- * Uruchom raz w iTerm i zostaw:
+ * Run once in iTerm and leave it:
  *   npm run agent
  *
- * Działanie:
- *  - nasłuchuje na pliki zadań w .agent/queue/*.json  ({"script": "fetch:swaps", "args": []})
- *  - wykonuje WYŁĄCZNIE skrypty z białej listy (nigdy dowolnych komend shellowych)
- *  - logi zadania: .agent/logs/<job>.log (streamowane na żywo)
- *  - stan: .agent/status.json (heartbeat co 3s, bieżące zadanie, kody wyjścia)
- *  - wykonane zadania lądują w .agent/done/
+ * How it works:
+ *  - watches for job files in .agent/queue/*.json  ({"script": "fetch:swaps", "args": []})
+ *  - runs ONLY whitelisted scripts (never arbitrary shell commands)
+ *  - job logs: .agent/logs/<job>.log (streamed live)
+ *  - state: .agent/status.json (heartbeat every 3s, current job, exit codes)
+ *  - completed jobs land in .agent/done/
  *
- * Claude wrzuca pliki zadań przez mostek plikowy sesji i czyta logi/status —
- * dzięki temu może odpalać pobieranie danych/backtesty i monitorować je,
- * mimo że nie ma bezpośredniego dostępu do Twojego terminala.
- * Zatrzymanie: Ctrl+C.
+ * Claude drops job files through the session's file bridge and reads logs/status —
+ * this lets it launch data fetches/backtests and monitor them, even though it has
+ * no direct access to your terminal.
+ * Stop: Ctrl+C.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -27,7 +27,7 @@ const DONE = path.join(AGENT, 'done');
 const LOGS = path.join(AGENT, 'logs');
 const STATUS = path.join(AGENT, 'status.json');
 
-/** Biała lista: nazwa zadania -> skrypt npm. Nic spoza listy nie zostanie wykonane. */
+/** Whitelist: job name -> npm script. Nothing outside the list gets executed. */
 const WHITELIST: Record<string, string> = {
   'fetch:swaps': 'fetch:swaps',
   'backtest': 'backtest',
@@ -78,7 +78,7 @@ async function runJob(jobFile: string) {
   }
 
   if (!WHITELIST[script]) {
-    console.error(`[agent] ODRZUCONO zadanie spoza białej listy: "${script}"`);
+    console.error(`[agent] REJECTED job outside the whitelist: "${script}"`);
     fs.renameSync(jobFile, path.join(DONE, `${jobName}.rejected.json`));
     busy = false;
     return;
@@ -94,7 +94,7 @@ async function runJob(jobFile: string) {
     cwd: ROOT,
     env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
-    // Windows: spawn() nie uruchamia npm.cmd bez shell (ENOENT) — jak w agent-runner-git.ts
+    // Windows: spawn() does not launch npm.cmd without a shell (ENOENT) — same as in agent-runner-git.ts
     shell: process.platform === 'win32',
   });
 
@@ -126,14 +126,14 @@ async function runJob(jobFile: string) {
       if (status.history.length > 50) status.history.shift();
       saveStatus();
       fs.renameSync(jobFile, path.join(DONE, `${jobName}.json`));
-      console.log(`\n[agent] ■ ${jobName} zakończone (exit ${code}, ${dur.toFixed(0)}s)`);
+      console.log(`\n[agent] ■ ${jobName} finished (exit ${code}, ${dur.toFixed(0)}s)`);
       resolve();
     });
   });
   busy = false;
 }
 
-console.log('[agent] mostek uruchomiony. Kolejka: .agent/queue/  Logi: .agent/logs/  Ctrl+C aby zakończyć.');
+console.log('[agent] bridge started. Queue: .agent/queue/  Logs: .agent/logs/  Ctrl+C to stop.');
 saveStatus();
 
 setInterval(async () => {

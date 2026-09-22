@@ -1,9 +1,9 @@
 const path = require('path');
 const webpack = require('webpack');
-// Bez tego .env NIE jest czytany przy buildzie — DefinePlugin wypiekał
-// puste WALLET_CONNECT_PROJECT_ID mimo wpisu w pliku (wykryte 19.08:
-// brak WalletConnect/Rabby na iOS). dotenv.config() w src/ jest no-opem
-// w przeglądarce; jedyne właściwe miejsce to build.
+// Without this, .env is NOT read at build time — DefinePlugin baked in an
+// empty WALLET_CONNECT_PROJECT_ID despite the entry in the file (found 19.08:
+// no WalletConnect/Rabby on iOS). dotenv.config() in src/ is a no-op
+// in the browser; the only proper place is the build.
 require('dotenv').config();
 
 module.exports = {
@@ -17,18 +17,18 @@ module.exports = {
     rules: [
       {
         test: /\.(ts|tsx|js|jsx|mjs)$/,
-        // [\\/] zamiast /: na Windows ścieżki mają backslashe — stary regex
-        // nie wykluczał NIC, babel transpilował całe node_modules i preset-env
-        // (bez targets = najstarsze przeglądarki) przepisywał `2n ** 7n` (viem)
-        // na Math.pow(2n,7n) → TypeError przy starcie → biała strona
-        // (incydent 18-19.08: każdy build z Windows był zepsuty, z Maca OK).
+        // [\\/] instead of /: on Windows paths have backslashes — the old regex
+        // excluded NOTHING, babel transpiled all of node_modules and preset-env
+        // (no targets = oldest browsers) rewrote `2n ** 7n` (viem)
+        // to Math.pow(2n,7n) → TypeError at startup → white page
+        // (incident 18-19.08: every build from Windows was broken, from the Mac OK).
         exclude: /node_modules[\\/](?!framer-motion[\\/])/,
         use: {
           loader: 'babel-loader',
           options: {
             presets: [
-              // targets es2020: BigInt/`**` zostają natywne nawet gdyby
-              // exclude znów przepuścił node_modules (druga linia obrony)
+              // targets es2020: BigInt/`**` stay native even if
+              // exclude let node_modules through again (second line of defense)
               ['@babel/preset-env', { targets: { chrome: '80', safari: '14', firefox: '78' } }],
               '@babel/preset-react',
               '@babel/preset-typescript'

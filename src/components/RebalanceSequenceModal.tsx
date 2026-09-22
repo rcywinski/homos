@@ -1,10 +1,10 @@
 /**
- * RebalanceSequenceModal.tsx — [Zatwierdź] na kartach propozycji REBALANCE
- * (TASKS-UI.md Partia 4b). Pokazuje listę kroków z `RebalancePlan`
- * (rebalanceBuilder.ts) z podglądem (label + detail), pasek postępu podczas
- * wykonania (useRebalanceExecution.ts) i stan "dokończ krok N/M" po
- * odświeżeniu strony (progress w localStorage, czytany tu tylko do wyświetlenia
- * — sama logika resume jest w hooku).
+ * RebalanceSequenceModal.tsx — [Approve] on REBALANCE proposal cards
+ * (TASKS-UI.md Batch 4b). Shows the step list from `RebalancePlan`
+ * (rebalanceBuilder.ts) with a preview (label + detail), a progress bar during
+ * execution (useRebalanceExecution.ts) and the "finish step N/M" state after
+ * a page refresh (progress in localStorage, read here only for display
+ * — the resume logic itself lives in the hook).
  */
 import React, { FC, useMemo } from 'react';
 import { Pool } from '@uniswap/v3-sdk';
@@ -22,8 +22,8 @@ interface Props {
 }
 
 const RebalanceSequenceModal: FC<Props> = ({ plan, pool, newTickLower, newTickUpper, execution, onClose, onDone }) => {
-  // Tylko do wyświetlenia "dokończ krok N/M" — execute() sam sprawdza to
-  // ponownie wewnątrz przed wysłaniem każdego kroku.
+  // Only for displaying "finish step N/M" — execute() re-checks this
+  // internally before sending each step.
   const progress = useMemo(() => loadProgress(plan.chainId, plan.tokenId), [plan.chainId, plan.tokenId]);
   const running = execution.status.phase === 'approving' || execution.status.phase === 'step';
   const doneCount = progress?.completed.length ?? 0;
@@ -32,7 +32,7 @@ const RebalanceSequenceModal: FC<Props> = ({ plan, pool, newTickLower, newTickUp
     <div className="modal-overlay" onClick={running ? undefined : onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>Zatwierdź rebalans #{plan.tokenId}</h3>
+          <h3>Approve rebalance #{plan.tokenId}</h3>
           {!running && (
             <button className="close-button" onClick={onClose}>
               ×
@@ -55,13 +55,13 @@ const RebalanceSequenceModal: FC<Props> = ({ plan, pool, newTickLower, newTickUp
             })}
           </div>
 
-          {plan.swapSkipped && <div className="morning-note">Proporcje już bliskie docelowym — krok swap pominięty.</div>}
-          <div className="morning-note">Approvals (jeśli potrzebne) wysyłane automatycznie tuż przed odpowiednim krokiem — nic do zrobienia ręcznie.</div>
+          {plan.swapSkipped && <div className="morning-note">Proportions already close to target — swap step skipped.</div>}
+          <div className="morning-note">Approvals (if needed) are sent automatically right before the relevant step — nothing to do manually.</div>
 
           {execution.status.message && execution.status.phase !== 'idle' && (
             <div className="morning-note">
               {execution.status.phase === 'approving' && `Approvals: `}
-              {execution.status.phase === 'step' && `Krok ${execution.status.stepIndex}/${execution.status.totalSteps}: `}
+              {execution.status.phase === 'step' && `Step ${execution.status.stepIndex}/${execution.status.totalSteps}: `}
               {execution.status.message}
             </div>
           )}
@@ -69,7 +69,7 @@ const RebalanceSequenceModal: FC<Props> = ({ plan, pool, newTickLower, newTickUp
 
           <div className="modal-actions">
             <button className="secondary-button" onClick={onClose} disabled={running}>
-              Anuluj
+              Cancel
             </button>
             <button
               className="primary-button"
@@ -77,12 +77,12 @@ const RebalanceSequenceModal: FC<Props> = ({ plan, pool, newTickLower, newTickUp
               onClick={() => execution.execute(pool, plan, newTickLower, newTickUpper, 50, onDone)}
             >
               {execution.status.phase === 'done'
-                ? 'Zakończono ✓'
+                ? 'Done ✓'
                 : running
-                ? 'W trakcie…'
+                ? 'In progress…'
                 : doneCount > 0
-                ? `Dokończ (krok ${doneCount + 1}/${plan.steps.length})`
-                : 'Wykonaj sekwencję'}
+                ? `Finish (step ${doneCount + 1}/${plan.steps.length})`
+                : 'Run sequence'}
             </button>
           </div>
         </div>

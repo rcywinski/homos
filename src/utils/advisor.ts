@@ -1,12 +1,12 @@
 /**
- * advisor.ts — "mózg" półautomatu (Faza 3 preview).
- * Liczy na danych on-chain z ostatnich godzin dokładnie to samo, co strategia
- * adaptacyjna w backteście (backtest/strategies.ts):
- *  - zmienność dzienną (EWMA na log-returnach z eventów Swap),
- *  - trailing fee-yield aktywnego pasma puli,
- *  - sugerowany zakres: szerokość = k · σ_dzienna · √(horyzont dni),
- *  - ocenę opłacalności rebalansu (payback kosztów z oczekiwanych fee).
- * Parametry (k, horyzont, payback) będą kalibrowane wynikami backtestu Fazy 1.
+ * advisor.ts — the "brain" of the semi-automatic mode (Phase 3 preview).
+ * Computes on on-chain data from the last hours exactly what the adaptive
+ * strategy in the backtest computes (backtest/strategies.ts):
+ *  - daily volatility (EWMA on log-returns from Swap events),
+ *  - trailing fee-yield of the pool's active band,
+ *  - suggested range: width = k · σ_daily · √(horizon days),
+ *  - rebalance profitability assessment (payback of costs from expected fees).
+ * Parameters (k, horizon, payback) will be calibrated with the Phase 1 backtest results.
  */
 import { PublicClient, parseAbiItem, Address } from 'viem';
 import { nearestUsableTick, TICK_SPACINGS, FeeAmount } from '@uniswap/v3-sdk';
@@ -26,8 +26,8 @@ export interface RecentSwap {
 }
 
 export interface PoolStats {
-  volDaily: number; // σ log-returnów przeskalowana na dzień
-  feeYieldDaily: number; // dzienny yield fee aktywnego pasma (±1 spacing)
+  volDaily: number; // σ of log-returns rescaled to a day
+  feeYieldDaily: number; // daily fee yield of the active band (±1 spacing)
   lastTick: number;
   lastSqrtP: bigint;
   swapsAnalyzed: number;
@@ -37,7 +37,7 @@ export interface PoolStats {
 export interface RangeSuggestion {
   tickLower: number;
   tickUpper: number;
-  widthPct: number; // połówkowa szerokość (±%)
+  widthPct: number; // half-width (±%)
   priceLower: number; // human, token1/token0
   priceUpper: number;
 }
@@ -51,9 +51,9 @@ export interface RebalanceAssessment {
 }
 
 export const ADVISOR_PARAMS = {
-  // k=3 od ALGORITHM.md v1.1 (walk-forward 365d: k3 h24 jedyna dodatnia śr.+med.
-  // w obu oknach; wcześniej 2). Pary skorelowane (cbBTC/WETH): k=2 — override
-  // per pula przez BotPool.advisorK (bot/config.ts), nie tutaj.
+  // k=3 since ALGORITHM.md v1.1 (walk-forward 365d: k3 h24 the only positive mean+median
+  // in both windows; previously 2). Correlated pairs (cbBTC/WETH): k=2 — per-pool
+  // override via BotPool.advisorK (bot/config.ts), not here.
   k: 3,
   horizonDays: 7,
   maxPaybackDays: 7,
@@ -64,11 +64,11 @@ export const ADVISOR_PARAMS = {
 
 const BLOCK_TIME: Record<number, number> = { 1: 12, 8453: 2, 42161: 0.25, 11155111: 12 };
 const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08, 42161: 0.1, 11155111: 0 };
-// chunk getLogs per chain: Arbitrum ma 4 bloki/s — przy 1000 bl./chunk 24h
-// wymagałoby ~350 wywołań co cykl; publiczne RPC Arbitrum znoszą 10k.
+// getLogs chunk per chain: Arbitrum has 4 blocks/s — at 1000 blocks/chunk 24h
+// would require ~350 calls per cycle; public Arbitrum RPCs tolerate 10k.
 const LOG_CHUNK: Record<number, bigint> = { 42161: 10_000n };
 
-/** Pobiera eventy Swap z ostatnich `hours` godzin (chunkowane getLogs). */
+/** Fetches Swap events from the last `hours` hours (chunked getLogs). */
 export async function fetchRecentSwaps(
   client: PublicClient,
   poolAddress: Address,
@@ -78,7 +78,7 @@ export async function fetchRecentSwaps(
   const latest = await client.getBlockNumber();
   const blocksBack = BigInt(Math.floor((hours * 3600) / (BLOCK_TIME[chainId] || 12)));
   const start = latest - blocksBack;
-  const CHUNK = LOG_CHUNK[chainId] ?? 1000n; // publiczne RPC często limitują getLogs do ~1-2k bloków
+  const CHUNK = LOG_CHUNK[chainId] ?? 1000n; // public RPCs often limit getLogs to ~1-2k blocks
   const out: RecentSwap[] = [];
   for (let from = start; from <= latest; from += CHUNK) {
     const to = from + CHUNK - 1n > latest ? latest : from + CHUNK - 1n;
@@ -101,7 +101,7 @@ export async function fetchRecentSwaps(
   return out;
 }
 
-/** Statystyki puli z listy swapów (identyczna metodologia jak w backteście). */
+/** Pool statistics from a list of swaps (identical methodology to the backtest). */
 export function computeStats(
   swaps: RecentSwap[],
   chainId: number,
@@ -113,12 +113,12 @@ export function computeStats(
   if (swaps.length < 10) return null;
   const bt = BLOCK_TIME[chainId] || 12;
 
-  // --- σ: tryb 'grid15' za flagą SIGMA_MODE (TASKS-RECAL §1, przegląd 26.08).
-  // Estymator swap-po-swapie mierzy mikrostrukturę puli (DECYZJE 11: rozrzut
-  // 4.5× na tym samym ETH); 'grid15' liczy zwroty między zamknięciami
-  // kubełków 15-min (czas z delty bloków). Default 'swap' — produkcja/paper
-  // bez zmian do decyzji po paczce rekalibracyjnej (podbicie algoVersion).
-  // Guard typeof: plik trafia też do bundla przeglądarki (webpack).
+  // --- σ: 'grid15' mode behind the SIGMA_MODE flag (TASKS-RECAL §1, review 26.08).
+  // The swap-by-swap estimator measures the pool's microstructure (DECISIONS 11: a
+  // 4.5× spread on the same ETH); 'grid15' computes returns between the closes of
+  // 15-min buckets (time from block deltas). Default 'swap' — production/paper
+  // unchanged until the decision after the recalibration batch (algoVersion bump).
+  // typeof guard: this file also ends up in the browser bundle (webpack).
   const sigmaGrid15 =
     typeof process !== 'undefined' && (process as { env?: Record<string, string | undefined> }).env?.SIGMA_MODE === 'grid15';
   const GRID_SEC = 900;
@@ -162,7 +162,7 @@ export function computeStats(
       }
       gridCurLast = p;
     }
-    // fee yield aktywnego pasma ±1 spacing
+    // fee yield of the active band ±1 spacing
     const sp = Number(s.sqrtPriceX96) / 2 ** 96;
     const spLo = sp * Math.pow(1.0001, -tickSpacing / 2);
     const spHi = sp * Math.pow(1.0001, tickSpacing / 2);
@@ -170,13 +170,13 @@ export function computeStats(
     if (L > 0) {
       const raw0 = L * ((spHi - sp) / (sp * spHi));
       const raw1 = L * (sp - spLo);
-      // wartość pasma w token0 (human): raw0 + raw1/p_raw, gdzie p_raw = sp^2
+      // band value in token0 (human): raw0 + raw1/p_raw, where p_raw = sp^2
       const bandTok0 = (raw0 + raw1 / (sp * sp)) / 10 ** d0;
       const feeTok0 =
         (s.amount0 > 0n ? Number(s.amount0) / 10 ** d0 : (Number(s.amount1) / 10 ** d1) / p) * feeRate;
       if (bandTok0 > 0 && feeTok0 >= 0) {
         const inst = (feeTok0 / bandTok0) * (86400 / dt);
-        const a = 1 - Math.exp(-dt / (86400 / Math.LN2)); // half-life 1 dzień
+        const a = 1 - Math.exp(-dt / (86400 / Math.LN2)); // half-life 1 day
         feeYield = (1 - a) * feeYield + a * inst;
       }
     }
@@ -212,9 +212,9 @@ export function suggestRange(
   return { tickLower: lo, tickUpper: hi, widthPct: w * 100, priceLower: toPrice(lo), priceUpper: toPrice(hi) };
 }
 
-/** PRODUKT 27.08 (hybryda FlatWide): zakres o STAŁEJ szerokości ±widthPct%
- *  wokół bieżącej ceny (postura idle = szeroki pasywny LP), zamiast k×σ.
- *  Ta sama matematyka ticków co suggestRange, w zadane z góry. */
+/** PRODUCT 27.08 (FlatWide hybrid): a range of FIXED width ±widthPct%
+ *  around the current price (idle posture = wide passive LP), instead of k×σ.
+ *  The same tick math as suggestRange, with w given up front. */
 export function suggestFixedRange(
   stats: PoolStats,
   feeAmount: FeeAmount,
@@ -241,9 +241,9 @@ export function assessPosition(
   d0: number,
   d1: number,
   params = ADVISOR_PARAMS,
-  /** żywy koszt gazu pełnego cyklu w USD (decyzja przeglądu 26.08, DECYZJE
-   *  6a): observer podaje wartość z eth_gasPrice; bez niej fallback na
-   *  statyczną tabelę GAS_USD (UI/backtest do czasu paczki rekalibracyjnej). */
+  /** live gas cost of a full cycle in USD (review decision 26.08, DECISIONS
+   *  6a): the observer supplies the value from eth_gasPrice; without it, fallback to
+   *  the static GAS_USD table (UI/backtest until the recalibration batch). */
   gasUsd?: number | null
 ): RebalanceAssessment {
   const suggestion = suggestRange(stats, feeAmount, d0, d1, params);

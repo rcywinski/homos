@@ -284,10 +284,10 @@ export const getExistingPool = async (
   }
 };
 
-// FIX 11.09 (Fable→Sonnet HANDOFF): kotwica fabryki per-chain, żeby przed
-// wysyłką kroku 'mint' (rebalance/rotate) dało się dociągnąć ŚWIEŻY stan
-// puli (slot0+liquidity) zamiast używać `pool` sprzed otwarcia modala —
-// patrz fetchFreshPool niżej.
+// FIX 11.09 (Fable→Sonnet HANDOFF): per-chain factory anchor, so that before
+// sending the 'mint' step (rebalance/rotate) a FRESH pool state
+// (slot0+liquidity) can be fetched instead of using the `pool` from before the modal opened —
+// see fetchFreshPool below.
 const FACTORY_BY_CHAIN: Record<number, Address> = {
   [NETWORKS.MAINNET.chainId]: NETWORKS.MAINNET.poolFactoryAddress,
   [NETWORKS.BASE.chainId]: NETWORKS.BASE.poolFactoryAddress,
@@ -295,15 +295,15 @@ const FACTORY_BY_CHAIN: Record<number, Address> = {
 };
 
 /**
- * Rebuduje `pool` (te same token0/token1/fee) ze ŚWIEŻO odczytanego
- * slot0+liquidity, zamiast reużywać obiekt Pool zamrożony w momencie
- * otwarcia modala rebalansu. Bez tego, przy ruchu ceny między otwarciem
- * modala a krokiem mint (> ok. 0.5%), Position.fromAmounts w buildMintStep
- * liczy z nieaktualnej ceny i symulacja mintu pada na "Price slippage
- * check" — użytkownik musi klikać [Zatwierdź] drugi raz. Jeśli adres puli
- * nie da się ustalić (nieznany chainId / fabryka nic nie zwraca), zwraca
- * PIERWOTNY `pool` niezmieniony (fail-open — wywołujący dostaje to, co
- * miał, zamiast wywalonego wyjątku w środku sekwencji).
+ * Rebuilds `pool` (same token0/token1/fee) from a FRESHLY read
+ * slot0+liquidity, instead of reusing the Pool object frozen at the moment
+ * the rebalance modal was opened. Without this, when the price moves between opening
+ * the modal and the mint step (> ~0.5%), Position.fromAmounts in buildMintStep
+ * computes from a stale price and the mint simulation fails on "Price slippage
+ * check" — the user has to click [Confirm] a second time. If the pool address
+ * cannot be determined (unknown chainId / factory returns nothing), returns
+ * the ORIGINAL `pool` unchanged (fail-open — the caller gets what it
+ * had, instead of an exception thrown mid-sequence).
  */
 export const fetchFreshPool = async (
   publicClient: PublicClient,

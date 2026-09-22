@@ -1,14 +1,14 @@
 /**
- * run.ts — uruchamia wszystkie strategie na danych z data/cache i generuje raport.
- *   npx tsx backtest/run.ts                      # wszystkie pule z cache
+ * run.ts — runs all strategies on data from data/cache and generates a report.
+ *   npx tsx backtest/run.ts                      # all pools from the cache
  *   npx tsx backtest/run.ts mainnet-usdc-weth-005
- * Wyniki: backtest/results/<id>.json + backtest/results/report.html
+ * Output: backtest/results/<id>.json + backtest/results/report.html
  */
 import * as fs from 'fs';
 import * as path from 'path';
 import { runStrategy, RunResult } from './engine';
 import { ALL_STRATEGIES } from './strategies';
-import { loadPool } from './load'; // wspólny loader (obsługuje też pary quote:'WETH')
+import { loadPool } from './load'; // shared loader (also handles quote:'WETH' pairs)
 
 const CACHE = path.join(__dirname, '..', 'data', 'cache');
 const OUT = path.join(__dirname, 'results');
@@ -53,7 +53,7 @@ function svgChart(results: RunResult[], w = 900, h = 320): string {
   }, 2000);
   const peakRssWriteTimer = setInterval(() => {
     try {
-      fs.writeFileSync(PEAK_RSS_FILE, `${peakRssMb.toFixed(0)} MB (w trakcie, ${new Date().toISOString()})
+      fs.writeFileSync(PEAK_RSS_FILE, `${peakRssMb.toFixed(0)} MB (in progress, ${new Date().toISOString()})
 `);
     } catch {}
   }, 60_000);
@@ -64,31 +64,32 @@ function svgChart(results: RunResult[], w = 900, h = 320): string {
     .readdirSync(CACHE)
     .filter((f) => f.endsWith('.meta.json'))
     .map((f) => f.replace('.meta.json', ''))
-    // cand-* = robocze cache lejka/walkforwardów (kandydaci przed bramką) —
-    // NIE wchodzą do dziennego raportu produkcyjnego (incydent 26.08:
-    // eksploracyjny cache cand-*-720d wpadł do pipeline'u i 2× go położył;
-    // jawne `--only cand-...` nadal działa dla pracy ręcznej)
-    // wide-*/ref-* = cache Piętra 2 lejka (scripts/wide-collect.ts, 720d) —
-    // ta sama klasa co cand-*: 19 dodatkowych pul 720d wpadło do nocnego
-    // backtest-run 03.09 (raport 07:30 zastał go w toku od 03:43). Ich
-    // wynik liczy kolektor (WF_SET=wide), nie dzienny raport.
+    // cand-* = working caches of the funnel/walkforwards (candidates before the
+    // gate) — they do NOT enter the daily production report (incident 26.08:
+    // an exploratory cand-*-720d cache got into the pipeline and took it down
+    // twice; an explicit `--only cand-...` still works for manual work)
+    // wide-*/ref-* = caches of funnel Tier 2 (scripts/wide-collect.ts, 720d) —
+    // the same class as cand-*: 19 extra 720d pools got into the nightly
+    // backtest-run on 03.09 (the 07:30 report found it still running since
+    // 03:43). Their result is computed by the collector (WF_SET=wide), not the
+    // daily report.
     .filter((id) => (only ? id === only : !/^(cand|wide|ref)-/.test(id)));
 
   let html = `<html><head><meta charset="utf-8"><title>HOMOS backtest</title>
   <style>body{font-family:system-ui;margin:24px;max-width:1000px}table{border-collapse:collapse;width:100%;font-size:13px}
   th,td{padding:6px 10px;border-bottom:1px solid #eee;text-align:right}th{color:#666}td:first-child,th:first-child{text-align:left}
-  .pos{color:#0a7d33}.neg{color:#c62828}h2{margin-top:40px}</style></head><body><h1>HOMOS — raport backtestu</h1>
-  <p>Kapitał startowy: $${fmt(START_CAPITAL_USD, 0)} · wygenerowano: ${new Date().toISOString()}</p>`;
+  .pos{color:#0a7d33}.neg{color:#c62828}h2{margin-top:40px}</style></head><body><h1>HOMOS — backtest report</h1>
+  <p>Starting capital: $${fmt(START_CAPITAL_USD, 0)} · generated: ${new Date().toISOString()}</p>`;
 
   for (const id of ids) {
     const loaded = await loadPool(id);
     if (!loaded || loaded.swaps.length < 100) {
-      console.log(`[${id}] brak danych lub za mało swapów — pomijam`);
+      console.log(`[${id}] no data or too few swaps — skipping`);
       continue;
     }
     const { swaps, spec } = loaded;
     const days = (swaps[swaps.length - 1].ts - swaps[0].ts) / 86400;
-    console.log(`\n=== ${id} — ${swaps.length} swapów, ${days.toFixed(1)} dni ===`);
+    console.log(`\n=== ${id} — ${swaps.length} swaps, ${days.toFixed(1)} days ===`);
 
     const results: RunResult[] = [];
     for (const strat of ALL_STRATEGIES) {
@@ -99,8 +100,8 @@ function svgChart(results: RunResult[], w = 900, h = 320): string {
     for (const r of results) r.vsHodlPct = ((r.finalUsd / hodl.finalUsd) - 1) * 100;
 
     console.log(
-      'strategia'.padEnd(42) +
-        'końcowa'.padStart(11) +
+      'strategy'.padEnd(42) +
+        'final'.padStart(11) +
         'APR%'.padStart(9) +
         'vsHODL%'.padStart(9) +
         'maxDD%'.padStart(8) +
@@ -128,9 +129,9 @@ function svgChart(results: RunResult[], w = 900, h = 320): string {
       JSON.stringify({ id, days, swapCount: swaps.length, results: results.map(({ equity, ...r }) => r) }, null, 2)
     );
 
-    html += `<h2>${id}</h2><p>${swaps.length.toLocaleString()} swapów · ${days.toFixed(1)} dni · fee ${spec.feeRate * 100}% · gas/rebalans $${spec.gasUsdPerRebalance}</p>`;
+    html += `<h2>${id}</h2><p>${swaps.length.toLocaleString()} swaps · ${days.toFixed(1)} days · fee ${spec.feeRate * 100}% · gas/rebalance $${spec.gasUsdPerRebalance}</p>`;
     html += svgChart(results);
-    html += `<table><tr><th>Strategia</th><th>Końcowa $</th><th>APR %</th><th>vs HODL %</th><th>maxDD %</th><th>Fees $</th><th>Gas $</th><th>Swap koszt $</th><th>Rebalanse</th><th>In-range %</th></tr>`;
+    html += `<table><tr><th>Strategy</th><th>Final $</th><th>APR %</th><th>vs HODL %</th><th>maxDD %</th><th>Fees $</th><th>Gas $</th><th>Swap cost $</th><th>Rebalances</th><th>In-range %</th></tr>`;
     for (const r of results) {
       const cls = r.vsHodlPct >= 0 ? 'pos' : 'neg';
       html += `<tr><td>${r.name}</td><td>${fmt(r.finalUsd, 0)}</td><td>${fmt(r.aprPct, 1)}</td><td class="${cls}">${fmt(r.vsHodlPct, 2)}</td><td>${fmt(r.maxDrawdownPct, 1)}</td><td>${fmt(r.feesUsd, 0)}</td><td>${fmt(r.gasUsd, 2)}</td><td>${fmt(r.swapCostUsd, 2)}</td><td>${r.rebalances}</td><td>${fmt(r.inRangePct, 0)}</td></tr>`;
@@ -139,14 +140,14 @@ function svgChart(results: RunResult[], w = 900, h = 320): string {
   }
   html += '</body></html>';
   fs.writeFileSync(path.join(OUT, 'report.html'), html);
-  console.log(`\nRaport: backtest/results/report.html`);
+  console.log(`\nReport: backtest/results/report.html`);
 
   clearInterval(memTimer);
   clearInterval(peakRssWriteTimer);
   peakRssMb = Math.max(peakRssMb, process.memoryUsage().rss / 1024 / 1024);
   console.log(`Peak RSS: ${peakRssMb.toFixed(0)} MB`);
   try {
-    fs.writeFileSync(PEAK_RSS_FILE, `${peakRssMb.toFixed(0)} MB (zakończone, ${new Date().toISOString()})
+    fs.writeFileSync(PEAK_RSS_FILE, `${peakRssMb.toFixed(0)} MB (finished, ${new Date().toISOString()})
 `);
   } catch {}
 })();

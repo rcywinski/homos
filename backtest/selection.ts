@@ -1,16 +1,17 @@
 /**
- * selection.ts — meta-backtest WARSTWY SELEKCJI PUL (bez lookahead bias).
+ * selection.ts — meta-backtest of the POOL SELECTION LAYER (no lookahead bias).
  *   npx tsx backtest/selection.ts
  *
- * Pytanie: czy polityka "codziennie trzymaj top-N pul wg rankingu fee-APR"
- * zarabia więcej niż trzymanie stałych pul rdzeniowych — PO kosztach rotacji?
- * Każdego dnia D ranking budowany WYŁĄCZNIE z danych ≤ D (trailing okno),
- * a wynik mierzony fee-APR z dnia D+1 (forward). To testuje trwałość APR.
+ * Question: does the policy "every day hold the top-N pools by fee-APR ranking"
+ * earn more than holding fixed core pools — AFTER rotation costs?
+ * On each day D the ranking is built EXCLUSIVELY from data ≤ D (trailing
+ * window), and the result is measured by the fee-APR of day D+1 (forward).
+ * This tests APR persistence.
  *
- * OGRANICZENIE (świadome): apyBase DefiLlama to yield z fee — NIE zawiera IL.
- * Wyniki czytać jako "porównanie strumieni fee między politykami"; pełny PnL
- * z IL testuje silnik tick-level (run.ts) na pulach wybranych przez selekcję.
- * Dla ostrożności: filtr stablecoin/ilRisk raportowany osobno.
+ * LIMITATION (deliberate): DefiLlama apyBase is fee yield — it does NOT include IL.
+ * Read the results as "a comparison of fee streams between policies"; full PnL
+ * with IL is tested by the tick-level engine (run.ts) on pools picked by selection.
+ * For caution: the stablecoin/ilRisk filter is reported separately.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -21,7 +22,7 @@ const OUT = path.join(__dirname, 'results');
 interface DayRow {
   date: string;
   apyBase: number | null;
-  il7d: number | null; // IL za trailing 7 dni, % (DefiLlama)
+  il7d: number | null; // IL over the trailing 7 days, % (DefiLlama)
   tvlUsd: number;
 }
 interface PoolHist {
@@ -30,7 +31,7 @@ interface PoolHist {
   dates: string[];
 }
 
-const SWITCH_COST_PCT = 0.15; // koszt wymiany puli jako % kapitału (swap 2x fee+slippage+gas, konserwatywnie)
+const SWITCH_COST_PCT = 0.15; // cost of swapping pools as % of capital (2x swap fee+slippage+gas, conservative)
 const MIN_TVL = 3_000_000;
 
 function load(): { pools: PoolHist[]; allDates: string[] } {
@@ -52,7 +53,7 @@ function load(): { pools: PoolHist[]; allDates: string[] } {
   return { pools, allDates: [...dateSet].sort() };
 }
 
-/** średni trailing apyBase z okna W dni kończącego się na dacie d (null gdy braki > 30%) */
+/** mean trailing apyBase over a window of W days ending on date d (null when gaps > 30%) */
 function trailing(p: PoolHist, d: string, w: number): number | null {
   const idx = p.dates.indexOf(d);
   if (idx < w - 1) return null;
@@ -70,9 +71,9 @@ function trailing(p: PoolHist, d: string, w: number): number | null {
 interface Policy {
   name: string;
   topN: number;
-  window: number; // trailing okno rankingu (dni)
-  persistDays: number; // pula musi być w topie przez X kolejnych dni zanim wejdziemy
-  excludeExotic: boolean; // tylko pary z majors (ETH/BTC/stable w symbolu)
+  window: number; // trailing ranking window (days)
+  persistDays: number; // a pool must be in the top for X consecutive days before we enter
+  excludeExotic: boolean; // only pairs of majors (ETH/BTC/stable in the symbol)
 }
 
 const MAJORS = /ETH|BTC|USDC|USDT|DAI|USDS/;
@@ -83,7 +84,7 @@ const isExotic = (sym: string) => {
 
 function simulate(pools: PoolHist[], allDates: string[], pol: Policy, ilAdjusted = false) {
   let ilCovered = 0, ilTotal = 0;
-  const start = 30; // rozbieg na trailing
+  const start = 30; // warm-up for trailing
   let capital = 1.0;
   let held: string[] = [];
   let switches = 0;
@@ -94,7 +95,7 @@ function simulate(pools: PoolHist[], allDates: string[], pol: Policy, ilAdjusted
     const d = allDates[di];
     const dNext = allDates[di + 1];
 
-    // ranking na dzień d (tylko dane ≤ d)
+    // ranking for day d (data ≤ d only)
     const scored = pools
       .filter((p) => {
         const row = p.byDate.get(d);
@@ -106,7 +107,7 @@ function simulate(pools: PoolHist[], allDates: string[], pol: Policy, ilAdjusted
       .filter((x) => x.score !== null)
       .sort((a, b) => b.score! - a.score!);
 
-    const topIds = scored.slice(0, pol.topN * 2).map((x) => x.p.meta.pool); // strefa topu (2N na streak)
+    const topIds = scored.slice(0, pol.topN * 2).map((x) => x.p.meta.pool); // top zone (2N for the streak)
     for (const id of topIds) topStreak.set(id, (topStreak.get(id) || 0) + 1);
     for (const id of [...topStreak.keys()]) if (!topIds.includes(id)) topStreak.set(id, 0);
 
@@ -115,16 +116,16 @@ function simulate(pools: PoolHist[], allDates: string[], pol: Policy, ilAdjusted
       .slice(0, pol.topN)
       .map((x) => x.p.meta.pool);
 
-    // rotacja: ile pozycji się zmienia
-    const target = eligible.length ? eligible : held; // brak kandydatów → trzymaj
+    // rotation: how many positions change
+    const target = eligible.length ? eligible : held; // no candidates → keep holding
     const changed = target.filter((id) => !held.includes(id)).length;
     if (held.length) {
       switches += changed;
-      capital *= 1 - (changed / Math.max(pol.topN, 1)) * (SWITCH_COST_PCT / 100) * 2; // wyjście+wejście
+      capital *= 1 - (changed / Math.max(pol.topN, 1)) * (SWITCH_COST_PCT / 100) * 2; // exit+entry
     }
     held = target;
 
-    // wynik: forward apyBase z dnia D+1 (equal weight), opcjonalnie minus IL
+    // result: forward apyBase of day D+1 (equal weight), optionally minus IL
     if (held.length) {
       let dayRet = 0, n = 0;
       for (const id of held) {
@@ -134,7 +135,7 @@ function simulate(pools: PoolHist[], allDates: string[], pol: Policy, ilAdjusted
           let r = row.apyBase! / 100 / 365;
           if (ilAdjusted) {
             const il = row.il7d;
-            if (il !== null && il > 0) r -= il / 100 / 7; // dzienna rata IL z trailing 7d
+            if (il !== null && il > 0) r -= il / 100 / 7; // daily IL instalment from trailing 7d
             ilCovered += il !== null ? 1 : 0;
             ilTotal += 1;
           }
@@ -160,20 +161,20 @@ function simulate(pools: PoolHist[], allDates: string[], pol: Policy, ilAdjusted
 (async () => {
   const { pools, allDates } = load();
   if (!pools.length) {
-    console.error('Brak danych w data/llama/history — odpal najpierw: npm run fetch:llama');
+    console.error('No data in data/llama/history — run first: npm run fetch:llama');
     process.exit(1);
   }
-  console.log(`Uniwersum: ${pools.length} pul z historią ≥30 dni, zakres dat ${allDates[0]} → ${allDates[allDates.length - 1]}\n`);
+  console.log(`Universe: ${pools.length} pools with ≥30 days of history, date range ${allDates[0]} → ${allDates[allDates.length - 1]}\n`);
 
   const policies: Policy[] = [
-    { name: 'NAIWNY pościg: top5 wg wczorajszego APR', topN: 5, window: 1, persistDays: 0, excludeExotic: false },
-    { name: 'Top5 wg średniej 7d', topN: 5, window: 7, persistDays: 0, excludeExotic: false },
-    { name: 'Top5 7d + persystencja 3d', topN: 5, window: 7, persistDays: 3, excludeExotic: false },
-    { name: 'Top5 7d + persyst. 3d + TYLKO majors', topN: 5, window: 7, persistDays: 3, excludeExotic: true },
-    { name: 'Top3 14d + persyst. 5d + majors', topN: 3, window: 14, persistDays: 5, excludeExotic: true },
+    { name: 'NAIVE chase: top5 by yesterday\'s APR', topN: 5, window: 1, persistDays: 0, excludeExotic: false },
+    { name: 'Top5 by 7d mean', topN: 5, window: 7, persistDays: 0, excludeExotic: false },
+    { name: 'Top5 7d + persistence 3d', topN: 5, window: 7, persistDays: 3, excludeExotic: false },
+    { name: 'Top5 7d + persist. 3d + majors ONLY', topN: 5, window: 7, persistDays: 3, excludeExotic: true },
+    { name: 'Top3 14d + persist. 5d + majors', topN: 3, window: 14, persistDays: 5, excludeExotic: true },
   ];
 
-  // benchmark: stałe pule rdzeniowe (jeśli są w uniwersum)
+  // benchmark: fixed core pools (if present in the universe)
   const CORE = ['WETH-USDC', 'USDC-WETH'];
   const corePools = pools.filter((p) => CORE.includes(p.meta.symbol) && !isExotic(p.meta.symbol)).slice(0, 3);
 
@@ -192,14 +193,14 @@ function simulate(pools: PoolHist[], allDates: string[], pol: Policy, ilAdjusted
       }
       if (k) { capital *= 1 + s / k / 100 / 365; n++; }
     }
-    results.push({ name: `BENCHMARK: stałe ${corePools.map((p) => p.meta.symbol + '@' + p.meta.chain).join(', ')}`, feeAprPct: n ? (Math.pow(capital, 365 / n) - 1) * 100 : 0, switches: 0, days: n, finalCapital: capital });
+    results.push({ name: `BENCHMARK: fixed ${corePools.map((p) => p.meta.symbol + '@' + p.meta.chain).join(', ')}`, feeAprPct: n ? (Math.pow(capital, 365 / n) - 1) * 100 : 0, switches: 0, days: n, finalCapital: capital });
   }
 
-  console.log('polityka'.padEnd(52) + 'fee-APR%'.padStart(10) + 'rotacje'.padStart(9) + 'dni'.padStart(6));
+  console.log('policy'.padEnd(52) + 'fee-APR%'.padStart(10) + 'rotations'.padStart(9) + 'days'.padStart(6));
   for (const r of results) {
     console.log(r.name.padEnd(52) + r.feeAprPct.toFixed(2).padStart(10) + String(r.switches).padStart(9) + String(r.days).padStart(6));
   }
-  console.log('\nUWAGA: fee-APR bez IL — porównuj polityki między sobą, nie traktuj jako PnL.');
+  console.log('\nNOTE: fee-APR without IL — compare policies against each other, do not treat as PnL.');
   fs.mkdirSync(OUT, { recursive: true });
   fs.writeFileSync(path.join(OUT, 'selection.json'), JSON.stringify(results, null, 2));
 })();

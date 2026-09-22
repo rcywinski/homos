@@ -1,19 +1,19 @@
 /**
- * rotation.ts — backtest DYNAMICZNEJ rotacji między pulami (TASKS-ROTATION v1,
- * dyrektywa Rafała 26.08: "cały czas przeglądamy rynek; jałowość/strata →
- * zamykamy i przenosimy się").
+ * rotation.ts — backtest of DYNAMIC rotation between pools (TASKS-ROTATION v1,
+ * Rafal's directive 26.08: "we keep reviewing the market; idleness/loss →
+ * we close and move").
  *
- * KONSTRUKCJA (uczciwie): pule ETH/stable = ta sama beta, więc test izoluje
- * pytanie "czy WYBÓR PULI (silnik fees) dodaje wartość" — rotacja nie ucieka
- * od kierunku rynku. Dla każdej puli liczymy engine'em equity strategii
- * in-pool (godzinowe próbki), a portfel rotacyjny SKŁADA godzinowe zwroty
- * aktywnej puli + płaci koszty przeskoku (SWITCH_COST_PCT + gaz; cross-chain
- * +$2 most). Przybliżenie: przy przeskoku dziedziczymy bieżący stan zakresu
- * puli docelowej (bias mały przy strategiach szybko re-centrowanych; ten sam
- * dla wszystkich reguł, więc PORÓWNANIE reguł jest fair).
+ * CONSTRUCTION (honest): ETH/stable pools = the same beta, so the test isolates
+ * the question "does POOL CHOICE (the fee engine) add value" — rotation does
+ * not escape market direction. For each pool we compute the in-pool strategy
+ * equity with the engine (hourly samples), and the rotation portfolio CHAINS
+ * the hourly returns of the active pool + pays hop costs (SWITCH_COST_PCT + gas;
+ * cross-chain +$2 bridge). Approximation: on a hop we inherit the current range
+ * state of the target pool (small bias for quickly re-centred strategies; the
+ * same for all rules, so the COMPARISON of rules is fair).
  *
- * Użycie: [SIGMA_MODE=grid15] npx tsx backtest/rotation.ts [startUsd=5000] [id...]
- *   default: 5 pul ETH/stable *-365d.
+ * Usage: [SIGMA_MODE=grid15] npx tsx backtest/rotation.ts [startUsd=5000] [id...]
+ *   default: 5 ETH/stable pools *-365d.
  */
 import { runStrategy, Strategy, PoolSpec } from './engine';
 import { fixedNaive, volAdaptiveTrend } from './strategies';
@@ -32,12 +32,12 @@ const ids = (argv.filter((a) => isNaN(Number(a))).length
     ]);
 
 const HOUR = 3600;
-const SWITCH_COST_PCT = 0.3; // % kapitału (wyjście+wejście) — jak selektor
-const BRIDGE_USD = 2; // cross-chain: most CCTP itp.
+const SWITCH_COST_PCT = 0.3; // % of capital (exit+entry) — as in the selector
+const BRIDGE_USD = 2; // cross-chain: CCTP bridge etc.
 const chainOf = (id: string) => id.split('-')[0];
 
-// sygnał "jałowości/atrakcyjności": EMA chwilowego fee-yieldu aktywnego pasma
-// (ta sama wielkość co engine §2), half-life 3.5d ≈ trailing ~7d
+// "idleness/attractiveness" signal: EMA of the instantaneous fee yield of the active band
+// (the same quantity as engine §2), half-life 3.5d ≈ trailing ~7d
 const YIELD_HL_SEC = 3.5 * 86400;
 
 interface PoolSeries {
@@ -46,9 +46,9 @@ interface PoolSeries {
   gasUsd: number;
   t0: number;
   t1: number;
-  // godzinowe (indeks = (ts - t0) / 3600)
-  logRet: Map<number, number>; // log-zwrot equity strategii in-pool w tej godzinie
-  yieldDaily: Map<number, number>; // trailing fee-yield (dzienny) na koniec godziny
+  // hourly (index = (ts - t0) / 3600)
+  logRet: Map<number, number>; // log-return of the in-pool strategy equity in this hour
+  yieldDaily: Map<number, number>; // trailing fee yield (daily) at end of hour
 }
 
 const trendBase = { k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, trendHLDays: 7, trendThresh: 0.05 } as const;
@@ -58,20 +58,20 @@ const IN_POOL: Record<string, () => Strategy> = {
 };
 
 (async () => {
-  // ROT_SET=naive30|v11 zawęża warianty in-pool (domyślnie oba)
+  // ROT_SET=naive30|v11 narrows the in-pool variants (default: both)
   const variants = process.env.ROT_SET ? [process.env.ROT_SET] : Object.keys(IN_POOL);
-  if (variants.some((v) => !IN_POOL[v])) { console.error(`Nieznany ROT_SET (dozwolone: ${Object.keys(IN_POOL).join(', ')})`); process.exit(1); }
-  // seria per pula per wariant strategii in-pool
+  if (variants.some((v) => !IN_POOL[v])) { console.error(`Unknown ROT_SET (allowed: ${Object.keys(IN_POOL).join(', ')})`); process.exit(1); }
+  // series per pool per in-pool strategy variant
   const series: Record<string, PoolSeries[]> = Object.fromEntries(variants.map((v) => [v, []]));
 
   for (const id of ids) {
     const loaded = await loadPool(id);
     if (!loaded) {
-      console.error(`Brak cache dla ${id} — pomijam`);
+      console.error(`No cache for ${id} — skipping`);
       continue;
     }
     const { swaps, spec } = loaded as { swaps: any[]; spec: PoolSpec };
-    // sygnał: przejście po swapach → godzinowy trailing yield (formuła engine §2)
+    // signal: pass over the swaps → hourly trailing yield (engine §2 formula)
     const yieldDaily = new Map<number, number>();
     {
       let y = 0;
@@ -88,8 +88,8 @@ const IN_POOL: Record<string, () => Strategy> = {
           const raw1 = L * (sp - spLo);
           const bandTok0 = (raw0 + raw1 / (sp * sp)) / 10 ** spec.d0;
           const feeTok0 = (ev.a0 > 0 ? ev.a0 : ev.a1 / (sp * sp) * 10 ** (spec.d1 - spec.d0) ) ;
-          // fee w token0 human: a0/a1 są już human w SwapEv? — patrz load.ts;
-          // liczymy w USD-agnostycznie: instYield = fee/band (jednostki się skracają)
+          // fee in token0 human: are a0/a1 already human in SwapEv? — see load.ts;
+          // we compute USD-agnostically: instYield = fee/band (units cancel out)
           const fee0 = (ev.a0 > 0 ? ev.a0 : Math.abs(ev.a1) / ((sp * sp) * 10 ** (spec.d0 - spec.d1))) * spec.feeRate;
           if (bandTok0 > 0 && fee0 >= 0) {
             const inst = (fee0 / bandTok0) * (86400 / dt);
@@ -120,13 +120,13 @@ const IN_POOL: Record<string, () => Strategy> = {
         t0: swaps[0].ts, t1: swaps[swaps.length - 1].ts, logRet, yieldDaily,
       });
     }
-    console.error(`  przygotowane: ${id} (${swaps.length} swapów)`);
-    // swaps wypada z zakresu — GC odzyska przed kolejną pulą
+    console.error(`  prepared: ${id} (${swaps.length} swaps)`);
+    // swaps goes out of scope — GC reclaims it before the next pool
   }
 
   for (const v of variants) {
     const pools = series[v];
-    if (pools.length < 2) { console.error('Za mało pul.'); process.exit(1); }
+    if (pools.length < 2) { console.error('Too few pools.'); process.exit(1); }
     const T0 = Math.max(...pools.map((p) => p.t0));
     const T1 = Math.min(...pools.map((p) => p.t1));
     const h0 = Math.ceil(T0 / HOUR), h1 = Math.floor(T1 / HOUR);
@@ -136,7 +136,7 @@ const IN_POOL: Record<string, () => Strategy> = {
       return memo.last;
     };
 
-    // prefiksowe sumy log-zwrotów (oracle + single-pool)
+    // prefix sums of log-returns (oracle + single-pool)
     const cum: number[][] = pools.map(() => new Array(h1 - h0 + 2).fill(0));
     pools.forEach((p, i) => {
       for (let h = h0; h <= h1; h++) cum[i][h - h0 + 1] = cum[i][h - h0] + (p.logRet.get(h) ?? 0);
@@ -148,13 +148,13 @@ const IN_POOL: Record<string, () => Strategy> = {
     type Res = { name: string; final: number; hops: number; costs: number; daysInCash: number };
     const results: Res[] = [];
 
-    // single-pool benchmarki
+    // single-pool benchmarks
     pools.forEach((p, i) => {
       results.push({ name: `single: ${p.id}`, final: startUsd * Math.exp(cum[i][h1 - h0 + 1]), hops: 0, costs: 0, daysInCash: 0 });
     });
     results.push({ name: '100% USDC', final: startUsd, hops: 0, costs: 0, daysInCash: (h1 - h0) / 24 });
 
-    // reguła (a) top-yield: przeskocz gdy inna pula ma yield wyższy o >X p.p. APR przez N godzin
+    // rule (a) top-yield: hop when another pool has a yield higher by >X p.p. APR for N hours
     for (const [X, Nh] of [[5, 48], [10, 48], [10, 72]] as const) {
       let usd = startUsd, active = 0, hops = 0, costs = 0, betterSince: number | null = null, betterIdx = -1;
       const memoY = pools.map(() => ({ last: 0 }));
@@ -170,10 +170,10 @@ const IN_POOL: Record<string, () => Strategy> = {
           }
         } else { betterSince = null; betterIdx = -1; }
       }
-      results.push({ name: `rotate: Δ>${X}p.p. przez ${Nh}h`, final: usd, hops, costs, daysInCash: 0 });
+      results.push({ name: `rotate: Δ>${X}p.p. for ${Nh}h`, final: usd, hops, costs, daysInCash: 0 });
     }
 
-    // reguła (b) jałowość: aktywna pula < Ymin% APR przez 48h → cash; powrót gdy top > Yre%
+    // rule (b) idleness: active pool < Ymin% APR for 48h → cash; return when top > Yre%
     for (const [Ymin, Yre] of [[5, 10], [10, 15]] as const) {
       let usd = startUsd, active: number | null = 0, hops = 0, costs = 0, lowSince: number | null = null, cashH = 0;
       const memoY = pools.map(() => ({ last: 0 }));
@@ -189,10 +189,10 @@ const IN_POOL: Record<string, () => Strategy> = {
           if (yields[best] > Yre) { const c = pools[best].gasUsd / 2 + usd * (SWITCH_COST_PCT / 200); usd -= c; costs += c; active = best; hops++; }
         }
       }
-      results.push({ name: `idle→cash: <${Ymin}% APR 48h, powrót >${Yre}%`, final: usd, hops, costs, daysInCash: cashH / 24 });
+      results.push({ name: `idle→cash: <${Ymin}% APR 48h, return >${Yre}%`, final: usd, hops, costs, daysInCash: cashH / 24 });
     }
 
-    // oracle: co tydzień wybiera pulę o najlepszym zwrocie NASTĘPNYCH 7 dni (górna granica)
+    // oracle: every week picks the pool with the best return over the NEXT 7 days (upper bound)
     {
       let usd = startUsd, active = 0, hops = 0, costs = 0;
       for (let h = h0; h <= h1; h++) {
@@ -204,16 +204,16 @@ const IN_POOL: Record<string, () => Strategy> = {
         }
         usd *= Math.exp(pools[active].logRet.get(h) ?? 0);
       }
-      results.push({ name: 'ORACLE (zna przyszłe 7d — górna granica)', final: usd, hops, costs, daysInCash: 0 });
+      results.push({ name: 'ORACLE (knows the next 7d — upper bound)', final: usd, hops, costs, daysInCash: 0 });
     }
 
     const days = (h1 - h0) / 24;
-    console.log(`\n═══ wariant in-pool: ${v} · ${pools.length} pul · wspólne okno ${days.toFixed(0)} dni · start $${startUsd} · SIGMA_MODE=${process.env.SIGMA_MODE ?? 'swap'} ═══`);
+    console.log(`\n═══ in-pool variant: ${v} · ${pools.length} pools · common window ${days.toFixed(0)} days · start $${startUsd} · SIGMA_MODE=${process.env.SIGMA_MODE ?? 'swap'} ═══`);
     const fmt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 }).padStart(8);
-    console.log('reguła'.padEnd(46) + 'koniec$'.padStart(8) + 'PnL%'.padStart(8) + 'przesk.'.padStart(8) + 'koszty$'.padStart(8) + 'dni-cash'.padStart(9));
+    console.log('rule'.padEnd(46) + 'final$'.padStart(8) + 'PnL%'.padStart(8) + 'hops'.padStart(8) + 'costs$'.padStart(8) + 'days-cash'.padStart(9));
     for (const r of [...results].sort((a, b) => b.final - a.final)) {
       console.log(r.name.padEnd(46) + fmt(r.final) + `${(((r.final - startUsd) / startUsd) * 100).toFixed(1)}%`.padStart(8) + String(r.hops).padStart(8) + fmt(r.costs) + r.daysInCash.toFixed(0).padStart(9));
     }
   }
-  console.log('\nUWAGA: pule ETH/stable = ta sama beta — tabela mierzy WYŁĄCZNIE wartość wyboru puli (silnik fees) i koszty przeskoków, nie kierunek rynku.');
+  console.log('\nNOTE: ETH/stable pools = the same beta — the table measures ONLY the value of pool choice (the fee engine) and hop costs, not market direction.');
 })();

@@ -1,18 +1,18 @@
 /**
- * bot/server.ts — mini API dla UI (czyta stan bota-obserwatora).
- *   npm run bot:server   (port 8787; docelowo pm2 na Windows, patrz INFRA.md)
+ * bot/server.ts — mini API for the UI (reads the observer bot's state).
+ *   npm run bot:server   (port 8787; eventually pm2 on Windows, see INFRA.md)
  * Endpoints:
- *   GET  /api/state                     — pełny stan (pule, pozycje, propozycje)
- *   GET  /api/paper?hours=N             — paper trading: stan + equity + księga
- *   POST /api/proposals/:id/dismiss     — odrzuć propozycję
- *   GET  /health                        — 200 gdy stan świeży (<5 min), BEZ tokena
+ *   GET  /api/state                     — full state (pools, positions, proposals)
+ *   GET  /api/paper?hours=N             — paper trading: state + equity + ledger
+ *   POST /api/proposals/:id/dismiss     — dismiss a proposal
+ *   GET  /health                        — 200 when the state is fresh (<5 min), WITHOUT token
  *
- * Autoryzacja: jeśli env BOT_API_TOKEN jest ustawiony, wszystkie /api/* wymagają
- * nagłówka `Authorization: Bearer <token>` (inaczej 401). Bez BOT_API_TOKEN w env
- * autoryzacja jest wyłączona (wygodne do dev na Macu) — na serwerze produkcyjnym
- * (Windows, patrz INFRA.md/setup-windows.md) token jest WYMAGANY, bo LAN domowy
- * to nie granica zaufania (goście na Wi-Fi). UI trzyma token w localStorage pod
- * kluczem `homos_api_token` i dokłada go do fetchy przeciwko temu API.
+ * Authorization: if the env BOT_API_TOKEN is set, all /api/* require the
+ * header `Authorization: Bearer <token>` (otherwise 401). Without BOT_API_TOKEN in env
+ * authorization is disabled (convenient for dev on the Mac) — on the production server
+ * (Windows, see INFRA.md/setup-windows.md) the token is REQUIRED, because the home LAN
+ * is not a trust boundary (guests on Wi-Fi). The UI keeps the token in localStorage under
+ * the key `homos_api_token` and attaches it to fetches against this API.
  */
 import 'dotenv/config';
 import * as fs from 'fs';
@@ -30,7 +30,7 @@ const API_TOKEN = process.env.BOT_API_TOKEN || '';
 
 const app = express();
 app.use(express.json());
-// CORS dla UI (dev na :3000, docelowo ten sam origin po buildzie)
+// CORS for the UI (dev on :3000, eventually the same origin after the build)
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -39,8 +39,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Token dostępu dla /api/* — /health zostaje otwarty (monitoring, pm2, curl bez tokena).
-// Bez BOT_API_TOKEN w env sprawdzenie jest pominięte (dev lokalnie na Macu).
+// Access token for /api/* — /health stays open (monitoring, pm2, curl without token).
+// Without BOT_API_TOKEN in env the check is skipped (local dev on the Mac).
 app.use('/api', (req, res, next) => {
   if (!API_TOKEN) return next();
   const header = req.headers.authorization || '';
@@ -54,12 +54,12 @@ const readJson = (p: string) => (fs.existsSync(p) ? JSON.parse(fs.readFileSync(p
 app.get('/api/state', (_req, res) => {
   const s = readJson(STATE_PATH);
   if (!s) return res.status(503).json({ error: 'bot not running (no state file)' });
-  // Fix 26.08 (zgłoszenie Rafała: "po odświeżeniu strony wracają"): odrzucenie
-  // czeka w kolejce komend do ≤30 s zanim observer je zastosuje i przepisze
-  // state.json — w tym oknie świeżo załadowana strona widziała propozycję
-  // znowu. Server NADAL nie pisze do proposals.json (jedyny writer =
-  // observer, lekcja dual-writer 25.08) — filtruje wyłącznie WIDOK stanu
-  // o idki z własnej kolejki. Gdy observer skonsumuje plik, filtr znika sam.
+  // Fix 26.08 (Rafal's report: "they come back after refreshing the page"): a dismissal
+  // waits in the command queue for up to 30 s before the observer applies it and rewrites
+  // state.json — in that window a freshly loaded page saw the proposal
+  // again. The server STILL does not write to proposals.json (the only writer =
+  // observer, dual-writer lesson 25.08) — it only filters the VIEW of the state
+  // by the ids from its own queue. Once the observer consumes the file, the filter disappears by itself.
   try {
     const cmdPath = path.join(DIR, 'proposal-commands.ndjson');
     if (fs.existsSync(cmdPath) && Array.isArray(s.proposals)) {
@@ -70,15 +70,15 @@ app.get('/api/state', (_req, res) => {
       );
       if (pending.size) s.proposals = s.proposals.filter((p: { id: string }) => !pending.has(p.id));
     }
-  } catch { /* filtr jest kosmetyką widoku — jego awaria nie kładzie endpointu */ }
+  } catch { /* the filter is view cosmetics — its failure must not take the endpoint down */ }
   res.json(s);
 });
 
 app.post('/api/proposals/:id/dismiss', (req, res) => {
-  // NIE piszemy do proposals.json (bug 25.08: dual-writer — observer trzyma
-  // propozycje w pamięci i nadpisywał plik, wskrzeszając odrzucone; jedynym
-  // writerem pliku jest observer). Komenda idzie kolejką append-only,
-  // observer aplikuje ją w ≤30 s i wtedy znika też z /api/state.
+  // We do NOT write to proposals.json (bug 25.08: dual-writer — the observer keeps
+  // proposals in memory and overwrote the file, resurrecting dismissed ones; the only
+  // writer of the file is the observer). The command goes through an append-only queue,
+  // the observer applies it within 30 s and then it also disappears from /api/state.
   const props = readJson(PROPOSALS_PATH) || [];
   if (!props.find((x: any) => x.id === req.params.id)) return res.status(404).json({ error: 'not found' });
   fs.appendFileSync(
@@ -88,8 +88,8 @@ app.post('/api/proposals/:id/dismiss', (req, res) => {
   res.json({ ok: true, applied: 'queued' });
 });
 
-// Historia snapshotów bota (dashboard "Analiza obserwacji" w UI).
-// Plik: .bot/history.ndjson — linie JSON co 15 min per pula (pisze observer).
+// History of bot snapshots (dashboard "Observation analysis" in the UI).
+// File: .bot/history.ndjson — JSON lines every 15 min per pool (written by the observer).
 app.get('/api/history', (req, res) => {
   const HISTORY_PATH = path.join(DIR, 'history.ndjson');
   if (!fs.existsSync(HISTORY_PATH)) return res.json([]);
@@ -101,14 +101,14 @@ app.get('/api/history', (req, res) => {
     try {
       const j = JSON.parse(line);
       if (new Date(j.ts).getTime() >= cutoff) out.push(j);
-    } catch { /* niepełna linia w trakcie zapisu — pomiń */ }
+    } catch { /* incomplete line mid-write — skip */ }
   }
   res.json(out);
 });
 
-// Historia equity/HODL REALNYCH pozycji (redesign kart pozycji wg wzorca
-// paper, 20.08). Plik: .bot/positions-history.ndjson — pisze observer co
-// cykl refreshPositions (5 min); kształt próbki jak paper-history + tokenId.
+// Equity/HODL history of REAL positions (position card redesign following the
+// paper pattern, 20.08). File: .bot/positions-history.ndjson — written by the observer every
+// refreshPositions cycle (5 min); sample shape like paper-history + tokenId.
 app.get('/api/positions-history', (req, res) => {
   const P = path.join(DIR, 'positions-history.ndjson');
   if (!fs.existsSync(P)) return res.json([]);
@@ -120,49 +120,49 @@ app.get('/api/positions-history', (req, res) => {
     try {
       const j = JSON.parse(line);
       if (new Date(j.ts).getTime() >= cutoff) out.push(j);
-    } catch { /* niepełna linia w trakcie zapisu — pomiń */ }
+    } catch { /* incomplete line mid-write — skip */ }
   }
   res.json(out);
 });
 
-// Ranking dnia selektora (TOP 10 pul "obserwowanych do wejścia") —
-// pisze bot/selector.ts raz dziennie po 8:00.
+// Selector's daily ranking (TOP 10 pools "watched for entry") —
+// written by bot/selector.ts once a day after 8:00.
 app.get('/api/ranking', (_req, res) => {
   const r = readJson(path.join(DIR, 'selector-ranking.json'));
   if (!r) return res.status(503).json({ error: 'ranking not generated yet (selector runs daily after 6:00)' });
   res.json(r);
 });
 
-// Ranking WIDE (lejek v2 piętro 1, scripts/wide-score.ts — krok nocnego
-// pipeline'u od 02.09). Ten sam kształt co /api/ranking; `apy7d` = score [%/r].
+// WIDE ranking (funnel v2 tier 1, scripts/wide-score.ts — a step of the nightly
+// pipeline since 02.09). Same shape as /api/ranking; `apy7d` = score [%/yr].
 app.get('/api/wide-ranking', (_req, res) => {
   const r = readJson(path.join(DIR, 'wide-ranking.json'));
   if (!r) return res.status(503).json({ error: 'wide ranking not generated yet (pipeline step wide-score, nightly)' });
   res.json(r);
 });
 
-// Model dzienny 365/720d (scripts/wide-daily.ts, krok pipeline'u po
-// wide-score): {pools: {llamaUuid → LP/HODL/Δ, mediany okien, flat%}}.
+// Daily model 365/720d (scripts/wide-daily.ts, pipeline step after
+// wide-score): {pools: {llamaUuid → LP/HODL/Δ, window medians, flat%}}.
 app.get('/api/wide-daily', (_req, res) => {
   res.json(readJson(path.join(DIR, 'wide-daily.json')) ?? { generatedAt: null, pools: {} });
 });
 
-// Pełne przebiegi (walkforward 720d, WF_SET=wide) dla pul z rankingów —
-// pisze scripts/wide-collect.ts (Piętro 2 lejka, subagent CC-Win w tle).
-// Obiekt {llamaUuid → summary}; UI dokłada kolumny po llamaUuid (Partia 22).
+// Full runs (walkforward 720d, WF_SET=wide) for pools from the rankings —
+// written by scripts/wide-collect.ts (funnel Tier 2, CC-Win subagent in the background).
+// Object {llamaUuid → summary}; the UI adds columns by llamaUuid (Batch 22).
 app.get('/api/wide-backtests', (_req, res) => {
   res.json(readJson(path.join(DIR, 'wide-backtests.json')) ?? {});
 });
 
-// Werdykty walidacji kandydatów (TASKS-FUNNEL.md): seed w kodzie +
-// runtime .bot/candidate-verdicts.json (pisze nocny lejek). UI dopasowuje
-// po llamaPool do wierszy rankingu → badge PASS/FAIL/QUEUED.
+// Candidate validation verdicts (TASKS-FUNNEL.md): seed in code +
+// runtime .bot/candidate-verdicts.json (written by the nightly funnel). The UI matches
+// by llamaPool to ranking rows → PASS/FAIL/QUEUED badge.
 app.get('/api/candidates', (_req, res) => {
   res.json(readVerdicts(DIR));
 });
 
-// Paper trading (bot/paper.ts): stan wirtualnego portfela + próbki equity
-// + księga decyzji. Query: ?hours=N (historia, domyślnie 72h, max 30 dni).
+// Paper trading (bot/paper.ts): virtual portfolio state + equity samples
+// + decision ledger. Query: ?hours=N (history, default 72h, max 30 days).
 app.get('/api/paper', (req, res) => {
   const st = readJson(path.join(DIR, 'paper-state.json'));
   if (!st) return res.status(503).json({ error: 'paper trading not started yet' });
@@ -177,15 +177,15 @@ app.get('/api/paper', (req, res) => {
       try {
         const row = JSON.parse(line);
         if (new Date(row.ts).getTime() >= cutoff) out.push(row);
-      } catch { /* pomiń uszkodzoną linię */ }
+      } catch { /* skip a corrupted line */ }
     }
     return out.slice(-limit);
   };
   res.json({ state: st, history: readNdjson('paper-history.ndjson', 20_000), events: readNdjson('paper-events.ndjson', 500) });
 });
 
-// Wyniki backtestów/walk-forwardów liczone przez pipeline (backtest/results/*.json).
-// UI (ObservationAnalysis) pyta o walkforward-<poolId>-365d-45d.json.
+// Backtest/walk-forward results computed by the pipeline (backtest/results/*.json).
+// The UI (ObservationAnalysis) asks for walkforward-<poolId>-365d-45d.json.
 app.get('/api/results/:name', (req, res) => {
   const name = req.params.name;
   if (!/^[\w.-]+\.json$/.test(name) || name.includes('..')) return res.status(400).json({ error: 'bad name' });
@@ -195,7 +195,7 @@ app.get('/api/results/:name', (req, res) => {
   res.json(JSON.parse(fs.readFileSync(p, 'utf8')));
 });
 
-// --- księga transakcji on-chain (TASKS-LEDGER.md §3) ---
+// --- on-chain transaction ledger (TASKS-LEDGER.md §3) ---
 app.get('/api/ledger', (req, res) => {
   const days = Math.max(1, Math.min(3650, Number(req.query.days) || 90));
   const cutoff = Date.now() - days * 24 * 3600e3;
@@ -207,7 +207,7 @@ app.get('/api/closed-positions', (_req, res) => {
   res.json(readJson(path.join(DIR, 'closed-positions.json')) ?? []);
 });
 
-// CSV: 1 wiersz = 1 zdarzenie on-chain (pod rozliczenia; PLN/NBP = iteracja 2)
+// CSV: 1 row = 1 on-chain event (for settlements; PLN/NBP = iteration 2)
 app.get('/api/ledger.csv', (_req, res) => {
   const esc = (v: unknown) => {
     const s = v === null || v === undefined ? '' : String(v);
@@ -227,7 +227,7 @@ app.get('/health', (_req, res) => {
   res.status(fresh ? 200 : 503).json({ fresh, updatedAt: s?.updatedAt ?? null });
 });
 
-// statyczny build UI (produkcja: webpack --mode production -> public/)
+// static UI build (production: webpack --mode production -> public/)
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 const PORT = Number(process.env.BOT_API_PORT || 8787);

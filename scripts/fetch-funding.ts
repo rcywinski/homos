@@ -1,13 +1,13 @@
 /**
- * fetch-funding.ts — historia funding rate z Binance USDⓈ-M futures (publiczne,
- * bez klucza). Fundament F4 (hedge): koszt/przychód shorta ETH-perp.
+ * fetch-funding.ts — funding rate history from Binance USDⓈ-M futures (public,
+ * no key). Foundation F4 (hedge): cost/income of an ETH-perp short.
  *
  *   npx tsx scripts/fetch-funding.ts ETHUSDT 400
  *   npx tsx scripts/fetch-funding.ts BTCUSDT 400
  *
- * Wyjście: data/funding/<symbol>.json — [{t: ms, r: rate}] rosnąco po t
- * (funding co 8h; rate to ułamek za okres 8h, np. 0.0001 = 1 bp/8h).
- * Konwencja perpów: r > 0 → longi płacą shortom (short DOSTAJE funding).
+ * Output: data/funding/<symbol>.json — [{t: ms, r: rate}] ascending by t
+ * (funding every 8h; rate is the fraction per 8h period, e.g. 0.0001 = 1 bp/8h).
+ * Perp convention: r > 0 → longs pay shorts (the short RECEIVES funding).
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -32,14 +32,14 @@ fs.mkdirSync(OUT_DIR, { recursive: true });
     if (!batch.length) break;
     for (const b of batch) all.push({ t: b.fundingTime, r: Number(b.fundingRate) });
     start = batch[batch.length - 1].fundingTime + 1;
-    process.stdout.write(`\r${symbol}: ${all.length} okresów (do ${new Date(start).toISOString().slice(0, 10)})  `);
-    await new Promise((r) => setTimeout(r, 300)); // grzecznie wobec rate-limitów
+    process.stdout.write(`\r${symbol}: ${all.length} periods (up to ${new Date(start).toISOString().slice(0, 10)})  `);
+    await new Promise((r) => setTimeout(r, 300)); // polite towards rate limits
   }
   all.sort((a, b) => a.t - b.t);
   const out = path.join(OUT_DIR, `${symbol}.json`);
   fs.writeFileSync(out, JSON.stringify(all));
   const mean = all.reduce((s, x) => s + x.r, 0) / all.length;
   const neg = all.filter((x) => x.r < 0).length;
-  console.log(`\n${symbol}: ${all.length} okresów 8h → ${out}`);
-  console.log(`średni funding ${(mean * 100).toFixed(4)}%/8h (${(mean * 3 * 365 * 100).toFixed(1)}%/rok), ujemnych: ${((neg / all.length) * 100).toFixed(0)}%`);
+  console.log(`\n${symbol}: ${all.length} 8h periods → ${out}`);
+  console.log(`mean funding ${(mean * 100).toFixed(4)}%/8h (${(mean * 3 * 365 * 100).toFixed(1)}%/yr), negative: ${((neg / all.length) * 100).toFixed(0)}%`);
 })();

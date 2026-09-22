@@ -1,37 +1,37 @@
 /**
- * fetch-swaps.ts — pobiera historię eventów Swap z pul Uniswap v3 do lokalnego cache.
+ * fetch-swaps.ts — fetches the history of Swap events from Uniswap v3 pools into a local cache.
  *
- * Uruchamianie (na maszynie z dostępem do sieci):
- *   npx tsx scripts/fetch-swaps.ts            # wszystkie pule z listy POOLS
- *   npx tsx scripts/fetch-swaps.ts base-weth-usdc-030   # jedna pula po id
+ * Usage (on a machine with network access):
+ *   npx tsx scripts/fetch-swaps.ts            # all pools from the POOLS list
+ *   npx tsx scripts/fetch-swaps.ts base-weth-usdc-030   # a single pool by id
  *
- * Wznawianie: skrypt trzyma stan w data/cache/<id>.state.json — przerwany
- * po prostu odpal ponownie, dociągnie od ostatniego bloku.
- * Wyjście: data/cache/<id>.ndjson (1 linia = 1 swap, format kompaktowy).
+ * Resuming: the script keeps state in data/cache/<id>.state.json — if interrupted,
+ * just run it again and it continues from the last block.
+ * Output: data/cache/<id>.ndjson (1 line = 1 swap, compact format).
  */
 import * as fs from 'fs';
 import * as path from 'path';
 
 // ---------------------------------------------------------------------------
-// Konfiguracja pul do pobrania (PAIRS.md §5 — start: rdzeń porównania)
+// Configuration of pools to fetch (PAIRS.md §5 — start: the comparison core)
 // ---------------------------------------------------------------------------
 export interface PoolCfg {
   id: string;
   chain: 'mainnet' | 'base' | 'arbitrum' | 'optimism';
   address: string;
   feeBps: number; // 500 = 0.05%
-  /** czy WETH/ETH-podobny token jest token0 (orientacja ceny) */
+  /** whether the WETH/ETH-like token is token0 (price orientation) */
   ethIsToken0: boolean;
   token0Decimals: number;
   token1Decimals: number;
-  days: number; // ile dni wstecz
+  days: number; // how many days back
 }
 
 export const POOLS: PoolCfg[] = [
-  // (wpis testowy base-weth-usdc-030-hstest USUNIĘTY 18.08 — test HyperSync
-  // dawno zaliczony [compare-caches zgodny]; zostawiony w POOLS blokował
-  // dzienny pipeline 90-dniowym backfillem przez RPC. Pliki -hstest w
-  // data/cache do skasowania na obu maszynach.)
+  // (test entry base-weth-usdc-030-hstest REMOVED 18.08 — the HyperSync test
+  // passed long ago [compare-caches consistent]; left in POOLS it blocked the
+  // daily pipeline with a 90-day backfill over RPC. The -hstest files in
+  // data/cache should be deleted on both machines.)
   {
     id: 'mainnet-usdc-weth-005',
     chain: 'mainnet',
@@ -59,27 +59,27 @@ export const POOLS: PoolCfg[] = [
   {
     id: 'base-cbbtc-weth-005',
     chain: 'base',
-    address: '', // uzupełniane automatycznie przez lookup factory przy pierwszym uruchomieniu
-    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 8, days: 90, // token0=WETH(d18), token1=cbBTC(d8) — zweryfikowane on-chain (fix odwróconej orientacji, sekcja F)
+    address: '', // filled in automatically by the factory lookup on the first run
+    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 8, days: 90, // token0=WETH(d18), token1=cbBTC(d8) — verified on-chain (fix of inverted orientation, section F)
   },
   {
-    // A3: rok danych drugiej najlepszej puli (skorelowana). Kopia base-cbbtc-weth-005, days: 365.
+    // A3: a year of data for the second-best pool (correlated). Copy of base-cbbtc-weth-005, days: 365.
     id: 'base-cbbtc-weth-005-365d',
     chain: 'base',
-    address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1', // cbBTC/WETH Base 0.05% (z lookupu RPC; HyperSync nie robi factory-lookup)
-    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 8, days: 365, // token0=WETH(d18), token1=cbBTC(d8) — zweryfikowane on-chain (fix odwróconej orientacji, sekcja F)
+    address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1', // cbBTC/WETH Base 0.05% (from RPC lookup; HyperSync does no factory lookup)
+    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 8, days: 365, // token0=WETH(d18), token1=cbBTC(d8) — verified on-chain (fix of inverted orientation, section F)
   },
   {
-    // A4: egzotyk v3 do werdyktu majors-vs-egzotyki. DORY-USDC (Arbitrum 1%) z rankingu
-    // to uniswap-V4 (singleton PoolManager, inny Swap event, brak adresu przez v3 factory)
-    // — NIE do pobrania tym v3-skryptem. Substytut: WTAO-WETH mainnet 1% (79% apyBase,
-    // najwyższy v3 egzotyk w universe.json). Decimals i adres zweryfikowane on-chain.
+    // A4: v3 exotic for the majors-vs-exotics verdict. DORY-USDC (Arbitrum 1%) from the ranking
+    // is uniswap-V4 (singleton PoolManager, different Swap event, no address via the v3 factory)
+    // — NOT fetchable with this v3 script. Substitute: WTAO-WETH mainnet 1% (79% apyBase,
+    // the highest v3 exotic in universe.json). Decimals and address verified on-chain.
     id: 'mainnet-wtao-weth-100',
     chain: 'mainnet',
     address: '0x433a00819c771b33fa7223a5b3499b24fbcd1bbc',
     feeBps: 10000, ethIsToken0: false, token0Decimals: 9, token1Decimals: 18, days: 90,
   },
-  // --- Część 2 (ALGORITHM v1): powtórka walidacji 005-pul na 365d (orientacja jak w 90d) ---
+  // --- Part 2 (ALGORITHM v1): repeat validation of the 005 pools on 365d (orientation as in 90d) ---
   {
     id: 'base-weth-usdc-005-365d',
     chain: 'base',
@@ -93,15 +93,15 @@ export const POOLS: PoolCfg[] = [
     feeBps: 500, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365,
   },
   {
-    // 20.08: brakująca 365d-wersja puli PRODUKCYJNEJ mainnet-030 (eksperyment
-    // hUp wykrył lukę — 4 z 5 pul bota miały cache 365d, ta tylko 90d).
+    // 20.08: missing 365d version of the PRODUCTION pool mainnet-030 (the hUp
+    // experiment found the gap — 4 of 5 bot pools had a 365d cache, this one only 90d).
     id: 'mainnet-usdc-weth-030-365d',
     chain: 'mainnet',
     address: '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8',
     feeBps: 3000, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365,
   },
-  // --- Sekcja F.A: sleeve par spiętych. Adresy przez factory + token0/token1 ZWERYFIKOWANE
-  //     on-chain (token0()/token1(), lekcja cbBTC — orientacja NIE z nazwy pary). Fee 0.01% = 100. ---
+  // --- Section F.A: pegged-pair sleeve. Addresses via factory + token0/token1 VERIFIED
+  //     on-chain (token0()/token1(), the cbBTC lesson — orientation NOT from the pair name). Fee 0.01% = 100. ---
   {
     id: 'mainnet-dai-usdt-001',
     chain: 'mainnet',
@@ -112,13 +112,13 @@ export const POOLS: PoolCfg[] = [
     id: 'arbitrum-usdc-usdt-001',
     chain: 'arbitrum',
     address: '0xbe3ad6a5669dc0b8b12febc03608860c31e2eef6',
-    feeBps: 100, ethIsToken0: false, token0Decimals: 6, token1Decimals: 6, days: 365, // token0=USDC natywny, token1=USDT
+    feeBps: 100, ethIsToken0: false, token0Decimals: 6, token1Decimals: 6, days: 365, // token0=native USDC, token1=USDT
   },
   {
     id: 'mainnet-usdc-usdt-001',
     chain: 'mainnet',
     address: '0x3416cf6c708da44db2624d63ea0aaef7113527c6',
-    feeBps: 100, ethIsToken0: false, token0Decimals: 6, token1Decimals: 6, days: 365, // token0=USDC, token1=USDT (kontrola: duża pula)
+    feeBps: 100, ethIsToken0: false, token0Decimals: 6, token1Decimals: 6, days: 365, // token0=USDC, token1=USDT (control: large pool)
   },
   {
     id: 'mainnet-wsteth-weth-001',
@@ -133,50 +133,50 @@ export const POOLS: PoolCfg[] = [
     feeBps: 100, ethIsToken0: false, token0Decimals: 18, token1Decimals: 8, days: 365, // token0=TBTC, token1=WBTC
   },
   {
-    // Referencja USD-za-WBTC dla mainnet-tbtc-wbtc-001 (para bez WETH).
+    // USD-per-WBTC reference for mainnet-tbtc-wbtc-001 (pair without WETH).
     id: 'mainnet-wbtc-usdc-030',
     chain: 'mainnet',
     address: '0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35',
-    feeBps: 3000, ethIsToken0: false, token0Decimals: 8, token1Decimals: 6, days: 365, // token0=WBTC, token1=USDC — zweryfikowane on-chain
+    feeBps: 3000, ethIsToken0: false, token0Decimals: 8, token1Decimals: 6, days: 365, // token0=WBTC, token1=USDC — verified on-chain
   },
-  // --- Nowe sieci: Arbitrum + Optimism (decyzja Rafała, 2026-08-11) ---
+  // --- New chains: Arbitrum + Optimism (Rafal's decision, 2026-08-11) ---
   {
     id: 'arbitrum-weth-usdc-005-365d',
     chain: 'arbitrum',
     address: '0xC6962004f452bE9203591991D15f6b388e09E8D0',
-    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=WETH, token1=USDC natywny (0xaf88…5831) — zweryfikowane on-chain
+    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=WETH, token1=native USDC (0xaf88…5831) — verified on-chain
   },
   {
     id: 'optimism-weth-usdc-030-365d',
     chain: 'optimism',
     address: '0xc1738d90e2e26c35784a0d3e3d8a9f795074bca4',
-    feeBps: 3000, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365, // token0=USDC natywny (0x0b2C…7Ff85), token1=WETH — zweryfikowane on-chain (getPool z factory)
+    feeBps: 3000, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365, // token0=native USDC (0x0b2C…7Ff85), token1=WETH — verified on-chain (getPool from factory)
   },
   {
     id: 'arbitrum-weth-usdc-030-365d',
     chain: 'arbitrum',
     address: '0xc473e2aee3441bf9240be85eb122abb059a3b57c',
-    feeBps: 3000, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=WETH, token1=USDC natywny — zweryfikowane on-chain (getPool z factory)
+    feeBps: 3000, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=WETH, token1=native USDC — verified on-chain (getPool from factory)
   },
-  // --- Walidacja kandydata selektora (pierwsza propozycja OPEN z rankingu, 17.08) ---
+  // --- Selector candidate validation (first OPEN proposal from the ranking, 17.08) ---
   {
     id: 'mainnet-weth-usdt-001-365d',
     chain: 'mainnet',
     address: '0xc7bbec68d12a0d1830360f8ec58fa599ba1b0e9b',
-    feeBps: 100, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=WETH, token1=USDT — zweryfikowane on-chain (getPool z factory)
+    feeBps: 100, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=WETH, token1=USDT — verified on-chain (getPool from factory)
   },
-  // --- Walidacja kandydata selektora #2 (ranking 19.08, 7d śr. 21.9%) ---
+  // --- Selector candidate validation #2 (ranking 19.08, 7d avg 21.9%) ---
   {
     id: 'mainnet-usdc-weth-001-365d',
     chain: 'mainnet',
     address: '0xe0554a476a092703abdb3ef35c80e0d76d32939f',
-    feeBps: 100, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365, // token0=USDC, token1=WETH — zweryfikowane on-chain (getPool z factory)
+    feeBps: 100, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365, // token0=USDC, token1=WETH — verified on-chain (getPool from factory)
   },
-  // --- EKSPERYMENT 720d (25.08, decyzja Rafała — DECYZJE pkt 12+13): dwa
-  // duże reżimy (bull 2024-25 + spadki 2025-26) dla pul rdzenia; adresy =
-  // kopie wpisów -365d (te same pule on-chain, szersze okno). Pula młodsza
-  // niż 720d (cbBTC, start ~X.2024) da dane OD POCZĄTKU życia — w raporcie
-  // ZAWSZE podawać faktyczne pokrycie w dniach.
+  // --- 720d EXPERIMENT (25.08, Rafal's decision — DECISIONS items 12+13): two
+  // major regimes (bull 2024-25 + declines 2025-26) for the core pools; addresses =
+  // copies of the -365d entries (same pools on-chain, wider window). A pool younger
+  // than 720d (cbBTC, launched ~X.2024) yields data FROM THE START of its life — in the
+  // report ALWAYS state the actual coverage in days.
   {
     id: 'base-weth-usdc-030-720d',
     chain: 'base',
@@ -209,9 +209,9 @@ export const POOLS: PoolCfg[] = [
   },
 ];
 
-// Kolejność ma znaczenie: najpierw endpointy z dostępem do pełnej historii.
-// Własny RPC (np. darmowy klucz Alchemy/Infura) można podać przez env:
-//   RPC_MAINNET=https://eth-mainnet.g.alchemy.com/v2/KLUCZ npm run agent
+// Order matters: endpoints with full-history access first.
+// Your own RPC (e.g. a free Alchemy/Infura key) can be provided via env:
+//   RPC_MAINNET=https://eth-mainnet.g.alchemy.com/v2/KEY npm run agent
 const RPC: Record<string, string[]> = {
   mainnet: [
     ...(process.env.RPC_MAINNET ? [process.env.RPC_MAINNET] : []),
@@ -246,15 +246,15 @@ const RPC: Record<string, string[]> = {
     'https://mainnet.optimism.io',
   ],
 };
-// Arbitrum ~0.25s/blok (dla interpolacji block→ts i okna dni-wstecz).
+// Arbitrum ~0.25s/block (for block→ts interpolation and the days-back window).
 const BLOCK_TIME: Record<string, number> = { mainnet: 12, base: 2, arbitrum: 0.25, optimism: 2 };
 const FACTORY: Record<string, string> = {
   mainnet: '0x1F98431c8aD98523631AE4a59f267346ea31F984',
   base: '0x33128a8fC17869897dcE68Ed026d694621f6FDfD',
-  arbitrum: '0x1F98431c8aD98523631AE4a59f267346ea31F984', // ten sam v3 factory co mainnet
-  optimism: '0x1F98431c8aD98523631AE4a59f267346ea31F984', // ten sam v3 factory co mainnet
+  arbitrum: '0x1F98431c8aD98523631AE4a59f267346ea31F984', // same v3 factory as mainnet
+  optimism: '0x1F98431c8aD98523631AE4a59f267346ea31F984', // same v3 factory as mainnet
 };
-// cbBTC/WETH Base — tokeny do lookupu adresu puli
+// cbBTC/WETH Base — tokens for the pool address lookup
 const BASE_CBBTC = '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf';
 const BASE_WETH = '0x4200000000000000000000000000000000000006';
 
@@ -264,7 +264,7 @@ const SWAP_TOPIC = '0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115f
 const CACHE_DIR = path.join(__dirname, '..', 'data', 'cache');
 
 // ---------------------------------------------------------------------------
-// Mini klient RPC z fallbackiem i backoffem
+// Mini RPC client with fallback and backoff
 // ---------------------------------------------------------------------------
 let rpcIdx = 0;
 async function rpc(chain: string, method: string, params: unknown[], attempt = 0): Promise<any> {
@@ -283,9 +283,9 @@ async function rpc(chain: string, method: string, params: unknown[], attempt = 0
   } catch (e: any) {
     const maxAttempts = urls.length * 2 + 4;
     if (attempt >= maxAttempts) throw e;
-    rpcIdx++; // następny provider
+    rpcIdx++; // next provider
     if (attempt === 0 || String(e?.message).includes('-32602') || String(e?.message).includes('429')) {
-      console.warn(`\n[rpc] ${url} odrzucił ${method} (${String(e?.message).slice(0, 90)}) — przełączam providera`);
+      console.warn(`\n[rpc] ${url} rejected ${method} (${String(e?.message).slice(0, 90)}) — switching provider`);
     }
     const delay = Math.min(400 * 1.6 ** attempt, 6000);
     await new Promise((res) => setTimeout(res, delay));
@@ -311,7 +311,7 @@ function decodeSwap(dataHex: string) {
 async function fetchPool(cfg: PoolCfg) {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
 
-  // lookup adresu puli, jeśli brak w konfiguracji
+  // pool address lookup, if missing from the configuration
   if (!cfg.address) {
     const [a, b] = [BASE_CBBTC.toLowerCase(), BASE_WETH.toLowerCase()].sort();
     const data =
@@ -339,7 +339,7 @@ async function fetchPool(cfg: PoolCfg) {
     console.log(`[${cfg.id}] resuming from block ${from}`);
   }
 
-  // anchory czasowe: timestamp co ~10% zakresu (do interpolacji w backteście)
+  // time anchors: a timestamp every ~10% of the range (for interpolation in the backtest)
   if (!fs.existsSync(metaPath)) {
     const anchors: Array<{ block: number; ts: number }> = [];
     for (let i = 0; i <= 10; i++) {
@@ -369,7 +369,7 @@ async function fetchPool(cfg: PoolCfg) {
       ]);
     } catch (e: any) {
       if (step > 200) {
-        step = Math.floor(step / 2); // za duże okno — zmniejsz
+        step = Math.floor(step / 2); // window too large — shrink it
         continue;
       }
       throw e;
@@ -377,7 +377,7 @@ async function fetchPool(cfg: PoolCfg) {
 
     for (const log of logs) {
       const s = decodeSwap(log.data);
-      // kompaktowy zapis: b=block, a0/a1=amounts, sp=sqrtPriceX96, L=liquidity, t=tick
+      // compact record: b=block, a0/a1=amounts, sp=sqrtPriceX96, L=liquidity, t=tick
       out.write(
         JSON.stringify({
           b: Number(hexToBigInt(log.blockNumber)),
@@ -402,12 +402,12 @@ async function fetchPool(cfg: PoolCfg) {
     );
   }
   out.end();
-  console.log(`\n[${cfg.id}] DONE — ${total} nowych swapów -> ${outPath}`);
+  console.log(`\n[${cfg.id}] DONE — ${total} new swaps -> ${outPath}`);
 }
 
-// Guard: uruchamiaj fetch tylko gdy ten plik jest punktem wejścia —
-// fetch-swaps-hypersync.ts importuje stąd POOLS/PoolCfg i bez guarda
-// sam import odpalałby równolegle fetch RPC wszystkich pul.
+// Guard: run the fetch only when this file is the entry point —
+// fetch-swaps-hypersync.ts imports POOLS/PoolCfg from here and without the guard
+// the mere import would launch the RPC fetch of all pools in parallel.
 if (require.main === module) {
   (async () => {
     const only = process.argv[2];

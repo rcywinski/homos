@@ -1,9 +1,9 @@
 /**
- * bot/config.ts — konfiguracja bota-obserwatora (standalone, bez zależności UI).
+ * bot/config.ts — configuration of the observer bot (standalone, no UI dependencies).
  * Env:
- *   BOT_WATCH_ADDRESS  — adres portfela do obserwacji pozycji (wymagany sensownie)
- *   RPC_MAINNET / RPC_BASE — opcjonalne własne RPC
- *   TG_TOKEN / TG_CHAT — opcjonalny Telegram na alerty
+ *   BOT_WATCH_ADDRESS  — wallet address whose positions are observed (effectively required)
+ *   RPC_MAINNET / RPC_BASE — optional custom RPCs
+ *   TG_TOKEN / TG_CHAT — optional Telegram for alerts
  */
 export interface BotPool {
   id: string;
@@ -16,102 +16,102 @@ export interface BotPool {
   d1: number;
   sym0: string;
   sym1: string;
-  /** adresy tokenów puli — do JEDNOZNACZNEGO dopasowania pozycji NFT
-   *  (dopasowanie po chain+fee przestało wystarczać przy >1 parze na tier) */
+  /** pool token addresses — for UNAMBIGUOUS matching of NFT positions
+   *  (matching by chain+fee stopped being enough with >1 pair per tier) */
   t0?: `0x${string}`;
   t1?: `0x${string}`;
-  /** waluta kwotowania ceny puli: 'USD' (domyślnie; ethUsd = USD za ETH)
-   *  albo 'WETH' (pary typu cbBTC/WETH; ethUsd = USD za token bazowy,
-   *  liczony przez kurs z puli referencyjnej usdRefPoolId) */
+  /** quote currency of the pool price: 'USD' (default; ethUsd = USD per ETH)
+   *  or 'WETH' (pairs like cbBTC/WETH; ethUsd = USD per base token,
+   *  computed via the rate from the reference pool usdRefPoolId) */
   quote?: 'USD' | 'WETH';
   usdRefPoolId?: string;
-  /** override mnożnika k doradcy dla tej puli (ALGORITHM v1.1: ETH/stable k=3
-   *  [domyślne z ADVISOR_PARAMS], pary skorelowane k=2) */
+  /** override of the advisor multiplier k for this pool (ALGORITHM v1.1: ETH/stable k=3
+   *  [default from ADVISOR_PARAMS], correlated pairs k=2) */
   advisorK?: number;
-  /** tryb powrotu bezpiecznika trendu (ALGORITHM v1.1 §4): 'aboveEma'
-   *  [domyślny, ETH/stable] — sygnał gaśnie dopiero gdy cena NAD EMA;
-   *  'half' [cbBTC] — gaśnie przy gap > −thresh/2 (czysty exit) */
+  /** re-entry mode of the trend circuit breaker (ALGORITHM v1.1 §4): 'aboveEma'
+   *  [default, ETH/stable] — the signal clears only when price is ABOVE the EMA;
+   *  'half' [cbBTC] — clears at gap > −thresh/2 (pure exit) */
   trendReentry?: 'aboveEma' | 'half';
-  /** akcja obronna na sygnale DOWN (ALGORITHM v1.2 §4): 'exit' [domyślna] —
-   *  propozycja wyjścia do cash 50/50; 'hedge' [base-030] — propozycja
-   *  shorta perp (GMX) na nadwyżkę ETH ponad 50% wartości, LP zostaje */
+  /** defensive action on a DOWN signal (ALGORITHM v1.2 §4): 'exit' [default] —
+   *  proposal to exit to cash 50/50; 'hedge' [base-030] — proposal of a
+   *  perp short (GMX) on the ETH excess above 50% of value, LP stays */
   trendAction?: 'exit' | 'hedge';
-  /** PRODUKT 27.08 — hybryda FlatWide (decyzja Rafała, dziennik CONTEXT
-   *  27.08): postura idle = SZEROKI pasywny LP o stałej szerokości
-   *  ±N% (zamiast k×σ doradcy). Gdy ustawione: sugestie zakresu
-   *  (OPEN w kokpicie, wykresy) liczą się z tej szerokości. Zwężanie
-   *  do k×σ następuje TYLKO w potwierdzonym flat (|gap|<2% przez
-   *  confirmH godzin — propozycja FLAT_ENTER, osobna logika). */
+  /** PRODUCT 27.08 — FlatWide hybrid (Rafal's decision, CONTEXT journal
+   *  27.08): idle posture = WIDE passive LP of fixed width
+   *  ±N% (instead of the advisor's k×σ). When set: range suggestions
+   *  (OPEN in the cockpit, charts) are computed from this width. Narrowing
+   *  to k×σ happens ONLY in a confirmed flat (|gap|<2% for
+   *  confirmH hours — FLAT_ENTER proposal, separate logic). */
   productIdleWidthPct?: number;
-  /** PRODUKT 29.08 — szerokość WĄSKIEJ nogi w potwierdzonym flacie
-   *  (uwaga Rafała: „mamy gap 2%, wyjście przy 5%, a zakres 16% —
-   *  to się nie trzyma kupy" — miał rację).
-   *  Do 29.08 zwężenie liczyło się doradcą v1.2 jako k×σ×√7, gdzie
-   *  horyzont 7 dni pochodzi z ZUPEŁNIE innej strategii („zakres ma
-   *  przeżyć tydzień bez rebalansu"). W hybrydzie pozycję chroni
-   *  FLAT_WIDEN przy |gap|>exitGap, więc pasmo szersze niż próg
-   *  wyjścia to płynność, do której cena nigdy nie dojdzie:
-   *  przy ±16% sygnał wyjścia pada po 32% drogi do krawędzi, przy
-   *  ±6% — po 83%. Stąd szerokość WYPROWADZONA z progu wyjścia
-   *  (FLAT.exitGap = 5%) plus zapas na dryf EMA w trakcie epizodu.
-   *  WARTOŚĆ 5% NA OBU PULACH = dokładnie FLAT.exitGap (decyzja
-   *  Rafała 29.08 po sweepie): krawędź pasma pokrywa się z sygnałem
-   *  FLAT_WIDEN, więc pozycja przestaje zarabiać w tym samym
-   *  momencie, w którym i tak ją rozszerzamy — jedna reguła zamiast
-   *  dwóch przypadkowych liczb. Sweep (flatwindows, 365d, CONFIRM_H=12,
-   *  ΣEV zwężania): cbBTC ±8% $193 → ±6% $334 → ±5% $442 → ±4% $570
-   *  → ±3% $685; base-030 ±8% $195 → ±6% $388 → ±5% $525 → ±4% $672.
-   *  EV rośnie monotonicznie w stronę węższych pasm, ale poniżej ±5%
-   *  psuje się udział czasu w zakresie (cbBTC przy ±3%: 59–79%
-   *  w kilku epizodach) — stąd ±5% jako punkt, w którym mamy prawie
-   *  całe EV przy in-range 85–100%.
-   *  ZASTRZEŻENIE: sweep liczony na cache 365d kończącym się 11.08;
-   *  weryfikacja na świeżych 720d (z bullem) — zlecona CC-Win na
-   *  przegląd 31.08, razem z walkforwardem hybrydy o TEJ szerokości
-   *  (dziś walkforward zwęża po k×σ×√7 — patrz RESEARCH-QUEUE E4). */
+  /** PRODUCT 29.08 — width of the NARROW leg in a confirmed flat
+   *  (Rafal's remark: "we have a 2% gap, exit at 5%, and a 16% range —
+   *  that does not hold together" — he was right).
+   *  Until 29.08 the narrowing was computed by advisor v1.2 as k×σ×√7, where
+   *  the 7-day horizon comes from a COMPLETELY different strategy ("the range
+   *  must survive a week without rebalancing"). In the hybrid the position is
+   *  protected by FLAT_WIDEN at |gap|>exitGap, so a band wider than the exit
+   *  threshold is liquidity the price will never reach:
+   *  at ±16% the exit signal fires after 32% of the way to the edge, at
+   *  ±6% — after 83%. Hence the width is DERIVED from the exit threshold
+   *  (FLAT.exitGap = 5%) plus a margin for EMA drift during the episode.
+   *  VALUE 5% ON BOTH POOLS = exactly FLAT.exitGap (Rafal's decision
+   *  29.08 after the sweep): the band edge coincides with the FLAT_WIDEN
+   *  signal, so the position stops earning at the same moment we widen
+   *  it anyway — one rule instead of two arbitrary numbers. Sweep
+   *  (flatwindows, 365d, CONFIRM_H=12, ΣEV of narrowing): cbBTC ±8% $193
+   *  → ±6% $334 → ±5% $442 → ±4% $570 → ±3% $685; base-030 ±8% $195
+   *  → ±6% $388 → ±5% $525 → ±4% $672.
+   *  EV grows monotonically toward narrower bands, but below ±5% the
+   *  in-range time share breaks down (cbBTC at ±3%: 59–79% in several
+   *  episodes) — hence ±5% as the point where we get almost all the EV
+   *  with 85–100% in-range.
+   *  CAVEAT: sweep computed on the 365d cache ending 11.08;
+   *  verification on fresh 720d (including the bull) — assigned to CC-Win
+   *  for the 31.08 review, together with a hybrid walkforward at THIS width
+   *  (today the walkforward narrows by k×σ×√7 — see RESEARCH-QUEUE E4). */
   productNarrowWidthPct?: number;
 }
 
-/** Bezpiecznik trendu spadkowego (ALGORITHM.md v1.1 §4) — jedna prawda. */
+/** Downtrend circuit breaker (ALGORITHM.md v1.1 §4) — single source of truth. */
 export const TREND = {
-  hlDays: 7, // half-life EMA log-ceny względnej pary
-  thresh: 0.05, // sygnał DOWN gdy log(P/EMA) < −5%
+  hlDays: 7, // half-life of the EMA of the pair's relative log-price
+  thresh: 0.05, // DOWN signal when log(P/EMA) < −5%
 };
 
-/** PRODUKT FlatWide — detektor flatu FLAT_ENTER/FLAT_EXIT (28.08).
- *  Zwężenie LP do k×σ TYLKO w potwierdzonym flacie; poza flatem szeroki
- *  pasywny ±productIdleWidthPct. Parametry z E1/flatwindows (365d Fable
- *  + 720d i cross-check CC-Win, 2 pule): confirm 12h zamiast 24h ~2×
- *  więcej złapanych epizodów bez utraty jakości (base-030 ΣEV +223%,
- *  cbBTC +13%). EMA: TA SAMA co bezpiecznik trendu (HL 7d, trend-state)
- *  — HL_D=5 (najlepszy na cbBTC, +18%) ODROCZONE do przeglądu 1.09
- *  (kombinacja 12h+5d nietestowana, wymagałaby drugiej EMA).
- *  Detektor działa WYŁĄCZNIE na pulach produktowych (productIdleWidthPct)
- *  — lekcja mainnet-wsteth-weth-001 (skan 27.08): na parach o
- *  strukturalnie niskiej zmienności (LST, stable/stable) detektor łapie
- *  szum mikrostruktury i generuje czyste koszty; dodatkowo twardy próg
- *  minVolDaily. Tryb PROPONUJ — nic nie wykonuje się samo. */
+/** PRODUCT FlatWide — flat detector FLAT_ENTER/FLAT_EXIT (28.08).
+ *  Narrowing the LP to k×σ ONLY in a confirmed flat; outside the flat a wide
+ *  passive ±productIdleWidthPct. Parameters from E1/flatwindows (365d Fable
+ *  + 720d and cross-check CC-Win, 2 pools): confirm 12h instead of 24h ~2×
+ *  more episodes caught without loss of quality (base-030 ΣEV +223%,
+ *  cbBTC +13%). EMA: THE SAME as the trend circuit breaker (HL 7d, trend-state)
+ *  — HL_D=5 (best on cbBTC, +18%) DEFERRED to the 1.09 review
+ *  (the 12h+5d combination is untested, it would require a second EMA).
+ *  The detector runs EXCLUSIVELY on product pools (productIdleWidthPct)
+ *  — lesson from mainnet-wsteth-weth-001 (scan 27.08): on pairs with
+ *  structurally low volatility (LST, stable/stable) the detector catches
+ *  microstructure noise and generates pure costs; additionally a hard
+ *  minVolDaily threshold. PROPOSE mode — nothing executes by itself. */
 export const FLAT = {
-  enterGap: 0.02, // |log-gap| < 2% → kandydat flat (zegar confirm startuje)
-  exitGap: 0.05, // |log-gap| > 5% → koniec flatu (propozycja powrotu do szerokiego, alarm 24/7)
-  confirmH: 12, // potwierdzenie: nieprzerwanie w progu przez N godzin
-  minVolDaily: 0.005, // poniżej 0.5%/d flat NIE jest sygnałem (klasa LST/stable)
-  narrowFrac: 0.6, // pozycja "wąska", gdy połówkowa szerokość < 0.6 × productIdleWidthPct
+  enterGap: 0.02, // |log-gap| < 2% → flat candidate (confirm clock starts)
+  exitGap: 0.05, // |log-gap| > 5% → end of flat (proposal to return to wide, 24/7 alarm)
+  confirmH: 12, // confirmation: continuously within threshold for N hours
+  minVolDaily: 0.005, // below 0.5%/d a flat is NOT a signal (LST/stable class)
+  narrowFrac: 0.6, // position is "narrow" when half-width < 0.6 × productIdleWidthPct
 };
 
-/** TRANSZA KAPITAŁU (29.08, pytanie Rafała „matematyka się nie zgadza"):
- *  panel kokpitu liczy PnL od KOTWIC pozycji, więc nie widać, ile z
- *  wpłaconych USDC realnie wróciło. Bilans transzy pilnuje tej drugiej
- *  liczby: wpłacone → dziś (LP + portfel), a różnicę rozbija na ruch
- *  rynku i „resztę" (koszty wejścia: swapy, poślizg, gaz mintów).
- *  depositedUsd = kwota wpłacona do gry, NIE suma mintów. */
+/** CAPITAL TRANCHE (29.08, Rafal's question "the math does not add up"):
+ *  the cockpit panel computes PnL from position ANCHORS, so it does not show
+ *  how much of the deposited USDC has really come back. The tranche balance
+ *  tracks that second number: deposited → today (LP + wallet), and splits the
+ *  difference into market move and "residual" (entry costs: swaps, slippage, mint gas).
+ *  depositedUsd = amount put into play, NOT the sum of mints. */
 export const TRANCHE = {
   id: 'transza-1',
-  label: 'Transza 1',
+  label: 'Tranche 1',
   depositedUsd: 6092,
   startedAt: '2026-08-27',
-  /** sieć, na której transza pracuje — portfel liczymy tylko tam
-   *  (mainnet/arbitrum mają tylko stare pyłki, nie należą do transzy) */
+  /** network the tranche works on — the wallet is counted only there
+   *  (mainnet/arbitrum hold only old dust, not part of the tranche) */
   chain: 'base' as const,
 };
 
@@ -136,17 +136,17 @@ export const BOT_POOLS: BotPool[] = [
     address: '0x6c561B446416E1A00E8E93E221854d6eA4171372',
     feeBps: 3000, ethIsToken0: true, d0: 18, d1: 6, sym0: 'WETH', sym1: 'USDC',
     t0: '0x4200000000000000000000000000000000000006', t1: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-    trendAction: 'hedge', // ALGORITHM v1.2: hedge-excess (bramka 73%/−2.88 i 81%/−2.74)
-    productIdleWidthPct: 50, // PRODUKT 27.08: hybryda FlatWide, idle ±50%
-    productNarrowWidthPct: 5, // 29.08: zwężenie ±5% = próg wyjścia (sweep: ΣEV $525 vs $195 przy ±8%)
+    trendAction: 'hedge', // ALGORITHM v1.2: hedge-excess (gate 73%/−2.88 and 81%/−2.74)
+    productIdleWidthPct: 50, // PRODUCT 27.08: FlatWide hybrid, idle ±50%
+    productNarrowWidthPct: 5, // 29.08: narrowing ±5% = exit threshold (sweep: ΣEV $525 vs $195 at ±8%)
   },
   {
-    // para skorelowana (PAIRS.md: sleeve pasywny ±15%); cena kwotowana w WETH,
-    // USD przez kurs ETH z base-weth-usdc-030.
-    // UWAGA kolejność tokenów ZWERYFIKOWANA on-chain przez tick na żywo
-    // (-265575 ⇒ token0=WETH: 0x4200… < 0xcbB7… w sortowaniu adresów Uniswapa).
-    // Konfiguracja w scripts/fetch-swaps.ts ma ją ODWROTNIE (token0Decimals: 8)
-    // — błąd zgłoszony do kolejki, dane cbBTC z 90d wymagają refetch/reinterpretacji.
+    // correlated pair (PAIRS.md: passive sleeve ±15%); price quoted in WETH,
+    // USD via the ETH rate from base-weth-usdc-030.
+    // NOTE token order VERIFIED on-chain via the live tick
+    // (-265575 ⇒ token0=WETH: 0x4200… < 0xcbB7… in Uniswap's address sort order).
+    // The configuration in scripts/fetch-swaps.ts has it REVERSED (token0Decimals: 8)
+    // — bug reported to the queue, the 90d cbBTC data needs a refetch/reinterpretation.
     id: 'base-cbbtc-weth-005',
     chainId: 8453, chain: 'base',
     address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1',
@@ -154,16 +154,16 @@ export const BOT_POOLS: BotPool[] = [
     t0: '0x4200000000000000000000000000000000000006', t1: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',
     quote: 'WETH', usdRefPoolId: 'base-weth-usdc-030',
     advisorK: 2, trendReentry: 'half',
-    productIdleWidthPct: 40, // PRODUKT 27.08: hybryda FlatWide, idle ±40%
-    productNarrowWidthPct: 5, // 29.08: zwężenie ±5% = próg wyjścia (sweep: ΣEV $442 vs $193 przy ±8%; in-range 85-100%)
+    productIdleWidthPct: 40, // PRODUCT 27.08: FlatWide hybrid, idle ±40%
+    productNarrowWidthPct: 5, // 29.08: narrowing ±5% = exit threshold (sweep: ΣEV $442 vs $193 at ±8%; in-range 85-100%)
   },
   {
-    // WETH/cbBTC 0.3% Base — dodane 2026-08-26 decyzją przeglądu (DECYZJE
-    // 11c): PIERWSZY PASS auto-lejka (65.2% wygr., worst −2.7; 23 okna
-    // 30/15, profil "Adapt k=2 h=24h + trend(exit,HL7d,5%)"). PAPER ONLY —
-    // PASS ≠ kapitał; werdykt odnowi się po rekalibracji σ/k. Adres CREATE2
-    // zweryfikowany 2×: on-chain przez CC-Win (25.08) i deterministycznie
-    // przez Fable (26.08). Profil jak base-cbbtc-weth-005 (para skorelowana).
+    // WETH/cbBTC 0.3% Base — added 2026-08-26 by review decision (DECISIONS
+    // 11c): FIRST PASS of the auto-funnel (65.2% wins, worst −2.7; 23 windows
+    // 30/15, profile "Adapt k=2 h=24h + trend(exit,HL7d,5%)"). PAPER ONLY —
+    // PASS != capital; the verdict will be renewed after σ/k recalibration. CREATE2
+    // address verified 2×: on-chain by CC-Win (25.08) and deterministically
+    // by Fable (26.08). Profile like base-cbbtc-weth-005 (correlated pair).
     id: 'base-weth-cbbtc-030',
     chainId: 8453, chain: 'base',
     address: '0x8c7080564B5A792A33Ef2FD473fbA6364d5495e5',
@@ -173,9 +173,9 @@ export const BOT_POOLS: BotPool[] = [
     advisorK: 2, trendReentry: 'half',
   },
   {
-    // Arbitrum — dodane 2026-08-11 po zaliczonym walk-forwardzie 365d
-    // (re>EMA 73% wygr — rekord projektu; CONTEXT ~16:15). Kolejność tokenów:
-    // WETH 0x82aF… < USDC 0xaf88… ⇒ token0=WETH (zgodne z meta fetcha 365d).
+    // Arbitrum — added 2026-08-11 after a passed 365d walk-forward
+    // (re>EMA 73% wins — project record; CONTEXT ~16:15). Token order:
+    // WETH 0x82aF… < USDC 0xaf88… ⇒ token0=WETH (consistent with the 365d fetch meta).
     id: 'arbitrum-weth-usdc-005',
     chainId: 42161, chain: 'arbitrum',
     address: '0xC6962004f452bE9203591991D15f6b388e09E8D0',
@@ -208,16 +208,19 @@ export const RPC: Record<string, string[]> = {
 export const NFT_MANAGER: Record<number, `0x${string}`> = {
   1: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
   8453: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1',
-  42161: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', // kanoniczny deploy = adres mainnetowy
+  42161: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', // canonical deploy = mainnet address
 };
 
-export const WATCH_ADDRESS = (process.env.BOT_WATCH_ADDRESS ||
-  '0xaa6acdc9900f3d3418d64360f85e220eca152e1e') as `0x${string}`;
+/** Wallet whose Uniswap v3 NFT positions the observer tracks. Set BOT_WATCH_ADDRESS in .env — there is no default. */
+export const WATCH_ADDRESS = (process.env.BOT_WATCH_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`;
+if (!process.env.BOT_WATCH_ADDRESS) {
+  console.warn('[config] BOT_WATCH_ADDRESS is not set — the observer will track the zero address (no positions). Set it in .env.');
+}
 
 export const INTERVALS = {
-  priceSec: 60, // slot0 wszystkich pul
-  statsSec: 15 * 60, // pełne statystyki doradcy (24h swapów)
-  positionsSec: 5 * 60, // odczyt pozycji NFT
+  priceSec: 60, // slot0 of all pools
+  statsSec: 15 * 60, // full advisor statistics (24h of swaps)
+  positionsSec: 5 * 60, // NFT positions read
 };
 
 export const STATE_DIR = '.bot';

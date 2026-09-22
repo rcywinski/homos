@@ -1,8 +1,8 @@
 /**
- * sweep.ts — przeszukiwanie parametrów strategii na jednej puli.
+ * sweep.ts — strategy parameter sweep on a single pool.
  *   npx tsx backtest/sweep.ts <pool-id>
- * Grid: adaptacyjna (k × histereza × payback) + pasywne/naiwne szerokości.
- * Wynik: tabela top-15 wg vsHODL + zapis backtest/results/sweep-<id>.json
+ * Grid: adaptive (k × hysteresis × payback) + passive/naive widths.
+ * Output: top-15 table by vsHODL + written to backtest/results/sweep-<id>.json
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -12,15 +12,15 @@ import { hodl5050, fixedNaive, passiveWide, volAdaptive } from './strategies';
 
 const OUT = path.join(__dirname, 'results');
 
-import { loadPool } from './load'; // wspólny loader (obsługuje też pary quote:'WETH')
+import { loadPool } from './load'; // shared loader (also handles quote:'WETH' pairs)
 
 (async () => {
   const id = process.argv[2] || 'base-weth-usdc-030';
   const loaded = await loadPool(id);
-  if (!loaded) { console.error(`Brak cache dla ${id}`); process.exit(1); }
+  if (!loaded) { console.error(`No cache for ${id}`); process.exit(1); }
   const { swaps, spec } = loaded;
   const days = (swaps[swaps.length - 1].ts - swaps[0].ts) / 86400;
-  console.log(`${id}: ${swaps.length} swapów, ${days.toFixed(1)} dni — sweep startuje\n`);
+  console.log(`${id}: ${swaps.length} swaps, ${days.toFixed(1)} days — sweep starting\n`);
 
   const strategies: Strategy[] = [hodl5050, passiveWide];
   for (const w of [0.1, 0.2, 0.3]) strategies.push(fixedNaive(w));
@@ -42,12 +42,12 @@ import { loadPool } from './load'; // wspólny loader (obsługuje też pary quot
   for (const r of results) r.vsHodlPct = ((r.finalUsd / hodl.finalUsd) - 1) * 100;
 
   const sorted = [...results].sort((a, b) => b.vsHodlPct - a.vsHodlPct);
-  console.log('\n\nTOP 15 wg vsHODL:');
-  console.log('strategia'.padEnd(46) + 'vsHODL%'.padStart(9) + 'APR%'.padStart(8) + 'maxDD%'.padStart(8) + 'fees$'.padStart(8) + 'reb'.padStart(5));
+  console.log('\n\nTOP 15 by vsHODL:');
+  console.log('strategy'.padEnd(46) + 'vsHODL%'.padStart(9) + 'APR%'.padStart(8) + 'maxDD%'.padStart(8) + 'fees$'.padStart(8) + 'reb'.padStart(5));
   for (const r of sorted.slice(0, 15)) {
     console.log(r.name.padEnd(46) + r.vsHodlPct.toFixed(2).padStart(9) + r.aprPct.toFixed(1).padStart(8) + r.maxDrawdownPct.toFixed(1).padStart(8) + r.feesUsd.toFixed(0).padStart(8) + String(r.rebalances).padStart(5));
   }
-  console.log('\nDolne 5 (przestroga):');
+  console.log('\nBottom 5 (cautionary tale):');
   for (const r of sorted.slice(-5)) {
     console.log(r.name.padEnd(46) + r.vsHodlPct.toFixed(2).padStart(9) + r.aprPct.toFixed(1).padStart(8) + r.maxDrawdownPct.toFixed(1).padStart(8) + r.feesUsd.toFixed(0).padStart(8) + String(r.rebalances).padStart(5));
   }

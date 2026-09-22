@@ -1,17 +1,17 @@
 /**
- * vol-estimator-check.ts — porównanie estymatorów zmienności NA TYCH SAMYCH
- * danych i w TYM SAMYM oknie. Powstało 21.08, żeby rozstrzygnąć spór:
- * czy per-swapowy EWMA z `computeStats` (advisor) zaniża σ względem
- * standardowego realized vol, czy nie.
+ * vol-estimator-check.ts — comparison of volatility estimators ON THE SAME
+ * data and in THE SAME window. Created 21.08 to settle a dispute:
+ * does the per-swap EWMA from `computeStats` (advisor) underestimate σ relative
+ * to standard realized vol, or not.
  *
- *   npx tsx scripts/vol-estimator-check.ts mainnet-usdc-weth-005 [godzin=24]
+ *   npx tsx scripts/vol-estimator-check.ts mainnet-usdc-weth-005 [hours=24]
  *
- * WAŻNE metodologicznie: porównywać wolno TYLKO estymatory policzone na tym
- * samym oknie. Zestawianie "advisor z okna spokojnego" z "realized vol z okna
- * zmiennego" nie mówi nic o obciążeniu estymatora — mówi o rynku.
+ * IMPORTANT methodologically: only estimators computed on the same window may be
+ * compared. Pitting "advisor from a calm window" against "realized vol from a
+ * volatile window" says nothing about estimator bias — it speaks about the market.
  *
- * Wyjście: σ dzienna wg (a) formuły advisora, (b) realized vol z próbek
- * 1/5/15/60 min, plus implikowana szerokość zakresu dla k=2,3,4.
+ * Output: daily σ per (a) the advisor formula, (b) realized vol from
+ * 1/5/15/60 min samples, plus the implied range width for k=2,3,4.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -22,13 +22,13 @@ const BLOCK_TIME: Record<string, number> = { mainnet: 12, base: 2, arbitrum: 0.2
 const id = process.argv[2];
 const hours = Number(process.argv[3] || 24);
 if (!id) {
-  console.error('Podaj id puli, np. mainnet-usdc-weth-005');
+  console.error('Provide a pool id, e.g. mainnet-usdc-weth-005');
   process.exit(1);
 }
 const metaPath = path.join(CACHE, `${id}.meta.json`);
 const dataPath = path.join(CACHE, `${id}.ndjson`);
 if (!fs.existsSync(metaPath) || !fs.existsSync(dataPath)) {
-  console.error(`Brak ${id}.meta.json albo ${id}.ndjson w data/cache`);
+  console.error(`Missing ${id}.meta.json or ${id}.ndjson in data/cache`);
   process.exit(1);
 }
 
@@ -41,17 +41,17 @@ const d1 = cfg.token1Decimals;
 type Row = { b: number; sp: string };
 
 /**
- * Czytanie OD KOŃCA pliku, chunkami — cache potrafi mieć >1.6GB, a limit
- * stringa w Node to ~536MB (crash `Cannot create a string longer than
- * 0x1fffffe8 characters`, zgłoszony przez CC-Win 21.08). Czytamy tylko tyle,
- * ile trzeba na żądane okno godzin.
+ * Reading FROM THE END of the file, in chunks — the cache can exceed 1.6GB, and the
+ * string limit in Node is ~536MB (crash `Cannot create a string longer than
+ * 0x1fffffe8 characters`, reported by CC-Win 21.08). We read only as much
+ * as the requested window of hours needs.
  */
 function readTailRows(file: string, needFrom: (lastBlock: number) => number): Row[] {
   const CHUNK = 4 * 1024 * 1024;
   const fd = fs.openSync(file, 'r');
   try {
     let pos = fs.fstatSync(fd).size;
-    let carry = ''; // niedokończony PIERWSZY wiersz z poprzedniego (późniejszego) chunku
+    let carry = ''; // unfinished FIRST row from the previous (later) chunk
     let rows: Row[] = [];
     let fromBlock: number | null = null;
     while (pos > 0) {
@@ -61,7 +61,7 @@ function readTailRows(file: string, needFrom: (lastBlock: number) => number): Ro
       fs.readSync(fd, buf, 0, len, pos);
       const text = buf.toString('utf8') + carry;
       const parts = text.split('\n');
-      carry = pos > 0 ? parts.shift() ?? '' : ''; // pierwszy fragment może być ucięty
+      carry = pos > 0 ? parts.shift() ?? '' : ''; // the first fragment may be cut off
       const parsed: Row[] = [];
       for (const l of parts) {
         if (!l.trim()) continue;
@@ -69,7 +69,7 @@ function readTailRows(file: string, needFrom: (lastBlock: number) => number): Ro
           const r = JSON.parse(l) as Row;
           if (r && r.sp && Number.isFinite(r.b)) parsed.push(r);
         } catch {
-          /* ucięty/uszkodzony wiersz pomijamy */
+          /* skip a cut-off/corrupted row */
         }
       }
       rows = parsed.concat(rows);
@@ -82,7 +82,7 @@ function readTailRows(file: string, needFrom: (lastBlock: number) => number): Ro
   }
 }
 
-// cena "ludzka" nogi bazowej (ta sama konwencja co advisor/paper)
+// "human" price of the base leg (same convention as advisor/paper)
 const price = (r: Row) => {
   const sp = Number(BigInt(r.sp)) / 2 ** 96;
   const p = sp * sp * 10 ** (d0 - d1);
@@ -91,18 +91,18 @@ const price = (r: Row) => {
 
 const rows = readTailRows(dataPath, (last) => last - Math.floor((hours * 3600) / bt));
 if (!rows.length) {
-  console.error(`${id}: brak wczytanych swapów`);
+  console.error(`${id}: no swaps loaded`);
   process.exit(1);
 }
 const lastBlock = rows[rows.length - 1].b;
 const fromBlock = lastBlock - Math.floor((hours * 3600) / bt);
 const w = rows.filter((r) => r.b > fromBlock);
 if (w.length < 50) {
-  console.error(`Za mało swapów w oknie ${hours}h (${w.length}) — zwiększ okno.`);
+  console.error(`Too few swaps in the ${hours}h window (${w.length}) — widen the window.`);
   process.exit(1);
 }
 
-// (a) estymator advisora: EWMA r^2 per swap, półtrwanie 12h
+// (a) advisor estimator: EWMA r^2 per swap, half-life 12h
 let volVar = 0;
 let lastP: number | null = null;
 let lastB: number | null = null;
@@ -122,7 +122,7 @@ for (const r of w) {
 }
 const volAdvisor = Math.sqrt(volVar);
 
-// (b) realized vol na próbce co N sekund (ostatnia cena w koszyku)
+// (b) realized vol on a sample every N seconds (last price in the bucket)
 function resampled(sec: number): number | null {
   const bucket = Math.max(1, Math.floor(sec / bt));
   const m = new Map<number, number>();
@@ -131,7 +131,7 @@ function resampled(sec: number): number | null {
   let s = 0;
   let n = 0;
   for (let i = 1; i < ks.length; i++) {
-    if (ks[i] - ks[i - 1] !== 1) continue; // luki pomijamy, nie sklejamy
+    if (ks[i] - ks[i - 1] !== 1) continue; // gaps are skipped, not stitched
     const lr = Math.log(m.get(ks[i])! / m.get(ks[i - 1])!);
     s += lr * lr;
     n++;
@@ -139,11 +139,11 @@ function resampled(sec: number): number | null {
   return n >= 20 ? Math.sqrt((s / n) * (86400 / sec)) : null;
 }
 
-// (c) diagnostyka trend vs szarpanina: |ruch netto| / √Σr² po krokach swapowych.
-// ≈1 → błądzenie losowe; <1 → cena szarpie się w miejscu (estymator swapowy
-// ZAWYŻA względem realnego przemieszczenia); >1 → cena idzie w jedną stronę
-// małymi krokami (estymator swapowy ZANIŻA — suma kwadratów małych kroków jest
-// dużo mniejsza niż kwadrat ruchu łącznego).
+// (c) trend vs chop diagnostic: |net move| / √Σr² over swap steps.
+// ≈1 → random walk; <1 → the price chops in place (the swap estimator
+// OVERESTIMATES relative to the real displacement); >1 → the price moves one way
+// in small steps (the swap estimator UNDERESTIMATES — the sum of squares of small
+// steps is much smaller than the square of the total move).
 let sumR2 = 0;
 let prev: number | null = null;
 for (const r of w) {
@@ -157,20 +157,20 @@ const trendRatio = sumR2 > 0 ? netMove / Math.sqrt(sumR2) : null;
 const width = (sigma: number, k: number) => Math.min(Math.max(k * sigma * Math.sqrt(7), 0.01), 0.6);
 const line = (nazwa: string, v: number | null) =>
   v === null
-    ? `${nazwa.padEnd(28)} — za mało próbek`
-    : `${nazwa.padEnd(28)} ${(v * 100).toFixed(2)}%/d   zakres k=2/3/4: ±${(width(v, 2) * 100).toFixed(1)}% / ±${(width(v, 3) * 100).toFixed(1)}% / ±${(width(v, 4) * 100).toFixed(1)}%`;
+    ? `${nazwa.padEnd(28)} — too few samples`
+    : `${nazwa.padEnd(28)} ${(v * 100).toFixed(2)}%/d   range k=2/3/4: ±${(width(v, 2) * 100).toFixed(1)}% / ±${(width(v, 3) * 100).toFixed(1)}% / ±${(width(v, 4) * 100).toFixed(1)}%`;
 
-console.log(`\npula ${id} (${cfg.chain}) | okno ${hours}h | swapów ${w.length} | bez ruchu ceny: ${zeroMoves} (${((zeroMoves / w.length) * 100).toFixed(0)}%)`);
-console.log(`cena na koniec okna: ${price(w[w.length - 1]).toFixed(2)}\n`);
+console.log(`\npool ${id} (${cfg.chain}) | window ${hours}h | swaps ${w.length} | no price move: ${zeroMoves} (${((zeroMoves / w.length) * 100).toFixed(0)}%)`);
+console.log(`price at window end: ${price(w[w.length - 1]).toFixed(2)}\n`);
 console.log(line('(a) advisor (per swap)', volAdvisor));
 for (const [nm, sec] of [['1 min', 60], ['5 min', 300], ['15 min', 900], ['1 h', 3600]] as const)
   console.log(line(`(b) realized vol @ ${nm}`, resampled(sec)));
-// --- werdykt z UWZGLĘDNIENIEM szumu mikrostruktury -------------------------
-// UWAGA (poprawka 21.08): realized vol przy próbce 1–5 min sam bywa ZAWYŻONY
-// przez odbijanie ceny w paśmie opłaty (bid-ask bounce) — im szersza opłata
-// (0.30% vs 0.05%), tym mocniej. Jeśli σ maleje monotonicznie wraz z
-// wydłużaniem próbki, to sygnatura szumu, a nie prawdziwa zmienność — wtedy
-// punktem odniesienia ma być próbka 15min/1h, NIE 5min.
+// --- verdict TAKING microstructure noise INTO ACCOUNT ------------------------
+// NOTE (correction 21.08): realized vol at a 1–5 min sample is itself often INFLATED
+// by the price bouncing within the fee band (bid-ask bounce) — the wider the fee
+// (0.30% vs 0.05%), the stronger. If σ decreases monotonically as the sample
+// lengthens, that is the signature of noise, not true volatility — then the
+// reference point should be the 15min/1h sample, NOT 5min.
 const v5 = resampled(300);
 const v15 = resampled(900);
 const v60 = resampled(3600);
@@ -180,29 +180,29 @@ const refName = v60 ? '1h' : v15 ? '15min' : '5min';
 if (ref) {
   const diff = ((volAdvisor - ref) / ref) * 100;
   console.log(
-    `\nwerdykt (odniesienie: realized@${refName}): advisor ${diff >= 0 ? '+' : ''}${diff.toFixed(0)}%  ` +
-      `${Math.abs(diff) < 15 ? '→ zgodne, brak istotnego obciążenia' : diff < 0 ? '→ advisor ZANIŻA' : '→ advisor ZAWYŻA'}`
+    `\nverdict (reference: realized@${refName}): advisor ${diff >= 0 ? '+' : ''}${diff.toFixed(0)}%  ` +
+      `${Math.abs(diff) < 15 ? '→ consistent, no significant bias' : diff < 0 ? '→ advisor UNDERESTIMATES' : '→ advisor OVERESTIMATES'}`
   );
   if (noiseDecay !== null)
     console.log(
-      `spadek σ z próbki 5min→1h: ${(noiseDecay * 100).toFixed(0)}%  ` +
-        `${noiseDecay > 0.25 ? '(silny szum mikrostruktury — NIE używaj 5min jako odniesienia)' : '(szum umiarkowany)'}`
+      `σ decay from 5min→1h sample: ${(noiseDecay * 100).toFixed(0)}%  ` +
+        `${noiseDecay > 0.25 ? '(strong microstructure noise — do NOT use 5min as the reference)' : '(moderate noise)'}`
     );
-  console.log(`fee tier: ${(cfg.feeBps / 10000).toFixed(2)}% — im szersza opłata, tym większe odbicie w paśmie.`);
+  console.log(`fee tier: ${(cfg.feeBps / 10000).toFixed(2)}% — the wider the fee, the larger the bounce within the band.`);
 }
 if (trendRatio !== null) {
   console.log(
-    `\ntrend vs szarpanina: |ruch netto| ${(netMove * 100).toFixed(2)}% / √Σr² ${(Math.sqrt(sumR2) * 100).toFixed(2)}% = ${trendRatio.toFixed(2)}  ` +
+    `\ntrend vs chop: |net move| ${(netMove * 100).toFixed(2)}% / √Σr² ${(Math.sqrt(sumR2) * 100).toFixed(2)}% = ${trendRatio.toFixed(2)}  ` +
       (trendRatio < 0.5
-        ? '→ cena szarpie się w miejscu; estymator SWAPOWY zawyża wobec realnego przemieszczenia'
+        ? '→ the price chops in place; the SWAP estimator overestimates relative to the real displacement'
         : trendRatio > 1.2
-          ? '→ cena idzie w jedną stronę małymi krokami; estymator SWAPOWY zaniża (suma kwadratów ≪ kwadrat ruchu)'
-          : '→ blisko błądzenia losowego')
+          ? '→ the price moves one way in small steps; the SWAP estimator underestimates (sum of squares ≪ square of the move)'
+          : '→ close to a random walk')
   );
   console.log(
-    'WNIOSEK: dla ustawiania zakresu liczy się WIELKOŚĆ RUCHU w horyzoncie, nie „chop".\n' +
-      'σ liczona ze skoków swap-po-swapie jest zależna od mikrostruktury puli (fee tier,\n' +
-      'częstość transakcji), a nie od zmienności aktywa — dlatego dwie pule na TYM SAMYM\n' +
-      'ETH potrafią dać σ różniące się kilkukrotnie. Próbka czasowa (15min/1h) tego nie ma.'
+    'CONCLUSION: for setting the range what matters is the SIZE OF THE MOVE over the horizon, not "chop".\n' +
+      'σ computed from swap-by-swap jumps depends on the pool microstructure (fee tier,\n' +
+      'trade frequency), not on the asset volatility — which is why two pools on THE SAME\n' +
+      'ETH can give σ differing several-fold. A time sample (15min/1h) does not have this.'
   );
 }

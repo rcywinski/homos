@@ -1,250 +1,122 @@
-# HOMO$
+# HOMOS — a Uniswap v3 concentrated-liquidity research stack
 
-Market-making / LP management dla Uniswap V3 (mainnet + Base). Zob. `PLAN.md`
-dla pełnej architektury i fazowania projektu, `CONTEXT.md` dla bieżącego stanu.
+**Status: closed (September 2026). Published as an engineering case study.**
 
-## Architektura i uruchamianie
+HOMOS is a TypeScript monorepo I built and ran, with my own capital, to answer one question:
+*can a systematic, rules-based liquidity-provision strategy on Uniswap v3 beat simply holding the two tokens?*
 
-Trzy części, jedna baza matematyki (`src/utils/v3math.ts`, `bigint`, zgodność
-z Uniswap co do 1 wei):
+The short answer, after ~6 weeks of backtesting and 25 days of live capital, was **no — not reliably**.
+The product ("FlatWide": a wide passive range that narrows only in a confirmed flat regime)
+returned **+0.6 % in 22 days** of live LP, which is roughly HODL 50/50 plus fees minus a little impermanent loss.
+The tranche was closed at **+5.5 %** overall, but most of that came from three days of directional
+exposure after the LP was unwound — not from the strategy. The full story, including the decisions
+I would make differently, is in [`docs/CASE-STUDY.md`](docs/CASE-STUDY.md).
 
-- **UI (dev, Mac)** — interfejs webowy do ręcznego zarządzania pozycjami.
-  ```bash
-  npm install
-  npm start          # webpack-dev-server, http://localhost:3000
-  ```
-- **Bot-obserwator (dev, Mac)** — daemon bez transakcji: śledzi ceny/pozycje,
-  liczy statystyki doradcy, publikuje propozycje rebalansu (do pliku +
-  opcjonalnie Telegram). Zob. `bot/observer.ts`, `bot/server.ts`.
-  ```bash
-  npm run bot         # daemon obserwatora
-  npm run bot:server  # API :8787 (GET /api/state, /health) — osobny terminal
-  ```
-- **Serwer produkcyjny (Windows, 24/7)** — te same dwa procesy pod `pm2`,
-  dostępne z Maca/iPhone'a po LAN/VPN. Pierwsza instalacja: `deploy/setup-windows.md`.
-  Kolejne wdrożenia: `deploy/deploy.ps1` (git pull → npm ci → build → pm2 reload).
-  Architektura i uzasadnienie decyzji: `INFRA.md`.
+What is worth reading here is the engineering and the process:
 
-### Sesje AI / koordynacja pracy
+- **Exact v3 math on `bigint`** (`src/utils/v3math.ts`) — reproduces `@uniswap/v3-sdk` to the wei;
+  2 925 reference tests (`npm run test:math`). Written after discovering that the legacy float
+  implementation was masking 20–25 % slippage.
+- **A backtesting engine with a hard validation gate** (`backtest/`) — walk-forward windows,
+  regime splits, a 720-day + recent-90-day gate against a HODL 50/50 benchmark, 14 sanity tests
+  (`npm run backtest:validate`). The gate is what stopped every "improvement" that only worked on
+  the last bullish year.
+- **A propose-only bot** (`bot/`) — a 24/7 observer that prices pools, tracks NFT positions,
+  detects regimes and *proposes* actions to a cockpit UI. Nothing executes without a wallet
+  signature from the owner. It never held a private key.
+- **A data pipeline** (`scripts/`) — swap-level history via HyperSync (a year of a pool in ~13 min),
+  DefiLlama APY/TVL history, a nightly pipeline with a morning report and Telegram digest.
+- **Windows 24/7 deployment** (`deploy/`, `docs/INFRA.md`) — NSSM services, scheduled tasks,
+  LAN/VPN-only API with a bearer token, backups.
+- **A documented decision log** ([`docs/DECISION-LOG.md`](docs/DECISION-LOG.md)) — every
+  parameter freeze, revision and exit rule, with the evidence it was based on and, where relevant,
+  a note about the bias it was made under.
+- **An AI-assisted workflow** ([`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md)) — the project was
+  developed by one engineer coordinating four specialised Claude sessions through two files in the
+  repo (a living journal and a set of hand-off inboxes). The commit history shows it.
 
-Ten projekt jest rozwijany częściowo przez sesje Claude równolegle do pracy
-właściciela. Każda sesja **czyta `CONTEXT.md` i właściwy `TASKS-*.md` przed
-jakąkolwiek pracą** i dopisuje wpis do dziennika w `CONTEXT.md` po zakończeniu
-— to zastępuje bezpośrednią komunikację między sesjami, które się nie widzą.
+## Architecture
 
-- `CONTEXT.md` — żywy dziennik: stan projektu, decyzje, log sesji.
-- `TASKS-UI.md` / `TASKS-INFRA.md` — kolejki zadań dla konkretnych sesji (zakres
-  i pliki, których NIE wolno dotykać, są w nagłówku każdego pliku).
-- `PLAN.md` / `UI-VISION.md` / `INFRA.md` / `PAIRS.md` — dokumenty referencyjne
-  (plan fazowy, docelowy UX, infrastruktura serwera, analiza par/pul).
-- `npm run agent` — mostek automatyzacji: sesja Claude wrzuca zadania do
-  `.agent/queue/*.json` (biała lista skryptów npm), czyta logi/status z
-  `.agent/logs/` i `.agent/status.json`. Uruchamiany ręcznie przez właściciela
-  w osobnym terminalu na Macu.
+```
+                       ┌──────────────────────────────────────────────┐
+                       │  src/utils/v3math.ts  (bigint, wei-exact)     │
+                       │  shared by every layer below                  │
+                       └───────┬───────────────┬───────────────┬───────┘
+                               │               │               │
+   scripts/ (data)             │  backtest/    │   bot/        │   src/ (cockpit UI)
+   ─ fetch-swaps-hypersync     │  ─ engine     │   ─ observer  │   ─ MorningCockpit
+   ─ fetch-llama-history       │  ─ strategies │   ─ selector  │   ─ position cards
+   ─ pipeline (nightly)        │  ─ walkforward│   ─ paper     │   ─ proposal cards
+   ─ morning-report + Telegram │  ─ validate   │   ─ ledger    │   ─ rebalance sequence
+   ─ wide-score / wide-daily   │  ─ selection  │   ─ server    │     (sign in wallet)
+                               ▼               ▼               ▼
+                     data/ (caches, .gitignored)   .bot/ (state, proposals, ledger)
+```
 
-### Skrypty pomocnicze
+The bot runs on a Windows box (NSSM services `homos-bot` + `homos-server`), the UI is a static
+React bundle served by the bot's API, and the owner approves proposals from a laptop or phone
+over LAN/VPN. Details: [`docs/PLAN.md`](docs/PLAN.md), [`docs/INFRA.md`](docs/INFRA.md),
+[`docs/UI-VISION.md`](docs/UI-VISION.md).
+
+## The strategy, in one paragraph
+
+Two pools on Base (WETH/USDC 0.30 % and WETH/cbBTC 0.05 %). Default posture is a **wide passive
+range** (±50 % / ±40 %) that behaves like HODL plus fees. A flat detector (|price − 7-day EMA| < 2 %
+for 12 h) allows a **narrowing to ±5 %** to harvest more fees; a trend circuit breaker widens back
+or exits when the price leaves the band. Parameters were frozen after walk-forward calibration
+([`docs/ALGORITHM.md`](docs/ALGORITHM.md)); the recalibration on 720 days of data later showed
+that **0 of 21 configurations passed the gate**, which is why the live product stayed wide and
+narrowed only once, as a measured experiment.
+
+## Results
+
+| | |
+|---|---|
+| Live capital | 6 092 USDC on Base, 27 Aug → 21 Sep 2026 (25 days) |
+| LP phase (FlatWide, wide posture) | 27 Aug → 18 Sep: **+0.6 %**, of which ≈ $29 fees; vs HODL 50/50 of the same legs: −$4 … −$22 depending on the day |
+| Narrowing experiment (cbBTC leg, ±5 %) | 31 Aug → 11 Sep: 11 days in flat, ≈ $8.6 fees, closed by the trend breaker at −$32 vs HODL |
+| Spot exposure after unwinding LP | 18 → 21 Sep: ≈ +$300 (ETH +7.8 %, BTC +7 %) |
+| Final | **+5.5 %** in EUR on the exchange; total round-trip costs ≈ $25 |
+| Verdict on the product | Does not beat HODL 50/50 on 720-day walk-forward in any of five ways of measuring it. Wide passive LP ≈ HODL + fees; narrowing has negative expectancy at the episode lengths observed (median 7.7 days). |
+
+## Running it
 
 ```bash
-npm run test:math          # 2925 testów referencyjnych v3math vs @uniswap/v3-sdk
-npm run fetch:swaps        # pobiera eventy Swap z pul skonfigurowanych w scripts/fetch-swaps.ts
-npm run fetch:llama        # historie APY/TVL z DefiLlama (do scripts/selection.ts)
-npm run backtest           # odpala wszystkie strategie na pobranych danych
-npm run backtest:validate  # 14 testów sanity silnika backtestu
-npm run backtest:selection # backtest polityk selekcji pul (nie pojedynczej puli)
-npm run build               # build produkcyjny UI (public/bundle.js)
+npm ci
+npm test                 # typecheck + 2 925 v3 math reference tests + 14 backtest sanity tests
+npm run backtest         # runs all strategies on cached swap data (see scripts/ for fetching)
+npm start                # cockpit UI on http://localhost:3000
+npm run bot              # observer daemon (propose-only), needs BOT_WATCH_ADDRESS in .env
+npm run bot:server       # bot API + static UI on :8787
 ```
 
----
+Copy `.env.example` to `.env` first. There are no hard-coded wallet addresses or RPC keys;
+public RPC fallbacks are used when none are configured. The pipeline scripts expect the caches
+under `data/` (not in the repo) — see `docs/PLAN.md` §5 and the headers of `scripts/*.ts`.
 
-## Legacy notes
+## Repository map
 
-Poniżej oryginalny README z wczesnej fazy projektu (interfejs Sepolia
-testnet) — zostawiony dla historii, część opisanych ograniczeń (tylko
-Sepolia, uproszczone liczenie ceny) już nie obowiązuje po Fazie 0
-(`v3math.ts`, mainnet + Base, patrz `CONTEXT.md`).
+| Path | What it is |
+|---|---|
+| `src/utils/v3math.ts`, `test/v3math.test.ts` | exact Uniswap v3 math and its reference test suite |
+| `backtest/` | engine, strategies, walk-forward, validation gate, pool selection |
+| `bot/` | observer, pool selector, paper trading, transaction ledger, API server |
+| `scripts/` | data fetching (HyperSync, DefiLlama), nightly pipeline, morning report |
+| `src/` | React cockpit (positions, proposals, rebalance/rotate sequences, paper panel) |
+| `deploy/` | Windows deployment scripts and setup guide |
+| `docs/` | plan, algorithm, pairs analysis, DB schema, infra, UI vision, emergency runbook, decision log, case study, AI workflow |
 
-# HOMOS - Ethereum DeFi Interface
+Code comments and UI are in English; a small number of string literals that act as data
+contracts (strategy names used as keys, log lines parsed by the report script) are kept in their
+original Polish and marked with a comment.
 
-## Overview
-HOMOS is a decentralized finance (DeFi) interface that integrates with Uniswap V3 on Ethereum networks. The application provides a user-friendly interface for interacting with Uniswap V3 pools, specifically focusing on the USDC/WETH pair.
+## What is not in this repository
 
-## Features
-
-### Uniswap V3 Pool Integration
-- Real-time pool data display
-- Automatic pool creation if it doesn't exist
-- Price calculations and display for both tokens
-- Liquidity monitoring
-- Technical metrics (tick, sqrt price)
-
-### Key Components
-
-#### UniswapPool Component
-The main component that handles Uniswap V3 pool interactions. It displays:
-- Current token pair (USDC/WETH)
-- Real-time price information
-- Pool address
-- Fee tier (0.3%)
-- Current liquidity
-- Technical indicators (current tick, sqrt price)
-- Individual token prices
-
-### Technical Details
-
-#### Price Calculation
-The application uses a specialized algorithm to calculate prices from Uniswap V3's square root price:
-```typescript
-const calculatePrice = (pool: Pool): number | null => {
-  try {
-    const sqrtPriceX96 = JSBI.toNumber(pool.sqrtRatioX96);
-    const Q96 = Math.pow(2, 96);
-    return (sqrtPriceX96 / Q96) * (sqrtPriceX96 / Q96);
-  } catch (error) {
-    console.error('Error calculating price:', error);
-    return null;
-  }
-};
-```
-
-#### State Management
-The application manages several states:
-- Pool instance
-- Pool address
-- Current price
-- Loading states
-- Error handling
-- Pool creation status
-
-### Dependencies
-- React
-- wagmi (Ethereum interactions)
-- viem (Ethereum data formatting)
-- @uniswap/v3-sdk (Uniswap V3 integration)
-- JSBI (Big integer handling)
-
-### Network Support
-Currently supports:
-- Sepolia testnet
-
-## Getting Started
-
-### Prerequisites
-- Node.js (v14 or higher)
-- MetaMask or another Web3 wallet
-- Some testnet ETH on Sepolia
-
-### Installation
-1. Clone the repository:
-```bash
-git clone [repository-url]
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the development server:
-```bash
-npm run start
-```
-
-### Usage
-1. Connect your Web3 wallet
-2. The application will automatically:
-   - Check for an existing USDC/WETH pool
-   - Create a new pool if none exists
-   - Display real-time pool information
-
-### Error Handling
-The application includes comprehensive error handling for:
-- Wallet connection issues
-- Pool initialization failures
-- Price calculation errors
-- Network issues
-
-## Development
-
-### Component Structure
-```
-src/
-├── components/
-│   └── UniswapPool.tsx    # Main pool interaction component
-├── utils/
-│   └── uniswap.ts        # Uniswap utilities and constants
-└── styles/
-    └── styles.css        # Component styling
-```
-
-### Future Enhancements
-- Support for additional token pairs
-- Liquidity provision interface
-- Swap functionality
-- Multiple network support
-- Historical price data
-- Advanced analytics
-
-## Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
+The private working journal (a 360 KB day-by-day log), the AI hand-off inboxes, daily morning
+reports and research queues were removed from the current tree; they remain in the git history
+because they are part of how the project was actually run. Nothing in them is secret — the wallet
+is public on-chain and the amounts are stated above.
 
 ## License
-[Your License]
 
-## Security
-This is a testnet application. Do not use on mainnet without proper security audits.
-
-# HOMOS - ETH/ERC20 Liquidity Manager
-
-A modern, user-friendly interface for managing Uniswap V3 liquidity positions.
-
-## Features
-
-- **Add Liquidity**: Create new positions with customizable price ranges
-- **Remove Liquidity**: Withdraw from existing positions
-- **Position Management**: View and manage all your active positions
-- **Real-time Gas Estimates**: See estimated transaction costs before confirming
-- **Token Balance Display**: View your available token balances
-
-## Liquidity Manager
-
-The Liquidity Manager component allows users to add liquidity to Uniswap V3 pools with a simple, intuitive interface.
-
-### Price Range Options
-
-The price range selector provides three options:
-
-- **Full Range (Min/Max)**: Provides liquidity across the entire price range. Earns fees at any price, but with less capital efficiency.
-- **Narrow Range (±5%)**: Concentrated liquidity within 5% of the current price. Higher capital efficiency but requires monitoring.
-- **Custom Range (±30%)**: Set a custom price range that balances risk and capital efficiency.
-
-All options are presented in a single row for easy selection, with the current option highlighted.
-
-### Token Inputs
-
-The token input fields display:
-- Clear labels for each token
-- Token symbols shown within the input field
-- Helpful guidance for minimum amounts
-- Your current wallet balances for reference
-
-### Transaction Process
-
-1. Select your desired price range
-2. Enter token amounts (the app will auto-calculate the paired token amount)
-3. Review the slippage tolerance setting
-4. Approve tokens if needed (one-time process per token)
-5. Click "Add Liquidity" to create your position
-
-### Mobile Responsive
-
-The interface adapts to different screen sizes, with optimized layouts for:
-- Desktop: Full horizontal layout with side-by-side inputs
-- Tablet: Adjusted spacing and element sizes
-- Mobile: Stacked inputs and controls for easier interaction on small screens
-
-## Technical Notes
-
-- Built with React and TypeScript
-- Uses wagmi for Ethereum wallet integration
-- Implements the Uniswap V3 SDK for liquidity position calculations
-- CSS styling optimized for all modern browsers
+MIT — see [`LICENSE`](LICENSE).

@@ -1,16 +1,16 @@
 /**
- * pegged.ts — bateria F.B: ultra-wąskie LP na parach spiętych
- * (stable-stable / LST-ETH). RESEARCH-QUEUE sekcja F.
+ * pegged.ts — battery F.B: ultra-narrow LP on pegged pairs
+ * (stable-stable / LST-ETH). RESEARCH-QUEUE section F.
  *
  *   npx tsx backtest/pegged.ts <pool-id>
  *
- * Strategie: HODL 50/50, full-range, sztywne ±0.05/±0.1/±0.2/±0.5/±2%
- * (rebalans natychmiast po wyjściu) oraz warianty z histerezą 6h/24h
- * (obrona przed whipsaw depegu: nie goń pegu od razu).
+ * Strategies: HODL 50/50, full-range, fixed ±0.05/±0.1/±0.2/±0.5/±2%
+ * (rebalance immediately after exit) plus variants with 6h/24h hysteresis
+ * (defence against depeg whipsaw: do not chase the peg right away).
  *
- * Metryki ponad standard: worst-7d (najgorszy tydzień equity — stres depegu),
- * fees NETTO po gazie. Gas mainnet $8/cykl przy $10k jest częścią pytania
- * badawczego (u znajomego działa przy $281k).
+ * Metrics beyond the standard: worst-7d (worst equity week — depeg stress),
+ * NET fees after gas. Mainnet gas $8/cycle at $10k is part of the research
+ * question (a friend's setup works at $281k).
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -29,11 +29,11 @@ const rangeAround = (ctx: Ctx, w: number): [number, number] => {
   return [lo, hi];
 };
 
-/** sztywny ±w z opcjonalną histerezą czasową */
+/** fixed ±w with optional time hysteresis */
 const pegged = (w: number, hystHours = 0): Strategy => {
   let outSince: number | null = null;
   return {
-    name: `Sztywny ±${(w * 100).toFixed(2)}%${hystHours ? ` h=${hystHours}h` : ' (natychmiast)'}`,
+    name: `Fixed ±${(w * 100).toFixed(2)}%${hystHours ? ` h=${hystHours}h` : ' (immediate)'}`,
     init: (ctx) => ctx.openPosition(...rangeAround(ctx, w)),
     onEvent: (ctx) => {
       const p = ctx.state.pos;
@@ -51,7 +51,7 @@ const pegged = (w: number, hystHours = 0): Strategy => {
   };
 };
 
-/** najgorszy 7-dniowy spadek equity (stres depegu) w % */
+/** worst 7-day equity drop (depeg stress) in % */
 function worst7d(r: RunResult): number {
   const eq = r.equity;
   let worst = 0;
@@ -67,21 +67,21 @@ function worst7d(r: RunResult): number {
 (async () => {
   const id = process.argv[2];
   if (!id) {
-    console.error('Użycie: npx tsx backtest/pegged.ts <pool-id>');
+    console.error('Usage: npx tsx backtest/pegged.ts <pool-id>');
     process.exit(1);
   }
   const loaded = await loadPool(id);
   if (!loaded) {
-    console.error(`Brak cache dla ${id}`);
+    console.error(`No cache for ${id}`);
     process.exit(1);
   }
   const { swaps: swapsRaw, spec } = loaded;
 
-  // FILTR OUTLIERÓW (kluczowe dla par spiętych): cienkie pule 0.01% mają
-  // probe-swapy przez puste ticki (DAI-USDT: 52 eventy do ±73…+643% od pega
-  // przy 99.9% danych w ±0.5%). Taki tick to nie jest wykonywalna cena dla
-  // $10k — wycena/rebalans po nim = fikcja. Odrzucamy eventy odchylone
-  // > OUTLIER_TICKS od rolling-mediany (okno 201 zaakceptowanych swapów).
+  // OUTLIER FILTER (crucial for pegged pairs): thin 0.01% pools have
+  // probe swaps through empty ticks (DAI-USDT: 52 events at ±73…+643% from the
+  // peg with 99.9% of the data within ±0.5%). Such a tick is not an executable
+  // price for $10k — pricing/rebalancing at it = fiction. We drop events
+  // deviating > OUTLIER_TICKS from the rolling median (window of 201 accepted swaps).
   const OUTLIER_TICKS = 300; // ~3%
   const W = 201;
   const win: number[] = [];
@@ -108,10 +108,10 @@ function worst7d(r: RunResult): number {
     insSorted(s.t);
     if (win.length > W) delSorted(win.shift()!);
   }
-  if (dropped) console.log(`filtr outlierów: odrzucono ${dropped} swapów (${((dropped / swapsRaw.length) * 100).toFixed(3)}%)`);
+  if (dropped) console.log(`outlier filter: dropped ${dropped} swaps (${((dropped / swapsRaw.length) * 100).toFixed(3)}%)`);
 
   const days = (swaps[swaps.length - 1].ts - swaps[0].ts) / 86400;
-  console.log(`=== ${id} — ${swaps.length} swapów, ${days.toFixed(1)} dni, gas $${spec.gasUsdPerRebalance}/cykl, kapitał $10k ===`);
+  console.log(`=== ${id} — ${swaps.length} swaps, ${days.toFixed(1)} days, gas $${spec.gasUsdPerRebalance}/cycle, capital $10k ===`);
 
   const strategies: Strategy[] = [
     hodl5050,
@@ -134,7 +134,7 @@ function worst7d(r: RunResult): number {
   const hodl = results.find((r) => r.name === 'HODL 50/50')!;
   for (const r of results) r.vsHodlPct = ((r.finalUsd / hodl.finalUsd) - 1) * 100;
 
-  console.log('\n' + 'strategia'.padEnd(30) + 'APR%'.padStart(8) + 'vsHODL%'.padStart(9) + 'maxDD%'.padStart(8) + 'w7d%'.padStart(7) + 'fees$'.padStart(8) + 'gas$'.padStart(8) + 'reb'.padStart(6) + 'inRng%'.padStart(8));
+  console.log('\n' + 'strategy'.padEnd(30) + 'APR%'.padStart(8) + 'vsHODL%'.padStart(9) + 'maxDD%'.padStart(8) + 'w7d%'.padStart(7) + 'fees$'.padStart(8) + 'gas$'.padStart(8) + 'reb'.padStart(6) + 'inRng%'.padStart(8));
   for (const r of results) {
     console.log(
       r.name.padEnd(30) +

@@ -1,23 +1,23 @@
 /**
- * compare-caches.ts — porównanie 1:1 dwóch cache'ów swapów tej samej puli
- * (np. referencja z RPC vs test HyperSync). Sekcja E RESEARCH-QUEUE.
+ * compare-caches.ts — 1:1 comparison of two swap caches of the same pool
+ * (e.g. RPC reference vs HyperSync test). Section E of RESEARCH-QUEUE.
  *
  *   npx tsx scripts/compare-caches.ts base-weth-usdc-030 base-weth-usdc-030-hstest
  *
- * Okna czasowe obu fetchy różnią się (startBlock liczony od "teraz"), więc
- * porównujemy CZĘŚĆ WSPÓLNĄ zakresów blokowych:
- *   1. liczba swapów w części wspólnej musi być identyczna,
- *   2. per blok: identyczny multizbiór linii (sortujemy linie wewnątrz bloku —
- *      kolejność logów w obrębie bloku może zależeć od źródła, dane nie),
- *   3. raport rozjazdów (max 10 przykładów) + skrajne linie.
- * Exit code: 0 = zgodne, 1 = rozjazd / błąd.
+ * The time windows of the two fetches differ (startBlock computed from "now"), so
+ * we compare the INTERSECTION of the block ranges:
+ *   1. the number of swaps in the intersection must be identical,
+ *   2. per block: identical multiset of lines (we sort lines within a block —
+ *      log order within a block may depend on the source, the data does not),
+ *   3. mismatch report (max 10 examples) + boundary lines.
+ * Exit code: 0 = consistent, 1 = mismatch / error.
  */
 import * as fs from 'fs';
 import * as path from 'path';
 
 const CACHE_DIR = path.join(__dirname, '..', 'data', 'cache');
 
-// Math.min(...keys) wysadza stos przy setkach tysięcy bloków — pętla zamiast spreadu
+// Math.min(...keys) blows the stack with hundreds of thousands of blocks — loop instead of spread
 function minMax(keys: Iterable<number>): [number, number] {
   let mn = Infinity;
   let mx = -Infinity;
@@ -31,7 +31,7 @@ function minMax(keys: Iterable<number>): [number, number] {
 function loadCache(id: string): Map<number, string[]> {
   const p = path.join(CACHE_DIR, `${id}.ndjson`);
   if (!fs.existsSync(p)) {
-    console.error(`Brak pliku ${p}`);
+    console.error(`Missing file ${p}`);
     process.exit(1);
   }
   const byBlock = new Map<number, string[]>();
@@ -42,7 +42,7 @@ function loadCache(id: string): Map<number, string[]> {
     n++;
     const m = line.match(/"b":(\d+)/);
     if (!m) {
-      console.error(`${id}: linia bez pola b: ${line.slice(0, 120)}`);
+      console.error(`${id}: line without field b: ${line.slice(0, 120)}`);
       process.exit(1);
     }
     const b = Number(m[1]);
@@ -51,13 +51,13 @@ function loadCache(id: string): Map<number, string[]> {
     else byBlock.set(b, [line]);
   }
   const [mn, mx] = minMax(byBlock.keys());
-  console.log(`[${id}] ${n} linii, bloki ${mn}..${mx}`);
+  console.log(`[${id}] ${n} lines, blocks ${mn}..${mx}`);
   return byBlock;
 }
 
 const [idA, idB] = [process.argv[2], process.argv[3]];
 if (!idA || !idB) {
-  console.error('Użycie: npx tsx scripts/compare-caches.ts <idA> <idB>');
+  console.error('Usage: npx tsx scripts/compare-caches.ts <idA> <idB>');
   process.exit(1);
 }
 
@@ -67,9 +67,9 @@ const [minA, maxA] = minMax(A.keys());
 const [minB, maxB] = minMax(B.keys());
 const lo = Math.max(minA, minB);
 const hi = Math.min(maxA, maxB);
-console.log(`Część wspólna zakresów: bloki ${lo}..${hi}`);
+console.log(`Range intersection: blocks ${lo}..${hi}`);
 if (lo > hi) {
-  console.error('Zakresy się nie przecinają — nie ma czego porównywać.');
+  console.error('Ranges do not intersect — nothing to compare.');
   process.exit(1);
 }
 
@@ -95,7 +95,7 @@ for (const b of [...blocks].sort((x, y) => x - y)) {
     blocksDiff++;
     if (examples.length < 10) {
       examples.push(
-        `blok ${b}: ${idA}=${la.length} vs ${idB}=${lb.length} linii` +
+        `block ${b}: ${idA}=${la.length} vs ${idB}=${lb.length} lines` +
           (la.length === lb.length
             ? `\n  A: ${la.find((l, i) => l !== lb[i])?.slice(0, 160)}\n  B: ${lb.find((l, i) => l !== la[i])?.slice(0, 160)}`
             : '')
@@ -104,14 +104,14 @@ for (const b of [...blocks].sort((x, y) => x - y)) {
   }
 }
 
-console.log(`\nSwapy w części wspólnej: ${idA}=${countA}  ${idB}=${countB}`);
-console.log(`Bloki z rozjazdem: ${blocksDiff} / ${blocks.size}`);
-console.log(`Pierwsza linia (A): ${firstA.slice(0, 160)}`);
-console.log(`Ostatnia linia (A): ${lastA.slice(0, 160)}`);
+console.log(`\nSwaps in the intersection: ${idA}=${countA}  ${idB}=${countB}`);
+console.log(`Blocks with mismatch: ${blocksDiff} / ${blocks.size}`);
+console.log(`First line (A): ${firstA.slice(0, 160)}`);
+console.log(`Last line (A): ${lastA.slice(0, 160)}`);
 if (blocksDiff || countA !== countB) {
-  console.log('\nPrzykłady rozjazdów:');
+  console.log('\nMismatch examples:');
   for (const e of examples) console.log('  ' + e);
-  console.log('\nWERDYKT: ❌ ROZJAZD — nie przełączać grindu na HyperSync bez wyjaśnienia.');
+  console.log('\nVERDICT: ❌ MISMATCH — do not switch the grind to HyperSync without an explanation.');
   process.exit(1);
 }
-console.log('\nWERDYKT: ✅ ZGODNE 1:1 w części wspólnej — HyperSync może przejąć fetch.');
+console.log('\nVERDICT: ✅ CONSISTENT 1:1 in the intersection — HyperSync can take over the fetch.');

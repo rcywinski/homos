@@ -1,44 +1,44 @@
 /**
- * wide-collect.ts — LEJEK v2, PIĘTRO 2: kolekcjoner historii swapów (720d)
- * + pełny przebieg (walkforward) dla topu rankingu WIDE, klasami.
- * (decyzja Rafała 02.09: „niech to się już powoli zbiera" — dane do kolumn
- * „365d/720d vs HODL, pełny przebieg" w tabelach rankingowych, Partia 22).
+ * wide-collect.ts — FUNNEL v2, TIER 2: collector of swap history (720d)
+ * + full run (walkforward) for the top of the WIDE ranking, by class.
+ * (Rafal's decision 02.09: "let it start collecting slowly" — data for the
+ * "365d/720d vs HODL, full run" columns in the ranking tables, Batch 22).
  *
- *   npx tsx scripts/wide-collect.ts --dry-run          # tylko kolejka + mapowanie (bez fetchu)
- *   npx tsx scripts/wide-collect.ts --one              # jedna pula (fetch + walkforward) i koniec
- *   npx tsx scripts/wide-collect.ts --max-minutes 300  # pętla, nie zaczyna nowej puli po budżecie
- *   npx tsx scripts/wide-collect.ts                    # cała kolejka (noce; wznawialne)
- *   opcje: --per-class 8 (ile pul na klasę), --refresh (ponów walkforward na już pobranych)
+ *   npx tsx scripts/wide-collect.ts --dry-run          # queue + mapping only (no fetch)
+ *   npx tsx scripts/wide-collect.ts --one              # one pool (fetch + walkforward) and stop
+ *   npx tsx scripts/wide-collect.ts --max-minutes 300  # loop, does not start a new pool past the budget
+ *   npx tsx scripts/wide-collect.ts                    # whole queue (nights; resumable)
+ *   options: --per-class 8 (how many pools per class), --refresh (rerun walkforward on already fetched)
  *
- * PRZEZNACZENIE: uruchamiany PRZEZ SUBAGENTA CC-Win w tle, NIE w pipeline
- * (pipeline nocny jest krótki i krytyczny; ten skrypt liczy godziny).
- * Bezpieczeństwo współbieżności: (1) własny lock `.bot/wide-collect.lock`
- * (drugi egzemplarz kończy od razu); (2) PAUZA, gdy biegnie pipeline
- * (istnieje `data/pipeline.lock` albo pipeline.log ma wpis START bez KONIEC
- * z ostatnich 3h) — czeka, nie konkuruje o CPU/RAM z backtest-run.
+ * PURPOSE: run BY THE CC-Win SUBAGENT in the background, NOT in the pipeline
+ * (the nightly pipeline is short and critical; this script takes hours).
+ * Concurrency safety: (1) own lock `.bot/wide-collect.lock`
+ * (a second instance exits immediately); (2) PAUSE while the pipeline is running
+ * (`data/pipeline.lock` exists or pipeline.log has a START entry without END
+ * within the last 3h) — it waits, does not compete for CPU/RAM with backtest-run.
  *
- * KOLEJKA (.bot/wide-collect-queue.json, wznawialna): z najnowszego
- * data/wide-score/wide-score-*.json bierze top `--per-class` pul KAŻDEJ klasy
- * (pegged/LST/stable nadreprezentowane z założenia — TASKS-FUNNEL §2), tylko
- * uniswap-v3 (v4 = singleton, inne eventy — poza zasięgiem fetcha) na
- * mainnet/base/arbitrum. Pule bota (BOT_POOLS) mają cache 720d w pipeline —
- * pomijane. Kolejka ROŚNIE (nowe pule z kolejnych rankingów dochodzą), stare
- * wpisy nie znikają — raz pobrana historia zostaje.
+ * QUEUE (.bot/wide-collect-queue.json, resumable): from the newest
+ * data/wide-score/wide-score-*.json takes the top `--per-class` pools of EACH class
+ * (pegged/LST/stable overrepresented by design — TASKS-FUNNEL §2), only
+ * uniswap-v3 (v4 = singleton, different events — out of the fetcher's reach) on
+ * mainnet/base/arbitrum. Bot pools (BOT_POOLS) have a 720d cache in the pipeline —
+ * skipped. The queue GROWS (new pools from subsequent rankings are added), old
+ * entries do not disappear — history once fetched stays.
  *
- * MAPOWANIE llama → on-chain: adresy tokenów z `underlyingTokens` (t0/t1 w
- * wide-score), pool = factory.getPool(lo, hi, fee) + sanity token0/token1,
- * decimals() z łańcucha. Orientacja silnika (konwencja repo, jak
- * candidate-funnel): noga KWOTUJĄCA = stable > WETH > BTC(WBTC/cbBTC);
- * `ethIsToken0` = pozycja nogi NIE-kwotującej... z wyjątkiem par z WETH bez
- * stable, gdzie (konwencja base-cbbtc-weth-005) `ethIsToken0` = pozycja WETH.
- * Referencje USD: quote WETH → USDC/WETH 720d tej sieci; quote BTC →
- * cache BTC/USDC 720d tej sieci (kolejkowany JAKO PIERWSZY, id `ref-*`),
- * z jawną orientacją `quoteRefAssetIsToken0` (czyta backtest/load.ts).
+ * MAPPING llama → on-chain: token addresses from `underlyingTokens` (t0/t1 in
+ * wide-score), pool = factory.getPool(lo, hi, fee) + token0/token1 sanity check,
+ * decimals() from the chain. Engine orientation (repo convention, as in
+ * candidate-funnel): QUOTE leg = stable > WETH > BTC(WBTC/cbBTC);
+ * `ethIsToken0` = position of the NON-quote leg... except for pairs with WETH and no
+ * stable, where (base-cbbtc-weth-005 convention) `ethIsToken0` = position of WETH.
+ * USD references: quote WETH → USDC/WETH 720d of that chain; quote BTC →
+ * BTC/USDC 720d cache of that chain (queued FIRST, id `ref-*`),
+ * with explicit orientation `quoteRefAssetIsToken0` (read by backtest/load.ts).
  *
- * PRZEBIEG: walkforward 30/15 na 720d, WF_SET=wide (szerokość klasy z
- * wide-score: crypto-stable ±50, eth-btc/crypto-crypto ±40, pegged ciasne;
- * hybryda ±5% tylko dla klas szerokich). Wynik summary → .bot/wide-backtests.json
- * (klucz = llama uuid) — czyta serwer (/api/wide-backtests) i UI (Partia 22).
+ * RUN: walkforward 30/15 on 720d, WF_SET=wide (class width from
+ * wide-score: crypto-stable ±50, eth-btc/crypto-crypto ±40, pegged tight;
+ * hybrid ±5% only for wide classes). Summary result → .bot/wide-backtests.json
+ * (key = llama uuid) — read by the server (/api/wide-backtests) and the UI (Batch 22).
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -77,20 +77,20 @@ const ETH_LIKE = new Set(['WETH', 'ETH']);
 const BTC_LIKE = new Set(['WBTC', 'CBBTC']);
 const ZERO_ADDR = /^0x0{40}$/i;
 
-/** referencja USD-za-WETH 720d per sieć (cache z pipeline'u) */
+/** USD-per-WETH reference 720d per chain (cache from the pipeline) */
 const WETH_USD_REF: Record<string, string> = {
   mainnet: 'mainnet-usdc-weth-005-720d',
   base: 'base-weth-usdc-030-720d',
   arbitrum: 'arbitrum-weth-usdc-005-720d',
 };
-/** referencja USD-za-BTC per sieć: kolejkowana przez ten skrypt (id ref-*) */
+/** USD-per-BTC reference per chain: queued by this script (id ref-*) */
 const BTC_USD_REF: Record<string, { id: string; btc: string; btcSym: string; usdc: string; feeBps: number }> = {
   mainnet: { id: 'ref-mainnet-wbtc-usdc-030-720d', btc: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', btcSym: 'WBTC', usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', feeBps: 3000 },
   base: { id: 'ref-base-cbbtc-usdc-005-720d', btc: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf', btcSym: 'CBBTC', usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', feeBps: 500 },
   arbitrum: { id: 'ref-arbitrum-wbtc-usdc-005-720d', btc: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f', btcSym: 'WBTC', usdc: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', feeBps: 500 },
 };
 
-/** szerokości klas — TE SAME co CLASS_PARAMS.wOurs w wide-score.ts */
+/** class widths — THE SAME as CLASS_PARAMS.wOurs in wide-score.ts */
 const CLASS_W: Record<string, { w: number; narrow: number | null }> = {
   'crypto-stable': { w: 0.5, narrow: 0.05 },
   'eth-btc': { w: 0.4, narrow: 0.05 },
@@ -104,12 +104,12 @@ const log = (m: string) => console.log(`${new Date().toISOString()} collect: ${m
 const arg = (name: string, def: string) => { const i = process.argv.indexOf(name); return i > -1 ? process.argv[i + 1] : def; };
 const flag = (name: string) => process.argv.includes(name);
 
-// ── kolejka ─────────────────────────────────────────────────────────────────
+// ── queue ───────────────────────────────────────────────────────────────────
 type QItem = {
-  key: string; // llama uuid albo 'ref:<id>'
-  id: string; // id cache
+  key: string; // llama uuid or 'ref:<id>'
+  id: string; // cache id
   chain: string; symbol: string; feeTier: string; cls: string; score: number | null;
-  t0: string; t1: string; // adresy z DefiLlamy (kolejność = symbol)
+  t0: string; t1: string; // addresses from DefiLlama (order = symbol)
   status: 'pending' | 'mapped' | 'fetched' | 'done' | 'unmapped' | 'failed';
   cfgPath?: string; note?: string; addedAt: string; updatedAt?: string; attempts?: number;
   isRef?: boolean;
@@ -134,7 +134,7 @@ function buildQueue(perClass: number): Queue {
   const q: Queue = readJson(QUEUE_PATH) ?? { generatedAt: '', sourceFile: null, items: [] };
   const byKey = new Map(q.items.map((i) => [i.key, i]));
   const file = latestScoreFile();
-  if (!file) { log(`brak data/wide-score/*.json — najpierw npm run wide:score`); return q; }
+  if (!file) { log(`no data/wide-score/*.json — run npm run wide:score first`); return q; }
   const rows: any[] = readJson(file).rows ?? [];
   const perClassCount: Record<string, number> = {};
   const now = new Date().toISOString();
@@ -150,7 +150,7 @@ function buildQueue(perClass: number): Queue {
     if (!feeBps) continue;
     const syms = String(r.symbol).toUpperCase().split('-');
     if (syms.length !== 2) continue;
-    if (botPoolCached(chain, syms, feeBps)) continue; // pule bota mają cache 720d z pipeline'u
+    if (botPoolCached(chain, syms, feeBps)) continue; // bot pools have a 720d cache from the pipeline
     if (byKey.has(r.pool)) continue;
     const item: QItem = {
       key: r.pool, id: `wide-${chain}-${syms[0].toLowerCase()}-${syms[1].toLowerCase()}-${FEE_CODE[feeBps]}-720d`,
@@ -166,14 +166,14 @@ function buildQueue(perClass: number): Queue {
 
 // ── eth_call ────────────────────────────────────────────────────────────────
 async function ethCall(chain: string, to: string, data: string): Promise<string> {
-  let lastErr: unknown = new Error(`brak RPC dla ${chain}`);
+  let lastErr: unknown = new Error(`no RPC for ${chain}`);
   for (const url of RPC[chain] ?? []) {
     try {
       const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to, data }, 'latest'] }), signal: AbortSignal.timeout(20_000) });
       const j: any = await r.json();
       if (j.error) throw new Error(`${j.error.code}: ${j.error.message}`);
       if (typeof j.result === 'string' && j.result !== '0x') return j.result;
-      throw new Error('pusta odpowiedź');
+      throw new Error('empty response');
     } catch (e) { lastErr = e; }
   }
   throw lastErr;
@@ -199,29 +199,29 @@ async function mapItem(it: QItem): Promise<{ cfg: Cfg } | { unmapped: string }> 
   const tok0 = parseAddr(await ethCall(it.chain, pool, '0x0dfe1681'));
   const tok1 = parseAddr(await ethCall(it.chain, pool, '0xd21220a7'));
   const idx0 = toks.indexOf(tok0), idx1 = toks.indexOf(tok1);
-  if (idx0 < 0 || idx1 < 0) return { unmapped: `token0/token1 puli ≠ underlyingTokens (${tok0},${tok1})` };
+  if (idx0 < 0 || idx1 < 0) return { unmapped: `pool token0/token1 ≠ underlyingTokens (${tok0},${tok1})` };
   const sym0 = syms[idx0], sym1 = syms[idx1];
   const d0 = parseUint(await ethCall(it.chain, tok0, '0x313ce567'));
   const d1 = parseUint(await ethCall(it.chain, tok1, '0x313ce567'));
   const isStable = (s: string) => STABLES.has(s), isEth = (s: string) => ETH_LIKE.has(s), isBtc = (s: string) => BTC_LIKE.has(s);
   const cfg: Cfg = { id: it.id, chain: it.chain, address: pool, feeBps, ethIsToken0: true, token0Decimals: d0, token1Decimals: d1, days: DAYS };
   if (isStable(sym0) || isStable(sym1)) {
-    // quote = stable; asset = druga noga (dla stable-stable: token0 umownie)
+    // quote = stable; asset = the other leg (for stable-stable: token0 by convention)
     cfg.ethIsToken0 = isStable(sym0) && isStable(sym1) ? true : !isStable(sym0);
   } else if (isEth(sym0) || isEth(sym1)) {
-    // konwencja repo dla par z WETH bez stable (base-cbbtc-weth-005): ethIsToken0 = pozycja WETH
+    // repo convention for pairs with WETH and no stable (base-cbbtc-weth-005): ethIsToken0 = position of WETH
     cfg.ethIsToken0 = isEth(sym0);
     cfg.quoteRefId = WETH_USD_REF[it.chain];
   } else if (isBtc(sym0) || isBtc(sym1)) {
-    // quote = BTC; asset = druga noga; referencja BTC/USDC (kolejkowana jako ref-*)
+    // quote = BTC; asset = the other leg; BTC/USDC reference (queued as ref-*)
     const ref = BTC_USD_REF[it.chain];
-    if (!ref) return { unmapped: `brak referencji BTC/USD dla ${it.chain}` };
+    if (!ref) return { unmapped: `no BTC/USD reference for ${it.chain}` };
     cfg.ethIsToken0 = isBtc(sym0) && isBtc(sym1) ? true : !isBtc(sym0);
     cfg.quoteRefId = ref.id;
-    // w puli referencyjnej BTC jest token0, gdy adres BTC < adres USDC
+    // in the reference pool BTC is token0 when the BTC address < the USDC address
     cfg.quoteRefAssetIsToken0 = ref.btc.toLowerCase() < ref.usdc.toLowerCase();
   } else {
-    return { unmapped: `brak nogi stable/WETH/BTC (${it.symbol}) — brak referencji USD` };
+    return { unmapped: `no stable/WETH/BTC leg (${it.symbol}) — no USD reference` };
   }
   return { cfg };
 }
@@ -234,12 +234,12 @@ async function refCfg(chain: string): Promise<Cfg> {
   return { id: ref.id, chain, address: pool, feeBps: ref.feeBps, ethIsToken0: btcIs0, token0Decimals: btcIs0 ? 8 : 6, token1Decimals: btcIs0 ? 6 : 8, days: DAYS };
 }
 
-// ── procesy ─────────────────────────────────────────────────────────────────
+// ── processes ───────────────────────────────────────────────────────────────
 function runStep(name: string, script: string, args: string[], timeoutMin: number, extraEnv: Record<string, string> = {}): Promise<number> {
   return new Promise((resolve) => {
     const child = spawn('npx', ['tsx', script, ...args], { cwd: ROOT, env: { ...process.env, ...extraEnv }, shell: process.platform === 'win32', stdio: 'inherit' });
     const killer = setTimeout(() => {
-      log(`✗ ${name}: TIMEOUT ${timeoutMin} min — ubijam (fetch jest wznawialny)`);
+      log(`✗ ${name}: TIMEOUT ${timeoutMin} min — killing (fetch is resumable)`);
       if (process.platform === 'win32' && child.pid) spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { shell: true });
       else child.kill('SIGKILL');
     }, timeoutMin * 60_000);
@@ -256,7 +256,7 @@ function pipelineRunning(): boolean {
     const ts = Date.parse(l.slice(0, 24));
     if (!Number.isFinite(ts)) continue;
     if (/PIPELINE START/.test(l)) start = ts;
-    if (/PIPELINE KONIEC/.test(l)) end = ts;
+    if (/PIPELINE KONIEC/.test(l)) end = ts; // PARSING CONTRACT: 'PIPELINE KONIEC' (= "PIPELINE END") is written by scripts/pipeline.ts — migrate both sides together
   }
   return start !== null && (end === null || end < start) && Date.now() - start < 3 * 3600e3;
 }
@@ -264,7 +264,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function waitForPipeline() {
   let warned = false;
   while (pipelineRunning()) {
-    if (!warned) { log('pipeline nocny w toku — pauza (sprawdzam co 5 min)'); warned = true; }
+    if (!warned) { log('nightly pipeline in progress — pausing (checking every 5 min)'); warned = true; }
     await sleep(5 * 60_000);
   }
 }
@@ -283,6 +283,7 @@ function harvest(it: QItem, w: { w: number; narrow: number | null }): any | null
   return {
     id: it.id, chain: it.chain, symbol: it.symbol, feeTier: it.feeTier, cls: it.cls, widthPct: w.w * 100,
     windows: j.windows, windowDays: j.windowDays, stepDays: j.stepDays, regimeCounts: j.regimeCounts,
+    // PARSING CONTRACT: strategy names 'Pasywny ±N%' (= "Passive") and 'FlatOnly wąski' (= "narrow") come from backtest/strategies.ts — keep the regexes in sync with it
     passive: pick(new RegExp(`^Pasywny ±${wPct}%$`)),
     hybrid: w.narrow ? pick(/^FlatOnly wąski/) : null,
     hodlByRegime: j.hodlByRegime ?? null,
@@ -300,15 +301,15 @@ function harvest(it: QItem, w: { w: number; narrow: number | null }): any | null
   fs.mkdirSync(BOT, { recursive: true });
   if (fs.existsSync(LOCK_PATH)) {
     const age = Date.now() - fs.statSync(LOCK_PATH).mtimeMs;
-    if (age < 12 * 3600e3) { log(`lock ${LOCK_PATH} (${(age / 60000).toFixed(0)} min) — inny egzemplarz biegnie, kończę`); process.exit(0); }
-    log('lock starszy niż 12h — przejmuję');
+    if (age < 12 * 3600e3) { log(`lock ${LOCK_PATH} (${(age / 60000).toFixed(0)} min) — another instance is running, exiting`); process.exit(0); }
+    log('lock older than 12h — taking over');
   }
   fs.writeFileSync(LOCK_PATH, String(process.pid));
   const unlock = () => { try { fs.unlinkSync(LOCK_PATH); } catch { /* */ } };
   process.on('exit', unlock); process.on('SIGINT', () => { unlock(); process.exit(130); });
 
   const q = buildQueue(perClass);
-  // referencje BTC/USD jako pierwsze, gdy jakakolwiek pula ich potrzebuje
+  // BTC/USD references first, when any pool needs them
   const needRef = new Set(q.items.filter((i) => !i.isRef && i.status !== 'done' && i.status !== 'unmapped').map((i) => i.chain));
   for (const chain of needRef) {
     const ref = BTC_USD_REF[chain];
@@ -318,48 +319,48 @@ function harvest(it: QItem, w: { w: number; narrow: number | null }): any | null
   saveQueue(q);
   const counts: Record<string, number> = {};
   for (const i of q.items) counts[i.status] = (counts[i.status] ?? 0) + 1;
-  log(`kolejka: ${q.items.length} pul (${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(', ')}) · źródło ${q.sourceFile}`);
+  log(`queue: ${q.items.length} pools (${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(', ')}) · source ${q.sourceFile}`);
   if (dryRun) {
     for (const i of q.items) log(`  ${i.status.padEnd(9)} ${i.cls.padEnd(13)} ${i.chain.padEnd(8)} ${i.symbol} ${i.feeTier} score ${i.score}`);
     process.exit(0);
   }
 
   const out: Record<string, any> = readJson(OUT_PATH) ?? {};
-  // refy najpierw, potem po score malejąco; pomijamy done (chyba że --refresh) / unmapped
+  // refs first, then by score descending; skip done (unless --refresh) / unmapped
   const todo = q.items
     .filter((i) => i.status !== 'unmapped' && (refresh || i.status !== 'done'))
     .sort((a, b) => (a.isRef ? -1 : 0) - (b.isRef ? -1 : 0) || (b.score ?? -1e9) - (a.score ?? -1e9));
 
   for (const it of todo) {
-    if (maxMin && Date.now() - t0 > maxMin * 60_000) { log(`budżet ${maxMin} min wyczerpany — koniec`); break; }
+    if (maxMin && Date.now() - t0 > maxMin * 60_000) { log(`budget of ${maxMin} min exhausted — stopping`); break; }
     await waitForPipeline();
     log(`=== ${it.symbol} ${it.feeTier} @ ${it.chain} [${it.cls}] score ${it.score} → ${it.id} ===`);
     it.attempts = (it.attempts ?? 0) + 1; it.updatedAt = new Date().toISOString();
-    // 1. mapowanie
+    // 1. mapping
     if (!it.cfgPath || !fs.existsSync(path.join(ROOT, it.cfgPath))) {
       try {
         const m = it.isRef ? { cfg: await refCfg(it.chain) } : await mapItem(it);
         if ('unmapped' in m) { it.status = 'unmapped'; it.note = m.unmapped; log(`✗ unmapped: ${m.unmapped}`); saveQueue(q); continue; }
-        // ref BTC/USD wymagany przez tę pulę musi być już pobrany
+        // the BTC/USD ref required by this pool must already be fetched
         if (m.cfg.quoteRefId?.startsWith('ref-') && !cacheComplete(m.cfg.quoteRefId)) {
-          it.note = `czeka na referencję ${m.cfg.quoteRefId}`; log(`⏸ ${it.note}`); saveQueue(q); continue;
+          it.note = `waiting for reference ${m.cfg.quoteRefId}`; log(`⏸ ${it.note}`); saveQueue(q); continue;
         }
         fs.mkdirSync(CFG_DIR, { recursive: true });
         const p = path.join(CFG_DIR, `${m.cfg.id}.cfg.json`);
         fs.writeFileSync(p, JSON.stringify(m.cfg, null, 2));
         it.cfgPath = path.relative(ROOT, p); it.status = 'mapped'; it.note = `pool ${m.cfg.address}`;
-        log(`zmapowano → ${m.cfg.address}${m.cfg.quoteRefId ? ` (ref ${m.cfg.quoteRefId})` : ''}`);
-      } catch (e) { it.status = 'failed'; it.note = `mapowanie: ${String(e).slice(0, 140)}`; log(`✗ ${it.note}`); saveQueue(q); continue; }
+        log(`mapped → ${m.cfg.address}${m.cfg.quoteRefId ? ` (ref ${m.cfg.quoteRefId})` : ''}`);
+      } catch (e) { it.status = 'failed'; it.note = `mapping: ${String(e).slice(0, 140)}`; log(`✗ ${it.note}`); saveQueue(q); continue; }
       saveQueue(q);
     }
-    // 2. fetch 720d (wznawialny)
+    // 2. 720d fetch (resumable)
     if (!cacheComplete(it.id)) {
       const code = await runStep(`fetch-${it.id}`, 'scripts/fetch-swaps-hypersync.ts', ['--cfg', it.cfgPath!], FETCH_TIMEOUT_MIN);
-      if (code !== 0 || !cacheComplete(it.id)) { it.status = 'failed'; it.note = `fetch exit ${code} (wznawialny — spróbuję w następnym przebiegu)`; log(`✗ ${it.note}`); saveQueue(q); if (one) break; continue; }
+      if (code !== 0 || !cacheComplete(it.id)) { it.status = 'failed'; it.note = `fetch exit ${code} (resumable — will retry in the next run)`; log(`✗ ${it.note}`); saveQueue(q); if (one) break; continue; }
     }
     it.status = 'fetched'; it.updatedAt = new Date().toISOString(); saveQueue(q);
-    if (it.isRef) { it.status = 'done'; saveQueue(q); log(`✓ referencja ${it.id} gotowa`); continue; }
-    // 3. walkforward WF_SET=wide (szerokość klasy)
+    if (it.isRef) { it.status = 'done'; saveQueue(q); log(`✓ reference ${it.id} ready`); continue; }
+    // 3. walkforward WF_SET=wide (class width)
     const w = CLASS_W[it.cls];
     await waitForPipeline();
     const code = await runStep(`walkforward-${it.id}`, 'backtest/walkforward.ts', [it.id, String(WINDOW_D), String(STEP_D)], WF_TIMEOUT_MIN, {
@@ -370,11 +371,11 @@ function harvest(it: QItem, w: { w: number; narrow: number | null }): any | null
     if (!h) { it.status = 'failed'; it.note = `walkforward exit ${code}`; log(`✗ ${it.note}`); saveQueue(q); if (one) break; continue; }
     out[it.key] = h;
     fs.writeFileSync(OUT_PATH, JSON.stringify(out, null, 1));
-    it.status = 'done'; it.note = `pasywny ±${w.w * 100}%: śr ${h.passive?.mean?.toFixed(2)} / wygr ${h.passive?.winPct?.toFixed(0)}% / worst ${h.passive?.worst?.toFixed(2)}`;
+    it.status = 'done'; it.note = `passive ±${w.w * 100}%: mean ${h.passive?.mean?.toFixed(2)} / win ${h.passive?.winPct?.toFixed(0)}% / worst ${h.passive?.worst?.toFixed(2)}`;
     log(`✓ ${it.note}`);
     saveQueue(q);
     if (one) break;
   }
-  log(`koniec: ${Object.keys(out).length} pul z pełnym przebiegiem w ${path.relative(ROOT, OUT_PATH)}`);
+  log(`done: ${Object.keys(out).length} pools with a full run in ${path.relative(ROOT, OUT_PATH)}`);
   unlock();
 })();

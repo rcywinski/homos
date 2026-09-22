@@ -1,24 +1,24 @@
 /**
- * useHedgeExecution.ts — wykonuje `HedgePlan` z utils/hedgeBuilder.ts
- * (TASKS-UI.md Partia 9: [Zatwierdź hedge] na karcie propozycji HEDGE, GMX v2
- * na Arbitrum). Ten sam wzorzec co useRebalanceExecution.ts/useCockpitActions.ts
- * (freshWalletClient po ewentualnym przełączeniu sieci, OBOWIĄZKOWA symulacja
- * client.call przed sendTransaction — patrz nagłówek hedgeBuilder.ts,
- * addTransaction do historii), z dwiema różnicami specyficznymi dla hedge'a:
+ * useHedgeExecution.ts — executes a `HedgePlan` from utils/hedgeBuilder.ts
+ * (TASKS-UI.md Batch 9: [Confirm hedge] on the HEDGE proposal card, GMX v2
+ * on Arbitrum). Same pattern as useRebalanceExecution.ts/useCockpitActions.ts
+ * (freshWalletClient after an optional network switch, MANDATORY client.call
+ * simulation before sendTransaction — see the hedgeBuilder.ts header,
+ * addTransaction to the history), with two hedge-specific differences:
  *
- *  - Sieć jest ZAWSZE Arbitrum (GMX_ARBITRUM.chainId=42161), niezależnie od
- *    sieci puli LP, którą propozycja dotyczy (hedge to osobny rynek perp) —
- *    freshWalletClient tu nie przyjmuje chainId jako argument, jest zaszyty.
- *  - Saldo USDC sprawdzane PRZED budową jakiejkolwiek transakcji: gdy brakuje,
- *    hook rzuca czytelny błąd i NIE wysyła nic (bez auto-swapów w v1, zgodnie
- *    ze zleceniem) — inaczej niż w rebalansie, gdzie approve/mint są zawsze
- *    wykonywalne (środki już są na pozycji).
+ *  - The network is ALWAYS Arbitrum (GMX_ARBITRUM.chainId=42161), regardless of
+ *    the network of the LP pool the proposal concerns (the hedge is a separate perp market) —
+ *    freshWalletClient here does not take chainId as an argument, it is hardwired.
+ *  - The USDC balance is checked BEFORE building any transaction: when it is short,
+ *    the hook throws a readable error and sends NOTHING (no auto-swaps in v1, per
+ *    the brief) — unlike the rebalance, where approve/mint are always
+ *    executable (the funds are already on the position).
  *
- * Stan otwartego shorta (`homos_hedge_open`, klucz globalny — bot v1.2
- * proponuje hedge tylko dla jednej puli na raz, base-030) zapisywany po
- * udanym OTWARCIU (plan.preview.direction==='open-short'), czyszczony po
- * udanym ZAMKNIĘCIU — "prosto" zgodnie ze zleceniem, bez integracji z GMX
- * Readerem (przyszłe ulepszenie, TASKS-UI.md).
+ * The open short state (`homos_hedge_open`, a global key — bot v1.2
+ * proposes a hedge for only one pool at a time, base-030) is saved after a
+ * successful OPEN (plan.preview.direction==='open-short'), cleared after a
+ * successful CLOSE — "simple" per the brief, without GMX Reader
+ * integration (future improvement, TASKS-UI.md).
  */
 import { useCallback, useState } from 'react';
 import { useAccount, usePublicClient, useChainId, useSwitchChain } from 'wagmi';
@@ -34,7 +34,7 @@ export interface HedgeExecStatus {
 }
 const IDLE: HedgeExecStatus = { phase: 'idle', message: '' };
 
-// --- stan otwartego shorta, localStorage jak reszta appki (homos_api_base itp.) ---
+// --- open short state, localStorage like the rest of the app (homos_api_base etc.) ---
 const HEDGE_STATE_KEY = 'homos_hedge_open';
 export interface HedgeOpenState {
   sizeUsd: number;
@@ -64,11 +64,11 @@ export const clearHedgeOpen = (): void => {
   }
 };
 
-// Jako `number` (nie literał `42161` z `as const` w GMX_ARBITRUM) — inaczej
-// getWalletClient(config, { chainId: <literal> }) łapie zbyt wąski overload
-// wagmi i `wc.chain` w sendTransaction typuje się na `never` (TS2345).
-// Ten sam wzorzec co w useRebalanceExecution.ts/useCockpitActions.ts, gdzie
-// chainId zawsze przychodzi jako zwykły `number` parametr, nigdy literal.
+// As `number` (not the `42161` literal from `as const` in GMX_ARBITRUM) — otherwise
+// getWalletClient(config, { chainId: <literal> }) picks up an overly narrow wagmi
+// overload and `wc.chain` in sendTransaction gets typed as `never` (TS2345).
+// Same pattern as in useRebalanceExecution.ts/useCockpitActions.ts, where
+// chainId always arrives as a plain `number` parameter, never a literal.
 const HEDGE_CHAIN_ID: number = GMX_ARBITRUM.chainId;
 
 export function useHedgeExecution() {
@@ -85,23 +85,23 @@ export function useHedgeExecution() {
     return getWalletClient(config, { chainId: HEDGE_CHAIN_ID });
   }, [walletChainId, switchChainAsync]);
 
-  // FIX 20.08 (test Rafała ~$15): Rabby zwrócił hash, którego publicnode nie
-  // przyjął w eth_getTransactionReceipt ("Invalid parameters") — hook rzucał
-  // PO udanym wysłaniu i NIE zapisywał stanu shorta, mimo że pozycja żyła
-  // on-chain. Zasada: po sendTransaction tx JEST wysłana — czekanie na
-  // receipt to best-effort (walidacja formatu hasha + try/catch), nigdy
-  // powód do phase:'error'.
+  // FIX 20.08 (owner's ~$15 test): Rabby returned a hash that publicnode did not
+  // accept in eth_getTransactionReceipt ("Invalid parameters") — the hook threw
+  // AFTER a successful send and did NOT save the short state, even though the position
+  // was live on-chain. Rule: after sendTransaction the tx IS sent — waiting for
+  // the receipt is best-effort (hash format validation + try/catch), never
+  // a reason for phase:'error'.
   const isTxHash = (h: unknown): h is `0x${string}` => typeof h === 'string' && /^0x[0-9a-fA-F]{64}$/.test(h);
   const waitBestEffort = useCallback(async (hash: unknown, label: string) => {
     if (!client) return;
     if (!isTxHash(hash)) {
-      console.warn(`[hedge] ${label}: portfel zwrócił nietypowy hash (${String(hash).slice(0, 80)}…) — pomijam receipt`);
+      console.warn(`[hedge] ${label}: the wallet returned an unusual hash (${String(hash).slice(0, 80)}…) — skipping receipt`);
       return;
     }
     try {
       await client.waitForTransactionReceipt({ hash });
     } catch (e) {
-      console.warn(`[hedge] ${label}: receipt-wait nieudany (${String(e).slice(0, 140)}) — tx już wysłana, kontynuuję`);
+      console.warn(`[hedge] ${label}: receipt-wait failed (${String(e).slice(0, 140)}) — tx already sent, continuing`);
     }
   }, [client]);
 
@@ -111,10 +111,10 @@ export function useHedgeExecution() {
       setError(null);
       try {
         const wc = await freshWalletClient();
-        if (!wc || !client) throw new Error('Brak połączenia z siecią Arbitrum');
+        if (!wc || !client) throw new Error('No connection to the Arbitrum network');
 
         if (plan.approval) {
-          setStatus({ phase: 'checking', message: 'Sprawdzanie salda i approval USDC…' });
+          setStatus({ phase: 'checking', message: 'Checking USDC balance and approval…' });
           const [balance, allowance] = await Promise.all([
             client.readContract({ address: plan.approval.token, abi: erc20Abi, functionName: 'balanceOf', args: [address] }) as Promise<bigint>,
             client.readContract({ address: plan.approval.token, abi: erc20Abi, functionName: 'allowance', args: [address, plan.approval.spender] }) as Promise<bigint>,
@@ -122,21 +122,21 @@ export function useHedgeExecution() {
           if (balance < plan.approval.amount) {
             const haveUsd = Number(balance) / 1e6;
             const needUsd = Number(plan.approval.amount) / 1e6;
-            throw new Error(`Za mało USDC na Arbitrum — masz $${haveUsd.toFixed(2)}, trzeba $${needUsd.toFixed(2)} (bez auto-swapów w v1, dokup ręcznie)`);
+            throw new Error(`Not enough USDC on Arbitrum — you have $${haveUsd.toFixed(2)}, need $${needUsd.toFixed(2)} (no auto-swaps in v1, top up manually)`);
           }
           if (allowance < plan.approval.amount) {
-            setStatus({ phase: 'approving', message: 'Approve USDC dla GMX Router…' });
+            setStatus({ phase: 'approving', message: 'Approving USDC for GMX Router…' });
             const hash = await wc.sendTransaction({ to: plan.approval.tx.to, data: plan.approval.tx.data, value: plan.approval.tx.value, account: address, chain: wc.chain });
             await waitBestEffort(hash, 'approve');
-            if (isTxHash(hash)) addTransaction(address, hash, plan.chainId, 'Approve USDC dla GMX Router (hedge)');
+            if (isTxHash(hash)) addTransaction(address, hash, plan.chainId, 'Approve USDC for GMX Router (hedge)');
           }
         }
 
-        setStatus({ phase: 'sending', message: 'Symulacja…' });
+        setStatus({ phase: 'sending', message: 'Simulating…' });
         await client.call({ to: plan.tx.to, data: plan.tx.data, value: plan.tx.value, account: address });
-        setStatus({ phase: 'sending', message: 'Podpis w Rabby…' });
+        setStatus({ phase: 'sending', message: 'Sign in Rabby…' });
         const hash = await wc.sendTransaction({ to: plan.tx.to, data: plan.tx.data, value: plan.tx.value, account: address, chain: wc.chain });
-        setStatus({ phase: 'sending', message: 'Potwierdzanie…' });
+        setStatus({ phase: 'sending', message: 'Confirming…' });
         await waitBestEffort(hash, 'order');
         if (isTxHash(hash)) addTransaction(address, hash, plan.chainId, plan.summary);
 
@@ -146,7 +146,7 @@ export function useHedgeExecution() {
           clearHedgeOpen();
         }
 
-        setStatus({ phase: 'done', message: 'Zlecenie wysłane — keeper GMX wykona w kolejnym bloku ✓' });
+        setStatus({ phase: 'done', message: 'Order sent — the GMX keeper will execute it in the next block ✓' });
         onDone?.();
       } catch (e) {
         const msg = e instanceof Error ? e.message.slice(0, 220) : String(e);

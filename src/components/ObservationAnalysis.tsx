@@ -1,43 +1,43 @@
 /**
- * ObservationAnalysis.tsx — "Analiza obserwacji" (HANDOFF Fable→Sonnet
- * 2026-08-11 ~19:4x). Zwijana sekcja w kokpicie (wzorzec BotTelemetry.tsx),
- * docelowo zostaje na produkcji jako podgląd "czy zamrożone parametry
- * (walk-forward) nadal wygrywają" na świeżych danych.
+ * ObservationAnalysis.tsx — "Observation analysis" (HANDOFF Fable→Sonnet
+ * 2026-08-11 ~19:4x). Collapsible section in the cockpit (BotTelemetry.tsx pattern),
+ * intended to stay in production as a view of "do the frozen parameters
+ * (walk-forward) still win" on fresh data.
  *
- * Dwa endpointy, których JESZCZE NIE MA na serwerze bota (Fable dodaje je
- * "jutro" w bot/server.ts) — cały fetch jest defensywny, 404/błąd sieci ==
- * po prostu pokazujemy fallback tekst, zero crashy:
- *  1. GET {base}/api/history?hours=72 — snapshoty co 15 min per pula
+ * Two endpoints that DO NOT EXIST YET on the bot server (Fable adds them
+ * "tomorrow" in bot/server.ts) — the whole fetch is defensive, 404/network error ==
+ * we simply show fallback text, zero crashes:
+ *  1. GET {base}/api/history?hours=72 — snapshots every 15 min per pool
  *     ({ts, poolId, price, volDaily, feeYieldDaily, rangeLo, rangeHi,
- *     emaGapPct}). Kształt odpowiedzi jest niepewny (JSON array vs NDJSON) —
- *     parseHistoryResponse próbuje oba.
- *  2. GET {base}/api/results/<nazwa>.json — pliki z backtest/results/
- *     (Windows). Nazwa pliku nie jest jednoznacznie ustalona w HANDOFF —
- *     przyjęta konwencja to `walkforward-<botPoolId>-365d-45d` (dopasowane
- *     do plików faktycznie widocznych w backtest/results/, np.
- *     walkforward-base-weth-usdc-030-365d-45d.json). Jeśli Fable wystawi
- *     endpoint pod inną nazwą, wystarczy poprawić WALKFORWARD_NAME_SUFFIX
- *     poniżej — reszta komponentu się nie zmienia.
+ *     emaGapPct}). The response shape is uncertain (JSON array vs NDJSON) —
+ *     parseHistoryResponse tries both.
+ *  2. GET {base}/api/results/<name>.json — files from backtest/results/
+ *     (Windows). The file name is not unambiguously fixed in HANDOFF —
+ *     the adopted convention is `walkforward-<botPoolId>-365d-45d` (matched
+ *     to the files actually visible in backtest/results/, e.g.
+ *     walkforward-base-weth-usdc-030-365d-45d.json). If Fable exposes the
+ *     endpoint under a different name, it is enough to fix WALKFORWARD_NAME_SUFFIX
+ *     below — the rest of the component does not change.
  *
- * Znaczniki propozycji na osi czasu: state.proposals (już w useBotApi, zero
- * nowych fetchy) — pionowa kreska na wykresie właściwej puli.
+ * Proposal markers on the time axis: state.proposals (already in useBotApi, zero
+ * new fetches) — a vertical line on the chart of the relevant pool.
  *
- * Tabela trafności propozycji (co było N dni po sygnale) świadomie NIE jest
- * tu budowana — wymaga logiki po stronie bota (HANDOFF, decyzja Fable).
+ * The proposal hit-rate table (what happened N days after the signal) is deliberately NOT
+ * built here — it requires bot-side logic (HANDOFF, Fable's decision).
  *
- * ZAKRES TWARDY (TASKS-UI.md): tylko warstwa wizualna, wykresy jako inline
- * SVG polyline bez nowych zależności — jak krzywe w backtest/report.html.
+ * HARD SCOPE (TASKS-UI.md): visual layer only, charts as inline
+ * SVG polyline without new dependencies — like the curves in backtest/report.html.
  */
 import React, { FC, useEffect, useState } from 'react';
 import { UseBotApi, BotProposal } from '../hooks/useBotApi';
 import { BOT_POOL_META } from '../config/botPools';
 
 interface HistoryPoint {
-  // BUG-CHECK 2026-08-17 (HANDOFF Fable→Sonnet): observer.ts pisze
-  // `ts: new Date().toISOString()` (string), NIE liczbę sekund jak zakładał
-  // ten komentarz. Realny endpoint zwraca więc ISO string. Trzymamy typ
-  // szeroki i normalizujemy przez tsSeconds() poniżej — to był powód
-  // pustych wykresów (a.ts - b.ts na stringach = NaN, cała krzywa NaN).
+  // BUG-CHECK 2026-08-17 (HANDOFF Fable→Sonnet): observer.ts writes
+  // `ts: new Date().toISOString()` (string), NOT a number of seconds as this
+  // comment assumed. So the real endpoint returns an ISO string. We keep the type
+  // wide and normalize via tsSeconds() below — this was the cause of
+  // empty charts (a.ts - b.ts on strings = NaN, the whole curve NaN).
   ts: number | string;
   poolId: string;
   price: number;
@@ -62,24 +62,24 @@ interface WalkforwardFile {
   summary?: Record<string, WalkforwardSummaryRow>;
 }
 
-const EMA_GAP_DANGER_PCT = -5; // ALGORITHM.md §4 — próg bezpiecznika trendu
-// PARTIA 20 pkt 3 (przegląd 31.08): tabela czytała pliki `-365d-45d` —
-// walk-forward strategii ALGORITHM v1.2 (k×σ doradcy), którymi bot JUŻ NIE
-// GRA (produkt od 27–29.08 to hybryda FlatWide ze stałą szerokością wąskiej
-// nogi, patrz backtest/walkforward.ts mkHybrid/mkProduct, WF_SET=hybrid|
-// product). Zamiast tego czytamy najnowsze przebiegi na 720-dniowej historii
+const EMA_GAP_DANGER_PCT = -5; // ALGORITHM.md §4 — trend safety-switch threshold
+// BATCH 20 item 3 (review 31.08): the table read `-365d-45d` files —
+// walk-forward of the ALGORITHM v1.2 strategy (advisor's k×σ), which the bot NO
+// LONGER PLAYS (the product since 27–29.08 is the FlatWide hybrid with a fixed
+// narrow-leg width, see backtest/walkforward.ts mkHybrid/mkProduct, WF_SET=hybrid|
+// product). Instead we read the latest runs on 720-day history
 // (`walkforward-<botPoolId>-720d-30d.json`, backtest/walkforward.ts:373 —
-// nazwa pliku niesie okno danych z ID przebiegu, nie env WF_SET, więc
-// dopasowanie jest po SUFIKSIE nazwy pliku, nie po treści; `summary`
-// renderuje się generycznie jak dotychczas, jakiekolwiek strategie w nim są).
-// Feature-detect: gdy pliku dla danej puli brak (404), WalkforwardPoolBlock
-// całkiem się nie renderuje (żadnych werdyktów porzuconej strategii v1.2) —
-// bez hardkodowania listy pul, po prostu po tym, co faktycznie odpowie API.
+// the file name carries the data window from the run ID, not the WF_SET env, so
+// matching is by the file name SUFFIX, not by content; `summary`
+// renders generically as before, whatever strategies are in it).
+// Feature-detect: when the file for a given pool is missing (404), WalkforwardPoolBlock
+// does not render at all (no verdicts of the abandoned v1.2 strategy) —
+// without hard-coding a pool list, simply by what the API actually answers.
 const WALKFORWARD_NAME_SUFFIX = '-720d-30d';
 
-/** Normalizuje HistoryPoint.ts (ISO string z observer.ts, ale defensywnie też liczby s/ms) do epoch-sekund. */
+/** Normalizes HistoryPoint.ts (ISO string from observer.ts, but defensively also s/ms numbers) to epoch seconds. */
 function tsSeconds(v: number | string): number {
-  if (typeof v === 'number') return v > 1e12 ? v / 1000 : v; // ms vs s heurystyka
+  if (typeof v === 'number') return v > 1e12 ? v / 1000 : v; // ms vs s heuristic
   const ms = Date.parse(v);
   return isFinite(ms) ? ms / 1000 : NaN;
 }
@@ -88,7 +88,7 @@ interface Props {
   bot: UseBotApi;
 }
 
-/** Obsługuje zarówno JSON-array, jak i NDJSON (jedna linia = jeden obiekt) — kształt endpointu nie jest jeszcze ustalony. */
+/** Handles both a JSON array and NDJSON (one line = one object) — the endpoint shape is not fixed yet. */
 function parseHistoryResponse(text: string): HistoryPoint[] {
   const trimmed = text.trim();
   if (!trimmed) return [];
@@ -96,7 +96,7 @@ function parseHistoryResponse(text: string): HistoryPoint[] {
     const parsed = JSON.parse(trimmed);
     if (Array.isArray(parsed)) return parsed as HistoryPoint[];
   } catch {
-    // nie jest to pojedynczy JSON — spróbuj NDJSON
+    // not a single JSON — try NDJSON
   }
   const out: HistoryPoint[] = [];
   for (const line of trimmed.split('\n')) {
@@ -105,7 +105,7 @@ function parseHistoryResponse(text: string): HistoryPoint[] {
     try {
       out.push(JSON.parse(l) as HistoryPoint);
     } catch {
-      // pomiń pojedynczą uszkodzoną linię — endpoint dopiero powstaje
+      // skip a single corrupted line — the endpoint is still being built
     }
   }
   return out;
@@ -198,7 +198,7 @@ const PoolHistoryChart: FC<{ points: HistoryPoint[]; proposals: BotProposal[] }>
     .filter((p) => isFinite(p.tsSec))
     .sort((a, b) => a.tsSec - b.tsSec);
   if (pts.length < 2) {
-    return <div className="morning-note muted">za mało punktów historii jeszcze zebranych dla tej puli.</div>;
+    return <div className="morning-note muted">too few history points collected yet for this pool.</div>;
   }
 
   const tMin = pts[0].tsSec;
@@ -267,20 +267,20 @@ const PoolHistoryChart: FC<{ points: HistoryPoint[]; proposals: BotProposal[] }>
         </svg>
       )}
       <div className="observation-chart-legend muted">
-        cena{hasRange ? ' · pasmo zakresu bota' : ''}
-        {hasEma ? ` · emaGapPct (czerwone tło = pod progiem bezpiecznika ${EMA_GAP_DANGER_PCT}%)` : ''}
-        {proposals.length > 0 ? ' · pionowe kreski = propozycje bota' : ''}
+        price{hasRange ? ' · bot range band' : ''}
+        {hasEma ? ` · emaGapPct (red background = below the safety-switch threshold ${EMA_GAP_DANGER_PCT}%)` : ''}
+        {proposals.length > 0 ? ' · vertical lines = bot proposals' : ''}
       </div>
     </div>
   );
 };
 
-// PARTIA 20 pkt 3: cały blok (tytuł + tabela) dla danej puli — NIE tylko
-// tabela jak poprzednio (WalkforwardMiniTable) — bo decyzja przeglądu jest
-// "sekcję UKRYĆ", czyli razem z nagłówkiem "para · botPoolId", nie tylko
-// treść tabeli zastąpić notką. Zwraca null, gdy pliku 720d-30d dla tej puli
-// nie ma (404/błąd sieci) albo `summary` jest puste — żadnych werdyktów
-// strategii, którą porzuciliśmy, ani pustych nagłówków bez treści.
+// BATCH 20 item 3: the whole block (title + table) for a given pool — NOT only
+// the table as before (WalkforwardMiniTable) — because the review decision is
+// "HIDE the section", i.e. together with the "pair · botPoolId" header, not just
+// replace the table content with a note. Returns null when the 720d-30d file for this
+// pool is missing (404/network error) or `summary` is empty — no verdicts of a
+// strategy we abandoned, nor empty headers without content.
 const WalkforwardPoolBlock: FC<{ meta: { id: string; sym0: string; sym1: string }; apiBase: string; apiToken: string }> = ({ meta, apiBase, apiToken }) => {
   const { result, fileDate, failed } = useWalkforward(apiBase, apiToken, `walkforward-${meta.id}${WALKFORWARD_NAME_SUFFIX}`);
 
@@ -298,7 +298,7 @@ const WalkforwardPoolBlock: FC<{ meta: { id: string; sym0: string; sym1: string 
           <table className="telemetry-table observation-walkforward-table">
             <thead>
               <tr>
-                <th>Strategia</th>
+                <th>Strategy</th>
                 <th>mean %</th>
                 <th>winPct</th>
                 <th>worst %</th>
@@ -316,7 +316,7 @@ const WalkforwardPoolBlock: FC<{ meta: { id: string; sym0: string; sym1: string 
             </tbody>
           </table>
         </div>
-        {fileDate && <div className="muted observation-walkforward-date">plik z: {fileDate}</div>}
+        {fileDate && <div className="muted observation-walkforward-date">file from: {fileDate}</div>}
       </div>
     </div>
   );
@@ -332,35 +332,35 @@ const ObservationAnalysis: FC<Props> = ({ bot }) => {
   return (
     <div className="telemetry-section">
       <div className="telemetry-header" onClick={() => setExpanded((e) => !e)}>
-        <span className="morning-section-title telemetry-title">Analiza obserwacji</span>
+        <span className="morning-section-title telemetry-title">Observation analysis</span>
         <span className="morning-toggle">{expanded ? '▼' : '▶'}</span>
       </div>
 
       {expanded && (
         <div className="telemetry-body">
           {historyUnavailable ? (
-            <div className="morning-note">historia niedostępna (bot sprzed aktualizacji)</div>
+            <div className="morning-note">history unavailable (bot predates the update)</div>
           ) : (
             BOT_POOL_META.map((meta) => {
               const poolPoints = (points as HistoryPoint[]).filter((p) => p.poolId === meta.id);
               if (poolPoints.length === 0) return null;
               const poolProposals = proposals.filter((p) => p.poolId === meta.id);
-              // Partia 16 pkt 3: badge stanu flatu — TYLKO pule produktowe mają
-              // te pola wypełnione (feature-detect, patrz useBotApi.ts
-              // BotPoolLive.flatSince/flatConfirmed); reszta nie pokazuje nic.
+              // Batch 16 item 3: flat state badge — ONLY product pools have
+              // these fields populated (feature-detect, see useBotApi.ts
+              // BotPoolLive.flatSince/flatConfirmed); the rest show nothing.
               const poolLive = bot.state?.pools?.find((pl) => pl.id === meta.id);
               const flatBadge = poolLive?.flatConfirmed ? (
-                <span className="observation-flat-badge observation-flat-badge--confirmed" title="Flat potwierdzony (≥12h nieprzerwanie) — propozycja zwężenia (FLAT_NARROW) aktywna albo możliwa">
+                <span className="observation-flat-badge observation-flat-badge--confirmed" title="Flat confirmed (≥12h uninterrupted) — narrowing proposal (FLAT_NARROW) active or possible">
                   {' '}
                   FLAT ✅
                 </span>
               ) : poolLive?.flatSince ? (
                 <span
                   className="observation-flat-badge muted"
-                  title="Zegar liczy czas nieprzerwanego flatu (|gap|<próg) — potwierdzenie (i propozycja FLAT_NARROW) dopiero po 12h nieprzerwanie"
+                  title="The clock counts the time of uninterrupted flat (|gap|<threshold) — confirmation (and the FLAT_NARROW proposal) only after 12h uninterrupted"
                 >
                   {' '}
-                  flat: zegar od {new Date(poolLive.flatSince).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })} (potwierdzenie po 12h)
+                  flat: clock since {new Date(poolLive.flatSince).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })} (confirmation after 12h)
                 </span>
               ) : null;
               return (
@@ -375,19 +375,19 @@ const ObservationAnalysis: FC<Props> = ({ bot }) => {
             })
           )}
 
-          {/* PARTIA 20 pkt 3: nagłówek zaktualizowany — pliki `-365d-45d`
-              (ALGORITHM v1.2, k×σ doradcy) zastąpione przebiegami hybrydy
-              720d (WF_SET=product/hybrid, backtest/walkforward.ts), którymi
-              bot faktycznie gra od 27–29.08. Pule bez wyniku 720d-30d na
-              serwerze po prostu nie renderują bloku (WalkforwardPoolBlock
-              zwraca null) — nie pokazujemy werdyktów porzuconej strategii. */}
-          <div className="morning-section-title observation-section-title">Algorytm vs świeże dane (walk-forward hybrydy, 720d)</div>
+          {/* BATCH 20 item 3: header updated — `-365d-45d` files
+              (ALGORITHM v1.2, advisor's k×σ) replaced by the 720d hybrid
+              runs (WF_SET=product/hybrid, backtest/walkforward.ts), which the
+              bot actually plays since 27–29.08. Pools without a 720d-30d result on
+              the server simply do not render the block (WalkforwardPoolBlock
+              returns null) — we do not show verdicts of the abandoned strategy. */}
+          <div className="morning-section-title observation-section-title">Algorithm vs fresh data (hybrid walk-forward, 720d)</div>
           {BOT_POOL_META.map((meta) => (
             <WalkforwardPoolBlock key={meta.id} meta={meta} apiBase={bot.apiBase} apiToken={bot.apiToken} />
           ))}
 
           <div className="morning-note muted observation-footer-note">
-            Tabela trafności propozycji (co było N dni po sygnale) — poza zakresem tej sekcji, wymaga logiki po stronie bota.
+            Proposal hit-rate table (what happened N days after the signal) — outside the scope of this section, requires bot-side logic.
           </div>
         </div>
       )}

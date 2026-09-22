@@ -1,12 +1,12 @@
-// deploy/ecosystem.config.js — konfiguracja pm2 dla serwera Windows (INFRA.md).
-// Dwa procesy: bot-obserwator (bez transakcji, patrz bot/observer.ts) i API+UI.
-// Uruchamiane z katalogu głównego repo: `pm2 startOrReload deploy/ecosystem.config.js`
-// (patrz deploy/deploy.ps1 i deploy/setup-windows.md dla pełnej procedury).
+// deploy/ecosystem.config.js — pm2 configuration for the Windows server (INFRA.md).
+// Two processes: the observer bot (no transactions, see bot/observer.ts) and API+UI.
+// Run from the repo root: `pm2 startOrReload deploy/ecosystem.config.js`
+// (see deploy/deploy.ps1 and deploy/setup-windows.md for the full procedure).
 //
-// UWAGA (Windows): script celowo NIE jest 'npx' — pm2 na Windows resolvuje 'npx'
-// do npx.cmd i próbuje go uruchomić przez interpreter node, co wywala
-// "SyntaxError: Unexpected token ':'" (pierwsza linia .cmd to komentarz batch).
-// Zamiast tego wołamy bezpośrednio CLI tsx (dist/cli.mjs) przez node.
+// NOTE (Windows): script is deliberately NOT 'npx' — pm2 on Windows resolves 'npx'
+// to npx.cmd and tries to run it through the node interpreter, which crashes with
+// "SyntaxError: Unexpected token ':'" (the first line of a .cmd is a batch comment).
+// Instead we call the tsx CLI (dist/cli.mjs) directly through node.
 
 const TSX_CLI = 'node_modules/tsx/dist/cli.mjs';
 
@@ -19,8 +19,8 @@ module.exports = {
       cwd: __dirname + '/..',
       autorestart: true,
       max_memory_restart: '300M',
-      // restart daemona nie powinien się zapętlać w kółko przy trwałym błędzie —
-      // pm2 i tak eskaluje backoff, ale trzymamy limit na wszelki wypadek
+      // a daemon restart should not loop endlessly on a persistent error —
+      // pm2 escalates the backoff anyway, but we keep a limit just in case
       max_restarts: 20,
       min_uptime: '30s',
       out_file: '.bot/pm2/homos-bot.out.log',
