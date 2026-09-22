@@ -17,14 +17,14 @@ node_modules/
 .cache/
 public/bundle.js*
 
-# HOMOS: dane robocze / cache / stan bota — regenerowalne, nie do repo.
-# Cały katalog data/ (cache, historie llama, bundle transferowe) trzymamy poza repo.
+# HOMOS: working data / caches / bot state — regenerable, not for the repo.
+# The whole data/ directory (caches, DefiLlama histories, transfer bundles) stays out of the repo.
 data/
 .agent/
 .bot/
 backtest/results/
 
-# Legacy backupy tworzone w trakcie sesji AI (np. legacy-AddLiquidity.tsx.bak)
+# Legacy backups created during AI sessions (e.g. legacy-AddLiquidity.tsx.bak)
 legacy-*.bak
 
 # IDE and Editor files
