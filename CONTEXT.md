@@ -6,6 +6,34 @@
 
 ## 1. Stan projektu — skrót
 
+- **⚡ STAN NA 21.09 ~19:30 PL — TRANSZA 1 ZAMKNIĘTA W CAŁOŚCI DO EUR
+  NA KRAKENIE. Wynik: ≈ +$336 (+5,5%) w 25 dni (27.08→21.09), z tego
+  LP FlatWide +$38 (22 dni), zakład spot 18–21.09 ≈ +$300.** Sprzedane
+  21.09 ~19:00 PL: 1,22014 ETH @ 2 403,39 EUR (≈ $2 756) i 1 213,40 USDC
+  (z cbBTC) @ 0,8719 — razem z piątkowymi 1 871 USDC ≈ 5 605 EUR
+  ≈ $6 428 wobec wpłaty $6 092. Zero pozycji, zero krypto transzy w
+  portfelu (Rabby: tylko pyłki). EUR czeka na zdjęcie blokady
+  depozytowej Krakena (Base → finalność L1), SEPA do banku 22.09.
+  Portfel: 0,000000001 ETH na Krakenie, ~$10 pyłków w Rabby.
+  **Bot: bez pozycji; pasek bilansu w kokpicie bez znaczenia** (wszystko
+  wyprowadzone). Zlecenie CC-Win 22.09: weryfikacja ledgera 18.09 +
+  PAUZA nocnego pipeline'u; **24.09 = przegląd ZAMKNIĘCIA** (werdykt
+  FlatWide, co z botem: hibernacja vs paper/research). Szczegóły: §2
+  wiersz 2026-09-21 + dziennik 21.09.
+- **⚡ STAN NA 18.09 ~16:30 PL — LP TRANSZY 1 ZAMKNIĘTY (+$38, +0,6%,
+  22 dni), kapitał zostaje w KRYPTO jako świadomy zakład spot (decyzja
+  Rafała), USDC wyprowadzone na Kraken.** Obie pozycje (#5886957
+  WETH/USDC ±50%, #5978579 WETH/cbBTC ±40%) zdjęte ręcznie w Uniswap
+  ~14:30 UTC, gdy bilans transzy przekroczył $6 092 (reguła 16.09).
+  Portfel zakładu: ~1,22 ETH (1,1341 ETH + 0,0860 WETH, Base) +
+  0,0141 cbBTC ≈ $4 258; 1 871 USDC transzy → Kraken (razem z 256 USDC
+  spoza transzy z Arbitrum/mainnet). **Od dziś bilans transzy = pasek
+  kokpitu + $1 871** (USDC poza portfelem; pole „wyprowadzone" w bocie
+  do dodania). Reguła zakładu: dół −5% ($5 790) = sprzedaż bez
+  dyskusji; bez górnej liczby; **24.10 przegląd z domyślną sprzedażą**.
+  Bot bez zmian (PROPONUJ), karty OPEN selektora ignorujemy. Produkt
+  FlatWide: rozliczony, werdykt na przegląd 24.09. Szczegóły: §2 wiersz
+  2026-09-18 + dziennik 18.09.
 - **⚡ STAN NA 29.08 rano (dzień 2 kapitału, sobota):** automat czysty
   (porażki BRAK), obie nogi in-range, razem $5,703 / vsHODL −$4.22 —
   PnL od kotwic −$155 to CZYSTA BETA (ETH), nie strata strategii.
@@ -70,6 +98,8 @@
 | 2026-08-26 | hUp48 → tylko paper; histereza ujednolicona na "udział czasu w oknie" (3 miejsca); cbBTC k2/k3 i GAS_USD-backtest w paczce; WETH-CBBTC 0.3% Base → BOT_POOLS (paper); żywy gaz w observerze od razu | Decyzje Rafała na przeglądzie 26.08 — szczegóły i uzasadnienia w DECYZJE-2026-08-26 |
 | 2026-08-26 | Godziny operacyjne: podpisy 9–20 pn–pt, **EXIT_TREND alarm 24/7 również w weekend**; pomiar kosztu zwłoki od 1. dnia | Tryb PROPONUJ nic nie wykonuje sam; zwłoka podpisu = jedyne ryzyko (noc ~13h, weekend ~61h); przegląd pomiaru po 2 tyg. |
 | 2026-09-02 | **[ZREWIDOWANA 16.09 — patrz wiersz 2026-09-16]** ZASADA WYJŚCIA TRANSZY 1 (decyzja Rafała po kolumnach 365/720 w rankingach): (1) **24.09 wychodzimy z LP niezależnie od kursu**; (2) **wcześniej, jeśli bilans transzy ≥ +5%** (≥ $6 396.60 przy wpłaconych $6 092) — wychodzimy od razu; kapitał wraca na giełdę → ETF. Monitoring RĘCZNY, dzienny (Rafał, pasek BILANS TRANSZY w kokpicie / raport 07:30) — ŚWIADOMIE bez automatu w bocie. Zasada może zostać zrewidowana, jeśli do 24.09 pełne przebiegi (Piętro 2, runda 2 kształtu) pokażą coś nowego | Produkt na parach zmiennych nie bije HODL w żadnym z 5 sposobów liczenia (13/13, wide-score, MC, model dzienny, pełny przebieg); benchmark HODL+yield ~4%/r bez oporu wygrywa. Zasada ustalona na chłodno, nie w dniu skoku |
+| 2026-09-21 | **TRANSZA 1 ZAMKNIĘTA — pełne wyjście do EUR (decyzja Rafała ~14:00 PL „dziś z całością", wykonanie ~19:00 PL):** (1) 1,22014 ETH → Kraken (Base) → sprzedaż ETH/EUR @ 2 403,39 (2 932,49 EUR, opłata 11,73 = 0,40% taker); (2) 0,0141 cbBTC → USDC w Uniswap (1 213,40) → Kraken → USDC/EUR @ 0,8719 (1 057,97 EUR, opłata 2,12); (3) razem z 18.09 (1 870,95 USDC → ≈ 1 628 EUR netto) **transza ≈ 5 605 EUR ≈ $6 428 vs $6 092 → +$336 (+5,5%), 25 dni**; (4) zakład spot z 18.09 (dół −5% / 24.10) ZAMKNIĘTY przed czasem, na plusie ≈ +$300 w 3 dni; (5) reguła „5k w Rabby" rozważana rano — NIE weszła w życie (sprzedaż przy Rabby ≈ $4 660) | Sprzedaż w dniu, gdy BTC dotknął $85–86k (strefa kosztu ETF-ów + klaster likwidacji shortów, $648M shortów zlikwidowanych w 24h), ETH w oporze $2 750–2 800 wskazywanym rano jako cel; wolumen nie rósł z ceną (dźwignia, nie kapitał), ETF BTC +$6M/tydz. Rafał rano: „wychodzę dziś, zobaczę po otwarciu USA" — wykonane po 17:00, bez kolejnego przesunięcia. Świadoma notatka: to była decyzja, nie reguła — 18.09 reguła z podłogą/datą, 21.09 sprzedaż uznaniowa w siłę; wyszło dobrze, ale metoda „sprzedam na górce" nie jest powtarzalna i na przeglądzie nie wolno jej uznać za potwierdzoną |
+| 2026-09-18 | **LP TRANSZY 1 ZAMKNIĘTY + KAPITAŁ ZOSTAJE W KRYPTO (decyzja Rafała ~15:00 PL):** (1) obie pozycje zdjęte w Uniswap, gdy bilans transzy = $6 130 ≥ $6 092 (reguła 16.09 spełniona: **+$38, +0,6%, 22 dni**, z tego ~$29 fee); (2) **ETH/cbBTC NIE zamienione na USDC** — ~1,22 ETH + 0,0141 cbBTC (≈ $4 258, 70% transzy) zostaje jako zakład spot „może jeszcze urośnie"; (3) 1 871 USDC transzy (+256 spoza) → Kraken, tam czeka jako USDC; (4) **reguła zakładu:** dół −5% bilansu transzy ($5 790, ETH ≈ $2 380) = sprzedaż bez dyskusji; bez górnej liczby; **24.10 = przegląd z DOMYŚLNĄ sprzedażą** (przedłużenie tylko świadomą decyzją, zapisaną tu); (5) bilans transzy = pasek kokpitu + $1 871 do czasu dodania pola „wyprowadzone" w bocie | Reguła 16.09 zadziałała co do litery (exit LP przy ≥ 0). Zakład spot to osobna decyzja — LP nic nie dodawał do bety (vs HODL −$4…−$22 przez 3 tyg.), więc trzymanie ekspozycji bez LP jest tańsze niż w LP. **Notatka dla uczciwości przeglądu (Fable):** to DRUGA rewizja w tygodniu w tym samym kierunku („trzymać") — 16.09 dzień po spadku, 18.09 dzień po wzroście (+4%). Fable zgłosił to wprost; Rafał podtrzymał. Dół i data dodane, żeby zakład nie był „poczekamy" |
 | 2026-09-16 | **ZASADA WYJŚCIA TRANSZY 1 — REWIZJA (decyzja Rafała na briefie 16.09):** (1) **wyjście z LP, gdy bilans transzy ≥ $6 092 (0%, wpłacone)** — twarde wyjście 24.09 SKREŚLONE, próg +5% SKREŚLONY; (2) **24.09 zostaje jako PRZEGLĄD** (bilans epizodu zwężenia, werdykt produktu, kolejka E8), nie jako exit; (3) **DÓŁ: bilans ≤ −10% (~$5 480) = obowiązek ponownej decyzji** o wyjściu (nie stop-loss, nie automat); (4) **przegląd zakładu 24.10** — jeśli zero nie padło, decyzja świadoma od nowa, nie z rozpędu; (5) zwężanie (FLAT_NARROW) NADAL NIE — dłuższy horyzont nie zmienia asymetrii (+$1 vs −$30/epizod), falsyfikacja 720d w mocy. Monitoring ręczny, dzienny (raport 07:30), bez automatu | Strata −4.3% (16.09) to w całości beta ETH/BTC (vs HODL −$12), nie strategia; Rafał podtrzymuje zakład na odbicie ETH/BTC i nie chce wychodzić poniżej wpłaty. Szeroki LP ≈ HODL + fee ~$1.37/d − mały IL, więc jako wehikuł tego zakładu jest OK (przy gwałtownym rajdzie zostaje kilkanaście $ za HODL). Pkt 3–4 dodane na wniosek Fable jako mechanizm ochronny (zasada bez horyzontu i bez dołu = „poczekamy"). Świadoma notatka: zasada 02.09 była ustalona „na chłodno" i zmieniana jest dzień po spadku — zapisane dla uczciwości przeglądu |
 | 2026-08-26 ~10:3x | REWIZJA kapitału: zamiast "czeka" — **wejście warunkowe TEGO SAMEGO dnia**, jeśli pula przejdzie bramkę 720d+recent90 na przebiegach recal (grid15); wejście = jednoczesne przełączenie bota na grid15+nowe k (algoVersion) | Decyzja Rafała: rynek boczny (potwierdzony przez bota), mała stawka $6k, wartość eksperymentu operacyjnego; pełny zapis z notatką FOMO w DECYZJE-2026-08-26 pkt 8-REWIZJA |
 
@@ -82,6 +112,136 @@
 - [ ] Istniejące otwarte pozycje użytkownika w Uniswap (podpiąć w F2 jako pierwsze dane żywe)
 
 ## 4. Dziennik sesji
+
+### 2026-09-21 (pon.) 09:xx–19:30 PL — BRIEF + NEWSY + PEŁNE WYJŚCIE TRANSZY 1 DO EUR (≈ +5,5%)
+RANO: Rabby $4 582 (ETH $2 712 +5%, cbBTC $84,5k), część transzy
+$4 502 + $1 871 = $6 373 (+4,6%). Rafał: „trzeba opracować moment
+wyjścia", nie chce sztywnych barier %, chce „wyjść na górce".
+NEWSY (Fable, web): Fed 18.09 +25 pb (3,75–4,00%, pierwsza podwyżka
+od 2023, dot plot: jeszcze jedna); Senat 15.09 odrzucił CLARITY
+(49–50); mimo to BTC +5,4% t/t, ETH +5,5% — short squeeze ($648M
+shortów/24h, $262M w 1 h przy $84k), ETF BTC tylko +$6,2M/tydz. po
+−$746M 15–16.09; ETF ETH −$140M/tydz. (ale +$143,8M 18.09); ropa
+Brent 4. dzień spadku → 10-latki <5%. Strukturalnie: BTC zamknął
+tydzień nad 50-tyg. SMA pierwszy raz od 45 tyg. (Galaxy: 11/13
+przypadków bez nowego dołka cyklu). Poziomy: BTC $85–86k = średni
+koszt ETF-ów + klaster likwidacji; ETH $2 750–2 800 cel pośredni,
+$3 000 rozszerzony; wolumen nie rośnie z ceną (Dean Chen/FXStreet),
+RSI ~70.
+DYSKUSJA O METODZIE: Fable proponował trailing/częściowe wyjścia
+(1/3 dziś, 1/3 na sygnale wyczerpania, 1/3 24.10) — odrzucone jako
+„sztywne bariery"; Rafał zaproponował „Rabby ≥ $5k = sprzedaż"; Fable:
+to górny kraniec optymistycznego scenariusza analityków, bez dołu;
+zaproponował podział na $2 800/$3 000. Ostatecznie Rafał ~14:00:
+**„wychodzę dziś z całością, zobaczę po otwarciu USA ~15:00"**;
+ustalone: sprzedaż najpóźniej ~17:00 niezależnie od poziomu.
+WYKONANIE (~17:00–19:11 PL): WETH odwinięte do ETH w Uniswap; 1,22014
+ETH wysłane na Kraken (Base, nowy adres depozytowy ETH); cbBTC 0,0141
+→ USDC 1 213,40 (Uniswap 0,05%) → Kraken; dust z Arbitrum (0,026 +
+0,003 ETH) też na Kraken. Sprzedaż w Kraken Pro spot: **ETH/EUR
+1,22014 @ 2 403,39 = 2 932,49 EUR (opłata 11,73 — 0,40%, poszło jako
+taker; limit-maker dałby 5,9 EUR mniej — drobiazg, do notatki w
+EMERGENCY §6)**; **USDC/EUR 1 213,40 @ 0,8719 = 1 057,97 EUR (opłata
+2,12)**; dust 0,029 ETH → 69,79 EUR. Saldo EUR 4 045,98, z czego
+3 983,41 zablokowane „oczekiwanie na potwierdzenie sieci" (depozyty z
+Base: status „Zaksięgowano", nie „Udało się" — Kraken czeka na
+finalność L1; Arbitrum przeszło od razu). SEPA 22.09 rano.
+ROZLICZENIE TRANSZY 1 (27.08 → 21.09, 25 dni), kurs EUR/USD 1,1469
+z transakcji USDC/EUR: 18.09 USDC 1 870,95 → ≈ 1 628,5 EUR netto;
+21.09 ETH → 2 920,76 EUR netto; 21.09 cbBTC→USDC → 1 055,85 EUR netto;
+**razem ≈ 5 605 EUR ≈ $6 428 vs wpłata $6 092 → ≈ +$336 (+5,5%).**
+Dekompozycja: LP FlatWide 27.08–18.09 +$38 (fee ~$29 + beta), zakład
+spot 18–21.09 ≈ +$300 (ETH $2 556 → $2 756, cbBTC $80,2k → $86k).
+Koszty łączne wyjścia (Uniswap + Kraken + gaz) ≈ $25. Poza transzą
+(nie liczone): 256 USDC z Arbitrum/mainnet sprzedane 18.09, dust ETH
+69,79 EUR sprzedany 21.09.
+UCZCIWA NOTATKA (Fable): produkt FlatWide zarobił +0,6% w 22 dni
+(≈ HODL + fee); prawie cały wynik transzy to 3 dni bety po wyjściu z
+LP — czyli dokładnie to, czego produkt miał NIE potrzebować. Wynik
+jest dobry, ale nie jest dowodem na cokolwiek poza tym, że reguły
+wyjścia (16.09 → 18.09 → 21.09) były zmieniane trzy razy w tygodniu,
+za każdym razem w kierunku aktualnego nastroju rynku, i tym razem
+rynek był łaskawy. Na przegląd 24.09: werdykt produktu liczyć z
+positions-history do 18.09, NIE z wyniku transzy.
+KRAKEN — LEKCJE do EMERGENCY §6 (dopisane): depozyty z Base mają
+blokadę wypłaty fiat do finalności L1 (godziny), Arbitrum nie; sprzedaż
+limit ustawiać po stronie maker (post-only lub tick nad bidem), inaczej
+0,40%. Funding 2FA = Google Authenticator (notatka w Hasłach Apple).
+LEDGER KRAKENA (eksport historyLedger_2026-09-21.csv u Rafała, poza
+repo): zawiera 18.09 i 21.09 w komplecie; on-ramp EUR→USDC z 24–25.08
+jest przed początkiem eksportu — do PIT-38 potrzebny wcześniejszy
+zakres (koszt nabycia). Wypłata 25.08: 5 979,78 USDC + 0,00686 ETH na
+gaz (transza 6 092 = to + USDC już w portfelu).
+BOT / INFRA: bez zmian dziś; od jutra zlecenie CC-Win (HANDOFF):
+(1) tylko odczyt: tx-ledger 18.09 dla #5886957/#5978579 + ostatnie
+próbki positions-history; (2) PAUZA schtask nocnego pipeline'u
+(backtest-run/sweep/wide-daily) — research bez odbiorcy; bot +
+serwer + raport 07:30 zostają do 24.09. Karty OPEN selektora —
+ignorować. Pasek bilansu transzy w kokpicie od dziś bez znaczenia
+(pozycje 0, portfel ~$10).
+PRZEGLĄD 24.09 = PRZEGLĄD ZAMKNIĘCIA: (1) werdykt FlatWide z
+positions-history 27.08–18.09 vs HODL 50/50; (2) bilans epizodu
+zwężenia 31.08–11.09; (3) decyzja o bocie: hibernacja (stop NSSM,
+schtaski off) vs paper+research (E8) vs archiwum; (4) co z kodem/repo
+(README „projekt zamknięty", stan wiedzy w CONTEXT §1–2); (5) czy i
+kiedy transza 2 — Rafał decyduje, domyślnie NIE bez nowej tezy, która
+bije HODL na 720d. Fable przygotuje liczby do (1)–(2) przed 24.09.
+
+### 2026-09-18 ~09:xx–16:30 PL — BRIEF + WYJŚCIE Z LP TRANSZY 1 (+$38) + decyzja: kapitał zostaje w krypto (zakład spot z regułą), USDC → Kraken
+BRIEF (raport 07:30): automat czysty, bilans $5 966 (−2,06%; 16.09 −4,29%
+→ 17.09 −3,33%), vs HODL obu nóg −$3,6, flat potwierdzony na obu,
+FLAT_NARROW ×2 odnowione 17.09 17:29Z po TTL (id stabilne od startu
+flatu — będą wracać co ~48 h, dopóki flat trwa; D0 to załatwi), OPEN
+WBTC-USDC@Arbitrum — wszystko zignorowane. HANDOFF: same DOCS.
+PYTANIE RAFAŁA o kokpit („Equity −$57 vs bilans +$16, nie liczy
+zamkniętych?"): NIE bug bilansu — dolny wiersz „PnL od startu" liczy
+od PIERWSZEJ PRÓBKI positions-history W OKNIE UI (`POSITIONS_HISTORY_HOURS
+= 168`), więc etykieta „od 11.09" na #5886957 (istnieje od 27.08) to
+początek 7-dniowego okna, nie kotwica; wiersz z założenia pomija bufor,
+koszty wejścia i pozycje zamknięte. **BUG UI do backlogu Sonneta:**
+etykieta → „PnL 7d" albo kotwica z bota (`anchoredAt`), nie z okna.
+Drobna niespójność: pasek „w pozycjach" (state bota) vs suma kart
+(wycena UI live) różniły się $19,50 (0,33%) — źródło cen/moment.
+ŻYWA WYCENA (Fable, Uniswap UI przez Chrome, ~14:00 UTC, ETH $2 556):
+#5886957 $3 515,40 + fee $27,12; #5978579 $2 338,64 + fee $1,77;
+portfel ~$240 → **$6 123 (+$31)**; bez fee $6 094 (+$2). Próg reguły
+16.09 przekroczony realnie, nie w szumie. Rekomendacja Fable: wychodzić
+dziś (piątek, potem 61 h bez reakcji; LP nie dodaje nic do zakładu na
+górkę; druga zmiana reguły w tygodniu = brak reguły).
+WYKONANIE (Rafał, ręcznie w Uniswap, ~14:30 UTC): 2× multicall
+decreaseLiquidity+collect 100%: #5886957 → 0,6540 ETH + 1 870,45 USDC
+(fee w tym), #5978579 → 0,4734 ETH + 0,0141 cbBTC; gaz $0,0058 +
+$0,0076. Uniswap odwinął WETH do natywnego ETH przy collect.
+BILANS NA WYJŚCIU (Rabby, Base, ETH $2 558,95, cbBTC $80 400): ETH
+1,1341 ($2 902) + USDC 1 870,95 + cbBTC 0,0141 ($1 136) + WETH 0,0860
+($220) = **$6 130,02 vs $6 092 → +$38,02 (+0,62%), 22 dni.** Saldo
+poza transzą (Arbitrum/mainnet ~$332) nie liczone. Fee zebrane łącznie
+~$29 (obie nogi) + ~$8,6 z epizodu wąskiego 31.08→11.09 wg ledgera.
+**DECYZJA RAFAŁA (~15:00 PL): ETH/cbBTC NIE sprzedajemy — „zostawić
+w krypto, bo może jeszcze urośnie".** Fable: to druga rewizja w tygodniu
+w kierunku „trzymać" (16.09 po spadku, 18.09 po wzroście), reguła
+„exit przy zerze" przestała istnieć jako reguła → zastąpiona zakładem
+z dołem i datą (§2 wiersz 2026-09-18): dół −5% ($5 790), bez góry,
+24.10 przegląd z domyślną sprzedażą. Zakład jest spot, bot go nie
+dotyka; sprzedaż możliwa o każdej porze w Uniswap.
+USDC → KRAKEN (~16:00 PL): całe USDC ze wszystkich sieci (Base
+1 870,95 + Arbitrum 152,78 + mainnet 103,22 ≈ 2 127) na Kraken,
+przelewy zaksięgowane. Transfer własny, nie zdarzenie podatkowe.
+KSIĘGOWOŚĆ BOTA: od teraz pasek BILANS TRANSZY pokaże ~$4 260 (−30%)
+— brakuje wyprowadzonych $1 871. **Prawdziwy bilans = pasek + $1 871.**
+TODO (mała paczka, bez pilności): pole `tranche.withdrawnUsd` (ręczna
+lista wypłat w config) dodawane do `totalUsd`. Gaz swapów/approve'ów
+nadal poza tx-ledger (jak 11.09), tu tylko 2 tx NFT — księga kompletna.
+PRZEGLĄD 24.09 — agenda po dzisiejszym: (1) werdykt FlatWide na
+domkniętej próbce 27.08→18.09 (+0,6% vs HODL 50/50 obu nóg ≈ +1…1,5%
+w tym samym oknie — do policzenia z positions-history); (2) bilans
+epizodu zwężenia; (3) fix łańcucha kotwic już tylko dla czystości
+historii; (4) D0 detektor→pomiar — teraz bez znaczenia (brak pozycji),
+ale karty FLAT_NARROW przestaną przychodzić same (brak tokenId);
+(5) co dalej z botem: paper + research (E8) czy hibernacja do transzy 2.
+Bot: nic nie zmieniamy, PROPONUJ; karty OPEN selektora (portfel bez
+płynności = „wolne" $3k w ETH) IGNORUJEMY. HANDOFF: nota @Fable +
+DOCS dla CC-Mac.
 
 ### 2026-09-16 ~09:xx — BRIEF (Fable + Rafał): automat czysty, bilans −4.29% (cała beta), 2× FLAT_NARROW NIE; **REWIZJA ZASADY WYJŚCIA: exit przy bilansie ≥ 0 zamiast twardego 24.09**
 AUTOMAT (raporty 07:30 z 15 i 16.09): obie noce „porażki: BRAK",

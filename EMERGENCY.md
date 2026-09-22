@@ -84,3 +84,44 @@ FLAT_NARROW/FLAT_WIDEN (zwężenie/rozszerzenie w produkcie) to NIE
 procedura awaryjna — to normalny cykl produktu FlatWide. FLAT_WIDEN
 jest ochronny (wąska pozycja na trendzie łapie IL), ale wykonuje się
 w spokojnym trybie propozycji, nie czerwonym przyciskiem.
+
+## 6. Off-ramp: portfel → Kraken → bank (lekcje z 18.09.2026)
+
+Nie awaryjne, ale tu, żeby było pod ręką przy każdym wyjściu kapitału.
+
+1. **Zamknięcie LP** bezpośrednio w Uniswap („Remove liquidity" 100%)
+   robi w jednym multicallu decreaseLiquidity + collect — fee wychodzą
+   razem z pozycją, osobne „Collect fees" niepotrzebne. WETH wraca jako
+   natywny ETH. Gaz na Base: ~$0,01 za pozycję.
+2. **Depozyt na Kraken**: USDC w sieci Base i Arbitrum One księgowane
+   w kilka minut, mainnet (L1) ~30–60 min. Zawsze najpierw przelew
+   testowy (20 USDC), potem reszta. Ten sam adres depozytowy USDC dla
+   wszystkich sieci EVM — ale sieć wybierać świadomie na ekranie
+   depozytu.
+3. **Wymiana USDC → EUR: TYLKO Kraken Pro → Handel → Spot → para
+   USDC/EUR → zlecenie Limit** po najlepszym bidzie (opłata 0,20%,
+   ~4 EUR na 2 tys.). NIE używać „Konwertuj" (Convert) — także w Pro:
+   kurs gorszy o ~1,4% + opłata ~0,85% = ~2,4% łącznie (18.09: 17 EUR
+   opłaty + ~25 EUR w kursie na 2 024 USDC). Nie wchodzić w „Handluj
+   futures"/„Kontrakty wieczyste" — inny rynek, dźwignia.
+4. **Wypłata SEPA** (Wpłata/Wypłata → Wypłać → EUR): opłata ~0,90 EUR.
+   Wymaga **osobnego 2FA „dla wpłat i wypłat" (Funding 2FA)** —
+   niezależnego od 2FA logowania (passkey w Hasłach Apple). Kod nie
+   przychodzi SMS-em/mailem — generuje go aplikacja uwierzytelniająca
+   skonfigurowana 24–25.08.2026 przy on-rampie. **Gdzie jest ten kod:
+   patrz notatka we wpisie „Kraken" w Hasłach Apple** (celowo nie
+   w repo). Bez tego kodu wypłata nie przejdzie; reset przez Support
+   trwa 1–3 dni robocze.
+5. Po sprzedaży: **Historia → Ledger → eksport CSV** (PIT-38: sprzedaż
+   USDC za EUR = zdarzenie podatkowe; transfery i swapy krypto↔krypto
+   nie). Zachować razem z historią tx z Rabby/Basescan z dnia wyjścia.
+6. Wpis do CONTEXT.md: kwoty na wyjściu, kurs, opłaty, co zostało
+   w portfelu i pod jaką regułą.
+7. **Lekcje z 21.09:** depozyt z **Base** na Krakena dostaje kredyt do
+   handlu w minuty, ale wypłata fiat z tych środków jest zablokowana
+   („oczekiwanie na potwierdzenie sieci") do finalności L1 — godziny;
+   z **Arbitrum** blokada schodzi od razu. Planować SEPA na następny
+   dzień. Przy sprzedaży ETH/EUR zlecenie Limit wykonane natychmiast
+   po bidzie liczy się jako **taker 0,40%** — żeby zapłacić 0,20–0,25%,
+   ustawić cenę 1 tick NAD najlepszym bidem (albo „Post only") i
+   poczekać kilka sekund. Na 3 000 EUR to ~6 EUR różnicy.

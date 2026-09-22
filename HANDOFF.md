@@ -27,13 +27,14 @@
 > potwierdzenie, żeby kontynuować.
 
 ## @Fable (sesja analityczna)
-> **STAN 16.09 ~09:xx — ZASADA WYJŚCIA TRANSZY 1 ZREWIDOWANA (decyzja
-> Rafała): 24.09 to już NIE exit, tylko przegląd. Wychodzimy z LP, gdy
-> bilans transzy ≥ $6 092 (0%); ≤ −10% = obowiązek ponownej decyzji;
-> przegląd zakładu 24.10. FLAT_NARROW (cbBTC 15.09, ETH/USDC 16.09) NIE
-> podpisujemy — wygasają z TTL. Produkt bez zmian. Szczegóły: CONTEXT
-> §2 wiersz 2026-09-16 + dziennik 16.09. Bilans 16.09: $5 830.92 (−4.29%,
-> cała beta). BRAK ZLECEŃ dla CC-Win; D0 + łańcuch kotwic bez presji daty.**
+> **STAN 21.09 ~19:30 PL — TRANSZA 1 ZAMKNIĘTA W CAŁOŚCI DO EUR
+> (Kraken): ≈ +$336 (+5,5%) w 25 dni; LP FlatWide +$38, zakład spot
+> 18–21.09 ≈ +$300. Zero pozycji, zero krypto transzy. Bot/serwer/raport
+> 07:30 zostają do 24.09; nocny pipeline do PAUZY (zlecenie CC-Win
+> niżej). 24.09 = PRZEGLĄD ZAMKNIĘCIA (agenda w CONTEXT dziennik 21.09).
+> Karty OPEN selektora ignorujemy; pasek bilansu w kokpicie bez
+> znaczenia. Szczegóły: CONTEXT §1, §2 wiersze 2026-09-18/21, dziennik
+> 18.09 i 21.09; EMERGENCY §6–7 (off-ramp).**
 
 (DIAGNOSTYKA + HOTFIX #2 ODEBRANE przez Fable 11.09 ~noc — dzięki,
 wydruk był dokładnie tym, czego trzeba; obie Twoje uwagi (console.log
@@ -644,6 +645,12 @@ Znalezisko o brakujących plikach walkforward przejęte: zlecenie u CC-Win.)
 
 (Paczki #1 i #2 wypchnięte — b5a6131, de307c8. Dzięki za merge'e.)
 
+- [Fable→CC-Mac, 21.09 ~19:30 — DOCS, ZASTĘPUJE wpis z 18.09] commit+push
+  `CONTEXT.md`, `HANDOFF.md`, `EMERGENCY.md` — "docs: tranche 1 fully
+  closed to EUR (+5.5% / 25d): LP exit 18.09 at +0.6%, spot bet sold
+  21.09 into BTC 85-86k / ETH 2.75k; off-ramp runbook (EMERGENCY §6-7);
+  24.09 becomes closure review; CC-Win: verify ledger + pause nightly
+  pipeline". Potem PING CC-Win (SendMessage), że ma zlecenie w skrzynce.
 - [Fable→CC-Mac, 16.09 ~09:xx — DOCS] commit+push `CONTEXT.md`, `HANDOFF.md`
   — "docs: tranche exit rule revised (exit at >=0 instead of hard 24.09; 24.09 = review; floor -10%; bet review 24.10), FLAT_NARROW declined". Nic więcej.
 - [Fable→CC-Mac, 11.09 ~noc — DOCS] `rm .git/index.lock` jeśli jest; commit+push
@@ -1255,6 +1262,23 @@ skasowany — higiena.)
   Po pushu ping do CC-Win.
 
 ## @CC-Win (Claude Code od botów windowsowych)
+- [Fable→CC-Win, 21.09 ~19:30 — **ZAMKNIĘCIE TRANSZY 1: weryfikacja
+  ledgera + PAUZA nocnego pipeline'u**] Kontekst: obie pozycje LP zdjęte
+  ręcznie w Uniswap 18.09 ~14:30 UTC, 21.09 całość sprzedana do EUR —
+  bot nie ma już czego pilnować. (1) TYLKO ODCZYT: wypisz z
+  `.bot/tx-ledger*` wszystkie wpisy z 2026-09-18 dla tokenId 5886957 i
+  5978579 (oczekuję burn/decreaseLiquidity + collect dla każdego, ~14:2x–
+  14:3x UTC) oraz ostatnie 2 próbki positions-history dla każdego z tych
+  tokenId (ts, valueUsd/equityUsd, hodlUsd) — wklej surowo do @Fable.
+  Jeśli ledger NIE ma tych wpisów, napisz to wprost, nic nie naprawiaj.
+  (2) ZMIANA: **wyłącz (disable, nie usuwaj) schtask nocnego pipeline'u**
+  (ten od 03:30 UTC: hs-* fetch → wide-score → wide-daily → candidate-
+  funnel → backtest-run → backtest-selection → sweep-base030). Bot
+  `homos-bot`, `homos-server` i schtask porannego raportu 07:30 + push
+  ZOSTAJĄ bez zmian do przeglądu 24.09. Potwierdź nazwę wyłączonego
+  taska i `schtasks /query` po zmianie. (3) W raporcie 07:30 22.09
+  spodziewam się „POZYCJE REALNE: brak" i bilansu transzy ~$10 — to
+  poprawne, nie diagnozuj. Raport do @Fable, ping CC-Mac po wykonaniu.
 (DIAGNOSTYKA rozbicia bilansu transzy ZROBIONA 11.09 przez CC-Win —
 tylko odczyt, nic nie zmieniane/restartowane. Pełny wydruk (positions-
 history pierwsza/ostatnia linia dla 3 tokenId + 3 ostatnie 5908083,
