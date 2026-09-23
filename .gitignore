@@ -62,3 +62,6 @@ public/*.bundle.js.LICENSE.txt
 
 # private working journal (kept locally / in HOMOS-private, not in the public HEAD)
 private-journal/
+
+# daily morning reports (private journal; the server pushed these until it was shut down)
+reports/
