@@ -22,7 +22,7 @@ function AppShell() {
       <div className="app-header">
         <div className="title-section">
           <h1>HOMO$</h1>
-          <h3>get rich or die tryin'</h3>
+          <h3>Uniswap v3 liquidity cockpit</h3>
         </div>
         <div className="header-right">
           <BotStatusDot status={bot.status} />
