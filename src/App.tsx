@@ -21,7 +21,7 @@ function AppShell() {
     <div className="app">
       <div className="app-header">
         <div className="title-section">
-          <h1>HOMO$</h1>
+          <h1>HOMOS</h1>
           <h3>Uniswap v3 liquidity cockpit</h3>
         </div>
         <div className="header-right">

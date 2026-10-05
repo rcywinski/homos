@@ -11,7 +11,7 @@ export const config = createConfig(
   getDefaultConfig({
     walletConnectProjectId,
     appName: 'HOMOS',
-    appDescription: 'Uniswap v3 liquidity cockpit',
+    appDescription: 'Uniswap v3 LP cockpit',
     chains: [mainnet, base, arbitrum],
     transports: {
       [mainnet.id]: http('https://ethereum-rpc.publicnode.com'),

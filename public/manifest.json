@@ -1,7 +1,7 @@
 {
-  "name": "HOMO$",
-  "short_name": "HOMO$",
-  "description": "HOMO$ Liquidity Manager — morning cockpit and Uniswap V3 position management",
+  "name": "HOMOS · LP Cockpit",
+  "short_name": "HOMOS",
+  "description": "Morning cockpit and Uniswap v3 position management",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8f9fa",
