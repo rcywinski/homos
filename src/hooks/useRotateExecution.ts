@@ -1,20 +1,19 @@
 /**
  * useRotateExecution.ts — executes a `RotatePlan` from utils/rebalanceBuilder.ts
- * (TASKS-UI.md Batch 8: [Confirm] on ROTATE proposal cards, cross-pool
- * within the SAME network). A 1:1 copy of the useRebalanceExecution.ts pattern (freshWalletClient
+ * ([Confirm] on ROTATE proposal cards, cross-pool within the same network).
+ * A 1:1 copy of the useRebalanceExecution.ts pattern (freshWalletClient
  * after an optional network switch, client.call before sendTransaction,
  * addTransaction to the history, resume after a failure) — the only difference: the 'mint' step
- * is rebuilt from the actual balances of the NEW pool (not the old one — after the
+ * is rebuilt from the actual balances of the new pool (not the old one — after the
  * swap steps the wallet holds tokens of the new pair), so `execute()` takes `newPool`
  * instead of a single `pool`. `oldPool` is not needed by execute() at all —
  * step 1 (decrease+collect) is already fully encoded in `plan.steps[0].tx`.
  *
- * Progress (localStorage) is kept under a SEPARATE prefix `homos_rotate_progress_`
+ * Progress (localStorage) is kept under a separate prefix `homos_rotate_progress_`
  * (not via saveProgress/loadProgress from rebalanceBuilder.ts, which write under
  * `homos_rebalance_${chainId}_${tokenId}`) — so as not to collide with the progress
  * of a regular REBALANCE on the same tokenId, should the user ever run both types
- * of sequence on the same position. rebalanceBuilder.ts is NOT edited here
- * (outside this batch's scope) — the local progress lives in this file.
+ * of sequence on the same position.
  */
 import { useCallback, useState } from 'react';
 import { useAccount, usePublicClient, useChainId, useSwitchChain } from 'wagmi';
@@ -25,8 +24,7 @@ import { RotatePlan, buildMintStep } from '../utils/rebalanceBuilder';
 import { fetchFreshPool } from '../utils/uniswap';
 import { addTransaction } from '../components/TransactionHistory';
 import { config } from '../config/wallet';
-// HOTFIX 31.08: best-effort receipt (the same class as useRebalanceExecution —
-// see the comment there; Rabby+publicnode 'Invalid parameters' error).
+// Best-effort receipt — see the comment in useRebalanceExecution.ts.
 import { waitReceiptBestEffort } from './useCockpitActions';
 
 export interface RotateExecStatus {
@@ -136,9 +134,8 @@ export function useRotateExecution() {
 
           let tx = step.tx;
           if (step.kind === 'mint') {
-            // Rebuild the mint from the ACTUAL balances of the NEW pool (after the swap
+            // Rebuild the mint from the actual balances of the new pool (after the swap
             // steps the wallet holds tokens of the new pair, not the old one) — see header.
-            // FIX 11.09 (HANDOFF @Sonnet, the same bug as useRebalanceExecution):
             // `newPool` is frozen from the moment the modal was opened — we fetch
             // fresh slot0+liquidity right before rebuilding the step, to avoid
             // "Price slippage check" on a price move > approx. 0.5%.

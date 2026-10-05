@@ -1,9 +1,8 @@
 /**
  * PositionCharts.tsx — charts shared by the paper-trading panel
- * (PaperTradingPanel.tsx, Batch 5/7) and the REAL position cards (MorningCockpit.tsx,
- * TASKS-UI.md Batch 10 — "position card redesign after the paper pattern"). Extracted
- * from PaperTradingPanel.tsx instead of copied, so a fix made once (e.g. the price
- * orientation bug, P7 review 20.08) works in both places forever.
+ * (PaperTradingPanel.tsx) and the REAL position cards (MorningCockpit.tsx).
+ * Shared rather than copied, so a fix made once (e.g. price orientation)
+ * applies to both.
  *
  * Generic over the point shape — `EquityChartPoint` requires only the fields
  * actually used by the charts (equityUsd/hodlUsd/inRange/status?/
@@ -38,25 +37,24 @@ export interface ChartEvent {
 }
 
 // Pools quoted in WETH (e.g. cbBTC — price is ~0.0296 WETH/cbBTC) need
-// more significant digits than USD-quoted pools (Batch 7, note from the brief).
+// more significant digits than USD-quoted pools.
 export const fmtPrice = (poolId: string, v: number): string =>
   poolId.toLowerCase().includes('cbbtc') ? v.toPrecision(4) : v.toLocaleString('en-US', { maximumFractionDigits: 0 });
 
-// Price orientation — FIX after the P7 review (Fable→Sonnet 2026-08-20):
-// `price`/`lo`/`hi` from bot/paper.ts (and analogously bot/observer.ts for
+// Price orientation: `price`/`lo`/`hi` from bot/paper.ts (and analogously bot/observer.ts for
 // real positions) are "human" token1-per-token0 (Uniswap convention), NOT
 // always USD. For mainnet pools (sym0='USDC', sym1='WETH') it is WETH-per-USDC
 // ≈ 0.00044 — rounds to zero in the UI. Pattern from the rest of the cockpit
 // (AddLiquidity.tsx/MyPositions.tsx/CockpitPositionActions.tsx):
 // `ethIsToken0 ? raw : 1/raw`. cbBTC (sym0='WETH', quote cbBTC) has
-// ethIsToken0=true → NO change, stays the readable 0.03183 (per the
-// brief — there is no USD leg to invert to).
+// ethIsToken0=true → NO change, stays the readable 0.03183 (there is
+// no USD leg to invert to).
 export const ethIsToken0 = (poolId: string): boolean => {
   const meta = BOT_POOL_META.find((m) => m.id === poolId);
   return meta ? meta.sym0.includes('ETH') : true;
 };
 
-// Batch 16 (FLAT_NARROW/FLAT_WIDEN proposal cards): whitelist duplicated
+// Used by FLAT_NARROW/FLAT_WIDEN proposal cards. Whitelist duplicated
 // from isStableQuote in CockpitPositionActions.tsx (RebalanceModal) — computed there
 // from full token objects (PortfolioPosition/RebalanceTarget), here from
 // the poolId alone (BOT_POOL_META), because proposal cards only have `p.poolId`,
@@ -65,15 +63,13 @@ export const ethIsToken0 = (poolId: string): boolean => {
 const STABLE_SYMBOLS = new Set(['USDC', 'USDT', 'DAI', 'USDBC', 'USDE', 'FRAX', 'LUSD']);
 
 /** Formats the `suggestedRange.usdLo/usdHi` value of a bot proposal.
- *  FIX 11.09 (HANDOFF Fable→Sonnet, FLAT_EXIT/WIDENING card + Telegram
- *  text): for pairs WITHOUT a stablecoin leg (today: cbBTC/WETH) this function
- *  so far treated `value` as the raw pool ratio (cbBTC-per-WETH) and
- *  appended the unit "otherSide/ethSide" — wrong. The bot (tickToUsd in
- *  bot/observer.ts, `quote: 'WETH'`) for these pools ALREADY converts the tick to
+ *  For pairs WITHOUT a stablecoin leg (e.g. cbBTC/WETH) `value` is NOT the raw
+ *  pool ratio (cbBTC-per-WETH): the bot (tickToUsd in bot/observer.ts,
+ *  `quote: 'WETH'`) already converts the tick to
  *  real USD via the reference rate (refEthUsd, usdRefPoolId ⇒ see the
  *  botPools.ts comment at base-cbbtc-weth-005) — `usdLo`/`usdHi` are
  *  USD PER 1 UNIT of otherSide (e.g. $56,793 per 1 cbBTC), not the
- *  cbBTC/WETH ratio (~34). The label now says so outright: "$/cbBTC". Fallback to
+ *  cbBTC/WETH ratio (~34). The label says so outright: "$/cbBTC". Fallback to
  *  a bare "$" when poolId is unknown or the pair has a stablecoin leg. */
 export function fmtQuoteForPool(poolId: string, value: number): string {
   const meta = BOT_POOL_META.find((m) => m.id === poolId);
@@ -119,8 +115,8 @@ function makeXScale(pts: TsPoint[], width: number, pad: number) {
  * yellowish = out of range, grey = cash (the trend safety switch parked the
  * capital — paper ONLY, `status==='cash'`; real positions do not have this field
  * so they never get a grey background, only yellow when `!inRange`). Works on the
- * WHOLE history, even from before 20.08 (inRange/status have always been there — only
- * price/lo/hi are new).
+ * WHOLE history (inRange/status have always been recorded — only price/lo/hi
+ * may be missing in older samples).
  */
 function stateBands(pts: TsPoint[], x: (t: number) => number, rightEdge: number) {
   const bands: { x1: number; x2: number; cls: string }[] = [];
@@ -135,7 +131,7 @@ function stateBands(pts: TsPoint[], x: (t: number) => number, rightEdge: number)
   return bands;
 }
 
-// Markers on the charts (a subset of EVENT_ICON — the Batch 7 spec lists only these three).
+// Markers on the charts (a subset of EVENT_ICON — only these three).
 const CHART_EVENT_ICON: Record<string, string> = {
   EXIT_TREND: '⛔',
   REENTRY: '▶',
@@ -236,8 +232,8 @@ export const PriceRangeChart: FC<{ poolId: string; points: EquityChartPoint[]; e
 
   const bands = stateBands(pts, x, rightEdge);
 
-  // Band segments MERGED over constant lo/hi ("stripes" fix 20.08): a rect per
-  // sample + the outline from P7 produced a vertical line at every sample boundary.
+  // Band segments MERGED over constant lo/hi: a rect per sample + its outline
+  // would produce a vertical stripe at every sample boundary.
   // One rect covers a continuous stretch with an unchanged range; a new rect
   // only on rebalance (lo/hi change) or after a gap (cash/pending).
   const rangeSegs: { x1: number; x2: number; yTop: number; yBottom: number; lo: number; hi: number }[] = [];
@@ -311,21 +307,16 @@ export const PriceRangeChart: FC<{ poolId: string; points: EquityChartPoint[]; e
   );
 };
 
-// --- Batch 14: position card metrics bar, shared by paper and REAL ---
-// Extracted from PaperTradingPanel.tsx (PoolCard, `.paper-pool-stats`) —
-// the same extraction pattern as Sparkline/PriceRangeChart above (P10):
-// one component, two call sites (paper has all 6 fields always
-// available; the REAL position cards in MorningCockpit.tsx today only 3 of 6 —
-// the other three wait for bot/ledger.ts to be wired up on Fable's side,
-// TASKS-UI.md Batch 14). `null` on a field = no data → dash "—" with a
+// --- Position card metrics bar, shared by paper and REAL ---
+// One component, two call sites: paper has all 6 fields always available;
+// the REAL position cards in MorningCockpit.tsx may have only some of them
+// (the rest depend on bot/ledger.ts). `null` on a field = no data → dash "—" with a
 // tooltip explaining WHY (distinguishing "under construction" for bot-side
 // fields vs a plain lack of history, so as not to suggest a defect where
 // it simply does not exist yet).
-// Batch 19 item 2: rounding to whole dollars ate small amounts on the
-// Base scale (accrued fees $0.41, gas in cents → both came out as "$0",
-// useless exactly where they were supposed to say something). For |v| < 10 two
-// decimal places, above that whole dollars as before (PnL/vsHODL in
-// paper trading, where amounts are large, look identical to before).
+// For |v| < 10 two decimal places, above that whole dollars — rounding small
+// Base-scale amounts (accrued fees $0.41, gas in cents) to "$0" would hide
+// exactly what they are supposed to show.
 const statFmtUsd = (v: number) => {
   const abs = Math.abs(v);
   const digits = abs < 10 ? 2 : 0;
@@ -337,12 +328,11 @@ export interface PositionStatsBarProps {
   /** PnL since start = valueUsd(now) − value at the anchor (first sample
    *  of this position's history). `null` when there is too little history to compute. */
   pnlUsd: number | null;
-  /** Suffix "since <anchor date>" next to the PnL label (TASKS-UI Batch 14: "like
-   *  for HODL") — optional, omitted when the date is unknown. */
+  /** Suffix "since <anchor date>" next to the PnL label (like for HODL) — optional, omitted when the date is unknown. */
   pnlSinceLabel?: string;
   /** vs HODL 50/50 = valueUsd(now) − hodlUsd (last history sample). */
   vsHodlUsd: number | null;
-  /** `null` = bot-side field not wired up yet (Batch 14: "—" + tooltip "under construction"). */
+  /** `null` = bot-side field not wired up yet ("—" + tooltip "under construction"). */
   feesReinvestedUsd: number | null;
   /** Accrued (uncollected) fees — available TODAY for both card types. */
   feesAccruedUsd: number | null;
@@ -358,7 +348,7 @@ const StatDash: FC<{ title: string }> = ({ title }) => (
   </span>
 );
 
-const PENDING_TITLE = 'under construction — waiting for the bot ledger (bot/ledger.ts) to be wired up, a task for the analytics session (TASKS-UI.md Batch 14)';
+const PENDING_TITLE = 'under construction — waiting for the bot ledger (bot/ledger.ts) to be wired up';
 const NO_HISTORY_TITLE = 'no data — too few history samples of this position collected yet';
 
 export const PositionStatsBar: FC<PositionStatsBarProps> = ({ pnlUsd, pnlSinceLabel, vsHodlUsd, feesReinvestedUsd, feesAccruedUsd, costsUsd, rebalances }) => (

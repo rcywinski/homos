@@ -1,13 +1,12 @@
 /**
- * load.ts — SHARED swap-cache loader for run/walkforward/sweep
- * (previously three duplicated copies of loadPool; one source of truth here).
+ * load.ts — shared swap-cache loader for run/walkforward/sweep (single source
+ * of truth for loadPool).
  *
- * NEW: support for WETH-quoted pairs (quote:'WETH'), e.g. cbBTC/WETH,
- * WTAO/WETH. The engine assumed an ETH/stable pair (non-ETH leg = $1) —
- * for WETH pairs that produced nonsensical units (see CONTEXT
- * 2026-08-11). Fix: the USD-per-WETH price is taken PER BLOCK from a parallel
- * USDC/WETH cache on THE SAME chain (same block numbers — join by block,
- * step-function sampled every SAMPLE_EVERY swaps).
+ * WETH-quoted pairs (quote:'WETH'), e.g. cbBTC/WETH, WTAO/WETH: the engine
+ * otherwise assumes an ETH/stable pair (non-ETH leg = $1), which gives
+ * nonsensical units for WETH pairs. So the USD-per-WETH price is taken per
+ * block from a parallel USDC/WETH cache on the same chain (same block
+ * numbers — join by block, step-function sampled every SAMPLE_EVERY swaps).
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -22,15 +21,15 @@ export const GAS_USD: Record<string, number> = { mainnet: 8, base: 0.08, arbitru
 export const QUOTE_WETH_REF: Record<string, string> = {
   'base-cbbtc-weth-005': 'base-weth-usdc-030',
   'base-cbbtc-weth-005-365d': 'base-weth-usdc-030-365d',
-  'base-cbbtc-weth-005-720d': 'base-weth-usdc-030-720d', // 720d experiment (25.08)
+  'base-cbbtc-weth-005-720d': 'base-weth-usdc-030-720d', // 720d experiment
   'mainnet-wtao-weth-100': 'mainnet-usdc-weth-005',
-  'mainnet-wsteth-weth-001': 'mainnet-usdc-weth-005-365d', // F.B: LST, token1=WETH
+  'mainnet-wsteth-weth-001': 'mainnet-usdc-weth-005-365d', // LST, token1=WETH
 };
 
-/** QUOTE_REF (20.08): pools quoted in an asset OTHER than WETH/stable (e.g.
+/** QUOTE_REF: pools quoted in an asset other than WETH/stable (e.g.
  *  tbtc-wbtc → USD-per-WBTC). Engine-wise identical to quote:'WETH' — spec.quote
  *  really means "quote leg priced by an external USD reference".
- *  `assetIsToken0`: whether the priced asset is token0 IN THE REFERENCE POOL —
+ *  `assetIsToken0`: whether the priced asset is token0 in the reference pool —
  *  explicit, because the reference's cfg.ethIsToken0 speaks about ETH, not our
  *  asset (wbtc-usdc-030 has ethIsToken0:false, while WBTC IS token0). */
 export const QUOTE_REF_EXT: Record<string, { ref: string; assetIsToken0: boolean }> = {
@@ -81,8 +80,8 @@ async function loadUsdRef(refId: string, assetIsToken0?: boolean): Promise<(b: n
   };
 }
 
-/** perp funding (F4): step-function ts(sec) → rate per 8h period (Binance).
- *  Convention: r > 0 → the short RECEIVES funding. */
+/** perp funding: step-function ts(sec) → rate per 8h period (Binance).
+ *  Convention: r > 0 → the short receives funding. */
 export function loadFunding(symbol = 'ETHUSDT'): ((tsSec: number) => number) | null {
   const p = path.join(__dirname, '..', 'data', 'funding', `${symbol}.json`);
   if (!fs.existsSync(p)) return null;
@@ -139,11 +138,11 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
     spec.quote = 'WETH';
     spec.usdPerEth = await loadUsdRef(QUOTE_REF_EXT[id].ref, QUOTE_REF_EXT[id].assetIsToken0);
   } else if (cfg.quoteRefId) {
-    // DYNAMIC reference from meta.cfg (auto-funnel candidates: candidate-funnel
+    // dynamic reference from meta.cfg (auto-funnel candidates: candidate-funnel
     // writes quoteRefId into cfg, fetch-swaps-hypersync carries it into meta.json) —
     // the static maps above do not know `cand-*` ids. Refs are USDC/WETH, so the
     // default orientation (the reference's cfg.ethIsToken0) is correct.
-    // 02.09 (wide-collect): `quoteRefAssetIsToken0` = explicit orientation of a
+    // `quoteRefAssetIsToken0` (wide-collect) = explicit orientation of a
     // reference other than USDC/WETH (e.g. BTC/USDC, where BTC may be token0).
     spec.quote = 'WETH';
     spec.usdPerEth = await loadUsdRef(cfg.quoteRefId, cfg.quoteRefAssetIsToken0);
@@ -165,11 +164,11 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
     });
   }
   swaps.sort((a, b) => a.b - b.b);
-  // dedup (resume can duplicate the last chunk) — PER BLOCK, not with a global
-  // Set: the key of the original Set started with the block number anyway,
-  // so the semantics are identical, while the global Set crashed with RangeError
-  // "Set maximum size exceeded" at >16.7M entries (V8 limit; first case:
-  // arbitrum-weth-usdc-005-720d, 25.6M swaps — CC-Win 25.08).
+  // dedup (resume can duplicate the last chunk) — per block, not with a global
+  // Set: the key starts with the block number anyway, so the semantics are
+  // identical, while a global Set throws RangeError "Set maximum size
+  // exceeded" above ~16.7M entries (V8 limit; e.g. arbitrum-weth-usdc-005-720d
+  // has 25.6M swaps).
   // The Set is reset at the block boundary → memory O(swaps per block), event
   // order within a block untouched (the sort is stable).
   const dedup: SwapEv[] = [];
@@ -185,9 +184,9 @@ export async function loadPool(id: string): Promise<{ swaps: SwapEv[]; spec: Poo
     blockSeen.add(k);
     dedup.push(s);
   }
-  // PROBE-SWAP FILTER (17.08, after the WETH-USDT 0.01% anomaly: probes through
-  // empty ticks ±13–20k ticks away from the market fired a false trend signal
-  // and the strategy "exited" at an absurd price → −100%). We drop events
+  // Probe-swap filter: on thin pools (e.g. WETH-USDT 0.01%) probes through
+  // empty ticks ±13–20k ticks away from the market fire a false trend signal
+  // and the strategy "exits" at an absurd price → −100%. We drop events
   // deviating > 1000 ticks (~10.5%) from the rolling median of 201 swaps — real
   // moves (even flash crashes) do not jump 10% within ~200 swaps on the pools we
   // analyze; for deep pools the filter is a no-op (verified: mainnet-030 results

@@ -14,6 +14,11 @@ sense with it.
 | **CC-Win** (Claude Code) | the 24/7 Windows server | services (NSSM), scheduled tasks, deployments, `.env`, long-running data jobs, read-only diagnostics of the bot's state |
 | **Sonnet** (UI) | desktop | the React cockpit — components, hooks, styles only |
 
+The session names are shorthand used throughout the journal and the commit history: Fable,
+Sonnet and Opus are the Claude models each session ran on, and CC-Mac / CC-Win are the Claude
+Code sessions on the Mac and on the Windows server. Other documents refer to them by role
+(analysis session, UI session, Windows ops session).
+
 The owner signed transactions, made every capital decision, and acted as the router between
 sessions when a direct channel was not available.
 

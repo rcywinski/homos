@@ -1,41 +1,36 @@
 /**
  * ClosedPositionsPanel.tsx — "Closed positions" + CSV export
- * (TASKS-LEDGER.md §3, HANDOFF Fable→Sonnet 25.08, requested by the owner
- * after closing #953427 through the app: the position vanished without a
- * trace — zero history, zero summary).
+ * — without it, a position closed through the app vanishes without a trace
+ * (no history, no summary).
  *
  * Data: `bot.closedPositions`/`closedPositionsStatus` from useBotApi.ts
- * (GET /api/closed-positions, bot/ledger.ts — outside this session's edit
- * scope, shape read only). EVERY numeric field may be `null`
+ * (GET /api/closed-positions, bot/ledger.ts — shape read only). EVERY numeric field may be `null`
  * (missing metadata of a burned NFT or a leg not priced in USD) —
  * rendered as "—", NEVER 0 (0 is a real value, null means "we don't know").
  *
  * Skeleton like TopRankingPanel/BotTelemetry/ForecastPanel/ObservationAnalysis
  * (`telemetry-section` > `telemetry-header` > `telemetry-body`, own
- * collapse `useState`) — collapsed by default (TASKS-LEDGER.md §3), per the
- * convention unified on 21.08.
+ * collapse `useState`) — collapsed by default, like the other sections.
  *
- * Graceful degradation (straight from HANDOFF): 404 (server without today's
- * package deployed yet) → calm note, NOT an error; empty list → "no closed
- * positions"; network/token error → note, no red banner.
- *
- * HARD SCOPE: bot/** untouched (only reading the type via useBotApi.ts).
+ * Graceful degradation: 404 (server without this endpoint deployed yet) →
+ * calm note, NOT an error; empty list → "no closed positions"; network/token
+ * error → note, no red banner.
  */
 import React, { FC, useState } from 'react';
 import { UseBotApi, ClosedPosition, BotPoolLive } from '../hooks/useBotApi';
 import { POSITION_MANAGER_ADDRESSES } from '../utils/liquidityManagement';
 import { BOT_POOL_META } from '../config/botPools';
+import { fmtUsd } from '../utils/formatters';
 
 interface Props {
   bot: UseBotApi;
 }
 
-// BATCH 20 item 4: net valuation fallback for crypto-crypto pairs (e.g. cbBTC/WETH
-// closed #5887690, "— (neither leg priced)" — bot/ledger.ts prices only legs
-// with a dollar pair, the same limitation as usdValueOf in usePortfolio.ts).
-// Same class of fix as Batch 15 (the tiles there counted via
-// bot.state.positions[].valueUsd — here, because the position is CLOSED and no
-// longer has a row in state.positions, we compute it ourselves from
+// Net valuation fallback for crypto-crypto pairs (e.g. cbBTC/WETH, otherwise
+// "— (neither leg priced)") — bot/ledger.ts prices only legs with a dollar pair,
+// the same limitation as usdValueOf in usePortfolio.ts. Open positions fall back
+// to bot.state.positions[].valueUsd; a CLOSED position no longer has a row in
+// state.positions, so we compute it ourselves from
 // bot.state.pools[].ethUsd (the bot's reference rate, same semantics as the price
 // orientation in bot/observer.ts: for a quote:'USD' pool ethUsd = USD per ETH,
 // for quote:'WETH' (cbBTC/WETH) ethUsd = USD per the non-WETH base token). NOTE:
@@ -73,14 +68,13 @@ function usdPriceForSymbolToday(sym: string, chainId: number, botPools: BotPoolL
 // Slug (`chain` in ClosedPosition/LedgerEntry, as in bot/ledger.ts) → chainId
 // + label + explorer domain for the NFT link (/nft/{contract}/{tokenId} —
 // pattern shared by the whole Etherscan family). Deliberate duplication, like
-// GAS_USD in useCockpitActions.ts — bot/** is outside this session's edit scope.
+// GAS_USD in useCockpitActions.ts — the UI does not import bot/** code.
 const CHAIN_META: Record<string, { chainId: number; label: string; explorerNftBase: string }> = {
   mainnet: { chainId: 1, label: 'Ethereum', explorerNftBase: 'https://etherscan.io/nft' },
   base: { chainId: 8453, label: 'Base', explorerNftBase: 'https://basescan.org/nft' },
   arbitrum: { chainId: 42161, label: 'Arbitrum', explorerNftBase: 'https://arbiscan.io/nft' },
 };
 
-const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtUsdOrDash = (v: number | null): string => (v === null ? '—' : fmtUsd(v));
 const fmtTok = (v: number | null, sym: string): string => (v === null ? '—' : `${v.toFixed(6)} ${sym}`);
 const fmtDate = (iso: string | null): string =>
@@ -96,7 +90,7 @@ const ClosedPositionCard: FC<{ p: ClosedPosition; botPools: BotPoolLive[] }> = (
   // approximation, so as not to suggest a precise realized PnL.
   const netUsd = p.inUsd !== null && p.outUsd !== null ? p.outUsd - p.inUsd : null;
 
-  // BATCH 20 item 4: fallback when the ledger priced no leg in USD (crypto-crypto
+  // Fallback when the ledger priced no leg in USD (crypto-crypto
   // pair, e.g. cbBTC/WETH) — the bot's reference rate, ONLY when we have all
   // four token amounts (in0/in1/out0/out1) and the pool is in the bot's
   // configuration on this chain. `null` = stays "— (neither leg priced)".

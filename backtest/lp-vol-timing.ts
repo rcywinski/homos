@@ -1,13 +1,13 @@
 /**
- * e8-timing.ts — E8.3 LP TIMING BY VOLATILITY (LP = short gamma).
+ * lp-vol-timing.ts — LP timing by volatility (LP = short gamma).
  *
  * Thesis: an LP earns fees (which rise in a storm) and loses ~σ²_realized/8.
  * If, after a volatility spike, the market calms down faster than fees fall,
  * then windows starting "after the storm" may be the only ones where LP > HODL.
  *
  * Nothing is recomputed: it takes `perWindow` from walkforward-*.json
- * (requires a walkforward.ts run from after 07.09 — the perWindow field) and
- * tags each window with the STATE AT ENTRY:
+ * (requires walkforward output that includes the perWindow field) and
+ * tags each window with the state at entry:
  *   RV7, RV30  — realized volatility (annualized %, from daily coins.llama
  *                prices: ETH/USD for ETH-stable, ETH/BTC for cbBTC)
  *   DVOL       — Deribit implied vol (data/dvol/ETH.json or BTC.json;
@@ -15,18 +15,18 @@
  *   VRP        — DVOL − RV30 (volatility risk premium: > 0 = the market pays
  *                more for insurance than it realizes)
  *   SHOCK      — RV7 / RV30 (> 1.3 = "fresh after a storm", < 0.8 = calm)
- * and computes vsHODL statistics per BUCKET (DVOL terciles; VRP>0 / ≤0;
- * SHOCK>1.3 / 0.8–1.3 / <0.8) per strategy, per pool and AGGREGATED.
+ * and computes vsHODL statistics per bucket (DVOL terciles; VRP>0 / ≤0;
+ * SHOCK>1.3 / 0.8–1.3 / <0.8) per strategy, per pool and aggregated.
  *
- *   npx tsx backtest/e8-timing.ts base-weth-usdc-030-720d base-cbbtc-weth-005-720d mainnet-usdc-weth-005-720d arbitrum-weth-usdc-005-720d
+ *   npx tsx backtest/lp-vol-timing.ts base-weth-usdc-030-720d base-cbbtc-weth-005-720d mainnet-usdc-weth-005-720d arbitrum-weth-usdc-005-720d
  *   (arguments = walkforward ids as in the file name results/walkforward-<id>-30d.json)
  * ENV: WF_DAYS=30 (window), STRATS="Pasywny ±50%,Pasywny ±40%" (filter on
  * strategy names as stored in the file; default: all from the file), OFFLINE=1 (price cache only).
  *
- * CRITERION E8.3: there exists a bucket in which, AGGREGATED (≥3/4 pools, ≥10
+ * Criterion: there exists a bucket in which, aggregated (≥3/4 pools, ≥10
  * windows per pool), mean vsHODL > 0 and %win ≥ 65 — and that same bucket is
- * NOT the worst by worst. Then it is a candidate entry filter; otherwise close.
- * Written to: backtest/results/e8-timing-<WF_DAYS>d.json
+ * not the worst by worst. Then it is a candidate entry filter; otherwise close.
+ * Written to: backtest/results/lp-vol-timing-<WF_DAYS>d.json
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -196,7 +196,7 @@ type Tagged = { pool: string; strat: string; v: number; regime: string; start: n
   if (es.length > 10) console.log(`Correlation (${ref}, n=${es.length}): vsHODL~VRP ${corr(es.map((e) => e.vrp!), es.map((e) => e.v)).toFixed(2)} · vsHODL~SHOCK ${corr(es.map((e) => e.shock), es.map((e) => e.v)).toFixed(2)} · vsHODL~DVOL ${corr(es.map((e) => e.dvol!), es.map((e) => e.v)).toFixed(2)}`);
   console.log('\nCRITERION E8.3: a bucket ◀ CANDIDATE on ≥3/4 pools, %win ≥ 65, and not the worst by worst — otherwise close.');
   fs.mkdirSync(OUT, { recursive: true });
-  const out = path.join(OUT, `e8-timing-${WF_DAYS}d.json`);
+  const out = path.join(OUT, `lp-vol-timing-${WF_DAYS}d.json`);
   fs.writeFileSync(out, JSON.stringify({ ...result, tagged }, null, 2));
   console.log(`→ ${out}`);
 })();

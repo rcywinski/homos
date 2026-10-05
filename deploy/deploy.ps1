@@ -2,25 +2,26 @@
 # Run from the repo root directory (where package.json is):
 #   cd C:\Projects\homos
 #   .\deploy\deploy.ps1
+# First-time installation (Node, NSSM services, firewall): deploy/setup-windows.md.
 #
-# ENCODING (incident 21.08, the SECOND time in this project): this file MUST be
-# saved as UTF-8 WITH BOM. Windows PowerShell 5.1 reads a .ps1 without BOM in
-# the system code page, so non-ASCII characters break the quotes and
-# wreck the whole parser (TerminatorExpectedAtEndOfString). The same happened
-# on 10.08 to backup.ps1/deploy.ps1 and was fixed back then - and I came back
-# with this bug, writing the script on a Mac. Second line of defense: ALL string
-# literals here are ASCII-only, so even if someone loses the BOM, the broken characters
-# sit exclusively in comments and do not touch the parser.
+# ENCODING (second incident in this project, 21 Aug 2026): this file must be
+# saved as UTF-8 with BOM. Windows PowerShell 5.1 reads a .ps1 without a BOM in
+# the system code page, so non-ASCII characters break the quotes and the whole
+# parser fails (TerminatorExpectedAtEndOfString). The same bug hit
+# backup.ps1/deploy.ps1 on 10 Aug and came back when the script was edited on a
+# Mac. Second line of defence: all string literals here are ASCII-only, so even
+# without the BOM any broken characters sit only in comments.
 #
-# HISTORY (so this is not reverted yet again): the 10.08 version ended with
-# `pm2 startOrReload` + `pm2 save`, but the same day the project moved
-# from pm2 to NSSM services (TASKS-WINDOWS-ADDENDUM.md: "bots must be
-# INVISIBLE" - pm2 on Windows keeps processes in the user session).
-# The script was not updated back then, so every deployment silently
-# went back to pm2. Since 21.08 we operate EXCLUSIVELY on NSSM services.
+# HISTORY (so this is not reverted again): the 10 Aug version ended with
+# `pm2 startOrReload` + `pm2 save`, but the same day the server moved from pm2
+# to NSSM services (the bot processes must not depend on a logged-in user
+# session, which is how pm2 runs on Windows). The script was not updated at the
+# time, so every deployment silently went back to pm2. Since 21 Aug deployments
+# use only the NSSM services homos-bot and homos-server
+# (deploy/ecosystem.config.js is the unused pm2 legacy).
 #
 # Order: fetch code -> dependencies per lock -> build UI -> restart services
-# ONLY if something outside the UI changed -> sanity check /health.
+# only if something outside the UI changed -> sanity check /health.
 
 $ErrorActionPreference = 'Stop'
 
@@ -29,7 +30,7 @@ function Write-Step($msg) {
     Write-Host "==> $msg" -ForegroundColor Cyan
 }
 
-# NSSM is sometimes outside PATH (installed via winget - see CONTEXT 10.08).
+# NSSM is sometimes outside PATH (when installed via winget).
 function Get-NssmPath {
     $cmd = Get-Command nssm -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }

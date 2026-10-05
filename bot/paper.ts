@@ -1,36 +1,36 @@
 /**
- * bot/paper.ts — PAPER TRADING: a virtual portfolio run by ALGORITHM
- * v1.2 on live data (Rafal's decision 18.08). Answers the question "how
+ * bot/paper.ts — paper trading: a virtual portfolio run by ALGORITHM
+ * v1.2 on live data. Answers the question "how
  * would the algorithm behave on real capital" without risking it.
  *
- * RULES:
- *  - $10k of virtual capital PER pool from BOT_POOLS (PAPER_CAPITAL_USD env).
+ * Rules:
+ *  - $10k of virtual capital per pool from BOT_POOLS (PAPER_CAPITAL_USD env).
  *  - Zero transactions, zero Rabby — the algorithm's decisions execute virtually
- *    at once; Telegram receives informational MILESTONES (📊 PAPER: ...).
+ *    at once; Telegram receives informational milestones (📊 PAPER: ...).
  *  - Called from observer.ts after every statistics cycle (15 min).
  *
- * MODEL (honest about approximations — consistent with the advisor and the backtest engine):
+ * Model (honest about approximations — consistent with the advisor and the backtest engine):
  *  - Open: range = advisor suggestion (k·σ·√7d, k per pool), capital
  *    split by v3 geometry at the current price (float, like backtest/engine).
  *  - Fees: valueUsd × feeYieldDaily × (2·spacing / position_width) × Δt —
- *    EXACTLY the same formula as expectedDailyFeesUsd in advisor.assessPosition
+ *    exactly the same formula as expectedDailyFeesUsd in advisor.assessPosition
  *    (trailing yield of the ±1 spacing band rescaled to our width).
- *    This is NOT a per-swap replay — no modeling of our L share in the pool; when
+ *    This is not a per-swap replay — no modeling of our L share in the pool; when
  *    interpreting, remember it is an estimate of the "fair" yield.
- *  - Rebalance: ALGORITHM v1 trigger — out of range CONTINUOUSLY >=24h
+ *  - Rebalance: ALGORITHM v1 trigger — out of range continuously >=24h
  *    (hysteresis) AND payback <=7d (assessPosition). Cost = gas + half a turnover
  *    × (fee tier + 5 bps slippage). Collected fees are added to the capital
  *    on rebalance (collect+reinvest).
  *  - Trend circuit breaker per pool (trendAction): 'exit' → virtual close
  *    to cash 50/50 (cost as above), re-entry after the signal clears (trendReentry);
  *    'hedge' → virtual short of the ETH excess >50% of value (taker 5 bps
- *    open/close, funding +2.9%/yr for the short — historical average
- *    from F4; LP stays).
+ *    open/close, funding +2.9%/yr for the short — historical Binance
+ *    average; LP stays).
  *  - Benchmark: HODL 50/50 — token amounts frozen at the moment of opening,
  *    valued at current prices (the same definition as the project gate).
  *  - USD valuation respects quote:'WETH' (leg prices are supplied by the observer).
  *
- * FILES (in .bot/, gitignored — do NOT force-add, lesson from 17.08):
+ * Files (in .bot/, gitignored — never force-add them):
  *  - paper-state.json    — current portfolio state (read by /api/paper),
  *  - paper-events.ndjson — decision ledger (open/rebalance/exit/reentry/hedge),
  *  - paper-history.ndjson — equity samples every 15 min (UI charts).
@@ -51,7 +51,7 @@ const HYSTERESIS_MS = 24 * 3600 * 1000; // h=24 from ALGORITHM v1
 // private — duplicated per the existing convention from useCockpitActions.ts)
 const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08, 42161: 0.1 };
 const HEDGE_TAKER_BPS = 5;
-const HEDGE_FUNDING_APR = 0.029; // +2.9%/yr FOR the short (Binance 400d, F4)
+const HEDGE_FUNDING_APR = 0.029; // +2.9%/yr paid to the short (Binance 400d average)
 const TICK_SPACING: Record<number, number> = { 100: 1, 500: 10, 3000: 60, 10000: 200 };
 
 // --- state types ---
@@ -134,13 +134,10 @@ const hodlValueUsd = (pos: PaperPosition, pr: LegPrices): number =>
   pos.hodl ? pos.hodl.a0 * pr.px0 + pos.hodl.a1 * pr.px1 : CAPITAL_USD;
 
 /** open an LP position in the suggested range at the current price */
-/** `costUsd` (added 22.08): the entry cost WAS charged (`pos.costsUsd += cost`
- *  on REENTRY and REBALANCE), but did NOT reach the event ledger — `event()`
- *  logged only the range and capital. CC-Win noticed this while reading the tail
- *  of `paper-events.ndjson`: at EXIT_TREND `costUsd` is visible, at REENTRY it is not.
- *  Effect: summing costs from the ledger alone gives an UNDERSTATED value (for
- *  cbBTC $11.38 instead of $16.70). The same omission would hurt in a ledger
- *  used for tax settlements, where every cost must be explicit. */
+/** `costUsd`: the entry cost charged to `pos.costsUsd` on REENTRY and REBALANCE
+ *  must also be logged in the event ledger — otherwise summing costs from
+ *  `paper-events.ndjson` alone understates them. A ledger used for tax
+ *  settlements needs every cost explicit. */
 function openPosition(pos: PaperPosition, p: BotPool, pr: LegPrices, stats: PoolStats, capital: number, why: string, ctx: PaperCtx, costUsd?: number) {
   const sug = suggestRange(stats, p.feeBps as any, p.d0, p.d1, { ...ADVISOR_PARAMS, k: p.advisorK ?? ADVISOR_PARAMS.k });
   const pa = tickToHuman(sug.tickLower, p.d0, p.d1), pb = tickToHuman(sug.tickUpper, p.d0, p.d1);
@@ -172,8 +169,8 @@ function openPosition(pos: PaperPosition, p: BotPool, pr: LegPrices, stats: Pool
 /** one paper-trading pass — call after the observer's statistics cycle (15 min) */
 export function paperTick(ctx: PaperCtx) {
   const now = Date.now();
-  // milestones collected per CYCLE and sent as ONE message — Telegram throttles
-  // >1 msg/s to a chat (429 without retry = lost; lesson 18.08: of 5 STARTs 1 arrived)
+  // milestones collected per cycle and sent as one message — Telegram throttles
+  // >1 msg/s to a chat (429 without retry = message lost)
   const notes: string[] = [];
   for (const p of BOT_POOLS) {
     try {
@@ -200,10 +197,9 @@ export function paperTick(ctx: PaperCtx) {
         continue;
       }
 
-      // FIX 25.08 (Rafal's report: "out of range although in range"):
-      // the source of truth for the range is the FRESH tick from slot0 (60 s), not
-      // stats.lastTick — on an RPC failure (llamarpc 521, 25.08) stats
-      // freeze for hours and inRange lied based on the stale tick.
+      // The source of truth for the range is the fresh tick from slot0 (60 s), not
+      // stats.lastTick — on an RPC failure stats can freeze for hours and
+      // inRange would be computed from a stale tick.
       const curTick = lv.tick ?? lv.stats?.lastTick ?? null;
       const inRange = pos.status === 'open' && curTick !== null
         ? curTick >= pos.tickLower! && curTick < pos.tickUpper!
@@ -305,8 +301,8 @@ export function paperTick(ctx: PaperCtx) {
         ? pos.hedge.sizeBase * (pos.hedge.entryUsd - (p.ethIsToken0 ? pr.px0 : pr.px1)) + pos.hedge.fundingUsd
         : 0;
       const equity = lpValue + pos.feesSinceRebalanceUsd + pos.hedgePnlRealizedUsd + hedgeOpenPnl;
-      // price/lo/hi (human) — since 20.08, for the range band on UI charts
-      // (Batch 7); lo/hi only when the position is open (in cash there is no range).
+      // price/lo/hi (human) — for the range band on UI charts;
+      // lo/hi only when the position is open (in cash there is no range).
       const range = pos.status === 'open' && pos.tickLower != null
         ? { lo: +tickToHuman(pos.tickLower, p.d0, p.d1).toPrecision(6), hi: +tickToHuman(pos.tickUpper!, p.d0, p.d1).toPrecision(6) }
         : {};

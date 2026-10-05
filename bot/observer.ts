@@ -1,5 +1,5 @@
 /**
- * bot/observer.ts — bot in OBSERVE mode (step C from UI-VISION.md).
+ * bot/observer.ts — propose-only observer (OBSERVE mode, docs/UI-DESIGN.md §8).
  *   npm run bot          (target: pm2 start "npm run bot" --name homos-bot on Windows)
  *
  * Executes NO transactions. Loops:
@@ -45,14 +45,14 @@ const clients = {
   arbitrum: createPublicClient({ chain: arbitrum, transport: fallback(RPC.arbitrum.map((u) => http(u))) }),
 };
 
-// --- live gas (review decision 26.08 — DECISIONS 6a / TASKS-RECAL §4) ---
-// The $8 constant on mainnet penalised payback 4-8x at real gas of 0.3-1.4 Gwei
-// (confirmed in the field 25.08: collect $0.27 against a threshold computed from the constant).
+// --- live gas ---
+// A static $8 cycle cost on mainnet overstated payback 4-8x at real gas of
+// 0.3-1.4 Gwei (an actual collect cost $0.27).
 // Cycle cost = eth_gasPrice × GAS_UNITS_CYCLE × ETH rate; the floor protects
-// against underestimation on L2 (the L1-data fee is invisible in execution gasPrice),
-// the old constant remains ONLY as a fallback before the first read.
-// Backtest/paper deliberately NOT touched — per-regime cost comes in the
-// recalibration batch (recalibration = bump of algoVersion).
+// against underestimation on L2 (the L1-data fee is invisible in execution gasPrice).
+// The static table is only a fallback before the first read.
+// Backtest/paper keep the static cost on purpose — changing it there would be a
+// recalibration (algoVersion bump).
 const GAS_UNITS_CYCLE = 800_000; // decrease+collect+swap+mint+approvals (~consistent with the measured $1-2 at 0.3-1.4 Gwei)
 const GAS_FLOOR_USD: Record<string, number> = { mainnet: 0.5, base: 0.08, arbitrum: 0.1 };
 const GAS_STATIC_USD: Record<string, number> = { mainnet: 8, base: 0.08, arbitrum: 0.1 };
@@ -102,8 +102,8 @@ const PM_ABI = [
       { name: 'tokensOwed0', type: 'uint128' }, { name: 'tokensOwed1', type: 'uint128' },
     ],
   },
-  // collect() ONLY for simulation (29.08): `tokensOwed0/1` from positions() is
-  // ZERO until the first burn/collect, so a fresh position would show
+  // collect() is used only via simulation: `tokensOwed0/1` from positions() is
+  // zero until the first burn/collect, so a fresh position would show
   // "fee $0" despite accruing fees. The same "static collect" trick as
   // in the UI (src/hooks/usePortfolio.ts) — eth_call, we sign nothing.
   {
@@ -131,7 +131,7 @@ interface PoolLive {
   /** trend circuit breaker (v1.1): deviation of log-price from EMA7d in % and signal state */
   trendGapPct?: number;
   trendDown?: boolean;
-  /** flat detector (FlatWide product, 28.08): since when |gap|<enterGap
+  /** flat detector (FlatWide product): since when |gap|<enterGap
    *  uninterrupted (ISO, null=clock not running) and whether flat is confirmed */
   flatSince?: string | null;
   flatConfirmed?: boolean;
@@ -147,18 +147,18 @@ interface WatchedPosition {
   inRange: boolean;
   advice: string;
   paybackDays: number | null;
-  /** aggregates from the ledger (BATCH 14, 27.08): fees collected COLLECT−DECREASE
+  /** aggregates from the ledger: fees collected COLLECT−DECREASE
    *  in USD (null when the ledger cannot price it — e.g. the cbBTC leg in ledger v1
-   *  or a backfill without a rate); rebalances = number of DECREASE. costsUsd
-   *  deliberately null until gas is indexed (TASKS-LEDGER §3). */
+   *  or a backfill without a rate); rebalances = number of DECREASE. costsUsd =
+   *  gas from transaction receipts, null until they are fetched. */
   collectedFeesUsd: number | null;
   costsUsd: number | null;
   rebalances: number | null;
-  /** ACCRUED fees, not yet collected (29.08, Rafal's brief: the report did not
-   *  show the earning pace of the product legs). Simulated collect() —
+  /** accrued fees, not yet collected (shows the earning pace of a position
+   *  between collects). Simulated collect() —
    *  sum in USD at the rates of the same cycle; null when RPC refuses. */
   feesUsd: number | null;
-  /** FlatWide product cycle (BATCH 17): 'wide' = idle posture
+  /** FlatWide product cycle: 'wide' = idle posture
    *  (±productIdleWidthPct), 'narrow' = flat narrowing (k×σ);
    *  null = non-product pool (cycle does not apply) */
   posture: 'wide' | 'narrow' | null;
@@ -169,7 +169,7 @@ interface Proposal {
   tokenId: string; // '' for OPEN proposals from the selector
   poolId: string; // '' when the pool is outside BOT_POOLS (selector → note)
   /** REBALANCE (advisor) | OPEN/ROTATE (selector) | EXIT_TREND / HEDGE
-   *  (circuit breaker v1.2) | FLAT_NARROW / FLAT_WIDEN (FlatWide product 28.08:
+   *  (circuit breaker v1.2) | FLAT_NARROW / FLAT_WIDEN (FlatWide product:
    *  narrowing in a confirmed flat / return to wide after the flat) */
   kind?: 'REBALANCE' | 'OPEN' | 'ROTATE' | 'EXIT_TREND' | 'HEDGE' | 'FLAT_NARROW' | 'FLAT_WIDEN';
   /** for kind HEDGE: suggested short size (ETH excess above 50% of value) */
@@ -187,9 +187,9 @@ interface Proposal {
   heldApy7d?: number;
   breakEvenDays?: number;
   note?: string;
-  /** EMERGENCY PROCEDURE (Rafal's decision 27.08, batch #2 28.08): a defence
-   *  proposal on a PRODUCT pool — the hybrid deliberately holds beta, so
-   *  EXIT/HEDGE on a DOWN signal are emergency options ("usually do NOT sign"),
+  /** emergency procedure: a defence proposal on a product pool — the hybrid
+   *  deliberately holds beta, so EXIT/HEDGE on a DOWN signal are emergency
+   *  options ("usually do not sign"),
    *  not recommendations. UI: red frame + reference to EMERGENCY.md. */
   emergency?: boolean;
   status: 'open' | 'dismissed';
@@ -198,10 +198,9 @@ interface Proposal {
 const live: Record<string, PoolLive> = {};
 let positions: WatchedPosition[] = [];
 let proposals: Proposal[] = fs.existsSync(PROPOSALS_PATH) ? JSON.parse(fs.readFileSync(PROPOSALS_PATH, 'utf8')) : [];
-// FIX 11.09 #2: cleanup of duplicates by id from the period before the dedup fix
-// (the same card multiple times in the file; [Dismiss] hit only the first
-// copy, so the others came back after a refresh). ONE copy per id remains;
-// if any of them was dismissed — dismissed.
+// Startup dedup by id: older proposals.json files can hold the same card several
+// times, and [Dismiss] on one copy would let the others reappear after a refresh.
+// One copy per id remains; if any copy was dismissed, the survivor is dismissed.
 {
   const byId = new Map<string, Proposal>();
   for (const p of proposals) {
@@ -215,26 +214,25 @@ let proposals: Proposal[] = fs.existsSync(PROPOSALS_PATH) ? JSON.parse(fs.readFi
   }
 }
 
-// --- tracking REAL positions like in paper (20.08, Rafal's decision):
+// --- tracking real positions the same way as paper:
 // equity + HODL per tokenId, samples every refreshPositions cycle (5 min).
-// HODL = token amounts FROZEN when the bot first notices the position
-// (anchor in .bot/positions-hodl.json — a restart does not reset it);
-// HONESTY NOTE: for positions older than the deployment the anchor = state as of
-// today, not the real opening — the comparison runs "from now".
-// UI charts (redesign of position cards after the paper pattern) read
+// HODL = token amounts frozen when the bot first notices the position
+// (anchor in .bot/positions-hodl.json — a restart does not reset it).
+// Caveat: for positions older than the deployment the anchor is the state at first
+// sighting, not the real opening — the comparison runs "from then".
+// UI position-card charts read
 // /api/positions-history. Sample format like paper-history (price/lo/hi
 // human) — the UI reuses the same components.
 const POS_HIST_PATH = path.join(DIR, 'positions-history.ndjson');
 const POS_HODL_PATH = path.join(DIR, 'positions-hodl.json');
 
-// --- tracking the REAL hedge on GMX (20.08, Rafal's note after the E2E test:
-// the short existed only on app.gmx.io and in the localStorage of one browser —
-// the bot did not see it, so it was absent from charts/report/iPhone and nobody
-// would warn "signal is gone but the short is still hanging"). Read via GMX Reader
+// --- tracking the real hedge on GMX: otherwise the short exists only on
+// app.gmx.io / one browser's localStorage, is absent from charts and reports, and
+// nobody warns "signal is gone but the short is still open". Read via GMX Reader
 // (getAccountPositions) every refreshPositions cycle; state in state.json
 // (field `hedge`), equity sample to positions-history under tokenId
 // 'gmx-eth-short' (UI: card without a range band — a perp has no range).
-// ABI NOTE: struct Position.Props per MAIN gmx-synthetics (10 fields in
+// ABI note: struct Position.Props per gmx-synthetics main (10 fields in
 // numbers, including pendingImpactAmount int256) — on a GMX upgrade
 // verify the shape, a wrong decode shifts the fields; the sanity check below
 // (market/scale) catches the mismatch and logs instead of reporting garbage.
@@ -306,8 +304,7 @@ const saveState = () => {
     JSON.stringify(
       // flatParams: live flat-detector parameters for the UI (countdown to
       // confirmation, thresholds in descriptions) — single truth from bot/config.ts,
-      // the UI does not hardcode 12h/2%/5% (BATCH 17; values may change
-      // by the review decision of 1.09)
+      // the UI does not hardcode 12h/2%/5%
       { updatedAt: new Date().toISOString(), mode: 'OBSERVE', watch: WATCH_ADDRESS, flatParams: FLAT, tranche: trancheLive, pools: Object.values(live), positions, hedge: hedgeLive, gasUsd: gasUsdLive, proposals: proposals.filter((p) => p.status === 'open') },
       bigintReplacer, 2
     )
@@ -315,9 +312,9 @@ const saveState = () => {
 };
 const saveProposals = () => fs.writeFileSync(PROPOSALS_PATH, JSON.stringify(proposals, bigintReplacer, 2));
 
-// Commands from the UI (the server only queues — dual-writer fix 25.08: previously
-// the server wrote to proposals.json while the observer overwrote it from memory and
-// dismissals were lost). Consumption: read → delete the file → apply.
+// Commands from the UI. The server only queues them: the observer is the single
+// writer of proposals.json (if the server wrote it too, the observer would overwrite
+// it from memory and dismissals would be lost). Consumption: read → delete the file → apply.
 const COMMANDS_PATH = path.join(DIR, 'proposal-commands.ndjson');
 function applyProposalCommands() {
   try {
@@ -330,7 +327,7 @@ function applyProposalCommands() {
       try {
         const c = JSON.parse(line);
         if (c.action === 'dismiss') {
-          // FIX 11.09 #2: dismiss ALL copies with this id (not only the first one)
+          // dismiss all copies with this id, not only the first one
           let n = 0;
           for (const p of proposals) if (p.id === c.id && p.status === 'open') { p.status = 'dismissed'; n++; }
           if (n) {
@@ -346,9 +343,8 @@ function applyProposalCommands() {
   }
 }
 
-// TTL of selector proposals (added 17.08 after the OBSERVE analysis): OPEN/ROTATE
-// rely on the daily ranking — after 48h the ranking is stale and a hanging
-// proposal is misleading (we saw entries from 10.08 still alive on 17.08).
+// TTL of selector proposals: OPEN/ROTATE rely on the daily ranking — after 48h
+// the ranking is stale and a lingering proposal is misleading.
 // REBALANCE/EXIT_TREND do not expire (they are based on position state, not the ranking).
 const PROPOSAL_TTL_MS = 48 * 3600 * 1000;
 function expireStaleProposals() {
@@ -368,11 +364,11 @@ function expireStaleProposals() {
   }
 }
 
-// --- Telegram: 15 min BUFFER (Rafal's decision 18.08) ---
-// Messages do NOT go out immediately: they collect in a queue and every 15 min go
-// as ONE aggregated message. Reasons: (1) anti-spam — a series of events from one
+// --- Telegram: 15 min buffer ---
+// Messages do not go out immediately: they collect in a queue and every 15 min go
+// as one aggregated message. Reasons: (1) anti-spam — a series of events from one
 // cycle is a single message; (2) Telegram limit ~1 msg/s per chat — a burst
-// >1 got 429 without retry and was lost (18.08: of 5 paper STARTs, 1 arrived).
+// gets 429 and, without retry, messages are lost.
 // Cost: delay up to 15 min — acceptable in OBSERVE mode (a human
 // approves in Rabby anyway, nothing executes by itself).
 const tgQueue: string[] = [];
@@ -417,7 +413,7 @@ async function flushTelegram() {
 
 // --- price orientation per pool ---
 // For quote:'USD' pools the ethUsd field = USD per ETH (as before). For quote:'WETH'
-// (e.g. cbBTC/WETH) ethUsd = USD per BASE TOKEN (non-WETH), computed as
+// (e.g. cbBTC/WETH) ethUsd = USD per base token (non-WETH), computed as
 // (price of base in WETH) × (ETH/USD from the reference pool usdRefPoolId).
 /** USD per WETH for a given pool (1 for the reference itself makes no sense — it is the rate) */
 const refEthUsd = (p: BotPool): number | null => {
@@ -434,7 +430,7 @@ const humanToBaseUsd = (p: BotPool, human: number): number | null => {
 };
 
 // --- trend circuit breaker (ALGORITHM.md v1.1 §4) ---
-// EMA of the pair's RELATIVE log-price (HL 7d), DOWN signal when gap < −5%.
+// EMA of the pair's relative log-price (HL 7d), DOWN signal when gap < −5%.
 // Re-entry: 'aboveEma' (default) — gap > 0; 'half' (cbBTC) — gap > −2.5%.
 // State persisted (.bot/trend-state.json) — a service restart does not reset the EMA.
 const TREND_STATE_PATH = path.join(DIR, 'trend-state.json');
@@ -447,9 +443,8 @@ const saveTrend = () => {
   fs.writeFileSync(TREND_STATE_PATH, JSON.stringify(trend, null, 2));
   lastTrendSaveMs = Date.now();
 };
-// Periodic save (15 min throttle) — without it the EMA lived only in memory
-// (save exclusively on seed/flip), so every service restart rolled the
-// anchor back to the last flip (detected 19.08: lastTs=12.08 despite 4 restarts).
+// Periodic save (15 min throttle) — saving only on seed/flip would keep the EMA
+// in memory, so every service restart would roll the anchor back to the last flip.
 const TREND_SAVE_MS = 15 * 60 * 1000;
 const TREND_TAU_MS = (TREND.hlDays * 86400 * 1000) / Math.LN2;
 
@@ -488,16 +483,15 @@ function updateTrend(p: BotPool, price: number, nowMs: number): number {
 }
 
 /** defence proposal for each of our positions in a pool with a DOWN signal.
- *  NON-product pools: as before — EXIT_TREND or HEDGE-excess per
- *  pool.trendAction (ALGORITHM v1.2 §4).
- *  PRODUCT pools (productIdleWidthPct — FlatWide hybrid): Rafal's decision
- *  27.08 evening — we do NOT mute the signal, but rebrand it as an
- *  EMERGENCY PROCEDURE: TWO proposals side by side, both emergency:true:
- *  (1) delta-neutral HEDGE (short of the FULL exposure of the volatile leg, LP
- *  stays — reversible), (2) EXIT_TREND ("the data says: usually do NOT
- *  sign" — backtests: exiting on a trend makes things worse on average). Order,
+ *  Non-product pools: EXIT_TREND or HEDGE-excess per pool.trendAction
+ *  (ALGORITHM v1.2 §4).
+ *  Product pools (productIdleWidthPct — FlatWide hybrid): the signal is not
+ *  muted but framed as an emergency procedure: two proposals side by side, both
+ *  emergency:true: (1) delta-neutral HEDGE (short of the full exposure of the
+ *  volatile leg, LP stays — reversible), (2) EXIT_TREND ("the data says: usually
+ *  do not sign" — backtests: exiting on a trend makes things worse on average). Order,
  *  criteria and costs: EMERGENCY.md. Nuance: the DOWN signal on cbBTC/WETH
- *  measures the RELATIVE price — the USD crash sensor for BOTH legs is the signal
+ *  measures the relative price — the USD crash sensor for both legs is the signal
  *  on WETH/USDC. */
 function proposeExitTrend(pool: BotPool, gap: number) {
   const held = positions.filter((x) => x.poolId === pool.id);
@@ -514,14 +508,14 @@ function proposeExitTrend(pool: BotPool, gap: number) {
     for (const kind of kinds) {
       // dedup PER KIND (the product emits two parallel options)
       const key = `trend-${kind === 'HEDGE' ? 'hedge-' : ''}${pool.id}-${pos.tokenId}-${day}`;
-      // FIX 11.09: a dismissed card does NOT come back on the same day — dedup also by id
-      // (so far only by status==='open', so every cycle after [Dismiss] created
-      // it anew with THE SAME id and sent a Telegram; Rafal's observation 11.09)
+      // dedup also by id, so a dismissed card does not come back the same day
+      // (checking only status==='open' would recreate it every cycle after
+      // [Dismiss] with the same id and send another Telegram)
       if (proposals.some((x) => x.id === key || (x.kind === kind && x.tokenId === pos.tokenId && x.status === 'open'))) continue;
       let prop: Proposal;
       if (kind === 'HEDGE') {
         const isRelative = (pool.quote ?? 'USD') === 'WETH'; // cbBTC/WETH: relative signal
-        // sizing: product = delta-neutral (FULL exposure of the volatile leg);
+        // sizing: product = delta-neutral (full exposure of the volatile leg);
         // non-product = excess (ETH surplus above 50% of value, v1.2)
         const P = live[pool.id]?.ethUsd ?? 0; // USD per the pool's BASE token
         let sizeTok: number; let tokSym: string; let market: string;
@@ -530,8 +524,8 @@ function proposeExitTrend(pool: BotPool, gap: number) {
           sizeTok = isProduct ? ethAmt : P > 0 ? Math.max(0, ethAmt - pos.valueUsd / 2 / P) : 0;
           tokSym = 'ETH'; market = 'ETH/USD';
         } else {
-          // signal = base token (cbBTC) weakening RELATIVE to WETH → neutralisation
-          // by shorting the BASE leg on the BTC/USD market (manually on app.gmx.io —
+          // signal = base token (cbBTC) weakening relative to WETH → neutralisation
+          // by shorting the base leg on the BTC/USD market (manually on app.gmx.io —
           // the 1-signature builder handles only ETH/USD today)
           sizeTok = pool.ethIsToken0 ? pos.amount1 : pos.amount0; // cbBTC leg
           tokSym = pool.ethIsToken0 ? pool.sym1 : pool.sym0; market = 'BTC/USD';
@@ -578,14 +572,14 @@ function proposeExitTrend(pool: BotPool, gap: number) {
   }
 }
 
-// --- FLAT_ENTER / FLAT_EXIT (FlatWide product — Rafal's decision 27-28.08) ---
+// --- FLAT_ENTER / FLAT_EXIT (FlatWide product) ---
 // State machine per product pool: |gap|<enterGap uninterrupted for
-// confirmH hours → flat CONFIRMED → proposal to narrow to k×σ
+// confirmH hours → flat confirmed → proposal to narrow to k×σ
 // (FLAT_NARROW). End of flat: |gap|>exitGap → proposal to return to
 // wide ±productIdleWidthPct (FLAT_WIDEN, 24/7 alarm). The middle zone
-// (enter..exit) does NOT end a confirmed flat (hysteresis as in
+// (enter..exit) does not end a confirmed flat (hysteresis as in
 // backtest/flatwindows.ts). State persisted — a restart does not reset the
-// confirm clock (the same class of fix as trend-state 19.08).
+// confirm clock (same reasoning as trend-state).
 const FLAT_STATE_PATH = path.join(DIR, 'flat-state.json');
 interface FlatPoolState { flatSince: number | null; confirmed: boolean }
 const flat: Record<string, FlatPoolState> = fs.existsSync(FLAT_STATE_PATH)
@@ -618,7 +612,7 @@ function updateFlat(p: BotPool, gapFrac: number, nowMs: number) {
   if (!p.productIdleWidthPct) return; // product pools only
   const vol = live[p.id]?.stats?.volDaily;
   if (vol != null && vol < FLAT.minVolDaily) {
-    // LST/stable guard (wstETH/WETH lesson 27.08): with dead volatility
+    // LST/stable guard (e.g. wstETH/WETH): with dead volatility
     // "flat" is the base state, not a signal — detector disabled, state reset
     if (flat[p.id]?.flatSince != null || flat[p.id]?.confirmed) {
       flat[p.id] = { flatSince: null, confirmed: false };
@@ -666,11 +660,11 @@ function proposeFlatNarrow(pool: BotPool, pos: WatchedPosition) {
   const lv = live[pool.id];
   if (!st?.confirmed || !lv?.stats) return;
   if (proposals.some((x) => x.kind === 'FLAT_NARROW' && x.tokenId === pos.tokenId && x.status === 'open')) return;
-  // NARROWING WIDTH (change 29.08, Rafal's note): fixed product width
-  // instead of k×σ×√7 from advisor v1.2. Reason: the 7-day horizon
+  // Narrowing width: fixed product width instead of k×σ×√7 from advisor
+  // v1.2. Reason: the 7-day horizon
   // comes from the strategy "the range should survive a week without a rebalance",
   // while in the hybrid the position is protected anyway by FLAT_WIDEN at |gap|>exitGap.
-  // With k×σ (today ±16%) the exit signal fired after 32% of the way to the edge
+  // With k×σ (e.g. ±16%) the exit signal fires after 32% of the way to the edge
   // of the band — two thirds of the liquidity would sit where the price never
   // gets. The k×σ fallback remains for pools without a configured width.
   const sug = pool.productNarrowWidthPct
@@ -784,7 +778,7 @@ async function refreshStats() {
       const stats = computeStats(swaps, p.chainId, p.d0, p.d1, p.feeBps / 1_000_000, TICK_SPACING[p.feeBps]);
       if (live[p.id] && stats) {
         live[p.id].stats = stats;
-        // PRODUCT 27.08 (FlatWide hybrid): a product pool gets a FIXED
+        // FlatWide hybrid: a product pool gets a fixed
         // width ±N% (idle posture); otherwise k per pool (ALGORITHM v1.1)
         live[p.id].suggestion = p.productIdleWidthPct
           ? suggestFixedRange(stats, p.feeBps as any, p.d0, p.d1, p.productIdleWidthPct)
@@ -822,9 +816,9 @@ async function refreshStats() {
         const p = BOT_POOLS.find((b) => b.id === poolId);
         const lv = p ? live[poolId] : undefined;
         if (!p || !lv) return null;
-        // tick from slot0 (60 s, refreshPrices) SEPARATE from stats: fix 25.08 —
-        // on an RPC failure stats froze and paper saw "out of range"
-        // from the old lastTick despite a fresh in-range price
+        // tick from slot0 (60 s, refreshPrices), separate from stats: on an RPC
+        // failure stats freeze, and paper would see "out of range" from the
+        // old lastTick despite a fresh in-range price
         return { stats: lv.stats, tick: typeof lv.tick === 'number' ? lv.tick : null, prices: legPrices(p), trendDown: lv.trendDown ?? false };
       },
     });
@@ -834,14 +828,14 @@ async function refreshStats() {
   saveState();
 }
 
-// --- GAS COSTS (29.08, Rafal's decision: gas is to be a cost of the POSITION, not
-// merely an implied part of PnL). Source: transaction receipts from the ledger —
-// `gasUsed × effectiveGasPrice`, exact to the wei, so the "Costs" column
-// stops being empty. Cache in .bot/tx-costs.json: we fetch a receipt ONCE
+// --- gas costs: gas is accounted as an explicit cost of the position, not
+// merely an implied part of PnL. Source: transaction receipts from the ledger —
+// `gasUsed × effectiveGasPrice`, exact to the wei. Cache in
+// .bot/tx-costs.json: we fetch a receipt once
 // per transaction (they are immutable), so the backfill does not repeat every cycle.
 // Pricing: we keep gas in ETH and convert to USD only on read —
 // the rate at the moment of the event would need an extra block query,
-// and on Base gas is cents (on mainnet the old dust is history anyway).
+// and on Base gas is cents.
 const TX_COSTS_PATH = path.join(DIR, 'tx-costs.json');
 interface TxCost { chain: string; gasEth: number; block: number }
 const txCosts: Record<string, TxCost> = fs.existsSync(TX_COSTS_PATH)
@@ -854,11 +848,10 @@ const saveTxCosts = () => fs.writeFileSync(TX_COSTS_PATH, JSON.stringify(txCosts
 async function refreshTxCosts(maxPerCycle = 25) {
   let added = 0;
   let failed = 0;
-  // ORDER MATTERS (fix 29.08 after the CC-Win report: `costsUsd`
-  // null despite a working backfill): the ledger is sorted from the
-  // oldest, and the oldest is mainnet dust from ~519 days ago —
-  // at 25 tx per cycle our two legs would get their receipts only
-  // after many cycles. Transactions of LIVE positions therefore go first.
+  // Order matters: the ledger is sorted oldest-first and starts with old
+  // mainnet dust — at 25 tx per cycle the live positions would get their
+  // receipts (and a non-null costsUsd) only after many cycles.
+  // Transactions of live positions therefore go first.
   const liveIds = new Set(positions.map((p) => p.tokenId));
   const all = readLedger();
   const queue = liveIds.size
@@ -891,32 +884,32 @@ const nativeEthUsd = (): number | null =>
     .map((p) => live[p.id]?.ethUsd)
     .find((v): v is number => typeof v === 'number' && v > 0) ?? null;
 
-// --- TRANCHE BALANCE (29.08). The cockpit panel measures the quality of the STRATEGY (PnL from
-// anchors, vs HODL) and is to stay that way — comparable with the walk-forward. This
-// section measures something else: how much of the DEPOSITED USDC really exists today.
+// --- tranche balance. The cockpit panel measures the quality of the strategy (PnL from
+// anchors, vs HODL) and stays comparable with the walk-forward. This section
+// measures something else: how much of the deposited USDC really exists today.
 // The difference between them is the buffer in the wallet (outside positions) + one-off
-// entry costs (swaps, slippage, mint gas) — until 29.08 nobody
-// tracked this, hence the impression "the math does not add up".
+// entry costs (swaps, slippage, mint gas); without it the two numbers look
+// inconsistent.
 interface TrancheState {
   label: string; depositedUsd: number; startedAt: string;
   lpUsd: number; walletUsd: number | null; totalUsd: number | null;
   diffUsd: number | null; diffPct: number | null;
   marketPnlUsd: number | null; residualUsd: number | null; gasUsd: number | null;
-  /** breakdown of the "residual" (29.08, after the first measurement): entry costs are
-   *  FIXED, the buffer's beta floats with price — without this split the residual would
+  /** breakdown of the "residual": entry costs are
+   *  fixed, the buffer's beta floats with price — without this split the residual would
    *  move with the market and stop being a test of accounting correctness. */
   entryCostUsd: number | null; bufferBetaUsd: number | null;
-  /** wallet composition per token — so it is possible to AUDIT what the bot counted
-   *  (the first measurement gave $226 instead of the estimated $150; without the breakdown
-   *  you cannot tell whether it is the tranche buffer or old ETH for gas from outside it) */
+  /** wallet composition per token — makes it possible to audit what the bot counted
+   *  (without the breakdown you cannot tell the tranche buffer from unrelated ETH
+   *  held for gas) */
   walletParts: Array<{ sym: string; amount: number; usd: number }> | null;
   updatedAt: string;
 }
 let trancheLive: TrancheState | null = null;
 // buffer anchor: wallet amounts do not change without swaps, so the
 // value from the first successful read lets us separate the buffer's beta from
-// the one-off entry costs. HONESTY: the anchor is created TODAY, so
-// the buffer's beta from 27–29.08 stays on the entryCostUsd side.
+// the one-off entry costs. Caveat: the anchor is created at the first read, so
+// any buffer beta before that moment stays on the entryCostUsd side.
 const TRANCHE_ANCHOR_PATH = path.join(DIR, 'tranche-anchor.json');
 interface TrancheAnchor { anchoredAt: string; walletUsd: number }
 let trancheAnchor: TrancheAnchor | null = fs.existsSync(TRANCHE_ANCHOR_PATH)
@@ -973,7 +966,7 @@ async function walletValueUsd(): Promise<{ usd: number; parts: Array<{ sym: stri
 }
 
 // --- positions loop (5min) ---
-/** Ledger aggregates per chain:tokenId for LIVE positions (BATCH 14).
+/** Ledger aggregates per chain:tokenId for live positions.
  *  fees = COLLECT − DECREASE (both sides null-guarded: missing metadata
  *  or usd:null in any entry → null, we do not guess).
  *  rebalances = number of DECREASE events (narrowing/rebalance/partial close). */
@@ -1039,7 +1032,7 @@ async function refreshPositions() {
         if (L === 0n) continue;
         // matching by token ADDRESSES when the pool has t0/t1 in the configuration
         // (unambiguous with multiple pairs on the same tier — e.g. cbBTC/WETH
-        // 0.05% and USDC/WETH 0.05% on Base); fallback: chain+fee as before.
+        // 0.05% and USDC/WETH 0.05% on Base); fallback: chain+fee.
         const eq = (a: string, b?: string) => !!b && a.toLowerCase() === b.toLowerCase();
         const match =
           BOT_POOLS.find((p) => p.chainId === chainId && p.feeBps === Number(fee) && eq(t0, p.t0) && eq(t1, p.t1)) ??
@@ -1067,7 +1060,7 @@ async function refreshPositions() {
           const a = assessPosition(
             { tickLower: Number(lo), tickUpper: Number(hi), valueUsd },
             lv.stats, chainId, match.feeBps as any, match.feeBps / 1_000_000, match.d0, match.d1,
-            ADVISOR_PARAMS, gasUsdFor(match.chain) // live gas (26.08) instead of the $8 constant
+            ADVISOR_PARAMS, gasUsdFor(match.chain) // live gas instead of the static constant
           );
           advice = a.action;
           payback = a.paybackDays;
@@ -1099,10 +1092,9 @@ async function refreshPositions() {
           advice, paybackDays: payback,
           collectedFeesUsd: la?.feesUsd ?? null,
           feesUsd,
-          // COSTS = gas of this position's transactions (mint/increase/narrowing/
-          // collect) from receipts. Entry swap costs deliberately do NOT go here
-          // (Rafal's decision 29.08) — they belong to no leg,
-          // the tranche balance counts them.
+          // costs = gas of this position's transactions (mint/increase/narrowing/
+          // collect) from receipts. Entry swap costs deliberately do not go here —
+          // they belong to no leg; the tranche balance counts them.
           costsUsd: la?.gasEth != null && ethUsdForGas ? +(la.gasEth * ethUsdForGas).toFixed(2) : null,
           rebalances: la ? la.rebalances : null,
           posture: match.productIdleWidthPct
@@ -1141,11 +1133,11 @@ async function refreshPositions() {
   }
   positions = found;
 
-  // TRANCHE BALANCE (29.08) — a second, independent measure: how much of the deposited USDC
+  // Tranche balance — a second, independent measure: how much of the deposited USDC
   // really exists today. Breakdown: difference = market move on the LP (PnL from anchors)
-  // + RESIDUAL, where residual ≈ one-off entry costs (swaps/slippage/mint
+  // + residual, where residual ≈ one-off entry costs (swaps/slippage/mint
   // gas) plus the buffer's beta in the wallet. The residual should be roughly
-  // CONSTANT — its drift over time means something in the accounting is diverging.
+  // constant — its drift over time means something in the accounting is diverging.
   try {
     const prodPositions = found.filter((p) => p.posture !== null);
     const lpUsd = +prodPositions.reduce((s, p) => s + p.valueUsd, 0).toFixed(2);
@@ -1157,20 +1149,18 @@ async function refreshPositions() {
       fs.writeFileSync(TRANCHE_ANCHOR_PATH, JSON.stringify(trancheAnchor, null, 2));
       log(`tranche: buffer anchor saved ($${walletUsd.toFixed(2)})`);
     }
-    // BEWARE of the trap (caught while writing): an anchor priced at TODAY'S
-    // prices gives "vs HODL" (~$0), not the market move. Market move = value
-    // today − value at the MOMENT of anchoring, i.e. hodlUsd of the FIRST
+    // Trap: an anchor priced at today's prices gives "vs HODL" (~$0), not the
+    // market move. Market move = value today − value at the moment of
+    // anchoring, i.e. hodlUsd of the first
     // positions-history sample (the same convention as "PnL from anchor" in the report/UI).
     const firstAnchorUsd = new Map<string, number>();
-    // FIX 01.09 (Fable, finding from the morning report): the rebalance
-    // #5887690→#5908083 made "entry costs (fixed)" jump
-    // −$8.58→−$76.02. Mechanism: marketPnl counted ONLY open positions,
-    // so the realised market move of the CLOSED position (−$66 of beta of the old
-    // cbBTC leg from 27–31.08) dropped out of the "market move" and landed in
-    // the residual "entry costs". Fix: for closed product positions
-    // we add (last sample − first anchor) from
+    // Closed product positions must be included too: counting only open
+    // positions would drop the realised market move of a closed leg (e.g.
+    // after a rebalance into a new tokenId) out of the "market move" and into
+    // the residual "entry costs", making that supposedly fixed number jump.
+    // So for closed product positions we add (last sample − first anchor) from
     // positions-history. The hedge (poolId gmx-*) is filtered out by the set of
-    // product pools. The round's swap/slippage cost STILL stays in
+    // product pools. The rebalance's swap/slippage cost still stays in
     // entry costs (that is a real cost, not a market move).
     const lastSample = new Map<string, { poolId: string; valueUsd: number }>();
     try {
@@ -1218,8 +1208,8 @@ async function refreshPositions() {
     log(`tranche balance: ${String(e).slice(0, 140)}`);
   }
 
-  // PRODUCT 27.08 (Rafal's ruling after entering #5886957): the OPEN proposal
-  // disappears automatically when we ALREADY have a position in this pool —
+  // An OPEN proposal is closed automatically once we already hold a position
+  // in this pool —
   // a hanging "open" after entry is an invitation to a double entry.
   // Another position in the same pool is proposed by the selector (a new proposal
   // the next day, if justified) or opened manually.
@@ -1233,10 +1223,9 @@ async function refreshPositions() {
         autoClosed++;
         log(`proposal ${pr.id}: closed automatically — position in ${pr.poolId} already open`);
       }
-      // cleanup after v1.2 (29.08): an advisor REBALANCE on a PRODUCT pool
-      // has no right to hang — width is governed by the FLAT_* cycle. The guard in
-      // maybePropose alone blocks only NEW ones; those saved in proposals.json before
-      // the fix would survive a restart (the incident class of 27.08).
+      // An advisor REBALANCE on a product pool must not linger — width is
+      // governed by the FLAT_* cycle. The guard in maybePropose blocks only new
+      // ones; ones already persisted in proposals.json would survive a restart.
       if (pr.status === 'open' && pr.kind === 'REBALANCE' && pr.poolId &&
           BOT_POOLS.find((b) => b.id === pr.poolId)?.productIdleWidthPct) {
         pr.status = 'dismissed';
@@ -1309,7 +1298,7 @@ async function refreshPositions() {
             hedgeWasOpen = true;
             void telegram(`🛡 HOMOS: detected ${p.flags.isLong ? 'LONG' : 'SHORT'} on GMX ETH/USD — $${sizeUsd.toFixed(0)} @ $${entry.toFixed(0)}, collateral $${collateralUsd.toFixed(0)} (on-chain read, observing every cycle)`);
           }
-          // orphan warning: the short is hanging while NO pool has a DOWN signal
+          // orphan warning: the short is hanging while no pool has a DOWN signal
           const anyDown = Object.values(trend).some((t) => t.down);
           if (!p.flags.isLong && !anyDown && Math.random() < 0.017) {
             // ~once a day at a 5 min cycle (288 cycles * 0.017 ≈ 5; rare enough, zero extra state)
@@ -1331,7 +1320,7 @@ async function refreshPositions() {
     log(`gmx hedge read failed: ${String(e).slice(0, 140)}`);
   }
 
-  // a position opened/detected DURING an ongoing DOWN signal also gets
+  // a position opened/detected during an ongoing DOWN signal also gets
   // a proposal (transition-only would miss it; dedup in proposeExitTrend)
   for (const p of BOT_POOLS) {
     if (trend[p.id]?.down && positions.some((x) => x.poolId === p.id)) {
@@ -1370,12 +1359,10 @@ function tickToUsd(pool: BotPool, t: number): number {
 }
 
 function maybePropose(tokenId: string, pool: BotPool, a: ReturnType<typeof assessPosition>, valueUsd: number) {
-  // PRODUCT POOLS DO NOT GET AN ADVISOR REBALANCE (fix 29.08, found
-  // while reviewing the UI section). The FlatWide hybrid has ONE body deciding
-  // on width: the FLAT_NARROW/FLAT_WIDEN cycle (|gap| 2%/5% + confirm).
+  // Product pools do not get an advisor REBALANCE. The FlatWide hybrid has one
+  // place deciding on width: the FLAT_NARROW/FLAT_WIDEN cycle (|gap| 2%/5% + confirm).
   // The k×σ advisor is v1.2 logic — without this exception the bot could issue
-  // a narrowing proposal OUTSIDE the cycle, i.e. exactly the incident class
-  // of 27.08 (an old narrow ±16% proposal looking like a normal one).
+  // a narrowing proposal outside the cycle that looks like a normal one.
   // The `advice` from assessPosition itself stays in state (telemetry/diagnostics),
   // but no longer turns into a proposal to sign.
   if (pool.productIdleWidthPct) return;
@@ -1417,14 +1404,14 @@ function runSelector() {
         const [usdLo, usdHi] = [toUsd(lv.suggestion.tickLower), toUsd(lv.suggestion.tickUpper)].sort((x, y) => x - y);
         return { tickLower: lv.suggestion.tickLower, tickUpper: lv.suggestion.tickUpper, usdLo, usdHi };
       },
-      getGasUsd: (chain: string) => gasUsdLive[chain] ?? null, // live gas (26.08)
+      getGasUsd: (chain: string) => gasUsdLive[chain] ?? null, // live gas
     });
   } catch (e) {
     log(`selector crashed: ${String(e).slice(0, 160)}`);
   }
 }
 
-// --- transaction ledger (TASKS-LEDGER.md; ndjson in .bot/, resumable backfill) ---
+// --- transaction ledger (ndjson in .bot/, resumable backfill) ---
 let ledgerBusy = false;
 async function runLedger() {
   if (ledgerBusy) return; // backfill may stretch beyond a cycle — no overlapping

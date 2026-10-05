@@ -1,11 +1,11 @@
 /**
  * compare-caches.ts — 1:1 comparison of two swap caches of the same pool
- * (e.g. RPC reference vs HyperSync test). Section E of RESEARCH-QUEUE.
+ * (e.g. RPC reference vs HyperSync test).
  *
  *   npx tsx scripts/compare-caches.ts base-weth-usdc-030 base-weth-usdc-030-hstest
  *
  * The time windows of the two fetches differ (startBlock computed from "now"), so
- * we compare the INTERSECTION of the block ranges:
+ * we compare the intersection of the block ranges:
  *   1. the number of swaps in the intersection must be identical,
  *   2. per block: identical multiset of lines (we sort lines within a block —
  *      log order within a block may depend on the source, the data does not),

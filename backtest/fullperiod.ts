@@ -1,14 +1,14 @@
 /**
  * fullperiod.ts — full-period simulation "I put in $X once and hold the
- * strategy for the WHOLE cache period" (Rafal's question 26.08: "2 years ago
- * I put in $5k — what would have happened to it?").
+ * strategy for the whole cache period" ("2 years ago I put in $5k — what
+ * would have happened to it?").
  *
- * This is a COMPLEMENTARY view to walkforward.ts (the gate): here there is one
+ * This is a complementary view to walkforward.ts (the gate): here there is one
  * entry point (start of the series) and compounding until today — i.e. real
  * dollar amounts; walkforward evaluates ~46 different entry moments in 30d
  * windows and answers the question of robustness to timing. A full-period
  * result can flatter or punish a strategy through the mere choice of start
- * date — that is why the gate stays on windows; this table serves INTUITION
+ * date — that is why the gate stays on windows; this table serves intuition
  * and the conversation about amounts.
  *
  * Usage: [SIGMA_MODE=grid15] npx tsx backtest/fullperiod.ts <poolId> [startUsd=5000]
@@ -33,7 +33,7 @@ if (!loaded) {
 }
 let { swaps } = loaded;
 const { spec } = loaded;
-// FP_DAYS=N (27.08, Rafal's question about "the last 3 months"): trim the
+// FP_DAYS=N: trim the
 // series to the last N days of the cache — entry in the middle of history
 // instead of at the beginning.
 const fpDays = Number(process.env.FP_DAYS ?? 0);
@@ -50,7 +50,7 @@ const days = (t1 - t0) / 86400;
 const p0 = ethUsd(swaps[0].sqrtP, spec);
 const p1 = ethUsd(swaps[swaps.length - 1].sqrtP, spec);
 
-// sets: default = same as WF_SET=recal; FP_SET=final = final round 26.08
+// sets: default = same as WF_SET=recal; FP_SET=final = final candidate round
 // (wide-passive + flatOnly-HODL) — keep in sync with walkforward.ts by hand
 const trendBase = { k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, trendHLDays: 7, trendThresh: 0.05 } as const;
 const v11 = { ...trendBase, mode: 'exit' as const, reentryAboveEma: true };
@@ -92,14 +92,13 @@ const hybridSet: Strategy[] = [
   flatOnlyLP({ ...flatBase, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600, idle: 'passive', passiveWidth: 0.4 }),
   flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600, idle: 'passive', passiveWidth: 0.5 }),
 ];
-// FP_SET=product (29.08, Rafal's question "I enter with $2500 two years ago —
-// how much comes out after 720 days?"): exactly the product we play live,
-// i.e. the FlatWide hybrid with a FIXED width of the narrow leg (±5% = exit
-// threshold), not kxσx√7 from the v1.2 advisor. The ±4/±5/±8% variants show
-// the cost and gain of changing that single parameter; `kxσ` = the product
-// from before 29.08 (the one that passed walkforward — hence it is in the set:
-// we want to see whether the width change does not break the FULL-PERIOD
-// result, not only the episode EV). Both idle widths (±40 cbBTC / ±50
+// FP_SET=product ("I enter with $2500 two years ago — how much comes out
+// after 720 days?"): exactly the product played live, i.e. the FlatWide hybrid
+// with a fixed width of the narrow leg (±5% = exit threshold), not kxσx√7 from
+// the v1.2 advisor. The ±4/±5/±8% variants show the cost and gain of changing
+// that single parameter; `kxσ` = the earlier variant that passed walkforward —
+// it is in the set to check that the width change does not break the
+// full-period result, not only the episode EV. Both idle widths (±40 cbBTC / ±50
 // base-030) in one set — read the row matching the pool.
 const productBase = { horizonDays: 7, trendHLDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, k: 2, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 12 * 3600, idle: 'passive' as const };
 const productSet: Strategy[] = [
@@ -113,24 +112,23 @@ const productSet: Strategy[] = [
   flatOnlyLP({ ...productBase, passiveWidth: 0.5, narrowWidth: 0.04 }),
   flatOnlyLP({ ...productBase, passiveWidth: 0.4, narrowWidth: 0.08 }),
   flatOnlyLP({ ...productBase, passiveWidth: 0.5, narrowWidth: 0.08 }),
-  flatOnlyLP({ ...productBase, passiveWidth: 0.4 }), // kxσx√7 — the product from before 29.08
+  flatOnlyLP({ ...productBase, passiveWidth: 0.4 }), // kxσx√7 — the earlier, walkforward-validated variant
   flatOnlyLP({ ...productBase, passiveWidth: 0.5 }),
-  // 29.08, Rafal's idea: re-posturing WITHOUT a swap (range shifted to match
+  // re-posturing without a swap (range shifted to match
   // the portfolio composition, up to and including one-sided) — the same
   // product, a different way of executing the transition
   flatOnlyLP({ ...productBase, passiveWidth: 0.4, narrowWidth: 0.05, recenter: 'noswap' }),
   flatOnlyLP({ ...productBase, passiveWidth: 0.5, narrowWidth: 0.05, recenter: 'noswap' }),
 ];
-// FP_SET=shape (02.09, two ideas from the brief — the SHAPE of the wide leg,
-// not its steering):
-//  (3) SKEWED RANGE: rangeAround is symmetric in LOG-price, so the product's
+// FP_SET=shape (two ideas about the shape of the wide leg, not its steering):
+//  (3) skewed range: rangeAround is symmetric in log-price, so the product's
 //      "±50%" = −33%/+50% in price — less room on the downside, and the
-//      downside is what hurts (MC 01.09). Variants: truly symmetric −50/+50,
+//      downside is what hurts (per Monte Carlo). Variants: truly symmetric −50/+50,
 //      skewed down −60/+35, −65/+30, −70/+25; for cbBTC (±40):
 //      −40/+40, −50/+30, −55/+25. Read the row matching the pool.
-//  (4) BARBELL: two static positions (½ narrow ±15/±20%, ½ wide) — the engine
+//  (4) barbell: two static positions (½ narrow ±15/±20%, ½ wide) — the engine
 //      holds one position, but the result is linear in capital, so barbell =
-//      the AVERAGE of two rows: e.g. ½·[Wewn. ±15% recentr. gdy poza −33/+50]
+//      the average of two rows: e.g. ½·[Wewn. ±15% recentr. gdy poza −33/+50]
 //      + ½·[Pasywny ±50%]. The "never touch" version = ½·[Pasywny ±15%]
 //      + ½·[Pasywny ±50%]. For comparison: all capital in [Pasywny ±50%].
 // Gate as always: fullperiod is an illustration, WF_SET=shape decides.

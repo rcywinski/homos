@@ -1,21 +1,26 @@
 # Pair and pool analysis — LP portfolio diversification
 
-> Date: 2026-08-10 · Data: app.uniswap.org/explore (live snapshot, block ~0x188820d)
-> Status: entry to Phase 1 — candidates for backtesting, NOT investment decisions.
+> **Historical snapshot (10 Aug 2026).** This is the pre-backtest candidate list. The
+> portfolio that was actually adopted, and the evidence behind it, is in
+> [`ALGORITHM.md`](ALGORITHM.md) §6; the live tranche ran on two Base pools (WETH/USDC 0.3 %
+> and cbBTC/WETH 0.05 %).
+>
+> Data: app.uniswap.org/explore (live snapshot, block ~0x188820d)
+> Status at the time: entry to Phase 1 — candidates for backtesting, not investment decisions.
 > Methodological note: Uniswap's "Pool APR" = fees/TVL of the whole pool, annualised
 > on a 1D basis — this is the average for a passive full-range position. A concentrated
 > position can earn a multiple of that APR, but a 1-day snapshot can be misleading.
 > The persistence of these APRs will only be verified by a backtest on 30–90 days of data.
 
-## 1. Key finding: your current pool is a weak choice
+## 1. Key finding: the original pool is a weak choice
 
-Both of your positions sit in **mainnet ETH/USDC v3 0.3%** — a pool that no longer even
+Both existing positions sat in **mainnet ETH/USDC v3 0.3%** — a pool that no longer even
 makes the top 20 by TVL on Ethereum. Liquidity and volume have flowed to the 0.05% tier
 and to v4. Comparison (same pair, same moment):
 
 | Pool | TVL | Pool APR | 1D vol/TVL |
 |---|---|---|---|
-| **ETH/USDC v3 0.3% mainnet (yours)** | outside top20 | ~2-3% | low |
+| **ETH/USDC v3 0.3% mainnet (the original pool)** | outside top20 | ~2-3% | low |
 | ETH/USDC v3 0.05% mainnet | $98.0M | **8.53%** | 0.62 |
 | ETH/USDC v3 0.3% **Base** | $120.8M | **14.92%** | 0.16 |
 | ETH/USDC v3 0.05% Base | $10.6M | 4.32% | 0.32 |
@@ -56,7 +61,7 @@ IL close to zero (range ±0.01–0.05%), but the APR is low. Sensible as a "park
 for part of the capital, not as a profit engine. Beware of depeg risk — the only real
 risk here.
 
-### D. Alt/ETH — high APR, high risk (NOT for now)
+### D. Alt/ETH — high APR, high risk (not for now)
 LINK/ETH 0.3% mainnet (4.49%), ARB/ETH 0.05% Arbitrum (8.47%), VIRTUAL/TIBBIR Base
 (11.18%). Higher volatility, thinner books, toxic flow, risk of −80% on the token.
 To be considered only once the bot is mature, and only with a small % of the portfolio.
@@ -67,10 +72,10 @@ To be considered only once the bot is mature, and only with a small % of the por
 |---|---|---|---|
 | ETH core | ETH/USDC v3 0.3% Base | ~40% | Main fee generator, cheap gas for rebalances |
 | Correlated | cbBTC/ETH v3 0.05% Base | ~25% | Fees at low IL, regime diversification |
-| Core #2 | ETH/USDT v3 0.3% mainnet OR ETH/USDC 0.05% mainnet | ~20% | Network + stablecoin diversification |
+| Core #2 | ETH/USDT v3 0.3% mainnet or ETH/USDC 0.05% mainnet | ~20% | Network + stablecoin diversification |
 | Ballast | USDC/USDT (mainnet 0.01% / arb v4) or cash reserve | ~15% | Low variance, capital for rebalances |
 
-An honest note on diversification: two ETH/USDC pools on different networks are NOT
+An honest note on diversification: two ETH/USDC pools on different networks are **not**
 price-risk diversification (the same ETH exposure) — they only diversify fee streams
 and network/venue risk. Real risk diversification comes from: correlated pairs (B),
 stables (C) and ultimately the hedge (Phase 4).
@@ -92,7 +97,7 @@ stables (C) and ultimately the hedge (Phase 4).
 
 ## 5. List of pools to fetch data for in Phase 1 (final)
 
-- mainnet: ETH/USDC 0.05%, ETH/USDC 0.3% (baseline — your current one), ETH/USDT 0.3%,
+- mainnet: ETH/USDC 0.05%, ETH/USDC 0.3% (baseline — the original pool), ETH/USDT 0.3%,
   WBTC/ETH 0.05%, USDC/USDT 0.01%
 - Base: ETH/USDC 0.3%, ETH/USDC 0.05%, cbBTC/ETH 0.05%, cbBTC/USDC 0.05%
 - Arbitrum (for comparison): ETH/USDC v3 0.05%

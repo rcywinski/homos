@@ -1,13 +1,13 @@
 /**
- * flatwindows.ts — E1 (RESEARCH-QUEUE): statistics of FLAT episodes per the
- * FlatWide product definition + valuation of the narrowing (expected value of FLAT_ENTER).
+ * flatwindows.ts — statistics of flat episodes per the FlatWide product
+ * definition + valuation of the narrowing (expected value of FLAT_ENTER).
  *
- * Business question (27.08): before we SIGN OFF a narrowing of the product
- * position for the first time — how many flats occur at all, how long they
+ * Business question: before signing off a narrowing of the product
+ * position — how many flats occur at all, how long they
  * last, and whether the extra fees from a narrow range cover the cost of two
  * transitions (narrowing + return).
  *
- * Method (deliberately WITHOUT the engine — plain arithmetic on the swap stream):
+ * Method (deliberately without the engine — plain arithmetic on the swap stream):
  *  - EMA of the pair's relative log-price (HL_D days) → gap = log(P/EMA);
  *  - flat episode: |gap|<ENTER held for CONFIRM_H hours (counter reset by a
  *    breakout, as in flatOnlyLP) → lasts until |gap|>EXIT;
@@ -15,7 +15,7 @@
  *    (a) WIDE ±WIDE and (b) NARROW ±NARROW — both centred at the moment the
  *    flat is confirmed, without recentering (conservative);
  *    fees per swap = input_volume_USD x feeRate x ourL/(poolL+ourL),
- *    accrued only when the tick is inside the position range; poolL = ev.L (real!).
+ *    accrued only when the tick is inside the position range; poolL = ev.L (real pool L).
  *  - episode EV = feesNarrow − feesWide − 2xCOST (narrowing and return).
  * Approximations: no recentering of the narrow one (in-range% reported), no IL
  * (in a flat it is by definition small and symmetric), constant transition cost COST.
@@ -23,8 +23,8 @@
  * Usage: npx tsx backtest/flatwindows.ts <poolId>
  * Env: ENTER=0.02 EXIT=0.05 CONFIRM_H=24 HL_D=7 CAP=2500 WIDE=0.5
  *      NARROW=0.08 COST=6
- * Env COMPARE_HL_D=5 (28.08, Rafal's question "shouldn't the anchor jump to
- * the new price faster?"): runs detection a SECOND time with a different EMA
+ * Env COMPARE_HL_D=5 (does a faster anchor catch flats sooner?): runs
+ * detection a second time with a different EMA
  * and prints a comparison — how many episodes we catch sooner, by how many
  * hours, which episodes exist only on the faster/slower anchor.
  */
@@ -61,8 +61,8 @@ interface Episode {
 
 const CMP_HL_D = process.env.COMPARE_HL_D ? Number(process.env.COMPARE_HL_D) : null;
 
-/** full episode detection for a given EMA (extracted from main, 28.08 —
- *  COMPARE_HL_D mode runs it twice on the same stream) */
+/** full episode detection for a given EMA (COMPARE_HL_D mode runs it twice
+ *  on the same stream) */
 function detect(swaps: any[], spec: PoolSpec, hlDays: number): Episode[] {
   const tau = (hlDays * 86400) / Math.LN2;
   const rWide = 1 + WIDE;
@@ -164,7 +164,7 @@ function detect(swaps: any[], spec: PoolSpec, hlDays: number): Episode[] {
   }
   console.log(`\nNOTES: narrow position without recentering (inN% shows how much volume it caught); IL in the flat omitted (symmetric, small); our liquidity included in the share denominator.`);
 
-  // --- EMA anchor comparison mode (COMPARE_HL_D) — Rafal's question 28.08 ---
+  // --- EMA anchor comparison mode (COMPARE_HL_D) ---
   if (CMP_HL_D) {
     const cmp = detect(swaps, spec, CMP_HL_D);
     const overlaps = (a: Episode, b: Episode) => a.startTs < b.endTs && b.startTs < a.endTs;

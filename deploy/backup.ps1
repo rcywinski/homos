@@ -1,7 +1,9 @@
 ﻿# deploy/backup.ps1 — daily backup of HOMOS state (Windows server, 24/7).
-# Copies .bot/*.json (bot state, proposals) and the future SQLite database (transaction/tax
-# ledger — see PLAN.md) to %USERPROFILE%\HomosBackup\<date>\.
-# Registration in Windows Task Scheduler: see deploy/setup-windows.md §11.
+# Copies .bot/*.json (bot state, proposals, ledger state) and any SQLite file to
+# %USERPROFILE%\HomosBackup\<date>\.
+# Note: the *.json filter does not match the append-only ndjson files in .bot/
+# (e.g. the transaction ledger tx-ledger.ndjson, see bot/ledger.ts).
+# Registration in Windows Task Scheduler: see deploy/setup-windows.md §6.
 #
 # Manual run:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File deploy\backup.ps1
@@ -35,9 +37,9 @@ try {
         Write-Host "  WARNING: the .bot\ directory does not exist — skipping (bot not started yet)."
     }
 
-    # --- SQLite database (transaction ledger) — name/path not yet finally
-    # settled in the code (see PLAN.md/CONTEXT.md), so we search defensively
-    # for all *.sqlite / *.db in the repo outside node_modules. ---
+    # --- SQLite database — designed (docs/DB-SCHEMA.md) but never implemented;
+    # the ledger shipped as ndjson/json. The search below stays defensive and
+    # copies any *.sqlite / *.db found in the repo outside node_modules. ---
     $dbFiles = Get-ChildItem -Path $repoRoot -Recurse -Include '*.sqlite', '*.sqlite3', '*.db' -File -ErrorAction SilentlyContinue |
         Where-Object { $_.FullName -notmatch '\\node_modules\\' }
 
@@ -47,7 +49,7 @@ try {
             Write-Host "  copied database: $($f.Name)"
         }
     } else {
-        Write-Host "  INFO: no SQLite file found — the ledger does not exist yet (OK at an early stage of the project)."
+        Write-Host "  INFO: no SQLite file found (expected: the ledger is ndjson/json)."
     }
 
     # --- Cleanup of old backups: keep the last 30 days ---

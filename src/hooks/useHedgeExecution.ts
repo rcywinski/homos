@@ -1,24 +1,22 @@
 /**
  * useHedgeExecution.ts — executes a `HedgePlan` from utils/hedgeBuilder.ts
- * (TASKS-UI.md Batch 9: [Confirm hedge] on the HEDGE proposal card, GMX v2
- * on Arbitrum). Same pattern as useRebalanceExecution.ts/useCockpitActions.ts
- * (freshWalletClient after an optional network switch, MANDATORY client.call
+ * ([Confirm hedge] on the HEDGE proposal card, GMX v2 on Arbitrum). Same pattern as useRebalanceExecution.ts/useCockpitActions.ts
+ * (freshWalletClient after an optional network switch, mandatory client.call
  * simulation before sendTransaction — see the hedgeBuilder.ts header,
  * addTransaction to the history), with two hedge-specific differences:
  *
- *  - The network is ALWAYS Arbitrum (GMX_ARBITRUM.chainId=42161), regardless of
+ *  - The network is always Arbitrum (GMX_ARBITRUM.chainId=42161), regardless of
  *    the network of the LP pool the proposal concerns (the hedge is a separate perp market) —
  *    freshWalletClient here does not take chainId as an argument, it is hardwired.
- *  - The USDC balance is checked BEFORE building any transaction: when it is short,
- *    the hook throws a readable error and sends NOTHING (no auto-swaps in v1, per
- *    the brief) — unlike the rebalance, where approve/mint are always
+ *  - The USDC balance is checked before building any transaction: when it is short,
+ *    the hook throws a readable error and sends nothing (no auto-swaps) — unlike the rebalance, where approve/mint are always
  *    executable (the funds are already on the position).
  *
  * The open short state (`homos_hedge_open`, a global key — bot v1.2
  * proposes a hedge for only one pool at a time, base-030) is saved after a
  * successful OPEN (plan.preview.direction==='open-short'), cleared after a
- * successful CLOSE — "simple" per the brief, without GMX Reader
- * integration (future improvement, TASKS-UI.md).
+ * successful CLOSE. It is only a local fallback — the bot's live GMX Reader
+ * read (`BotHedgeLive` in useBotApi.ts) is the source of truth when present.
  */
 import { useCallback, useState } from 'react';
 import { useAccount, usePublicClient, useChainId, useSwitchChain } from 'wagmi';
@@ -85,12 +83,11 @@ export function useHedgeExecution() {
     return getWalletClient(config, { chainId: HEDGE_CHAIN_ID });
   }, [walletChainId, switchChainAsync]);
 
-  // FIX 20.08 (owner's ~$15 test): Rabby returned a hash that publicnode did not
-  // accept in eth_getTransactionReceipt ("Invalid parameters") — the hook threw
-  // AFTER a successful send and did NOT save the short state, even though the position
-  // was live on-chain. Rule: after sendTransaction the tx IS sent — waiting for
-  // the receipt is best-effort (hash format validation + try/catch), never
-  // a reason for phase:'error'.
+  // After sendTransaction the tx is sent — waiting for the receipt is best-effort
+  // (hash format validation + try/catch), never a reason for phase:'error'.
+  // Rabby can return a hash that publicnode rejects in eth_getTransactionReceipt
+  // ("Invalid parameters"); throwing there would skip saving the short state
+  // while the position is live on-chain.
   const isTxHash = (h: unknown): h is `0x${string}` => typeof h === 'string' && /^0x[0-9a-fA-F]{64}$/.test(h);
   const waitBestEffort = useCallback(async (hash: unknown, label: string) => {
     if (!client) return;

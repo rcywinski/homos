@@ -1,12 +1,11 @@
 /**
- * cycleLine.tsx — CYCLE line of the FlatWide product (posture WIDE ±N% (idle) /
+ * CycleLine.tsx — CYCLE line of the FlatWide product (posture WIDE ±N% (idle) /
  * NARROW k×σ (flat) + flat state: above threshold / clock since HH:MM / FLAT ✅).
  *
- * Extracted from MorningCockpit.tsx (Batch 17) into a shared file in
- * BATCH 20 item 2 — BotTelemetry.tsx needs THE SAME flatParams unit logic
- * for the "Advisor" column of product pools (so as not to duplicate the
+ * Shared by MorningCockpit.tsx and BotTelemetry.tsx (position cards and the
+ * "Advisor" column of product pools) — so as not to duplicate the
  * fraction→percent conversion or the flatSince/flatConfirmed interpretation
- * in two places that could drift apart). MorningCockpit.tsx remains the only
+ * in two places that could drift apart. MorningCockpit.tsx remains the only
  * place that DRIVES the countdown refresh (nowTick, every 60s) — BotTelemetry
  * passes Date.now() computed at render (the section is collapsed by default
  * and refreshes with every bot state poll anyway).
@@ -15,17 +14,16 @@ import React from 'react';
 import { BotPoolLive } from '../hooks/useBotApi';
 import { formatDuration } from '../utils/formatters';
 
-// Fallback when the bot state does not carry `flatParams` yet (old bot from
-// before the bot-side "cycle in state" package, 28.08 evening) — the same
-// values as bot/config.ts FLAT as of today. Feature-detect: used ONLY when the
+// Fallback when the bot state does not carry `flatParams` (older bot builds) —
+// mirrors bot/config.ts FLAT. Feature-detect: used ONLY when the
 // field is entirely absent, never overrides live data from /api/state.
-// UNITS NOTE: enterGap/exitGap are FRACTIONS (0.02 = 2%), just like the raw
+// Units: enterGap/exitGap are fractions (0.02 = 2%), just like the raw
 // bot/config.ts FLAT — verified directly in bot/observer.ts (saveState:
 // `flatParams: FLAT`, no conversion). confirmH in hours.
 export const DEFAULT_FLAT_PARAMS = { enterGap: 0.02, exitGap: 0.05, confirmH: 12 };
 
 /**
- * CYCLE line (Batch 17, TASKS-UI.md) on a product position card —
+ * CYCLE line on a product position card —
  * `posture` comes from bot.state.positions[].posture (feature-detect:
  * `null`/absent = non-product pool, the function then renders nothing).
  */

@@ -1,19 +1,20 @@
 /**
- * e8-carry.ts — E8.1 FUNDING CASH-AND-CARRY (delta-neutral).
+ * funding-carry.ts — funding cash-and-carry (delta-neutral).
  *
  * Position: long spot 1x + short perp 1x of the same size. Price exposure
- * cancels out; what remains is funding (r > 0 → the short RECEIVES) minus costs.
+ * cancels out; what remains is funding (r > 0 → the short receives) minus costs.
  * Gate question: over rolling windows of W days, does net funding beat the
  * "boring" USDC yield (BENCH_APR) — and what does the tail (negative funding) look like.
  *
- *   npx tsx backtest/e8-carry.ts data/funding/ETHUSDT.json [W=30] [step=15]
- *   npx tsx backtest/e8-carry.ts data/funding/HL-ETH.json 90 30
+ *   npx tsx backtest/funding-carry.ts data/funding/ETHUSDT.json [W=30] [step=15]
+ *   npx tsx backtest/funding-carry.ts data/funding/HL-ETH.json 90 30
  *
  * ENV (defaults = conservative):
- *   BENCH_APR=4.5      %/yr of the alternative (USDC on Aave/Morpho) — from E8.0
+ *   BENCH_APR=4.5      %/yr of the alternative (USDC on Aave/Morpho, see
+ *                      scripts/yield-benchmark.ts)
  *   COST_RT=0.25       % round-trip: taker spot+perp open+close
  *                      (HL taker 0.035%x2 + spot 0.1%x2 ≈ 0.27; Binance
- *                      similar) + spread; NOT amortized — paid in EVERY
+ *                      similar) + spread; not amortized — paid in every
  *                      window (window = one entry/exit round)
  *   CAPITAL_SHARE=0.5  how much capital works as spot (the rest = short
  *                      margin, unremunerated; 0.5 = 1:1 margin, safe against
@@ -31,7 +32,7 @@
  * Output: mean/median/win rate/worst edge% per window + per calendar year
  * (regime: 2022 bear, 2024–25 bull, etc.) + the longest streak of negative
  * funding (in days) + distribution of annualized funding.
- * Written to: backtest/results/e8-carry-<file>-<W>d.json
+ * Written to: backtest/results/funding-carry-<file>-<W>d.json
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -123,7 +124,7 @@ function stat(vals: number[]) {
   console.log(`\nCRITERION E8.1: %win ≥ 65 on ALL and ≥ 50 in the worst year, worst > −(2xCOST_RT) — otherwise the class does NOT pass.`);
 
   fs.mkdirSync(OUT, { recursive: true });
-  const out = path.join(OUT, `e8-carry-${tag}-${W}d.json`);
+  const out = path.join(OUT, `funding-carry-${tag}-${W}d.json`);
   fs.writeFileSync(out, JSON.stringify({ file, W, step, periodH, spanDays, params: { BENCH_APR, COST_RT, CAPITAL_SHARE, MARGIN_YIELD }, all, byYear, recent180, annFunding, negShare, worstRunDays, worstRunStart, breakevenPct: breakeven, perWindow }, null, 2));
   console.log(`→ ${out}`);
 })();

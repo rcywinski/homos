@@ -8,7 +8,7 @@ const LABEL: Record<BotStatus, string> = {
   loading: 'Bot: connecting…',
 };
 
-/** Small colored dot: green (fresh) / yellow (stale) / grey (offline) — TASKS-UI.md Batch 2 #3. */
+/** Small colored dot: green (fresh) / yellow (stale) / grey (offline) */
 const BotStatusDot: FC<{ status: BotStatus }> = ({ status }) => (
   <span className={`bot-dot bot-dot-${status}`} title={LABEL[status]} />
 );

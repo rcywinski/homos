@@ -1,25 +1,23 @@
 /**
- * MorningCockpit.tsx — MAIN VIEW of the application (UI-VISION.md §3.1,
- * UX-COCKPIT.md §1, TASKS-UI.md Batches 2/3).
+ * MorningCockpit.tsx — main view of the application (docs/UI-DESIGN.md §4.1).
  *
- * 21.08: after removing the "Manage (advanced)" section the cockpit is no longer
- * one of the modules — it IS the whole application. That is why it stopped being
- * collapsible (no title or arrow, the content always renders). The module header
- * kept the bot status dot + ⚙ (API address/token) — the dot is
+ * The cockpit IS the whole application, not one of several modules — that is
+ * why it is not collapsible (no title or arrow, the content always renders). The module header
+ * has only the bot status dot + ⚙ (API address/token) — the dot is
  * admittedly a duplicate of the one in App.tsx, but it is precisely this one that is read as
  * "the server connection is alive", because it sits next to the connection settings.
  *
  * Contents: financial header (usePortfolio), bot proposals (useBotApi),
  * position cards with inline actions (CockpitPositionActions.tsx +
- * useCockpitActions.ts), paper trading and four collapsible sections at the bottom
- * (Telemetry / Forecast / Analysis / Ranking). Plain CSS — see styles.css,
+ * useCockpitActions.ts), paper trading and collapsible sections at the bottom
+ * (Telemetry / Analysis / Rankings / Closed positions). Plain CSS — see styles.css,
  * classes with the morning-, cockpit- and telemetry- prefixes.
  */
 import React, { FC, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { Pool } from '@uniswap/v3-sdk';
 import { usePortfolio, PortfolioPosition } from '../hooks/usePortfolio';
-import { UseBotApi, BotProposal } from '../hooks/useBotApi';
+import { UseBotApi, BotProposal, DEFAULT_BOT_API } from '../hooks/useBotApi';
 import { findBotPoolByAddress } from '../config/botPools';
 import { useCockpitActions, RebalanceTarget } from '../hooks/useCockpitActions';
 import { useRebalanceExecution } from '../hooks/useRebalanceExecution';
@@ -27,10 +25,10 @@ import { useRotateExecution } from '../hooks/useRotateExecution';
 import { useHedgeExecution, loadHedgeOpen, clearHedgeOpen, HedgeOpenState } from '../hooks/useHedgeExecution';
 import { planRebalance, RebalancePlan, planRotate, RotatePlan } from '../utils/rebalanceBuilder';
 import { planHedgeOpen, planHedgeClose, HedgePlan } from '../utils/hedgeBuilder';
-import { formatDuration } from '../utils/formatters';
+import { formatDuration, fmtUsd, fmtSignedUsd } from '../utils/formatters';
 import BotStatusDot from './BotStatusDot';
 import BotTelemetry from './BotTelemetry';
-import { renderCycleLine, DEFAULT_FLAT_PARAMS } from './cycleLine';
+import { renderCycleLine, DEFAULT_FLAT_PARAMS } from './CycleLine';
 import ObservationAnalysis from './ObservationAnalysis';
 import CockpitPositionActions, { CloseModal, RebalanceModal } from './CockpitPositionActions';
 import { Sparkline, PriceRangeChart, EquityChartPoint, PositionStatsBar, fmtQuoteForPool } from './PositionCharts';
@@ -42,8 +40,6 @@ import TopRankingPanel from './TopRankingPanel';
 import ClosedPositionsPanel from './ClosedPositionsPanel';
 import ExpandableSection from './ExpandableSection';
 
-const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtSigned = (v: number) => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtUsd(Math.abs(v));
 
 const ADVICE_ICON: Record<string, string> = {
   IN_RANGE_HOLD: '✅',
@@ -56,17 +52,12 @@ const ADVICE_TITLE: Record<string, string> = {
   WAIT_NOT_PROFITABLE: 'Out of range, but a rebalance is not worth it for now — waiting',
 };
 
-/** State icon of a REAL position — the same language as in paper trading
- *  (owner's request 21.08: this section had no status at all, and a position
- *  out of range looked identical to a healthy one).
+/** State icon of a REAL position — the same language as in paper trading,
+ *  so a position out of range never looks identical to a healthy one.
  *  A real position has no 'cash'/'pending' state — the bot either sees it or not. */
 const positionStatusIcon = (inRange: boolean): string => (inRange ? '🟢' : '⚠️');
 const positionStatusTitle = (inRange: boolean): string =>
   inRange ? 'In range — the position is earning' : 'OUT of range — the position accrues no fees';
-
-// BATCH 20 item 2: renderCycleLine + DEFAULT_FLAT_PARAMS extracted to
-// components/cycleLine.tsx (BotTelemetry.tsx needs the same logic for the
-// "Advisor" column of product pools — zero duplication of flatParams units).
 
 /**
  * Since when the position has been CONTINUOUSLY out of range — computed from
@@ -91,8 +82,8 @@ interface Props {
   bot: UseBotApi;
 }
 
-// Proposal cards from the bot (Batch 4) may open two different modals
-// that have existed since Batch 3 (CockpitPositionActions.tsx), only prefilled
+// Proposal cards from the bot may open the two position modals from
+// CockpitPositionActions.tsx, only prefilled
 // with proposal data instead of position card data:
 //  - 'close' — the "Close position" modal (ROTATE step 1, closes a held position)
 //  - 'open'  — the "Manual rebalance / new position" modal (REBALANCE "Modify",
@@ -106,20 +97,17 @@ type ProposalModalState =
       target: RebalanceTarget;
       title: string;
       initialUsdRange?: { usdLo: number; usdHi: number };
-      /** Batch 16: overrides the default warning "this is NOT the product
-       *  ±40/50%" (Batch 13b, CockpitPositionActions.tsx) with neutral text
+      /** Overrides the default warning "this is NOT the product
+       *  ±40/50%" (CockpitPositionActions.tsx) with neutral text
        *  for FLAT_NARROW — the narrow prefill there is INTENDED (narrowing to
        *  k×σ in a confirmed flat), not a symptom of a stale/broken proposal. */
       narrowRangeNote?: string;
     };
 
-// [Approve] (Batch 4b) — plan of the full sequence (decrease+collect → swap →
-// mint) from rebalanceBuilder.ts for REBALANCE cards. REBALANCE only: the old and
-// new position are in THE SAME pool, so planRebalance() (one Pool on
-// input) has everything it needs. ROTATE deliberately omitted here —
-// the old/new position are in DIFFERENT pools, and the builder does not handle that (see
-// TODO in TASKS-UI.md Batch 4b, item 2) — ROTATE stays on manual steps 1/2
-// (already implemented in Batch 4).
+// [Approve] — plan of the full sequence (decrease+collect → swap → mint) from
+// rebalanceBuilder.ts for REBALANCE cards. REBALANCE only: the old and new
+// position are in THE SAME pool, so planRebalance() (one Pool on input) has
+// everything it needs. ROTATE (two different pools) has its own state below.
 interface SequenceModalState {
   plan: RebalancePlan;
   pool: Pool;
@@ -128,7 +116,7 @@ interface SequenceModalState {
   proposalId: string;
 }
 
-// [Approve] ROTATE (Batch 8, closing the TODO from Batch 4b) — planRotate()
+// [Approve] ROTATE — planRotate()
 // requires TWO pools (old/new), hence a separate modal state from REBALANCE.
 interface RotateSequenceModalState {
   plan: RotatePlan;
@@ -138,7 +126,7 @@ interface RotateSequenceModalState {
   proposalId: string;
 }
 
-// [Approve hedge] / [Close short] (Batch 9) — one modal, two directions
+// [Approve hedge] / [Close short] — one modal, two directions
 // (plan.preview.direction distinguishes). proposalId=null for close (there is no
 // bot proposal to dismiss — the user closes on their own initiative).
 interface HedgeModalState {
@@ -148,7 +136,7 @@ interface HedgeModalState {
 
 const MorningCockpit: FC<Props> = ({ bot }) => {
   const { address } = useAccount();
-  // BATCH 20 item 1: bot passed to usePortfolio, so positions in pools
+  // bot passed to usePortfolio, so positions in pools
   // TRACKED by the bot get a ready suggestion from bot.state.pools[]
   // instead of the UI's own sigma (feature-detect via findBotPoolByAddress, inside
   // usePortfolio.ts — zero new requests, the data is already in useBotApi).
@@ -167,20 +155,19 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   const [hedgeOpen, setHedgeOpen] = useState<HedgeOpenState | null>(() => loadHedgeOpen());
   const [resolvingId, setResolvingId] = useState<string | null>(null);
   const [proposalError, setProposalError] = useState<string | null>(null);
-  // Batch 17: the "until narrowing proposal" countdown on the CYCLE line must
+  // The "until narrowing proposal" countdown on the CYCLE line must
   // refresh without a server read (it counts time, not data) — a separate
   // small tick every minute, without touching the bot pollers. Hook above the early
-  // return (see FIX 20.08 above — Rendered more hooks).
+  // return (see the hooks note below).
   const [nowTick, setNowTick] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setNowTick(Date.now()), 60_000);
     return () => clearInterval(id);
   }, []);
 
-  // Batch 11 item 3 (FIX 20.08 — "Rendered more hooks" crash: this useEffect
-  // sat BELOW the early return `if (!portfolio.connected) return null`,
-  // so the number of hooks changed between renders when the connection
-  // state changed. RULE: ALL hooks above EVERY early return.)
+  // Hooks note: ALL hooks must stay above EVERY early return (e.g.
+  // `if (!portfolio.connected)` below) — otherwise the hook count changes with
+  // the connection state and React crashes with "Rendered more hooks".
   // localStorage is ONLY a fallback — when the bot CONFIRMS (state.hedge === null,
   // explicitly, not undefined/state not loaded yet) there is no position, and the fallback
   // is set, we clear it — the bot tells the truth about the on-chain state.
@@ -193,8 +180,8 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   }, [bot.state, hedgeOpen]);
 
   // Without a wallet the cockpit has nothing to show (it reads positions/balances from the chain).
-  // Until 21.08 it returned `null` here — and since we removed the "Manage" section,
-  // that meant a COMPLETELY empty page, looking like a broken application.
+  // Not `null`: the cockpit is the whole app, so that would be a completely empty
+  // page, looking like a broken application.
   if (!portfolio.connected) {
     return (
       <div className="morning-cockpit">
@@ -210,7 +197,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   // REBALANCE/FLAT_NARROW/FLAT_WIDEN "Modify →": prefill from a position already
   // held by the user — the same mechanism (existing position + range from
   // the proposal), differing only in the modal title and (for NARROW) the warning
-  // about the narrow range (Batch 16 item 2).
+  // about the narrow range.
   const openModifyRebalance = (p: BotProposal) => {
     const pos = findHeldPosition(p.tokenId);
     if (!pos) {
@@ -233,7 +220,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
     });
   };
 
-  // REBALANCE "Approve →" (Batch 4b): builds the full plan (decrease+collect →
+  // REBALANCE "Approve →": builds the full plan (decrease+collect →
   // swap → mint) and opens the sequence modal instead of opening a second, separate
   // position like [Modify →] — the user ends up with one position in the new range,
   // not two.
@@ -276,7 +263,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
     }
   };
 
-  // ROTATE "Approve →" (Batch 8, closing the TODO from Batch 4b): the old and new
+  // ROTATE "Approve →": the old and new
   // position are in DIFFERENT pools — builds both Pools (old from the portfolio, new from
   // resolveBotPool, the same read as "2. Open new →") and calls planRotate().
   // CONDITION: same chain (planRotate throws otherwise — caught below with
@@ -338,7 +325,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
     }
   };
 
-  // HEDGE "Approve hedge →" (Batch 9): sizeEth from the bot proposal,
+  // HEDGE "Approve hedge →": sizeEth from the bot proposal,
   // ethPriceUsd from the pool telemetry (state.pools[poolId].ethUsd — the same pool
   // for which the bot computed sizeEth). The "Open GMX ↗" link stays as a fallback.
   const openHedgeApprove = (p: BotProposal) => {
@@ -366,17 +353,13 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
     }
   };
 
-  // 20.08: hedge E2E test ($15 short opened and closed through the app —
-  // details in CONTEXT ~evening) performed via a TEMPORARY button, removed
-  // after passing. The production path = the HEDGE proposal card below.
-
-  // [Close short →] (Batch 9 item 4, Batch 11 items 2/3): sizeUsd/collateralUsd
+  // [Close short →]: sizeUsd/collateralUsd
   // taken FIRST AND FOREMOST from `bot.state.hedge` (on-chain data, read by the GMX
   // Reader every cycle — the truth), localStorage (homos_hedge_open) is ONLY a fallback
   // for when the bot is offline / state.hedge not yet available. ETH price
   // from ANY live pool in telemetry (the hedge is one ETH/USD market
   // regardless of which LP pool triggered it).
-  // (`liveHedge` defined above, above the early return — see FIX.)
+  // (`liveHedge` is defined above the early return — see the hooks note.)
   const openHedgeCloseModal = () => {
     if (!address) return;
     const sizeUsd = liveHedge ? liveHedge.sizeUsd : hedgeOpen?.sizeUsd;
@@ -427,7 +410,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   };
 
   const saveSettings = () => {
-    bot.setApiBase(baseInput.trim() || 'http://localhost:8787');
+    bot.setApiBase(baseInput.trim() || DEFAULT_BOT_API);
     bot.setApiToken(tokenInput.trim());
     bot.refresh();
     setShowSettings(false);
@@ -437,7 +420,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   // on save) — filter defensively anyway in case that ever changes.
   const pendingProposals = (bot.state?.proposals ?? []).filter((p) => p.status === 'open');
 
-  // Batch 16b: DOWN on product pools emits TWO proposals at once
+  // DOWN on product pools emits TWO proposals at once
   // (HEDGE = option A preferred, EXIT_TREND = option B "usually do NOT
   // sign"), both marked `emergency: true` — pulled out of the list of
   // regular proposals into a separate "Emergency procedure" section, grouped
@@ -455,9 +438,8 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
     return Array.from(byKey.values()).map((arr) => [...arr].sort((a, b) => (a.kind === 'HEDGE' ? 0 : 1) - (b.kind === 'HEDGE' ? 0 : 1)));
   })();
 
-  // Batch 15 (items 1+3): usePortfolio cannot value pairs without a
-  // stable/ETH leg (e.g. cbBTC/WETH — see "Valuation note" in usePortfolio.ts,
-  // deliberately NOT touched in this session, the calculation logic stays). The bot COMPUTES this
+  // usePortfolio cannot value pairs without a stable/ETH leg (e.g. cbBTC/WETH —
+  // see "Valuation note" in usePortfolio.ts). The bot COMPUTES this
   // valuation via the reference rate (BOT_POOLS.usdRefPoolId) and exposes it in
   // /api/state.positions[].valueUsd — already loaded in useBotApi.ts, zero
   // new requests. Map tokenId→bot valueUsd, reused below both in the
@@ -471,16 +453,14 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
     return typeof v === 'number' ? sum + v : sum;
   }, 0);
   const adjustedTotalUsd = portfolio.totalUsd + botFallbackUsd;
-  // Item 3: the "*" note (and omission from the total) stays ONLY for positions that
-  // are neither in the usePortfolio valuation nor in the bot state — not for every
-  // position without a stable/ETH leg as before (cbBTC/WETH now has a bot valuation).
+  // The "*" note (and omission from the total) applies ONLY to positions that
+  // are neither in the usePortfolio valuation nor in the bot state.
   const stillUnknownValue = portfolio.positions.some((p) => p.valueUsd === null && !botValueByTokenId.has(p.tokenId));
 
-  // Batch 17 item 1: summary panel of REAL positions, mirroring the
-  // "Paper trading" header (.paper-total-header, PaperTradingPanel.tsx) — Σ over the
-  // same sources as each card's metrics bar (Batch 14/15, below in
-  // .map()): "now" = p.valueUsd ?? bot valuation ?? equityUsd of the last
-  // positions-history sample; PnL anchor = hodlUsd of the FIRST sample per position;
+  // Summary panel of REAL positions, mirroring the "Paper trading" header
+  // (.paper-total-header, PaperTradingPanel.tsx) — Σ over the same sources as
+  // each card's metrics bar (below in .map()): "now" = p.valueUsd ?? bot
+  // valuation ?? equityUsd of the last positions-history sample; PnL anchor = hodlUsd of the FIRST sample per position;
   // vs HODL base = hodlUsd of the LAST sample per position. Only positions with a
   // computable value and history enter the sums (consistent with "—" on a
   // single card when data is missing — here simply omitted from the sums, there is
@@ -509,18 +489,15 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
   const totalPnlPct = totalStartUsd > 0 ? (totalPnlUsd / totalStartUsd) * 100 : 0;
   const hasRealPositionStats = portfolio.positions.length > 0 && oldestAnchorTs !== null;
 
-  // Batch 16/16b: one proposal card, extracted from inline JSX into a
-  // function, to render THE SAME per-kind logic both in the regular
-  // "Bot proposals" list and in the "Emergency procedure" section (16b item 3
-  // — grouping A/B side by side), without duplicating ~150 lines of JSX. Closes
+  // One proposal card as a function, to render THE SAME per-kind logic both in
+  // the regular "Bot proposals" list and in the "Emergency procedure" section
+  // (A/B grouped side by side), without duplicating ~150 lines of JSX. Closes
   // over all handlers defined above in the component
   // (openApproveSequence etc.) — without changing their signatures.
   const renderProposalCard = (p: BotProposal) => {
     const kind = p.kind ?? 'REBALANCE';
-    // Item 2 (Batch 16b): the "EMERGENCY OPTION A/B" header only on cards with
-    // emergency===true — A(hedge)/B(exit) distinguished by kind. Cards without
-    // `emergency` (all other kinds, and HEDGE/EXIT_TREND outside the
-    // emergency procedure) — unchanged.
+    // The "EMERGENCY OPTION A/B" header only on cards with emergency===true —
+    // A(hedge)/B(exit) distinguished by kind.
     const emergencyLabel = p.emergency ? (kind === 'HEDGE' ? 'A (hedge — preferred)' : kind === 'EXIT_TREND' ? 'B (exit — usually do NOT sign)' : null) : null;
     return (
       <div key={p.id} className={`morning-proposal-card morning-proposal-card--stacked${p.emergency ? ' morning-proposal-card--emergency' : ''}`}>
@@ -586,7 +563,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
               {typeof p.breakEvenDays === 'number' && <> · switching cost pays back in ~{p.breakEvenDays.toFixed(1)}d</>}
             </div>
             {p.note && <div className="morning-note morning-proposal-note">{p.note}</div>}
-            {/* Batch 8 (closing the TODO from Batch 4b): automatic [Approve]
+            {/* Automatic [Approve]
                 requires planRotate() (old+new pool, same chain) — when the pairs
                 are disjoint or the chains differ, openRotateApprove shows an error and
                 the manual steps 1/2 below remain as a fallback. */}
@@ -637,10 +614,9 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                 {typeof p.hedgeNotionalUsd === 'number' && <> ≈ ${p.hedgeNotionalUsd.toLocaleString()}</>}
               </div>
             )}
-            {/* Batch 9: [Approve hedge] sends the order from this app (GMX
+            {/* [Approve hedge] sends the order from this app (GMX
                 ExchangeRouter multicall, 1 signature) — the GMX link stays as a manual
-                fallback (HANDOFF Fable→Sonnet 2026-08-17 ~15:0x, extended 20.08).
-                Item 4 (Batch 16b): missing `hedgeSizeEth` = cbBTC leg (BTC/USD
+                fallback. Missing `hedgeSizeEth` = cbBTC leg (BTC/USD
                 market, not ETH) — the bot has no auto-execute for it (the multicall
                 in useHedgeExecution.ts handles ETH only), so INSTEAD of the
                 [Approve hedge] button only a link + a "manually" note. */}
@@ -747,17 +723,10 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
 
   return (
     <div className="morning-cockpit">
-      {/* 21.08 (owner's decision): after removing the "Manage" section the cockpit IS
-          the whole application, so it stopped being a collapsible module — no title
-          or arrow, the content always renders. Only ⚙ remains
-          (bot connection settings); the bot status dot is not
-          repeated here, because it already sits in the app header (App.tsx). */}
+      {/* Not a collapsible module (see the file header) — only the bot status
+          dot and ⚙ (bot connection settings). */}
       <div className="morning-header morning-header-bare">
         <div className="morning-header-actions">
-          {/* Bot status dot: I removed it 21.08 as a duplicate of the one
-              in the app header, but the owner immediately noticed it missing — i.e.
-              it is THIS dot that is read as "the server connection is alive",
-              because it sits next to the connection settings. It stays. */}
           <BotStatusDot status={bot.status} />
           <button
             className="morning-settings-btn"
@@ -815,7 +784,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           )}
           {portfolio.error && <div className="morning-note morning-error">Portfolio error: {portfolio.error}</div>}
 
-          {/* Batch 11: when the bot CONFIRMS the hedge (state.hedge, on-chain) —
+          {/* When the bot CONFIRMS the hedge (state.hedge, on-chain) —
               the card in the positions section below takes over showing it/[Close
               short →], the localStorage note disappears (one source of truth on
               screen). The note stays as a fallback ONLY when the bot is offline/
@@ -834,9 +803,9 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
             </div>
           )}
 
-          {/* Batch 16b item 3: the "Emergency procedure" section ABOVE the regular
+          {/* The "Emergency procedure" section ABOVE the regular
               proposals — A(hedge)/B(exit) pairs of the same position side by
-              side, so the owner sees both options at once instead of scrolling
+              side, so both options are visible at once instead of scrolling
               a mixed list. Empty (no DOWN on product pools) —
               the section does not render at all. */}
           {emergencyGroups.length > 0 && (
@@ -868,12 +837,10 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
 
           <div className="morning-section-title">Positions — actions</div>
 
-          {/* Batch 18: TRANCHE BALANCE bar, ABOVE the Batch 17 summary panel
-              (owner's decision 29.08 — a SEPARATE section, the Batch 17 panel stays
-              UNCHANGED apart from the note/tooltip below). It measures a DIFFERENT thing than
-              the Batch 17 panel: how much of the actually deposited USDC there is today
-              (including the buffer in the wallet + one-off entry costs), not
-              only LP quality since the position anchors. The bot side already computes everything —
+          {/* TRANCHE BALANCE bar, a separate section ABOVE the positions summary
+              panel. It measures a DIFFERENT thing than that panel: how much of
+              the actually deposited USDC there is today (including the buffer in
+              the wallet + one-off entry costs), not only LP quality since the position anchors. The bot side already computes everything —
               the UI only displays `bot.state.tranche`, zero math of its own.
               `walletUsd`/`totalUsd`/`diffUsd`/`diffPct` may be `null` (failed
               balance read or missing rate) — then "—", NEVER $0. */}
@@ -900,7 +867,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                   >
                     {bot.state.tranche.diffUsd === null || bot.state.tranche.diffPct === null
                       ? '—'
-                      : `${fmtSigned(bot.state.tranche.diffUsd)} (${bot.state.tranche.diffPct >= 0 ? '+' : ''}${bot.state.tranche.diffPct.toFixed(1)}%)`}
+                      : `${fmtSignedUsd(bot.state.tranche.diffUsd)} (${bot.state.tranche.diffPct >= 0 ? '+' : ''}${bot.state.tranche.diffPct.toFixed(1)}%)`}
                   </span>
                   <span className="muted">Difference</span>
                 </div>
@@ -910,11 +877,11 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                 {bot.state.tranche.marketPnlUsd !== null && bot.state.tranche.residualUsd !== null && (
                   <>
                     {' '}
-                    · of which market move {fmtSigned(bot.state.tranche.marketPnlUsd)} · residual (entry costs + buffer beta){' '}
+                    · of which market move {fmtSignedUsd(bot.state.tranche.marketPnlUsd)} · residual (entry costs + buffer beta){' '}
                     <span
-                      title="one-off entry costs — swaps, slippage, mint gas — plus the change in value of the buffer in the wallet. It should be roughly constant; if it grows, report it to Fable."
+                      title="one-off entry costs — swaps, slippage, mint gas — plus the change in value of the buffer in the wallet. It should be roughly constant; if it grows, investigate."
                     >
-                      {fmtSigned(bot.state.tranche.residualUsd)}
+                      {fmtSignedUsd(bot.state.tranche.residualUsd)}
                     </span>
                   </>
                 )}
@@ -922,7 +889,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
             </>
           )}
 
-          {/* Batch 17 item 1: summary panel above the cards — mirroring
+          {/* Summary panel above the cards — mirroring
               .paper-total-header (PaperTradingPanel.tsx), the same CSS classes.
               Only when there is at least one position with computable history
               (otherwise the sums would be misleadingly empty — the "no positions" message
@@ -938,7 +905,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                   className={`paper-total-value ${totalPnlUsd < 0 ? 'forecast-negative' : 'paper-positive'}`}
                   title="Computed from the position anchors, excluding the buffer and entry costs — the full tranche account is in the bar above."
                 >
-                  {fmtSigned(totalPnlUsd)} ({totalPnlPct >= 0 ? '+' : ''}
+                  {fmtSignedUsd(totalPnlUsd)} ({totalPnlPct >= 0 ? '+' : ''}
                   {totalPnlPct.toFixed(1)}%)
                 </span>
                 <span
@@ -949,7 +916,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                 </span>
               </div>
               <div className="paper-total-stat">
-                <span className={`paper-total-value ${totalVsHodlUsd < 0 ? 'forecast-negative' : 'paper-positive'}`}>{fmtSigned(totalVsHodlUsd)}</span>
+                <span className={`paper-total-value ${totalVsHodlUsd < 0 ? 'forecast-negative' : 'paper-positive'}`}>{fmtSignedUsd(totalVsHodlUsd)}</span>
                 <span className="muted">vs HODL 50/50</span>
               </div>
             </div>
@@ -982,7 +949,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                     {fmtUsd(liveHedge.collateralUsd)}
                   </div>
                   <div className={`cockpit-position-fees ${liveHedge.pnlUsd < 0 ? 'forecast-negative' : 'paper-positive'}`}>
-                    PnL: {fmtSigned(liveHedge.pnlUsd)}
+                    PnL: {fmtSignedUsd(liveHedge.pnlUsd)}
                   </div>
                   {(() => {
                     const hedgeHistory: EquityChartPoint[] = (bot.positionsHistory ?? [])
@@ -1011,7 +978,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                 const span = p.tickUpper - p.tickLower;
                 const pct = span > 0 && p.pool ? Math.min(100, Math.max(0, ((p.pool.tickCurrent - p.tickLower) / span) * 100)) : 50;
 
-                // Batch 10: two charts as in PaperTradingPanel, from
+                // Two charts as in PaperTradingPanel, from
                 // positionsHistory (GET /api/positions-history, filtered by
                 // tokenId — unique per position, no need to match by
                 // poolId). Mapping to EquityChartPoint: valueUsd→equityUsd
@@ -1034,29 +1001,29 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                   hi: h.hi,
                 }));
                 // HODL anchor = the first (oldest) bot sample for this
-                // tokenId — the anchoredAt field does not come in the API response
-                // (see TASKS-UI.md Batch 10 item 4), so we take the ts of the
+                // tokenId — the anchoredAt field does not come in the API response,
+                // so we take the ts of the
                 // first snapshot as an honest "since when we count" label.
                 const posHistorySorted = posHistory.length > 0 ? [...posHistory].sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts)) : [];
                 const firstPosHistPoint = posHistorySorted[0] ?? null;
                 const lastPosHistPoint = posHistorySorted.length > 0 ? posHistorySorted[posHistorySorted.length - 1] : null;
                 const hodlSince = firstPosHistPoint?.ts ?? null;
-                // Item 1 (Batch 15): card valuation fallback to bot data when
+                // Card valuation fallback to bot data when
                 // usePortfolio cannot value the position in USD (no
                 // stable/ETH leg — e.g. cbBTC/WETH). The bot computes USD via the
                 // reference rate, independently of this UI limitation.
                 const botLivePos = botValueByTokenId.get(p.tokenId);
                 const cardValueUsd = p.valueUsd ?? botLivePos ?? null;
                 const isBotValuation = p.valueUsd === null && botLivePos !== undefined;
-                // Batch 14/15 (item 2): PnL since start = value now −
+                // PnL since start = value now −
                 // value at the anchor (hodlUsd stored in the FIRST sample — at
                 // that moment the anchor had JUST been frozen, so the
                 // hodlUsd of that sample = a0*px0+a1*px1 computed at anchoredAt
                 // = the actual starting value of the position, see
-                // bot/observer.ts:626-632). vs HODL 50/50 = value now −
+                // bot/observer.ts). vs HODL 50/50 = value now −
                 // hodlUsd of the last sample (benchmark "if you had held the same
                 // tokens without LP"). "Value now" = p.valueUsd, and for positions
-                // without a usePortfolio valuation (item 2, Batch 15) — equityUsd
+                // without a usePortfolio valuation — equityUsd
                 // of the LAST positions-history sample (the same field as
                 // bot.state.positions[].valueUsd, the same number from the observer,
                 // only from the sample instead of live state — both already in USD, no
@@ -1066,7 +1033,7 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                 const pnlSinceStartUsd = nowValueUsdForStats !== null && firstPosHistPoint ? nowValueUsdForStats - firstPosHistPoint.hodlUsd : null;
                 const vsHodlUsd = nowValueUsdForStats !== null && lastPosHistPoint ? nowValueUsdForStats - lastPosHistPoint.hodlUsd : null;
 
-                // Batch 17 item 2: CYCLE line — posture from bot.state.positions
+                // CYCLE line — posture from bot.state.positions
                 // (feature-detect: null/absent = non-product pool, the card
                 // renders nothing), the rest (flatSince/flatConfirmed/
                 // trendGapPct) from bot.state.pools by pool id (matched via
@@ -1102,10 +1069,10 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                         )}
                       </span>
                     </div>
-                    {/* Batch 17 item 2: CYCLE line — ONLY product positions
+                    {/* CYCLE line — ONLY product positions
                         (posture !== null). */}
                     {renderCycleLine(bpForCycle?.posture, poolLiveForCycle, botMeta?.productIdleWidthPct, flatParams, nowTick)}
-                    {/* Batch 17 item 3: OUT OF RANGE badge — a rare and
+                    {/* OUT OF RANGE badge — a rare and
                         important event in the FlatWide product (the WIDE posture is ±40/50%,
                         breaking the band is a real signal), so visible from the
                         threshold, separately from the timer below. Direction from
@@ -1123,10 +1090,10 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                           : 'outside the band'}
                       </div>
                     )}
-                    {/* Out-of-range timer for a REAL position (owner's request 21.08).
+                    {/* Out-of-range timer for a REAL position.
                         Difference vs paper: the bot does NOT wait 24h here — it issues the
                         rebalance proposal right away, once the advisor deems it worthwhile
-                        (bot/observer.ts:544). So instead of a countdown we show
+                        (bot/observer.ts). So instead of a countdown we show
                         what the position is actually waiting for. */}
                     {!p.inRange && (() => {
                       const since = outOfRangeSinceFromHistory(rawPosHistory);
@@ -1151,24 +1118,21 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
                         </div>
                       );
                     })()}
-                    {/* The old range bar (P1) only as a FALLBACK, as long as
-                        the price-vs-band chart has no data — afterwards a duplicate
-                        (owner's remark from the P10 review: "shouldn't it be thrown out?") */}
+                    {/* Simple range bar only as a FALLBACK while the price-vs-band
+                        chart has no data — afterwards it would be a duplicate. */}
                     {posHistory.length < 2 && (
                       <div className={`range-bar ${p.inRange ? 'in-range' : 'out-of-range'} cockpit-range-bar`}>
                         <div className="range-bar-marker" style={{ left: `${pct}%` }} />
                       </div>
                     )}
-                    {/* Batch 14: metrics bar as in paper (PositionStatsBar,
-                        PositionCharts.tsx) — "Accrued fees" here REPLACES the old
-                        separate "Uncollected fees" line (moved into the bar,
-                        per the spec). Fees reinvested/Costs/Rebalances:
-                        feature-detect from bot.state.positions (ledger aggregates,
-                        bot-side Batch 14, 27.08 — Fable) — field absent
+                    {/* Metrics bar as in paper (PositionStatsBar, PositionCharts.tsx),
+                        including "Accrued fees". Fees reinvested/Costs/Rebalances:
+                        feature-detect from bot.state.positions (ledger
+                        aggregates) — field absent
                         (old bot) or null (the ledger cannot value it) = "—";
                         0 is the CORRECT zero of a fresh position, not "—". */}
                     {(() => {
-                      const bp = bpForCycle; // Batch 17: reused lookup (above, the same position)
+                      const bp = bpForCycle; // reused lookup (above, the same position)
                       return (
                         <PositionStatsBar
                           pnlUsd={pnlSinceStartUsd}
@@ -1204,23 +1168,16 @@ const MorningCockpit: FC<Props> = ({ bot }) => {
           </ExpandableSection>
 
           {/* The sections share the same skeleton (telemetry-section with its own
-              header) — the Ranking was previously wrapped in
-              ExpandableSection and thus got an extra bar/frame.
-              "Profit forecast" (ForecastPanel) REMOVED 29.08: forecast.json
-              described v1.2 strategies (k=3 + rebalance/exit), which we no longer play
-              after switching to the FlatWide hybrid, computed on the swap sigma
-              rejected 26.08 and not refreshed since 17.08 (the generator was not
-              in the pipeline). History in git — it will only return as a PRODUCT
-              forecast (narrowing EV from flatwindows), if the review so
-              decides. */}
+              header). There is deliberately no profit-forecast section: the old
+              forecast described v1.2 strategies that the FlatWide hybrid no longer
+              plays; it would only return as a PRODUCT forecast (narrowing EV). */}
           <BotTelemetry bot={bot} />
           <ObservationAnalysis bot={bot} />
           <TopRankingPanel bot={bot} />
-          {/* Batch 21 (02.09, owner's decision "an exact copy of the ranking under
-              the new guidelines, I want to observe"): a second ranking next to
-              the first, the same component with variant="wide" — source
-              /api/wide-ranking, apy7d carries the SCORE %/yr instead of APY. Both
-              rankings live side by side for ~a month (observation). */}
+          {/* Second ranking next to the first, the same component with
+              variant="wide" — source /api/wide-ranking, apy7d carries the SCORE
+              %/yr instead of APY. Both rankings are kept side by side for
+              observation. */}
           <TopRankingPanel bot={bot} variant="wide" />
           <ClosedPositionsPanel bot={bot} />
       </div>

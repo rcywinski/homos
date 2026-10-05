@@ -1,6 +1,6 @@
 /**
- * pegged.ts — battery F.B: ultra-narrow LP on pegged pairs
- * (stable-stable / LST-ETH). RESEARCH-QUEUE section F.
+ * pegged.ts — ultra-narrow LP on pegged pairs
+ * (stable-stable / LST-ETH).
  *
  *   npx tsx backtest/pegged.ts <pool-id>
  *
@@ -9,8 +9,8 @@
  * (defence against depeg whipsaw: do not chase the peg right away).
  *
  * Metrics beyond the standard: worst-7d (worst equity week — depeg stress),
- * NET fees after gas. Mainnet gas $8/cycle at $10k is part of the research
- * question (a friend's setup works at $281k).
+ * net fees after gas. Mainnet gas $8/cycle at $10k is part of the research
+ * question (fixed gas matters far less at a few hundred $k).
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -23,7 +23,7 @@ const OUT = path.join(__dirname, 'results');
 const widthToTicks = (w: number) => Math.round(Math.log(1 + w) / Math.log(1.0001));
 const rangeAround = (ctx: Ctx, w: number): [number, number] => {
   const dt = Math.max(widthToTicks(w), ctx.spec.tickSpacing);
-  let lo = ctx.alignTick(ctx.ev.t - dt);
+  const lo = ctx.alignTick(ctx.ev.t - dt);
   let hi = ctx.alignTick(ctx.ev.t + dt);
   if (hi <= lo) hi = lo + ctx.spec.tickSpacing;
   return [lo, hi];
@@ -77,7 +77,7 @@ function worst7d(r: RunResult): number {
   }
   const { swaps: swapsRaw, spec } = loaded;
 
-  // OUTLIER FILTER (crucial for pegged pairs): thin 0.01% pools have
+  // Outlier filter (crucial for pegged pairs): thin 0.01% pools have
   // probe swaps through empty ticks (DAI-USDT: 52 events at ±73…+643% from the
   // peg with 99.9% of the data within ±0.5%). Such a tick is not an executable
   // price for $10k — pricing/rebalancing at it = fiction. We drop events

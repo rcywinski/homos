@@ -1,15 +1,15 @@
 /**
- * rebalanceBuilder.ts — rebalance transaction sequence (UX-COCKPIT.md §3).
+ * rebalanceBuilder.ts — rebalance transaction sequence (docs/UI-DESIGN.md §6).
  *
  * Confirming a proposal = 2-3 signatures in Rabby, sequentially:
  *   1. multicall on the NFT manager: decreaseLiquidity(100%) + collect(MAX)
- *      — ONE transaction (the manager supports multicall); closes the old position
+ *      — one transaction (the manager supports multicall); closes the old position
  *      and collects the capital + accrued fees.
  *   2. swap balancing the proportions for the new range (SwapRouter02, exactInputSingle
- *      IN THE SAME POOL where we provide LP — best liquidity for this pair,
+ *      in the same pool where we provide LP — best liquidity for this pair,
  *      and the fee paid partially flows back to this pool's LPs) — SKIPPED when
  *      the proportions are closer than SWAP_SKIP_PCT.
- *   3. mint of the new range — built AFTER steps 1-2 from the ACTUAL wallet
+ *   3. mint of the new range — built after steps 1-2 from the actual wallet
  *      balances (buildMintStep), not from estimates — estimates are for preview only.
  *
  * Failure mid-sequence = safe state: after step 1 the funds are in cash in the
@@ -28,14 +28,12 @@ import { Address, Hex, encodeFunctionData, erc20Abi } from 'viem';
 import { getAmountsForLiquidity, MAX_UINT128 } from './v3math';
 import { POSITION_MANAGER_ADDRESSES } from './liquidityManagement';
 
-// SwapRouter02 (official Uniswap; NOT the old SwapRouter — different exactInputSingle ABI)
+// SwapRouter02 (official Uniswap; not the old SwapRouter — different exactInputSingle ABI)
 export const SWAP_ROUTER_02: Record<number, Address> = {
   1: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
   8453: '0x2626664c2603336E57B271c5C0b26F421741e481',
-  // Arbitrum: canonical SwapRouter02 deployment at THE SAME address as mainnet
-  // (Base is the exception). Added 2026-08-11 (Fable) after Arbitrum entered the UI;
-  // before the first real [Confirm] sequence on Arbitrum: sanity-check
-  // with an eth_call simulation (the builder does it before the mint anyway).
+  // Arbitrum: canonical SwapRouter02 deployment at the same address as mainnet
+  // (Base is the exception). Every sequence is simulated with eth_call before sending.
   42161: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
 };
 
@@ -80,7 +78,7 @@ const COLLECT_ABI = [
 
 const EXACT_INPUT_SINGLE_ABI = [
   {
-    // SwapRouter02: ExactInputSingleParams WITHOUT the deadline field (unlike SwapRouter v1)
+    // SwapRouter02: ExactInputSingleParams without the deadline field (unlike SwapRouter v1)
     name: 'exactInputSingle', type: 'function', stateMutability: 'payable',
     inputs: [{
       name: 'params', type: 'tuple', components: [
@@ -125,7 +123,7 @@ export interface RebalanceStep {
   index: number;
   kind: 'decreaseCollect' | 'swap' | 'mint';
   label: string;
-  /** for kind='mint' this is only an ESTIMATE for preview — before sending, rebuild
+  /** for kind='mint' this is only an estimate for preview — before sending, rebuild
    *  via buildMintStep from the actual balances (see file header) */
   tx: PlannedTx;
   detail: string;
@@ -192,7 +190,7 @@ export function planRebalance(params: {
   const d0 = pool.token0.decimals;
   const d1 = pool.token1.decimals;
 
-  // ---- STEP 1: multicall(decrease 100% + collect MAX) — exact ----
+  // ---- step 1: multicall(decrease 100% + collect MAX) — exact ----
   const position = new Position({ pool, tickLower, tickUpper, liquidity: liquidity.toString() });
   const amount0Min = BigInt(position.amount0.multiply(keep).quotient.toString());
   const amount1Min = BigInt(position.amount1.multiply(keep).quotient.toString());
@@ -209,7 +207,7 @@ export function planRebalance(params: {
   const withdraw0 = BigInt(position.amount0.quotient.toString()) + feesOwed0;
   const withdraw1 = BigInt(position.amount1.quotient.toString()) + feesOwed1;
 
-  // ---- STEP 2: balancing swap (estimate; float — the mins protect) ----
+  // ---- step 2: balancing swap (estimate; float — the mins protect) ----
   // target raw a1/a0 proportion for the new range at the current price
   const sqrtP = BigInt(pool.sqrtRatioX96.toString());
   // literal instead of `10n ** 18n` — babel transpiles `**` to Math.pow() without
@@ -269,7 +267,7 @@ export function planRebalance(params: {
     };
   }
 
-  // ---- STEP 3 (ESTIMATE for preview): mint from est. balances after the swap ----
+  // ---- step 3 (estimate for preview): mint from est. balances after the swap ----
   // safety margin on the swap leg (the actual out may be lower);
   // the executable mint is built by buildMintStep from real balances.
   const SAFETY = 0.998;
@@ -338,7 +336,7 @@ export function planRebalance(params: {
 }
 
 /**
- * Executable mint step — called AFTER steps 1-2 are confirmed, with ACTUAL
+ * Executable mint step — called after steps 1-2 are confirmed, with actual
  * balances (readBalanceAndAllowance), not estimates. Uses Position.fromAmounts
  * internally (the SDK picks the maximum L that fits the given amounts) + mins after slippage
  * — the same path as prepareAddLiquidityTransaction in AddLiquidity.tsx.
@@ -381,22 +379,21 @@ export function buildMintStep(params: {
 }
 
 // ---------------------------------------------------------------------------
-// ROTATE cross-pool (20.08, closing the TODO from Batch 4b): old and new position
-// in DIFFERENT pools. v1 limitations (deliberate):
-//  - THE SAME network (a tx sequence will not bridge; cross-chain rotations stay
-//    on the manual steps 1/2 as before — the UI must communicate this),
-//  - pairs: identical (tier change, e.g. mainnet 030→005) or with ONE
+// ROTATE cross-pool: old and new position in different pools. Deliberate limitations:
+//  - the same network (a tx sequence will not bridge; cross-chain rotations stay
+//    on the manual steps 1/2 — the UI must communicate this),
+//  - pairs: identical (tier change, e.g. mainnet 030→005) or with one
 //    shared token (e.g. WETH/USDC → cbBTC/WETH via the shared WETH);
 //    disjoint pairs → throw (swap route selection is a different class of problem,
 //    and no such case occurs in BOT_POOLS).
 // Sequence: 1) decrease+collect in the old pool → 2) a "bridging" swap of
-// the ENTIRE unique token of the old pair into the shared one (in the OLD pool — that
+// the entire unique token of the old pair into the shared one (in the old pool — that
 // is where the liquidity for this pair is) → 3) swap balancing the proportions for the new range
-// (in the NEW pool) → 4) mint in the new pool. Steps 2/3 are skipped when unnecessary
+// (in the new pool) → 4) mint in the new pool. Steps 2/3 are skipped when unnecessary
 // (same pair → balancing only; one-sided range → no balancing).
 // Failure mid-way = funds in cash in the wallet (safe state, as in
 // planRebalance); the executable mint must be rebuilt via buildMintStep from
-// ACTUAL balances (same rules as the base plan).
+// actual balances (same rules as the base plan).
 // ---------------------------------------------------------------------------
 
 export interface RotatePlan {
@@ -407,10 +404,10 @@ export interface RotatePlan {
   /** the pool we mint in (for buildMintStep after the swap steps) */
   mintPool: 'new';
   preview: {
-    withdraw0: number; withdraw1: number; // tokens of the OLD pool
+    withdraw0: number; withdraw1: number; // tokens of the old pool
     bridgeSwap: string | null;  // description of the unique→shared swap (null when same pair)
     balanceSwap: string | null; // description of the balancing swap in the new pool
-    mint0: number; mint1: number; // ESTIMATE of the mint input (tokens of the NEW pool)
+    mint0: number; mint1: number; // estimate of the mint input (tokens of the new pool)
   };
 }
 
@@ -446,7 +443,7 @@ export function planRotate(params: {
   const keep = new Fraction(10_000 - bips, 10_000);
   const deadline = BigInt(Math.floor(Date.now() / 1000) + (params.deadlineSeconds ?? 1800));
 
-  // ---- STEP 1: decrease 100% + collect in the OLD pool (exact) ----
+  // ---- step 1: decrease 100% + collect in the old pool (exact) ----
   const position = new Position({ pool: oldPool, tickLower, tickUpper, liquidity: liquidity.toString() });
   const step1Data = encodeFunctionData({
     abi: MULTICALL_ABI, functionName: 'multicall',
@@ -498,7 +495,7 @@ export function planRotate(params: {
     value: 0n,
   });
 
-  // working balances in the NEW pool's tokens (raw, float — the mins protect)
+  // working balances in the new pool's tokens (raw, float — the mins protect)
   let bal0 = 0; // n0
   let bal1 = 0; // n1
   let bridgeSwapDesc: string | null = null;
@@ -520,7 +517,7 @@ export function planRotate(params: {
     const uniqueIn = [Number(withdraw0), Number(withdraw1)][1 - sharedIdxOld];
     let sharedBal = [Number(withdraw0), Number(withdraw1)][sharedIdxOld];
 
-    // STEP: the entire unique old token → shared, in the OLD pool
+    // Step: the entire unique old token → shared, in the old pool
     if (uniqueIn > 0) {
       // price of shared per unique in the old pool (raw): account for orientation
       const sharedPerUnique = sharedIdxOld === 1 ? pRawOld : 1 / pRawOld;
@@ -542,7 +539,7 @@ export function planRotate(params: {
     else { bal0 = 0; bal1 = sharedBal; }
   }
 
-  // ---- BALANCING swap for the new range (in the NEW pool) — same logic as planRebalance ----
+  // ---- balancing swap for the new range (in the new pool) — same logic as planRebalance ----
   const sqrtPNew = BigInt(newPool.sqrtRatioX96.toString());
   const probe = getAmountsForLiquidity(sqrtPNew, newTickLower, newTickUpper, 1_000_000_000_000_000_000n); // 10n ** 18n
   const totalV1 = bal0 * pRawNew + bal1;
@@ -576,7 +573,7 @@ export function planRotate(params: {
     balanceSwapDesc = `${tin.symbol}→${tout.symbol} in the new pool`;
   }
 
-  // ---- mint in the NEW pool (ESTIMATE — executable via buildMintStep from real balances) ----
+  // ---- mint in the new pool (estimate — executable via buildMintStep from real balances) ----
   const SAFETY = 0.998; // margin on the legs fed by swaps (the real out may be lower)
   const estMint0 = raw(est0 * SAFETY, 0);
   const estMint1 = raw(est1 * SAFETY, 0);
@@ -626,7 +623,7 @@ export interface RebalanceProgress {
   newTickLower: number;
   newTickUpper: number;
   totalSteps: number;
-  /** indices of steps CONFIRMED on-chain (receipt), e.g. [1] or [1,2] */
+  /** indices of steps confirmed on-chain (receipt), e.g. [1] or [1,2] */
   completed: number[];
   txHashes: Record<number, string>;
   updatedAt: string;

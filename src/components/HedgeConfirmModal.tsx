@@ -1,6 +1,6 @@
 /**
  * HedgeConfirmModal.tsx — confirmation for [Approve hedge]/[Close short]
- * (TASKS-UI.md Batch 9). ONE signature in Rabby (GMX ExchangeRouter multicall,
+ * One signature in Rabby (GMX ExchangeRouter multicall,
  * value=executionFee) + an optional separate USDC approve (only on open —
  * `plan.approval` is `null` on close). The same component handles both
  * directions (`plan.preview.direction`), differing only in title/text.

@@ -1,5 +1,9 @@
 # HOMOS — a Uniswap v3 concentrated-liquidity research stack
 
+[![CI](https://github.com/rcywinski/homos/actions/workflows/ci.yml/badge.svg)](https://github.com/rcywinski/homos/actions/workflows/ci.yml)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
 **Status: closed (September 2026). Published as an engineering case study.**
 
 HOMOS is a TypeScript monorepo I built and ran, with my own capital, to answer one question:
@@ -11,6 +15,14 @@ returned **+0.6 % in 22 days** of live LP, which is roughly HODL 50/50 plus fees
 The tranche was closed at **+5.5 %** overall, but most of that came from three days of directional
 exposure after the LP was unwound — not from the strategy. The full story, including the decisions
 I would make differently, is in [`docs/CASE-STUDY.md`](docs/CASE-STUDY.md).
+
+**Start here:** [`docs/CASE-STUDY.md`](docs/CASE-STUDY.md) for the story,
+[`src/utils/v3math.ts`](src/utils/v3math.ts) for the core math,
+[`backtest/validate.ts`](backtest/validate.ts) for the validation gate and
+[`docs/DECISION-LOG.md`](docs/DECISION-LOG.md) for how decisions were made.
+
+**Tech stack:** TypeScript (strict), Node 20, React 18, wagmi/viem, `@uniswap/v3-sdk` (reference only),
+Envio HyperSync, DefiLlama, Express, webpack, ESLint, GitHub Actions; deployed as Windows services via NSSM.
 
 What is worth reading here is the engineering and the process:
 
@@ -55,14 +67,14 @@ What is worth reading here is the engineering and the process:
 
 The bot runs on a Windows box (NSSM services `homos-bot` + `homos-server`), the UI is a static
 React bundle served by the bot's API, and the owner approves proposals from a laptop or phone
-over LAN/VPN. Details: [`docs/PLAN.md`](docs/PLAN.md), [`docs/INFRA.md`](docs/INFRA.md),
-[`docs/UI-VISION.md`](docs/UI-VISION.md).
+over LAN/VPN. Details: [`docs/ALGORITHM.md`](docs/ALGORITHM.md), [`docs/INFRA.md`](docs/INFRA.md),
+[`docs/UI-DESIGN.md`](docs/UI-DESIGN.md); the original plan is kept in [`docs/PLAN.md`](docs/PLAN.md).
 
 ## The strategy, in one paragraph
 
 Two pools on Base (WETH/USDC 0.30 % and WETH/cbBTC 0.05 %). Default posture is a **wide passive
 range** (±50 % / ±40 %) that behaves like HODL plus fees. A flat detector (|price − 7-day EMA| < 2 %
-for 12 h) allows a **narrowing to ±5 %** to harvest more fees; a trend circuit breaker widens back
+for 12 h) allows a **narrowing to ±5 %** to harvest more fees; a trend breaker widens back
 or exits when the price leaves the band. Parameters were frozen after walk-forward calibration
 ([`docs/ALGORITHM.md`](docs/ALGORITHM.md)); the recalibration on 720 days of data later showed
 that **0 of 21 configurations passed the gate**, which is why the live product stayed wide and
@@ -81,18 +93,27 @@ narrowed only once, as a measured experiment.
 
 ## Running it
 
+Works on a fresh clone (Node ≥ 20, no `.env` needed):
+
 ```bash
 npm ci
 npm test                 # typecheck + 2 925 v3 math reference tests + 14 backtest sanity tests
-npm run backtest         # runs all strategies on cached swap data (see scripts/ for fetching)
-npm start                # cockpit UI on http://localhost:3000
-npm run bot              # observer daemon (propose-only), needs BOT_WATCH_ADDRESS in .env
-npm run bot:server       # bot API + static UI on :8787
+npm run lint             # ESLint (typescript-eslint + react-hooks)
+npm start                # cockpit UI on http://localhost:3000 (connect a wallet to see positions)
 ```
 
-Copy `.env.example` to `.env` first. There are no hard-coded wallet addresses or RPC keys;
-public RPC fallbacks are used when none are configured. The pipeline scripts expect the caches
-under `data/` (not in the repo) — see `docs/PLAN.md` §5 and the headers of `scripts/*.ts`.
+Needs configuration or data that is not in the repo:
+
+```bash
+cp .env.example .env     # set BOT_WATCH_ADDRESS (any public address with v3 positions)
+npm run bot              # observer daemon (propose-only), writes state to .bot/
+npm run bot:server       # bot API + built UI on :8787
+npm run fetch:swaps      # swap history → data/ (needed by the backtests below)
+npm run backtest         # all strategies on the cached swap data
+```
+
+There are no hard-coded wallet addresses or RPC keys; public RPC fallbacks are used when none
+are configured. The data caches under `data/` are regenerable — see the headers of `scripts/*.ts`.
 
 ## Repository map
 
@@ -104,7 +125,7 @@ under `data/` (not in the repo) — see `docs/PLAN.md` §5 and the headers of `s
 | `scripts/` | data fetching (HyperSync, DefiLlama), nightly pipeline, morning report |
 | `src/` | React cockpit (positions, proposals, rebalance/rotate sequences, paper panel) |
 | `deploy/` | Windows deployment scripts and setup guide |
-| `docs/` | plan, algorithm, pairs analysis, DB schema, infra, UI vision, emergency runbook, decision log, case study, AI workflow |
+| `docs/` | plan, algorithm, pairs analysis, DB schema, infra, UI design, emergency runbook, decision log, case study, AI workflow |
 
 Code comments and UI are in English; a small number of string literals that act as data
 contracts (strategy names used as keys, log lines parsed by the report script) are kept in their

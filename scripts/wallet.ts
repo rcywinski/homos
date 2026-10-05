@@ -1,43 +1,30 @@
-import { createPublicClient, http, createWalletClient } from 'viem';
-import { mainnet } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
-import dotenv from 'dotenv';
+/**
+ * wallet.ts — read-only sanity check of the watched wallet.
+ *
+ * Prints the native balance of BOT_WATCH_ADDRESS on every chain the bot knows,
+ * using the same RPC fallback lists as the observer. No private key is involved:
+ * the whole stack is propose-only and signing happens in the browser wallet.
+ *
+ * Usage: npm run wallet
+ */
+import 'dotenv/config';
+import { createPublicClient, formatEther, http } from 'viem';
+import { mainnet, base, arbitrum } from 'viem/chains';
+import { RPC, WATCH_ADDRESS } from '../bot/config';
 
-// Load environment variables
-dotenv.config();
-
-const privateKey = process.env.PRIVATE_KEY;
-const rpcUrl = process.env.RPC_URL || 'https://eth-mainnet.g.alchemy.com/v2/your-api-key';
+const CHAINS = { mainnet, base, arbitrum } as const;
 
 async function main() {
-  try {
-    if (!privateKey) {
-      throw new Error('Private key not found in environment variables');
+  console.log(`Address: ${WATCH_ADDRESS}`);
+  for (const [name, chain] of Object.entries(CHAINS)) {
+    const client = createPublicClient({ chain, transport: http(RPC[name]?.[0]) });
+    try {
+      const balance = await client.getBalance({ address: WATCH_ADDRESS });
+      console.log(`  ${name.padEnd(8)} ${formatEther(balance)} ${chain.nativeCurrency.symbol}`);
+    } catch (err) {
+      console.error(`  ${name.padEnd(8)} error: ${(err as Error).message.split('\n')[0]}`);
     }
-
-    const account = privateKeyToAccount(`0x${privateKey}`);
-    
-    const publicClient = createPublicClient({
-      chain: mainnet,
-      transport: http(rpcUrl)
-    });
-
-    const walletClient = createWalletClient({
-      account,
-      chain: mainnet,
-      transport: http(rpcUrl)
-    });
-    
-    // Get account balance
-    const balance = await publicClient.getBalance({ address: account.address });
-    
-    console.log('Wallet connected successfully!');
-    console.log('Address:', account.address);
-    console.log('Balance:', balance);
-    
-  } catch (error) {
-    console.error('Error:', error);
   }
 }
 
-main(); 
+main();

@@ -2,7 +2,7 @@
  * fetch-swaps-hypersync.ts — swap backfill via HyperSync (Envio) instead of
  * eth_getLogs over public RPCs. Why: free RPCs choke on deep archive reads
  * (~150–190 bl/s ⇒ a year of Base = ~21h); HyperSync serves historical logs
- * from its own index — the same data in MINUTES.
+ * from its own index — the same data in minutes.
  *
  *   npx tsx scripts/fetch-swaps-hypersync.ts base-weth-usdc-030-365d
  *
@@ -13,18 +13,16 @@
  *
  * Output 100% compatible with scripts/fetch-swaps.ts: data/cache/<id>.ndjson
  * (lines {b,a0,a1,sp,L,t}), <id>.state.json {nextBlock} (resumable,
- * COMPATIBLE with fetch-swaps — either script can finish the job),
+ * compatible with fetch-swaps — either script can finish the job),
  * <id>.meta.json {cfg,startBlock,latest,anchors} (time anchors built from
  * the block timestamps that HyperSync returns together with the logs).
  *
- * CORRECTNESS TEST before trusting it (for Claude Code): fetch with this script
- * a pool we ALREADY have from RPC (e.g. base-weth-usdc-030, 90d) under a fresh id
- * and compare: the ndjson line count must match exactly, and the first/last
- * line must match by value (wc -l + head/tail + diff after sorting).
+ * Correctness check: fetch with this script a pool already cached from RPC
+ * (e.g. base-weth-usdc-030, 90d) under a fresh id and compare with
+ * scripts/compare-caches.ts — swap counts and per-block lines must match exactly.
  *
- * NOTE — the client API was written from memory (no way to test in that session):
- * verify the query/response field names against the @envio-dev/hypersync-client docs
- * on the first run; the response shape is logged with --debug.
+ * The client's query/response field names follow the @envio-dev/hypersync-client
+ * docs; if a package upgrade changes them, the response shape is logged with --debug.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -43,8 +41,6 @@ const HYPERSYNC_URL: Record<string, string> = {
 };
 
 // --- identical pool configuration to fetch-swaps.ts (import, not a copy) ---
-// fetch-swaps.ts must export POOLS and PoolCfg (one-line change:
-// `const POOLS` → `export const POOLS`, `interface PoolCfg` → `export interface PoolCfg`).
 import { POOLS, PoolCfg } from './fetch-swaps';
 
 const hexToBigInt = (h: string) => BigInt(h);
@@ -67,7 +63,7 @@ function decodeSwap(dataHex: string) {
 (async () => {
   const id = process.argv[2];
   const debug = process.argv.includes('--debug');
-  // --dry-run: compute EVERYTHING (query HyperSync, decode, count swaps), but
+  // --dry-run: compute everything (query HyperSync, decode, count swaps), but
   // do not touch ndjson/state/meta. For safe verification of a fix in production.
   const dryRun = process.argv.includes('--dry-run');
   const writeJson = (p: string, data: unknown) => {
@@ -118,13 +114,12 @@ function decodeSwap(dataHex: string) {
   const outPath = path.join(CACHE_DIR, `${cfg.id}.ndjson`);
   const metaPath = path.join(CACHE_DIR, `${cfg.id}.meta.json`);
 
-  // Block window: startBlock is FIXED (from meta, if it exists — we do not
-  // move the window start, we do not break the anchors), but `latest` is REFRESHED
-  // on EVERY run from the current chain height.
-  // FIX 21.08 (bug from CC-Win): previously `latest` read from meta only once
-  // froze the window end forever — once the cursor caught up with the frozen tip, the
-  // range [from, toBlock) was empty till the end of time, the script exited 0
-  // ("nextBlock not advancing") and no pool ever fetched new swaps.
+  // Block window: startBlock is fixed (from meta, if it exists — we do not
+  // move the window start, we do not break the anchors), but `latest` is refreshed
+  // on every run from the current chain height. Reading `latest` from meta would
+  // freeze the window end: once the cursor caught up with the frozen tip, the range
+  // [from, toBlock) would stay empty forever, the script would exit 0 and no pool
+  // would ever fetch new swaps.
   const metaPathEarly = path.join(CACHE_DIR, `${cfg.id}.meta.json`);
   const tip = Number(await client.getHeight());
   let latest: number;
@@ -165,7 +160,7 @@ function decodeSwap(dataHex: string) {
   const out = fs.createWriteStream(dryRun ? (process.platform === 'win32' ? '\\\\.\\NUL' : '/dev/null') : outPath, { flags: dryRun ? 'w' : 'a' });
   let total = 0;
   const t0 = Date.now();
-  // time anchors every ~10% of the ORIGINAL range — from block timestamps attached to logs
+  // time anchors every ~10% of the original range — from block timestamps attached to logs
   const anchorMarks = Array.from({ length: 11 }, (_, i) => startBlock + Math.floor((anchorSpan * i) / 10));
   const anchors: Array<{ block: number; ts: number }> = savedAnchors;
   // last block with a timestamp seen in this run — appended as a tail
@@ -175,9 +170,9 @@ function decodeSwap(dataHex: string) {
   let tailTs = 0;
   let stalled = false;
 
-  let query: any = {
+  const query: any = {
     fromBlock: from,
-    toBlock: latest + 1, // per docs toBlock is EXCLUSIVE — verify
+    toBlock: latest + 1, // per docs toBlock is exclusive
     logs: [{ address: [cfg.address], topics: [[SWAP_TOPIC]] }],
     fieldSelection: {
       // per docs (2026): field names PascalCase; the response has camelCase keys
@@ -223,8 +218,8 @@ function decodeSwap(dataHex: string) {
     const next = Number(res?.nextBlock ?? 0);
     if (!next || next <= query.fromBlock) {
       // A real anomaly: the range [fromBlock, toBlock) is non-empty (checked
-      // before the loop and on every iteration), so HyperSync MUST advance the cursor.
-      // This used to end with exit 0 = false green status in the pipeline.
+      // before the loop and on every iteration), so HyperSync must advance the cursor.
+      // Exit 1, not 0 — a silent exit 0 would be a false green status in the pipeline.
       console.error(`\n[${cfg.id}] ANOMALY: nextBlock not advancing (${next}, fromBlock=${query.fromBlock}, toBlock=${latest + 1}) — aborted, state saved. Reporting FAILURE (exit 1).`);
       stalled = true;
       break;
@@ -248,7 +243,7 @@ function decodeSwap(dataHex: string) {
   }
   writeJson(metaPath, { cfg, startBlock, latest, anchorSpan, anchors });
 
-  // Close the stream BEFORE exit — process.exit cuts off unflushed buffers.
+  // Close the stream before exit — process.exit cuts off unflushed buffers.
   await new Promise<void>((resolve) => out.end(resolve));
   console.log(`\n[${cfg.id}] ${stalled ? 'ABORTED' : 'DONE'}: ${total} swaps in ${((Date.now() - t0) / 60000).toFixed(1)} min → ${dryRun ? 'DRY-RUN (nothing written)' : outPath}`);
   process.exit(stalled ? 1 : 0);

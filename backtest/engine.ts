@@ -6,9 +6,9 @@
  * exact v3math (bigint → Number, 1 ulp error), so position geometry is
  * identical to production. The production engine (bot) remains bigint-only.
  *
- * KNOWN APPROXIMATIONS (deliberate, to be sharpened in v2):
- *  - fee accrual uses the tick AFTER the swap (a swap crossing a range boundary
- *    is credited in full or not at all) — the error shrinks with swap count;
+ * Known approximations (deliberate):
+ *  - fee accrual is proportional to the overlap of the swap's tick path with
+ *    our range (linear in ticks, not in liquidity-weighted volume);
  *  - our fee share = L/(L_pool + L); we assume our liquidity does not change
  *    the price path (true at $5-25k in $5M+ pools);
  *  - swap cost on rebalance = pool fee tier + slippageBps on turnover.
@@ -194,14 +194,13 @@ export function runStrategy(
   };
 
   let volDaily = 0.03; // starting prior 3%/day
-  // --- σ on a 15-min grid (TASKS-RECAL §1, review decision of 26.08) ---
+  // --- σ on a 15-min grid ---
   // The swap-by-swap estimator measures pool microstructure, not asset
-  // volatility (CONTEXT/DECISIONS 11: same ETH, same day, σ spread of 4.5x
-  // between pools; on a time grid 1.4x). Mode 'grid15': return computed
-  // between CLOSING PRICES of 15-min buckets, EMA as before (HL 12h).
-  // Default 'swap' = behaviour before the change — v1.2 frozen; recalibration
-  // runs are launched with SIGMA_MODE=grid15 (env), and switching the default
-  // = Rafal's decision after the batch + an algoVersion bump.
+  // volatility (same ETH, same day: σ spread of 4.5x between pools; on a time
+  // grid 1.4x). Mode 'grid15': return computed between closing prices of
+  // 15-min buckets, same EMA (HL 12h). Default 'swap' keeps the frozen v1.2
+  // behaviour; recalibration runs use SIGMA_MODE=grid15. Switching the default
+  // would require an algoVersion bump.
   const SIGMA_GRID15 = process.env.SIGMA_MODE === 'grid15';
   const GRID_SEC = 900;
   let gridCurBucket = -1; // bucket we are currently in
@@ -241,9 +240,8 @@ export function runStrategy(
     },
     openPosition: (lo: number, hi: number) => {
       if (state.pos) throw new Error('position already open');
-      // clamp to the v3 domain (fix 26.08 after the crash "Tick out of bounds: -887332"
-      // on cand-base-weth-cbbtc-030-720d): anomalous ticks from the early life of
-      // a pool can push the range beyond MIN/MAX_TICK — v3math throws on purpose
+      // clamp to the v3 domain: anomalous ticks from the early life of a pool
+      // can push the range beyond MIN/MAX_TICK — v3math throws on purpose
       // (it must be bit-exact with Uniswap), so we guard the bounds here.
       lo = Math.max(lo, MIN_TICK);
       hi = Math.min(hi, MAX_TICK);
@@ -274,7 +272,7 @@ export function runStrategy(
       const c = mkCtx(ev);
       c.closePosition();
       state.gasUsd += spec.gasUsdPerRebalance;
-      // gas paid "from outside"? NO — honestly: from capital (preferably in the stable token)
+      // gas is paid from capital (preferably the stable token), not from outside
       const { px0, px1 } = unitPrices(ev.sqrtP, spec);
       const gasInToken0 = spec.gasUsdPerRebalance / px0;
       if (state.cash0 >= gasInToken0) state.cash0 -= gasInToken0;
@@ -342,8 +340,8 @@ export function runStrategy(
       const feeUsd = (ev.a0 > 0 ? ev.a0 * px0 : ev.a1 * px1) * spec.feeRate;
       // value of active liquidity in a narrow band: approximation ±1 tickSpacing
       const t = ev.t;
-      // clamp the band to the v3 domain (fix 26.08 — crash "Tick out of bounds":
-      // a swap with a tick right at MIN/MAX_TICK gave t±spacing outside the domain)
+      // clamp the band to the v3 domain: a swap with a tick right at
+      // MIN/MAX_TICK would give t±spacing outside it (v3math throws)
       const act = amountsForL(
         ev.L,
         Math.max(t - spec.tickSpacing, MIN_TICK),
@@ -358,13 +356,11 @@ export function runStrategy(
       }
     }
 
-    // 3. fee accrual for our position.
-    // v2 (2026-08-11): credit proportional to the OVERLAP of the swap path
-    // [prevTick, ev.t] with our range — previously a swap counted in full or
-    // not at all based on the tick AFTER the swap. On ETH/stable pairs the
-    // difference is cosmetic (paths short vs range); on pegged pairs the old
-    // version credited entire excursions through empty ticks to wide positions
-    // (fees overstated x10+).
+    // 3. fee accrual for our position: credit proportional to the overlap of
+    // the swap path [prevTick, ev.t] with our range. Crediting by the
+    // post-swap tick alone is fine on ETH/stable pairs (paths are short vs the
+    // range) but on pegged pairs it credits whole excursions through empty
+    // ticks to wide positions (fees overstated x10+).
     if (state.pos && ev.L > 0) {
       const lo = Math.min(prevTick, ev.t);
       const hi = Math.max(prevTick, ev.t);
@@ -384,7 +380,7 @@ export function runStrategy(
         // the swap. The truth lies in between — env FEE_SHARE_L=end gives the
         // upper bound. On ETH/stable pairs both models give identical results
         // (L changes slowly); the difference concerns pegged pools with
-        // excursions (section F).
+        // excursions.
         const Lpool = process.env.FEE_SHARE_L === 'end' ? ev.L : Math.max(ev.L, prevL);
         const share = (state.pos.L / (Lpool + state.pos.L)) * frac;
         const { px0, px1 } = unitPrices(ev.sqrtP, spec);

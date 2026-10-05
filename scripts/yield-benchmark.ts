@@ -1,12 +1,13 @@
 /**
- * e8-bench.ts — E8.0 "BORING" BENCHMARK: real HODL+yield without IL, against
- * which we compare EVERYTHING (E8.1–E8.3 and the scale decision on 24.09).
+ * yield-benchmark.ts — "boring" benchmark: real HODL+yield without IL, against
+ * which every alternative-yield strategy is compared. Part of the E8
+ * alternative-yield experiments (see docs/DECISION-LOG.md).
  * One call to yields.llama.fi/pools (like scan-universe), filter by
  * projects/symbols, table apy / apyMean30d / TVL + BENCH_APR recommendation
  * (median apyMean30d of the top USDC pools on Aave/Morpho).
  *
- *   npx tsx scripts/e8-bench.ts
- * Output: console + backtest/results/e8-bench-<YYYY-MM-DD>.json
+ *   npx tsx scripts/yield-benchmark.ts
+ * Output: console + backtest/results/yield-benchmark-<YYYY-MM-DD>.json
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -44,10 +45,10 @@ const CHAINS = new Set(['Ethereum', 'Base', 'Arbitrum']);
   const bench = usdc.length ? usdc[usdc.length >> 1] : null;
   const eth = pools.filter((p) => /^(lido)$/.test(p.project) && /STETH/.test(p.symbol)).map((p) => p.apyMean30d ?? p.apy)[0] ?? null;
   console.log(`\nE8.0 RECOMMENDATION: BENCH_APR (USDC, median avg30d Aave/Morpho, n=${usdc.length}) = ${bench?.toFixed(2)}%/yr · ETH staking (Lido) ≈ ${eth?.toFixed(2)}%/yr`);
-  console.log(`HODL+yield 50/50 ≈ ${bench !== null && eth !== null ? ((bench + eth) / 2).toFixed(2) : '?'}%/yr above pure HODL — this is the bar for LP (E8.3) and for scale. Use: BENCH_APR=${bench?.toFixed(1)} in e8-carry/e8-house.`);
+  console.log(`HODL+yield 50/50 ≈ ${bench !== null && eth !== null ? ((bench + eth) / 2).toFixed(2) : '?'}%/yr above pure HODL — this is the bar for LP (E8.3) and for scale. Use: BENCH_APR=${bench?.toFixed(1)} in funding-carry/vault-house-edge.`);
   out.benchAprUsdc = bench; out.ethStakingApr = eth;
   fs.mkdirSync(OUT, { recursive: true });
-  const outF = path.join(OUT, `e8-bench-${day}.json`);
+  const outF = path.join(OUT, `yield-benchmark-${day}.json`);
   fs.writeFileSync(outF, JSON.stringify(out, null, 2));
   console.log(`→ ${outF}`);
 })();

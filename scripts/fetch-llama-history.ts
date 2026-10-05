@@ -1,7 +1,7 @@
 /**
- * fetch-llama-history.ts — fetches HISTORICAL APY/TVL series from DefiLlama
- * for the Uniswap pool universe. Data for the meta-backtest of the SELECTION
- * LAYER (does the "buy the top of the ranking" policy work — without lookahead bias).
+ * fetch-llama-history.ts — fetches historical APY/TVL series from DefiLlama
+ * for the Uniswap pool universe. Data for the meta-backtest of the selection
+ * layer (does the "buy the top of the ranking" policy work — without lookahead bias).
  *
  *   npm run fetch:llama     (lightweight — a few minutes, API calls only)
  * Output: data/llama/universe.json + data/llama/history/<poolId>.json
@@ -53,10 +53,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   let done = 0;
   for (const p of universe) {
     const f = path.join(HIST, `${p.pool}.json`);
-    // resume: skip only files refreshed TODAY (UTC calendar date, as in swap-cache).
-    // The "mtime < 24h" heuristic FAILED: the cron runs at intervals close to 24h, so once
-    // the mtimes of the whole universe got synchronized they permanently fell inside the
-    // window and the history stopped refreshing (proof: rankings of 23.08 and 24.08 identical to the digit).
+    // resume: skip only files refreshed today (UTC calendar date, as in swap-cache).
+    // Do not use an "mtime < 24h" heuristic: the cron runs at intervals close to 24h,
+    // so once the mtimes of the whole universe synchronize they permanently fall inside
+    // the window and the history silently stops refreshing.
     const st = fs.statSync(f, { throwIfNoEntry: false });
     const todayUtc = new Date().toISOString().slice(0, 10);
     if (st && new Date(st.mtimeMs).toISOString().slice(0, 10) === todayUtc) {

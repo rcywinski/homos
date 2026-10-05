@@ -1,31 +1,27 @@
 /**
- * ObservationAnalysis.tsx — "Observation analysis" (HANDOFF Fable→Sonnet
- * 2026-08-11 ~19:4x). Collapsible section in the cockpit (BotTelemetry.tsx pattern),
- * intended to stay in production as a view of "do the frozen parameters
+ * ObservationAnalysis.tsx — "Observation analysis". Collapsible section in the
+ * cockpit (BotTelemetry.tsx pattern), intended to stay in production as a view of "do the frozen parameters
  * (walk-forward) still win" on fresh data.
  *
- * Two endpoints that DO NOT EXIST YET on the bot server (Fable adds them
- * "tomorrow" in bot/server.ts) — the whole fetch is defensive, 404/network error ==
+ * Two bot-server endpoints (bot/server.ts) that may be absent on older
+ * deployments — the whole fetch is defensive, 404/network error ==
  * we simply show fallback text, zero crashes:
  *  1. GET {base}/api/history?hours=72 — snapshots every 15 min per pool
  *     ({ts, poolId, price, volDaily, feeYieldDaily, rangeLo, rangeHi,
  *     emaGapPct}). The response shape is uncertain (JSON array vs NDJSON) —
  *     parseHistoryResponse tries both.
  *  2. GET {base}/api/results/<name>.json — files from backtest/results/
- *     (Windows). The file name is not unambiguously fixed in HANDOFF —
- *     the adopted convention is `walkforward-<botPoolId>-365d-45d` (matched
- *     to the files actually visible in backtest/results/, e.g.
- *     walkforward-base-weth-usdc-030-365d-45d.json). If Fable exposes the
- *     endpoint under a different name, it is enough to fix WALKFORWARD_NAME_SUFFIX
- *     below — the rest of the component does not change.
+ *     (`walkforward-<botPoolId><WALKFORWARD_NAME_SUFFIX>.json`). If the
+ *     naming changes, it is enough to fix WALKFORWARD_NAME_SUFFIX below —
+ *     the rest of the component does not change.
  *
  * Proposal markers on the time axis: state.proposals (already in useBotApi, zero
  * new fetches) — a vertical line on the chart of the relevant pool.
  *
  * The proposal hit-rate table (what happened N days after the signal) is deliberately NOT
- * built here — it requires bot-side logic (HANDOFF, Fable's decision).
+ * built here — it requires bot-side logic.
  *
- * HARD SCOPE (TASKS-UI.md): visual layer only, charts as inline
+ * Visual layer only: charts as inline
  * SVG polyline without new dependencies — like the curves in backtest/report.html.
  */
 import React, { FC, useEffect, useState } from 'react';
@@ -33,11 +29,9 @@ import { UseBotApi, BotProposal } from '../hooks/useBotApi';
 import { BOT_POOL_META } from '../config/botPools';
 
 interface HistoryPoint {
-  // BUG-CHECK 2026-08-17 (HANDOFF Fable→Sonnet): observer.ts writes
-  // `ts: new Date().toISOString()` (string), NOT a number of seconds as this
-  // comment assumed. So the real endpoint returns an ISO string. We keep the type
-  // wide and normalize via tsSeconds() below — this was the cause of
-  // empty charts (a.ts - b.ts on strings = NaN, the whole curve NaN).
+  // observer.ts writes `ts: new Date().toISOString()` (string), not epoch
+  // seconds. The type stays wide and everything goes through tsSeconds() —
+  // `a.ts - b.ts` on strings gives NaN and the whole curve disappears.
   ts: number | string;
   poolId: string;
   price: number;
@@ -63,15 +57,14 @@ interface WalkforwardFile {
 }
 
 const EMA_GAP_DANGER_PCT = -5; // ALGORITHM.md §4 — trend safety-switch threshold
-// BATCH 20 item 3 (review 31.08): the table read `-365d-45d` files —
-// walk-forward of the ALGORITHM v1.2 strategy (advisor's k×σ), which the bot NO
-// LONGER PLAYS (the product since 27–29.08 is the FlatWide hybrid with a fixed
-// narrow-leg width, see backtest/walkforward.ts mkHybrid/mkProduct, WF_SET=hybrid|
-// product). Instead we read the latest runs on 720-day history
-// (`walkforward-<botPoolId>-720d-30d.json`, backtest/walkforward.ts:373 —
+// Reads the FlatWide hybrid walk-forward (fixed narrow-leg width, see
+// backtest/walkforward.ts mkHybrid/mkProduct, WF_SET=hybrid|product) — the
+// strategy the bot actually plays — not the `-365d-45d` files of the ALGORITHM
+// v1.2 advisor (k×σ). Runs on 720-day history
+// (`walkforward-<botPoolId>-720d-30d.json`, backtest/walkforward.ts —
 // the file name carries the data window from the run ID, not the WF_SET env, so
 // matching is by the file name SUFFIX, not by content; `summary`
-// renders generically as before, whatever strategies are in it).
+// renders generically, whatever strategies are in it).
 // Feature-detect: when the file for a given pool is missing (404), WalkforwardPoolBlock
 // does not render at all (no verdicts of the abandoned v1.2 strategy) —
 // without hard-coding a pool list, simply by what the API actually answers.
@@ -275,11 +268,9 @@ const PoolHistoryChart: FC<{ points: HistoryPoint[]; proposals: BotProposal[] }>
   );
 };
 
-// BATCH 20 item 3: the whole block (title + table) for a given pool — NOT only
-// the table as before (WalkforwardMiniTable) — because the review decision is
-// "HIDE the section", i.e. together with the "pair · botPoolId" header, not just
-// replace the table content with a note. Returns null when the 720d-30d file for this
-// pool is missing (404/network error) or `summary` is empty — no verdicts of a
+// The whole block (title + table) for a given pool, so a missing result hides
+// the "pair · botPoolId" header too, instead of leaving it above a note.
+// Returns null when the 720d-30d file for this pool is missing (404/network error) or `summary` is empty — no verdicts of a
 // strategy we abandoned, nor empty headers without content.
 const WalkforwardPoolBlock: FC<{ meta: { id: string; sym0: string; sym1: string }; apiBase: string; apiToken: string }> = ({ meta, apiBase, apiToken }) => {
   const { result, fileDate, failed } = useWalkforward(apiBase, apiToken, `walkforward-${meta.id}${WALKFORWARD_NAME_SUFFIX}`);
@@ -345,7 +336,7 @@ const ObservationAnalysis: FC<Props> = ({ bot }) => {
               const poolPoints = (points as HistoryPoint[]).filter((p) => p.poolId === meta.id);
               if (poolPoints.length === 0) return null;
               const poolProposals = proposals.filter((p) => p.poolId === meta.id);
-              // Batch 16 item 3: flat state badge — ONLY product pools have
+              // Flat state badge — only product pools have
               // these fields populated (feature-detect, see useBotApi.ts
               // BotPoolLive.flatSince/flatConfirmed); the rest show nothing.
               const poolLive = bot.state?.pools?.find((pl) => pl.id === meta.id);
@@ -375,12 +366,9 @@ const ObservationAnalysis: FC<Props> = ({ bot }) => {
             })
           )}
 
-          {/* BATCH 20 item 3: header updated — `-365d-45d` files
-              (ALGORITHM v1.2, advisor's k×σ) replaced by the 720d hybrid
-              runs (WF_SET=product/hybrid, backtest/walkforward.ts), which the
-              bot actually plays since 27–29.08. Pools without a 720d-30d result on
-              the server simply do not render the block (WalkforwardPoolBlock
-              returns null) — we do not show verdicts of the abandoned strategy. */}
+          {/* 720d hybrid runs (see WALKFORWARD_NAME_SUFFIX). Pools without a
+              result on the server do not render a block (WalkforwardPoolBlock
+              returns null) — no verdicts of the abandoned v1.2 strategy. */}
           <div className="morning-section-title observation-section-title">Algorithm vs fresh data (hybrid walk-forward, 720d)</div>
           {BOT_POOL_META.map((meta) => (
             <WalkforwardPoolBlock key={meta.id} meta={meta} apiBase={bot.apiBase} apiToken={bot.apiToken} />

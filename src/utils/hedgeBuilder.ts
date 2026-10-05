@@ -1,58 +1,54 @@
 /**
- * hedgeBuilder.ts — transaction plan for a SHORT ETH-perp hedge on GMX v2 (Arbitrum).
- * Step 2 of the hedge automation plan (RESEARCH-QUEUE H, accepted in principle
- * 17.08; owner's brief 20.08): [Confirm hedge] in the cockpit = ONE signature
+ * hedgeBuilder.ts — transaction plan for a short ETH-perp hedge on GMX v2 (Arbitrum).
+ * [Confirm hedge] in the cockpit = one signature
  * in Rabby (ExchangeRouter multicall), size from the bot's HEDGE proposal, 1×,
  * slippage limits. Closing the short with an analogous multicall (MarketDecrease).
  *
- * GMX v2 MECHANICS (synthetics): orders are TWO-PHASE — we create the order
+ * GMX v2 mechanics (synthetics): orders are two-phase — we create the order
  * (createOrder) and deposit collateral + execution fee into the OrderVault, and the GMX
  * keeper executes it in the next block at the oracle price. Hence:
  *  - acceptablePrice = our slippage limit (the keeper will not execute worse),
  *  - executionFee = ETH for the keeper (the overpayment returns to the wallet),
- *  - ONE multicall: [sendWnt(fee), sendTokens(collateral), createOrder] —
- *    the transfer and createOrder MUST be in one tx (otherwise the funds in the vault
+ *  - one multicall: [sendWnt(fee), sendTokens(collateral), createOrder] —
+ *    the transfer and createOrder must be in one tx (otherwise the funds in the vault
  *    can be claimed by someone else — an explicit warning from the GMX docs).
  *
- * SOURCES (verified 2026-08-20 by Fable):
- *  - addresses: gmx-synthetics/docs/contracts.json (section "arbitrum") — commit
- *    current as of 20.08; OrderVault and Router consistent with earlier knowledge,
- *    ExchangeRouter is the LATEST deploy (the address changes between versions!),
+ * Sources:
+ *  - addresses: gmx-synthetics/docs/contracts.json (section "arbitrum");
+ *    OrderVault and Router are stable, ExchangeRouter changes between deploys,
  *  - ETH/USD market: live API https://arbitrum-api.gmxinfra.io/markets
  *    (indexToken=WETH, shortToken=native USDC),
  *  - struct CreateOrderParams: contracts/order/IBaseOrderUtils.sol @ main
  *    (version with cancellationReceiver/validFromTime/autoCancel/dataList).
  *
- * GMX v2 UNIT CONVENTIONS (easy to get wrong):
+ * GMX v2 unit conventions (easy to get wrong):
  *  - sizeDeltaUsd: USD × 1e30,
  *  - prices (triggerPrice/acceptablePrice): USD per 1 unit of the index token
  *    × 10^(30 − index_decimals) → for ETH (18 dec) = USD × 1e12,
  *  - collateral (USDC): raw 6 dec,
  *  - executionFee: wei (native ETH via sendWnt).
  *
- * SAFETY (project rules): the module ONLY builds the tx — sending goes through
- * Rabby after an EXPLICIT human click; before sending, the hook MUST run an
+ * Safety (project rules): the module only builds the tx — sending goes through
+ * Rabby after an explicit human click; before sending, the hook must run an
  * eth_call simulation (as in rebalanceBuilder) — the struct ABI is then verified
- * against the live contract; the first real test on a MINIMAL amount (~$15,
- * GMX min size ~$11 collateral at 1×).
+ * against the live contract. GMX min size is ~$11 collateral at 1×.
  */
 import { Address, Hex, encodeFunctionData, erc20Abi } from 'viem';
 
 // --- addresses (Arbitrum One, chainId 42161) ---
 export const GMX_ARBITRUM = {
   chainId: 42161,
-  /** LATEST ExchangeRouter (contracts.json 20.08) — after a GMX update
-   *  ONLY this address needs replacing (vault/router/market are stable) */
+  /** ExchangeRouter (from contracts.json) — after a GMX update
+   *  only this address needs replacing (vault/router/market are stable) */
   exchangeRouter: '0x1C3fa76e6E1088bCE750f23a5BFcffa1efEF6A41' as Address,
   orderVault: '0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5' as Address,
-  /** spender for the USDC approve (Router, NOT ExchangeRouter!) */
+  /** spender for the USDC approve (Router, not ExchangeRouter!) */
   router: '0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6' as Address,
   /** ETH/USD market [ETH-USDC] — marketToken */
   ethUsdMarket: '0x70d95587d40A2caf56bd97485aB3Eec10Bee6336' as Address,
   usdc: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831' as Address, // native USDC
   weth: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1' as Address,
-  // position read (bot/observer tracks the real hedge — added 20.08 after
-  // the E2E test, when it turned out the short was not visible anywhere outside GMX):
+  // position read (bot/observer tracks the real hedge via the Reader):
   reader: '0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789' as Address,
   dataStore: '0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8' as Address,
 } as const;
@@ -66,12 +62,11 @@ export const ORDER_TYPE = { MarketIncrease: 2, MarketDecrease: 4 } as const;
 // DecreasePositionSwapType: 1 = pay out PnL in the collateral token (USDC)
 const SWAP_PNL_TO_COLLATERAL = 1;
 
-// NOTE: do NOT use `**` on BigInts — babel (transform-exponentiation-operator)
+// NOTE: do not use `**` on BigInts — babel (transform-exponentiation-operator)
 // transpiles `**` to `Math.pow()` without distinguishing operand types, and
 // `Math.pow(10n, 30n)` throws "Cannot convert a BigInt value to a number" at
-// runtime (build/tsc does not catch it — it fails only in the browser). The same
-// bug was already fixed once elsewhere (CC-Win build, P7) — literals
-// instead of `**` are immune to the problem's return here.
+// runtime (build/tsc does not catch it — it fails only in the browser). Literals
+// instead of `**` sidestep the problem.
 const USD_1E30 = 1_000_000_000_000_000_000_000_000_000_000n; // 10n ** 30n
 const PRICE_1E12 = 1_000_000_000_000n; // 10n ** 12n, for an 18 dec index: 30-18
 

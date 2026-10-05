@@ -284,10 +284,9 @@ export const getExistingPool = async (
   }
 };
 
-// FIX 11.09 (Fable→Sonnet HANDOFF): per-chain factory anchor, so that before
-// sending the 'mint' step (rebalance/rotate) a FRESH pool state
-// (slot0+liquidity) can be fetched instead of using the `pool` from before the modal opened —
-// see fetchFreshPool below.
+// Per-chain factory anchor, so that before sending the 'mint' step
+// (rebalance/rotate) a fresh pool state (slot0+liquidity) can be fetched instead
+// of using the `pool` captured when the modal opened — see fetchFreshPool below.
 const FACTORY_BY_CHAIN: Record<number, Address> = {
   [NETWORKS.MAINNET.chainId]: NETWORKS.MAINNET.poolFactoryAddress,
   [NETWORKS.BASE.chainId]: NETWORKS.BASE.poolFactoryAddress,
@@ -362,8 +361,7 @@ export const calculatePoolPrice = (
 ): number => {
   try {
     // Exact-at-display-precision conversion (see v3math.ts).
-    // No hardcoded prices, no chain special-casing: Sepolia pools now show
-    // their REAL (test) price instead of a fake $1,900.
+    // No hardcoded prices, no chain special-casing.
     const price = sqrtPriceX96ToHumanPrice(sqrtPriceX96, token0Decimals, token1Decimals);
     // Preserve the legacy return orientation (callers depend on it):
     // the function returns "WETH per quote token" (a small number, e.g.

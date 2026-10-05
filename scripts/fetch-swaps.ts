@@ -28,10 +28,9 @@ export interface PoolCfg {
 }
 
 export const POOLS: PoolCfg[] = [
-  // (test entry base-weth-usdc-030-hstest REMOVED 18.08 — the HyperSync test
-  // passed long ago [compare-caches consistent]; left in POOLS it blocked the
-  // daily pipeline with a 90-day backfill over RPC. The -hstest files in
-  // data/cache should be deleted on both machines.)
+  // Keep one-off test entries (e.g. HyperSync comparison ids) out of POOLS:
+  // every entry here is fetched by the daily pipeline, and a new id means a full
+  // backfill over RPC.
   {
     id: 'mainnet-usdc-weth-005',
     chain: 'mainnet',
@@ -60,26 +59,26 @@ export const POOLS: PoolCfg[] = [
     id: 'base-cbbtc-weth-005',
     chain: 'base',
     address: '', // filled in automatically by the factory lookup on the first run
-    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 8, days: 90, // token0=WETH(d18), token1=cbBTC(d8) — verified on-chain (fix of inverted orientation, section F)
+    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 8, days: 90, // token0=WETH(d18), token1=cbBTC(d8) — verified on-chain (orientation not inferred from the pair name)
   },
   {
-    // A3: a year of data for the second-best pool (correlated). Copy of base-cbbtc-weth-005, days: 365.
+    // A year of data for the second-best pool (correlated). Copy of base-cbbtc-weth-005, days: 365.
     id: 'base-cbbtc-weth-005-365d',
     chain: 'base',
     address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1', // cbBTC/WETH Base 0.05% (from RPC lookup; HyperSync does no factory lookup)
-    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 8, days: 365, // token0=WETH(d18), token1=cbBTC(d8) — verified on-chain (fix of inverted orientation, section F)
+    feeBps: 500, ethIsToken0: true, token0Decimals: 18, token1Decimals: 8, days: 365, // token0=WETH(d18), token1=cbBTC(d8) — verified on-chain (orientation not inferred from the pair name)
   },
   {
-    // A4: v3 exotic for the majors-vs-exotics verdict. DORY-USDC (Arbitrum 1%) from the ranking
+    // v3 exotic for the majors-vs-exotics verdict. DORY-USDC (Arbitrum 1%) from the ranking
     // is uniswap-V4 (singleton PoolManager, different Swap event, no address via the v3 factory)
-    // — NOT fetchable with this v3 script. Substitute: WTAO-WETH mainnet 1% (79% apyBase,
+    // — not fetchable with this v3 script. Substitute: WTAO-WETH mainnet 1% (79% apyBase,
     // the highest v3 exotic in universe.json). Decimals and address verified on-chain.
     id: 'mainnet-wtao-weth-100',
     chain: 'mainnet',
     address: '0x433a00819c771b33fa7223a5b3499b24fbcd1bbc',
     feeBps: 10000, ethIsToken0: false, token0Decimals: 9, token1Decimals: 18, days: 90,
   },
-  // --- Part 2 (ALGORITHM v1): repeat validation of the 005 pools on 365d (orientation as in 90d) ---
+  // --- ALGORITHM v1: repeat validation of the 005 pools on 365d (orientation as in 90d) ---
   {
     id: 'base-weth-usdc-005-365d',
     chain: 'base',
@@ -93,15 +92,15 @@ export const POOLS: PoolCfg[] = [
     feeBps: 500, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365,
   },
   {
-    // 20.08: missing 365d version of the PRODUCTION pool mainnet-030 (the hUp
-    // experiment found the gap — 4 of 5 bot pools had a 365d cache, this one only 90d).
+    // 365d version of the production pool mainnet-030 (every bot pool needs a
+    // 365d cache, not just the 90d one).
     id: 'mainnet-usdc-weth-030-365d',
     chain: 'mainnet',
     address: '0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8',
     feeBps: 3000, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365,
   },
-  // --- Section F.A: pegged-pair sleeve. Addresses via factory + token0/token1 VERIFIED
-  //     on-chain (token0()/token1(), the cbBTC lesson — orientation NOT from the pair name). Fee 0.01% = 100. ---
+  // --- Pegged-pair sleeve (F.A in docs/ALGORITHM.md). Addresses via factory, token0/token1
+  //     checked on-chain (orientation is never inferred from the pair name). Fee 0.01% = 100. ---
   {
     id: 'mainnet-dai-usdt-001',
     chain: 'mainnet',
@@ -139,7 +138,7 @@ export const POOLS: PoolCfg[] = [
     address: '0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35',
     feeBps: 3000, ethIsToken0: false, token0Decimals: 8, token1Decimals: 6, days: 365, // token0=WBTC, token1=USDC — verified on-chain
   },
-  // --- New chains: Arbitrum + Optimism (Rafal's decision, 2026-08-11) ---
+  // --- Arbitrum + Optimism ---
   {
     id: 'arbitrum-weth-usdc-005-365d',
     chain: 'arbitrum',
@@ -158,25 +157,24 @@ export const POOLS: PoolCfg[] = [
     address: '0xc473e2aee3441bf9240be85eb122abb059a3b57c',
     feeBps: 3000, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=WETH, token1=native USDC — verified on-chain (getPool from factory)
   },
-  // --- Selector candidate validation (first OPEN proposal from the ranking, 17.08) ---
+  // --- Selector candidate validation (OPEN proposal from the ranking) ---
   {
     id: 'mainnet-weth-usdt-001-365d',
     chain: 'mainnet',
     address: '0xc7bbec68d12a0d1830360f8ec58fa599ba1b0e9b',
     feeBps: 100, ethIsToken0: true, token0Decimals: 18, token1Decimals: 6, days: 365, // token0=WETH, token1=USDT — verified on-chain (getPool from factory)
   },
-  // --- Selector candidate validation #2 (ranking 19.08, 7d avg 21.9%) ---
+  // --- Selector candidate validation #2 ---
   {
     id: 'mainnet-usdc-weth-001-365d',
     chain: 'mainnet',
     address: '0xe0554a476a092703abdb3ef35c80e0d76d32939f',
     feeBps: 100, ethIsToken0: false, token0Decimals: 6, token1Decimals: 18, days: 365, // token0=USDC, token1=WETH — verified on-chain (getPool from factory)
   },
-  // --- 720d EXPERIMENT (25.08, Rafal's decision — DECISIONS items 12+13): two
-  // major regimes (bull 2024-25 + declines 2025-26) for the core pools; addresses =
-  // copies of the -365d entries (same pools on-chain, wider window). A pool younger
-  // than 720d (cbBTC, launched ~X.2024) yields data FROM THE START of its life — in the
-  // report ALWAYS state the actual coverage in days.
+  // --- 720d window (see docs/DECISION-LOG.md): two major regimes (bull 2024-25 +
+  // declines 2025-26) for the core pools; addresses = copies of the -365d entries
+  // (same pools on-chain, wider window). A pool younger than 720d (cbBTC) yields data
+  // from the start of its life — reports must state the actual coverage in days.
   {
     id: 'base-weth-usdc-030-720d',
     chain: 'base',

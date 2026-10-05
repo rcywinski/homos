@@ -1,162 +1,183 @@
-# setup-windows.md — first launch of HOMOS on Windows (24/7 server)
+# setup-windows.md — first installation of HOMOS on the Windows server
 
-> Architecture context: `docs/INFRA.md`. This document is a one-off installation
-> guide for a clean Windows machine. Day-to-day updates are handled by
-> `deploy/deploy.ps1`.
+> Step-by-step installation on a clean Windows machine. The architecture and the
+> security model behind these steps are described in [`docs/INFRA.md`](../docs/INFRA.md).
+> Day-to-day updates are handled by [`deploy.ps1`](deploy.ps1).
 
 ## 1. Node.js 22 LTS
 
-1. Download and install Node 22 LTS from https://nodejs.org (`.msi` installer,
-   default options — tick "Add to PATH").
-2. Verify in a new PowerShell:
+1. Install Node 22 LTS from https://nodejs.org (`.msi` installer, default options,
+   with "Add to PATH" ticked).
+2. Verify in a new PowerShell window:
    ```powershell
    node --version   # v22.x.x
    npm --version
    ```
 
-## 2. pm2 + autostart after reboot
+## 2. Clone the repository
 
 ```powershell
-npm install -g pm2
-npm install -g pm2-windows-startup
-pm2-startup install
-```
-
-`pm2-startup install` registers a service which, after a Windows restart, runs
-`pm2 resurrect` (restores the processes saved by `pm2 save` — see step 6).
-
-## 3. Clone the repository
-
-The repo is private on GitHub (see docs/INFRA.md §4) — access is required (an SSH key
-or a Personal Access Token configured in Git Credential Manager).
-
-```powershell
-cd C:\
-git clone https://github.com/<twoj-user>/homos.git
+mkdir C:\Projects -Force
+cd C:\Projects
+git clone https://github.com/rcywinski/homos.git
 cd homos
 npm ci
 ```
 
-## 4. The `.env` file
+The rest of this guide assumes the repository lives in `C:\Projects\homos` (the path used
+in `deploy.ps1`); adjust the paths if you choose a different location.
 
-Copy the template and fill in the values (full description of the variables: `.env.example`):
+## 3. The `.env` file
+
+Copy the template and fill in the values (every variable is described in `.env.example`):
 
 ```powershell
 Copy-Item .env.example .env
 notepad .env
 ```
 
-At minimum, to run the observer bot you need:
-- `BOT_WATCH_ADDRESS` — the address of the wallet whose positions the bot should watch,
+The observer bot needs at least:
+- `BOT_WATCH_ADDRESS` — the wallet whose positions the bot watches (read-only; the stack
+  never holds a private key),
 - `BOT_API_PORT` — the API port (default 8787),
-- `BOT_API_TOKEN` — the API access token (see step 7 — REQUIRED if the
-  server is to be reachable beyond `localhost`),
-- optionally `RPC_MAINNET` / `RPC_BASE` (your own RPCs instead of public ones),
+- `BOT_API_TOKEN` — the API access token (required whenever the server is reachable from
+  anything other than `localhost`; see step 7),
+- optionally `RPC_MAINNET` / `RPC_BASE` (your own RPC endpoints instead of the public ones),
 - optionally `TG_TOKEN` / `TG_CHAT` (Telegram alerts).
 
-## 5. Build the UI and test locally (without pm2, once)
+Both services load `.env` from their working directory, so it must sit in the repository root.
+
+## 4. Build the UI and run once in the foreground
 
 ```powershell
 npm run build
-npx tsx bot/observer.ts     # in one window — Ctrl+C after checking that it starts without errors
-npx tsx bot/server.ts       # in a second window
+npx tsx bot/observer.ts     # first window; Ctrl+C once it starts without errors
+npx tsx bot/server.ts       # second window
 ```
 
-Check in a browser (on the Windows machine itself): `http://localhost:8787/health`
-should return `{"fresh":false,...}` right after start (fresh only after the
-bot's first cycle — see `INTERVALS` in `bot/config.ts`) and `{"fresh":true,...}`
-after about a minute. Stop both processes (Ctrl+C) before moving on.
+Open `http://localhost:8787/health` on the server. Right after start it returns
+`{"fresh":false,...}`; after the bot's first cycle (about a minute, see `INTERVALS` in
+`bot/config.ts`) it returns `{"fresh":true,...}`. Stop both processes before moving on.
 
-## 6. Running under pm2 (the target mode of operation)
+## 5. Install the NSSM services
+
+Production ran as two Windows services managed by [NSSM](https://nssm.cc): `homos-bot`
+(`bot/observer.ts`) and `homos-server` (`bot/server.ts`, API + static UI). Services run
+outside the user session, start at boot and are restarted by NSSM if they crash.
+`deploy.ps1` restarts exactly these two service names.
 
 ```powershell
-pm2 startOrReload deploy/ecosystem.config.js
-pm2 save          # saves the current process list — pm2-startup will restore it after a reboot
-pm2 status        # both processes should be "online"
-pm2 logs          # live log view (Ctrl+C to exit, the processes keep running)
+winget install NSSM.NSSM    # nssm.exe may end up outside PATH; deploy.ps1 also looks in WinGet\Packages
 ```
 
-Logs also go to files: `.bot/pm2/homos-bot.{out,err}.log` and
-`.bot/pm2/homos-server.{out,err}.log`.
-
-## 7. Firewall — restricting access to LAN + VPN
-
-The server should NOT be reachable from the public internet (zero
-port-forwarding on the router — see docs/INFRA.md §3). A Windows firewall rule
-restricts the API port to trusted subnets:
+The exact service parameters used in production were not kept in the repository. The
+commands below create an equivalent setup (run as Administrator). They call the tsx CLI
+through `node` directly instead of `npx`, because `npx` resolves to `npx.cmd` on Windows,
+which a service wrapper cannot run as a script.
 
 ```powershell
-# Run as Administrator. REPLACE the subnets with your own:
-#  - LAN subnet, e.g. <lan-subnet>
-#  - your home VPN subnet, e.g. <vpn-subnet>
-New-NetFirewallRule -DisplayName "HOMOS API (LAN+VPN only)" `
-  -Direction Inbound -Protocol TCP -LocalPort 8787 `
-  -RemoteAddress <lan-subnet>,<vpn-subnet> `
-  -Action Allow
+$repo = 'C:\Projects\homos'
+$node = (Get-Command node).Source
+New-Item -ItemType Directory -Path "$repo\.bot\logs" -Force | Out-Null
 
-# The default Windows Firewall policy already blocks inbound traffic not covered by rules —
-# the rule above is the only exception for port 8787. Verify:
-Get-NetFirewallRule -DisplayName "HOMOS API (LAN+VPN only)" | Format-List
+foreach ($svc in @(
+    @{ Name = 'homos-bot';    Script = 'bot\observer.ts' },
+    @{ Name = 'homos-server'; Script = 'bot\server.ts' })) {
+  nssm install $svc.Name $node "node_modules\tsx\dist\cli.mjs $($svc.Script)"
+  nssm set $svc.Name AppDirectory $repo
+  nssm set $svc.Name AppStdout "$repo\.bot\logs\$($svc.Name).out.log"
+  nssm set $svc.Name AppStderr "$repo\.bot\logs\$($svc.Name).err.log"
+  nssm set $svc.Name Start SERVICE_AUTO_START
+  nssm start $svc.Name
+}
+
+Get-Service homos-bot, homos-server   # both should be Running
 ```
 
-Additionally set `BOT_API_TOKEN` in `.env` (see step 4) — the firewall rule alone
-does not protect against other devices on the same home network
-(guests on the Wi-Fi). The server then requires the header `Authorization: Bearer <token>`
-for all `/api/*` (the `/health` endpoint stays token-free, for monitoring).
-The web client (UI) keeps the token in `localStorage` under the key `homos_api_token`.
+Useful commands afterwards: `nssm restart <name>`, `nssm stop <name>`, `nssm edit <name>`
+(GUI editor for the service parameters).
 
-## 8. Power and clock (24/7 server)
+## 6. Scheduled tasks
 
-```powershell
-# Disable sleep (AC power) — Administrator
-powercfg /change standby-timeout-ac 0
-powercfg /change hibernate-timeout-ac 0
+Two kinds of jobs ran from Windows Task Scheduler rather than as services:
 
-# Resume after power loss: a setting in the motherboard BIOS/UEFI
-# ("Restore on AC Power" / "After Power Loss" -> "Power On") — out of PowerShell's reach,
-# do it manually at computer startup (Del/F2 key during boot).
-```
+- the data/backtest pipeline (`npm run pipeline`) and the morning report
+  (`npm run report:morning`, 07:30), which commits `reports/morning-YYYY-MM-DD.md` and sends
+  the Telegram digest;
+- the daily backup (`deploy/backup.ps1`).
 
-Make sure the system clock synchronises with NTP (Settings -> Time
-& language -> Date & time -> "Sync now") — needed for correct
-timestamps in the ledger/logs.
-
-## 9. Final test from the phone (over the VPN)
-
-1. Connect the iPhone to the home VPN.
-2. Open `http://<server-lan-address>:8787/health` — it should return JSON.
-3. Add to Home Screen — PWA (see docs/INFRA.md §5).
-
-## 10. Post-installation verification — checklist
+Registering the backup (the other tasks follow the same pattern with a different action):
 
 ```powershell
-pm2 status                              # both processes "online", restarts ~0
-curl http://localhost:8787/health       # 200 after about a minute of bot operation
-Get-NetFirewallRule -DisplayName "HOMOS API (LAN+VPN only)"   # the rule exists and is Enabled
-```
-
-## 11. Daily backup
-
-See `deploy/backup.ps1` and the "Backup" section in this file (added by that
-task) for configuring the Windows Task Scheduler.
-
-### Registering `deploy/backup.ps1` in Task Scheduler (once a day)
-
-```powershell
-# Run as Administrator. Replace the repo path if different from C:\homos.
+# Run as Administrator.
 $action = New-ScheduledTaskAction -Execute 'powershell.exe' `
-  -Argument '-NoProfile -ExecutionPolicy Bypass -File "C:\homos\deploy\backup.ps1"'
+  -Argument '-NoProfile -ExecutionPolicy Bypass -File "C:\Projects\homos\deploy\backup.ps1"'
 $trigger = New-ScheduledTaskTrigger -Daily -At 3:00AM
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -DontStopOnIdleEnd
 Register-ScheduledTask -TaskName "HOMOS Daily Backup" -Action $action `
-  -Trigger $trigger -Settings $settings -Description "Daily backup of .bot/*.json and the HOMOS database"
+  -Trigger $trigger -Settings $settings -Description "Daily backup of the HOMOS bot state (.bot/)"
 
 # Immediate test:
 Start-ScheduledTask -TaskName "HOMOS Daily Backup"
 Get-ScheduledTaskInfo -TaskName "HOMOS Daily Backup"
 ```
 
-## Updates (after the first setup)
+## 7. Firewall: LAN and VPN only
 
-All subsequent deployments (new code from the Mac) go through `deploy/deploy.ps1`
-— see its header. Steps 1–3 and 7–8 above do not need to be repeated.
+The server must not be reachable from the public internet (no port forwarding on the
+router). A Windows Firewall rule limits the API port to trusted subnets:
+
+```powershell
+# Run as Administrator. Replace the subnets with your own:
+#  - the LAN subnet, e.g. <lan-subnet>
+#  - the home VPN subnet, e.g. <vpn-subnet>
+New-NetFirewallRule -DisplayName "HOMOS API (LAN+VPN only)" `
+  -Direction Inbound -Protocol TCP -LocalPort 8787 `
+  -RemoteAddress <lan-subnet>,<vpn-subnet> `
+  -Action Allow
+
+# The default policy already blocks inbound traffic not covered by a rule,
+# so this rule is the only exception for port 8787. Verify:
+Get-NetFirewallRule -DisplayName "HOMOS API (LAN+VPN only)" | Format-List
+```
+
+Also set `BOT_API_TOKEN` (step 3): the firewall alone does not protect against other
+devices on the same network. The server then requires `Authorization: Bearer <token>` on
+every `/api/*` route (`/health` stays open for monitoring). The UI stores the token in
+`localStorage` under the key `homos_api_token`.
+
+## 8. Power and clock
+
+```powershell
+# Disable sleep on AC power (Administrator)
+powercfg /change standby-timeout-ac 0
+powercfg /change hibernate-timeout-ac 0
+```
+
+Resuming after a power cut is a BIOS/UEFI setting ("Restore on AC Power" / "After Power
+Loss" -> "Power On") and has to be set by hand during boot.
+
+Make sure the clock synchronises with NTP (Settings -> Time & language -> Date & time ->
+"Sync now"); the ledger and the logs depend on correct timestamps.
+
+## 9. Test from the phone (over the VPN)
+
+1. Connect the phone to the home VPN.
+2. Open `http://<server-lan-address>:8787/health`; it should return JSON.
+3. Open the UI at `http://<server-lan-address>:8787/` and add it to the Home Screen.
+
+## 10. Post-installation checklist
+
+```powershell
+Get-Service homos-bot, homos-server                           # both Running
+curl http://localhost:8787/health                             # 200, fresh:true after about a minute
+Get-NetFirewallRule -DisplayName "HOMOS API (LAN+VPN only)"   # the rule exists and is Enabled
+Get-ScheduledTask -TaskName "HOMOS*"                          # scheduled tasks registered
+```
+
+## Updates after the first installation
+
+Every later deployment goes through `deploy\deploy.ps1` (see its header): `git pull`,
+`npm ci`, `npm run build`, a restart of the NSSM services only when `bot/`, the
+dependencies or `deploy/` changed, and a `/health` check. Steps 1, 5 and 7–8 do not need
+to be repeated.

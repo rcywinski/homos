@@ -1,6 +1,6 @@
 /**
  * fetch-funding-hl.ts — funding rate history from Hyperliquid (public API,
- * no key). E8.1 (cash-and-carry): second venue next to Binance
+ * no key). Cash-and-carry input (backtest/funding-carry.ts): second venue next to Binance
  * (scripts/fetch-funding.ts), because that is where we would actually open the short.
  *
  *   npx tsx scripts/fetch-funding-hl.ts ETH 800
@@ -8,7 +8,7 @@
  *
  * Output: data/funding/HL-<coin>.json — [{t: ms, r: rate}] ascending by t.
  * NOTE: on Hyperliquid funding is HOURLY (rate = fraction per 1h),
- * Binance every 8h. e8-carry.ts normalizes by time (sums r within a window),
+ * Binance every 8h. funding-carry.ts normalizes by time (sums r within a window),
  * so both series are comparable without conversion.
  * Same convention as Binance: r > 0 → longs pay shorts.
  */

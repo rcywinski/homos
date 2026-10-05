@@ -1,6 +1,6 @@
 /**
  * useRebalanceExecution.ts — executes a `RebalancePlan` from utils/rebalanceBuilder.ts
- * (TASKS-UI.md Batch 4b: [Confirm] on REBALANCE proposal cards).
+ * ([Confirm] on REBALANCE proposal cards).
  *
  * rebalanceBuilder.ts is a pure module (no React, no RPC) — all
  * sending/simulation/reads live here, with the same pattern as
@@ -9,8 +9,8 @@
  *
  * Sequence: approvals from the plan (skipped when the allowance already suffices) →
  * step 1 (decrease+collect, exact) → step 2 (swap, skipped when
- * swapSkipped) → step 3 (mint) — REBUILT right before sending from the
- * ACTUAL wallet balances (buildMintStep), because step 2 is only an estimate with
+ * swapSkipped) → step 3 (mint) — rebuilt right before sending from the
+ * actual wallet balances (buildMintStep), because step 2 is only an estimate with
  * post-slippage minimums; the real balance after the swap may differ slightly from
  * mint0/mint1 in the plan preview. If the real balance exceeds the amount
  * approved earlier (approvals in the plan are computed from the estimate), right before
@@ -33,13 +33,10 @@ import { RebalancePlan, buildMintStep, saveProgress, loadProgress, clearProgress
 import { fetchFreshPool } from '../utils/uniswap';
 import { addTransaction } from '../components/TransactionHistory';
 import { config } from '../config/wallet';
-// HOTFIX 31.08 (first live FLAT_NARROW sequence, #5887690): raw
-// waitForTransactionReceipt aborted the sequence on the Rabby+publicnode
-// "Invalid parameters" error (the same class as useHedgeExecution FIX 20.08 and
-// Batch 13) — every [Confirm] click sent one tx and failed on reading
-// its confirmation, over and over from step 1. The receipt is best-effort: after
-// sendTransaction the tx IS on chain; the pre-flight simulation (client.call) before
-// each step protects against sending a step that would revert.
+// Receipts are best-effort: a raw waitForTransactionReceipt can fail on the
+// Rabby+publicnode "Invalid parameters" error and abort the sequence after a tx
+// was already sent. The pre-flight simulation (client.call) before each step
+// protects against sending a step that would revert.
 import { waitReceiptBestEffort } from './useCockpitActions';
 
 export interface ExecStatus {
@@ -114,10 +111,9 @@ export function useRebalanceExecution() {
 
           let tx = step.tx;
           if (step.kind === 'mint') {
-            // Rebuild the mint from ACTUAL balances (not from the estimate in the plan) —
-            // see the file header and rebalanceBuilder.ts. FIX 11.09 (HANDOFF
-            // @Sonnet): `pool` here is the same object as passed to the modal
-            // when it was opened — if the price has moved since then
+            // Rebuild the mint from actual balances (not from the estimate in the plan) —
+            // see the file header and rebalanceBuilder.ts. `pool` here is the
+            // object passed to the modal when it was opened — if the price has moved since then
             // (> approx. 0.5%), Position.fromAmounts computes from a stale price and
             // the mint simulation fails with "Price slippage check". We fetch
             // fresh slot0+liquidity right before rebuilding the step.
@@ -150,9 +146,9 @@ export function useRebalanceExecution() {
           setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — sign in Rabby…` });
           const hash = await wc.sendTransaction({ to: tx.to, data: tx.data, value: tx.value, account: address, chain: wc.chain });
           setStatus({ phase: 'step', stepIndex: step.index, totalSteps: total, message: `${step.label} — confirming…` });
-          // HOTFIX 31.08: best-effort (no throw) + progress saved even
-          // without a receipt — the tx is sent, and not saving progress caused
-          // THE SAME step to be re-sent on the next [Confirm].
+          // Best-effort (no throw) + progress saved even without a receipt —
+          // the tx is sent; not saving progress would re-send the same step on
+          // the next [Confirm].
           await waitReceiptBestEffort(client, hash);
           addTransaction(address, hash, plan.chainId, step.label);
 

@@ -1,6 +1,7 @@
 /**
  * fetch-dvol.ts — daily history of the DVOL implied volatility index
- * from Deribit (public API, no key). E8.3 (LP timing by volatility).
+ * from Deribit (public API, no key). Input for LP timing by volatility
+ * (backtest/lp-vol-timing.ts; part of the E8 experiments, see docs/DECISION-LOG.md).
  *
  *   npx tsx scripts/fetch-dvol.ts ETH 1200
  *   npx tsx scripts/fetch-dvol.ts BTC 1200

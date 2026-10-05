@@ -1,6 +1,6 @@
 /**
  * RebalanceSequenceModal.tsx — [Approve] on REBALANCE proposal cards
- * (TASKS-UI.md Batch 4b). Shows the step list from `RebalancePlan`
+ * Shows the step list from `RebalancePlan`
  * (rebalanceBuilder.ts) with a preview (label + detail), a progress bar during
  * execution (useRebalanceExecution.ts) and the "finish step N/M" state after
  * a page refresh (progress in localStorage, read here only for display

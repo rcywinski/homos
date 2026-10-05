@@ -36,28 +36,22 @@ export interface BotPool {
    *  proposal to exit to cash 50/50; 'hedge' [base-030] — proposal of a
    *  perp short (GMX) on the ETH excess above 50% of value, LP stays */
   trendAction?: 'exit' | 'hedge';
-  /** PRODUCT 27.08 — FlatWide hybrid (Rafal's decision, CONTEXT journal
-   *  27.08): idle posture = WIDE passive LP of fixed width
-   *  ±N% (instead of the advisor's k×σ). When set: range suggestions
+  /** FlatWide hybrid product: idle posture = wide passive LP of fixed width
+   *  ±N% (instead of the advisor's k×σ). When set, range suggestions
    *  (OPEN in the cockpit, charts) are computed from this width. Narrowing
-   *  to k×σ happens ONLY in a confirmed flat (|gap|<2% for
-   *  confirmH hours — FLAT_ENTER proposal, separate logic). */
+   *  happens only in a confirmed flat (|gap|<2% for confirmH hours —
+   *  FLAT_ENTER proposal, separate logic). */
   productIdleWidthPct?: number;
-  /** PRODUCT 29.08 — width of the NARROW leg in a confirmed flat
-   *  (Rafal's remark: "we have a 2% gap, exit at 5%, and a 16% range —
-   *  that does not hold together" — he was right).
-   *  Until 29.08 the narrowing was computed by advisor v1.2 as k×σ×√7, where
-   *  the 7-day horizon comes from a COMPLETELY different strategy ("the range
-   *  must survive a week without rebalancing"). In the hybrid the position is
-   *  protected by FLAT_WIDEN at |gap|>exitGap, so a band wider than the exit
-   *  threshold is liquidity the price will never reach:
-   *  at ±16% the exit signal fires after 32% of the way to the edge, at
-   *  ±6% — after 83%. Hence the width is DERIVED from the exit threshold
-   *  (FLAT.exitGap = 5%) plus a margin for EMA drift during the episode.
-   *  VALUE 5% ON BOTH POOLS = exactly FLAT.exitGap (Rafal's decision
-   *  29.08 after the sweep): the band edge coincides with the FLAT_WIDEN
-   *  signal, so the position stops earning at the same moment we widen
-   *  it anyway — one rule instead of two arbitrary numbers. Sweep
+  /** Width of the narrow leg in a confirmed flat.
+   *  Not k×σ×√7 from the advisor: that 7-day horizon belongs to a different
+   *  strategy ("the range must survive a week without rebalancing"). In the
+   *  hybrid the position is protected by FLAT_WIDEN at |gap|>exitGap, so a
+   *  band wider than the exit threshold is liquidity the price will never
+   *  reach: at ±16% the exit signal fires after 32% of the way to the edge,
+   *  at ±6% — after 83%. Hence the width is derived from the exit threshold.
+   *  5% on both pools = exactly FLAT.exitGap: the band edge coincides with
+   *  the FLAT_WIDEN signal, so the position stops earning at the same moment
+   *  it is widened anyway — one rule instead of two arbitrary numbers. Sweep
    *  (flatwindows, 365d, CONFIRM_H=12, ΣEV of narrowing): cbBTC ±8% $193
    *  → ±6% $334 → ±5% $442 → ±4% $570 → ±3% $685; base-030 ±8% $195
    *  → ±6% $388 → ±5% $525 → ±4% $672.
@@ -65,10 +59,8 @@ export interface BotPool {
    *  in-range time share breaks down (cbBTC at ±3%: 59–79% in several
    *  episodes) — hence ±5% as the point where we get almost all the EV
    *  with 85–100% in-range.
-   *  CAVEAT: sweep computed on the 365d cache ending 11.08;
-   *  verification on fresh 720d (including the bull) — assigned to CC-Win
-   *  for the 31.08 review, together with a hybrid walkforward at THIS width
-   *  (today the walkforward narrows by k×σ×√7 — see RESEARCH-QUEUE E4). */
+   *  Caveat: the sweep was computed on a 365d cache; walkforward WF_SET=product
+   *  validates the hybrid at this fixed width. */
   productNarrowWidthPct?: number;
 }
 
@@ -78,19 +70,18 @@ export const TREND = {
   thresh: 0.05, // DOWN signal when log(P/EMA) < −5%
 };
 
-/** PRODUCT FlatWide — flat detector FLAT_ENTER/FLAT_EXIT (28.08).
- *  Narrowing the LP to k×σ ONLY in a confirmed flat; outside the flat a wide
- *  passive ±productIdleWidthPct. Parameters from E1/flatwindows (365d Fable
- *  + 720d and cross-check CC-Win, 2 pools): confirm 12h instead of 24h ~2×
- *  more episodes caught without loss of quality (base-030 ΣEV +223%,
- *  cbBTC +13%). EMA: THE SAME as the trend circuit breaker (HL 7d, trend-state)
- *  — HL_D=5 (best on cbBTC, +18%) DEFERRED to the 1.09 review
- *  (the 12h+5d combination is untested, it would require a second EMA).
- *  The detector runs EXCLUSIVELY on product pools (productIdleWidthPct)
- *  — lesson from mainnet-wsteth-weth-001 (scan 27.08): on pairs with
- *  structurally low volatility (LST, stable/stable) the detector catches
- *  microstructure noise and generates pure costs; additionally a hard
- *  minVolDaily threshold. PROPOSE mode — nothing executes by itself. */
+/** FlatWide product — flat detector FLAT_ENTER/FLAT_EXIT.
+ *  The LP is narrowed only in a confirmed flat; outside the flat a wide
+ *  passive ±productIdleWidthPct. Parameters from backtest/flatwindows.ts
+ *  (365d + 720d, 2 pools): confirm 12h instead of 24h catches ~2× more
+ *  episodes without loss of quality (base-030 ΣEV +223%, cbBTC +13%).
+ *  EMA: the same as the trend circuit breaker (HL 7d, trend-state);
+ *  HL_D=5 (best on cbBTC, +18%) was not adopted — the 12h+5d combination
+ *  is untested and would require a second EMA.
+ *  The detector runs only on product pools (productIdleWidthPct): on pairs
+ *  with structurally low volatility (LST, stable/stable, e.g. wstETH/WETH)
+ *  it catches microstructure noise and generates pure costs; minVolDaily is
+ *  an additional hard floor. Propose mode — nothing executes by itself. */
 export const FLAT = {
   enterGap: 0.02, // |log-gap| < 2% → flat candidate (confirm clock starts)
   exitGap: 0.05, // |log-gap| > 5% → end of flat (proposal to return to wide, 24/7 alarm)
@@ -99,12 +90,11 @@ export const FLAT = {
   narrowFrac: 0.6, // position is "narrow" when half-width < 0.6 × productIdleWidthPct
 };
 
-/** CAPITAL TRANCHE (29.08, Rafal's question "the math does not add up"):
- *  the cockpit panel computes PnL from position ANCHORS, so it does not show
+/** Capital tranche: the cockpit panel computes PnL from position anchors, so it does not show
  *  how much of the deposited USDC has really come back. The tranche balance
  *  tracks that second number: deposited → today (LP + wallet), and splits the
  *  difference into market move and "residual" (entry costs: swaps, slippage, mint gas).
- *  depositedUsd = amount put into play, NOT the sum of mints. */
+ *  depositedUsd = amount put into play, not the sum of mints. */
 export const TRANCHE = {
   id: 'transza-1',
   label: 'Tranche 1',
@@ -137,16 +127,14 @@ export const BOT_POOLS: BotPool[] = [
     feeBps: 3000, ethIsToken0: true, d0: 18, d1: 6, sym0: 'WETH', sym1: 'USDC',
     t0: '0x4200000000000000000000000000000000000006', t1: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
     trendAction: 'hedge', // ALGORITHM v1.2: hedge-excess (gate 73%/−2.88 and 81%/−2.74)
-    productIdleWidthPct: 50, // PRODUCT 27.08: FlatWide hybrid, idle ±50%
-    productNarrowWidthPct: 5, // 29.08: narrowing ±5% = exit threshold (sweep: ΣEV $525 vs $195 at ±8%)
+    productIdleWidthPct: 50, // FlatWide hybrid, idle ±50%
+    productNarrowWidthPct: 5, // narrowing ±5% = exit threshold (sweep: ΣEV $525 vs $195 at ±8%)
   },
   {
     // correlated pair (PAIRS.md: passive sleeve ±15%); price quoted in WETH,
     // USD via the ETH rate from base-weth-usdc-030.
-    // NOTE token order VERIFIED on-chain via the live tick
+    // Token order verified on-chain via the live tick
     // (-265575 ⇒ token0=WETH: 0x4200… < 0xcbB7… in Uniswap's address sort order).
-    // The configuration in scripts/fetch-swaps.ts has it REVERSED (token0Decimals: 8)
-    // — bug reported to the queue, the 90d cbBTC data needs a refetch/reinterpretation.
     id: 'base-cbbtc-weth-005',
     chainId: 8453, chain: 'base',
     address: '0x7AeA2E8A3843516afa07293a10Ac8E49906dabD1',
@@ -154,16 +142,14 @@ export const BOT_POOLS: BotPool[] = [
     t0: '0x4200000000000000000000000000000000000006', t1: '0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf',
     quote: 'WETH', usdRefPoolId: 'base-weth-usdc-030',
     advisorK: 2, trendReentry: 'half',
-    productIdleWidthPct: 40, // PRODUCT 27.08: FlatWide hybrid, idle ±40%
-    productNarrowWidthPct: 5, // 29.08: narrowing ±5% = exit threshold (sweep: ΣEV $442 vs $193 at ±8%; in-range 85-100%)
+    productIdleWidthPct: 40, // FlatWide hybrid, idle ±40%
+    productNarrowWidthPct: 5, // narrowing ±5% = exit threshold (sweep: ΣEV $442 vs $193 at ±8%; in-range 85-100%)
   },
   {
-    // WETH/cbBTC 0.3% Base — added 2026-08-26 by review decision (DECISIONS
-    // 11c): FIRST PASS of the auto-funnel (65.2% wins, worst −2.7; 23 windows
-    // 30/15, profile "Adapt k=2 h=24h + trend(exit,HL7d,5%)"). PAPER ONLY —
-    // PASS != capital; the verdict will be renewed after σ/k recalibration. CREATE2
-    // address verified 2×: on-chain by CC-Win (25.08) and deterministically
-    // by Fable (26.08). Profile like base-cbbtc-weth-005 (correlated pair).
+    // WETH/cbBTC 0.3% Base — first pool to pass the auto-funnel (65.2% wins,
+    // worst −2.7; 23 windows 30/15, profile "Adapt k=2 h=24h + trend(exit,HL7d,5%)").
+    // Paper only — PASS != capital. CREATE2 address verified both on-chain and
+    // by deterministic derivation. Profile like base-cbbtc-weth-005 (correlated pair).
     id: 'base-weth-cbbtc-030',
     chainId: 8453, chain: 'base',
     address: '0x8c7080564B5A792A33Ef2FD473fbA6364d5495e5',
@@ -173,8 +159,8 @@ export const BOT_POOLS: BotPool[] = [
     advisorK: 2, trendReentry: 'half',
   },
   {
-    // Arbitrum — added 2026-08-11 after a passed 365d walk-forward
-    // (re>EMA 73% wins — project record; CONTEXT ~16:15). Token order:
+    // Arbitrum — added after a passed 365d walk-forward (re>EMA 73% wins).
+    // Token order:
     // WETH 0x82aF… < USDC 0xaf88… ⇒ token0=WETH (consistent with the 365d fetch meta).
     id: 'arbitrum-weth-usdc-005',
     chainId: 42161, chain: 'arbitrum',

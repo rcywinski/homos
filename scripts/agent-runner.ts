@@ -1,19 +1,20 @@
 /**
- * agent-runner.ts — automation bridge between a Claude session and your machine.
+ * agent-runner.ts — job-queue runner used by the AI-assisted workflow
+ * (see docs/AI-WORKFLOW.md).
  *
- * Run once in iTerm and leave it:
+ * Run once and leave it in a terminal:
  *   npm run agent
  *
  * How it works:
  *  - watches for job files in .agent/queue/*.json  ({"script": "fetch:swaps", "args": []})
- *  - runs ONLY whitelisted scripts (never arbitrary shell commands)
+ *  - runs only whitelisted npm scripts (never arbitrary shell commands)
  *  - job logs: .agent/logs/<job>.log (streamed live)
  *  - state: .agent/status.json (heartbeat every 3s, current job, exit codes)
  *  - completed jobs land in .agent/done/
  *
- * Claude drops job files through the session's file bridge and reads logs/status —
- * this lets it launch data fetches/backtests and monitor them, even though it has
- * no direct access to your terminal.
+ * An assistant without terminal access can drop job files and read logs/status,
+ * which lets it launch data fetches/backtests and monitor them. The whitelist is
+ * the security boundary: a job file can only pick a script, not a command.
  * Stop: Ctrl+C.
  */
 import * as fs from 'fs';
@@ -94,7 +95,7 @@ async function runJob(jobFile: string) {
     cwd: ROOT,
     env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
-    // Windows: spawn() does not launch npm.cmd without a shell (ENOENT) — same as in agent-runner-git.ts
+    // Windows: spawn() does not launch npm.cmd without a shell (ENOENT)
     shell: process.platform === 'win32',
   });
 

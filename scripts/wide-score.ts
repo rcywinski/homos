@@ -1,16 +1,14 @@
 /**
  * wide-score.ts — FUNNEL v2, TIER 1: scoring the whole universe for the product
- * (passive wide / pegged classes), NOT for headline APY.
+ * (passive wide / pegged classes), not for headline APY.
  *
- * Spec: TASKS-FUNNEL.md §2 (Rafal's decision, review 31.08).
- * Constant calibration: CONTEXT 01.09 (on live positions #5886957/#5908083).
+ * Constants calibrated on live positions #5886957/#5908083 (see CALIBRATION below).
  *
  *   npx tsx scripts/wide-score.ts             (full run, ~2-4 min)
  *   npx tsx scripts/wide-score.ts --limit 50  (quick test)
  *
- * Output: data/wide-score/wide-score-<YYYY-MM-DD>.{json,csv} + top on stdout.
- * DELIBERATELY without a pipeline step and without UI — validate the metric first
- * (lesson of v1.2: do not build pages for a metric that may not survive).
+ * Output: data/wide-score/wide-score-<YYYY-MM-DD>.{json,csv} + top on stdout,
+ * plus .bot/wide-ranking.json for the UI (see the WIDE RANKING section below).
  *
  * MODEL (a ranker, not a dollar estimator):
  *   score [%/yr] = feeAprWide − drag
@@ -19,13 +17,13 @@
  *     g(w) = 1 / (1 − 1/sqrt(1+w))  — liquidity density of a ±w range (v3 math:
  *       L = V / (2·sqrt(P)·(1 − 1/sqrt(1+w))), fee ∝ L at the same V).
  *   drag = K_DRAG × (σ_ann²/8) × g(wOurs)  — variance drag scaled by
- *     concentration; σ_ann = volatility of the pair RATIO (not the asset!) from 90d
+ *     concentration; σ_ann = volatility of the pair ratio (not the asset!) from 90d
  *     of daily prices (coins.llama.fi).
  *   DRIFT-FLAG: |μ_ann| > wOurs/2 — a symmetric range drifts out through its center
  *     in <2 years (the wstETH case: ~3–4%/yr drift breaks ±2%); this is a FLAG,
  *     not a score component (backlog: "drift-aware range").
  *
- * CALIBRATION (01.09, live positions):
+ * CALIBRATION (live positions):
  *   crypto-stable ±50, typLP ±15 → c=0.37; measured base-030: $1.04/d
  *     on $3459 = 11.0%/yr vs pool apyBase ~31% → c_real≈0.33 ✓ (±30%)
  *   eth-btc ±40, typLP ±2 → c=0.064; measured cbBTC wide: $0.19/d
@@ -62,7 +60,7 @@ const WETH: Record<string, string> = {
   optimism: '0x4200000000000000000000000000000000000006',
 };
 
-// ── class dictionary (IN CODE, tracked — like SEED_VERDICTS) ────────────────
+// ── class dictionary (in code, tracked — like SEED_VERDICTS) ────────────────
 const ETH_SYMS = new Set(['ETH', 'WETH']);
 const BTC_SYMS = new Set(['WBTC', 'CBBTC', 'TBTC']);
 const LST_SYMS = new Set(['WSTETH', 'WEETH', 'CBETH', 'RETH', 'EZETH', 'RSETH']);
@@ -73,17 +71,17 @@ type PairClass = 'pegged-btc' | 'lst-eth' | 'stable-stable' | 'eth-btc' | 'crypt
 /** widths: ours (wOurs) and a typical LP of the class (wTypLP) — calibration knobs */
 const CLASS_PARAMS: Record<Exclude<PairClass, 'inne'>, { wOurs: number; wTypLP: number; driftMatters: boolean }> = {
   // driftMatters: the drift flag only makes sense for tight classes — an ETH trend
-  // within a quarter is not "peg drift" (validation 01.09: μ ETH 90d ±130%/yr
+  // within a quarter is not "peg drift" (in validation μ ETH 90d ±130%/yr
   // annualized flagged the whole crypto-stable class).
   'pegged-btc': { wOurs: 0.01, wTypLP: 0.01, driftMatters: true },
   'lst-eth': { wOurs: 0.02, wTypLP: 0.01, driftMatters: true },
   'stable-stable': { wOurs: 0.005, wTypLP: 0.002, driftMatters: true },
   'eth-btc': { wOurs: 0.4, wTypLP: 0.02, driftMatters: false },
-  // wTypLP 0.07 (not 0.15): recalibration 01.09 — live base-030 $1.04/d
-  // = 11%/yr at pool apy30 58% → c_real≈0.19; at apyBase 31% (10.08)
+  // wTypLP 0.07 (not 0.15): recalibrated on live base-030 $1.04/d
+  // = 11%/yr at pool apy30 58% → c_real≈0.19; at apyBase 31%
   // c_real≈0.33. The LP crowd concentrates harder in high-APY regimes,
   // so c drifts 0.19–0.35; 0.07 gives c=0.19 (conservative,
-  // on the side of NOT overestimating fees). A ranker, not an estimator.
+  // on the side of not overestimating fees). A ranker, not an estimator.
   'crypto-stable': { wOurs: 0.5, wTypLP: 0.07, driftMatters: false },
 };
 
@@ -133,9 +131,8 @@ async function fetchPrices(keys: string[]): Promise<Map<string, { t: number; p: 
   const BATCH = Math.max(1, Math.floor(500 / PRICE_SPAN_DAYS));
   for (let i = 0; i < keys.length; i += BATCH) {
     const batch = keys.slice(i, i + BATCH);
-    // NOTE: no searchWidth — the parameter is in SECONDS and narrows the price
+    // NOTE: no searchWidth — the parameter is in seconds and narrows the price
     // matching window; at 600s most lookups come back empty
-    // (found during the 01.09 validation in the browser).
     const url =
       `https://coins.llama.fi/chart/${batch.join(',')}` +
       `?span=${PRICE_SPAN_DAYS}&period=1d`;
@@ -154,7 +151,7 @@ async function fetchPrices(keys: string[]): Promise<Map<string, { t: number; p: 
   return out;
 }
 
-/** σ and μ (annualized, %) of daily log-returns of the RATIO pA/pB */
+/** σ and μ (annualized, %) of daily log-returns of the ratio pA/pB */
 function ratioStats(pa: { t: number; p: number }[], pb: { t: number; p: number }[]) {
   const byDay = (s: { t: number; p: number }[]) => {
     const m = new Map<string, number>();
@@ -193,7 +190,7 @@ function ratioStats(pa: { t: number; p: number }[], pb: { t: number; p: number }
         p.tvlUsd >= MIN_TVL &&
         (p.count ?? 0) >= MIN_AGE_DAYS &&
         // v4: DefiLlama has UNSTABLE volumeUsd7d/apyBase7d for v4
-        // (validation 01.09: the same field 89.8M in the morning, 0.0 in the afternoon)
+        // (observed: the same field 89.8M in the morning, 0.0 in the afternoon)
         // → for v4 the activity filter is apy>0, not volume.
         (p.project === 'uniswap-v4' ? (p.apyMean30d ?? p.apyBase ?? 0) > 0 : (p.volumeUsd7d ?? 0) > 0)
     )
@@ -226,7 +223,7 @@ function ratioStats(pa: { t: number; p: number }[], pb: { t: number; p: number }
     const { wOurs, wTypLP, driftMatters } = CLASS_PARAMS[p.cls as Exclude<PairClass, 'inne'>];
     const c = g(wOurs) / g(wTypLP);
     // min of the available windows — resilience to 30-day APY spikes
-    // (validation 01.09: apy30 base-030 = 58% at apy7d 34%)
+    // (e.g. apy30 base-030 = 58% at apy7d 34%)
     const apyCands = [p.apyMean30d, p.apyBase7d, p.apyBase].filter((x: any) => x != null && x > 0) as number[];
     const apy = apyCands.length ? Math.min(...apyCands) : 0;
     const feeAprWide = apy * c;
@@ -267,14 +264,14 @@ function ratioStats(pa: { t: number; p: number }[], pb: { t: number; p: number }
 
   console.log(`\nSaved ${rows.length} pools → ${base}.{json,csv}\n`);
 
-  // ── WIDE RANKING for the UI/report (02.09, Rafal's decision: "an exact copy
-  // of the ranking in the UI, only under the new guidelines — I want to observe it").
+  // ── WIDE RANKING for the UI/report: a copy of the selector ranking computed
+  // under the wide-product metric, published for observation.
   // Same shape as .bot/selector-ranking.json (RankingData in useBotApi),
   // so the UI can reuse TopRankingPanel 1:1; `apy7d` holds the SCORE [%/yr]
   // (UI label: "score wide"), and the extra fields carry the breakdown.
   // Streak = consecutive days in the top zone (2×TOP_N, as in selector.ts), state
   // in .bot/wide-ranking-streaks.json. NO-PRICE pools (score null) skipped.
-  // Ranking NEXT TO the old one, not instead — a month of observation, then a decision.
+  // Ranking next to the old one, not instead of it.
   try {
     const TOP_N = 10;
     const stateDir = path.join(__dirname, '..', STATE_DIR);

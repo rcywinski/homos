@@ -13,6 +13,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:math
       - run: npm run backtest:validate

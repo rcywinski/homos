@@ -1,28 +1,28 @@
 /**
- * scan-universe.ts — GLOBAL scan of the pool market (Pool Scanner 2.0).
+ * scan-universe.ts — global scan of the pool market (Pool Scanner 2.0).
  *   npx tsx backtest/scan-universe.ts
  *
- * Idea (2026-08-10, after analyzing a friend's bot interface): do not limit the
- * search to our few pairs, but classify the WHOLE DefiLlama market into
- * BUCKETS with different IL profiles and rank within a bucket:
+ * Idea: do not limit the search to our few pairs, but classify the whole
+ * DefiLlama market into buckets with different IL profiles and rank within a
+ * bucket:
  *   - stable-stable  (USDC-USDT, FRAX-USDC…)   — no IL, risk: depeg
  *   - eth-lst        (wstETH-WETH, weETH-WETH…) — staking drift, risk: depeg
  *   - btc-btc        (WBTC-cbBTC…)              — as above
  *   - major-volatile (WETH-USDC, cbBTC-WETH…)   — our current core, full IL
- *   - exotic         (the rest)                 — token beta dominates (verdict B5)
- * Comparing APR ACROSS buckets is a category error (same APR = different IL);
- * ranking only makes sense WITHIN a bucket.
+ *   - exotic         (the rest)                 — token beta dominates
+ * Comparing APR across buckets is a category error (same APR = different IL);
+ * ranking only makes sense within a bucket.
  *
  * For pegged pairs the key metric is volumeUsd7d/tvlUsd (fee throughput per $1
  * of TVL) — this is the raw material that xN concentration turns into a high
- * position APR (hence the friend's 100-378%: ultra-narrow range on a pegged pair).
+ * position APR (hence the 100-378% APRs of ultra-narrow ranges on pegged pairs).
  *
  * Report: top-10 per bucket in two views:
- *   (a) EXECUTABLE for us (uniswap-v3, Ethereum/Base/Arbitrum),
- *   (b) WHOLE MARKET (all projects/chains) — awareness of what we are missing
+ *   (a) executable for us (uniswap-v3, Ethereum/Base/Arbitrum),
+ *   (b) whole market (all projects/chains) — awareness of what we are missing
  *       (e.g. aerodrome-slipstream on Base is a v3 fork — a candidate for the future).
  * Output: backtest/results/scan-universe.json + tables on stdout.
- * One API call (/pools), zero AI tokens — suitable for the pipeline.
+ * One API call (/pools), no LLM involved — suitable for the pipeline.
  */
 import * as fs from 'fs';
 import * as path from 'path';

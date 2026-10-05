@@ -1,6 +1,6 @@
 /**
  * RotateSequenceModal.tsx — [Approve] on ROTATE proposal cards
- * (TASKS-UI.md Batch 8, cross-pool on the same chain). Twin of
+ * (cross-pool on the same chain). Twin of
  * RebalanceSequenceModal.tsx — difference: `RotatePlan` operates on TWO pools
  * (old/new), so execute() from useRotateExecution.ts takes `newPool`
  * instead of a single `pool`, and the preview shows `preview.bridgeSwap`/

@@ -1,12 +1,11 @@
-// bot/candidates.ts — validation verdicts for selector candidates (TASKS-FUNNEL.md)
+// bot/candidates.ts — validation verdicts for selector candidates (candidate funnel)
 //
-// Architecture (deliberate, 24.08): SEED in code (tracked by git — history
-// of manual validation verdicts), RUNTIME in .bot/candidate-verdicts.json
-// (untracked — written by the nightly funnel on Windows). We do NOT keep this
-// in a tracked file that is appended at runtime: exactly this class of problem
-// (dirty tree on production) blocked the report auto-push for 3 days.
+// Architecture: seed in code (tracked by git — history of manual validation
+// verdicts), runtime in .bot/candidate-verdicts.json (untracked — written by
+// the nightly funnel). This is deliberately not a tracked file appended at
+// runtime: a dirty tree on the production host blocks automated git pushes.
 //
-// A verdict is PERMANENT: once FAIL = we do not retest automatically.
+// A verdict is permanent: once FAIL, it is not retested automatically.
 // Retest only manually (remove the entry). PASS != auto-add to BOT_POOLS
 // — the decision to play a pool always belongs to a human.
 
@@ -23,16 +22,15 @@ export type CandidateVerdict = {
   worst?: number; // worst window vsHODL (gate: >-3)
   testedAt?: string; // ISO date of validation
   note?: string;
-  // auto-funnel fields (25.08, TASKS-FUNNEL.md):
+  // auto-funnel fields:
   algoVersion?: string; // ALGORITHM.md version of the verdict — different from current = verdict invalid, funnel retests
   candId?: string; // id of the `cand-*` cache (data/cache) and of the walkforward result
   poolAddress?: string; // pool address from factory.getPool (verified token0/token1)
   strategy?: string; // name of the profile strategy the gate was computed on
 };
 
-// Verdicts of manual validations from before the funnel (sources: SELECTOR-LOG.md,
-// CONTEXT 17/19/20.08). Seed, so the funnel does not recompute them
-// and so the UI tells the truth from day one.
+// Verdicts of manual validations from before the funnel. Seeded so the funnel
+// does not recompute them and the UI shows them from day one.
 export const SEED_VERDICTS: CandidateVerdict[] = [
   {
     llamaPool: '3a2f2faf-6423-4569-ad93-821c54cbe702',

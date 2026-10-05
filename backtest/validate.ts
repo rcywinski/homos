@@ -82,8 +82,7 @@ function mkSwaps(ticks: number[], volumeToken0: number, poolL: number): SwapEv[]
 {
   const specNoFee: PoolSpec = { ...spec, feeRate: 0, gasUsdPerRebalance: 0, slippageBps: 0 };
   const t0 = 200700;
-  // price move: ETH drops → tick USDC/WETH... for token0=USDC the raw price token1/token0 rises when ETH gets cheaper?
-  // human p = WETH per USDC = 1/P_eth * 1e-12... P_eth drops → p rises → tick rises.
+  // token0=USDC: human p = WETH per USDC = 1/P_eth, so ETH dropping → p rises → tick rises.
   // r = P1/P0 (ETH price): tick_delta = -ln(r)/ln(1.0001)
   const r = 0.8; // ETH -20%
   const dTick = Math.round(-Math.log(r) / Math.log(1.0001));
@@ -109,7 +108,7 @@ function mkSwaps(ticks: number[], volumeToken0: number, poolL: number): SwapEv[]
   const cases = [
     { L: 1.2345e13, lo: 198060, hi: 202140, cur: 200700 },
     { L: 5.5e11, lo: 198180, hi: 201360, cur: 200700 },
-    { L: 9e14, lo: 195000, hi: 196000, cur: 200700 }, // below the price range? cur>hi → all token1
+    { L: 9e14, lo: 195000, hi: 196000, cur: 200700 }, // cur>hi → all token1
     { L: 7e12, lo: 202200, hi: 205000, cur: 200700 }, // cur<lo → all token0
   ];
   for (const c of cases) {

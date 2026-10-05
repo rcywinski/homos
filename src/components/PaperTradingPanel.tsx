@@ -1,14 +1,12 @@
 /**
- * PaperTradingPanel.tsx — paper-trading visualization (TASKS-UI.md Batch 5,
- * commissioned by Fable 18.08, owner's decision). The bot runs a virtual portfolio
- * of $10k/pool (bot/paper.ts) per ALGORITHM v1.2 on live data — zero
- * transactions, pure simulation. The owner wants to see daily how much the algorithm
+ * PaperTradingPanel.tsx — paper-trading visualization. The bot runs a virtual
+ * portfolio of $10k/pool (bot/paper.ts) per ALGORITHM v1.2 on live data — zero
+ * transactions, pure simulation. The panel shows how much the algorithm
  * virtually earns/loses per pool and in total, especially vs HODL 50/50.
  *
  * Data: `bot.paper` / `bot.paperStatus` from useBotApi.ts (GET /api/paper?hours=168,
  * a separate slower poller than /api/state — see the comment in useBotApi.ts).
- * Response shape (HANDOFF Fable→CC-Mac 2026-08-18 ~11:3x, also pasted
- * into TASKS-UI.md Batch 5):
+ * Response shape:
  *   state.positions[poolId]: {status, capitalUsd, feesUsd, costsUsd,
  *     rebalances, hedge, hedgePnlRealizedUsd, ...}
  *   history[]: {ts, poolId, equityUsd, hodlUsd, feesUsd, costsUsd, inRange,
@@ -17,26 +15,23 @@
  *     state, because it also carries hodlUsd needed for "vs HODL") and (b) the sparkline.
  *   events[]: {ts, poolId, kind} — list of recent events.
  *
- * TASKS-UI.md Batch 7 (owner's idea 20.08, commissioned by Fable) — visibility
- * of the RANGE and the moments of falling out: 19–20.08 ETH +18.7%, 3 ETH/stable pools
- * fell out of range at the top, cbBTC went into EXIT_TREND, and on the equity-vs-HODL
- * sparkline itself you could NOT SEE when. Added: (a) state shading
- * (out of range / cash) on the equity-vs-HODL sparkline — works on the whole
- * history, even from before 20.08 (inRange/status have always been there); (b) a second
- * mini-chart "price vs bot range band" — ONLY when the pool has ≥2 samples
- * with the `price` field (added in bot/paper.ts 20.08; older samples lack it —
- * feature-detect, do not assume presence); (c) event markers
+ * Range visibility — the equity-vs-HODL sparkline alone does not show WHEN a
+ * pool fell out of range or exited on trend. Hence: (a) state shading
+ * (out of range / cash) on the sparkline — works on the whole history
+ * (inRange/status have always been recorded); (b) a second mini-chart
+ * "price vs bot range band" — ONLY when the pool has ≥2 samples with the
+ * `price` field (older samples lack it — feature-detect, do not assume
+ * presence); (c) event markers
  * EXIT_TREND/REENTRY/REBALANCE on the time axis of both charts.
  *
- * HARD SCOPE: bot/** read-only (here: not touched at all — the panel
- * reads exclusively what useBotApi.ts already brings). No action buttons
+ * Read-only: the panel uses exclusively what useBotApi.ts already brings. No action buttons
  * (it is a simulation, nothing to approve), no second /api/state poller.
  * Chart as inline SVG polyline without new dependencies — the
  * ObservationAnalysis.tsx pattern (PoolHistoryChart).
  *
- * Batch 10 (20.08): chart logic (Sparkline/PriceRangeChart/EventMarkers/
- * stateBands/price orientation) extracted to PositionCharts.tsx — now also used
- * by the REAL position cards in MorningCockpit.tsx. Only the import + the
+ * Chart logic (Sparkline/PriceRangeChart/EventMarkers/stateBands/price
+ * orientation) lives in PositionCharts.tsx, shared with the REAL position cards
+ * in MorningCockpit.tsx. Only the import + the
  * PaperHistoryPoint→EquityChartPoint mapping stays here (structural
  * typing — PaperHistoryPoint has equityUsd, so it fits without changes).
  */
@@ -62,10 +57,9 @@ const STATUS_ICON: Record<string, string> = {
   pending: '⏳',
 };
 
-/** Position state icon. IMPORTANT (owner's request 21.08): a position that is OPEN but
- *  out of range earns no fees — and until now it lit up with the same green dot
- *  as a healthy one. Hence out-of-range REPLACES the icon (one icon = one state),
- *  instead of adding a second mark next to it. */
+/** Position state icon. A position that is OPEN but out of range earns no fees,
+ *  so it must not share the green dot with a healthy one. Out-of-range REPLACES
+ *  the icon (one icon = one state) instead of adding a second mark next to it. */
 const statusIcon = (status: string, inRange: boolean | undefined): string =>
   status === 'open' && inRange === false ? '⚠️' : (STATUS_ICON[status] ?? '·');
 
@@ -128,7 +122,7 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
         <span className="paper-pool-equity">{fmtUsd(equity)}</span>
       </div>
 
-      {/* Out-of-range timer (owner's request 21.08). Shown ONLY when the
+      {/* Out-of-range timer. Shown ONLY when the
           position is open and out of range. `outOfRangeSince` resets
           on every return to range — it is a CONTINUOUS out-of-range timer. */}
       {position.status === 'open' && last?.inRange === false && (
@@ -162,11 +156,9 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
         </div>
       )}
 
-      {/* Batch 14: metrics bar extracted to PositionCharts.tsx
-          (PositionStatsBar) — also reused by the REAL position cards in
-          MorningCockpit.tsx, so the visual pattern is 1:1 without duplication.
-          Paper has all 6 fields available from the start, so behavior here is
-          unchanged (no field ever renders "—"). */}
+      {/* Metrics bar shared with the REAL position cards (PositionStatsBar in
+          PositionCharts.tsx). Paper always has all 6 fields, so no field
+          renders "—" here. */}
       <PositionStatsBar
         pnlUsd={pnl}
         vsHodlUsd={vsHodl}

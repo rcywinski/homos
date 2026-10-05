@@ -1,10 +1,10 @@
 /**
  * usePortfolio.ts — shared portfolio-wide summary for the morning cockpit
- * (UI-VISION.md §3.1) and any other screen that needs cross-pool numbers.
+ * (docs/UI-DESIGN.md §4.1) and any other screen that needs cross-pool numbers.
  *
  * Unlike MyPositions.tsx (scoped to whatever single pool is open), this walks
- * ALL of the connected wallet's Uniswap V3 NFT positions across every chain
- * we support (mainnet + Base — see POSITION_MANAGER_ADDRESSES), reusing the
+ * all of the connected wallet's Uniswap V3 NFT positions across every chain
+ * we support (mainnet + Base + Arbitrum — see POSITION_MANAGER_ADDRESSES), reusing the
  * exact same math (v3math, advisor.ts) the rest of the app already uses —
  * no new formulas introduced here.
  *
@@ -111,7 +111,7 @@ export interface PortfolioPosition {
   inRange: boolean;
   advice: RebalanceAssessment['action'] | null;
   paybackDays: number | null;
-  // --- Batch 3 (TASKS-UI.md): raw data needed for the actions on cockpit
+  // --- Raw data needed for the actions on cockpit
   // cards (Collect fees / Close / Manual rebalance — see useCockpitActions.ts).
   // Everything below comes from reads already performed above in this loop —
   // no additional RPC queries.
@@ -120,7 +120,7 @@ export interface PortfolioPosition {
   fee: number;
   tickLower: number;
   tickUpper: number;
-  liquidity: string; // bigint (liquidity of THIS position, not the whole pool) as a string
+  liquidity: string; // bigint (liquidity of this position, not the whole pool) as a string
   token0: { address: Address; symbol: string; decimals: number };
   token1: { address: Address; symbol: string; decimals: number };
   /** SDK Pool built once here — used by prepareRemoveLiquidityTransaction
@@ -132,17 +132,17 @@ export interface PortfolioPosition {
   feeAmount0: number; // uncollected fees (human units, not USD)
   feeAmount1: number;
   /** The same uncollected fees as feeAmount0/1, but as bigint (string) in
-   *  raw units — Batch 4b: rebalanceBuilder.ts's planRebalance()
+   *  raw units — rebalanceBuilder.ts's planRebalance()
    *  wants feesOwed0/1 exactly (bigint), not a rounded Number(). '0' when
    *  the fee read failed (see the catch below — feeAmount0/1 are then 0 too). */
   feesOwed0Raw: string;
   feesOwed1Raw: string;
   suggestion: RangeSuggestion | null; // advisor's suggested range — for the manual rebalance
-  /** BATCH 20 item 1: where `suggestion` comes from — 'bot' when the pool is
-   *  TRACKED by the bot and we had its ready suggestion (bot.state.pools[].suggestion,
-   *  the same number the bot actually plays, including the bot's SIGMA_MODE); 'ui-estimate'
-   *  when it is this hook's own computation (suggestRange/assessPosition, the browser's
-   *  swap estimator) — the only case NOW is a pool outside the bot's configuration
+  /** Where `suggestion` comes from — 'bot' when the pool is tracked by the bot
+   *  and we had its ready suggestion (bot.state.pools[].suggestion, the same number
+   *  the bot actually plays, including the bot's SIGMA_MODE); 'ui-estimate' when it
+   *  is this hook's own computation (suggestRange/assessPosition, the browser's
+   *  swap estimator) — only for pools outside the bot's configuration
    *  (findBotPoolByAddress found nothing). `null` = no suggestion at all. */
   suggestionSource: 'bot' | 'ui-estimate' | null;
 }
@@ -163,7 +163,7 @@ export interface PortfolioSummary {
   /** Reference ETH/USD price derived from the first stable/ETH pool
    *  encountered among the positions (see `derivedEthUsd` below) — null when
    *  the user has no such position. Reused by
-   *  useCockpitActions.ts (Fix 25.08: live [Collect fees] threshold) instead of
+   *  useCockpitActions.ts (live [Collect fees] threshold) instead of
    *  a separate price read. */
   ethUsd: number | null;
 }
@@ -192,14 +192,12 @@ const usdValueOf = (amount0: number, amount1: number, sym0: string, sym1: string
 };
 
 /**
- * FIX 01.09 (Fable): valuation via the POOL PRICE for pairs with no path in usdValueOf
- * (e.g. cbBTC/WETH — no stable leg). Symptom: the cockpit card showed
- * "Accrued fees $0.00" on the narrow leg of the experiment (#5908083), while
- * the bot and Uniswap saw ~$0.7 — feesUsd did `?? 0` on the null from usdValueOf.
- * The unknown leg is converted via the pool price (sqrtPriceX96) to the ETH/stable leg,
- * then to USD. Also fixes the position value (the "(bot valuation)" fallback disappears).
+ * Valuation via the pool price for pairs with no path in usdValueOf (e.g.
+ * cbBTC/WETH — no stable leg); otherwise fees on such pairs would show as $0.
+ * The unknown leg is converted via the pool price (sqrtPriceX96) to the
+ * ETH/stable leg, then to USD.
  * Note: the ETH branches require derivedEthUsd — derived from a previously
- * processed stable/ETH pool (loop order, as before).
+ * processed stable/ETH pool, so loop order matters.
  */
 const usdValueViaPool = (
   amount0: number,
@@ -241,14 +239,10 @@ export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
   const clientArbitrum = usePublicClient({ chainId: 42161 });
   const clients: Record<number, ReturnType<typeof usePublicClient>> = { 1: clientMainnet, 8453: clientBase, 42161: clientArbitrum };
 
-  // Wallet balances — ALL THREE NETWORKS.
-  // BUG FOUND 21.08: until now only mainnet was counted (the comment
-  // read "Mirrors CompactWalletInfo's balance fetch (mainnet ETH/WETH/USDC)"),
-  // while positions are read from mainnet+Base+Arbitrum. Effect: "Total value"
-  // in the cockpit UNDERSTATED the wallet by everything sitting on L2 — for the
-  // owner this hid 152 USDC on Arbitrum.
+  // Wallet balances on all three networks — positions are read from
+  // mainnet+Base+Arbitrum, so counting only mainnet would understate "Total value".
   // Hooks listed explicitly (not in a loop): their count must be constant between
-  // renders — see today's two "Rendered more hooks…" crashes.
+  // renders (otherwise React throws "Rendered more hooks…").
   const { data: ethBalM } = useBalance({ address, chainId: 1 });
   const { data: wethBalM } = useBalance({ address, token: NETWORKS.MAINNET.tokens.WETH.address, chainId: 1 });
   const { data: usdcBalM } = useBalance({ address, token: NETWORKS.MAINNET.tokens.USDC.address, chainId: 1 });
@@ -426,25 +420,20 @@ export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
             // Advisor's suggested range — computed when we have stats, regardless
             // of whether the position could be valued in USD (a manual rebalance still
             // makes sense, just without the profitability/payback assessment).
-            // BATCH 20 item 1: this computation (suggestRange/assessPosition, the browser's
-            // swap estimator — the bot's SIGMA_MODE does NOT apply here) is now
-            // ONLY a fallback for pools outside the bot's configuration. For pools TRACKED
+            // This computation (suggestRange/assessPosition, the browser's swap
+            // estimator — the bot's SIGMA_MODE does not apply here) is only a
+            // fallback for pools outside the bot's configuration. For pools tracked
             // by the bot we override `suggestion` with the ready number from bot.state.pools[]
             // below (in a useMemo after this loop, so as not to trigger another RPC pass
             // on every /api/state poll — see the comment at `positionsWithBotSuggestion`).
             let suggestion: RangeSuggestion | null = null;
             if (stats) {
-              // cbBTC FORECAST CONSISTENCY (HANDOFF Fable→Sonnet 26.08/28.08 morning):
-              // ADVISOR_PARAMS.k=3 is the default for ETH/stable pairs — correlated
-              // pairs (cbBTC/WETH) play live with the bot's frozen v1.2
-              // profile, k=2 (bot/config.ts BotPool.advisorK). This hook was
-              // the ONLY call site of suggestRange/assessPosition in the whole UI
-              // (Advisor ±X% in RebalanceModal, REBALANCE/WAIT_NOT_PROFITABLE
-              // on cards) and always fell back to the global k=3, even for cbBTC —
-              // until recalibration the UI should show what the bot actually
-              // plays, not separate (more aggressive) math. Per-pool override
-              // via BOT_POOL_META.advisorK (duplicate of bot/config.ts,
-              // the same convention as the rest of botPools.ts), zero new requests.
+              // ADVISOR_PARAMS.k=3 is the default for ETH/stable pairs; correlated
+              // pairs (cbBTC/WETH) run live with k=2 (bot/config.ts BotPool.advisorK).
+              // This hook is the only UI call site of suggestRange/assessPosition
+              // (Advisor ±X% in RebalanceModal, REBALANCE/WAIT_NOT_PROFITABLE on
+              // cards), so the per-pool k is applied here to show what the bot
+              // actually plays. Source: BOT_POOL_META.advisorK (mirror of bot/config.ts).
               const botMeta = findBotPoolByAddress(chainId, poolInfo.address);
               const advisorParams = botMeta?.advisorK ? { ...ADVISOR_PARAMS, k: botMeta.advisorK } : ADVISOR_PARAMS;
               try {
@@ -523,9 +512,9 @@ export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, isConnected, tick]);
 
-  // BATCH 20 item 1: suggestion override for pools TRACKED by the bot — a separate
-  // useMemo ON TOP of the RPC effect, not in its dependencies, so that the /api/state poll
-  // (every 60s, useBotApi) does NOT trigger another pass over all
+  // Suggestion override for pools tracked by the bot — a separate useMemo on top
+  // of the RPC effect, not in its dependencies, so that the /api/state poll
+  // (every 60s, useBotApi) does not trigger another pass over all
   // on-chain positions (expensive RPC) — it only recomputes the existing `positions`
   // with the latest bot.state.pools[].suggestion. Zero new requests: the bot's
   // data is already in memory (useBotApi), here only matching by pool address.
@@ -543,7 +532,7 @@ export function usePortfolio(bot?: UseBotApi): PortfolioSummary {
 
   const num = (b?: { formatted: string }) => Number(b?.formatted ?? 0);
   // ETH and WETH are summed across all networks (same price), USDC is 1:1 USD.
-  // cbBTC on Base deliberately OMITTED — it would require a BTC price, which the UI
+  // cbBTC on Base deliberately omitted — it would require a BTC price, which the UI
   // does not have (the bot computes it via the reference pool). If we ever hold real
   // capital there, the price must be fetched, otherwise "Total value" will understate again.
   const ethLike = num(ethBalM) + num(wethBalM) + num(ethBalB) + num(wethBalB) + num(ethBalA) + num(wethBalA);

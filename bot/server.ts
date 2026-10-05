@@ -1,6 +1,6 @@
 /**
  * bot/server.ts — mini API for the UI (reads the observer bot's state).
- *   npm run bot:server   (port 8787; eventually pm2 on Windows, see INFRA.md)
+ *   npm run bot:server   (port 8787; pm2 on Windows, see docs/INFRA.md)
  * Endpoints:
  *   GET  /api/state                     — full state (pools, positions, proposals)
  *   GET  /api/paper?hours=N             — paper trading: state + equity + ledger
@@ -10,7 +10,7 @@
  * Authorization: if the env BOT_API_TOKEN is set, all /api/* require the
  * header `Authorization: Bearer <token>` (otherwise 401). Without BOT_API_TOKEN in env
  * authorization is disabled (convenient for dev on the Mac) — on the production server
- * (Windows, see INFRA.md/setup-windows.md) the token is REQUIRED, because the home LAN
+ * (Windows, see docs/INFRA.md, deploy/setup-windows.md) the token is required, because the home LAN
  * is not a trust boundary (guests on Wi-Fi). The UI keeps the token in localStorage under
  * the key `homos_api_token` and attaches it to fetches against this API.
  */
@@ -54,11 +54,10 @@ const readJson = (p: string) => (fs.existsSync(p) ? JSON.parse(fs.readFileSync(p
 app.get('/api/state', (_req, res) => {
   const s = readJson(STATE_PATH);
   if (!s) return res.status(503).json({ error: 'bot not running (no state file)' });
-  // Fix 26.08 (Rafal's report: "they come back after refreshing the page"): a dismissal
-  // waits in the command queue for up to 30 s before the observer applies it and rewrites
-  // state.json — in that window a freshly loaded page saw the proposal
-  // again. The server STILL does not write to proposals.json (the only writer =
-  // observer, dual-writer lesson 25.08) — it only filters the VIEW of the state
+  // A dismissal waits in the command queue for up to 30 s before the observer applies
+  // it and rewrites state.json — without this filter a freshly loaded page would show
+  // the proposal again. The server still does not write to proposals.json (the only
+  // writer is the observer, see below) — it only filters the view of the state
   // by the ids from its own queue. Once the observer consumes the file, the filter disappears by itself.
   try {
     const cmdPath = path.join(DIR, 'proposal-commands.ndjson');
@@ -75,9 +74,9 @@ app.get('/api/state', (_req, res) => {
 });
 
 app.post('/api/proposals/:id/dismiss', (req, res) => {
-  // We do NOT write to proposals.json (bug 25.08: dual-writer — the observer keeps
-  // proposals in memory and overwrote the file, resurrecting dismissed ones; the only
-  // writer of the file is the observer). The command goes through an append-only queue,
+  // We do not write to proposals.json: the observer keeps proposals in memory and
+  // would overwrite the file, resurrecting dismissed ones (two writers race); the only
+  // writer of the file is the observer. The command goes through an append-only queue,
   // the observer applies it within 30 s and then it also disappears from /api/state.
   const props = readJson(PROPOSALS_PATH) || [];
   if (!props.find((x: any) => x.id === req.params.id)) return res.status(404).json({ error: 'not found' });
@@ -106,8 +105,8 @@ app.get('/api/history', (req, res) => {
   res.json(out);
 });
 
-// Equity/HODL history of REAL positions (position card redesign following the
-// paper pattern, 20.08). File: .bot/positions-history.ndjson — written by the observer every
+// Equity/HODL history of real positions (position cards follow the
+// paper-trading pattern). File: .bot/positions-history.ndjson — written by the observer every
 // refreshPositions cycle (5 min); sample shape like paper-history + tokenId.
 app.get('/api/positions-history', (req, res) => {
   const P = path.join(DIR, 'positions-history.ndjson');
@@ -125,7 +124,7 @@ app.get('/api/positions-history', (req, res) => {
   res.json(out);
 });
 
-// Selector's daily ranking (TOP 10 pools "watched for entry") —
+// Selector's daily ranking (top 10 pools "watched for entry") —
 // written by bot/selector.ts once a day after 8:00.
 app.get('/api/ranking', (_req, res) => {
   const r = readJson(path.join(DIR, 'selector-ranking.json'));
@@ -133,8 +132,8 @@ app.get('/api/ranking', (_req, res) => {
   res.json(r);
 });
 
-// WIDE ranking (funnel v2 tier 1, scripts/wide-score.ts — a step of the nightly
-// pipeline since 02.09). Same shape as /api/ranking; `apy7d` = score [%/yr].
+// Wide ranking (funnel v2 tier 1, scripts/wide-score.ts — a step of the nightly
+// pipeline). Same shape as /api/ranking; `apy7d` = score [%/yr].
 app.get('/api/wide-ranking', (_req, res) => {
   const r = readJson(path.join(DIR, 'wide-ranking.json'));
   if (!r) return res.status(503).json({ error: 'wide ranking not generated yet (pipeline step wide-score, nightly)' });
@@ -148,13 +147,13 @@ app.get('/api/wide-daily', (_req, res) => {
 });
 
 // Full runs (walkforward 720d, WF_SET=wide) for pools from the rankings —
-// written by scripts/wide-collect.ts (funnel Tier 2, CC-Win subagent in the background).
-// Object {llamaUuid → summary}; the UI adds columns by llamaUuid (Batch 22).
+// written by scripts/wide-collect.ts (funnel tier 2, runs in the background).
+// Object {llamaUuid → summary}; the UI adds columns by llamaUuid.
 app.get('/api/wide-backtests', (_req, res) => {
   res.json(readJson(path.join(DIR, 'wide-backtests.json')) ?? {});
 });
 
-// Candidate validation verdicts (TASKS-FUNNEL.md): seed in code +
+// Candidate validation verdicts (bot/candidates.ts): seed in code +
 // runtime .bot/candidate-verdicts.json (written by the nightly funnel). The UI matches
 // by llamaPool to ranking rows → PASS/FAIL/QUEUED badge.
 app.get('/api/candidates', (_req, res) => {
@@ -195,7 +194,7 @@ app.get('/api/results/:name', (req, res) => {
   res.json(JSON.parse(fs.readFileSync(p, 'utf8')));
 });
 
-// --- on-chain transaction ledger (TASKS-LEDGER.md §3) ---
+// --- on-chain transaction ledger (bot/ledger.ts) ---
 app.get('/api/ledger', (req, res) => {
   const days = Math.max(1, Math.min(3650, Number(req.query.days) || 90));
   const cutoff = Date.now() - days * 24 * 3600e3;
@@ -207,7 +206,7 @@ app.get('/api/closed-positions', (_req, res) => {
   res.json(readJson(path.join(DIR, 'closed-positions.json')) ?? []);
 });
 
-// CSV: 1 row = 1 on-chain event (for settlements; PLN/NBP = iteration 2)
+// CSV: 1 row = 1 on-chain event (for settlements; USD only, no PLN conversion)
 app.get('/api/ledger.csv', (_req, res) => {
   const esc = (v: unknown) => {
     const s = v === null || v === undefined ? '' : String(v);

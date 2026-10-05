@@ -1,6 +1,6 @@
 /**
  * walkforward.ts — strategy robustness test on rolling windows
- * + SPLIT BY REGIME (B2 from RESEARCH-QUEUE).
+ * + split by regime.
  *
  *   npx tsx backtest/walkforward.ts <pool-id> [windowDays=30] [stepDays=15]
  *
@@ -9,14 +9,15 @@
  * mean/median vsHODL, % of windows won, worst window. A strategy is "sound"
  * only when it wins in the majority of windows, not in a single run.
  *
- * REGIMES: each window is tagged by the change of the pair's RELATIVE price in the window
+ * Regimes: each window is tagged by the change of the pair's relative price in the window
  * (P_end/P_start − 1): up > +10%, down < −10%, flat in between. The per-regime
- * report answers the B1 question: are the worst windows the trend windows
+ * report answers the question: are the worst windows the trend windows
  * (if so, the improvement lies in the trend safety switch/hedge, not in tuning k/h).
  * PLAN.md gate: the strategy must win in ≥2 regimes.
  *
  * Output: backtest/results/walkforward-<id>-<windowDays>d.json
- * (name includes the window — previously a 45d run overwrote the 60d result).
+ * (name includes the window so runs with different window lengths do not
+ * overwrite each other).
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -46,7 +47,7 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
   console.log(`${id}: ${swaps.length} swaps, ${totalDays.toFixed(1)} days · windows ${windowDays}d every ${stepDays}d · regime: ±${REGIME_THRESHOLD * 100}%\n`);
 
   const trendBase = { k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7, trendHLDays: 7, trendThresh: 0.05 } as const;
-  // set controlled by env WF_SET: 'hedge' = F4 (perp hedge; requires
+  // set controlled by env WF_SET: 'hedge' = perp hedge (requires
   // data/funding/ETHUSDT.json), 'trend-sweep' = exit variants, default canon.
   const fundingAt = loadFunding('ETHUSDT');
   const mkHedge = (): Strategy[] => {
@@ -63,13 +64,13 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
       volAdaptiveHedge({ ...trendBase, sizing: 'excess', fundingAt, reentryAboveEma: true }),
     ];
   };
-  // 'hup' (experiment 20.08, Rafal's request): ASYMMETRIC hysteresis —
-  // shorter (6/12h) or longer (48h) when the price leaves the range UPWARDS
-  // (h=24 on a downward exit unchanged). Motivation: 19–20.08 ETH +18.7%,
-  // 3 ETH/stable pools sat 100% in USDC waiting the full 24h. Two-sided
+  // 'hup': asymmetric hysteresis — shorter (6/12h) or longer (48h) when the
+  // price leaves the range upwards (h=24 on a downward exit unchanged).
+  // Motivation: after a sharp ETH rally the ETH/stable pools sat 100% in USDC
+  // waiting the full 24h. Two-sided
   // hypothesis: shorter hUp = returns to collecting fees sooner, but buys
   // ETH dearer after the pump (chase); longer hUp = less chase. Comparison
-  // ONLY against the frozen v1.1 on the same windows; k=2 pure exit for
+  // only against the frozen v1.1 on the same windows; k=2 pure exit for
   // cbBTC pools (when interpreting, look at the rows matching the pool profile).
   const mkHup = (): Strategy[] => {
     const v11 = { ...trendBase, mode: 'exit' as const, reentryAboveEma: true };
@@ -86,8 +87,8 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
       volAdaptiveTrend({ ...cb, hysteresisUpSec: 12 * 3600 }),
     ];
   };
-  // 'funnel' (auto candidate funnel, TASKS-FUNNEL.md): benchmark only +
-  // two FROZEN v1.2 profiles (ETH/stable = v1.1 re>EMA; cbBTC = k=2 pure
+  // 'funnel' (auto candidate funnel): benchmark only +
+  // two frozen v1.2 profiles (ETH/stable = v1.1 re>EMA; cbBTC = k=2 pure
   // exit) — the gate is computed by candidate-funnel.ts from summary by strategy name.
   // Small set = faster run (the candidate has to fit in the pipeline window).
   const mkFunnel = (): Strategy[] => [
@@ -95,10 +96,10 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
     volAdaptiveTrend({ ...trendBase, mode: 'exit', reentryAboveEma: true }),
     volAdaptiveTrend({ ...trendBase, k: 2, mode: 'exit' }),
   ];
-  // 'y2' (720d experiment, 25.08 — DECISIONS items 12+13): baselines + frozen
-  // profiles + candidate hUp48 + NEW up→5050 (upward exit → parking in 50/50
-  // HODL instead of 100% quote) in both variants. Goal: the same strategies on
-  // a window with TWO big regimes (bull 24-25 + declines 25-26).
+  // 'y2' (720d experiment): baselines + frozen profiles + candidate hUp48 +
+  // up→5050 (upward exit → parking in 50/50 HODL instead of 100% quote) in
+  // both variants. Goal: the same strategies on a window with two big regimes
+  // (bull 24-25 + declines 25-26).
   const mkY2 = (): Strategy[] => {
     const v11 = { ...trendBase, mode: 'exit' as const, reentryAboveEma: true };
     return [
@@ -106,30 +107,29 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
       volAdaptive({ k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
       volAdaptiveTrend(v11), // frozen v1.1
       volAdaptiveTrend({ ...v11, hysteresisUpSec: 48 * 3600 }), // candidate v1.3 (hUp48)
-      volAdaptiveTrend({ ...v11, upFallback: '5050' }), // item 12: up→50/50
+      volAdaptiveTrend({ ...v11, upFallback: '5050' }), // up→50/50
       volAdaptiveTrend({ ...v11, hysteresisUpSec: 48 * 3600, upFallback: '5050' }), // hUp48 + up→50/50
       volAdaptiveTrend({ ...trendBase, k: 2, mode: 'exit' }), // frozen cbBTC profile
-      // "LP only when the market is not trending" (Rafal 25.08 night, after the 720d analysis):
-      // SYMMETRIC safety switch — an UP trend also kicks out to 50/50 (HODL
-      // catches the beta), return once the gap has cooled; reaction to the trend
-      // SIGNAL, not to falling out of range (too late — lesson from up→5050)
+      // "LP only when the market is not trending": symmetric safety switch —
+      // an up trend also kicks out to 50/50 (HODL catches the beta), return
+      // once the gap has cooled; reacts to the trend signal, not to falling
+      // out of range (which up→5050 showed is too late)
       volAdaptiveTrend({ ...v11, upExitThresh: 0.05 }),
       volAdaptiveTrend({ ...v11, hysteresisUpSec: 48 * 3600, upExitThresh: 0.05 }),
       volAdaptiveTrend({ ...trendBase, k: 2, mode: 'exit', upExitThresh: 0.05 }), // cbBTC profile + upX
     ];
   };
-  // 'recal' (recalibration batch, review decisions 26.08 — TASKS-RECAL §5):
-  // run with SIGMA_MODE=grid15 (σ from 15-min bucket closes)! Goal: sweep k
-  // on the FIXED σ (old k values are in units of the broken estimator — DECISIONS
-  // 11/11a), settle cbBTC k2/k3, candidate hUp48/h48 and the
-  // "LP only without trend" variants (upX — Rafal's sideways-market thesis; upX=8% =
-  // gentler UP signal from 11f.d). Hysteresis still the old one (time share =
-  // §2, separate step) — one variable at a time.
+  // 'recal' (recalibration): run with SIGMA_MODE=grid15 (σ from 15-min
+  // bucket closes). Goal: sweep k on the corrected σ (old k values are in
+  // units of the swap-by-swap estimator), settle cbBTC k2/k3, candidate
+  // hUp48/h48 and the "LP only without trend" variants (upX; upX=8% = gentler
+  // up signal). Hysteresis kept as-is (time share is a separate step) — one
+  // variable at a time.
   const mkRecal = (): Strategy[] => {
     const v11 = { ...trendBase, mode: 'exit' as const, reentryAboveEma: true };
     return [
       hodl5050,
-      passiveWide, // ±50% — the 720d "leader" so far; on grid15 σ we will see whether adapt catches up
+      passiveWide, // ±50% — the 720d leader; checks whether adaptive catches up on grid15 σ
       fixedNaive(0.3), // reference from the base-030 sweep ("Sztywny ±30%" = "Fixed ±30%")
       volAdaptive({ k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
       volAdaptiveTrend({ ...v11, k: 2 }),
@@ -139,15 +139,15 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
       volAdaptiveTrend({ ...v11, hysteresisSec: 48 * 3600 }), // h=48 (direction from the sweep)
       volAdaptiveTrend({ ...v11, hysteresisUpSec: 48 * 3600 }), // candidate v1.3 (hUp48)
       volAdaptiveTrend({ ...trendBase, k: 2, mode: 'exit' }), // frozen cbBTC profile (k=2)
-      volAdaptiveTrend({ ...trendBase, k: 3, mode: 'exit' }), // cbBTC k=3 (agenda item 3)
+      volAdaptiveTrend({ ...trendBase, k: 3, mode: 'exit' }), // cbBTC k=3
       volAdaptiveTrend({ ...v11, upExitThresh: 0.05 }), // "LP only without trend" (upX=5%)
-      volAdaptiveTrend({ ...v11, upExitThresh: 0.08 }), // upX=8% — less jumpy (11f.d)
+      volAdaptiveTrend({ ...v11, upExitThresh: 0.08 }), // upX=8% — less jumpy
     ];
   };
-  // 'next' (26.08 afternoon, Rafal's decision "we test everything"):
-  // (B) FLAT-ONLY family — cash by default, LP only in a confirmed flat,
-  // exit on trend in BOTH directions; benchmark = cash100, NOT HODL!
-  // (C) share hysteresis (DECISIONS item 10) + upConfirm (less jumpy upX).
+  // 'next':
+  // (B) flat-only family — cash by default, LP only in a confirmed flat,
+  // exit on trend in both directions; benchmark = cash100, not HODL.
+  // (C) share hysteresis + upConfirm (less jumpy upX).
   // Run with SIGMA_MODE=grid15.
   const mkNext = (): Strategy[] => {
     const v11 = { ...trendBase, mode: 'exit' as const, reentryAboveEma: true };
@@ -167,13 +167,13 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
       volAdaptiveTrend({ ...v11, upExitThresh: 0.08, upConfirmSec: 12 * 3600 }),
     ];
   };
-  // 'final' (26.08 evening — LAST round before the decision about the project):
-  // two product candidates after the Rafal/Fable discussion and literature research:
-  // (1) WIDE-PASSIVE "HODL with yield" — the only family winning in
+  // 'final' (last candidate round before the product decision), two
+  // candidates backed by the backtests and literature research:
+  // (1) wide-passive "HODL with yield" — the only family winning in
   //     fullperiod 4/4 (+$603…+$2574 vsHODL) and consistent with the research
   //     (a wide range minimizes divergence loss + costs≈0);
-  // (2) FLATONLY-HODL (Rafal's idea) — 50/50 base ALWAYS (in a trend a
-  //     draw with HODL instead of a loss), narrow LP only in a CONFIRMED
+  // (2) flatOnly-HODL — 50/50 base always (in a trend a
+  //     draw with HODL instead of a loss), narrow LP only in a confirmed
   //     flat (our niche, 74-100% win rate). Criteria: flat ≥65% vsHODL,
   //     up/down draw (±1 p.p.), worst>-3, fullperiod ≥ HODL.
   const mkFinal = (): Strategy[] => {
@@ -191,8 +191,8 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
       volAdaptiveTrend({ ...trendBase, mode: 'exit', reentryAboveEma: true }), // v1.1 reference
     ];
   };
-  // 'hybrid' (27.08, Rafal's idea #3 — FlatWide): narrow LP in flat,
-  // outside flat a WIDE passive LP (idle:'passive') instead of HODL. Thesis:
+  // 'hybrid' (FlatWide): narrow LP in flat,
+  // outside flat a wide passive LP (idle:'passive') instead of HODL. Thesis:
   // FlatOnly-HODL + fees in trends, at the cost of passiveW's tail. References:
   // hodl, passiveW ±40, FlatOnly-HODL k=3|24h.
   const mkHybrid = (): Strategy[] => {
@@ -206,10 +206,10 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
       flatOnlyLP({ ...flatBase, k: 3, enterThresh: 0.02, exitThresh: 0.05, confirmSec: 24 * 3600, idle: 'passive', passiveWidth: 0.5 }),
     ];
   };
-  // WF_SET=product (29.08): multi-window gate for the product we actually PLAY —
-  // a hybrid with a FIXED width of the narrow leg (±5% = exit threshold), not
-  // k×σ×√7 from the v1.2 advisor. Until 29.08 walkforward and the product computed
-  // different widths; this set closes the gap. Variants ±4/±5/±8% + the k×σ
+  // WF_SET=product: multi-window gate for the product actually played live —
+  // a hybrid with a fixed width of the narrow leg (±5% = exit threshold), not
+  // k×σ×√7 from the v1.2 advisor, so walkforward evaluates the same widths
+  // the product uses. Variants ±4/±5/±8% + the k×σ
   // reference show whether the width change passes the gate, and not merely
   // improves episode EV (flatwindows) and a single-window result (fullperiod).
   const mkProduct = (): Strategy[] => {
@@ -223,12 +223,12 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
       flatOnlyLP({ ...base, passiveWidth: 0.4, narrowWidth: 0.04 }),
       flatOnlyLP({ ...base, passiveWidth: 0.5, narrowWidth: 0.04 }),
       flatOnlyLP({ ...base, passiveWidth: 0.4, narrowWidth: 0.08 }),
-      flatOnlyLP({ ...base, passiveWidth: 0.4 }), // k×σ×√7 — the product before 29.08
+      flatOnlyLP({ ...base, passiveWidth: 0.4 }), // k×σ×√7 — the earlier variant
       flatOnlyLP({ ...base, passiveWidth: 0.4, narrowWidth: 0.05, recenter: 'noswap' }),
       flatOnlyLP({ ...base, passiveWidth: 0.5, narrowWidth: 0.05, recenter: 'noswap' }),
     ];
   };
-  // WF_SET=shape (02.09): multi-window gate for the SHAPE of the wide leg —
+  // WF_SET=shape: multi-window gate for the shape of the wide leg —
   // skewed interval (3) and barbell (4); set description in fullperiod.ts.
   // Barbell = average of two rows (result is linear in capital).
   const mkShape = (): Strategy[] => {
@@ -238,7 +238,7 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
       passiveW(0.4),
       passiveW(0.5),
       passiveAsym(0.5, 0.5),
-      passiveAsym(0.5, 0.4), // round 2 (02.09): intermediate — smaller penalty in up
+      passiveAsym(0.5, 0.4), // intermediate — smaller penalty in up
       passiveAsym(0.55, 0.4),
       passiveAsym(0.6, 0.35),
       passiveAsym(0.65, 0.3),
@@ -255,11 +255,11 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
       fixedNaive(0.5),
     ];
   };
-  // WF_SET=wide (02.09, funnel Floor 2 — scripts/wide-collect.ts): width of the
-  // pair CLASS from env WIDE_W (0.5 crypto-stable, 0.4 crypto-crypto, tight for
+  // WF_SET=wide (funnel Tier 2 — scripts/wide-collect.ts): width of the
+  // pair class from env WIDE_W (0.5 crypto-stable, 0.4 crypto-crypto, tight for
   // pegged), FlatWide hybrid with the narrow leg WIDE_NARROW only when given
   // (wide classes). Minimal set: HODL, passive, hybrid — what ends up in the
-  // "full run" columns of the ranking tables (Batch 22).
+  // "full run" columns of the ranking tables.
   const mkWide = (): Strategy[] => {
     const w = Number(process.env.WIDE_W || '0.5');
     const narrow = process.env.WIDE_NARROW ? Number(process.env.WIDE_NARROW) : null;
@@ -299,9 +299,9 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
           volAdaptiveTrend({ ...trendBase, mode: 'exit', volGateRatio: 1.4, trendThresh2: 0.15 }),
         ]
       : [
-          // CANONICAL set for cross-validation (11.08): baselines + 3 safety-switch
+          // canonical set for cross-validation: baselines + 3 safety-switch
           // profiles from the sweep on base-030-365d (max tail protection / balance /
-          // sharper return) — the same configs on EVERY pool (generalization test)
+          // sharper return) — the same configs on every pool (generalization test)
           hodl5050, passiveWide,
           volAdaptive({ k: 2, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
           volAdaptive({ k: 3, horizonDays: 7, hysteresisSec: 24 * 3600, maxPaybackDays: 7 }),
@@ -415,9 +415,9 @@ const REGIME_THRESHOLD = 0.10; // ±10% relative price change within the window
   }
   fs.writeFileSync(
     path.join(OUT, `walkforward-${id}-${windowDays}d.json`),
-    // perWindow (E8.3, 07.09): raw vsHODL per window per strategy — for
-    // conditioning windows on the volatility state at entry (backtest/e8-timing.ts).
-    // Until now `dist` lived only in memory; summary is not enough for bucketing.
+    // perWindow: raw vsHODL per window per strategy — for conditioning
+    // windows on the volatility state at entry (backtest/lp-vol-timing.ts);
+    // the summary alone is not enough for bucketing.
     JSON.stringify({ id, windowDays, stepDays, windows, regimeThreshold: REGIME_THRESHOLD, regimeCounts, windowMeta, summary, hodlByRegime, perWindow: dist }, null, 2)
   );
 })();

@@ -1,16 +1,15 @@
 /**
- * rotation.ts — backtest of DYNAMIC rotation between pools (TASKS-ROTATION v1,
- * Rafal's directive 26.08: "we keep reviewing the market; idleness/loss →
- * we close and move").
+ * rotation.ts — backtest of dynamic rotation between pools ("keep reviewing
+ * the market; on idleness/loss close and move").
  *
- * CONSTRUCTION (honest): ETH/stable pools = the same beta, so the test isolates
- * the question "does POOL CHOICE (the fee engine) add value" — rotation does
+ * Construction: ETH/stable pools = the same beta, so the test isolates
+ * the question "does pool choice (the fee engine) add value" — rotation does
  * not escape market direction. For each pool we compute the in-pool strategy
- * equity with the engine (hourly samples), and the rotation portfolio CHAINS
+ * equity with the engine (hourly samples), and the rotation portfolio chains
  * the hourly returns of the active pool + pays hop costs (SWITCH_COST_PCT + gas;
  * cross-chain +$2 bridge). Approximation: on a hop we inherit the current range
  * state of the target pool (small bias for quickly re-centred strategies; the
- * same for all rules, so the COMPARISON of rules is fair).
+ * same for all rules, so the comparison of rules is fair).
  *
  * Usage: [SIGMA_MODE=grid15] npx tsx backtest/rotation.ts [startUsd=5000] [id...]
  *   default: 5 ETH/stable pools *-365d.
@@ -88,8 +87,8 @@ const IN_POOL: Record<string, () => Strategy> = {
           const raw1 = L * (sp - spLo);
           const bandTok0 = (raw0 + raw1 / (sp * sp)) / 10 ** spec.d0;
           const feeTok0 = (ev.a0 > 0 ? ev.a0 : ev.a1 / (sp * sp) * 10 ** (spec.d1 - spec.d0) ) ;
-          // fee in token0 human: are a0/a1 already human in SwapEv? — see load.ts;
-          // we compute USD-agnostically: instYield = fee/band (units cancel out)
+          // fee in token0 human units; instYield = fee/band is USD-agnostic
+          // (units cancel out)
           const fee0 = (ev.a0 > 0 ? ev.a0 : Math.abs(ev.a1) / ((sp * sp) * 10 ** (spec.d0 - spec.d1))) * spec.feeRate;
           if (bandTok0 > 0 && fee0 >= 0) {
             const inst = (fee0 / bandTok0) * (86400 / dt);

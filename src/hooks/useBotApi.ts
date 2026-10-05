@@ -2,7 +2,7 @@
  * useBotApi.ts — connects the UI to bot/server.ts (the observer API running
  * on the Windows server — see INFRA.md). Not on the same origin as the UI
  * dev server, so the address+token are user-configurable and persisted in
- * localStorage (`homos_api_base` / `homos_api_token`) — see TASKS-UI.md #1.
+ * localStorage (`homos_api_base` / `homos_api_token`).
  *
  * Deliberately quiet on the common "bot offline" case (dev on Mac with no
  * server running, or server unreachable): failures land in `status`/`error`
@@ -12,37 +12,33 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const BASE_KEY = 'homos_api_base';
 const TOKEN_KEY = 'homos_api_token';
-// Default to the page ORIGIN — the UI is served from the same server as the
-// API (homos-server :8787), so localhost as the default broke access from every
-// device other than the server itself (Mac ~14:2x and iPhone ~15:4x on 19.08 —
-// empty panels despite a saved token). localhost remains only for the
-// dev server on :3000 (webpack-dev), where the origin has no API.
+/** Fallback API address for local development (webpack-dev on :3000 has no API). */
+export const DEFAULT_BOT_API = 'http://localhost:8787';
+// Prefer the page origin: in production the UI is served by the same server as
+// the API (:8787), and a localhost default would break every other device on the LAN.
 const DEFAULT_BASE =
   typeof window !== 'undefined' && window.location.origin.includes(':8787')
     ? window.location.origin
-    : 'http://localhost:8787';
+    : DEFAULT_BOT_API;
 const POLL_MS = 60_000;
 const STALE_MS = 5 * 60_000;
-// Paper trading (bot/paper.ts, TASKS-UI.md Batch 5) — data changes every
-// 15 min (observer.ts stats cycle), so a separate, SLOWER timer than
-// /api/state (60s) — per the task: "no second /api/state poller".
+// Paper trading (bot/paper.ts) — data changes every 15 min (observer.ts stats
+// cycle), so it gets its own slower timer instead of riding the /api/state poller.
 const PAPER_POLL_MS = 5 * 60_000;
 const PAPER_HOURS = 168; // 7 days
-// Daily ranking (bot/selector.ts, TASKS-UI.md Batch 6) — file refreshed once
-// a day (after 8:00) — INFREQUENT poll, clearly slower than paper/state.
+// Daily ranking (bot/selector.ts) — file refreshed once a day (after 8:00),
+// so polled much less often than paper/state.
 const RANKING_POLL_MS = 30 * 60_000;
-// History of REAL positions (bot/observer.ts refreshPositions, TASKS-UI.md
-// Batch 10) — samples every ~5 min, same polling interval as paper.
+// History of real positions (bot/observer.ts refreshPositions) — samples
+// every ~5 min, same polling interval as paper.
 const POSITIONS_HISTORY_POLL_MS = 5 * 60_000;
 const POSITIONS_HISTORY_HOURS = 168; // 7 days, like paper
-// Candidate validation verdicts (bot/candidates.ts, TASKS-UI.md Batch 12) —
-// change once a day (nightly funnel) — INFREQUENT poll, separate state, we do
-// NOT touch the existing pollers.
+// Candidate validation verdicts (bot/candidates.ts) — change once a day
+// (nightly funnel), so they get their own infrequent poller.
 const CANDIDATES_POLL_MS = 60 * 60_000;
-// Transaction ledger + closed positions (bot/ledger.ts, TASKS-LEDGER.md §3) —
-// the observer pulls new events every cycle (~5 min), but from the user's
-// perspective it changes rarely (next transaction / position close) —
-// poll slower than paper/positions, faster than candidates (once a day),
+// Transaction ledger + closed positions (bot/ledger.ts) — the observer pulls new
+// events every cycle (~5 min), but from the user's perspective it changes rarely
+// (next transaction / position close) — poll slower than paper/positions, faster than candidates (once a day),
 // so a freshly closed position shows up without a manual page refresh.
 const LEDGER_POLL_MS = 15 * 60_000;
 const LEDGER_DAYS = 90;
@@ -52,15 +48,14 @@ export interface BotProposal {
   createdAt: string;
   tokenId: string; // '' for OPEN proposals from the selector (no existing position)
   poolId?: string; // BOT_POOLS id, '' when the pool is outside the bot's configuration
-  /** REBALANCE (position advisor, as before) | OPEN/ROTATE (pool selection
-   *  layer — bot/selector.ts, Batch 4) | EXIT_TREND (trend circuit breaker
-   *  ALGORITHM.md §4 — "exit LP to cash 50/50" when price < EMA7d by 5%;
-   *  HANDOFF Fable→Sonnet 2026-08-11). Missing field = treat as REBALANCE
+  /** REBALANCE (position advisor) | OPEN/ROTATE (pool selection layer —
+   *  bot/selector.ts) | EXIT_TREND (trend circuit breaker, ALGORITHM.md §4 —
+   *  "exit LP to cash 50/50" when price < EMA7d by 5%). Missing field = treat as REBALANCE
    *  (backward compatibility with older entries in proposals.json). Cards in
    *  MorningCockpit.tsx render unknown `kind` values as a grey note instead
    *  of crashing, in case of further schema extensions.
-   *  FLAT_NARROW/FLAT_WIDEN (Batch 16, FlatWide product): narrowing to k×σ in
-   *  a CONFIRMED flat (`flatConfirmed` on state.pools[]) / return to the wide
+   *  FLAT_NARROW/FLAT_WIDEN (FlatWide product): narrowing to k×σ in
+   *  a confirmed flat (`flatConfirmed` on state.pools[]) / return to the wide
    *  ±productIdleWidthPct after the flat ends — both concern a position
    *  already held (existing tokenId), same mechanism as REBALANCE
    *  (suggestedRange + the existing rebalance modal). */
@@ -69,11 +64,10 @@ export interface BotProposal {
   suggestedRange?: { tickLower?: number; tickUpper?: number; usdLo: number; usdHi: number };
   costUsd?: number;
   paybackDays?: number | null;
-  // Batch 16b (emergency procedure, bot/observer.ts): DOWN on PRODUCT pools
-  // emits TWO proposals at once (HEDGE = option A, preferred,
-  // EXIT_TREND = option B "usually do NOT sign"), both flagged with this field.
-  // Cards without `emergency` (or `false`/absent) render as before —
-  // no visual changes. Procedure document: EMERGENCY.md.
+  // Emergency procedure (bot/observer.ts, docs/EMERGENCY.md): DOWN on product
+  // pools emits two proposals at once (HEDGE = option A, preferred;
+  // EXIT_TREND = option B, "usually do not sign"), both flagged with this field.
+  // Absent/false = a regular card.
   emergency?: boolean;
   // Selector fields (OPEN/ROTATE) — bot/selector.ts SelectorProposal:
   llamaPool?: string;
@@ -82,9 +76,9 @@ export interface BotProposal {
   apy7d?: number;
   heldApy7d?: number; // for ROTATE: 7d APY of the pool we are rotating out of
   breakEvenDays?: number; // for ROTATE: days to cover the transition cost
-  // HEDGE (ALGORITHM.md v1.2 — hedge-excess for base-030, HANDOFF Fable→Sonnet
-  // 2026-08-17 ~15:0x): the bot proposes a SHORT perp on Arbitrum/GMX instead of
-  // exiting the LP. Manual execution (outside the app, via Rabby) — no auto-execute.
+  // HEDGE (ALGORITHM.md v1.2 — hedge-excess for base-030): the bot proposes a
+  // short perp on Arbitrum/GMX instead of exiting the LP. Executed manually
+  // (outside the app, via Rabby) — no auto-execute.
   hedgeSizeEth?: number;
   hedgeNotionalUsd?: number;
   note?: string;
@@ -94,8 +88,8 @@ export interface BotProposal {
 }
 
 // Shape of state.pools / state.positions — duplicated from bot/observer.ts (PoolLive /
-// WatchedPosition), that file is outside this UI session's edit scope. Used in
-// MorningCockpit.tsx / BotTelemetry.tsx (TASKS-UI.md Batch 3, section "Bot telemetry").
+// WatchedPosition) so the UI bundle does not import bot code. Used in
+// MorningCockpit.tsx / BotTelemetry.tsx.
 export interface BotPoolLive {
   id: string;
   ethUsd: number;
@@ -104,16 +98,16 @@ export interface BotPoolLive {
   stats: { volDaily: number; feeYieldDaily: number; swapsAnalyzed: number; hoursCovered: number } | null;
   suggestion: { tickLower: number; tickUpper: number; widthPct: number; priceLower: number; priceUpper: number } | null;
   updatedAt: string;
-  // Flat detector (Batch 16, bot/observer.ts FLAT_ENTER/FLAT_EXIT) — only
+  // Flat detector (bot/observer.ts FLAT_ENTER/FLAT_EXIT) — only
   // product pools (BotPool.productIdleWidthPct set) have these fields
   // populated; the rest stay undefined (feature-detect, not a separate
   // "is this a product pool" list duplicated in the UI). `flatSince`: start of
-  // the UNINTERRUPTED flat (ISO) or `null` when the pool is not in a flat now.
+  // the uninterrupted flat (ISO) or `null` when the pool is not in a flat now.
   // `flatConfirmed`: true only after the confirmation threshold (12h) — only
   // then does the bot actually propose FLAT_NARROW.
   flatSince?: string | null;
   flatConfirmed?: boolean;
-  /** Batch 17: price gap vs EMA (%, signed value) — used for the CYCLE line
+  /** Price gap vs EMA (%, signed value) — used for the CYCLE line
    *  on cards ("waiting for stabilization: |gap| X.X%" / "return to wide
    *  at |gap|>exitGap%, now X.X%"). Same number as emaGapPct in /api/history
    *  (ObservationAnalysis.tsx), here as "now", without needing a separate
@@ -132,28 +126,25 @@ export interface BotWatchedPosition {
   inRange: boolean;
   advice: string;
   paybackDays: number | null;
-  /** bot ledger aggregates (BATCH 14 bot-side, 27.08): optional —
-   *  older bot versions do not send them (feature-detect in the UI).
+  /** Bot ledger aggregates: optional — older bot versions do not send them
+   *  (feature-detect in the UI).
    *  0 = a valid zero for a fresh position; null = the ledger cannot value it. */
   collectedFeesUsd?: number | null;
   costsUsd?: number | null;
   rebalances?: number | null;
-  /** FlatWide product cycle (Batch 17 bot-side): 'wide' = wide passive
+  /** FlatWide product cycle: 'wide' = wide passive
    *  ±productIdleWidthPct% (idle), 'narrow' = narrowed k×σ (confirmed
    *  flat). `null`/absent = non-product pool (no cycle) —
    *  feature-detect, the card then does not render the CYCLE line at all. */
   posture?: 'wide' | 'narrow' | null;
 }
 
-// REAL hedge on GMX (Arbitrum) — read via the Reader every observer cycle,
-// HANDOFF Fable→Sonnet 2026-08-20 late evening, TASKS-UI.md Batch 11
-// (owner's note after the E2E test: the short existed only on app.gmx.io and in
-// one browser's localStorage, it was not visible anywhere in the app).
-// Shape verified directly against `interface HedgeLive` in bot/observer.ts.
+// Real hedge on GMX (Arbitrum), read via the GMX Reader every observer cycle, so
+// a short opened outside the app is still visible here. Mirrors
+// `interface HedgeLive` in bot/observer.ts.
 // `null` = the bot confirms there is no position (Reader sees nothing) — distinct
-// from `undefined`/absent field (older state.json from before this change, or
-// state not yet loaded) — ONLY `null` is grounds for auto-clearing the
-// localStorage fallback (see MorningCockpit.tsx).
+// from `undefined`/absent (older bot, or state not yet loaded). Only `null` is
+// grounds for auto-clearing the localStorage fallback (see MorningCockpit.tsx).
 export interface BotHedgeLive {
   isLong: boolean;
   sizeUsd: number;
@@ -173,19 +164,18 @@ export interface BotStateShape {
   positions?: BotWatchedPosition[];
   proposals?: BotProposal[];
   hedge?: BotHedgeLive | null;
-  /** Batch 17: LIVE flat detector parameters (bot/config.ts FLAT, may change
-   *  at the 1.09 review) — the UI MUST NOT hardcode 12h/2%/5%,
-   *  read from here with feature-detect (fallback to those values ONLY when the
-   *  field is entirely absent — old bot from before this batch). Units: enterGap/
-   *  exitGap in percent (like trendGapPct), confirmH in hours. */
+  /** Live flat detector parameters (bot/config.ts FLAT, tunable) — the UI must
+   *  not hardcode 12h/2%/5%; those are only the fallback when the field is
+   *  absent (older bot). Units: enterGap/exitGap in percent (like trendGapPct),
+   *  confirmH in hours. */
   flatParams?: { enterGap: number; exitGap: number; confirmH: number };
-  /** Batch 18: TRANCHE balance (bot/observer.ts trancheLive, 29.08) — a second,
-   *  independent measure next to the Batch 17 summary panel (that one measures
-   *  strategy quality from position anchors; this one measures how much of the
-   *  actually deposited USDC exists today, counting the wallet buffer and entry costs).
-   *  EVERY field other than label/depositedUsd/startedAt may be `null` (failed
-   *  balance read or missing price) — render "—", NEVER $0, and never compute
-   *  sums in the UI yourself, the bot has already done that. */
+  /** Tranche balance (bot/observer.ts trancheLive) — independent of the summary
+   *  panel (that one measures strategy quality from position anchors; this one
+   *  measures how much of the actually deposited USDC exists today, counting the
+   *  wallet buffer and entry costs).
+   *  Every field other than label/depositedUsd/startedAt may be `null` (failed
+   *  balance read or missing price) — render "—", never $0, and do not recompute
+   *  sums in the UI; the bot already did. */
   tranche?: {
     label: string;
     depositedUsd: number;
@@ -204,8 +194,7 @@ export interface BotStateShape {
 
 export type BotStatus = 'loading' | 'online' | 'stale' | 'offline';
 
-// Paper trading — GET /api/paper?hours=N (bot/paper.ts, HANDOFF Fable→CC-Mac
-// 2026-08-18 ~11:3x, wired under TASKS-UI.md Batch 5). Virtual portfolio
+// Paper trading — GET /api/paper?hours=N (bot/paper.ts). Virtual portfolio
 // $10k/pool per ALGORITHM v1.2, zero real transactions.
 export interface PaperHedge {
   sizeBase: number;
@@ -221,7 +210,7 @@ export interface PaperPosition {
   capitalUsd: number;
   feesUsd: number;
   /** fees since the last collect/rebalance (bot/paper.ts:69) — reinvested
-   *  at the next rebalance. Batch 10: `feesUsd - feesSinceRebalanceUsd`
+   *  at the next rebalance. `feesUsd - feesSinceRebalanceUsd`
    *  = already reinvested, `feesSinceRebalanceUsd` = accrued since then. */
   feesSinceRebalanceUsd: number;
   costsUsd: number;
@@ -230,11 +219,9 @@ export interface PaperPosition {
   hedgePnlRealizedUsd: number;
   openedAt: string;
   startedAt: string;
-  /** ms — the moment since which the position has been CONTINUOUSLY out of range
-   *  (bot/paper.ts:72). Resets on every return into range, so the counter in
-   *  the UI is a CONTINUOUS out-of-range counter, not a cumulative one. The field
-   *  was always in the JSON from /api/paper (the server returns the whole
-   *  paper-state.json), it was only missing from this type — added 21.08 for the UI counter. */
+  /** ms — the moment since which the position has been continuously out of range
+   *  (bot/paper.ts). Resets on every return into range, so the UI counter is a
+   *  continuous out-of-range counter, not a cumulative one. */
   outOfRangeSince?: number | null;
 }
 
@@ -256,10 +243,9 @@ export interface PaperHistoryPoint {
   inRange: boolean;
   trendDown: boolean;
   rebalances: number;
-  // Since 20.08 (bot/paper.ts, TASKS-UI.md Batch 7) — price (human) and the
-  // bot's range bounds (human), ONLY when status==='open' (no range in cash).
-  // Older history samples (before 20.08) do NOT have these fields — the UI must
-  // survive that (feature-detect via typeof, do not assume presence).
+  // Price (human) and the bot's range bounds (human), only when status==='open'
+  // (no range in cash). Older history samples lack these fields — feature-detect
+  // via typeof, do not assume presence.
   price?: number;
   lo?: number;
   hi?: number;
@@ -283,9 +269,8 @@ export interface PaperData {
 // 'error' (network/token/other error), so the panel shows the right message.
 export type PaperStatus = 'loading' | 'ok' | 'not-started' | 'error';
 
-// Daily ranking — GET /api/ranking (bot/selector.ts, HANDOFF Fable→Sonnet
-// 2026-08-18, TASKS-UI.md Batch 6). TOP 10 pools per the ALGORITHM policy,
-// written once a day to .bot/selector-ranking.json.
+// Daily ranking — GET /api/ranking (bot/selector.ts). Top 10 pools per the
+// ALGORITHM policy, written once a day to .bot/selector-ranking.json.
 export interface RankingRow {
   rank: number;
   symbol: string;
@@ -297,10 +282,9 @@ export interface RankingRow {
   tvlUsd: number;
   botPoolId: string | null;
   llamaUuid?: string;
-  // Additional fields of the WIDE ranking (GET /api/wide-ranking, Batch 21,
-  // HANDOFF Fable→Sonnet 02.09) — absent in the old /api/ranking, hence
-  // optional (feature-detect). NOTE: in the wide ranking `apy7d` (above)
-  // carries SCORE %/yr, not 7d APY — the UI label must say so.
+  // Additional fields of the wide ranking (GET /api/wide-ranking) — absent in
+  // /api/ranking, hence optional (feature-detect). Note: in the wide ranking
+  // `apy7d` (above) carries score %/yr, not 7d APY — the UI label must say so.
   cls?: string;
   feeAprWide?: number | null;
   dragPct?: number | null;
@@ -328,8 +312,8 @@ export interface RankingData {
 // expected until the first run after 8:00).
 export type RankingStatus = 'loading' | 'ok' | 'not-started' | 'error';
 
-// Wide-range daily model — GET /api/wide-daily (scripts/wide-daily.ts,
-// HANDOFF Fable→Sonnet 02.09, TASKS-UI.md Batch 22). Key of the `pools` map =
+// Wide-range daily model — GET /api/wide-daily (scripts/wide-daily.ts).
+// Key of the `pools` map =
 // `RankingRow.llamaUuid`. `latest` = the window starting exactly N days
 // ago ("from today backwards"); `med*`/`worstDeltaPct`/`winPct` = statistics from
 // rolling windows every 30 days (n windows).
@@ -399,11 +383,10 @@ export interface WideBacktestEntry {
 
 export type WideBacktestsData = Record<string, WideBacktestEntry>;
 
-// History of REAL positions — GET /api/positions-history?hours=N (bot/observer.ts
-// refreshPositions, HANDOFF Fable→Sonnet 2026-08-20, TASKS-UI.md Batch 10:
-// position card redesign after the paper pattern). Sample shape LIKE PaperHistoryPoint,
+// History of real positions — GET /api/positions-history?hours=N (bot/observer.ts
+// refreshPositions). Sample shape like PaperHistoryPoint,
 // but without `status` (a real position has no cash/pending state — it is "open"
-// as long as the bot sees it) and with `tokenId` instead; price/lo/hi ALWAYS present
+// as long as the bot sees it) and with `tokenId` instead; price/lo/hi always present
 // (the observer writes them unconditionally, unlike paper, where lo/hi
 // depend on status==='open'). The endpoint returns a plain JSON array (like
 // /api/history), not {state,history,events} like /api/paper.
@@ -424,9 +407,8 @@ export interface PositionHistoryPoint {
 // paper/ranking and in case of a future server change.
 export type PositionsHistoryStatus = 'loading' | 'ok' | 'not-started' | 'error';
 
-// Candidate validation verdicts — GET /api/candidates (bot/candidates.ts,
-// HANDOFF Fable→Sonnet 24.08, TASKS-UI.md Batch 12). Shape 1:1 with
-// `CandidateVerdict` in bot/candidates.ts (outside this UI session's edit scope).
+// Candidate validation verdicts — GET /api/candidates (bot/candidates.ts).
+// Shape 1:1 with `CandidateVerdict` in bot/candidates.ts.
 // Matched to ranking rows by `llamaPool` (uuid) === `RankingRow.llamaUuid`.
 export interface CandidateVerdict {
   llamaPool: string;
@@ -442,15 +424,13 @@ export interface CandidateVerdict {
 
 // The endpoint always returns 200 + an array (seeded in code, never 503) — 'error'
 // only on network/token. Verdicts are an enrichment of the ranking, not a critical
-// dependency — missing data must NOT turn the table red.
+// dependency — missing data must not turn the table red.
 export type CandidatesStatus = 'loading' | 'ok' | 'error';
 
 // Transaction ledger + closed positions — GET /api/ledger?days=N and
-// GET /api/closed-positions (bot/ledger.ts, TASKS-LEDGER.md §3, HANDOFF
-// Fable→Sonnet 25.08). Shapes 1:1 with bot/ledger.ts (outside this UI session's
-// edit scope, type read only) — EVERY numeric field may be `null`
-// (missing metadata of a burned NFT or a leg not valued in USD) — render
-// "—", NEVER 0 (0 is a real value, null is "we don't know").
+// GET /api/closed-positions (bot/ledger.ts). Shapes 1:1 with bot/ledger.ts —
+// every numeric field may be `null` (missing metadata of a burned NFT or a leg
+// not valued in USD) — render "—", never 0 (0 is a real value, null is "unknown").
 export type LedgerKind = 'MINT' | 'INCREASE' | 'DECREASE' | 'COLLECT' | 'BURN' | 'TRANSFER_IN' | 'TRANSFER_OUT';
 
 export interface LedgerEntry {
@@ -491,10 +471,8 @@ export interface ClosedPosition {
 }
 
 // Both endpoints always return 200 (array, possibly empty — server.ts
-// has no 503 for them like paper/ranking), so 'not-started' is not
-// expected here, but kept for consistency (in case of a 404 before today's
-// evening batch is deployed to the server — see HANDOFF: "graceful
-// degradation, 404/error → a calm note, not an error").
+// has no 503 for them like paper/ranking). 'not-started' covers a 404 from an
+// older server without these endpoints: a calm note, not an error.
 export type LedgerStatus = 'loading' | 'ok' | 'not-started' | 'error';
 
 export interface UseBotApi {
@@ -549,7 +527,7 @@ export function useBotApi(): UseBotApi {
   const [rankingStatus, setRankingStatus] = useState<RankingStatus>('loading');
   const [wideRanking, setWideRanking] = useState<RankingData | null>(null);
   const [wideRankingStatus, setWideRankingStatus] = useState<RankingStatus>('loading');
-  // Wide-daily/wide-backtests (Batch 22) — an enrichment of the rankings, not a
+  // Wide-daily/wide-backtests — an enrichment of the rankings, not a
   // critical dependency: missing/404/empty → null quietly, without a red
   // error (like candidates/verdicts).
   const [wideDaily, setWideDaily] = useState<WideDailyData | null>(null);
@@ -562,15 +540,13 @@ export function useBotApi(): UseBotApi {
   const [closedPositionsStatus, setClosedPositionsStatus] = useState<LedgerStatus>('loading');
   const [ledger, setLedger] = useState<LedgerEntry[] | null>(null);
   const [ledgerStatus, setLedgerStatus] = useState<LedgerStatus>('loading');
-  // Dismissals applied optimistically on the UI side (fix 26.08: the server
-  // only QUEUES the command, the observer applies it within ≤30 s, and the state
-  // poll runs every 60 s — without this the proposal hung around for ~90 s after
-  // the click and the button looked broken). The entry lives until the proposal
-  // disappears from the fetched state (then reconciliation clears it).
-  // Fix 26.08(2) — owner's report "they come back after refresh": the list is
-  // additionally kept in localStorage with a 15 min TTL, so it survives a page
-  // reload in the window before the observer applies the command (the server
-  // also filters the /api/state view by the command queue — belt and braces).
+  // Dismissals applied optimistically on the UI side: the server only queues the
+  // command, the observer applies it within ≤30 s, and the state poll runs every
+  // 60 s — without this the proposal would linger for up to ~90 s after the click.
+  // An entry lives until the proposal disappears from the fetched state (then
+  // reconciliation clears it). The list is also kept in localStorage with a
+  // 15 min TTL so it survives a page reload before the observer applies the
+  // command (the server also filters /api/state by the command queue).
   const DISMISSED_LS_KEY = 'homos.dismissedProposals';
   const DISMISSED_TTL_MS = 15 * 60 * 1000;
   const [locallyDismissed, setLocallyDismissed] = useState<string[]>(() => {
@@ -692,8 +668,8 @@ export function useBotApi(): UseBotApi {
     return () => clearInterval(id);
   }, [fetchRanking, tick]);
 
-  // WIDE ranking — GET /api/wide-ranking (scripts/wide-score.ts, funnel v2
-  // tier 1, HANDOFF Fable→Sonnet 02.09, TASKS-UI.md Batch 21). Same
+  // Wide ranking — GET /api/wide-ranking (scripts/wide-score.ts, funnel v2
+  // tier 1). Same
   // shape as /api/ranking (RankingData) — poller and statuses 1:1.
   const fetchWideRanking = useCallback(async () => {
     try {
@@ -727,8 +703,8 @@ export function useBotApi(): UseBotApi {
     return () => clearInterval(id);
   }, [fetchWideRanking, tick]);
 
-  // Daily model (wide-daily) + full run (wide-backtests) — Batch 22,
-  // HANDOFF Fable→Sonnet 02.09. Same poller as the ranking (30 min); missing/404/
+  // Daily model (wide-daily) + full run (wide-backtests). Same poller as the
+  // ranking (30 min); missing/404/
   // empty → null quietly (an enrichment of the ranking tables, not a dependency).
   const fetchWideDaily = useCallback(async () => {
     try {
@@ -839,8 +815,7 @@ export function useBotApi(): UseBotApi {
       if (apiToken) headers.Authorization = `Bearer ${apiToken}`;
       const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/closed-positions`, { headers });
       if (res.status === 404) {
-        // server not yet running today's batch (TASKS-LEDGER.md) —
-        // a calm state, not an error (HANDOFF: "graceful degradation")
+        // older server without the ledger endpoints — a calm state, not an error
         setClosedPositions(null);
         setClosedPositionsStatus('not-started');
         return;
@@ -905,9 +880,9 @@ export function useBotApi(): UseBotApi {
           headers,
         });
         if (!res.ok) {
-          // Fix 26.08: until now the error was SWALLOWED (empty catch) and the button
-          // "did nothing" without a trace. 401 = invalid token, 404 = the proposal no
-          // longer exists on the bot side (e.g. expired) — we show it explicitly.
+          // Surface the failure so the button never silently does nothing.
+          // 401 = invalid token, 404 = the proposal no longer exists on the bot
+          // side (e.g. expired).
           setActionNotice(
             res.status === 401
               ? 'Dismissal rejected: invalid access token (API settings).'
@@ -918,7 +893,7 @@ export function useBotApi(): UseBotApi {
           refresh();
           return;
         }
-        // Success = command QUEUED (the observer applies it within ≤30 s) —
+        // Success = command queued (the observer applies it within ≤30 s) —
         // we hide the proposal immediately so the button visibly works.
         setActionNotice(null);
         setLocallyDismissed((prev) => (prev.includes(id) ? prev : [...prev, id]));

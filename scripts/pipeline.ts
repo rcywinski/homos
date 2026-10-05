@@ -1,6 +1,6 @@
 /**
- * pipeline.ts — BULLETPROOF local orchestrator of data and backtests.
- * Zero AI/token involvement: a plain script to run manually, via the bridge,
+ * pipeline.ts — fault-tolerant local orchestrator of data and backtests.
+ * No AI involvement: a plain script to run manually, via the agent runner,
  * pm2 or the task scheduler (Windows: schtasks, once a day after 8:00).
  *
  *   npm run pipeline            # full run
@@ -20,7 +20,7 @@ import 'dotenv/config';
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
-import { POOLS } from './fetch-swaps'; // require.main guard in fetch-swaps — the import does NOT start a fetch
+import { POOLS } from './fetch-swaps'; // require.main guard in fetch-swaps — the import does not start a fetch
 
 const ROOT = path.join(__dirname, '..');
 const LOGDIR = path.join(ROOT, 'data', 'pipeline-logs');
@@ -37,8 +37,7 @@ function runStep(name: string, script: string, args: string[] = [], extraEnv: Re
   return new Promise((resolve) => {
     const logFile = path.join(LOGDIR, `${name}-${Date.now()}.log`);
     const out = fs.createWriteStream(logFile);
-    // shell:true on Windows — spawn() does not launch npx.cmd directly (ENOENT);
-    // same pattern as in agent-runner-git.ts (verified on the Windows server).
+    // shell:true on Windows — spawn() does not launch npx.cmd directly (ENOENT).
     const child = spawn('npx', ['tsx', script, ...args], { cwd: ROOT, env: { ...process.env, ...extraEnv }, shell: process.platform === 'win32' });
     child.stdout.on('data', (d) => out.write(d));
     child.stderr.on('data', (d) => out.write(d));
@@ -89,11 +88,11 @@ function swapsFresh(): { fresh: string[]; stale: string[] } {
   log(`=== PIPELINE START (only=${only ?? 'all'}) ===`);
 
   if (!only || only === 'fetch') {
-    // ORDER (lesson of 18.08): fetch-llama FIRST — cheap (DefiLlama API only)
-    // and CRITICAL for the selector (26h failsafe); slow swaps must not block it.
+    // Order matters: fetch-llama first — cheap (DefiLlama API only) and critical
+    // for the selector (26h failsafe); slow swaps must not block it.
     if (!(await withRetry('fetch-llama', () => runStep('fetch-llama', 'scripts/fetch-llama-history.ts')))) failures.push('fetch-llama');
     // Swaps: HyperSync per pool (minutes) when a token is present; fallback = the old
-    // RPC variant (hours on free limits — lesson of 18.08: 11%/91min).
+    // RPC variant (hours on free RPC limits).
     const hsToken = process.env.HYPERSYNC_BEARER_TOKEN || process.env.ENVIO_API_TOKEN;
     if (hsToken) {
       for (const p of POOLS) {
@@ -110,19 +109,19 @@ function swapsFresh(): { fresh: string[]; stale: string[] } {
   }
 
   if (!only || only === 'funnel') {
-    // WIDE ranking (02.09, funnel v2 tier 1): scoring the universe for the product,
-    // NEXT TO the selector's APY ranking. DefiLlama API only (~2-4 min), 1 attempt,
+    // WIDE ranking (funnel v2 tier 1): scoring the universe for the product,
+    // next to the selector's APY ranking. DefiLlama API only (~2-4 min), 1 attempt,
     // failure = entry in the report (the old wide-ranking.json ranking stays).
     if (!(await withRetry('wide-score', () => runStep('wide-score', 'scripts/wide-score.ts'), 1)))
       failures.push('wide-score');
-    // Daily 365/720d model for pools from both rankings (02.09) — reads
+    // Daily 365/720d model for pools from both rankings — reads
     // .bot/wide-ranking.json (above) and selector-ranking.json (selector from the
     // previous day; today's will overwrite after 06:00 — the pools are 90% the same
     // anyway, and the result refreshes every night). Prices from coins.llama (daily cache).
     if (!(await withRetry('wide-daily', () => runStep('wide-daily', 'scripts/wide-daily.ts'), 1)))
       failures.push('wide-daily');
-    // Candidate auto-funnel (TASKS-FUNNEL.md): AFTER the fetch (fresh universe),
-    // BEFORE backtest-run (a backtest OOM must not kill the funnel). 1 attempt,
+    // Candidate auto-funnel: after the fetch (fresh universe),
+    // before backtest-run (a backtest OOM must not kill the funnel). 1 attempt,
     // steady-state max 1 candidate/night; failure = entry in the report, we move on.
     // The funnel sets the 8GB heap for the walkforward itself (NODE_OPTIONS in the spawn).
     if (!(await withRetry('candidate-funnel', () => runStep('candidate-funnel', 'scripts/candidate-funnel.ts'), 1)))
@@ -130,9 +129,9 @@ function swapsFresh(): { fresh: string[]; stale: string[] } {
   }
 
   if (!only || only === 'backtest') {
-    // 12GB heap (25.08: first measurement Peak RSS = 7612 MB at the 8192 limit
-    // — 7% headroom and the data window grows; the machine has 24GB free, we raise it
-    // BEFORE the OOM of 20.08 returns). NODE_OPTIONS is appended, not overwritten.
+    // 12GB heap: peak RSS was measured at ~7.6 GB against an 8 GB limit, with the
+    // data window still growing — too little headroom to avoid an OOM. The server has
+    // the memory to spare. NODE_OPTIONS is appended, not overwritten.
     const heap = { NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --max-old-space-size=12288`.trim() };
     if (!(await withRetry('backtest-run', () => runStep('backtest-run', 'backtest/run.ts', [], heap), 2))) failures.push('backtest-run');
     if (!(await withRetry('backtest-selection', () => runStep('backtest-selection', 'backtest/selection.ts'), 2)))

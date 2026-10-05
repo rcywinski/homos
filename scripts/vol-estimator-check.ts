@@ -1,7 +1,6 @@
 /**
- * vol-estimator-check.ts — comparison of volatility estimators ON THE SAME
- * data and in THE SAME window. Created 21.08 to settle a dispute:
- * does the per-swap EWMA from `computeStats` (advisor) underestimate σ relative
+ * vol-estimator-check.ts — comparison of volatility estimators ON the same
+ * data and in the same window. Answers the question: does the per-swap EWMA from `computeStats` (advisor) underestimate σ relative
  * to standard realized vol, or not.
  *
  *   npx tsx scripts/vol-estimator-check.ts mainnet-usdc-weth-005 [hours=24]
@@ -41,9 +40,9 @@ const d1 = cfg.token1Decimals;
 type Row = { b: number; sp: string };
 
 /**
- * Reading FROM THE END of the file, in chunks — the cache can exceed 1.6GB, and the
+ * Reading from the end of the file, in chunks — the cache can exceed 1.6GB, and the
  * string limit in Node is ~536MB (crash `Cannot create a string longer than
- * 0x1fffffe8 characters`, reported by CC-Win 21.08). We read only as much
+ * 0x1fffffe8 characters`). We read only as much
  * as the requested window of hours needs.
  */
 function readTailRows(file: string, needFrom: (lastBlock: number) => number): Row[] {
@@ -51,7 +50,7 @@ function readTailRows(file: string, needFrom: (lastBlock: number) => number): Ro
   const fd = fs.openSync(file, 'r');
   try {
     let pos = fs.fstatSync(fd).size;
-    let carry = ''; // unfinished FIRST row from the previous (later) chunk
+    let carry = ''; // unfinished first row from the previous (later) chunk
     let rows: Row[] = [];
     let fromBlock: number | null = null;
     while (pos > 0) {
@@ -141,8 +140,8 @@ function resampled(sec: number): number | null {
 
 // (c) trend vs chop diagnostic: |net move| / √Σr² over swap steps.
 // ≈1 → random walk; <1 → the price chops in place (the swap estimator
-// OVERESTIMATES relative to the real displacement); >1 → the price moves one way
-// in small steps (the swap estimator UNDERESTIMATES — the sum of squares of small
+// overestimates relative to the real displacement); >1 → the price moves one way
+// in small steps (the swap estimator underestimates — the sum of squares of small
 // steps is much smaller than the square of the total move).
 let sumR2 = 0;
 let prev: number | null = null;
@@ -165,12 +164,12 @@ console.log(`price at window end: ${price(w[w.length - 1]).toFixed(2)}\n`);
 console.log(line('(a) advisor (per swap)', volAdvisor));
 for (const [nm, sec] of [['1 min', 60], ['5 min', 300], ['15 min', 900], ['1 h', 3600]] as const)
   console.log(line(`(b) realized vol @ ${nm}`, resampled(sec)));
-// --- verdict TAKING microstructure noise INTO ACCOUNT ------------------------
-// NOTE (correction 21.08): realized vol at a 1–5 min sample is itself often INFLATED
+// --- verdict taking microstructure noise into account ------------------------
+// NOTE: realized vol at a 1–5 min sample is itself often inflated
 // by the price bouncing within the fee band (bid-ask bounce) — the wider the fee
 // (0.30% vs 0.05%), the stronger. If σ decreases monotonically as the sample
 // lengthens, that is the signature of noise, not true volatility — then the
-// reference point should be the 15min/1h sample, NOT 5min.
+// reference point should be the 15min/1h sample, not 5min.
 const v5 = resampled(300);
 const v15 = resampled(900);
 const v60 = resampled(3600);

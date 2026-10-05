@@ -1,22 +1,21 @@
 /**
- * morning-report.ts — AUTOMATION: morning snapshot of the bot's state from Windows into the repo.
+ * morning-report.ts — morning snapshot of the bot's state from the Windows server into the repo.
  *
- * Problem it solves: the analytical session (Fable) on the Mac sees only the
- * repo — Windows never pushed anything on its own, so the morning analysis was
- * blind (stale .bot/* snapshots). This script collects logs/ranking/proposals
- * into reports/morning-YYYY-MM-DD.md and commits+pushes to main.
+ * Problem it solves: the bot runs on a Windows server, while analysis happens on
+ * another machine that sees only the repo (the live .bot/* files are not pushed).
+ * This script collects logs/ranking/proposals into reports/morning-YYYY-MM-DD.md
+ * and commits+pushes to main.
  *
- * Running (Windows, schtask under the elo account, ~08:45 — AFTER the 07:30 pipeline
- * and AFTER the selector ~08:24):  npm run report:morning
+ * Running (Windows, schtask under the elo account, ~08:45 — after the 07:30 pipeline
+ * and after the selector ~08:24):  npm run report:morning
  * Manual test on any machine: REPORT_PUSH=0 npm run report:morning
  *
- * Safety rules (lessons from CONTEXT 17.08):
- *  - does NOT touch the live .bot/* files in git — only READS and copies the content
- *    into a separate file in reports/ (a tracked directory).
+ * Safety rules:
+ *  - does not touch the live .bot/* files in git — only READS and copies the content
+ *    into a separate file in reports/.
  *  - commit+push immediately after writing; push with a pull --rebase retry
- *    (resilience against parallel pushes from other sessions). Historical note:
- *    the runner's auto-pull (reset --hard every 3 min) was WITHDRAWN by Rafal's decision
- *    on 18.08 — since then this script is the ONLY git automation on Windows.
+ *    (resilience against parallel pushes from other machines). This script is the
+ *    only git automation on the server — nothing else may reset or pull there.
  */
 import 'dotenv/config';
 import { execSync } from 'child_process';
@@ -59,9 +58,8 @@ sections.push(`## Data freshness\n- universe.json: ${ageH(path.join(DATA, 'llama
 // --- pipeline: last run ---
 // data/pipeline.log (written internally via fs.appendFileSync in pipeline.ts) and
 // data/pipeline-task.log (stdout redirect `>>` from the schtask on Windows) can
-// drift apart — observed 19.08: pipeline-task.log had a fresh run at
-// 06:06 while pipeline.log was stuck on 17.08 despite the same invocation. Take
-// the fresher of the two (by the timestamp of the "PIPELINE START" line), not pipeline.log blindly.
+// drift apart (one can show a fresh run while the other is days stale despite
+// the same invocation). Take the fresher of the two (by the timestamp of the "PIPELINE START" line), not pipeline.log blindly.
 // log contract with scripts/pipeline.ts: it writes `=== PIPELINE START (only=...) ===`
 const lastRunBlock = (content: string): { ts: string; block: string } | null => {
   const idx = content.lastIndexOf('PIPELINE START');
@@ -82,7 +80,7 @@ if (ptask) sections.push('## pipeline-task.log (tail)\n```\n' + tail(ptask, 12) 
 // --- selector: lines from the last 2 days ---
 // observer-tail.log on Windows is sometimes double-encoded (UTF-8 passed
 // through cp1250 on console redirect) — a map of the most common mojibake
-// sequences for Polish characters (reported by CC-Win 18.08, cosmetic).
+// sequences for Polish characters (cosmetic).
 const MOJIBAKE: Array<[RegExp, string]> = [
   [/Ä…/g, 'ą'], [/Ä‡/g, 'ć'], [/Ä™/g, 'ę'], [/Ĺ‚/g, 'ł'], [/Ĺ„/g, 'ń'],
   [/Ăł/g, 'ó'], [/Ĺ›/g, 'ś'], [/Ĺş/g, 'ź'], [/Ĺź/g, 'ż'], [/Ĺ»/g, 'Ż'],
@@ -157,7 +155,7 @@ try {
       lines.push(
         `| ${row.rank} | ${row.symbol} ${row.poolMeta} @ ${row.chain} | ${row.cls ?? ''} | ${row.apy7d} | ${row.feeAprWide ?? '—'} | ${row.dragPct ?? '—'} | ${row.sigmaAnnPct ?? '—'}${row.driftFlag ? ' ⚠' : ''} | ${row.streak}d | $${(row.tvlUsd / 1e6).toFixed(1)}M | ${row.botPoolId ?? '—'} | ${dcol(row.llamaUuid)} |`
       );
-    lines.push('', '_score = wide-range fee − volatility cost (drag); in %/yr; observational ranking, the entry decision is manual (TASKS-FUNNEL §2)._',
+    lines.push('', '_score = wide-range fee − volatility cost (drag); in %/yr; observational ranking, the entry decision is manual._',
       '_365d/720d = DAILY MODEL of the class wide range (wide-daily): LP % / HODL 50/50 % / Δ pp "from today backwards", med Δ = median of rolling windows every 30d; flat = % of days with |gap|<2% (365d). ±a few pp — for comparisons, not for bookkeeping._');
     sections.push('## WIDE RANKING (for the product, top 10)\n\n' + lines.join('\n'));
   } else sections.push('## WIDE RANKING\nMISSING .bot/wide-ranking.json (wide-score step has not run yet)');
@@ -169,14 +167,12 @@ for (const f of ['selector-state.json', 'trend-state.json']) {
   if (s) sections.push(`## ${f}\n\`\`\`json\n${s.trim()}\n\`\`\``);
 }
 
-// --- REAL POSITIONS (FlatWide product, 28.08) — equity vs HODL + flat state ---
-// Gap from the 28.08 brief: the report had no real-positions section, Fable
-// had to pull /api/state through the browser. Reads state.json (live
-// values from the observer) + positions-history.ndjson (HODL anchor =
-// first sample per tokenId).
-// Telegram digest (29.08, Rafal's decision): the morning message concerns
-// ONLY real positions — paper stopped mattering once capital went in,
-// and the daily paper digest drowned out what needs a decision.
+// --- real POSITIONS (FlatWide product) — equity vs HODL + flat state ---
+// Reads state.json (live values from the observer) + positions-history.ndjson
+// (HODL anchor = first sample per tokenId), so the report is self-contained
+// without querying /api/state.
+// The Telegram digest covers only real positions — once capital is deployed,
+// a daily paper digest would drown out what needs a decision.
 let tgRealDigest: string | null = null;
 try {
   const stRaw = readSafe(path.join(BOT, 'state.json'));
@@ -191,14 +187,14 @@ try {
       try { const r = JSON.parse(line); if (!first[r.tokenId]) first[r.tokenId] = r; last[r.tokenId] = r; } catch { /* skip */ }
     }
     const fmtUsd = (v: number | null) => (v === null ? '—' : `${v >= 0 ? '+' : ''}$${v.toFixed(2)}`);
-    // flat detector parameters from the state root (single source of truth in bot/config.ts,
-    // BATCH 17) — the report does NOT hardcode 2%/12h, because a review may change them
+    // flat detector parameters from the state root (single source of truth in bot/config.ts)
+    // — the report does not hardcode 2%/12h, because a review may change them
     const fp = st.flatParams ?? {};
     const enterPct = (typeof fp.enterGap === 'number' ? fp.enterGap : 0.02) * 100;
     const exitPct = (typeof fp.exitGap === 'number' ? fp.exitGap : 0.05) * 100;
     const confirmH = typeof fp.confirmH === 'number' ? fp.confirmH : 12;
     const nowMs = Date.now();
-    // the phone digest counts ONLY product positions (posture set) —
+    // the phone digest counts only product positions (posture set) —
     // the old dust #953427 ($2, legacy mainnet) has no cycle or stabilization
     // and would clutter the message; it goes as a single line at the end.
     const tgPositions: string[] = [];
@@ -214,18 +210,18 @@ try {
       const vsHodl = l ? pos.valueUsd - l.hodlUsd : null;
       const pnl = f ? pos.valueUsd - f.hodlUsd : null; // anchor: hodlUsd of the 1st sample = value at the moment of anchoring
       const pl = poolsById[pos.poolId];
-      // FEE PACE (29.08, Rafal's brief): fees since open = accrued (uncollected)
-      // + already collected from the ledger; divided by days since the anchor. After the first
-      // COLLECT, `feesUsd` alone would drop to zero and the pace would lie downwards.
-      // when accrued is unknown (RPC refused) → "—", NOT "$0.00": a zero from missing
-      // data would look like "the pool earns nothing" and mislead during the brief
+      // Fee pace: fees since open = accrued (uncollected) + already collected from the
+      // ledger, divided by days since the anchor. After the first COLLECT, `feesUsd`
+      // alone would drop to zero and understate the pace.
+      // When accrued is unknown (RPC refused) → "—", not "$0.00": a zero from missing
+      // data would read as "the pool earns nothing".
       const feesTotal =
         typeof pos.feesUsd === 'number' ? pos.feesUsd + (pos.collectedFeesUsd ?? 0) : null;
       const days = f ? (nowMs - Date.parse(f.ts)) / 86_400e3 : null;
       const pace = feesTotal !== null && days !== null && days > 0.5 ? feesTotal / days : null;
       const postureTxt = pos.posture === 'narrow' ? 'NARROW' : pos.posture === 'wide' ? 'WIDE' : '—';
-      // FLAT CLOCK with a countdown — without it the report only said "—" and
-      // one could not tell "gap beyond threshold" from "clock ticking, close to the end".
+      // Flat clock with a countdown — distinguishes "gap beyond threshold" from
+      // "clock ticking, close to the end", which a bare "—" cannot.
       let flatTxt: string;
       if (pl?.flatConfirmed) {
         flatTxt = `✅ CONFIRMED (since ${String(pl.flatSince ?? '').slice(5, 16)}Z)`;
@@ -238,8 +234,8 @@ try {
       } else {
         flatTxt = '—';
       }
-      // telegram line (29.08): the same truth as the table, but in phone
-      // language — "stabilization" instead of "flat", time to NARROWING stated directly
+      // telegram line: the same truth as the table, but in phone
+      // language — "stabilization" instead of "flat", time to narrowing stated directly
       const tgFlat = pos.posture === 'narrow'
         // in the narrow range what matters is no longer the entry but the exit from flat
         ? `✅ narrow range working — widening at gap > ${exitPct.toFixed(1)}%`
@@ -276,7 +272,7 @@ try {
         (s: number, p: any) => s + (last[p.tokenId] ? p.valueUsd - last[p.tokenId].hodlUsd : 0), 0);
       rows.push(`| **TOTAL** | | | **$${sumVal.toFixed(2)}** | ${fmtUsd(sumVsHodl)} | | | | | | |`);
       // PnL since start = value today − anchor (hodlUsd of the 1st sample). Interpretation
-      // NOTE for the reader: this includes the MARKET MOVE (beta), so a
+      // NOTE for the reader: this includes the market move (beta), so a
       // negative PnL with vs HODL ≈ 0 means "the market fell", not "the strategy is losing".
       const trHeader = st.tranche && typeof st.tranche.depositedUsd === 'number' && st.tranche.totalUsd !== null
         ? `\n${st.tranche.label ?? 'Tranche'}: $${st.tranche.depositedUsd.toFixed(0)} deposited → $${st.tranche.totalUsd.toFixed(2)} today (${fmtUsd(st.tranche.diffUsd)}${st.tranche.diffPct === null ? '' : `, ${st.tranche.diffPct.toFixed(2)}%`})`
@@ -290,8 +286,8 @@ try {
           tgPositions.join('\n\n') +
           (tgOther.length ? `\n\n${tgOther.join('\n')}` : '');
       }
-      // TRANCHE BALANCE (29.08) — a second measure next to the strategy metrics: how much
-      // of the DEPOSITED USDC is really there today (LP + wallet), and what ate
+      // Tranche balance — a second measure next to the strategy metrics: how much
+      // of the deposited USDC is really there today (LP + wallet), and what ate
       // the difference. The bot computes, the report only displays.
       const tr = st.tranche;
       if (tr && typeof tr.depositedUsd === 'number') {
@@ -311,8 +307,8 @@ try {
           ]),
           line('(informational) indexed gas', tr.gasUsd === null ? '—' : `$${tr.gasUsd.toFixed(2)}`),
         ];
-        // wallet composition — auditability: the first measurement gave $226 instead of
-        // the estimated $150, so it must be visible WHAT the bot counted in
+        // wallet composition — auditability: when the total differs from expectations,
+        // it must be visible what the bot counted in
         const parts = Array.isArray(tr.walletParts) && tr.walletParts.length
           ? `\n\n_Wallet: ${tr.walletParts.map((w: any) => `${w.sym} ${w.amount} ($${w.usd.toFixed(2)})`).join(' · ')}_`
           : '';
@@ -338,8 +334,8 @@ try {
 } catch { sections.push('## REAL POSITIONS\nstate.json/positions-history unparseable'); }
 
 // --- PAPER TRADING: daily summary (state + PnL vs HODL per pool) ---
-// Stays in the REPORT (the product vs paper A/B makes sense until the 24.09 review),
-// but NO LONGER goes to Telegram — since 29.08 the morning message is the real positions.
+// Kept in the report for the product-vs-paper A/B comparison, but not sent to
+// Telegram — the morning message is about real positions.
 const paperRaw = readSafe(path.join(BOT, 'paper-state.json'));
 if (paperRaw) {
   try {
@@ -373,9 +369,8 @@ if (paperRaw) {
 fs.writeFileSync(OUT, sections.join('\n\n') + '\n');
 console.log(`written ${path.relative(ROOT, OUT)}`);
 
-// --- Telegram: morning digest of REAL POSITIONS (Rafal's decision 29.08;
-// replaces the paper-trading digest from 18.08 — paper is still in the report,
-// but the phone message is supposed to be about the money that is really working) ---
+// --- Telegram: morning digest of real POSITIONS (paper trading stays in the report;
+// the phone message is about the money that is really working) ---
 if (tgRealDigest && process.env.TG_TOKEN && process.env.TG_CHAT) {
   fetch(`https://api.telegram.org/bot${process.env.TG_TOKEN}/sendMessage`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -392,15 +387,11 @@ try {
   catch { console.log('nothing to commit (report unchanged)'); process.exit(0); }
   let pushed = false;
   for (let i = 1; i <= 3 && !pushed; i++) {
-    // --autostash (FIX 21.08): without it `pull --rebase` aborted with
-    // "cannot pull with rebase: You have unstaged changes" and the report did NOT
-    // push itself — diagnosed by CC-Win, it happened EVERY DAY
-    // for at least 3 days. The culprit was `data/pipeline.log` (appended
-    // at 07:30 by the pipeline, tracked by git despite the `data/` entry in
-    // .gitignore — .gitignore has no effect on files already indexed).
-    // The log itself gets untracked separately (`git rm --cached`), but autostash stays
-    // as resilience against ANY dirty file: tomorrow it will be a different one, and this
-    // automation has to work unattended.
+    // --autostash: without it `pull --rebase` aborts with "cannot pull with rebase:
+    // You have unstaged changes" whenever any tracked file is dirty (e.g. a log
+    // appended by the pipeline that was indexed before being added to .gitignore —
+    // .gitignore has no effect on files already indexed), and the report silently
+    // never pushes. This automation runs unattended, so it must tolerate any dirty file.
     try { git('pull --rebase --autostash origin main'); git('push origin main'); pushed = true; }
     catch (e) { console.log(`push attempt ${i}/3 failed: ${String(e).slice(0, 200)}`); }
   }

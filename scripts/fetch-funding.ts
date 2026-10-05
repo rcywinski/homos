@@ -7,7 +7,7 @@
  *
  * Output: data/funding/<symbol>.json — [{t: ms, r: rate}] ascending by t
  * (funding every 8h; rate is the fraction per 8h period, e.g. 0.0001 = 1 bp/8h).
- * Perp convention: r > 0 → longs pay shorts (the short RECEIVES funding).
+ * Perp convention: r > 0 → longs pay shorts (the short receives funding).
  */
 import * as fs from 'fs';
 import * as path from 'path';

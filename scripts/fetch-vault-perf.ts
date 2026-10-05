@@ -1,13 +1,13 @@
 /**
  * fetch-vault-perf.ts — daily UNIT VALUE series for the "casino house"
- * class (E8.2): HLP (Hyperliquid) and GM pools (GMX v2). What counts is
- * realized performance, NOT fee APY — so we need the share price.
+ * class: HLP (Hyperliquid) and GM pools (GMX v2). What counts is
+ * realized performance, not fee APY — so we need the share price.
  *
  *   npx tsx scripts/fetch-vault-perf.ts hlp
  *   npx tsx scripts/fetch-vault-perf.ts gm arbitrum:0x70d95587d40A2caf56bd97485aB3Eec10Bee6336 GM-ETH-USD
  *   npx tsx scripts/fetch-vault-perf.ts gm arbitrum:0x47c031236e19d024b42f8AE6780E44A573170703 GM-BTC-USD
- *   (GM addresses = market token from https://gmx-docs / GMX app "Pools" → VERIFY
- *    before the first run: the token symbol in the explorer must be "GM" and the pair in the description)
+ *   (GM addresses = market token from the GMX docs / app "Pools"; check before use
+ *    that the token symbol in the explorer is "GM" and the pair matches the description)
  *
  * Output: data/vaults/<name>.json — { name, source, series: [{t: ms, v}] }
  *   HLP: v = accountValue / (accountValue − cumulative pnl)? — NO: HL does not give
@@ -18,7 +18,7 @@
  *   unit of capital). v = product of (1+r_d) — index 1.0 at the start.
  *   GM: v = GM token price in USD (coins.llama, like wide-daily); the GM value
  *   already includes fees/borrow/trader PnL (they increase the backing).
- * The E8.2 benchmark is computed by e8-house.ts.
+ * The benchmark itself is computed by backtest/vault-house-edge.ts.
  */
 import * as fs from 'fs';
 import * as path from 'path';

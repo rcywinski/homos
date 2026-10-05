@@ -3,8 +3,8 @@
  *
  * RULES (see PLAN.md / CONTEXT.md):
  *  - All on-chain quantities (sqrtPriceX96, liquidity, token amounts in raw units)
- *    are computed EXCLUSIVELY with bigint — bit-for-bit identical to the contracts.
- *  - JS `number` (float) is allowed ONLY at the display boundary
+ *    are computed exclusively with bigint — bit-for-bit identical to the contracts.
+ *  - JS `number` (float) is allowed only at the display boundary
  *    (converting an exact value to a human-readable price string).
  *
  * The tick→sqrtPrice function is a direct port of TickMath.sol from v3-core.
@@ -71,7 +71,7 @@ export function getAmount0ForLiquidity(
   sqrtRatioBX96: bigint,
   liquidity: bigint
 ): bigint {
-  let [a, b] = sqrtRatioAX96 <= sqrtRatioBX96 ? [sqrtRatioAX96, sqrtRatioBX96] : [sqrtRatioBX96, sqrtRatioAX96];
+  const [a, b] = sqrtRatioAX96 <= sqrtRatioBX96 ? [sqrtRatioAX96, sqrtRatioBX96] : [sqrtRatioBX96, sqrtRatioAX96];
   if (a <= 0n) throw new Error('sqrtRatio must be positive');
   // ((L << 96) * (b - a) / b) / a
   return (((liquidity << 96n) * (b - a)) / b) / a;
@@ -83,7 +83,7 @@ export function getAmount1ForLiquidity(
   sqrtRatioBX96: bigint,
   liquidity: bigint
 ): bigint {
-  let [a, b] = sqrtRatioAX96 <= sqrtRatioBX96 ? [sqrtRatioAX96, sqrtRatioBX96] : [sqrtRatioBX96, sqrtRatioAX96];
+  const [a, b] = sqrtRatioAX96 <= sqrtRatioBX96 ? [sqrtRatioAX96, sqrtRatioBX96] : [sqrtRatioBX96, sqrtRatioAX96];
   return (liquidity * (b - a)) / Q96;
 }
 
@@ -124,7 +124,7 @@ export function getLiquidityForAmount0(
   sqrtRatioBX96: bigint,
   amount0: bigint
 ): bigint {
-  let [a, b] = sqrtRatioAX96 <= sqrtRatioBX96 ? [sqrtRatioAX96, sqrtRatioBX96] : [sqrtRatioBX96, sqrtRatioAX96];
+  const [a, b] = sqrtRatioAX96 <= sqrtRatioBX96 ? [sqrtRatioAX96, sqrtRatioBX96] : [sqrtRatioBX96, sqrtRatioAX96];
   const intermediate = (a * b) / Q96;
   return (amount0 * intermediate) / (b - a);
 }
@@ -135,7 +135,7 @@ export function getLiquidityForAmount1(
   sqrtRatioBX96: bigint,
   amount1: bigint
 ): bigint {
-  let [a, b] = sqrtRatioAX96 <= sqrtRatioBX96 ? [sqrtRatioAX96, sqrtRatioBX96] : [sqrtRatioBX96, sqrtRatioAX96];
+  const [a, b] = sqrtRatioAX96 <= sqrtRatioBX96 ? [sqrtRatioAX96, sqrtRatioBX96] : [sqrtRatioBX96, sqrtRatioAX96];
   return (amount1 * Q96) / (b - a);
 }
 

@@ -13,6 +13,12 @@ interface Transaction {
 
 const STORAGE_KEY = 'wallet_transactions';
 
+const EXPLORER_TX_URL: Record<number, string> = {
+  1: 'https://etherscan.io/tx/',
+  8453: 'https://basescan.org/tx/',
+  42161: 'https://arbiscan.io/tx/',
+};
+
 const getStoredTransactions = (address: string): Transaction[] => {
   try {
     const stored = localStorage.getItem(`${STORAGE_KEY}_${address}`);
@@ -46,14 +52,10 @@ export const addTransaction = (
 };
 
 /**
- * FIX 21.08 (crash "Rendered more hooks than during the previous render",
- * reproduced on localhost when expanding the "Manage" section):
- * the previous version called `useTransaction`/`useWaitForTransactionReceipt`/
- * `useEffect` INSIDE `transactions.forEach(...)`. The number of hooks thus
- * depended on the number of transactions in the "pending" state and changed
- * between renders — the first rule of hooks broken, React tore down the whole tree.
- *
- * Fix: the watcher for ONE transaction as a separate component. Hooks are
+ * Watcher for ONE pending transaction, as a separate component. Calling
+ * `useTransaction`/`useWaitForTransactionReceipt`/`useEffect` inside a loop over
+ * transactions would make the hook count depend on how many are pending and
+ * crash with "Rendered more hooks than during the previous render". Hooks are
  * at the top level of the component (constant count), and what varies is the
  * number of MOUNTED components — which is legal in React. Renders nothing.
  */
@@ -139,9 +141,7 @@ const TransactionHistory: FC = () => {
                   <div className="transaction-info">
                     <span className="transaction-hash">
                       <a
-                        href={`${tx.chainId === mainnet.id
-                          ? 'https://etherscan.io/tx/'
-                          : 'https://sepolia.etherscan.io/tx/'}${tx.hash}`}
+                        href={`${EXPLORER_TX_URL[tx.chainId] ?? EXPLORER_TX_URL[mainnet.id]}${tx.hash}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         title={tx.hash}

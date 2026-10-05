@@ -1,18 +1,17 @@
 /**
- * BotTelemetry.tsx — "Bot telemetry" (TASKS-UI.md Batch 3, UX-COCKPIT.md §1.A.4).
+ * BotTelemetry.tsx — "Bot telemetry" (docs/UI-DESIGN.md §4.1).
  * Collapsible section in the cockpit, collapsed by default. Shows state.pools /
  * state.positions from bot/observer.ts — the data already arrives via useBotApi
  * (60s polling in App.tsx), nothing new is fetched here.
  *
- * Fix for 401 (TASKS-UI.md): instead of a "raw JSON" link (a direct link cannot
- * carry the Authorization header, so for a protected API it would end in a 401)
- * — a button opening a modal with the already-held `bot.state`, formatted as
- * JSON. Zero additional requests.
+ * No "raw JSON" link: a direct link cannot carry the Authorization header, so
+ * for a protected API it would end in a 401. Instead, a button opens a modal
+ * with the already-held `bot.state`, formatted as JSON. Zero additional requests.
  */
 import React, { FC, useState } from 'react';
 import { UseBotApi, BotPoolLive } from '../hooks/useBotApi';
 import { findBotPoolById } from '../config/botPools';
-import { renderCycleLine, DEFAULT_FLAT_PARAMS } from './cycleLine';
+import { renderCycleLine, DEFAULT_FLAT_PARAMS } from './CycleLine';
 
 interface Props {
   bot: UseBotApi;
@@ -110,14 +109,13 @@ const BotTelemetry: FC<Props> = ({ bot }) => {
               <div className="morning-section-title">Positions watched by the bot</div>
               <div className="morning-advice-list">
                 {positions.map((p) => {
-                  // BATCH 20 item 2: the "Advisor" column spoke the v1.2 language
-                  // (IN_RANGE_HOLD/REBALANCE) even for PRODUCT pools, where the
-                  // bot since Batch 17 plays a completely different cycle (posture
-                  // WIDE/NARROW + flat detector) — for those it is replaced by the
-                  // CYCLE line (same sources and units as the position cards in
-                  // MorningCockpit.tsx, shared helper in cycleLine.tsx, so the
-                  // numbers never drift apart). Non-product pools (posture
-                  // null/absent) stay as before — v1.2 advisor icon.
+                  // PRODUCT pools play a different cycle (posture WIDE/NARROW +
+                  // flat detector), so the v1.2 advisor verdict (IN_RANGE_HOLD/
+                  // REBALANCE) would be misleading — they get the CYCLE line
+                  // instead (shared helper in CycleLine.tsx, same sources and units
+                  // as the position cards in MorningCockpit.tsx, so the numbers
+                  // never drift apart). Non-product pools (posture null/absent)
+                  // keep the v1.2 advisor icon.
                   const isProduct = p.posture === 'wide' || p.posture === 'narrow';
                   const botMeta = findBotPoolById(p.poolId);
                   const poolLive = pools.find((pl) => pl.id === p.poolId);

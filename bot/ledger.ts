@@ -1,17 +1,17 @@
 /**
- * bot/ledger.ts — on-chain TRANSACTION LEDGER (TASKS-LEDGER.md §2).
+ * bot/ledger.ts — on-chain transaction ledger.
  *
  * Source of truth: NonfungiblePositionManager events for the tokenIds of
  * WATCH_ADDRESS (Transfer/IncreaseLiquidity/DecreaseLiquidity/Collect) —
- * the ledger also catches transactions made OUTSIDE our app (Rabby/Uniswap UI),
- * because it reads the chain, not UI intentions. Implements the decision of 10.08:
- * "SQLite + CSV from the first transaction — PL taxes + auditability"
- * (ndjson+json to start, like paper/candidates; SQLite with the PLN layer).
+ * the ledger also catches transactions made outside our app (Rabby/Uniswap UI),
+ * because it reads the chain, not UI intentions. Purpose: a complete record from
+ * the first transaction for tax reporting and auditability (ndjson+json, like
+ * paper/candidates).
  *
  * Files (all in .bot/, untracked):
  *  - tx-ledger.ndjson    — append-only, 1 line = 1 on-chain event;
  *                          idempotency: the writer may duplicate on a crash
- *                          between append and state save — READERS
+ *                          between append and state save — readers
  *                          deduplicate by txHash+logIndex (dedupeEntries).
  *  - ledger-state.json   — nextBlock cursor per chain + tokenId metadata
  *                          cache (token0/1, symbols, decimals).
@@ -19,20 +19,20 @@
  *                          from the ledger after every update).
  *
  * Backfill: the first run starts LEDGER_BACKFILL_DAYS (default
- * 400) days back. Large gaps (>HS_THRESHOLD blocks) go through HYPERSYNC
+ * 400) days back. Large gaps (>HS_THRESHOLD blocks) go through HyperSync
  * (like swap-cache; requires HYPERSYNC_BEARER_TOKEN in the homos-bot env) —
- * lesson from 25.08: free public RPCs cap eth_getLogs at a few thousand
- * blocks and the RPC backfill stood still. RPC (own rotation with provider
+ * free public RPCs cap eth_getLogs at a few thousand blocks, so an RPC-only
+ * backfill stalls. RPC (own rotation with provider
  * logging) handles only the current tail between cycles. The cursor
  * per chain is saved after a successful pass — resumable, and duplicates after
  * a crash are deduplicated by readers.
  *
  * USD valuation (v1, deliberate simplification): stable = 1:1, WETH × rate from
- * the observer's live prices (ctx.ethUsd — price at the moment of INDEXING, not
+ * the observer's live prices (ctx.ethUsd — price at the moment of indexing, not
  * of the event; with a 5 min cycle the drift is negligible, with a monthly backfill
- * it is NOT — such entries get usd:null instead of a lie). Other tokens
+ * it is not — such entries get usd:null instead of a wrong value). Other tokens
  * (cbBTC etc.): usd:null, token amounts are always present. Historical valuation
- * at the event-time rate + PLN/NBP = next iteration (TASKS-LEDGER §3).
+ * at the event-time rate is not implemented.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -44,17 +44,17 @@ const LEDGER_PATH = path.join(DIR, 'tx-ledger.ndjson');
 const STATE_PATH = path.join(DIR, 'ledger-state.json');
 const CLOSED_PATH = path.join(DIR, 'closed-positions.json');
 
-// 600d (not 400): dust positions #953427/#953465 were minted 519 days before 25.08 —
+// 600d (not 400): some old dust positions were minted ~520 days back —
 // the window must cover their full history (INCREASE from the mint), otherwise the ledger
-// shows "deposited 0" (CC-Win diagnosis 25.08). HyperSync counts this in
+// shows "deposited 0". HyperSync counts this in
 // seconds anyway, the cost of the wider window is negligible.
 const BACKFILL_DAYS = Number(process.env.LEDGER_BACKFILL_DAYS || 600);
 const CYCLE_BUDGET_MS = 60_000; // the ledger must not eat the observer's cycle
 const BLOCK_TIME: Record<string, number> = { mainnet: 12, base: 2, arbitrum: 0.25 };
 const CHAIN_IDS: Record<string, number> = { mainnet: 1, base: 8453, arbitrum: 42161 };
-// RPC only for the CURRENT tail (small ranges) — free public RPCs cap
-// eth_getLogs at a few thousand blocks (bug 25.08: backfill stalled at 20k).
-// Backfill of LARGE ranges goes through HyperSync (see below), like swap-cache.
+// RPC only for the current tail (small ranges) — free public RPCs cap
+// eth_getLogs at a few thousand blocks, so large backfills stall on RPC.
+// Backfill of large ranges goes through HyperSync (see below), like swap-cache.
 const MAX_CHUNK: Record<string, number> = { mainnet: 5_000, base: 5_000, arbitrum: 5_000 };
 const MIN_CHUNK = 1_000;
 const HS_THRESHOLD = 20_000; // gap > this many blocks → HyperSync instead of RPC
@@ -96,8 +96,8 @@ interface LedgerState {
   chains: Record<string, { nextBlock: number }>;
   tokens: Record<string, TokenMeta | null>;
   /** current liquidity per chain:tokenId (raw string; '0' also for burned) —
-   *  needed to close positions whose NFT is NOT burned: our app
-   *  "closes" via decrease+collect and the NFT stays in the wallet (CC-Win 25.08),
+   *  needed to close positions whose NFT is not burned: our app
+   *  "closes" via decrease+collect and the NFT stays in the wallet,
    *  so BURN/TRANSFER_OUT will never arrive. */
   liq?: Record<string, string>;
 }
@@ -118,9 +118,9 @@ const word = (data: string, i: number): bigint => BigInt('0x' + (data.replace(/^
 /** normalized log — common shape for the RPC and HyperSync paths */
 interface NormLog { blockNumber: number; logIndex: number; txHash: string; data: string; topics: string[] }
 
-/** eth_getLogs with our own fetch, ROTATING over the RPC list + logging WHICH
- *  provider failed (CC-Win remark 25.08: viem fallback swallowed this information).
- *  Adaptive range splitting; for SMALL ranges (the tail) — backfill
+/** eth_getLogs with our own fetch, rotating over the RPC list + logging which
+ *  provider failed (viem's fallback transport swallows this information).
+ *  Adaptive range splitting; for small ranges (the tail) — backfill
  *  of large ones goes through HyperSync. */
 async function rpcGetLogs(chain: string, address: string, topics: (string | string[] | null)[], from: number, to: number, log: (m: string) => void): Promise<NormLog[]> {
   const urls = RPC[chain] ?? [];
@@ -156,7 +156,7 @@ async function rpcGetLogs(chain: string, address: string, topics: (string | stri
   return out;
 }
 
-/** BACKFILL via HyperSync (like swap-cache): historical logs with a topic
+/** Backfill via HyperSync (like swap-cache): historical logs with a topic
  *  filter in seconds instead of thousands of RPC requests. Two phases: (A) transfers
  *  from/to WATCH → tokenId discovery, (B) liquidity events of known
  *  tokenIds. Returns logs + block timestamps (HyperSync provides them directly).
@@ -183,7 +183,7 @@ async function hypersyncLogs(chain: string, from: number, to: number, tokenTopic
     topics: (lg.topics ?? [lg.topic0, lg.topic1, lg.topic2, lg.topic3]).filter((t: unknown) => !!t),
   });
   const runQuery = async (selections: any[], sink: (lg: NormLog) => Promise<void> | void) => {
-    let query: any = { fromBlock: from, toBlock: to + 1, logs: selections, fieldSelection };
+    const query: any = { fromBlock: from, toBlock: to + 1, logs: selections, fieldSelection };
     while (true) {
       const res = await hs.get(query);
       for (const b of res?.data?.blocks ?? []) {
@@ -292,8 +292,8 @@ export async function updateLedger(clients: Record<string, any>, ctx: LedgerCtx)
       const key = `${chain}:${tokenId}`;
       if (!(key in state.tokens)) state.tokens[key] = await fetchTokenMeta(client, chain, BigInt(tokenId), lg.blockNumber, ctx.log);
     };
-    // SEED from the live wallet enumeration (CC-Win diagnosis 25.08): old positions
-    // (mint before the backfill window, zero transfers) will NEVER come in through
+    // Seed from the live wallet enumeration: old positions
+    // (mint before the backfill window, zero transfers) will never come in through
     // Phase A — we take them directly from balanceOf/tokenOfOwnerByIndex. Also catches
     // future positions imported/bought by any route.
     try {
@@ -423,7 +423,7 @@ export interface ClosedPosition {
   fees0: number | null; fees1: number | null; // COLLECT − DECREASE (>=0)
   inUsd: number | null; outUsd: number | null; feesUsdApprox: number | null;
   txCount: number;
-  /** whether the ledger has the FULL history of the position (MINT within the backfill window);
+  /** whether the ledger has the full history of the position (MINT within the backfill window);
    *  false = deposits before the window → in* deliberately null, see note */
   complete: boolean;
   note?: string;
@@ -441,7 +441,7 @@ function rebuildClosedPositions(log: (m: string) => void, state?: LedgerState): 
     for (const [key, evs] of byToken) {
       const end = evs.find((e) => e.kind === 'BURN' || e.kind === 'TRANSFER_OUT');
       // close-out without burning the NFT: liquidity==0 on chain + there was a DECREASE
-      // (our app closes via decrease+collect, the NFT stays — CC-Win 25.08)
+      // (our app closes via decrease+collect, the NFT stays)
       const emptied = !end && state?.liq?.[key] === '0' && evs.some((e) => e.kind === 'DECREASE');
       if (!end && !emptied) continue; // live position — not for this file
       const sum = (kinds: LedgerKind[], leg: 0 | 1): number | null => {
@@ -489,7 +489,7 @@ function rebuildClosedPositions(log: (m: string) => void, state?: LedgerState): 
       const s0 = STABLE.has(c.sym0.toUpperCase()) ? c.fees0 : null;
       const s1 = STABLE.has(c.sym1.toUpperCase()) ? c.fees1 : null;
       // v1: approximation only for a stable/stable pair or the stable leg — WETH
-      // requires the rate at event time (iteration 2); we do not guess.
+      // requires the rate at event time (not implemented); we do not guess.
       if (s0 !== null && s1 !== null) c.feesUsdApprox = +(s0 + s1).toFixed(2);
     }
     fs.writeFileSync(CLOSED_PATH, JSON.stringify(closed, null, 2));

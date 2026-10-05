@@ -81,7 +81,7 @@ export function formatPercentage(percentage: number): string {
 /**
  * Duration in compact form: "48min", "6h 12min", "3d 4h".
  * No seconds — the bot samples every 15 minutes, so more precision would be fiction.
- * Added 21.08 for the "how long the position has been out of range" counter (paper + real).
+ * Used by the "how long the position has been out of range" counter (paper + real).
  */
 export function formatDuration(ms: number): string {
   const min = Math.max(0, Math.round(ms / 60000));
@@ -92,3 +92,10 @@ export function formatDuration(ms: number): string {
   if (h > 0) return `${h}h ${m}min`;
   return `${m}min`;
 }
+
+/** USD with exactly two decimals: "$1,234.50". Negative values render as "$-1.00". */
+export const fmtUsd = (v: number): string =>
+  '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Signed USD with two decimals and a typographic minus: "+$1.50", "−$1.50", "$0.00". */
+export const fmtSignedUsd = (v: number): string => (v > 0 ? '+' : v < 0 ? '−' : '') + fmtUsd(Math.abs(v));

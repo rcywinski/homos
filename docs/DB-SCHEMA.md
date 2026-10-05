@@ -1,30 +1,36 @@
 # DB-SCHEMA.md — HOMOS database design (SQLite)
 
-> Design: Fable 2026-08-18 (owner's decision: "a good structure for future
-> extensions"). Implements the 2026-08-10 decision "SQLite + CSV from the first
-> transaction". Implementation: separate session (the schema is frozen first).
+> **Design document — never implemented; the ledger shipped as ndjson/json
+> (`bot/ledger.ts`).** None of the files below (`db/migrations/`,
+> `scripts/db-migrate.ts`, `scripts/db-import.ts`) exist in the repository. The design is
+> kept because it records how the data would have been structured for real capital and
+> tax reporting.
+>
+> Written 18 Aug 2026 by the analysis session, on the owner's request for "a good structure
+> for future extensions". It was meant to implement the 10 Aug decision "SQLite + CSV from
+> the first transaction".
 
 ## 1. Design principles (more important than the specific tables)
 
 1. **SQLite, file `data/homos.db`, WAL mode** (safe concurrent reads with a
    single writer; backup.ps1 picks the file up automatically).
-2. **Numbered migrations from day 1**: `db/migrations/NNN_nazwa.sql` +
+2. **Numbered migrations from day 1**: `db/migrations/NNN_name.sql` +
    table `schema_migrations(version, applied_at)` + runner
-   `scripts/db-migrate.ts`. EVERY future schema change = a new migration
+   `scripts/db-migrate.ts`. Every future schema change = a new migration
    file, never editing old ones — this is the extensibility mechanism.
 3. **ndjson remains the bot's write path** (append-only, crash-safe). Data
-   enters the database by IMPORT (a pipeline / morning-report step). The bot
+   enters the database by import (a pipeline / morning-report step). The bot
    does not write to SQLite directly → zero new failure modes in the observer.
    The importer is idempotent (INSERT OR IGNORE on natural keys).
 4. **Precision: on-chain amounts as TEXT (raw bigint, wei/token units)**,
-   never REAL — the lesson of Phase 0 (float loses >2^53). REAL only for
+   never REAL (the lesson of Phase 0: float loses precision above 2^53). REAL only for
    derived metrics (APR, %, USD after valuation). This applies above all to
-   future REAL transactions.
+   future transactions with real capital.
 5. **Time: INTEGER unix ms UTC** (column `ts`) — fast ranges and indexes;
    ISO strings only in human-facing views.
 6. **Flexible payloads: column `payload` TEXT/JSON** (SQLite JSON1) wherever
    the shape will evolve (proposals, events) — new fields do not require a
-   migration; we extract into columns only what we FILTER by.
+   migration; we extract into columns only what we filter by.
 7. **Dictionaries as tables, not enums in code**: `pool`, `venue` — adding a
    pool/exchange = INSERT, not a schema change. `protocol` in pool (v3/v4)
    from the start, even though v4 is postponed.
@@ -66,7 +72,7 @@ CREATE TABLE pool_snapshot (
 ) WITHOUT ROWID;
 CREATE INDEX ix_snapshot_ts ON pool_snapshot(ts);
 
--- ===== BOT PROPOSALS + ACCURACY JOURNAL (import from proposals.json/SELECTOR-LOG) =====
+-- ===== BOT PROPOSALS + ACCURACY JOURNAL (import from proposals.json and the selector log) =====
 CREATE TABLE proposal (
   id TEXT PRIMARY KEY,                    -- id from the bot (natural)
   created_at INTEGER NOT NULL,
@@ -105,8 +111,8 @@ CREATE TABLE paper_event (
   PRIMARY KEY (pool_id, ts, kind)
 ) WITHOUT ROWID;
 
--- ===== REAL CAPITAL (empty until F2/F3 — but the schema NOW, because it is
--- the foundation for taxes; raw amounts as TEXT!) =====
+-- ===== REAL CAPITAL (empty until Phase 2/3, but defined now because it is
+-- the foundation for taxes; raw amounts as TEXT) =====
 CREATE TABLE position (                   -- LP position register (NFT)
   token_id TEXT NOT NULL, chain_id INTEGER NOT NULL,
   pool_id TEXT REFERENCES pool(id),
@@ -115,7 +121,7 @@ CREATE TABLE position (                   -- LP position register (NFT)
   PRIMARY KEY (token_id, chain_id)
 );
 
-CREATE TABLE tx (                         -- EVERY on-chain/venue transaction
+CREATE TABLE tx (                         -- every on-chain/venue transaction
   id INTEGER PRIMARY KEY,
   ts INTEGER NOT NULL,
   chain TEXT, tx_hash TEXT UNIQUE,        -- NULL for CEX/off-chain venue
@@ -126,7 +132,7 @@ CREATE TABLE tx (                         -- EVERY on-chain/venue transaction
   token_out TEXT, amount_out_raw TEXT,
   fee_usd REAL, gas_usd REAL,
   value_usd REAL,                         -- valuation at the time of the tx
-  pln_rate REAL,                          -- NBP D-1 rate (Polish taxes) — filled in by script
+  pln_rate REAL,                          -- National Bank of Poland D-1 FX rate (Polish taxes), filled in by script
   note TEXT, payload TEXT
 );
 CREATE INDEX ix_tx_ts ON tx(ts); CREATE INDEX ix_tx_pool ON tx(pool_id, ts);
@@ -155,17 +161,17 @@ CREATE VIEW v_selector_accuracy AS
   FROM proposal WHERE kind IN ('OPEN','ROTATE');
 ```
 
-## 3. What is deliberately OUTSIDE the database
+## 3. What is deliberately outside the database
 
 - **Raw tick-level swaps** (`data/cache/*.ndjson`, millions of rows per pool) —
   stay in files: the backtest reads them sequentially, the database adds
   nothing here and would bloat by orders of magnitude. The database holds only
   `backtest_run` (results index).
 - **Secrets** — never in the database (they stay in .env).
-- **CONTEXT/HANDOFF/journals** — stay in md (that is the session coordination
-  layer, not application data; private working journal, not published).
+- **The working journal and hand-off files** — stay in Markdown (that is the session
+  coordination layer, not application data).
 
-## 4. Rollout path (separate session)
+## 4. Planned rollout (not carried out)
 
 1. `db/migrations/001_init.sql` (the DDL above once frozen) + `scripts/db-migrate.ts`
    + `scripts/db-import.ts` (idempotent ndjson→SQLite import, resume from the
@@ -174,5 +180,10 @@ CREATE VIEW v_selector_accuracy AS
    table from bot/config.ts.
 3. Morning-report and /api can gradually move to database queries
    (ndjson still written — switching reads carries no risk).
-4. At F2/F3 (real capital): write to `tx` from the FIRST transaction + NBP rate
-   script (pln_rate) + CSV export for the tax return.
+4. In Phase 2/3 (real capital): write to `tx` from the first transaction, plus a script
+   filling `pln_rate` from the National Bank of Poland D-1 FX rate, plus a CSV export for
+   the Polish income-tax return (PIT-38).
+
+What shipped instead: the bot-side ledger in `.bot/tx-ledger.ndjson` (`bot/ledger.ts`),
+rebuilt from on-chain position events, with a CSV export at `/api/ledger.csv` and a
+closed-positions panel in the UI. The PLN conversion layer was never built.

@@ -1,22 +1,22 @@
 /**
- * candidate-funnel.ts — AUTO-FUNNEL validating selector candidates (TASKS-FUNNEL.md).
+ * candidate-funnel.ts — automated funnel that validates selector candidates.
  *
  * Automates the FUNNEL (qualification → on-chain mapping → 365d fetch →
- * walkforward → gate verdict), NOT the decision: PASS lands in the brief as a
+ * walkforward → gate verdict), not the decision: PASS lands in the brief as a
  * recommendation, BOT_POOLS is edited by a human.
  *
  *   npx tsx scripts/candidate-funnel.ts             # steady-state: 1 candidate (pipeline step 05:30)
  *   npx tsx scripts/candidate-funnel.ts --all       # BACKFILL: whole queue sequentially (manual, evenings)
  *   npx tsx scripts/candidate-funnel.ts --dry-run   # qualification + queue snapshot only, no fetch/walkforward
  *
- * Qualification (guardrails from TASKS-FUNNEL.md §2):
+ * Qualification guardrails:
  *  - top10 of the ranking by 7d MEDIAN apyBase (not mean — spike-resistant)
  *    with persistence ≥3 days (selector streaks), TVL ≥ $3M, majors, uniswap-v3
  *  - OR an open OPEN proposal outside BOT_POOLS (llamaPool from proposals.json)
  *  - minus: pools in BOT_POOLS, pools with a valid verdict (current algoVersion)
  *  - age ≥180 days of llama history — younger → deferral (QUEUED with a note), not FAIL
  * Verdict: PASS = winPct ≥65 AND worst >−3 (profile by pair: ETH/stable = v1.1
- * re>EMA; BTC leg without stable = cbBTC profile k=2 clean exit). PERSISTENT write
+ * re>EMA; BTC leg without stable = cbBTC profile k=2 clean exit). persistent write
  * to .bot/candidate-verdicts.json with algoVersion — retest only after an
  * algorithm change or manual removal of the entry.
  *
@@ -184,7 +184,7 @@ function buildQueue(): { queue: QueueItem[]; deferred: QueueItem[]; universeAgeH
   try { streaks = JSON.parse(fs.readFileSync(path.join(BOT, 'selector-state.json'), 'utf8')).streaks ?? {}; } catch { /* no selector state = streak 0 */ }
 
   // valid verdicts (the seed lives in bot/candidates.ts, but the funnel writes only
-  // runtime; for filtering we need BOTH)
+  // runtime; for filtering we need both)
   const byId = new Map<string, Verdict>();
   for (const v of SEED_VERDICTS as Verdict[]) byId.set(v.llamaPool, v);
   for (const v of readRuntimeVerdicts()) byId.set(v.llamaPool, v);
@@ -228,9 +228,9 @@ function buildQueue(): { queue: QueueItem[]; deferred: QueueItem[]; universeAgeH
     } else queue.push(item);
   };
 
-  // "TOP10 GOOD ONES" (Rafal 25.08): pools rejected by verdict do not take slots —
-  // we scan the ranking until TOP_N pools without FAIL/UNMAPPED are collected (so the
-  // funnel also examines pools that moved into the slots of rejected ones).
+  // Pools already rejected by a verdict do not take slots: scan the ranking until
+  // TOP_N pools without FAIL/UNMAPPED are collected (so the funnel also examines
+  // pools that moved into the slots of rejected ones).
   const rejected = (uuid: string): boolean => {
     const v = byId.get(uuid);
     return !!v && (v.verdict === 'FAIL' || v.verdict === 'UNMAPPED') && (!v.algoVersion || v.algoVersion === ALGO_VERSION);
@@ -245,7 +245,7 @@ function buildQueue(): { queue: QueueItem[]; deferred: QueueItem[]; universeAgeH
   }
   for (const p of ranked) if (openProposals.has(p.pool)) consider(p, 'OPEN proposal outside BOT_POOLS');
 
-  // FIFO by persistence, then TVL (TASKS-FUNNEL §2)
+  // FIFO by persistence, then TVL
   queue.sort((a, b) => b.streak - a.streak || b.tvlUsd - a.tvlUsd);
   return { queue, deferred, universeAgeH };
 }
@@ -342,7 +342,7 @@ function evaluateGate(candId: string, symsUpper: string[]): { verdict: 'PASS' | 
   for (const q of queue) log(`  → ${q.symbol} ${q.feeTier} @ ${q.chain} (streak ${q.streak}, TVL $${(q.tvlUsd / 1e6).toFixed(1)}M) — ${q.reason}`);
   for (const d of deferred) log(`  ⏸ ${d.symbol} ${d.feeTier} @ ${d.chain} — ${d.reason}`);
 
-  // queue snapshot for the report/UI (ALWAYS written, even with an empty queue)
+  // queue snapshot for the report/UI (always written, even with an empty queue)
   fs.mkdirSync(BOT, { recursive: true });
   fs.writeFileSync(QUEUE_PATH, JSON.stringify({ generatedAt: new Date().toISOString(), universeAgeH: Math.round(universeAgeH * 10) / 10, queue, deferred }, null, 2));
 

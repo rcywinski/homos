@@ -1,9 +1,7 @@
 const path = require('path');
 const webpack = require('webpack');
-// Without this, .env is NOT read at build time — DefinePlugin baked in an
-// empty WALLET_CONNECT_PROJECT_ID despite the entry in the file (found 19.08:
-// no WalletConnect/Rabby on iOS). dotenv.config() in src/ is a no-op
-// in the browser; the only proper place is the build.
+// .env must be loaded here, at build time: DefinePlugin inlines the values into
+// the bundle, and dotenv cannot run in the browser.
 require('dotenv').config();
 
 module.exports = {
@@ -17,18 +15,16 @@ module.exports = {
     rules: [
       {
         test: /\.(ts|tsx|js|jsx|mjs)$/,
-        // [\\/] instead of /: on Windows paths have backslashes — the old regex
-        // excluded NOTHING, babel transpiled all of node_modules and preset-env
-        // (no targets = oldest browsers) rewrote `2n ** 7n` (viem)
-        // to Math.pow(2n,7n) → TypeError at startup → white page
-        // (incident 18-19.08: every build from Windows was broken, from the Mac OK).
+        // [\\/] so the exclusion also matches Windows paths. If node_modules were
+        // transpiled, preset-env would rewrite viem's `2n ** 7n` into
+        // Math.pow(2n, 7n), which throws a TypeError at startup.
         exclude: /node_modules[\\/](?!framer-motion[\\/])/,
         use: {
           loader: 'babel-loader',
           options: {
             presets: [
-              // targets es2020: BigInt/`**` stay native even if
-              // exclude let node_modules through again (second line of defense)
+              // ES2020 targets keep BigInt and `**` native (second line of defence
+              // in case node_modules ever slips through the exclusion above).
               ['@babel/preset-env', { targets: { chrome: '80', safari: '14', firefox: '78' } }],
               '@babel/preset-react',
               '@babel/preset-typescript'
@@ -66,7 +62,6 @@ module.exports = {
     }),
     new webpack.DefinePlugin({
       'process.env.WALLET_CONNECT_PROJECT_ID': JSON.stringify(process.env.WALLET_CONNECT_PROJECT_ID || ''),
-      'process.env.RPC_URL': JSON.stringify(process.env.RPC_URL || ''),
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
     })
   ],

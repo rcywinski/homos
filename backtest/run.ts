@@ -65,14 +65,12 @@ function svgChart(results: RunResult[], w = 900, h = 320): string {
     .filter((f) => f.endsWith('.meta.json'))
     .map((f) => f.replace('.meta.json', ''))
     // cand-* = working caches of the funnel/walkforwards (candidates before the
-    // gate) — they do NOT enter the daily production report (incident 26.08:
-    // an exploratory cand-*-720d cache got into the pipeline and took it down
-    // twice; an explicit `--only cand-...` still works for manual work)
+    // gate) — they do not enter the daily production report: a large
+    // exploratory 720d cache can stall the nightly pipeline. An explicit
+    // `--only cand-...` still works for manual work.
     // wide-*/ref-* = caches of funnel Tier 2 (scripts/wide-collect.ts, 720d) —
-    // the same class as cand-*: 19 extra 720d pools got into the nightly
-    // backtest-run on 03.09 (the 07:30 report found it still running since
-    // 03:43). Their result is computed by the collector (WF_SET=wide), not the
-    // daily report.
+    // same reason (dozens of 720d pools would run for hours). Their result is
+    // computed by the collector (WF_SET=wide), not the daily report.
     .filter((id) => (only ? id === only : !/^(cand|wide|ref)-/.test(id)));
 
   let html = `<html><head><meta charset="utf-8"><title>HOMOS backtest</title>

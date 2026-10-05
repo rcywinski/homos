@@ -51,8 +51,8 @@ export interface RebalanceAssessment {
 }
 
 export const ADVISOR_PARAMS = {
-  // k=3 since ALGORITHM.md v1.1 (walk-forward 365d: k3 h24 the only positive mean+median
-  // in both windows; previously 2). Correlated pairs (cbBTC/WETH): k=2 — per-pool
+  // k=3 per ALGORITHM.md v1.1 (walk-forward 365d: k3 h24 the only setting with a
+  // positive mean+median in both windows). Correlated pairs (cbBTC/WETH): k=2 — per-pool
   // override via BotPool.advisorK (bot/config.ts), not here.
   k: 3,
   horizonDays: 7,
@@ -62,8 +62,8 @@ export const ADVISOR_PARAMS = {
   slippageBps: 5,
 };
 
-const BLOCK_TIME: Record<number, number> = { 1: 12, 8453: 2, 42161: 0.25, 11155111: 12 };
-const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08, 42161: 0.1, 11155111: 0 };
+const BLOCK_TIME: Record<number, number> = { 1: 12, 8453: 2, 42161: 0.25 };
+const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08, 42161: 0.1 };
 // getLogs chunk per chain: Arbitrum has 4 blocks/s — at 1000 blocks/chunk 24h
 // would require ~350 calls per cycle; public Arbitrum RPCs tolerate 10k.
 const LOG_CHUNK: Record<number, bigint> = { 42161: 10_000n };
@@ -95,7 +95,7 @@ export async function fetchRecentSwaps(
         });
       }
     } catch (e) {
-      console.warn('advisor getLogs chunk failed', e);
+      console.warn('advisor getLogs chunk failed:', (e as { shortMessage?: string }).shortMessage ?? String(e));
     }
   }
   return out;
@@ -113,11 +113,11 @@ export function computeStats(
   if (swaps.length < 10) return null;
   const bt = BLOCK_TIME[chainId] || 12;
 
-  // --- σ: 'grid15' mode behind the SIGMA_MODE flag (TASKS-RECAL §1, review 26.08).
-  // The swap-by-swap estimator measures the pool's microstructure (DECISIONS 11: a
-  // 4.5× spread on the same ETH); 'grid15' computes returns between the closes of
-  // 15-min buckets (time from block deltas). Default 'swap' — production/paper
-  // unchanged until the decision after the recalibration batch (algoVersion bump).
+  // --- σ: optional 'grid15' mode behind the SIGMA_MODE flag.
+  // The swap-by-swap estimator measures the pool's microstructure (σ for the same
+  // ETH can differ ~4.5× between pools); 'grid15' computes returns between the
+  // closes of 15-min buckets (time from block deltas). Default 'swap'; switching
+  // modes changes production numbers, so it goes with an algoVersion bump.
   // typeof guard: this file also ends up in the browser bundle (webpack).
   const sigmaGrid15 =
     typeof process !== 'undefined' && (process as { env?: Record<string, string | undefined> }).env?.SIGMA_MODE === 'grid15';
@@ -205,14 +205,14 @@ export function suggestRange(
   const spacing = TICK_SPACINGS[feeAmount];
   const w = Math.min(Math.max(params.k * stats.volDaily * Math.sqrt(params.horizonDays), params.minWidth), params.maxWidth);
   const dTicks = Math.round(Math.log(1 + w) / Math.log(1.0001));
-  let lo = nearestUsableTick(stats.lastTick - dTicks, spacing);
+  const lo = nearestUsableTick(stats.lastTick - dTicks, spacing);
   let hi = nearestUsableTick(stats.lastTick + dTicks, spacing);
   if (hi <= lo) hi = lo + spacing;
   const toPrice = (t: number) => Math.pow(1.0001, t) * Math.pow(10, d0 - d1);
   return { tickLower: lo, tickUpper: hi, widthPct: w * 100, priceLower: toPrice(lo), priceUpper: toPrice(hi) };
 }
 
-/** PRODUCT 27.08 (FlatWide hybrid): a range of FIXED width ±widthPct%
+/** FlatWide product: a range of fixed width ±widthPct%
  *  around the current price (idle posture = wide passive LP), instead of k×σ.
  *  The same tick math as suggestRange, with w given up front. */
 export function suggestFixedRange(
@@ -225,7 +225,7 @@ export function suggestFixedRange(
   const spacing = TICK_SPACINGS[feeAmount];
   const w = widthPct / 100;
   const dTicks = Math.round(Math.log(1 + w) / Math.log(1.0001));
-  let lo = nearestUsableTick(stats.lastTick - dTicks, spacing);
+  const lo = nearestUsableTick(stats.lastTick - dTicks, spacing);
   let hi = nearestUsableTick(stats.lastTick + dTicks, spacing);
   if (hi <= lo) hi = lo + spacing;
   const toPrice = (t: number) => Math.pow(1.0001, t) * Math.pow(10, d0 - d1);
@@ -241,9 +241,8 @@ export function assessPosition(
   d0: number,
   d1: number,
   params = ADVISOR_PARAMS,
-  /** live gas cost of a full cycle in USD (review decision 26.08, DECISIONS
-   *  6a): the observer supplies the value from eth_gasPrice; without it, fallback to
-   *  the static GAS_USD table (UI/backtest until the recalibration batch). */
+  /** live gas cost of a full cycle in USD: the observer supplies the value from
+   *  eth_gasPrice; without it, fallback to the static GAS_USD table (UI/backtest). */
   gasUsd?: number | null
 ): RebalanceAssessment {
   const suggestion = suggestRange(stats, feeAmount, d0, d1, params);

@@ -38,16 +38,11 @@ function AppShell() {
       <div className="app-content">
         <div className="main-content">
           <MorningCockpit bot={bot} />
-          {/* REMOVED 21.08 (owner's decision): the "Manage (advanced)" section
-              — PoolBrowser/UniswapPool/LiquidityManager/MyPositions/TopPools/
-              MarketVolatility. Manual liquidity management was replaced by the
-              cockpit (openPositionAtRange / rebalance / rotation / hedge), and
-              the pool ranking comes from the bot, not from DefiLlama in the browser.
-              `TransactionHistory` did NOT go away — it is the WRITE module for
-              cockpit actions (`addTransaction` in use*Execution/useCockpitActions).
-              Its view is deliberately unmounted here: it is localStorage, the last
-              10 entries, no export — to be replaced by the bot-side ledger
-              (UI-VISION.md: SQLite + CSV for tax accounting). */}
+          {/* Liquidity management lives in the cockpit (openPositionAtRange /
+              rebalance / rotation / hedge); the pool ranking comes from the bot.
+              `TransactionHistory` is still the write module for cockpit actions
+              (`addTransaction`), but its view is deliberately not mounted — the
+              bot-side ledger is the record of transactions. */}
         </div>
       </div>
     </div>

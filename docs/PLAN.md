@@ -1,8 +1,11 @@
 # HOMOS v2 — Project plan: Automated Liquidity Manager (ALM)
 
-> Created: 2026-08-10
-> Status: PLAN — approved direction, before implementation starts
-> Parameters agreed with the owner: capital $5k–$25k · network: to be chosen after backtesting · hedging: in stages · execution: semi-auto → full-auto
+> **Historical: the plan as written on 10 Aug 2026, before implementation.** What was
+> actually built is in the [README](../README.md) and [`CASE-STUDY.md`](CASE-STUDY.md);
+> a short "planned vs built" summary is in §5.
+>
+> Parameters agreed with the owner at the time: capital $5k–$25k · network: to be chosen
+> after backtesting · hedging: in stages · execution: semi-auto → full-auto.
 
 ---
 
@@ -75,7 +78,7 @@ The suggestions (delta-neutral, rebalance cost > IL+gas, L2, backtesting) are co
 
 ### 3.1. LVR — naming the enemy properly
 
-The LP's main adversary is not "IL" in general, but **LVR (Loss-Versus-Rebalancing)**: the loss to arbitrageurs who trade against your position at a stale price on every market move. Research shows that most LPs in ETH/stablecoin pairs **lose to simple HODL**, because fees do not cover LVR. Practical conclusion: profitability depends on the **quality of flow in the specific pool** (the ratio of "organic" to arbitrage volume), not just on the APR displayed in the interface. Pool selection = the first algorithmic decision, before any range.
+The LP's main adversary is not "IL" in general, but **LVR (Loss-Versus-Rebalancing)**: the loss to arbitrageurs who trade against the position at a stale price on every market move. Research shows that most LPs in ETH/stablecoin pairs **lose to simple HODL**, because fees do not cover LVR. Practical conclusion: profitability depends on the **quality of flow in the specific pool** (the ratio of "organic" to arbitrage volume), not just on the APR displayed in the interface. Pool selection = the first algorithmic decision, before any range.
 
 ### 3.2. Choosing the fee tier and pool is a separate optimisation problem
 
@@ -107,7 +110,7 @@ Gaps in the proposed profitability condition:
 The biggest trap: **a backtest on candles (OHLC) systematically overstates LP profits**, because it does not see the price path inside the candle nor the actual volume distribution across ticks. Requirements:
 - simulation on **swap-by-swap** data (`Swap` events from the pool — available via subgraph/RPC/public datasets) at least for final validation; candles acceptable for preliminary strategy selection,
 - modelling our own impact: our fee = our liquidity's share of the active tick (at $5–25k in a deep pool negligible, but this has to be known, not assumed),
-- costs in the simulation: gas (real L2 prices), swap fee on rebalance, slippage, (in F4) funding,
+- costs in the simulation: gas (real L2 prices), swap fee on rebalance, slippage, (in Phase 4) funding,
 - **walk-forward, not curve-fitting**: parameters tuned on period A, validated on B; tested across different regimes (2024 bull run, declines, sideways),
 - mandatory benchmarks: HODL 50/50, HODL 100% ETH, passive full-range, passive wide ±50%, and public results of ALMs (Arrakis/Gamma/Charm) as the "was it worth building at all" check.
 
@@ -145,111 +148,40 @@ Levers of maximisation, in order of impact:
 
 ---
 
-## 5. Target architecture
+## 5. Planned vs built
 
-Monorepo (pnpm workspaces), TypeScript everywhere — one language, shared types and **one math module** used by the backtest, the bot and the UI (no more discrepancies between layers):
+**Architecture.** The plan called for a pnpm monorepo (`packages/core`, `data`, `backtest`,
+`bot`, `ui`). It was never split up: the project stayed a single package (`src/utils/v3math.ts`,
+`backtest/`, `bot/`, `scripts/`, `src/`), which still achieved the key goal of **one math
+module** shared by the backtester, the bot and the UI. Other architectural decisions held: no
+own smart contract or vault, positions as standard Uniswap NFTs in the owner's wallet, a
+Node/TypeScript daemon on a home machine (see [`INFRA.md`](INFRA.md)).
 
-```
-homos/
-├── CONTEXT.md               ← living project journal (section 8) — private working journal, not published
-├── PLAN.md                  ← this document (now docs/PLAN.md)
-├── packages/
-│   ├── core/                ← F0: v3/v4 math, bigint ONLY, zero UI dependencies
-│   │   ├── src/math/        (tick↔price, liquidity, amounts, fee growth)
-│   │   ├── src/strategy/    (range width, rebalance conditions, hedge sizing)
-│   │   └── test/            (tests vs SDK and on-chain reference values)
-│   ├── data/                ← F1: data fetching (subgraph, RPC, prices, gas, funding)
-│   │   └── cache/           (local cache — never download the same thing twice)
-│   ├── backtest/            ← F1: swap-by-swap simulator + HTML reports
-│   ├── bot/                 ← F2/F3: 24/7 keeper (monitor → decision → proposal/execution)
-│   └── ui/                  ← F2: dashboard (positions, PnL vs benchmarks, bot proposals)
-└── docs/
-```
+**Phases.**
 
-**Architectural decisions:**
-- **No own smart contract / vault** at this capital size. Positions as standard Uniswap NFTs on our own wallet. An own vault = audit costs and risk disproportionate to $5–25k. Revisit only if the strategy required atomicity (rebalance+hedge in one tx).
-- **Semi-auto execution (F3):** the bot builds a ready transaction → notification → signature in Rabby (WalletConnect). We will check the Rabby↔Claude integration as an approval channel — if it works, it shortens the loop.
-- **Full-auto (F4):** dedicated hot wallet (key in env on the bot machine), per-transaction and per-day amount limits, kill-switch, minimal approvals.
-- Bot backend: Node/TS as a simple daemon (pm2/systemd) on any VPS or home machine; database: SQLite (sufficient).
+| Phase (plan) | Outcome |
+|---|---|
+| 0 — math on `bigint`, verified against `@uniswap/v3-sdk` | Done: `v3math.ts`, bit-for-bit agreement on 2 925 generated cases. |
+| 1 — data + backtesting, gate "beats HODL 50/50 in ≥ 2 regimes" | Done: swap-level data (HyperSync), walk-forward engine, validation gate. On 720 days of data 0 of 21 configurations passed. |
+| 2 — read-only dashboard, observer bot, Telegram alerts | Done: the cockpit UI, the observer with paper trading, Telegram alerts and a daily morning report. |
+| 3 — semi-automatic execution (signal → ready transaction → signature in Rabby) | Done: rebalance, rotation and hedge sequences signed in the browser wallet. The ledger shipped as ndjson + CSV export rather than SQLite ([`DB-SCHEMA.md`](DB-SCHEMA.md)). |
+| 4 — full-auto + delta-neutral hedge | Not built as planned. AUTO mode was never enabled; the hedge exists only as a propose-only short on GMX v2, signed in the cockpit (ETH/USD only). |
+
+**Agents.** The plan assigned one agent per package, each with its own notes file, and a
+shared journal as the single source of truth. In practice this became four Claude sessions
+with distinct roles, coordinated through the working journal and hand-off inboxes (see
+[`AI-WORKFLOW.md`](AI-WORKFLOW.md)).
 
 ---
 
-## 6. Implementation phases
-
-### Phase 0 — Mathematical foundation (no risk, no funds)
-**Goal: a core we trust to 1 wei.**
-- [ ] Monorepo setup, move the old code to `legacy/` (reference, not foundation),
-- [ ] `packages/core/math`: tick↔price (bigint), liquidity↔amounts (full v3 formulas with the current price), fee growth, position value in USD,
-- [ ] Tests: 1:1 agreement with `@uniswap/v3-sdk` + verification on real mainnet positions (on-chain read → comparison with the Uniswap interface),
-- [ ] **Exit gate: values identical to app.uniswap.org for your existing positions.**
-
-### Phase 1 — Data + backtesting (the most important phase of the project)
-**Goal: proof (or refutation) of the strategy's profitability before spending 1 cent on gas.**
-- [ ] `packages/data`: fetching swap and fee history for candidate pools (Arbitrum, Base, mainnet; tiers 0.05/0.3; v3 and v4) — subgraph + RPC events + local cache,
-- [ ] Simulator: a virtual position walks through the swap history; accrues fees, IL, gas, slippage,
-- [ ] Strategies to compare: (a) passive benchmarks, (b) rigid ±X% with simple rebalance, (c) width ∝ volatility + hysteresis + profitability condition, (d) variant with trend filter and asymmetry,
-- [ ] Walk-forward + report: net APR, max drawdown, number of rebalances, parameter sensitivity,
-- [ ] **Exit gate: a chosen network+pool+strategy with a result better than HODL 50/50 in ≥2 market regimes.** If nothing beats the benchmark — we stop and think instead of deploying.
-
-### Phase 2 — Dashboard + live monitoring (read-only)
-- [ ] UI: your real positions (you already have open pools — we will connect them right away), PnL vs benchmarks, range vs price chart, hedge health (later),
-- [ ] Bot in **observer** mode: computes signals live and logs "what it would do" (paper trading) — comparison with the backtest,
-- [ ] Telegram alerts: price at the range edge, rebalance signal, anomalies.
-
-### Phase 3 — Semi-automatic execution
-- [ ] Transaction builder (mint/increase/decrease/collect/swap) + `eth_call` simulation before sending,
-- [ ] Flow: signal → ready tx with rationale and numbers → approval in Rabby → tracking,
-- [ ] Accounting: every move to SQLite + CSV export (taxes),
-- [ ] After 2–4 weeks of paper-trading agreeing with reality → F4.
-
-### Phase 4 — Full-auto + delta-neutral hedging
-- [ ] Dedicated hot wallet, limits, kill-switch, watchdog, RPC redundancy,
-- [ ] Hedge module: venue choice (Hyperliquid vs GMX vs CEX — comparison of funding/fees/min size on current data), dynamic delta matching with a tolerance band (rehedge only at deviation > threshold — cost vs accuracy), margin management with an anti-liquidation buffer,
-- [ ] Backtest of the combined strategy (LP + hedge + funding) before launch,
-- [ ] Gradual capital increase: start ~$2k, scale after a month of clean results.
-
----
-
-## 7. Division of work among agents (and token discipline)
-
-Structure follows the packages — each agent has a narrow scope and its own context file:
-
-| Agent | Scope | Context files |
-|---|---|---|
-| **Core/Math** | `packages/core` — formulas, reference tests | `CONTEXT.md` + `packages/core/NOTES.md` |
-| **Data/Backtest** | `packages/data`, `packages/backtest` — data, simulator, reports | `packages/backtest/NOTES.md` |
-| **Bot/Execution** | `packages/bot` — keeper, tx builder, alerts, hedge | `packages/bot/NOTES.md` |
-| **UI** | `packages/ui` — dashboard | `packages/ui/NOTES.md` |
-| **Reviewer** | cross-reviews: math correctness, tx security, tests | — |
-
-(`CONTEXT.md` was the private working journal, not published.)
-
-Token-saving rules:
-1. **CONTEXT.md is the single source of truth about the project state** — every session starts by reading it (not by re-exploring the repo) and ends with an entry: what was done, what broke, next step (private working journal, not published),
-2. Working sessions = one task from one phase; no "while I'm at it I'll fix the UI",
-3. An agent reads only its own package + `core` (interfaces),
-4. The Reviewer is invoked selectively (before phase gates), not continuously,
-5. Large data downloads → once, into `packages/data/cache/`, never again.
-
----
-
-## 8. Main risks (summary)
+## 6. Main risks (summary)
 
 | Risk | Mitigation |
 |---|---|
-| Strategy does not beat HODL | Gate after F1 — we do not deploy; cost = time, not capital |
+| Strategy does not beat HODL | Gate after Phase 1 — we do not deploy; cost = time, not capital |
 | Whipsaw eats capital through rebalances | Hysteresis + profitability condition + daily rebalance limits |
-| Hedge liquidation on a pump | Margin buffer, auto-deleverage, alerts; hedge only in F4 |
+| Hedge liquidation on a pump | Margin buffer, auto-deleverage, alerts; hedge only in Phase 4 |
 | Stablecoin depeg | Monitoring + kill-switch to exit |
 | Hot wallet key leak | Operating capital limited, limits, separate wallet for the rest |
 | Backtest overfitting | Walk-forward, ≥2 market regimes, "round" parameters not tuned to the 4th decimal place |
-| Bot/RPC failure | Watchdog, redundancy, position safe even without the bot (wider range in F2/F3) |
-
----
-
-## 9. First steps (next working session)
-
-1. Monorepo setup + moving legacy,
-2. `core/math`: tick↔price + liquidity↔amounts on bigint,
-3. Reference test on your real mainnet position (NFT position address → our numbers == Uniswap UI),
-4. Entry in the project journal (private working journal, not published).
+| Bot/RPC failure | Watchdog, redundancy, position safe even without the bot (wider range in Phases 2–3) |

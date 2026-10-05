@@ -1,18 +1,18 @@
 /**
- * bot/selector.ts — SELECTION LAYER: morning OPEN / ROTATE proposals.
+ * bot/selector.ts — selection layer: morning OPEN / ROTATE proposals.
  *
  * Policy validated by meta-backtest (backtest/selection.ts, 231 pools, 4.4y):
- *   Top5 by 7d average apyBase + 3-day persistence in the top zone + majors ONLY
+ *   Top5 by 7d average apyBase + 3-day persistence in the top zone + majors only
  *   (74.8% fee-APR vs 43.0% naive chasing vs 32.9% fixed core).
- * Rotation by the rule from RESEARCH-QUEUE C: the candidate's edge must cover the
+ * Rotation rule: the candidate's edge must cover the
  * switch cost (0.3% of capital) in <=10 days; max 1 rotation proposal per day.
  *
  * Inputs: data/llama/universe.json + data/llama/history/<uuid>.json —
  * refreshed daily by the pipeline (Windows Task Scheduler 07:30).
  * The selector runs once a day after RUN_AFTER_HOUR, only when data is <26h old.
  *
- * MODE: proposals go to proposals.json (kind: OPEN/ROTATE) — the bot executes
- * nothing; the UI shows cards [Approve]/[Modify]/[Dismiss] (Batch 4),
+ * Mode: proposals go to proposals.json (kind: OPEN/ROTATE) — the bot executes
+ * nothing; the UI shows cards [Approve]/[Modify]/[Dismiss],
  * and Approve always ends with signatures in Rabby.
  */
 import * as fs from 'fs';
@@ -24,7 +24,7 @@ const ROOT = path.join(__dirname, '..');
 const LLAMA = path.join(ROOT, 'data', 'llama');
 const SELECTOR_STATE = path.join(ROOT, STATE_DIR, 'selector-state.json');
 
-// --- policy parameters (after freezing ALGORITHM.md: single source of truth here and in the backtest) ---
+// --- policy parameters (frozen in docs/ALGORITHM.md; single source of truth here and in the backtest) ---
 const TOP_N = 5;
 const RANK_WINDOW_D = 7;
 const PERSIST_DAYS = 3;
@@ -33,9 +33,9 @@ const MAJORS = /ETH|BTC|USDC|USDT|DAI|USDS/;
 const SWITCH_COST_PCT = 0.3; // exit+entry, % of capital (2× 0.15 from selection.ts)
 const MAX_PAYBACK_DAYS = 10; // the edge must cover the switch cost in <=10 days
 const MIN_ROTATE_USD = 25; // dust positions: fixed gas cost > value, we do not propose rotation
-// gas for a FULL cycle (close+open) per chain — static fallback;
-// since 26.08 (review decision, DECISIONS 6a) the observer supplies the LIVE cost via
-// ctx.getGasUsd and the static table only plays before the first read.
+// gas for a full cycle (close+open) per chain — static fallback;
+// the observer supplies the live cost via ctx.getGasUsd and the static table
+// only applies before the first read.
 const GAS_CYCLE_USD: Record<string, number> = { mainnet: 8, base: 0.1, arbitrum: 0.2 };
 const chainOf = (key: string): string | null => {
   const k = key.toLowerCase();
@@ -47,14 +47,14 @@ const gasCycleUsd = (key: string, ctx?: SelectorCtx): number => {
   if (!chain) return 1; // unknown chain: conservative default
   return ctx?.getGasUsd?.(chain) ?? GAS_CYCLE_USD[chain];
 };
-const RUN_AFTER_HOUR = 6; // local hour, after the 05:30 pipeline (25.08: the whole chain moved ~2h earlier, Rafal's decision)
+const RUN_AFTER_HOUR = 6; // local hour, after the 05:30 pipeline
 const MAX_DATA_AGE_H = 26; // do not propose from stale data
 const REPROPOSE_COOLDOWN_D = 7; // a dismissed proposal does not come back for a week
 const MAX_OPEN_PROPOSALS_PER_DAY = 2;
 
 const FEE_META: Record<number, string> = { 100: '0.01%', 500: '0.05%', 3000: '0.3%', 10000: '1%' };
-// Arbitrum added 2026-08-11 after a passed 365d walk-forward (re>EMA 73% wins,
-// worst −3.49 — best result in the project; Rafal's decision). OP deliberately NOT
+// Arbitrum included after a passed 365d walk-forward (re>EMA 73% wins,
+// worst −3.49 — best result in the project). OP deliberately not
 // (thin $4.3M pool, gate far away, unstable profile).
 const CHAIN_MAP: Record<string, string> = { Ethereum: 'mainnet', Base: 'base', Arbitrum: 'arbitrum' };
 
@@ -180,7 +180,7 @@ export interface SelectorCtx {
   getPositions: () => Array<{ tokenId: string; poolId: string; valueUsd: number }>;
   getSuggestion: (poolId: string) => { tickLower: number; tickUpper: number; usdLo: number; usdHi: number } | null;
   /** live full-cycle gas cost in USD per chain ('mainnet'|'base'|'arbitrum');
-   *  null/undefined → fallback to the static GAS_CYCLE_USD (26.08, DECISIONS 6a) */
+   *  null/undefined → fallback to the static GAS_CYCLE_USD */
   getGasUsd?: (chain: string) => number | null;
 }
 
@@ -208,9 +208,9 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
     saveSelState(state);
     return;
   }
-  // The universe must be from TODAY (UTC date, pattern like the fetch-llama fix 24.08):
+  // The universe must be from today (UTC date, same pattern as fetch-llama):
   // the 26h limit alone would let yesterday's file through while the pipeline is still running /
-  // has failed — in that case we do NOT mark the day, just wait for the next cycle (up to 26h).
+  // has failed — in that case we do not mark the day, just wait for the next cycle (up to 26h).
   const mtimeDay = new Date(st.mtimeMs).toISOString().slice(0, 10);
   const ageH = (Date.now() - st.mtimeMs) / 3_600_000;
   if (mtimeDay !== today() && ageH <= MAX_DATA_AGE_H) {
@@ -226,7 +226,7 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
 
   let ranking: RankedPool[];
   try {
-    // COLD START: without saved state the 3d persistence would block proposals
+    // Cold start: without saved state the 3d persistence would block proposals
     // for the first 3 days — we seed the streaks with historical passes
     // (ranking from 3, 2, 1 days ago from the same DefiLlama history files).
     const coldStart = !state.lastRunDate && Object.keys(state.streaks).length === 0;
@@ -240,7 +240,7 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
     return;
   }
 
-  // Funnel verdicts (ranking consistency — Rafal's decision 25.08): a pool with
+  // Funnel verdicts (ranking consistency): a pool with
   // a FAIL/UNMAPPED verdict does not take a place in the top, is not eligible
   // and gets no OPEN proposal — the walkforward gate takes precedence over
   // headline APY (6/7 examined top candidates dropped out).
@@ -252,8 +252,8 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
 
   const eligible = ranking.filter((p) => p.streak >= PERSIST_DAYS && !isRejected(p.pool)).slice(0, TOP_N);
 
-  // TOP 10 of the day → .bot/selector-ranking.json (section "watched for entry"
-  // in the UI + future import into SQLite selector_ranking; Rafal's decision 18.08).
+  // Top 10 of the day → .bot/selector-ranking.json (section "watched for entry"
+  // in the UI).
   try {
     fs.writeFileSync(
       path.join(ROOT, STATE_DIR, 'selector-ranking.json'),
@@ -262,8 +262,8 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
         generatedAt: new Date().toISOString(),
         criteria: { window: `${RANK_WINDOW_D}d avg apyBase`, persistDays: PERSIST_DAYS, minTvlUsd: MIN_TVL, filter: 'uniswap-v3, majors, ETH/Base/Arb' },
         rows: (() => {
-          // "TOP10 OF GOOD ONES" (Rafal 25.08): pools rejected by the gate are shown
-          // at their APY positions (⛔ badge in the UI), but do NOT take up the pool
+          // "Top 10 of good ones": pools rejected by the gate are shown
+          // at their APY positions (⛔ badge in the UI), but do not take up the pool
           // of ten — the list grows until it collects 10 pools with status
           // unexamined / validated / playing-in-bot.
           const shown: RankedPool[] = [];
@@ -326,7 +326,7 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
         ? range
           ? undefined
           : 'pool is in the bot configuration, but the advisor has no statistics yet — set the range manually (Modify)'
-        : 'pool OUTSIDE the bot configuration — before opening add it to bot/config.ts BOT_POOLS (task for Claude Code)',
+        : 'pool OUTSIDE the bot configuration — before opening add it to bot/config.ts BOT_POOLS',
       status: 'open',
     };
     ctx.addProposal(prop);
@@ -352,10 +352,10 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
         );
       } else if (weakest) {
         const edge = bestCand.apy7d - weakest.r.apy7d; // p.p. per year
-        // SWITCH cost IN USD: proportional part (swap/slippage) + FIXED gas
+        // Switch cost in USD: proportional part (swap/slippage) + fixed gas
         // (close on the source chain + open on the target — half a cycle each).
-        // The previous version computed payback purely in percent and for dust positions
-        // ($2) proposed rotations where mainnet gas alone ($8) exceeded the position value.
+        // A purely percentage payback would propose rotating dust positions ($2)
+        // where mainnet gas alone ($8) exceeds the position value.
         const posUsd = weakest.pos.valueUsd;
         const costUsd =
           posUsd * (SWITCH_COST_PCT / 100) +

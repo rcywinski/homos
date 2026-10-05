@@ -1,25 +1,25 @@
 /**
  * wide-daily.ts — DAILY MODEL: "how much would our wide range have earned on this
- * pool over the last 365/720 days" for EVERY pool from both rankings
+ * pool over the last 365/720 days" for every pool from both rankings
  * (selector APY and WIDE), without swap-by-swap data.
- * (Rafal's idea 02.09: 365d and 720d profit/loss % columns in the ranking
- * tables; agreed: three numbers LP / HODL / Δ vs HODL, median over rolling
- * windows, width by pair class, narrowing NOT modelled —
- * instead "flat %"; full run = separate column from wide-collect).
+ * Feeds the 365d and 720d profit/loss % columns in the ranking tables:
+ * three numbers LP / HODL / Δ vs HODL, median over rolling windows, width by
+ * pair class, narrowing not modelled — instead "flat %"; the full run is a
+ * separate column from wide-collect.
  *
  *   npx tsx scripts/wide-daily.ts             (pipeline step after wide-score, ~1-3 min)
  *   npx tsx scripts/wide-daily.ts --limit 5   (quick test)
  *
  * Output: .bot/wide-daily.json {generatedAt, params, pools: {uuid → result}}
- *          → GET /api/wide-daily → columns in both ranking tables (Batch 22).
+ *          → GET /api/wide-daily → columns in both ranking tables.
  *
  * DATA: daily token prices from coins.llama.fi (span 1100d, cache
  * data/llama/prices/, refreshed once a day), daily pool apyBase from
  * data/llama/history/<uuid>.json (fetch-llama-history; fallback: chart API).
  *
- * MODEL (same as the Monte Carlo of 01.09, only on history instead of
+ * MODEL (same as the earlier Monte Carlo study, only on history instead of
  * sampled paths): passive v3 range [P0/(1+w), P0·(1+w)] (product
- * convention: log-symmetric) in the RELATIVE price of the asset/quote pair; position
+ * convention: log-symmetric) in the relative price of the asset/quote pair; position
  * value from v3 formulas (x = L(1/√P − 1/√Pb), y = L(√P − √Pa)); day's fee =
  * position value × apyBase/365 × c_class × [in range] (c = fee share of the
  * wide range vs a typical LP of the class — calibration as in wide-score);
@@ -67,8 +67,8 @@ const LST_SYMS = new Set(['WSTETH', 'WEETH', 'CBETH', 'RETH', 'EZETH', 'RSETH'])
 const STABLE_SYMS = new Set(['USDC', 'USDT', 'DAI', 'USDS', 'PYUSD', 'USDE', 'LUSD', 'GHO', 'FRAX', 'USDBC']);
 
 type Cls = 'pegged-btc' | 'lst-eth' | 'stable-stable' | 'eth-btc' | 'crypto-stable' | 'crypto-crypto';
-/** OUR width (w) and that of a typical LP of the class (wTyp) → c = g(w)/g(wTyp); as in wide-score.ts
- *  (crypto-crypto: Rafal's decision 02.09 — every pair of two independent assets = ±40%) */
+/** our width (w) and that of a typical LP of the class (wTyp) → c = g(w)/g(wTyp); as in wide-score.ts
+ *  (crypto-crypto: every pair of two independent assets = ±40%) */
 const CLASS_PARAMS: Record<Cls, { w: number; wTyp: number }> = {
   'crypto-stable': { w: 0.5, wTyp: 0.15 },
   'eth-btc': { w: 0.4, wTyp: 0.02 },
@@ -127,8 +127,7 @@ async function loadPrices(slug: string, addr: string): Promise<Map<number, numbe
   if (cached && cached.day === today) series = cached.series;
   if (!series) {
     try {
-      // API LIMIT (CC-Win finding 02.09, HTTP 400 "exceeds the maximum
-      // of 500"): max 500 POINTS per request, regardless of the number of keys
+      // API limit (HTTP 400 "exceeds the maximum of 500"): max 500 points per request, regardless of the number of keys
       // → 1100d in chunks of ≤500d with the `start` parameter (unix s), stitched.
       const CHUNK = 500;
       const startAll = dayOf(Date.now() / 1000) * DAY + DAY / 2 - SPAN_DAYS * DAY;
@@ -184,11 +183,11 @@ export function buildDays(pa: Map<number, number>, pb: Map<number, number>, fees
 }
 
 export function simulate(days: Day[], s: number, e: number, w: number, c: number) {
-  // RELATIVE prices: P = asset/quote; value in quote, USD = × pB
+  // relative prices: P = asset/quote; value in quote, USD = × pB
   const P = (i: number) => days[i].pA / days[i].pB;
   let lo = P(s) / (1 + w), hi = P(s) * (1 + w);
   const capUsd = 1;
-  let quoteCap = capUsd / days[s].pB; // capital in quote
+  const quoteCap = capUsd / days[s].pB; // capital in quote
   const setL = (p: number, valQ: number) => { const u = unitVal(p); return valQ / u; };
   const unitVal = (p: number): number => {
     // value (in quote) of a position with L=1 at price p in [lo,hi]

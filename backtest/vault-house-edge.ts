@@ -1,11 +1,11 @@
 /**
- * e8-house.ts — E8.2 "THE HOUSE": does being the counterparty to traders
+ * vault-house-edge.ts — "the house": does being the counterparty to traders
  * (HLP / GM pools) beat HODLing the basket and boring USDC — gated as always.
  *
- *   npx tsx backtest/e8-house.ts data/vaults/HLP.json usdc [W=30] [step=15]
- *   npx tsx backtest/e8-house.ts data/vaults/GM-ETH-USD.json eth50 90 30
- *   npx tsx backtest/e8-house.ts data/vaults/GM-BTC-USD.json btc50 90 30
- *   npx tsx backtest/e8-house.ts data/vaults/GLP.json mix 90 30
+ *   npx tsx backtest/vault-house-edge.ts data/vaults/HLP.json usdc [W=30] [step=15]
+ *   npx tsx backtest/vault-house-edge.ts data/vaults/GM-ETH-USD.json eth50 90 30
+ *   npx tsx backtest/vault-house-edge.ts data/vaults/GM-BTC-USD.json btc50 90 30
+ *   npx tsx backtest/vault-house-edge.ts data/vaults/GLP.json mix 90 30
  *
  * Benchmark (2nd argument):
  *   usdc  — 100% USDC at BENCH_APR (HLP is ~market-neutral)
@@ -13,15 +13,15 @@
  *   btc50 — HODL 50% BTC / 50% USDC
  *   mix   — HODL 30% ETH / 20% BTC / 50% USDC (nominal GLP/JLP basket:
  *           stables ~50%, the rest ETH+BTC) — the only bench with a
- *           TWO-FACTOR regression (see below), because a single-factor one
- *           on ETH alone books BTC moves as fake alpha (lesson of 08.09: GLP
+ *           two-factor regression (see below), because a single-factor one
+ *           on ETH alone books BTC moves as fake alpha (e.g. GLP's apparent
  *           "+7%/yr" on eth50 was entirely BTC beta leakage).
  * ETH/BTC prices: coins.llama (cache data/llama/prices, as in wide-daily).
- * ENV: BENCH_APR=4.5 (from E8.0), OFFLINE=1, SPAN_DAYS=1100 (coins.llama
+ * ENV: BENCH_APR=4.5 (see scripts/yield-benchmark.ts), OFFLINE=1, SPAN_DAYS=1100 (coins.llama
  * price reach — for series older than 09.2023 set e.g. 1500), CUT_AFTER=YYYY-MM-DD
- * (drop points AFTER this date — e.g. the GLP hack 2025-07-09: "the class under
+ * (drop points after this date — e.g. the GLP hack 2025-07-09: "the class under
  * normal conditions" separately from "with the tail").
- * REGRESSION over windows: vault% = α + β·asset% → β = real exposure (for
+ * Regression over windows: vault% = α + β·asset% → β = real exposure (for
  * mixed baskets like GLP a rigid 50/50 is not fair), α = beta-adjusted edge.
  * For `mix`: two-factor vault% = α + βETH·ETH% + βBTC·BTC% (normal equations,
  * Gaussian elimination), α computed so that at βETH+βBTC=1 it reduces to the
@@ -32,9 +32,9 @@
  * edge% = vault% − bench%. Statistics: mean/med/%win/worst per year + regime
  * (asset price change in the window: up > +10%, down < −10%, flat) + recent180
  * + vault max drawdown (the "player broke the bank" tail).
- * CRITERION E8.2: %win ≥ 65 vs basket, worst edge > −5 (90d), positive
+ * Criterion: %win ≥ 65 vs basket, worst edge > −5 (90d), positive
  * edge in ≥2 regimes, vault maxDD < basket maxDD. Written to:
- * backtest/results/e8-house-<name>-<W>d.json
+ * backtest/results/vault-house-edge-<name>-<W>d.json
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -95,7 +95,7 @@ function maxDD(vals: number[]) { let peak = -Infinity, dd = 0; for (const v of v
   const bench = (process.argv[3] || 'usdc') as 'usdc' | 'eth50' | 'btc50' | 'mix' | 'mix3';
   const W = Number(process.argv[4] || 30);
   const step = Number(process.argv[5] || 15);
-  if (!file) { console.error('usage: e8-house.ts <data/vaults/X.json> usdc|eth50|btc50|mix|mix3 [W] [step]'); process.exit(1); }
+  if (!file) { console.error('usage: vault-house-edge.ts <data/vaults/X.json> usdc|eth50|btc50|mix|mix3 [W] [step]'); process.exit(1); }
   const vault = JSON.parse(fs.readFileSync(file, 'utf8')) as { name: string; series: { t: number; v: number }[] };
   const vm = new Map<number, number>();
   for (const x of vault.series) { const d = dayOf(x.t / 1000); if (CUT_AFTER === null || d <= CUT_AFTER) vm.set(d, x.v); }
@@ -236,7 +236,7 @@ function maxDD(vals: number[]) { let peak = -Infinity, dd = 0; for (const v of v
   console.log(`\nWhole period: vault ${pct(totVault)}% (${pct(annVault)}%/yr) · vault maxDD ${vaultDD.toFixed(1)}% vs basket ${benchDD.toFixed(1)}%`);
   console.log(`CRITERION E8.2: %win ≥ 65, worst > −5 (90d), edge > 0 in ≥2 regimes, vault maxDD < basket maxDD.`);
   fs.mkdirSync(OUT, { recursive: true });
-  const out = path.join(OUT, `e8-house-${vault.name}-${bench}-${W}d${CUT_AFTER !== null ? '-cut' : ''}.json`);
+  const out = path.join(OUT, `vault-house-edge-${vault.name}-${bench}-${W}d${CUT_AFTER !== null ? '-cut' : ''}.json`);
   fs.writeFileSync(out, JSON.stringify({ file, bench, W, step, BENCH_APR, SPAN_DAYS, CUT_AFTER: process.env.CUT_AFTER ?? null, reg, all, byYear, byRegime, recent180, totVault, annVault, vaultDD, benchDD, perWindow: wins }, null, 2));
   console.log(`→ ${out}`);
 })();

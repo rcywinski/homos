@@ -1,33 +1,33 @@
 /**
- * strategies.ts — benchmarks and active strategies (PLAN.md §6 Phase 1).
+ * strategies.ts — benchmarks and active strategies (docs/PLAN.md §6 Phase 1).
  * Range prices are computed in tick space: width as a fraction of price
  * translates to ±log(1+w)/log(1.0001) ticks around the current price.
  *
  * NOTE on strategy `name` strings: they are kept verbatim (partly Polish, e.g.
  * "Pasywny" = passive, "Sztywny" = fixed, "Adaptacyjna" = adaptive, "wąski" =
  * narrow, "Wewn." = inner, "bez swapu" = no swap, "naiwny" = naive) because
- * they are DATA-CONTRACT KEYS: they end up as keys in walkforward `summary` /
+ * they are data-contract keys: they end up as keys in walkforward `summary` /
  * `perWindow` JSON, are regex-matched by scripts/wide-collect.ts and
- * scripts/candidate-funnel.ts, and are passed via the STRATS env of e8-timing.ts.
+ * scripts/candidate-funnel.ts, and are passed via the STRATS env of lp-vol-timing.ts.
  */
 import { Strategy, Ctx, ethUsd, unitPrices, amountsForL } from './engine';
 import { MIN_TICK as VMIN, MAX_TICK as VMAX } from '../src/utils/v3math';
 
 const widthToTicks = (w: number) => Math.round(Math.log(1 + w) / Math.log(1.0001));
 
-/** RANGE WITHOUT A SWAP (29.08, Rafal's idea: "can't we just add ETH?").
+/** Range without a swap ("can't we just add ETH?").
  *  Instead of re-posturing through the market (swap to the 50/50 proportions
  *  of a range centred on the price — cost = turnover x pool tier + slippage),
- *  we shift the range so that the REQUIRED proportions coincide with what we
- *  currently hold in the portfolio. The extreme case is a ONE-SIDED range:
- *  after ETH has been sold off we place a band of pure USDC BELOW the price —
+ *  we shift the range so that the required proportions coincide with what we
+ *  currently hold in the portfolio. The extreme case is a one-sided range:
+ *  after ETH has been sold off we place a band of pure USDC below the price —
  *  if the price comes back, the market buys ETH back for us and even pays us
  *  fees for it (a limit order that earns while waiting).
- *  The WIDTH is preserved (2w in log scale); only the centre moves.
+ *  The width is preserved (2w in log scale); only the centre moves.
  *  We search for the shift by bisection — an analytical solution exists, but
  *  bisection is robust to edge cases (position out of range, zero balances)
  *  and costs ~40 iterations per rebalance, i.e. nothing.
- *  NOTE: this does NOT cancel IL (we still sold lower than we will buy back) —
+ *  Note: this does not cancel IL (we still sold lower than we will buy back) —
  *  it only removes the swap cost and lets us buy back at a price we choose
  *  ourselves instead of the market price at the moment of clicking. */
 const rangeNoSwap = (ctx: Ctx, w: number): [number, number] => {
@@ -61,7 +61,7 @@ const rangeNoSwap = (ctx: Ctx, w: number): [number, number] => {
     else hi = mid;
   }
   const off = Math.round((lo + hi) / 2);
-  let l = ctx.alignTick(ctx.ev.t - dt + off);
+  const l = ctx.alignTick(ctx.ev.t - dt + off);
   let h = ctx.alignTick(ctx.ev.t + dt + off);
   if (h <= l) h = l + ctx.spec.tickSpacing;
   return [Math.max(l, VMIN + ctx.spec.tickSpacing), Math.min(h, VMAX - ctx.spec.tickSpacing)];
@@ -69,25 +69,25 @@ const rangeNoSwap = (ctx: Ctx, w: number): [number, number] => {
 
 const rangeAround = (ctx: Ctx, w: number): [number, number] => {
   const dt = widthToTicks(w);
-  let lo = ctx.alignTick(ctx.ev.t - dt);
+  const lo = ctx.alignTick(ctx.ev.t - dt);
   let hi = ctx.alignTick(ctx.ev.t + dt);
   if (hi <= lo) hi = lo + ctx.spec.tickSpacing;
   return [Math.max(lo, VMIN + ctx.spec.tickSpacing), Math.min(hi, VMAX - ctx.spec.tickSpacing)];
 };
 
-/** RANGE ASYMMETRIC IN PRICE (02.09, "skewed range"). MIND the convention:
- *  `rangeAround(w)` is symmetric in LOG-price, i.e. "±50%" = [P/1.5, P·1.5]
+/** Range asymmetric in price ("skewed range"). Mind the convention:
+ *  `rangeAround(w)` is symmetric in log-price, i.e. "±50%" = [P/1.5, P·1.5]
  *  = −33% down / +50% up. The live product (advisor.suggestFixedRange)
- *  computes identically — so our wide leg has HALF as much room in the
- *  direction that, per Monte Carlo (01.09), hurts the most (below the band:
+ *  computes identically — so our wide leg has half as much room in the
+ *  direction that, per Monte Carlo, hurts the most (below the band:
  *  100% in the falling asset).
- *  Here `down`/`up` are fractions of PRICE: lo = P·(1−down), hi = P·(1+up).
+ *  Here `down`/`up` are fractions of price: lo = P·(1−down), hi = P·(1+up).
  *  passiveAsym(0.5, 0.5) = true −50/+50; passiveW(0.5) ≡
  *  passiveAsym(0.333, 0.5). */
 const rangeAsym = (ctx: Ctx, down: number, up: number): [number, number] => {
   const dLo = Math.round(-Math.log(1 - down) / Math.log(1.0001));
   const dHi = Math.round(Math.log(1 + up) / Math.log(1.0001));
-  let lo = ctx.alignTick(ctx.ev.t - dLo);
+  const lo = ctx.alignTick(ctx.ev.t - dLo);
   let hi = ctx.alignTick(ctx.ev.t + dHi);
   if (hi <= lo) hi = lo + ctx.spec.tickSpacing;
   return [Math.max(lo, VMIN + ctx.spec.tickSpacing), Math.min(hi, VMAX - ctx.spec.tickSpacing)];
@@ -101,8 +101,8 @@ export const hodl5050: Strategy = {
   onEvent: () => {},
 };
 
-/** Swap all cash into the QUOTE leg (for ETH/stable = stable, i.e. true
- *  cash without beta; NOTE: for WETH-quoted pools, e.g. cbBTC/WETH, the quote
+/** Swap all cash into the quote leg (for ETH/stable = stable, i.e. true
+ *  cash without beta; note: for WETH-quoted pools, e.g. cbBTC/WETH, the quote
  *  is WETH — beta vs USD remains). Cost: tier fee + slippage on turnover. */
 const toQuoteAll = (ctx: Ctx) => {
   const { px0, px1 } = unitPrices(ctx.ev.sqrtP, ctx.spec);
@@ -122,14 +122,14 @@ const toQuoteAll = (ctx: Ctx) => {
 };
 
 /** 1b. 100% quote (cash) — baseline for strategies whose default posture is
- *  OUT of the market (the flat-only family, 26.08). On ETH/stable ≈ "I hold USDC". */
+ *  out of the market (the flat-only family). On ETH/stable ≈ "I hold USDC". */
 export const cash100: Strategy = {
   name: '100% quote (cash, bez LP)', // data-contract key: "100% quote (cash, no LP)"
   init: (ctx) => toQuoteAll(ctx),
   onEvent: () => {},
 };
 
-/** Swap all cash into the BASE leg (ETH/cbBTC) — mirror of toQuoteAll. */
+/** Swap all cash into the base leg (ETH/cbBTC) — mirror of toQuoteAll. */
 const toBaseAll = (ctx: Ctx) => {
   const { px0, px1 } = unitPrices(ctx.ev.sqrtP, ctx.spec);
   const ethIs0 = ctx.spec.ethIsToken0;
@@ -147,9 +147,9 @@ const toBaseAll = (ctx: Ctx) => {
   }
 };
 
-/** 1d. SWING "buy the dips, sell the tops" (Rafal's idea 29.08) —
- *  NO LP, pure direction: when the price is `thresh` BELOW the EMA → all
- *  capital into the base asset; when `thresh` ABOVE → all into quote.
+/** 1d. Swing "buy the dips, sell the tops" —
+ *  no LP, pure direction: when the price is `thresh` below the EMA → all
+ *  capital into the base asset; when `thresh` above → all into quote.
  *  The same signal (log-gap to the HL7d EMA) used by the flat detector, so
  *  the comparison is fair: this is not new information, only a different
  *  way of using it. Zero fees — the strategy provides no liquidity, it only
@@ -181,10 +181,10 @@ export const swingHold = (opts: { thresh: number; hlDays?: number }): Strategy =
 };
 
 /**
- * 1c. FLAT-ONLY LP (26.08, direction from the review + Rafal's sideways-market
- * thesis): DEFAULT CASH (100% quote — zero beta on ETH/stable), entry into LP
- * only when the detector says "sideways" (|gap to EMA| < enterThresh
- * CONTINUOUSLY for confirmSec), exit to cash on a trend in EITHER direction
+ * 1c. Flat-only LP (sideways-market thesis): default cash (100% quote — zero
+ * beta on ETH/stable), entry into LP only when the detector says "sideways"
+ * (|gap to EMA| < enterThresh continuously for confirmSec), exit to cash on a
+ * trend in either direction
  * (|gap| > exitThresh). While in LP, normal range re-centering (hysteresis +
  * payback as in volAdaptive). Benchmark: cash100, not HODL — the question is
  * "how many fees do I add to cash without risking the tail", not "do I beat
@@ -201,30 +201,30 @@ export const flatOnlyLP = (opts: {
   trendHLDays: number;
   minWidth?: number;
   maxWidth?: number;
-  /** posture OUTSIDE LP (26.08 evening, Rafal's idea): 'quote' [default] =
-   *  cash without beta; 'hodl' = 50/50 — in a trend you ride WITH the market
+  /** posture outside LP: 'quote' [default] =
+   *  cash without beta; 'hodl' = 50/50 — in a trend you ride with the market
    *  (vs HODL ≈ a draw instead of a loss), in a flat you add fees.
    *  The benchmark for 'hodl' is HODL 50/50, for 'quote' — cash100.
-   *  'passive' (27.08, Rafal's idea #2): outside the flat a WIDE passive LP
+   *  'passive': outside the flat a wide passive LP
    *  (±passiveWidth) instead of bare HODL — fees also in a trend, at the
    *  cost of the passiveW tail. The FlatWide hybrid. */
   idle?: 'quote' | 'hodl' | 'passive';
   /** width of the passive LP for idle:'passive' (default 0.4 = ±40%) */
   passiveWidth?: number;
-  /** re-posturing WITHOUT A SWAP (29.08): 'swap' [default] centres the range
+  /** re-posturing without a swap: 'swap' [default] centres the range
    *  on the price and tops up the difference through the market; 'noswap'
    *  shifts the range so it matches what we hold in the portfolio (up to and
    *  including a one-sided range) — zero turnover, zero slippage. */
   recenter?: 'swap' | 'noswap';
-  /** FIXED width of the NARROW leg in a flat (29.08). Without it the narrow
+  /** fixed width of the narrow leg in a flat. Without it the narrow
    *  band is computed as kxσx√horizonDays — the v1.2 advisor formula, which
-   *  the product ABANDONED (it gave ±16–19% at an exit threshold of 5%, i.e.
+   *  the product abandoned (it gave ±16–19% at an exit threshold of 5%, i.e.
    *  liquidity out of reach of the FLAT_WIDEN signal). Production plays a
    *  fixed width = FLAT.exitGap (±5%), so the backtest must be able to
    *  compute the same — otherwise walkforward and fullperiod measure a
-   *  different product than the one we play (drift detected 29.08). */
+   *  different product than the one played live. */
   narrowWidth?: number;
-  /** ASYMMETRIC wide idle leg in PRICE (02.09): [down, up] — overrides
+  /** asymmetric wide idle leg in price: [down, up] — overrides
    *  passiveWidth (which is log-symmetric, see rangeAsym). */
   passiveAsym?: [number, number];
 }): Strategy => {
@@ -233,7 +233,7 @@ export const flatOnlyLP = (opts: {
   let flatSince: number | null = null;
   let outSince: number | null = null;
   const tau = (opts.trendHLDays * 86400) / Math.LN2;
-  // width of the NARROW leg: fixed from the product when given; otherwise kxσx√h
+  // width of the narrow leg: fixed from the product when given; otherwise kxσx√h
   const width = (ctx: Ctx) =>
     opts.narrowWidth ??
     Math.min(Math.max(opts.k * ctx.volDaily * Math.sqrt(opts.horizonDays), opts.minWidth ?? 0.01), opts.maxWidth ?? 0.6);
@@ -261,11 +261,11 @@ export const flatOnlyLP = (opts: {
   const idleMode = opts.idle ?? 'quote';
   const passive = idleMode === 'passive';
   const pw = opts.passiveWidth ?? 0.4;
-  // wide leg: asymmetric in price when passiveAsym is given (02.09);
+  // wide leg: asymmetric in price when passiveAsym is given;
   // the noswap variant concerns only transitions from the narrow leg, so not here
   const mkIdleRange = (ctx: Ctx): [number, number] =>
     opts.passiveAsym ? rangeAsym(ctx, opts.passiveAsym[0], opts.passiveAsym[1]) : mkRange(ctx, pw);
-  let inFlat = false; // for idle:'passive' — whether the current position is the NARROW LP
+  let inFlat = false; // for idle:'passive' — whether the current position is the narrow LP
   const idleName = idleMode === 'quote' ? 'cash' : idleMode === 'hodl' ? 'HODL50/50'
     : opts.passiveAsym ? asymName(opts.passiveAsym[0], opts.passiveAsym[1]) : `±${(pw * 100).toFixed(0)}%`;
   return {
@@ -276,7 +276,7 @@ export const flatOnlyLP = (opts: {
         ctx.openPosition(...mkIdleRange(ctx)); // idle = wide passive LP
         inFlat = false;
       } else {
-        toIdle(ctx); // start OUT of the market in the idle posture
+        toIdle(ctx); // start out of the market in the idle posture
       }
       ema = Math.log(ethUsd(ctx.ev.sqrtP, ctx.spec));
       lastTs = ctx.ev.ts;
@@ -364,7 +364,7 @@ export const fullRange: Strategy = {
 
 /** 3. Passive wide ±50% — open once, never touch. */
 export const passiveWide: Strategy = {
-  name: 'Pasywny ±50%', // data-contract key: "Passive ±50%" (matched by scripts/wide-collect.ts and e8-timing.ts)
+  name: 'Pasywny ±50%', // data-contract key: "Passive ±50%" (matched by scripts/wide-collect.ts and lp-vol-timing.ts)
   init: (ctx) => {
     const [lo, hi] = rangeAround(ctx, 0.5);
     ctx.openPosition(lo, hi);
@@ -372,8 +372,8 @@ export const passiveWide: Strategy = {
   onEvent: () => {},
 };
 
-/** Passive ±w% — open once, never touch (the "HODL with yield" family,
- *  26.08 evening: the only family winning in fullperiod 4/4 and consistent
+/** Passive ±w% — open once, never touch (the "HODL with yield" family:
+ *  the only family winning in fullperiod 4/4 and consistent
  *  with the literature — a wide range minimizes divergence loss and costs). */
 export const passiveW = (w: number): Strategy => ({
   name: `Pasywny ±${(w * 100).toFixed(0)}%`, // data-contract key: "Passive ±w%" (matched by scripts/wide-collect.ts)
@@ -381,8 +381,8 @@ export const passiveW = (w: number): Strategy => ({
   onEvent: () => {},
 });
 
-/** Passive asymmetric −down/+up (in PRICE) — open once, never touch.
- *  The "skewed range" family (02.09): wider on the downside, narrower on the upside. */
+/** Passive asymmetric −down/+up (in price) — open once, never touch.
+ *  The "skewed range" family: wider on the downside, narrower on the upside. */
 export const passiveAsym = (down: number, up: number): Strategy => ({
   name: `Pasywny ${asymName(down, up)}`, // data-contract key: "Passive −down%/+up%"
   init: (ctx) => ctx.openPosition(...rangeAsym(ctx, down, up)),
@@ -399,16 +399,16 @@ export const fixedNaiveAsym = (down: number, up: number): Strategy => ({
   },
 });
 
-/** INNER LEG OF A "BARBELL" (02.09, idea: two static positions instead of
- *  one). The engine holds ONE position, but the result is linear in capital
+/** Inner leg of a "barbell" (two static positions instead of one).
+ *  The engine holds one position, but the result is linear in capital
  *  (fixed gas and the L/(Lpool+L) share are negligible non-linearities at $2.5k
- *  vs a $10M+ pool), so barbell = the AVERAGE of two separate runs:
+ *  vs a $10M+ pool), so barbell = the average of two separate runs:
  *    barbell(A,B) ≈ ½·final(A) + ½·final(B)   (the same for fees/gas/swap)
- *  Inner leg: narrow ±wIn (log-sym.), recentred ONLY when the price leaves
+ *  Inner leg: narrow ±wIn (log-sym.), recentred only when the price leaves
  *  [c·(1−trigDown), c·(1+trigUp)] from the centre c — i.e. exactly when we
- *  would be re-positioning the wide leg anyway. In between: NOTHING (zero cost).
- *  This is NOT the narrowing of 29.08 (there the narrow leg chased the price
- *  on every exit — costs ate the effect); here the position sits still most
+ *  would be re-positioning the wide leg anyway. In between: nothing (zero cost).
+ *  Unlike the FlatWide narrowing (where the narrow leg chases the price on
+ *  every exit and costs eat the effect), here the position sits still most
  *  of the time. */
 export const innerTrig = (wIn: number, trigDown: number, trigUp: number): Strategy => {
   let center = 0;
@@ -451,8 +451,8 @@ export const volAdaptive = (opts: {
   horizonDays: number;
   /** minimum time out of range before a rebalance (seconds) */
   hysteresisSec: number;
-  /** ASYMMETRY (experiment 20.08): separate hysteresis when the RELATIVE base
-   *  price (ETH/cbBTC) left the range UPWARDS; absent = symmetric hysteresisSec */
+  /** asymmetry: separate hysteresis when the relative base price (ETH/cbBTC)
+   *  left the range upwards; absent = symmetric hysteresisSec */
   hysteresisUpSec?: number;
   /** required payback of the cost from fees within N days (Infinity = disabled) */
   maxPaybackDays: number;
@@ -478,7 +478,7 @@ export const volAdaptive = (opts: {
         return;
       }
       if (outSince === null) outSince = ctx.ev.ts;
-      // exit direction in the RELATIVE base price: ethIsToken0 → price ~1.0001^t
+      // exit direction in the relative base price: ethIsToken0 → price ~1.0001^t
       // (upwards = t≥hi); eth as token1 → price ~1/1.0001^t (upwards = t<lo)
       const outUp = ctx.spec.ethIsToken0 ? ctx.ev.t >= p.hi : ctx.ev.t < p.lo;
       const hSec = outUp ? opts.hysteresisUpSec ?? opts.hysteresisSec : opts.hysteresisSec;
@@ -493,8 +493,8 @@ export const volAdaptive = (opts: {
       const costUsd =
         ctx.spec.gasUsdPerRebalance +
         valueUsd * 0.5 * (ctx.spec.feeRate + ctx.spec.slippageBps / 10_000); // ~half the value is swapped
-      // yield for OUR concentration: fee yield of the narrow band / (band_width/2*tickSpacing)...
-      // simplification: the active band yield scales inversely with range width
+      // yield for our concentration (simplification): the active band yield
+      // scales inversely with range width
       const bandTicks = 2 * ctx.spec.tickSpacing;
       const ourTicks = Math.max(widthToTicks(w) * 2, bandTicks);
       const ourYieldDaily = ctx.poolFeeYieldDaily * (bandTicks / ourTicks);
@@ -513,11 +513,12 @@ export const volAdaptive = (opts: {
 };
 
 /**
- * 6. Adaptive WITH A DOWNTREND CIRCUIT BREAKER (conclusion from B2: all the
- *    worst walk-forward windows are down windows; tuning k/h does not fix that).
+ * 6. Adaptive with a downtrend circuit breaker (the regime split in
+ *    walkforward shows all the worst windows are down windows; tuning k/h
+ *    does not fix that).
  *
  * Detector (causal, 2 parameters): EMA of the relative log-price with half-life
- * trendHLDays; DOWN signal when logP − EMA < −trendThresh; the signal CLEARS
+ * trendHLDays; DOWN signal when logP − EMA < −trendThresh; the signal clears
  * (hysteresis) when logP − EMA > −trendThresh/2.
  *
  * Defence modes:
@@ -534,7 +535,7 @@ export const volAdaptiveTrend = (opts: {
   k: number;
   horizonDays: number;
   hysteresisSec: number;
-  /** ASYMMETRY (experiment 20.08): separate hysteresis on an UPWARD exit (as above) */
+  /** asymmetry: separate hysteresis on an upward exit (as above) */
   hysteresisUpSec?: number;
   maxPaybackDays: number;
   trendHLDays: number;
@@ -546,40 +547,39 @@ export const volAdaptiveTrend = (opts: {
   /** volatility gate: DOWN signal only when volDaily > ratio x slow vol EMA
    *  (a crash = high vol; calm chop in a flat does not trigger the breaker) */
   volGateRatio?: number;
-  /** stricter re-entry: return to LP only when the price is ABOVE the EMA (gap > 0),
+  /** stricter re-entry: return to LP only when the price is above the EMA (gap > 0),
    *  not at gap > −thresh/2 */
   reentryAboveEma?: boolean;
-  /** second UNCONDITIONAL threshold (a downward grind without a vol spike):
+  /** second unconditional threshold (a downward grind without a vol spike):
    *  DOWN signal also when gap < −trendThresh2, regardless of the vol gate */
   trendThresh2?: number;
-  /** UP-FALLBACK (item 12 of DECISIONS-2026-08-26, Rafal's idea 25.08; only
-   *  mode:'exit'): an UPWARD exit from the range leaves the LP 100% in quote
+  /** up-fallback (only mode:'exit'): an upward exit from the range leaves the
+   *  LP 100% in quote
    *  (it sold the base on the way) — instead of waiting out the whole
    *  hysteresis with no exposure, after 1h of confirmation we move to 50/50
    *  HODL (catching the trend beta), and return to LP after the full hUp
-   *  counted from the range EXIT (the "don't buy the top" mechanism of hUp48
+   *  counted from the range exit (the "don't buy the top" mechanism of hUp48
    *  stays intact). */
   upFallback?: '5050';
-  /** SYMMETRIC UP BREAKER (Rafal's idea, night of 25.08, after the 720d
-   *  analysis; only mode:'exit'): UP signal when gap = logP − EMA > threshold →
+  /** symmetric up breaker (only mode:'exit'): UP signal when gap = logP − EMA > threshold →
    *  exit from LP to 50/50 (HODL catches the trend beta); the signal clears at
-   *  gap < threshold/2; we return to LP when BOTH signals (down and up) are
+   *  gap < threshold/2; we return to LP when both signals (down and up) are
    *  cleared = "LP only when the market is not trending". Difference vs
-   *  upFallback: reacts to the TREND (early), not to falling out of range (late). */
+   *  upFallback: reacts to the trend (early), not to falling out of range (late). */
   upExitThresh?: number;
-  /** (26.08, DECISIONS item 10) hysteresis as a TIME SHARE out of range:
+  /** hysteresis as a time share out of range:
    *  instead of "24h continuously, a touch resets" — an EMA of the out-of-range
    *  indicator with time constant hysteresisSec (hUp for an upward exit);
    *  rebalance when the share > hysteresisShare (e.g. 0.8). Robust to sampling
    *  frequency — the same semantics deployable in paper (15 min) and the observer. */
   hysteresisShare?: number;
-  /** (26.08, 11f.d — "a less jumpy UP signal") upExitThresh fires only once
-   *  gap>threshold has held CONTINUOUSLY for upConfirmSec (a drop below the
+  /** less jumpy UP signal: upExitThresh fires only once
+   *  gap>threshold has held continuously for upConfirmSec (a drop below the
    *  threshold before confirmation resets the counter). */
   upConfirmSec?: number;
 }): Strategy => {
   let outSince: number | null = null;
-  let upCashSince: number | null = null; // time of the UPWARD exit, when we park at 50/50
+  let upCashSince: number | null = null; // time of the upward exit, when we park at 50/50
   let upSig = false; // symmetric uptrend signal (upExitThresh)
   let upGapSince: number | null = null; // since when gap>threshold (for upConfirmSec)
   let fracOut = 0; // EMA of the out-of-range indicator (hysteresisShare)
@@ -706,8 +706,8 @@ export const volAdaptiveTrend = (opts: {
       if (!p) return;
 
       const out = ctx.ev.t < p.lo || ctx.ev.t >= p.hi;
-      // hysteresisShare: EMA of the out-of-range indicator updated on EVERY
-      // swap (in range it decays towards 0 — touching the range no longer RESETS
+      // hysteresisShare: EMA of the out-of-range indicator updated on every
+      // swap (in range it decays towards 0 — touching the range does not reset
       // the counter, it only weakens it proportionally to time in range)
       if (opts.hysteresisShare !== undefined) {
         if (prevOutTs !== null) {
@@ -729,7 +729,7 @@ export const volAdaptiveTrend = (opts: {
       const outUp = ctx.spec.ethIsToken0 ? ctx.ev.t >= p.hi : ctx.ev.t < p.lo;
       const hSec = outUp ? opts.hysteresisUpSec ?? opts.hysteresisSec : opts.hysteresisSec;
 
-      // UP-FALLBACK: after 1h of confirmed upward exit → 50/50 HODL (see the
+      // up-fallback: after 1h of confirmed upward exit → 50/50 HODL (see the
       // option description); the return to LP is handled by the mode:'exit' branch above.
       if (opts.upFallback && opts.mode === 'exit' && outUp) {
         if (ctx.ev.ts - outSince >= 3600) {
@@ -741,7 +741,7 @@ export const volAdaptiveTrend = (opts: {
         return; // within the confirmation window (<1h) we do nothing
       }
       // hysteresis: classic (continuously out, a touch resets) OR
-      // time share in the window (share, DECISIONS item 10 — 26.08)
+      // time share in the window (hysteresisShare)
       if (opts.hysteresisShare !== undefined ? fracOut < opts.hysteresisShare : ctx.ev.ts - outSince < hSec) return;
 
       const w = width(ctx);
@@ -769,20 +769,20 @@ export const volAdaptiveTrend = (opts: {
 };
 
 /**
- * 7. F4: Adaptive WITH A PERP HEDGE instead of exiting the LP.
+ * 7. Adaptive with a perp hedge instead of exiting the LP.
  *
  * During a DOWN signal (the same EMA detector as volAdaptiveTrend) the LP
- * position STAYS (keeps collecting fees), and the ETH delta is neutralized by
+ * position stays (keeps collecting fees), and the ETH delta is neutralized by
  * a short ETH perp:
  *  - sizing 'full'   — short = the entire ETH exposure (delta→0; maximum defence,
  *    in up/flat windows with a signal it pays for the bounce),
  *  - sizing 'excess' — short = the ETH excess above 50% of portfolio value
  *    (neutralizes only the LP's convexity relative to HODL 50/50 — a fairer vsHODL).
- * Costs: taker takerBps on every short adjustment + HISTORICAL FUNDING
- * (fundingAt: r per 8h; perp convention: r>0 → the short RECEIVES funding, r<0 →
+ * Costs: taker takerBps on every short adjustment + historical funding
+ * (fundingAt: r per 8h; perp convention: r>0 → the short receives funding, r<0 →
  * the short pays — in bear markets r is often negative and that is the main
  * cost of this defence).
- * Simplifications (deliberate, to be described with the conclusions): cross-margin
+ * Simplifications (deliberate): cross-margin
  * without a deposit/liquidation model; short PnL settled continuously into the
  * stable leg (it may temporarily go below zero); quote:'USD' pools only.
  */

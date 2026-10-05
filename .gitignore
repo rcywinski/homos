@@ -17,15 +17,11 @@ node_modules/
 .cache/
 public/bundle.js*
 
-# HOMOS: working data / caches / bot state — regenerable, not for the repo.
-# The whole data/ directory (caches, DefiLlama histories, transfer bundles) stays out of the repo.
+# Working data, caches and bot state — all regenerable.
 data/
 .agent/
 .bot/
 backtest/results/
-
-# Legacy backups created during AI sessions (e.g. legacy-AddLiquidity.tsx.bak)
-legacy-*.bak
 
 # IDE and Editor files
 .idea/
@@ -41,11 +37,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Configuration files
-.babelrc
-.babel.config.js
-.prettierrc
-.eslintrc
+# Tool caches
 .eslintcache
 
 # Coverage directory used by tools like istanbul
@@ -60,8 +52,6 @@ yarn-error.log*
 public/*.bundle.js
 public/*.bundle.js.LICENSE.txt
 
-# private working journal (kept locally / in HOMOS-private, not in the public HEAD)
+# Private working journal and generated morning reports
 private-journal/
-
-# daily morning reports (private journal; the server pushed these until it was shut down)
 reports/

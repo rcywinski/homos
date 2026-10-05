@@ -152,7 +152,6 @@ export const calculateOptimalAmounts = (
 
 export const POSITION_MANAGER_ADDRESSES: Record<number, string> = {
   1: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', // mainnet
-  11155111: '0x1238536071E1c677A632429e3655c799b22cDA52', // sepolia
   42161: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88', // arbitrum
   8453: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1', // base
 };

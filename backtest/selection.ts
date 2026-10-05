@@ -1,14 +1,14 @@
 /**
- * selection.ts — meta-backtest of the POOL SELECTION LAYER (no lookahead bias).
+ * selection.ts — meta-backtest of the pool selection layer (no lookahead bias).
  *   npx tsx backtest/selection.ts
  *
  * Question: does the policy "every day hold the top-N pools by fee-APR ranking"
- * earn more than holding fixed core pools — AFTER rotation costs?
- * On each day D the ranking is built EXCLUSIVELY from data ≤ D (trailing
+ * earn more than holding fixed core pools — after rotation costs?
+ * On each day D the ranking is built exclusively from data ≤ D (trailing
  * window), and the result is measured by the fee-APR of day D+1 (forward).
  * This tests APR persistence.
  *
- * LIMITATION (deliberate): DefiLlama apyBase is fee yield — it does NOT include IL.
+ * Limitation (deliberate): DefiLlama apyBase is fee yield — it does not include IL.
  * Read the results as "a comparison of fee streams between policies"; full PnL
  * with IL is tested by the tick-level engine (run.ts) on pools picked by selection.
  * For caution: the stablecoin/ilRisk filter is reported separately.
@@ -183,7 +183,8 @@ function simulate(pools: PoolHist[], allDates: string[], pol: Policy, ilAdjusted
 
   if (corePools.length) {
     const ids = corePools.map((p) => p.meta.pool);
-    let capital = 1, daily = 0, n = 0;
+    const daily = 0;
+    let capital = 1, n = 0;
     for (let di = 30; di < allDates.length - 1; di++) {
       const dNext = allDates[di + 1];
       let s = 0, k = 0;

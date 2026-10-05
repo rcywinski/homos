@@ -39,8 +39,7 @@ const bWETH = t(8453, B.tokens.WETH);
 const bUSDC = t(8453, B.tokens.USDC);
 const bCBBTC = t(8453, (B.tokens as any).cbBTC);
 
-// Arbitrum tokens (added 2026-08-11, Fable→Sonnet HANDOFF — walk-forward pass,
-// owner's decision: network added to the analysis; pattern exactly like Base in session 2e)
+// Arbitrum tokens (network passed walk-forward; same pattern as Base)
 const aWETH = t(42161, A.tokens.WETH);
 const aUSDC = t(42161, A.tokens.USDC);
 
@@ -82,7 +81,7 @@ export const OBSERVED_PAIRS: ObservedPair[] = [
     token0: mUSDC, token1: mUSDT, name: 'USDC/USDT',
     feeTiers: [FeeAmount.LOWEST], role: 'stable',
   },
-  // --- Arbitrum (walk-forward pass, HANDOFF 2026-08-11) ---
+  // --- Arbitrum ---
   {
     chainId: 42161, chainName: 'Arbitrum', networkConfig: A,
     token0: aUSDC, token1: aWETH, name: 'USDC/WETH',

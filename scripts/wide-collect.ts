@@ -1,8 +1,7 @@
 /**
  * wide-collect.ts — FUNNEL v2, TIER 2: collector of swap history (720d)
  * + full run (walkforward) for the top of the WIDE ranking, by class.
- * (Rafal's decision 02.09: "let it start collecting slowly" — data for the
- * "365d/720d vs HODL, full run" columns in the ranking tables, Batch 22).
+ * Feeds the "365d/720d vs HODL, full run" columns in the ranking tables.
  *
  *   npx tsx scripts/wide-collect.ts --dry-run          # queue + mapping only (no fetch)
  *   npx tsx scripts/wide-collect.ts --one              # one pool (fetch + walkforward) and stop
@@ -10,7 +9,7 @@
  *   npx tsx scripts/wide-collect.ts                    # whole queue (nights; resumable)
  *   options: --per-class 8 (how many pools per class), --refresh (rerun walkforward on already fetched)
  *
- * PURPOSE: run BY THE CC-Win SUBAGENT in the background, NOT in the pipeline
+ * Runs as a separate background job, not in the pipeline
  * (the nightly pipeline is short and critical; this script takes hours).
  * Concurrency safety: (1) own lock `.bot/wide-collect.lock`
  * (a second instance exits immediately); (2) PAUSE while the pipeline is running
@@ -18,11 +17,11 @@
  * within the last 3h) — it waits, does not compete for CPU/RAM with backtest-run.
  *
  * QUEUE (.bot/wide-collect-queue.json, resumable): from the newest
- * data/wide-score/wide-score-*.json takes the top `--per-class` pools of EACH class
- * (pegged/LST/stable overrepresented by design — TASKS-FUNNEL §2), only
+ * data/wide-score/wide-score-*.json takes the top `--per-class` pools of each class
+ * (pegged/LST/stable overrepresented by design), only
  * uniswap-v3 (v4 = singleton, different events — out of the fetcher's reach) on
  * mainnet/base/arbitrum. Bot pools (BOT_POOLS) have a 720d cache in the pipeline —
- * skipped. The queue GROWS (new pools from subsequent rankings are added), old
+ * skipped. The queue grows (new pools from subsequent rankings are added), old
  * entries do not disappear — history once fetched stays.
  *
  * MAPPING llama → on-chain: token addresses from `underlyingTokens` (t0/t1 in
@@ -32,13 +31,13 @@
  * `ethIsToken0` = position of the NON-quote leg... except for pairs with WETH and no
  * stable, where (base-cbbtc-weth-005 convention) `ethIsToken0` = position of WETH.
  * USD references: quote WETH → USDC/WETH 720d of that chain; quote BTC →
- * BTC/USDC 720d cache of that chain (queued FIRST, id `ref-*`),
+ * BTC/USDC 720d cache of that chain (queued first, id `ref-*`),
  * with explicit orientation `quoteRefAssetIsToken0` (read by backtest/load.ts).
  *
  * RUN: walkforward 30/15 on 720d, WF_SET=wide (class width from
  * wide-score: crypto-stable ±50, eth-btc/crypto-crypto ±40, pegged tight;
  * hybrid ±5% only for wide classes). Summary result → .bot/wide-backtests.json
- * (key = llama uuid) — read by the server (/api/wide-backtests) and the UI (Batch 22).
+ * (key = llama uuid) — read by the server (/api/wide-backtests) and the UI.
  */
 import * as fs from 'fs';
 import * as path from 'path';
@@ -90,7 +89,7 @@ const BTC_USD_REF: Record<string, { id: string; btc: string; btcSym: string; usd
   arbitrum: { id: 'ref-arbitrum-wbtc-usdc-005-720d', btc: '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f', btcSym: 'WBTC', usdc: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', feeBps: 500 },
 };
 
-/** class widths — THE SAME as CLASS_PARAMS.wOurs in wide-score.ts */
+/** class widths — the same as CLASS_PARAMS.wOurs in wide-score.ts */
 const CLASS_W: Record<string, { w: number; narrow: number | null }> = {
   'crypto-stable': { w: 0.5, narrow: 0.05 },
   'eth-btc': { w: 0.4, narrow: 0.05 },

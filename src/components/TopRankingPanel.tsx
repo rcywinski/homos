@@ -1,6 +1,5 @@
 /**
- * TopRankingPanel.tsx — "Daily ranking" / TOP 10 pools watched for entry
- * (TASKS-UI.md Batch 6, commissioned by Fable 18.08, owner's idea).
+ * TopRankingPanel.tsx — "Daily ranking" / TOP 10 pools watched for entry.
  *
  * Data: `bot.ranking` / `bot.rankingStatus` from useBotApi.ts (GET /api/ranking,
  * poller every 30 min — the data changes once a day, after 8:00). Shape:
@@ -13,8 +12,7 @@
  * buttons, disclaimer right under the table. Section COLLAPSED by default in the cockpit
  * (not a daily decision, unlike paper trading).
  *
- * VARIANT 'wide' (TASKS-UI.md Batch 21, owner's decision 02.09 "an exact
- * copy of the ranking under the new guidelines, I want to observe", Fable's spec 02.09):
+ * VARIANT 'wide': the same ranking under the wide-band scoring rules —
  * the same component, prop `variant`, data source `bot.wideRanking` /
  * `bot.wideRankingStatus` (GET /api/wide-ranking — EXACTLY the same
  * RankingData shape). In this ranking `apy7d` carries the SCORE %/yr (wide-band
@@ -22,8 +20,7 @@
  * separate column labels and disclaimer. `variant` defaults to 'apy' — zero
  * behavior change for existing calls.
  *
- * COLUMNS "365d/720d" + "full run" (TASKS-UI.md Batch 22, owner's idea
- * 02.09, Fable's spec 02.09, AFTER Batch 21): two additional column
+ * COLUMNS "365d/720d" + "full run": two additional column
  * groups, shared by BOTH variants, after TVL and before status. Two separate
  * sources, both feature-detect (missing file/pair → "—", zero errors):
  *  - `bot.wideDaily` (GET /api/wide-daily) — daily model of the wide
@@ -34,9 +31,6 @@
  *    engine (walkforward 720d) only for pools the Floor 2 collector
  *    has already fetched — a separate unit (pp/30d window), do NOT mix with the
  *    daily model (% per 365d).
- *
- * HARD SCOPE: bot/** untouched. The old `TopPools.tsx` (DefiLlama
- * client-side, session 2e) — deliberately left alone, merge decision separate.
  */
 import React, { FC, useState } from 'react';
 import {
@@ -56,14 +50,14 @@ const fmtTvl = (v: number): string => {
 
 // Extra fields of the WIDE ranking — one place for null/undefined handling.
 const fmtPct1 = (v: number | null | undefined): string => (typeof v === 'number' ? `${v.toFixed(1)}%` : '—');
-// Daily model/full run (Batch 22): signed numbers, without "%" (the unit is
+// Daily model/full run: signed numbers, without "%" (the unit is
 // appended at the use site — pp/30d for the full run, bare points for LP/HODL/Δ).
 const fmtSigned1 = (v: number | null | undefined): string =>
   typeof v === 'number' ? `${v > 0 ? '+' : ''}${v.toFixed(1)}` : '—';
 const deltaClass = (v: number | null | undefined): string | undefined =>
   typeof v === 'number' ? (v > 0 ? 'paper-positive' : v < 0 ? 'forecast-negative' : undefined) : undefined;
 
-// "365d"/"720d" — daily model (GET /api/wide-daily, Batch 22). `w` = rolling
+// "365d"/"720d" — daily model (GET /api/wide-daily). `w` = rolling
 // window (`WideDailyWindow`) from the pair `pools[llamaUuid].windows.w365/w720`;
 // `error`/`stale` from one level up (`WideDailyPool`) explain a missing number.
 const ModelDziennyCell: FC<{ w: WideDailyWindow | null | undefined; error: string | undefined }> = ({ w, error }) => {
@@ -89,7 +83,7 @@ const ModelDziennyCell: FC<{ w: WideDailyWindow | null | undefined; error: strin
   );
 };
 
-// "flat" — % of days in the last year meeting the flat condition (Batch 22).
+// "flat" — % of days in the last year meeting the flat condition.
 const FlatCell: FC<{ pool: WideDailyPool | undefined }> = ({ pool }) => (
   <td
     className="muted"
@@ -99,7 +93,7 @@ const FlatCell: FC<{ pool: WideDailyPool | undefined }> = ({ pool }) => (
   </td>
 );
 
-// "full run" — backtest engine (GET /api/wide-backtests, Batch 22),
+// "full run" — backtest engine (GET /api/wide-backtests),
 // only pools already fetched by the Floor 2 collector. Unit pp/30d window —
 // SEPARATE from the daily model (% per 365d), do not mix in one column.
 const PelnyPrzebiegCell: FC<{ entry: WideBacktestEntry | undefined }> = ({ entry }) => {
@@ -124,10 +118,10 @@ const PelnyPrzebiegCell: FC<{ entry: WideBacktestEntry | undefined }> = ({ entry
   );
 };
 
-// Candidate validation verdicts (TASKS-UI.md Batch 12, owner's request):
-// "outside configuration" wrongly suggested rejection. Real status per
-// pool, priority top-down (the first matching state wins) — semantics
-// described in the batch, do NOT change without asking @Fable.
+// Candidate validation verdicts: real status per pool (a generic "outside
+// configuration" would wrongly suggest rejection). Priority top-down — the
+// first matching state wins; the order mirrors the bot-side validation
+// semantics, so change it only together with the bot.
 type CandidateStatus = 'in-bot' | 'fail' | 'queued' | 'unmapped' | 'validated' | 'unresearched';
 
 const verdictTooltip = (v: CandidateVerdict): string => {
@@ -202,8 +196,8 @@ const RankingRowView: FC<{
   );
 };
 
-// WIDE row (Batch 21): `apy7d` carries the SCORE %/yr (not 7d APY), color
-// >0 green / ≤0 muted (spec). `sigmaAnnPct` with a "⚠ drift" suffix +
+// WIDE row: `apy7d` carries the SCORE %/yr (not 7d APY), color
+// >0 green / ≤0 muted. `sigmaAnnPct` with a "⚠ drift" suffix +
 // tooltip when `driftFlag` — peg drift > half the band width.
 const WideRankingRowView: FC<{
   row: RankingRow;
@@ -250,16 +244,12 @@ interface Props {
 }
 
 /**
- * UNIFICATION 21.08 (owner's remark): the section had its own "bar" — it was
- * wrapped in `ExpandableSection` in MorningCockpit, which gave it a card frame
- * and a blue title, unlike its neighbors (Bot telemetry, Profit
- * forecast, Observation analysis). Now the component keeps its own collapse state
- * and uses EXACTLY the same skeleton as they do:
+ * Keeps its own collapse state and uses the same skeleton as the neighboring
+ * sections (Bot telemetry, Observation analysis):
  * `telemetry-section` > `telemetry-header` (title + arrow) > `telemetry-body`.
- * Trophy 🏆 removed — the neighbors have no icons.
- * HOOKS NOTE: `useState` MUST stay before all early
- * returns (lesson from the "Rendered more hooks…" crash 20.08 and 21.08) —
- * that is why error/loading states now render INSIDE the section body,
+ * Hooks note: `useState` must stay before all early returns (otherwise
+ * "Rendered more hooks…" crash) — that is why error/loading states render
+ * INSIDE the section body,
  * and the header is always visible, as in Bot telemetry.
  */
 const TopRankingPanel: FC<Props> = ({ bot, variant = 'apy' }) => {

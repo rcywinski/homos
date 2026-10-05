@@ -4,19 +4,9 @@ import { formatEther, formatUnits, isAddress } from 'viem';
 import { NETWORKS } from '../utils/uniswap';
 
 /**
- * REBUILD 21.08 (owner's remarks: "the Sepolia switch should be removed",
- * "maybe all currencies should be displayed, not just the chosen 3").
- *
- * What was wrong — not just cosmetically:
- *  1. The network label was BINARY (`isMainnet ? 'Mainnet' : 'Sepolia'`), so
- *     on Base and Arbitrum the header showed "Sepolia". It lied about which
- *     network you are on, and the bot works precisely on Base/Arbitrum.
- *  2. WETH/USDC addresses were binary too: outside mainnet the SEPOLIA
- *     addresses were used, so on Base/Arbitrum balances ALWAYS showed 0, even
- *     when the tokens were there.
- *  3. The ⇄ button only switched mainnet↔Sepolia.
- *
- * How it is now: the token list comes from `NETWORKS` (utils/uniswap.ts) —
+ * Wallet balances per supported network (Mainnet/Base/Arbitrum), side by side.
+ * Network and token addresses are never inferred from a mainnet/testnet flag:
+ * the token list comes from `NETWORKS` (utils/uniswap.ts) —
  * i.e. exactly the ones the bot operates with on a given network (Base has cbBTC,
  * mainnet USDT etc.), plus native ETH. Zero hard-coded addresses.
  *
@@ -77,8 +67,7 @@ export const CompactWalletInfo: React.FC = () => {
   const { address } = useAccount();
   if (!address) return null;
 
-  // NO network switch (owner's question 21.08: "do we need this
-  // switch?"). We don't — and it's not a matter of taste:
+  // Deliberately no network switch:
   //  • for VIEWING it added nothing: `usePortfolio` reads positions from
   //    all three networks at once anyway (`usePublicClient({chainId: 1/8453/42161})`),
   //    and balances can also be read cross-chain (`useBalance({chainId})`);
@@ -98,10 +87,4 @@ export const CompactWalletInfo: React.FC = () => {
   );
 };
 
-/**
- * The old, extended wallet view — it was exclusively a testnet panel
- * (Mainnet/Sepolia switches + links to Sepolia faucets). Imported nowhere
- * (App uses `CompactWalletInfo`), and after the decision to drop Sepolia
- * there is nothing left to show. Removed 21.08 together with `FaucetSection`.
- */
 export default CompactWalletInfo;

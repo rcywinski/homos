@@ -1,6 +1,6 @@
 # Decision log
 
-Translated and condensed from section 2 of the private working journal ("decisions made — do not
+Translated and condensed from section 2 of the working journal ("decisions made — do not
 reopen without a reason"). Each row records the decision, the evidence it was based on and, where
 it matters, the bias it was made under. Dates are 2026.
 

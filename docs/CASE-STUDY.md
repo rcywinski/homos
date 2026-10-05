@@ -34,7 +34,7 @@ Over the next four weeks, working with four specialised AI sessions coordinated 
   sufficient share of windows with a bounded worst window. The gate was designed before the
   strategies, so it could not be tuned to them.
 - **An observer bot** running 24/7 on a Windows machine: prices, position tracking, a
-  volatility estimator, a flat-regime detector, a trend circuit breaker, a daily pool selector,
+  volatility estimator, a flat-regime detector, a trend breaker, a daily pool selector,
   a paper-trading harness and a transaction ledger — all in *propose-only* mode. Proposals are
   cards in a cockpit UI; the owner signs in a wallet or dismisses. The bot never held a key.
 - **Operations**: NSSM services, a nightly pipeline, a 07:30 morning report committed to the
@@ -55,7 +55,7 @@ Then two things happened that I consider the most valuable part of the project:
    be done together.
 2. **Extending the window to 720 days killed the strategy.** On the longer history, which
    included a strong uptrend, **0 of 21 configurations passed the gate**. The 365-day year had
-   flattered range-bound strategies. Five independent ways of measuring it (13 pool scan,
+   flattered range-bound strategies. Five independent ways of measuring it (13-pool scan,
    an analytical "wide score", Monte Carlo, a daily model, and full-period replays) agreed:
    a passive wide range ≈ HODL + fees − a little IL, and narrowing added variance without
    adding expectancy at the flat-episode lengths actually observed (median 7.7 days).
@@ -98,8 +98,8 @@ What actually happened:
   days, of which the strategy contributed +0.6 % and three days of unhedged beta the rest.
 
 I am recording that sequence because it is the most instructive part of the case study.
-Every revision was documented at the time, with a note that it was being made under the bias it
-was being made under, and the AI session I used for analysis pushed back on each one in writing.
+Every revision was documented at the time, with a note naming the bias it was made
+under, and the AI session I used for analysis pushed back on each one in writing.
 The outcome was good. The process was not a method, and the decision log says so.
 
 ## 5. Conclusions
