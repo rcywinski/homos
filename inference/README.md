@@ -104,11 +104,86 @@ curl -s "$INFERENCE_URL/api/embed" \
 # expected: 2 [1024, 1024]
 ```
 
-## Later (not part of 0.3)
+## Reranker (step 1.6): contract
 
-- **Reranker, step 1.6.** A small Python service in this directory, run as a Windows service on its own port.
-  CC-Mac will add its contract here before CC-Win installs it.
+A second service on the same box: a cross-encoder that scores (question, chunk) pairs. The Mac sends the top 30
+candidates of hybrid search and reorders them. Code: `inference/reranker/` (`app.py`, `requirements.txt`, `smoke.py`).
+Written by CC-Mac, deployed and operated by CC-Win.
+
+| Item | Expected value |
+|---|---|
+| Server | Python 3.11 or 3.12, FastAPI + uvicorn, `sentence-transformers` `CrossEncoder`, GPU via CUDA |
+| Model | `BAAI/bge-reranker-v2-m3` (568M parameters, backbone bge-m3, 8192-token positions; ~1.2 GB VRAM in fp16) |
+| Address | `http://192.168.1.8:11435` (LAN) and port 11435 on the VPN address; Mac config `RERANK_URL` in `.env` |
+| Endpoints | `GET /health`, `POST /rerank` |
+| Availability | starts by itself after a reboot, without a desktop login (same requirement as Ollama) |
+| Exposure | TCP 11435 limited to the LAN and VPN subnets, same pattern as the Ollama rule; no authentication |
+
+### Request and response
+
+```http
+POST /rerank
+Content-Type: application/json
+
+{ "query": "Why was the narrow range not used again?", "documents": ["...chunk text...", "..."] }
+```
+
+```json
+{ "model": "BAAI/bge-reranker-v2-m3", "device": "cuda", "maxLength": 2048,
+  "scores": [3.21, -4.05], "truncated": [false, false], "elapsedMs": 85.3 }
+```
+
+- `scores` are in the order of `documents`; higher is more relevant; only the order is used.
+- At most 100 documents per request; empty query or no documents is HTTP 400 (the client does not retry 4xx).
+- `truncated[i]` is true when the pair is longer than `maxLength` tokens and its tail was cut. With the default 2048
+  no pair of the current corpus should be cut (chunks stay under ~1500 tokens); the client counts truncated pairs.
+
+### Configuration (environment variables of the service)
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `RERANK_DEVICE` | `cuda` when available | `cpu` only for the one-off latency comparison in 1.6, then back to `cuda` |
+| `RERANK_MAX_LENGTH` | `2048` | `1024` is a speed variant to measure in 1.6 |
+| `RERANK_BATCH_SIZE` | `16` | pairs per forward pass |
+| `HF_HOME` | (set it) | model cache outside any user profile, e.g. `C:\ollama\hf` (the service runs as SYSTEM, like Ollama) |
+
+### Install (CC-Win)
+
+1. Python 3.12 (or 3.11) for all users; a venv in `inference\reranker\.venv` of the repo clone.
+2. PyTorch with CUDA from the PyTorch index for the installed driver (617.14), e.g.
+   `pip install torch --index-url https://download.pytorch.org/whl/cu124` (pick the CUDA build the index offers for this
+   driver), then `pip install -r inference\reranker\requirements.txt`.
+3. Start command (working directory `inference\reranker`):
+   `.venv\Scripts\python.exe -m uvicorn app:app --host 0.0.0.0 --port 11435`.
+   Run it at startup as SYSTEM without a login: a scheduled task like Ollama's or an NSSM service, CC-Win's choice;
+   log to `C:\ollama\logs\reranker.log`. The first start downloads the model (~2.2 GB) into `HF_HOME`.
+4. Firewall rule `HOMOS reranker (LAN+VPN only)`: inbound TCP 11435, remote addresses `<lan-subnet>,<vpn-subnet>`.
+5. Check on the box: `python smoke.py http://127.0.0.1:11435` prints the health line and `OK`.
+6. Fill in "Reranker operations" below and push only `inference/README.md` (code changes go through CC-Mac).
+
+### Check from the Mac
+
+```bash
+source .env
+curl -s "$RERANK_URL/health"
+inference/reranker/.venv/bin/python inference/reranker/smoke.py "$RERANK_URL"   # or any python3: smoke.py uses only the stdlib
+```
+
+### Verified before handing over (CC-Mac, 9 Nov 2026)
+
+The service was run once on the Mac's CPU (Intel, torch 2.2.2, transformers 4.49, sentence-transformers 3.4.1)
+to check the API shape and `smoke.py`; see the step 1.6 commit. Latency on the Mac is not a measurement of the box.
+
+## Later
+
 - **Local generator comparison, phase 3.** Extra models pulled into the same Ollama.
+
+## Reranker operations (filled in by CC-Win in step 1.6)
+
+- How it is installed and started, and how it survives a reboot:
+- Python, torch (CUDA build), transformers, sentence-transformers versions:
+- Firewall rule name and subnets (placeholders are fine in this public repo):
+- `smoke.py` output on the box:
 
 ## Operations (filled in by CC-Win in step 0.3)
 

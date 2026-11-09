@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "test": "npm run typecheck && npm run test:math && npm run test:ai && npm run backtest:validate",
     "test:math": "tsx test/v3math.test.ts",
-    "test:ai": "tsx ai/corpus/split.test.ts && tsx ai/embed/embed.test.ts && tsx ai/eval/metrics.test.ts && tsx ai/store/store.test.ts",
+    "test:ai": "tsx ai/corpus/split.test.ts && tsx ai/embed/embed.test.ts && tsx ai/eval/metrics.test.ts && tsx ai/store/store.test.ts && tsx ai/rerank/rerank.test.ts",
     "backtest:validate": "tsx backtest/validate.ts",
     "backtest": "tsx backtest/run.ts",
     "backtest:selection": "tsx backtest/selection.ts",

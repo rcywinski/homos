@@ -19,6 +19,8 @@ import { Bm25Index } from '../store/bm25';
 import { HybridRetriever } from '../store/hybrid';
 import type { Stem } from '../store/tokenize';
 import type { Retriever } from '../store/types';
+import { LocalReranker } from '../rerank/local';
+import { RerankRetriever } from '../rerank/retriever';
 import { CATEGORIES, overlaps, type GoldenQuestion } from './golden';
 import { firstHitRank, fmtRatio, journalOnly, mrrAt, recallAt } from './metrics';
 
@@ -58,10 +60,22 @@ async function main() {
   if (!['none', 'prefix6'].includes(stem)) throw new Error('--stem must be none or prefix6');
   const vector = new VectorStore(index.ids, index.vectors, embedder);
   const bm25 = () => new Bm25Index(chunks, { stem, dropNie: process.argv.includes('--drop-nie') });
-  const retriever: Retriever =
-    kind === 'vector' ? vector : kind === 'bm25' ? bm25() : kind === 'hybrid' ? new HybridRetriever([vector, bm25()]) : (() => {
-      throw new Error('--retriever must be vector, bm25 or hybrid');
-    })();
+  let reranker: LocalReranker | null = null;
+  let rerankRetriever: RerankRetriever | null = null;
+  const makeRetriever = (): Retriever => {
+    if (kind === 'vector') return vector;
+    if (kind === 'bm25') return bm25();
+    if (kind === 'hybrid') return new HybridRetriever([vector, bm25()]);
+    if (kind === 'hybrid-rerank') {
+      const rerankUrl = process.env.RERANK_URL;
+      if (!rerankUrl) throw new Error('RERANK_URL is not set (see .env.example)');
+      reranker = new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 120_000 });
+      rerankRetriever = new RerankRetriever(new HybridRetriever([vector, bm25()]), reranker, byId, 30);
+      return rerankRetriever;
+    }
+    throw new Error('--retriever must be vector, bm25, hybrid or hybrid-rerank');
+  };
+  const retriever = makeRetriever();
 
   const t0 = Date.now();
   const rankings = await retriever.search(
@@ -126,6 +140,7 @@ async function main() {
     chunkCount: chunks.length,
     questions: { total: golden.length, answerable: answerableQs.length },
     searchMs,
+    ...(reranker && rerankRetriever ? { rerank: rerankStats(reranker, rerankRetriever) } : {}),
     metrics,
     perQuestion: perQuestion.map(({ top5: _top5, ...rest }) => rest),
   };
@@ -140,6 +155,20 @@ async function main() {
   writeFileSync(`${base}.md`, md);
   console.log(md);
   console.log(`\nWrote ${base}.json and ${base}.md (search ${searchMs} ms)`);
+}
+
+function rerankStats(r: LocalReranker, rr: RerankRetriever) {
+  const ms = [...r.serverMs].sort((a, b) => a - b);
+  const pct = (p: number) => (ms.length ? ms[Math.min(ms.length - 1, Math.floor(p * ms.length))] : null);
+  return {
+    device: r.lastDevice,
+    maxLength: r.lastMaxLength,
+    queries: ms.length,
+    serverMsMedian: pct(0.5),
+    serverMsP95: pct(0.95),
+    truncatedPairs: rr.truncatedPairs,
+    totalPairs: rr.totalPairs,
+  };
 }
 
 type Block = Record<string, { hits: number; n: number } | number>;
