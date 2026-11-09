@@ -82,13 +82,16 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   Tools: `npm run ai:find` (evidence lookup), `npm run ai:golden:check` (validator).
   Verify: `npm run ai:golden:check` reports 0 errors.
 
-- [ ] NEXT **1.3 Embedder interface and local implementation.** `ai/embed/`. Interface `Embedder { embed(texts, kind: 'document' | 'query'): Promise<number[][]>; readonly name: string; readonly dims: number }`.
-  `LocalEmbedder` calls Ollama on the inference box (`bge-m3`, 1024 dimensions), batched, with retry and a timeout. A `FakeEmbedder` for tests.
-  `npm run ai:index` embeds all chunks and writes `ai/index/<embedder-name>.json`, so several embedders can be compared later. Record wall time.
+- [x] 2026-11-09 **1.3 Embedder interface and local implementation.** `ai/embed/`. Interface `Embedder { embed(texts, kind: 'document' | 'query'): Promise<number[][]>; readonly name: string; readonly dims: number }`.
+  `LocalEmbedder` calls Ollama on the inference box (`bge-m3`, 1024 dimensions): batches of 32, `truncate: false`, no `options`,
+  `keep_alive: 30m` only while indexing, 30 s timeout, 3 attempts with backoff, HTTP 413 never retried (a chunker bug).
+  A `FakeEmbedder` for tests. `npm run ai:index` writes `ai/index/<embedder-name>.json` (ids, vectors, corpus hash; a stale index is refused).
   `VoyageEmbedder` (`voyage-4`) is optional and only added if evaluation in 1.4 to 1.6 suggests the local model is the bottleneck.
-  Verify: index file exists, vector count equals chunk count, a smoke query in Polish and the same in English return the same top chunk.
+  Result (9 Nov 2026): 957 vectors in 21.2 s wall time, 12.3 MB of plain JSON. Kept as JSON, unrounded: parses in ~50 ms, readable,
+  exact; switch to a JSON manifest + Float32 binary (3.9 MB) only with several indexes or a much larger corpus.
+  Smoke check: Polish and English question return the same top chunk (both an English DECISION-LOG row: English summaries attract queries).
 
-- [ ] **1.4 Vector store and baseline evaluation.** `ai/store/vector.ts`: load the index, cosine similarity, top-k. `ai/eval/run.ts`: for each golden question
+- [ ] NEXT **1.4 Vector store and baseline evaluation.** `ai/store/vector.ts`: load the index, cosine similarity, top-k. `ai/eval/run.ts`: for each golden question
   compute recall@5, recall@10, MRR; write `ai/eval/results/<date>-<label>.json` and a markdown table. This is the baseline number everything else is compared to.
   Verify: `npm run ai:eval -- --label baseline-vector` prints the table.
 

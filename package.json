@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "test": "npm run typecheck && npm run test:math && npm run test:ai && npm run backtest:validate",
     "test:math": "tsx test/v3math.test.ts",
-    "test:ai": "tsx ai/corpus/split.test.ts",
+    "test:ai": "tsx ai/corpus/split.test.ts && tsx ai/embed/embed.test.ts",
     "backtest:validate": "tsx backtest/validate.ts",
     "backtest": "tsx backtest/run.ts",
     "backtest:selection": "tsx backtest/selection.ts",
@@ -35,7 +35,8 @@
     "wallet": "tsx scripts/wallet.ts",
     "ai:chunks": "tsx ai/corpus/chunks-cli.ts",
     "ai:find": "tsx ai/eval/find-cli.ts",
-    "ai:golden:check": "tsx ai/eval/golden-check-cli.ts"
+    "ai:golden:check": "tsx ai/eval/golden-check-cli.ts",
+    "ai:index": "tsx ai/embed/index-cli.ts"
   },
   "author": "Rafał Cywiński",
   "license": "MIT",
