@@ -76,7 +76,91 @@ curl -s "$INFERENCE_URL/api/embed" \
 
 ## Operations (filled in by CC-Win in step 0.3)
 
-- How Ollama is installed and started, and how it survives a reboot:
-- Firewall rule name and subnets (subnet values may stay as placeholders in this public repo):
-- How to check that it runs on the box itself:
-- Ollama version and `bge-m3` model digest:
+### Layout on the box
+
+| Path | What |
+|---|---|
+| `C:\ollama\app\` | Ollama binaries (`winget install Ollama.Ollama --location C:\ollama\app`), outside any user profile |
+| `C:\ollama\models\` | the only model store, shared by the server and the CLI |
+| `C:\ollama\start-ollama.ps1` | launcher used by the startup task (content below) |
+| `C:\ollama\logs\serve.log` | server log, appended on every start |
+
+### Environment (system-wide, Machine scope)
+
+| Variable | Value | Why |
+|---|---|---|
+| `OLLAMA_HOST` | `0.0.0.0:11434` | listen on all interfaces instead of `127.0.0.1`, so the Mac can reach it |
+| `OLLAMA_MODELS` | `C:\ollama\models` | the server runs as SYSTEM; without this it would look for models under the SYSTEM profile, not under the user profile where a user-run server stores them |
+
+Note that `ollama pull` is only a client: the running server downloads the model into its own `OLLAMA_MODELS`.
+The shared path matters when a server is ever started by hand as the user (for example the tray app): it then sees
+the same models instead of an empty store.
+
+### Start and reboot survival
+
+Ollama has no Windows service mode, so it runs as a scheduled task:
+
+- Task `HOMOS inference (Ollama)`: trigger "At startup", runs as `SYSTEM` (no desktop login needed),
+  no execution time limit, restarts every minute on failure (up to 999 times).
+- Action: `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\ollama\start-ollama.ps1`.
+- The tray app autostart (`Ollama.lnk` in the user's Startup folder) was removed, so only one server owns port 11434.
+
+`C:\ollama\start-ollama.ps1`:
+
+```powershell
+# Launcher for the "HOMOS inference (Ollama)" scheduled task, runs as SYSTEM at boot.
+# Reads OLLAMA_* from the machine environment on every start, because Task Scheduler
+# keeps the environment it had at boot and would miss later changes.
+foreach ($name in 'OLLAMA_HOST', 'OLLAMA_MODELS') {
+    Set-Item -Path "env:$name" -Value ([Environment]::GetEnvironmentVariable($name, 'Machine'))
+}
+New-Item -ItemType Directory -Force C:\ollama\logs | Out-Null
+# Redirect in cmd, not PowerShell: PowerShell 5.1 wraps native stderr in error records.
+cmd.exe /c '"C:\ollama\app\ollama.exe" serve >> C:\ollama\logs\serve.log 2>&1'
+```
+
+Restart by hand (as Administrator):
+
+```powershell
+Stop-ScheduledTask  -TaskName 'HOMOS inference (Ollama)'
+Get-Process ollama -ErrorAction SilentlyContinue | Stop-Process -Force
+Start-ScheduledTask -TaskName 'HOMOS inference (Ollama)'
+```
+
+### Firewall
+
+Rule `HOMOS inference (LAN+VPN only)`: inbound, TCP 11434, allow, remote addresses `<lan-subnet>,<vpn-subnet>`
+(the same two subnets as the old `HOMOS API (LAN+VPN only)` rule). The default inbound policy blocks everything else.
+There is no program-based rule for `ollama.exe`; if Windows ever shows an "allow access" prompt for it, decline,
+otherwise it adds a rule without the subnet limit.
+
+### Check on the box
+
+```powershell
+Get-ScheduledTask -TaskName 'HOMOS inference (Ollama)'                    # State: Running
+Get-NetTCPConnection -LocalPort 11434 -State Listen                       # LocalAddress :: (all interfaces)
+Invoke-RestMethod http://127.0.0.1:11434/api/version                      # version
+& C:\ollama\app\ollama.exe ps                                             # loaded models, PROCESSOR 100% GPU
+Get-NetFirewallRule -DisplayName 'HOMOS inference (LAN+VPN only)'         # exists, Enabled True
+Get-Content C:\ollama\logs\serve.log -Tail 20                             # look for "inference compute ... RTX 3090"
+```
+
+The CLI reads `OLLAMA_HOST`; `0.0.0.0` is a listen address, so in an interactive session set
+`$env:OLLAMA_HOST = '127.0.0.1:11434'` first if `ollama list` cannot connect.
+
+### Versions (9 Nov 2026)
+
+- Ollama `0.40.15`, CUDA backend, RTX 3090 (24 GB), NVIDIA driver 617.14.
+- `bge-m3:latest`, digest `7907646426070047a77226ac3e684fbbe8410524f7b4a74d02837e43f2146bab`, F16, 567M parameters, 1.2 GB on disk,
+  about 0.7 GB VRAM when loaded.
+
+### Behaviour the client should expect
+
+- Ollama unloads an idle model after 5 minutes (default keep-alive). The first request after that loads it again:
+  measured about 24 s for the very first call after install and about 7 s for a reload later. A warm batch of 32 short texts
+  takes about 0.2 s. The client timeout should cover a cold start (30 s is safe).
+- The client can override the unload timer per request with `keep_alive` in the body, for example
+  `{ "model": "bge-m3", "input": [...], "keep_alive": "30m" }`. Note for CC-Mac: pass it during indexing runs so the model
+  is not unloaded mid-run between batches; normal queries can leave it out and use the 5 minute default.
+- Local smoke test on 9 Nov 2026: the Polish and English sentences from the Mac check returned `2 [1024, 1024]`,
+  cosine similarity between the two vectors 0.894.
