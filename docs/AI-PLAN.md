@@ -49,7 +49,7 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   After this step HOMOS-private is redundant; the owner decides whether to archive it.
   Verify: `du -sh journal/` is about 1.3 MB, `grep -rEn 'sk-ant-|[0-9]{8,10}:[A-Za-z0-9_-]{35}' journal/` finds nothing.
 
-- [ ] **0.3 Local inference box.** `[CC-Win]` (CC-Mac writes `inference/README.md` with the expected endpoint first, then tests from the Mac.) The former bot server (Windows, RTX 3090 24 GB, on 24/7, LAN `192.168.1.8`) becomes the inference server.
+- [x] 2026-11-09 **0.3 Local inference box.** `[CC-Win]` (CC-Mac writes `inference/README.md` with the expected endpoint first, then tests from the Mac.) The former bot server (Windows, RTX 3090 24 GB, on 24/7, LAN `192.168.1.8`) becomes the inference server.
   Install Ollama, pull the multilingual embedding model `bge-m3`, expose Ollama on the LAN (bind address + firewall rule limited to the LAN and VPN
   subnets, same pattern as the old bot API). From the Mac: `curl $INFERENCE_URL/api/embed` with a Polish and an English sentence returns two vectors.
   Write `inference/README.md`: what runs where, how to start it, how to check it. Why: the corpus is small enough that embeddings do not need a GPU,
