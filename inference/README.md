@@ -38,6 +38,20 @@ Content-Type: application/json
 The client checks: HTTP 200, `embeddings.length === input.length`, every vector has 1024 numbers.
 Any other answer is an error and the batch is retried with a timeout.
 
+**Every batch must be sent with identical options.** Ollama restarts the model runner whenever the request `options`
+differ from the loaded ones. Measured from the Mac on 9 Nov 2026 with the model warm in VRAM:
+
+| Request | Time |
+|---|---|
+| same body repeated | 0.02 to 0.12 s |
+| 2, 3 or 8 inputs, no `options` | 0.02 to 0.09 s (batch size alone does not reload) |
+| first call with `"options": {"num_ctx": 4096}` | 9.5 s (reload) |
+| same call again | 0.02 s |
+| back to no `options` | 3.2 s (reload again) |
+
+So `LocalEmbedder` sends no `options` at all (or one fixed set, defined in one place) and never varies them per batch.
+A top-level `keep_alive` does not cause a reload.
+
 ### Network exposure
 
 Ollama listens on `127.0.0.1` by default. To reach it from the Mac it must listen on the LAN:
