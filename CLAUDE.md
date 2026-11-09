@@ -55,6 +55,6 @@ history lives in commits, decisions and results live in `docs/AI-RAG.md`.
 
 ## Corpus facts you can rely on
 
-- `journal/` (after step 1.1) holds ~1.3 MB of Polish text: `CONTEXT.md` (journal, 359 KB, dated entries), `HANDOFF.md` (inboxes), `reports/` (32 morning reports, 18 Aug to 18 Sep 2026, near-identical structure), `TASKS-*.md`, `RESEARCH-QUEUE.md`, decision notes.
+- `journal/` (after step 1.1) holds ~1.3 MB of Polish text: `CONTEXT.md` (journal, 359 KB, dated entries), `HANDOFF.md` (inboxes), `reports/` (37 morning reports, 18 Aug to 23 Sep 2026, near-identical structure; the last 5 were generated automatically after the project closed on 22 Sep), `TASKS-*.md`, `RESEARCH-QUEUE.md`, decision notes.
 - `docs/` holds ~80 KB of English documentation, including `DECISION-LOG.md` (translated decision table) and `CASE-STUDY.md`.
 - The whole corpus is roughly 350k tokens, so it does not fit in one context window. That is the reason this layer exists.

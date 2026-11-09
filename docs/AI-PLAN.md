@@ -16,14 +16,14 @@ each with a documented decision and a measured result.
 ## Target layout
 
 ```
-journal/              Polish working notes restored from git history (tag journal-final), see journal/README.md
+journal/              Polish working notes (HOMOS-private archive of 23 Sep 2026 = tag journal-final + 5 later reports), see journal/README.md
+inference/            Python service for the GPU box (reranker; later anything Ollama cannot serve), see inference/README.md
 ai/
   corpus/             loaders and chunkers: one chunk = one journal entry / report section / decision row, with metadata
   embed/              Embedder interface; LocalEmbedder (Ollama on the LAN GPU box) first, VoyageEmbedder optional
   store/              JSON vector store, cosine similarity, BM25 index, hybrid merge
   rerank/             Reranker interface; LocalReranker (own Python service on the GPU box), Voyage optional
   answer/             Generator interface; ClaudeGenerator (phase 1), LocalGenerator (phase 3 comparison); citations + verification
-inference/            Python service for the GPU box (reranker; later anything Ollama cannot serve), see inference/README.md
   agent/              phase 2: tool definitions, agentic loop, whitelist bridge to scripts/agent-runner.ts
   eval/               golden question set, metrics (recall@k, MRR, citation accuracy), results/ (committed)
   cli.ts              npm run ask -- "question"
@@ -37,7 +37,7 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   Add `ANTHROPIC_API_KEY` and `INFERENCE_URL` (base URL of the local inference box, e.g. `http://192.168.1.8:11434`) to `.env.example` with comments. Install `@anthropic-ai/sdk`. No embedding vendor SDK: embeddings are served over HTTP from the local inference box (step 0.3).
   Verify: `npm run typecheck` passes, `git status` shows only the intended files.
 
-- [ ] NEXT **0.2 Restore the journal.** Two sources exist: tag `journal-final` in this repo (state of 22-23 Sep 2026) and the sibling clone
+- [x] 2026-11-09 **0.2 Restore the journal.** Two sources exist: tag `journal-final` in this repo (state of 22-23 Sep 2026) and the sibling clone
   `../HOMOS-private`, branch `private`, which may hold later entries. First compare them (`git -C ../HOMOS-private log --oneline private -5`,
   `diff` of `CONTEXT.md`); take the newer one. Files: `CONTEXT.md HANDOFF.md reports/ TASKS-*.md RESEARCH-QUEUE.md DECYZJE-2026-08-26.md
   KAPITAL-REKOMENDACJA.md PYTANIE-SZEROKOSC-I-SIGMA.md SELECTOR-LOG.md`, moved into `journal/` (reports to `journal/reports/`).
@@ -58,7 +58,7 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
 
 ## Phase 1: retrieval with citations
 
-- [ ] **1.1 Corpus loader and chunker.** `ai/corpus/`. One loader per file type:
+- [ ] NEXT **1.1 Corpus loader and chunker.** `ai/corpus/`. One loader per file type:
   journal entries in `CONTEXT.md` (split on dated session headers in section 4; sections 1 to 3 as their own chunks),
   morning reports (one chunk per `##` section, date from the file name), decision table rows (one row = one chunk, both the Polish table
   and `docs/DECISION-LOG.md`), task queues and research queue (split on `##`/`###`), `docs/*.md` (split on `##`).

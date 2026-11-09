@@ -125,18 +125,22 @@ are configured. The data caches under `data/` are regenerable — see the header
 | `scripts/` | data fetching (HyperSync, DefiLlama), nightly pipeline, morning report |
 | `src/` | React cockpit (positions, proposals, rebalance/rotate sequences, paper panel) |
 | `deploy/` | Windows deployment scripts and setup guide |
+| `journal/` | raw working notes in Polish: journal, inboxes, morning reports, task queues |
+| `inference/` | contract and services for the local GPU inference box used by the AI layer |
 | `docs/` | plan, algorithm, pairs analysis, DB schema, infra, UI design, emergency runbook, decision log, case study, AI workflow |
 
 Code comments and UI are in English; a small number of string literals that act as data
 contracts (strategy names used as keys, log lines parsed by the report script) are kept in their
 original Polish and marked with a comment.
 
-## What is not in this repository
+## The working journal
 
-The private working journal (a 360 KB day-by-day log), the AI hand-off inboxes, daily morning
-reports and research queues were removed from the current tree; they remain in the git history
-because they are part of how the project was actually run. Nothing in them is secret — the wallet
-is public on-chain and the amounts are stated above.
+The raw working notes of the project are in [`journal/`](journal/README.md): the day-by-day journal
+(`CONTEXT.md`, 360 KB), the AI hand-off inboxes, 37 daily morning reports, task and research queues
+and decision notes. They are in Polish and kept unedited on purpose, because they show how the
+project was actually run. Nothing in them is secret: the wallet is public on-chain and the amounts
+are stated above. Since November 2026 an AI layer (`ai/`, see [`docs/AI-PLAN.md`](docs/AI-PLAN.md))
+answers questions over these notes with citations to file and line.
 
 ## License
 

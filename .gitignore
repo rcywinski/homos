@@ -58,6 +58,3 @@ yarn-error.log*
 public/*.bundle.js
 public/*.bundle.js.LICENSE.txt
 
-# Private working journal and generated morning reports
-private-journal/
-reports/
