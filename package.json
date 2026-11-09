@@ -33,7 +33,9 @@
     "backtest:lp-timing": "tsx backtest/lp-vol-timing.ts",
     "agent": "tsx scripts/agent-runner.ts",
     "wallet": "tsx scripts/wallet.ts",
-    "ai:chunks": "tsx ai/corpus/chunks-cli.ts"
+    "ai:chunks": "tsx ai/corpus/chunks-cli.ts",
+    "ai:find": "tsx ai/eval/find-cli.ts",
+    "ai:golden:check": "tsx ai/eval/golden-check-cli.ts"
   },
   "author": "Rafał Cywiński",
   "license": "MIT",

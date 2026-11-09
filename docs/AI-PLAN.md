@@ -73,13 +73,16 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   Every chunk carries `{ id, file, lineStart, lineEnd, date?, session?, kind, text }`. Oversized chunks are split at paragraph boundaries with a hard cap.
   Print a histogram of chunk sizes. Verify: `npm run ai:chunks` lists chunk count per file and the 5 largest chunks; no chunk above the cap.
 
-- [ ] NEXT **1.2 Golden question set, version 1.** `ai/eval/golden.jsonl`, 30 questions in English, each with the chunk ids (or file + line range) that answer it.
-  Mix: 10 "why" questions from the decision log, 10 dated facts from morning reports (tests whether retrieval hits the right day, not a neighbouring one),
-  5 identifiers (position numbers, config names such as FLAT_NARROW), 5 questions with no answer in the corpus (the system must say so).
-  Written by the owner with the assistant, by hand. This is done before any retrieval code so the metric is not tuned to the code.
-  Verify: every referenced chunk id exists in the output of 1.1.
+- [x] 2026-11-09 **1.2 Golden question set, version 1.** `ai/eval/golden.jsonl`, 34 questions in English, written by the owner with the analysis
+  session from memory (`ai/eval/golden-draft.md`, kept unchanged), then checked against the sources by CC-Mac; every correction is in the
+  question's `notes`. Mix 10/10/7/7: "why", dated facts (right day, not a neighbouring one), identifiers, no-answer.
+  Evidence is a file + line range (not a chunk id, so the set survives chunker changes); a retrieved chunk is a hit when its lines overlap
+  any evidence range. `answerable`: yes | partial | no; partial/no questions have no evidence but `related` ranges that should surface
+  and be classified, not used. Every "why" has evidence in `journal/`. Each question has a one-sentence reference answer (for 1.9).
+  Tools: `npm run ai:find` (evidence lookup), `npm run ai:golden:check` (validator).
+  Verify: `npm run ai:golden:check` reports 0 errors.
 
-- [ ] **1.3 Embedder interface and local implementation.** `ai/embed/`. Interface `Embedder { embed(texts, kind: 'document' | 'query'): Promise<number[][]>; readonly name: string; readonly dims: number }`.
+- [ ] NEXT **1.3 Embedder interface and local implementation.** `ai/embed/`. Interface `Embedder { embed(texts, kind: 'document' | 'query'): Promise<number[][]>; readonly name: string; readonly dims: number }`.
   `LocalEmbedder` calls Ollama on the inference box (`bge-m3`, 1024 dimensions), batched, with retry and a timeout. A `FakeEmbedder` for tests.
   `npm run ai:index` embeds all chunks and writes `ai/index/<embedder-name>.json`, so several embedders can be compared later. Record wall time.
   `VoyageEmbedder` (`voyage-4`) is optional and only added if evaluation in 1.4 to 1.6 suggests the local model is the bottleneck.
