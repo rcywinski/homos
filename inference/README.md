@@ -15,7 +15,7 @@ CC-Win asks CC-Mac, who updates this file first.
 | Server | Ollama, native Windows install, using the GPU |
 | Address | `http://192.168.1.8:11434` (LAN) and the same port on the box's VPN address |
 | Mac config | `INFERENCE_URL` in `.env`, base URL without a trailing slash |
-| Embedding model | `bge-m3` (multilingual, Polish and English, 1024 dimensions, 8192 token context) |
+| Embedding model | `bge-m3` (multilingual, Polish and English, 1024 dimensions; **2048 tokens per input in practice**, see below) |
 | Endpoint | `POST /api/embed` |
 | Availability | starts by itself after a reboot, without anyone logging in to the desktop |
 | Exposure | LAN and VPN subnets only, never the public internet |
@@ -39,8 +39,8 @@ The client checks: HTTP 200, `embeddings.length === input.length`, every vector 
 Any other answer is an error and the batch is retried with a timeout.
 
 **`LocalEmbedder` sends no `options` at all.** Ollama restarts the model runner whenever the request `options`
-differ from the loaded ones, and `num_ctx` is the one that matters here. Leaving it out gives `bge-m3` its maximum
-context of 8192 tokens, which is what the chunker relies on, so there is nothing to gain by setting it. Measured from the
+differ from the loaded ones, and `num_ctx` is the one that matters here. Setting it gains nothing anyway: see
+"Input length" below, the server takes at most 2048 tokens per input with or without it. Measured from the
 Mac on 9 Nov 2026 with the model warm in VRAM:
 
 | Request | Time |
@@ -54,6 +54,25 @@ Mac on 9 Nov 2026 with the model warm in VRAM:
 CC-Win measured the same effect on the box at 1.5 to 5 s per `num_ctx` change. Either way a client that varied
 `num_ctx` per batch would pay a reload on almost every call. A top-level `keep_alive` is not an option and does not
 cause a reload, so indexing runs may send it (see "Behaviour the client should expect").
+
+### Input length: 2048 tokens, and `truncate: false`
+
+The model metadata says `bert.context_length 8192`, but this Ollama build embeds at most **2048 tokens per input**.
+Measured from the Mac on 9 Nov 2026 with `prompt_eval_count` from the response:
+
+| Input | Tokens counted |
+|---|---|
+| 3000 characters of a morning report | 1441 |
+| 6000 characters | 2048 (cut) |
+| 12000 characters | 2048 (cut) |
+| 12000 characters with `"options": {"num_ctx": 8192}` | 2048 (cut) |
+| 12000 characters with `"truncate": false` | HTTP 413 `the input length exceeds the context length` |
+
+By default the cut is silent: the vector then describes only the first ~2048 tokens of the text. So:
+
+- the chunker (`ai/corpus/tokens.ts`) keeps every chunk under 2048 real tokens (checked over all chunks: max 1444);
+- `LocalEmbedder` always sends `"truncate": false` at the top level of the body (it is not an `option`, so it
+  does not reload the model), and treats HTTP 413 as a bug in chunking, never retries it.
 
 ### Network exposure
 
