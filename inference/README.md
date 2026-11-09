@@ -38,8 +38,10 @@ Content-Type: application/json
 The client checks: HTTP 200, `embeddings.length === input.length`, every vector has 1024 numbers.
 Any other answer is an error and the batch is retried with a timeout.
 
-**Every batch must be sent with identical options.** Ollama restarts the model runner whenever the request `options`
-differ from the loaded ones. Measured from the Mac on 9 Nov 2026 with the model warm in VRAM:
+**`LocalEmbedder` sends no `options` at all.** Ollama restarts the model runner whenever the request `options`
+differ from the loaded ones, and `num_ctx` is the one that matters here. Leaving it out gives `bge-m3` its maximum
+context of 8192 tokens, which is what the chunker relies on, so there is nothing to gain by setting it. Measured from the
+Mac on 9 Nov 2026 with the model warm in VRAM:
 
 | Request | Time |
 |---|---|
@@ -49,8 +51,9 @@ differ from the loaded ones. Measured from the Mac on 9 Nov 2026 with the model 
 | same call again | 0.02 s |
 | back to no `options` | 3.2 s (reload again) |
 
-So `LocalEmbedder` sends no `options` at all (or one fixed set, defined in one place) and never varies them per batch.
-A top-level `keep_alive` does not cause a reload.
+CC-Win measured the same effect on the box at 1.5 to 5 s per `num_ctx` change. Either way a client that varied
+`num_ctx` per batch would pay a reload on almost every call. A top-level `keep_alive` is not an option and does not
+cause a reload, so indexing runs may send it (see "Behaviour the client should expect").
 
 ### Network exposure
 
