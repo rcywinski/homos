@@ -91,11 +91,16 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   exact; switch to a JSON manifest + Float32 binary (3.9 MB) only with several indexes or a much larger corpus.
   Smoke check: Polish and English question return the same top chunk (both an English DECISION-LOG row: English summaries attract queries).
 
-- [ ] NEXT **1.4 Vector store and baseline evaluation.** `ai/store/vector.ts`: load the index, cosine similarity, top-k. `ai/eval/run.ts`: for each golden question
-  compute recall@5, recall@10, MRR; write `ai/eval/results/<date>-<label>.json` and a markdown table. This is the baseline number everything else is compared to.
-  Verify: `npm run ai:eval -- --label baseline-vector` prints the table.
+- [x] 2026-11-09 **1.4 Vector store and baseline evaluation.** `ai/store/vector.ts`: load the index, dot product (vectors are normalised), brute-force top-k
+  behind a batch-first `Retriever` interface that 1.5 and 1.6 implement too. `ai/eval/run.ts`: question-level recall@5/10/30 (a question is found
+  when any top-k chunk overlaps any evidence range; @30 is the ceiling for the 1.6 reranker) and MRR@10, by category, plus a journal-only variant
+  (only evidence in `journal/` counts) to measure the pull of the English `docs/`. Writes `ai/eval/results/<date>-<label>.{json,md}` with the golden
+  version, and a per-question top-5 with hit/related/miss tags for human review (the retriever never adds evidence).
+  Baseline on golden v1.2 (26 answerable questions, 1 question = 3.8 pp): recall@5 50% (13/26), recall@10 58% (15/26), recall@30 58% (15/26),
+  MRR@10 0.378; journal-only recall@10 46% (12/26), "why" 67% full vs 33% journal-only; dated-fact recall@5 30% (3/10).
+  The v1.1 run is kept next to it: the owner's review of its top-5 misses produced golden v1.2.
 
-- [ ] **1.5 BM25 and hybrid search.** `ai/store/bm25.ts` (own implementation or a small library), `ai/store/hybrid.ts` merging the two ranked lists
+- [ ] NEXT **1.5 BM25 and hybrid search.** `ai/store/bm25.ts` (own implementation or a small library), `ai/store/hybrid.ts` merging the two ranked lists
   (reciprocal rank fusion). Re-run evaluation with label `hybrid`. Expect the identifier questions to improve most.
   Verify: evaluation table shows baseline and hybrid side by side.
 

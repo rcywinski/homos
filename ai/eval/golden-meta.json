@@ -1,5 +1,5 @@
 {
-  "version": "1.1",
+  "version": "1.2",
   "rules": [
     "A chunk or range is added to evidence only if a human reading it agrees it answers the question; appearing in a retriever's top-k is never the reason.",
     "Every evaluation result records the golden version it used."
@@ -14,6 +14,11 @@
       "version": "1.1",
       "date": "2026-11-09",
       "summary": "Evidence widened: id-02 (+#5978579 SZEROKI rows in reports 12-18.09), why-01 (+docs/CASE-STUDY.md:81-84). Both gaps surfaced by a raw vector top-5 in step 1.3 and confirmed by reading the sources."
+    },
+    {
+      "version": "1.2",
+      "date": "2026-11-09",
+      "summary": "Owner review of the baseline-vector top-5 misses: evidence added to why-09 (DECISION-LOG.md:22) and dated-09 (CASE-STUDY.md:81-84, DECISION-LOG.md:28); DB-SCHEMA.md:164-169 added to id-07 as related only (misleading alone); INFRA.md:52 rejected for why-05."
     }
   ]
 }
