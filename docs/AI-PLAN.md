@@ -66,14 +66,14 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
 
 ## Phase 1: retrieval with citations
 
-- [ ] NEXT **1.1 Corpus loader and chunker.** `ai/corpus/`. One loader per file type:
+- [x] 2026-11-09 **1.1 Corpus loader and chunker.** `ai/corpus/`. One loader per file type:
   journal entries in `CONTEXT.md` (split on dated session headers in section 4; sections 1 to 3 as their own chunks),
   morning reports (one chunk per `##` section, date from the file name), decision table rows (one row = one chunk, both the Polish table
   and `docs/DECISION-LOG.md`), task queues and research queue (split on `##`/`###`), `docs/*.md` (split on `##`).
   Every chunk carries `{ id, file, lineStart, lineEnd, date?, session?, kind, text }`. Oversized chunks are split at paragraph boundaries with a hard cap.
   Print a histogram of chunk sizes. Verify: `npm run ai:chunks` lists chunk count per file and the 5 largest chunks; no chunk above the cap.
 
-- [ ] **1.2 Golden question set, version 1.** `ai/eval/golden.jsonl`, 30 questions in English, each with the chunk ids (or file + line range) that answer it.
+- [ ] NEXT **1.2 Golden question set, version 1.** `ai/eval/golden.jsonl`, 30 questions in English, each with the chunk ids (or file + line range) that answer it.
   Mix: 10 "why" questions from the decision log, 10 dated facts from morning reports (tests whether retrieval hits the right day, not a neighbouring one),
   5 identifiers (position numbers, config names such as FLAT_NARROW), 5 questions with no answer in the corpus (the system must say so).
   Written by the owner with the assistant, by hand. This is done before any retrieval code so the metric is not tuned to the code.

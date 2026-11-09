@@ -8,8 +8,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "test": "npm run typecheck && npm run test:math && npm run backtest:validate",
+    "test": "npm run typecheck && npm run test:math && npm run test:ai && npm run backtest:validate",
     "test:math": "tsx test/v3math.test.ts",
+    "test:ai": "tsx ai/corpus/split.test.ts",
     "backtest:validate": "tsx backtest/validate.ts",
     "backtest": "tsx backtest/run.ts",
     "backtest:selection": "tsx backtest/selection.ts",
@@ -31,7 +32,8 @@
     "backtest:house-edge": "tsx backtest/vault-house-edge.ts",
     "backtest:lp-timing": "tsx backtest/lp-vol-timing.ts",
     "agent": "tsx scripts/agent-runner.ts",
-    "wallet": "tsx scripts/wallet.ts"
+    "wallet": "tsx scripts/wallet.ts",
+    "ai:chunks": "tsx ai/corpus/chunks-cli.ts"
   },
   "author": "Rafał Cywiński",
   "license": "MIT",
