@@ -22,7 +22,9 @@ const fileLines = new Map(
 );
 const { questions, issues, hits, relatedHits, overlap } = checkGolden(readFileSync(file, 'utf8'), chunks, fileLines);
 
-console.log(`\n${file}: ${questions.length} questions\n`);
+const metaFile = path.join(path.dirname(file), 'golden-meta.json');
+const version = existsSync(metaFile) ? (JSON.parse(readFileSync(metaFile, 'utf8')) as { version: string }).version : 'unknown';
+console.log(`\n${file} (golden v${version}): ${questions.length} questions\n`);
 questions.forEach((q, k) => {
   const fmt = (list: Evidence[], ids: string[][] | undefined, tag: string) =>
     list.map((e, i) => `${tag} ${e.file}:${e.lines?.[0]}-${e.lines?.[1]} -> ${(ids?.[i] ?? []).join(', ') || 'NO CHUNK'}`);
