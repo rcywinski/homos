@@ -100,11 +100,17 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   MRR@10 0.378; journal-only recall@10 46% (12/26), "why" 67% full vs 33% journal-only; dated-fact recall@5 30% (3/10).
   The v1.1 run is kept next to it: the owner's review of its top-5 misses produced golden v1.2.
 
-- [ ] NEXT **1.5 BM25 and hybrid search.** `ai/store/bm25.ts` (own implementation or a small library), `ai/store/hybrid.ts` merging the two ranked lists
-  (reciprocal rank fusion). Re-run evaluation with label `hybrid`. Expect the identifier questions to improve most.
-  Verify: evaluation table shows baseline and hybrid side by side.
+- [x] 2026-11-09 **1.5 BM25 and hybrid search.** `ai/store/tokenize.ts` (lowercase, diacritics folded, dates in six forms to one token `d20260915`,
+  identifiers kept whole, short PL+EN stopword list with "nie" kept, optional truncate-to-6 stemming), `ai/store/bm25.ts` (own implementation,
+  k1 1.2, b 0.75; a chunk's metadata date is indexed as its date token: indexing existing metadata, not generated text), `ai/store/hybrid.ts`
+  (reciprocal rank fusion, c = 60, depth 100, no weights to tune). `npm run ai:compare` puts all runs of one golden version side by side.
+  Result on golden v1.2 (honest line): hybrid is worse than vectors at top 10 (recall@10 46% vs 58%, 12/26 vs 15/26) and better at top 30
+  (65% vs 58%, 17/26 vs 15/26). BM25 alone: recall@10 38%, but 100% of identifiers at top 30. Causes: English questions share no words with
+  the Polish journal (BM25 "why" journal-only recall@10 0/9; hybrid lowers it from 3/9 to 1/9), English words in questions hit unrelated
+  Polish tokens ("open" vs "propozycje OPEN"), and equal-weight RRF drags good vector hits down. Stemming none vs prefix6 and dropping "nie":
+  within one question, "nie" kept. Decision: `hybrid-stem-prefix6` is the candidate generator for 1.6 (its recall@30 is the reranker's ceiling).
 
-- [ ] **1.6 Reranker.** `[CC-Mac writes the service, CC-Win deploys it]` `inference/`: a small Python service (FastAPI + sentence-transformers on CUDA) on the GPU box with `POST /rerank`
+- [ ] NEXT **1.6 Reranker.** `[CC-Mac writes the service, CC-Win deploys it]` `inference/`: a small Python service (FastAPI + sentence-transformers on CUDA) on the GPU box with `POST /rerank`
   running `bge-reranker-v2-m3`; runs as a Windows service next to Ollama. `ai/rerank/`: `Reranker` interface plus `LocalReranker` client.
   Retrieve 30 with hybrid, rerank, keep 5. Label `hybrid-rerank`. Record latency per query with and without the GPU (CPU fallback flag in the service).
   Verify: table with three rows; latency numbers in `docs/AI-RAG.md`.
@@ -112,7 +118,10 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
 - [ ] **1.7 Contextual retrieval (Claude).** Before embedding, ask Claude for a one or two sentence context for each chunk given its whole source document,
   using prompt caching so the document is paid for once per file, not once per chunk. Prepend the context to the chunk text for embedding and BM25.
   Record tokens and cost. Label `contextual-hybrid-rerank`.
-  Verify: table with four rows; `docs/AI-RAG.md` gets its first draft with the table and the cost line.
+  Second variant, measured separately: query translation/expansion. One Claude call per question returns a Polish rendering plus 3-5 Polish
+  keywords the journal author would use; vectors get the original question, BM25 gets the original plus the Polish text. Label
+  `query-pl-hybrid-rerank`. Rationale: the 1.5 result shows that BM25's weakness here is the question language, not the algorithm.
+  Verify: table with the two variants as separate rows next to the earlier ones; `docs/AI-RAG.md` gets its first draft with the table and the cost line.
 
 - [ ] **1.8 Answer with citations.** `ai/answer/`: `Generator` interface with `ClaudeGenerator` as the phase 1 implementation; prompt with the top chunks, each tagged with its id; Claude answers in a structured output
   `{ answer, citations: [{ chunkId, quote }], notEnoughContext: boolean }`. A verifier checks that every quoted string actually occurs in the cited chunk

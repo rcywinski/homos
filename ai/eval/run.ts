@@ -15,6 +15,9 @@ import type { Chunk } from '../corpus/types';
 import { LocalEmbedder } from '../embed/local';
 import { corpusHash, indexPath, readIndex } from '../embed/index-file';
 import { VectorStore } from '../store/vector';
+import { Bm25Index } from '../store/bm25';
+import { HybridRetriever } from '../store/hybrid';
+import type { Stem } from '../store/tokenize';
 import type { Retriever } from '../store/types';
 import { CATEGORIES, overlaps, type GoldenQuestion } from './golden';
 import { firstHitRank, fmtRatio, journalOnly, mrrAt, recallAt } from './metrics';
@@ -50,7 +53,15 @@ async function main() {
 
   const embedder = new LocalEmbedder({ baseUrl });
   const index = readIndex(indexPath(embedder.name, root), chunks);
-  const retriever: Retriever = new VectorStore(index.ids, index.vectors, embedder);
+  const kind = arg('--retriever') ?? 'vector';
+  const stem = (arg('--stem') ?? 'none') as Stem;
+  if (!['none', 'prefix6'].includes(stem)) throw new Error('--stem must be none or prefix6');
+  const vector = new VectorStore(index.ids, index.vectors, embedder);
+  const bm25 = () => new Bm25Index(chunks, { stem, dropNie: process.argv.includes('--drop-nie') });
+  const retriever: Retriever =
+    kind === 'vector' ? vector : kind === 'bm25' ? bm25() : kind === 'hybrid' ? new HybridRetriever([vector, bm25()]) : (() => {
+      throw new Error('--retriever must be vector, bm25 or hybrid');
+    })();
 
   const t0 = Date.now();
   const rankings = await retriever.search(
@@ -61,6 +72,7 @@ async function main() {
 
   const perQuestion = golden.map((q, i) => {
     const ranked = rankings[i].map((h) => byId.get(h.id) as Chunk);
+    // BM25 and hybrid return only chunks that scored; a question with no scored chunk has an empty ranking.
     const answerable = q.answerable === 'yes';
     const relatedRank = q.related?.length ? firstHitRank(ranked, q.related) : null;
     const top5 = rankings[i].slice(0, 5).map((h, k) => {
