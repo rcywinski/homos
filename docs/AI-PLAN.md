@@ -56,6 +56,14 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   but the reranker (1.6) and the local generator comparison (phase 3) do, and one interface with a cloud and a local implementation is the point.
   Verify: the curl above works from the Mac; `docs/INFRA.md` gets a short "inference box" note.
 
+- [x] 2026-11-09 **0.4 Dependabot alerts.** Narrow scope: list the open alerts with `gh api repos/rcywinski/homos/dependabot/alerts`
+  (package, severity, fixed version) and fix exactly those. `npm audit fix` without `--force` first; if an alert needs a major bump,
+  a targeted `npm install pkg@version`, checking that nothing else moves. Check the critical entries of `npm audit` and report them
+  before touching them if they are runtime deps (ethers, viem, wagmi). After fixing: `npm test`, `npm run lint`, `npm run build`.
+  One commit on `main` (`chore(deps): fix Dependabot alerts`), push `main`, merge `main` into `ai-layer`.
+  No `dependabot.yml`: the project is closed and weekly PRs would be noise; GitHub security updates work without it.
+  Anything that cannot be fixed safely goes in one paragraph in `docs/INFRA.md` with the reason. Budget under an hour.
+
 ## Phase 1: retrieval with citations
 
 - [ ] NEXT **1.1 Corpus loader and chunker.** `ai/corpus/`. One loader per file type:
