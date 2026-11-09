@@ -1,0 +1,137 @@
+# AI layer plan: retrieval over the project journal and a tool-using agent
+
+Status legend: `[ ]` to do, `[ ] NEXT` the step being worked on, `[x]` done (with date).
+One step = one explanation, one build, one verification, one commit. See `CLAUDE.md` for the working mode.
+
+## Why
+
+The project produced ~1.3 MB of working notes in six weeks: a living journal, hand-off inboxes, 32 morning reports,
+task queues and decision notes. They are the most informative part of the case study and the least readable one.
+Nobody, including the author, will read 350k tokens to find out why the cbBTC range was narrowed on 31 August.
+
+The AI layer answers such questions with citations to file and line, and later lets an agent combine the journal
+with the backtesting engine. It is also a showcase of the standard building blocks of applied LLM engineering,
+each with a documented decision and a measured result.
+
+## Target layout
+
+```
+journal/              Polish working notes restored from git history (tag journal-final), see journal/README.md
+ai/
+  corpus/             loaders and chunkers: one chunk = one journal entry / report section / decision row, with metadata
+  embed/              Embedder interface; LocalEmbedder (Ollama on the LAN GPU box) first, VoyageEmbedder optional
+  store/              JSON vector store, cosine similarity, BM25 index, hybrid merge
+  rerank/             Reranker interface; LocalReranker (own Python service on the GPU box), Voyage optional
+  answer/             Generator interface; ClaudeGenerator (phase 1), LocalGenerator (phase 3 comparison); citations + verification
+inference/            Python service for the GPU box (reranker; later anything Ollama cannot serve), see inference/README.md
+  agent/              phase 2: tool definitions, agentic loop, whitelist bridge to scripts/agent-runner.ts
+  eval/               golden question set, metrics (recall@k, MRR, citation accuracy), results/ (committed)
+  cli.ts              npm run ask -- "question"
+  index/              generated embeddings and indexes (gitignored)
+docs/AI-RAG.md        design decisions, evaluation table, costs, example transcripts
+```
+
+## Phase 0: preparation
+
+- [x] 2026-11-09 **0.1 Branch and plumbing.** Create branch `ai-layer`. Add `ai/` to `tsconfig.json` include. Add `ai/index/` to `.gitignore`.
+  Add `ANTHROPIC_API_KEY` and `INFERENCE_URL` (base URL of the local inference box, e.g. `http://192.168.1.8:11434`) to `.env.example` with comments. Install `@anthropic-ai/sdk`. No embedding vendor SDK: embeddings are served over HTTP from the local inference box (step 0.3).
+  Verify: `npm run typecheck` passes, `git status` shows only the intended files.
+
+- [ ] NEXT **0.2 Restore the journal.** Two sources exist: tag `journal-final` in this repo (state of 22-23 Sep 2026) and the sibling clone
+  `../HOMOS-private`, branch `private`, which may hold later entries. First compare them (`git -C ../HOMOS-private log --oneline private -5`,
+  `diff` of `CONTEXT.md`); take the newer one. Files: `CONTEXT.md HANDOFF.md reports/ TASKS-*.md RESEARCH-QUEUE.md DECYZJE-2026-08-26.md
+  KAPITAL-REKOMENDACJA.md PYTANIE-SZEROKOSC-I-SIGMA.md SELECTOR-LOG.md`, moved into `journal/` (reports to `journal/reports/`).
+  Remove the `reports/` and `private-journal/` lines from `.gitignore`.
+  Write `journal/README.md` in English: what these files are, that they are raw working notes in Polish kept on purpose,
+  how the four AI sessions used them (link `docs/AI-WORKFLOW.md`), and a short map of the files. Add a note to the main README.
+  A secret scan of the `journal-final` files was done on 9 Nov 2026 (no token values, no keys, only variable names and LAN addresses of a
+  decommissioned server); repeat the scan on whatever is restored.
+  After this step HOMOS-private is redundant; the owner decides whether to archive it.
+  Verify: `du -sh journal/` is about 1.3 MB, `grep -rEn 'sk-ant-|[0-9]{8,10}:[A-Za-z0-9_-]{35}' journal/` finds nothing.
+
+- [ ] **0.3 Local inference box.** `[CC-Win]` (CC-Mac writes `inference/README.md` with the expected endpoint first, then tests from the Mac.) The former bot server (Windows, RTX 3090 24 GB, on 24/7, LAN `192.168.1.8`) becomes the inference server.
+  Install Ollama, pull the multilingual embedding model `bge-m3`, expose Ollama on the LAN (bind address + firewall rule limited to the LAN and VPN
+  subnets, same pattern as the old bot API). From the Mac: `curl $INFERENCE_URL/api/embed` with a Polish and an English sentence returns two vectors.
+  Write `inference/README.md`: what runs where, how to start it, how to check it. Why: the corpus is small enough that embeddings do not need a GPU,
+  but the reranker (1.6) and the local generator comparison (phase 3) do, and one interface with a cloud and a local implementation is the point.
+  Verify: the curl above works from the Mac; `docs/INFRA.md` gets a short "inference box" note.
+
+## Phase 1: retrieval with citations
+
+- [ ] **1.1 Corpus loader and chunker.** `ai/corpus/`. One loader per file type:
+  journal entries in `CONTEXT.md` (split on dated session headers in section 4; sections 1 to 3 as their own chunks),
+  morning reports (one chunk per `##` section, date from the file name), decision table rows (one row = one chunk, both the Polish table
+  and `docs/DECISION-LOG.md`), task queues and research queue (split on `##`/`###`), `docs/*.md` (split on `##`).
+  Every chunk carries `{ id, file, lineStart, lineEnd, date?, session?, kind, text }`. Oversized chunks are split at paragraph boundaries with a hard cap.
+  Print a histogram of chunk sizes. Verify: `npm run ai:chunks` lists chunk count per file and the 5 largest chunks; no chunk above the cap.
+
+- [ ] **1.2 Golden question set, version 1.** `ai/eval/golden.jsonl`, 30 questions in English, each with the chunk ids (or file + line range) that answer it.
+  Mix: 10 "why" questions from the decision log, 10 dated facts from morning reports (tests whether retrieval hits the right day, not a neighbouring one),
+  5 identifiers (position numbers, config names such as FLAT_NARROW), 5 questions with no answer in the corpus (the system must say so).
+  Written by the owner with the assistant, by hand. This is done before any retrieval code so the metric is not tuned to the code.
+  Verify: every referenced chunk id exists in the output of 1.1.
+
+- [ ] **1.3 Embedder interface and local implementation.** `ai/embed/`. Interface `Embedder { embed(texts, kind: 'document' | 'query'): Promise<number[][]>; readonly name: string; readonly dims: number }`.
+  `LocalEmbedder` calls Ollama on the inference box (`bge-m3`, 1024 dimensions), batched, with retry and a timeout. A `FakeEmbedder` for tests.
+  `npm run ai:index` embeds all chunks and writes `ai/index/<embedder-name>.json`, so several embedders can be compared later. Record wall time.
+  `VoyageEmbedder` (`voyage-4`) is optional and only added if evaluation in 1.4 to 1.6 suggests the local model is the bottleneck.
+  Verify: index file exists, vector count equals chunk count, a smoke query in Polish and the same in English return the same top chunk.
+
+- [ ] **1.4 Vector store and baseline evaluation.** `ai/store/vector.ts`: load the index, cosine similarity, top-k. `ai/eval/run.ts`: for each golden question
+  compute recall@5, recall@10, MRR; write `ai/eval/results/<date>-<label>.json` and a markdown table. This is the baseline number everything else is compared to.
+  Verify: `npm run ai:eval -- --label baseline-vector` prints the table.
+
+- [ ] **1.5 BM25 and hybrid search.** `ai/store/bm25.ts` (own implementation or a small library), `ai/store/hybrid.ts` merging the two ranked lists
+  (reciprocal rank fusion). Re-run evaluation with label `hybrid`. Expect the identifier questions to improve most.
+  Verify: evaluation table shows baseline and hybrid side by side.
+
+- [ ] **1.6 Reranker.** `[CC-Mac writes the service, CC-Win deploys it]` `inference/`: a small Python service (FastAPI + sentence-transformers on CUDA) on the GPU box with `POST /rerank`
+  running `bge-reranker-v2-m3`; runs as a Windows service next to Ollama. `ai/rerank/`: `Reranker` interface plus `LocalReranker` client.
+  Retrieve 30 with hybrid, rerank, keep 5. Label `hybrid-rerank`. Record latency per query with and without the GPU (CPU fallback flag in the service).
+  Verify: table with three rows; latency numbers in `docs/AI-RAG.md`.
+
+- [ ] **1.7 Contextual retrieval (Claude).** Before embedding, ask Claude for a one or two sentence context for each chunk given its whole source document,
+  using prompt caching so the document is paid for once per file, not once per chunk. Prepend the context to the chunk text for embedding and BM25.
+  Record tokens and cost. Label `contextual-hybrid-rerank`.
+  Verify: table with four rows; `docs/AI-RAG.md` gets its first draft with the table and the cost line.
+
+- [ ] **1.8 Answer with citations.** `ai/answer/`: `Generator` interface with `ClaudeGenerator` as the phase 1 implementation; prompt with the top chunks, each tagged with its id; Claude answers in a structured output
+  `{ answer, citations: [{ chunkId, quote }], notEnoughContext: boolean }`. A verifier checks that every quoted string actually occurs in the cited chunk
+  and resolves chunk id to file and lines. The 5 unanswerable golden questions must come back with `notEnoughContext: true`.
+  Verify: `npm run ask -- "Why did the live product stay wide?"` prints an answer with `file:lineStart-lineEnd` citations.
+
+- [ ] **1.9 Answer-quality evaluation.** For the 25 answerable questions: citation accuracy (cited chunk is a golden chunk) and an LLM-as-judge score
+  against a short reference answer written by the owner. Add to the results table.
+
+- [ ] **1.10 Write-up.** `docs/AI-RAG.md`: the question this layer answers, the corpus, each design decision with the alternative rejected
+  (structure-based chunking vs fixed size, no vector database at this scale, hybrid, reranker, contextual retrieval), the evaluation table, costs,
+  three example transcripts with citations, what did not work. README section "AI layer". A short GIF of the CLI.
+  Merge `ai-layer` to `main`.
+
+## Phase 2: tool-using agent
+
+- [ ] **2.1 Tool definitions.** `ai/agent/tools.ts`: `search_journal(query)` (phase 1 retrieval), `read_decision_log()`, `read_backtest_results(name)`
+  (JSON in `backtest/results/`, restored from `journal-final` for the e8 and walk-forward runs), `list_backtest_configs()`.
+  Each tool has a JSON schema, a pure handler and a unit test.
+- [ ] **2.2 Agentic loop.** `ai/agent/run.ts`: Anthropic SDK tool use, max 10 steps, every tool call and result logged to `ai/agent/logs/` (gitignored),
+  final answer with citations reused from 1.8. `npm run agent:ask -- "Would FlatWide have passed the gate with a 3 percent narrowing?"`.
+- [ ] **2.3 Whitelisted job execution.** `run_backtest(config)` drops a job file for `scripts/agent-runner.ts` and polls `.agent/status.json`.
+  The agent can only choose a whitelisted script, never a command. Document this as the security boundary.
+- [ ] **2.4 Agent evaluation and write-up.** 10 multi-step questions with expected tool sequences; measure whether the right tools were called and the
+  answer cites the right evidence. Add a section to `docs/AI-RAG.md`, three transcripts, README update. Merge to `main`.
+
+## Phase 3: optional, only if time allows
+
+- [ ] `/ask` endpoint in `bot/server.ts` and a panel in the cockpit UI.
+- [ ] **Local generator comparison.** `[CC-Win pulls the models]` `LocalGenerator` on Ollama (e.g. Qwen 2.5 14B or 32B, 4-bit, fits in 24 GB) behind the same `Generator`
+  interface. Re-run 1.9 with the local model: same retrieval, same golden set, same judge. Also re-run 1.7 with the local model writing the chunk
+  contexts and compare recall against the Claude-written contexts. Write up as "cloud vs local" in `docs/AI-RAG.md`: quality, latency, cost.
+  This answers the question clients actually ask: can this run without sending data to a cloud model, and what does it cost in quality.
+- [ ] `VoyageEmbedder` as a cloud embedding alternative, if 1.4 to 1.6 showed retrieval misses that look like embedding quality.
+- [ ] Temporal filters in retrieval (restrict to a date range parsed from the question).
+
+## Out of scope, deliberately
+
+- No vector database. The corpus is a few thousand chunks; a JSON file and cosine similarity in memory is the right tool. Revisit above ~100k chunks.
+- No fine-tuning. Retrieval over documents is the problem, not model behaviour.
+- No orchestration framework. One session builds this, step by step, with the owner reading along.

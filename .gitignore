@@ -22,6 +22,9 @@ data/
 .agent/
 .bot/
 backtest/results/
+# AI layer: generated embeddings and search indexes (rebuild with npm run ai:index).
+# Evaluation results in ai/eval/results/ are committed on purpose.
+ai/index/
 
 # IDE and Editor files
 .idea/

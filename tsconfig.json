@@ -25,7 +25,8 @@
     "scripts",
     "backtest",
     "test",
-    "bot"
+    "bot",
+    "ai"
   ],
   "exclude": [
     "node_modules"
