@@ -105,6 +105,31 @@ Ollama has no Windows service mode, so it runs as a scheduled task:
 - Action: `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\ollama\start-ollama.ps1`.
 - The tray app autostart (`Ollama.lnk` in the user's Startup folder) was removed, so only one server owns port 11434.
 
+### Tray app disabled, updates on purpose
+
+The installer also ships a tray app (`ollama app.exe`). Even without a Startup shortcut it came back at the first
+desktop login after the reboot (9 Nov 2026, started by Explorer, source not found) and then tried every second to start
+its own server on 11434, failing with "address in use" against the SYSTEM task. It also runs an hourly self-updater,
+which could replace binaries under the running server. It is therefore disabled by renaming it:
+`C:\ollama\app\ollama app.exe` -> `C:\ollama\app\ollama app.exe.disabled`.
+
+Updating Ollama is a deliberate step (as Administrator):
+
+```powershell
+Stop-ScheduledTask -TaskName 'HOMOS inference (Ollama)'
+Get-Process ollama -ErrorAction SilentlyContinue | Stop-Process -Force
+winget upgrade --id Ollama.Ollama -e --location C:\ollama\app
+# The installer restores the tray app and its Startup shortcut: disable both again.
+Get-Process 'ollama app' -ErrorAction SilentlyContinue | Stop-Process -Force
+Remove-Item "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Startup\Ollama.lnk" -ErrorAction SilentlyContinue
+Get-Process ollama -ErrorAction SilentlyContinue | Stop-Process -Force   # the server the tray app may have started as the user
+Remove-Item 'C:\ollama\app\ollama app.exe.disabled' -ErrorAction SilentlyContinue   # the old copy, or the rename fails
+Rename-Item 'C:\ollama\app\ollama app.exe' 'ollama app.exe.disabled'
+Start-ScheduledTask -TaskName 'HOMOS inference (Ollama)'
+```
+
+Then run the checks below and update the version line in "Versions".
+
 `C:\ollama\start-ollama.ps1`:
 
 ```powershell
@@ -162,5 +187,9 @@ The CLI reads `OLLAMA_HOST`; `0.0.0.0` is a listen address, so in an interactive
 - The client can override the unload timer per request with `keep_alive` in the body, for example
   `{ "model": "bge-m3", "input": [...], "keep_alive": "30m" }`. Note for CC-Mac: pass it during indexing runs so the model
   is not unloaded mid-run between batches; normal queries can leave it out and use the 5 minute default.
+- First calls after a reboot (9 Nov 2026, Mac test): GPU discovery takes about 12 s after the server starts listening,
+  so a request in that window waits; the Mac saw 13 s for the cold call (5.1 s of it on the server, mostly the model load).
+  The next call took 5.2 s with no model load and about 50 ms of compute; this was a one-off right after boot and is not
+  reproducible (the same call now takes 80 to 220 ms).
 - Local smoke test on 9 Nov 2026: the Polish and English sentences from the Mac check returned `2 [1024, 1024]`,
   cosine similarity between the two vectors 0.894.
