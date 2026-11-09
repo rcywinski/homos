@@ -57,17 +57,21 @@ function decisionRows(
       ...(isoDate(cells[0]) ? { date: isoDate(cells[0]) } : {}),
     });
   }
-  const restLines = rest.filter((i) => lines[i].trim() !== '');
-  if (restLines.length) {
-    const s = rest[0];
-    const e = rest[rest.length - 1] + 1;
-    const unit = sectionUnit(file, lines, { start: s, end: e, heading: null, level: 0 }, restKind);
-    unit.text = rest.map((i) => lines[i]).join('\n');
-    unit.raw = false;
-    unit.title = restTitle;
-    units.unshift(unit);
+  // Text around the table: one unit per contiguous run of lines, so its line range never covers table rows.
+  const runs: number[][] = [];
+  for (const i of rest) {
+    const run = runs[runs.length - 1];
+    if (run && run[run.length - 1] === i - 1) run.push(i);
+    else runs.push([i]);
   }
-  return units;
+  const around = runs
+    .filter((run) => run.some((i) => lines[i].trim() !== '' && !/^#{1,6}\s/.test(lines[i])))
+    .map((run) => {
+      const unit = sectionUnit(file, lines, { start: run[0], end: run[run.length - 1] + 1, heading: null, level: 0 }, restKind);
+      unit.title = restTitle;
+      return unit;
+    });
+  return [...around, ...units].sort((a, b) => a.lineStart - b.lineStart);
 }
 
 export function loadContext(file: string, content: string): Unit[] {

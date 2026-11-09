@@ -4,7 +4,7 @@
  */
 import { readFileSync } from 'fs';
 import { boundaries, splitText, toChunks } from './split';
-import { loadContext } from './loaders';
+import { loadContext, loadDecisionLog } from './loaders';
 import { isoDate, tableCells } from './markdown';
 import { estimateTokens, MAX_CHUNK_TOKENS } from './tokens';
 import type { Unit } from './types';
@@ -106,6 +106,19 @@ const squash = (s: string) => s.replace(/\s+/g, '');
   }
   const tiny = entries.reduce((a, b) => (a.text.length < b.text.length ? a : b));
   check('tiny entry kept whole', toChunks(tiny).length === 1);
+}
+
+// 7. Text around a decision table must not claim the table's lines (it would be a false hit in evaluation).
+{
+  const units = loadDecisionLog('docs/DECISION-LOG.md', readFileSync('docs/DECISION-LOG.md', 'utf8'));
+  const rows = units.filter((u) => u.kind === 'decision');
+  const around = units.filter((u) => u.kind !== 'decision');
+  check('decision log rows', rows.length === 24, String(rows.length));
+  check(
+    'text around the table does not overlap rows',
+    around.every((u) => rows.every((r) => r.lineStart < u.lineStart || r.lineStart > u.lineEnd)),
+    around.map((u) => `${u.lineStart}-${u.lineEnd}`).join(' '),
+  );
 }
 
 console.log(`${passed} passed, ${failed} failed`);
