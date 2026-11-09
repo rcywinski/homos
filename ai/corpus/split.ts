@@ -95,7 +95,10 @@ export function toChunks(unit: Unit, maxTokens = MAX_CHUNK_TOKENS): Chunk[] {
   return ranges.map(([s, e], i) => {
     // Skip leading whitespace so the line number points at the first real character.
     const lead = body.slice(s, e).length - body.slice(s, e).trimStart().length;
-    const lineStart = unit.raw ? lineAt(unit.text, unit.bodyStart + s + lead, unit.lineStart) : unit.lineStart;
+    // The first part also covers the header line: its text starts with the title, and a citation of the
+    // header line (e.g. a journal entry title) must resolve to a chunk.
+    const lineStart =
+      unit.raw && i > 0 ? lineAt(unit.text, unit.bodyStart + s + lead, unit.lineStart) : unit.lineStart;
     const lineEnd = unit.raw ? lineAt(unit.text, unit.bodyStart + e - 1, unit.lineStart) : unit.lineEnd;
     return {
       id: `${id}#p${i + 1}`,
