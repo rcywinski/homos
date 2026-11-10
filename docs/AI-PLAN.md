@@ -128,14 +128,14 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   Service: device and max_length are per-request parameters, scores are the sigmoid of the logit (smoke.py asserts >= 0.9 for the
   relevant document). Box restart without login verified on 10 Nov (inference/README.md). Default for 1.7: hybrid-rerank-meta, 2048.
 
-- [ ] NEXT **1.7 Contextual retrieval (Claude).** Before embedding, ask Claude for a one or two sentence context for each chunk given its whole source document,
+- [x] 2026-11-10 **1.7 Contextual retrieval (Claude).** Before embedding, ask Claude for a one or two sentence context for each chunk given its whole source document,
   using prompt caching so the document is paid for once per file, not once per chunk. Prepend the context to the chunk text for embedding and BM25.
   Record tokens and cost. Label `contextual-hybrid-rerank`.
   Second variant, measured separately: query translation/expansion. One Claude call per question returns a Polish rendering plus 3-5 Polish
   keywords the journal author would use; vectors get the original question, BM25 gets the original plus the Polish text. Label
   `query-pl-hybrid-rerank`. Rationale: the 1.5 result shows that BM25's weakness here is the question language, not the algorithm.
   Verify: table with the two variants as separate rows next to the earlier ones; `docs/AI-RAG.md` gets its first draft with the table and the cost line.
-  Status 2026-11-10 (not ticked: run-to-run spread, pooled miss review and the AI-RAG draft are still open; no default variant chosen).
+  Done 2026-11-10. First draft of `docs/AI-RAG.md` written (tables for golden v1.3 and v1.4, costs, spread, review limits, mishaps).
   Design as built: control row `meta-index` first (metadata header in the index, no LLM), the row to beat; contexts from a cached project
   brief (CASE-STUDY + DECISION-LOG) plus the chunk's parent unit (whole journal entry or whole report) instead of the whole file; English
   contexts, format-validated (metadata date or "Undated:" first, no first person, no date absent from the sources), one retry, failures
@@ -146,8 +146,14 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   Run-to-run spread (second full Haiku run, $0.42): contextual-haiku recall@10 77% -> 73%, recall@30 81% -> 77%; 10 of 26 questions
   change rank, 1 crosses the top-10 line. haiku + query-pl recall@30 85% -> 77% (4 questions cross the top-30 line). The spread of one
   generation run is as large as the Haiku vs Sonnet difference, so neither model is shown better. Pooled review list: ai/eval/review/pool-v1.4.md.
+  Golden v1.4 (one pooled review, evidence is a floor): vector moved from 58% to 77% recall@10 with no retriever change, because most added
+  evidence is English documentation; the variants differ in journal-only recall@10 (vector 58%, meta-index 65%, context and query-pl rows
+  73 to 81%) and recall@30 (77%, 81%, 81 to 92%). BM25 date fix and file-name dates measured as their own rows, no gain; both stay switches,
+  off by default. Variant for 1.8: Haiku contexts (run-1 file) plus Polish query translation, chosen for cost (about $0.5 to regenerate all
+  contexts) and simplicity, not for a measured quality lead (the context rows are within their run-to-run spread). Run 1 is used because it
+  was generated before any comparison, so it was not selected for its score.
 
-- [ ] **1.8 Answer with citations.** `ai/answer/`: `Generator` interface with `ClaudeGenerator` as the phase 1 implementation; prompt with the top chunks, each tagged with its id; Claude answers in a structured output
+- [ ] NEXT **1.8 Answer with citations.** `ai/answer/`: `Generator` interface with `ClaudeGenerator` as the phase 1 implementation; prompt with the top chunks, each tagged with its id; Claude answers in a structured output
   `{ answer, citations: [{ chunkId, quote }], notEnoughContext: boolean }`. A verifier checks that every quoted string actually occurs in the cited chunk
   and resolves chunk id to file and lines. The 5 unanswerable golden questions must come back with `notEnoughContext: true`.
   Verify: `npm run ask -- "Why did the live product stay wide?"` prints an answer with `file:lineStart-lineEnd` citations.
