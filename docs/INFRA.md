@@ -79,13 +79,4 @@ used for the whole live period (27 Aug – 21 Sep 2026). AUTO was never enabled.
 
 ## 6. Inference box (since Nov 2026)
 
-After the project closed, the same Windows machine (RTX 3090 24 GB, LAN `192.168.1.8`) was repurposed as the
-local inference server for the AI layer (`ai/`, see [`docs/AI-PLAN.md`](AI-PLAN.md)). The bot services are no longer running.
-
-- Ollama serves the multilingual embedding model `bge-m3` on TCP 11434 (`POST /api/embed`, 1024-dimension vectors).
-  The Mac reaches it through `INFERENCE_URL` in `.env`.
-- Same network boundary as the old bot API: a Windows Firewall rule admits port 11434 only from the LAN and VPN subnets,
-  with no port forwarding on the router. Ollama has no authentication, so this rule is the only boundary.
-- It starts by itself after a reboot, without a desktop login (checked on 9 Nov 2026: the embed call from the Mac
-  answered while the box was at the login screen, first call 13 s including model load).
-- The contract, operation notes and the reranker service planned for step 1.6 are in [`inference/README.md`](../inference/README.md).
+After the project closed, this machine became the local inference server for the AI layer; see [`inference/README.md`](../inference/README.md).

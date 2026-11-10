@@ -53,6 +53,16 @@ history lives in commits, decisions and results live in `docs/AI-RAG.md`.
 - Never rewrite history on `main`. Never force-push.
 - `git status` before every commit; `journal/` is public now and intended, `ai/index/` and `.env` must never appear in a commit.
 
+## Corpus stability
+
+The retrieval corpus is `journal/` plus `docs/` (loader: `ai/corpus/load.ts`). Every evaluation row is tied to one
+corpus hash, so the corpus changes only on purpose.
+
+- Documents about the AI layer are not corpus: `docs/AI-PLAN.md`, `docs/AI-RAG.md` and `journal/README.md` are
+  excluded in the loader, and notes about the inference box live in `inference/README.md`, not in `docs/`.
+- Do not edit project documentation in `docs/` or `journal/` while a comparison is running. If a change is needed,
+  rebuild the index and rerun every row that is compared with it.
+
 ## Corpus facts you can rely on
 
 - `journal/` (after step 1.1) holds ~1.3 MB of Polish text: `CONTEXT.md` (journal, 359 KB, dated entries), `HANDOFF.md` (inboxes), `reports/` (37 morning reports, 18 Aug to 23 Sep 2026, near-identical structure; the last 5 were generated automatically after the project closed on 22 Sep), `TASKS-*.md`, `RESEARCH-QUEUE.md`, decision notes.

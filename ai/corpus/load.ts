@@ -7,8 +7,11 @@ import type { Chunk, ChunkKind, Unit } from './types';
 import { loadContext, loadDecisionLog, loadMarkdown, loadReport } from './loaders';
 import { toChunks } from './split';
 
-/** Not indexed: meta documents about the AI layer itself, not knowledge about the project. */
-const EXCLUDED = new Set(['docs/AI-PLAN.md', 'journal/README.md']);
+/**
+ * Not indexed: documents about the AI layer itself, not knowledge about the project (rule in CLAUDE.md,
+ * "Corpus stability"). docs/AI-RAG.md is listed before it exists so that writing it never changes the corpus.
+ */
+const EXCLUDED = new Set(['docs/AI-PLAN.md', 'docs/AI-RAG.md', 'journal/README.md']);
 
 const NOTE_FILES = /^(DECYZJE-|KAPITAL-|PYTANIE-|SELECTOR-LOG)/;
 

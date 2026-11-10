@@ -2,11 +2,41 @@
 
 The former bot server (Windows, RTX 3090 24 GB, on 24/7, LAN `192.168.1.8`) serves models to the AI layer in `ai/`
 over HTTP on the LAN. The Mac never runs models itself; it only calls the endpoints below through small interfaces
-(`Embedder`, later `Reranker`), so the box can be swapped for a cloud API or mocked in tests.
+(`Embedder`, `Reranker`), so the box can be swapped for a cloud API or mocked in tests.
 
 Roles (see `CLAUDE.md`, "Sessions and coordination"): CC-Mac writes this contract and the client code;
 CC-Win installs and operates what runs on the box and fills in the "Operations" section. If the contract has to change,
 CC-Win asks CC-Mac, who updates this file first.
+
+## The box at a glance
+
+The Windows machine that ran the bot (RTX 3090 24 GB, LAN `192.168.1.8`) was repurposed in Nov 2026 as the local
+inference server for the AI layer. The bot services are no longer running. (This section was moved here from
+`docs/INFRA.md` on 10 Nov 2026: documents about the AI layer stay out of the retrieval corpus, see `CLAUDE.md`.)
+
+| Service | Port | Mac config | Started by |
+|---|---|---|---|
+| Ollama, embedding model `bge-m3` (`POST /api/embed`, 1024-dimension vectors) | 11434 | `INFERENCE_URL` | task `HOMOS inference (Ollama)` |
+| Reranker `bge-reranker-v2-m3` (`POST /rerank`, step 1.6) | 11435 | `RERANK_URL` | task `HOMOS reranker` |
+
+- Same network boundary as the old bot API: one Windows Firewall rule per port admits only the LAN and VPN subnets,
+  with no port forwarding on the router. Neither service has authentication, so these rules are the only boundary.
+- Both tasks run as `SYSTEM` at startup, so the services need no desktop login.
+
+### Reboot test without login
+
+The 9 Nov 2026 check (embed call answered while the box showed the login screen) does not prove a login-free start:
+an RDP session reconnected 6 s before Ollama started, so a logged-in user was present. It is replaced by this test.
+
+10 Nov 2026, box rebooted, nobody logged in. Calls from the Mac (CET):
+
+| Time | Call | Result |
+|---|---|---|
+| 10:38:08 | `POST /api/embed` on 11434 | HTTP 200, 1024-dimension vector |
+| 10:38:08 | `GET /health` on 11435 | no answer within 10 s (service still starting) |
+| 10:38:42 | `GET /health` on 11435 | HTTP 200, `device cuda`, RTX 3090; next calls 5 to 24 ms |
+
+Box side (CC-Win, from the box logs): boot time, start of both tasks and first logon after boot, still to be added.
 
 ## Contract: what the Mac expects (step 0.3)
 
