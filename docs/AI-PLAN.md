@@ -153,13 +153,23 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   contexts) and simplicity, not for a measured quality lead (the context rows are within their run-to-run spread). Run 1 is used because it
   was generated before any comparison, so it was not selected for its score.
 
-- [ ] NEXT **1.8 Answer with citations.** `ai/answer/`: `Generator` interface with `ClaudeGenerator` as the phase 1 implementation; prompt with the top chunks, each tagged with its id; Claude answers in a structured output
+- [x] 2026-11-10 **1.8 Answer with citations.** `ai/answer/`: `Generator` interface with `ClaudeGenerator` as the phase 1 implementation; prompt with the top chunks, each tagged with its id; Claude answers in a structured output
   `{ answer, citations: [{ chunkId, quote }], notEnoughContext: boolean }`. A verifier checks that every quoted string actually occurs in the cited chunk
   and resolves chunk id to file and lines. The 5 unanswerable golden questions must come back with `notEnoughContext: true`.
   Verify: `npm run ask -- "Why did the live product stay wide?"` prints an answer with `file:lineStart-lineEnd` citations.
   Note from 1.7: candidates reach 22/26 at top 30 but only 16/26 at top 5, so measure answer quality with 5 and with 10 chunks passed to Claude.
+  Result (golden v1.4, Sonnet 5.5 generator, structured output with `coverage: full | partial | none` instead of a boolean):
+  citations verified 91/91 at k=5 and 97/97 at k=10 (3 per run first failed on a verifier bug with blockquote markers, fixed and
+  re-checked offline), none over 40 words; answerable questions citing golden evidence 62% (16/26) at k=5 and 73% (19/26) at k=10,
+  about 95% when the evidence was among the chunks and 0 when it was not; all 3 unanswerable questions answered `none` at both k;
+  $0.60 vs $1.05 per run, median 4.0 vs 4.1 s. Prompt-injection probe passed. The owner checked five questions of his own with
+  `npm run ask` (one in Polish, one unanswerable): all five right.
+  Recorded for later, not done now:
+  - Prompt polish, after 1.9 and as a separately measured variant: answer in the language of the question; say "the sources",
+    never "the chunks"; prefer quotes that carry the claim over schema lines such as `CREATE TABLE`.
+  - Golden v1.5 evidence candidate, not to be added before the next pooled review: `journal/RESEARCH-QUEUE.md:1002-1004` for why-01.
 
-- [ ] **1.9 Answer-quality evaluation.** For the 25 answerable questions: citation accuracy (cited chunk is a golden chunk) and an LLM-as-judge score
+- [ ] NEXT **1.9 Answer-quality evaluation.** For the 25 answerable questions: citation accuracy (cited chunk is a golden chunk) and an LLM-as-judge score
   against a short reference answer written by the owner. Add to the results table.
 
 - [ ] **1.10 Write-up.** `docs/AI-RAG.md`: the question this layer answers, the corpus, each design decision with the alternative rejected
