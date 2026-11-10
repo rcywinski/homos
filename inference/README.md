@@ -180,10 +180,119 @@ to check the API shape and `smoke.py`; see the step 1.6 commit. Latency on the M
 
 ## Reranker operations (filled in by CC-Win in step 1.6)
 
-- How it is installed and started, and how it survives a reboot:
-- Python, torch (CUDA build), transformers, sentence-transformers versions:
-- Firewall rule name and subnets (placeholders are fine in this public repo):
-- `smoke.py` output on the box:
+### Layout on the box
+
+| Path | What |
+|---|---|
+| `C:\Program Files\Python311\` | Python 3.11.9 for all users (python.org installer, signature checked), base of the venv |
+| `C:\Projects\homos\inference\reranker\.venv\` | the service venv (gitignored) |
+| `C:\ollama\hf\` | `HF_HOME`: Hugging Face cache with `BAAI/bge-reranker-v2-m3` (2.14 GB) |
+| `C:\ollama\start-reranker.ps1` | launcher used by the startup task (content below) |
+| `C:\ollama\logs\reranker.log` | uvicorn log, appended on every start |
+
+Why Python 3.11 and not 3.12: the box already had a per-user Python 3.12.10 under the owner's profile. A venv only
+points at its base interpreter, so a SYSTEM service built on it would depend on a user profile. 3.12.10 is the last
+3.12 release with an installer, and running the same version's installer for all users only repairs the per-user
+install, so 3.11 (allowed by the contract) was installed for all users instead.
+
+### Install, as done on 10 Nov 2026 (as Administrator)
+
+```powershell
+# Python 3.11.9 for all users, no PATH change, no launcher
+python-3.11.9-amd64.exe /quiet InstallAllUsers=1 PrependPath=0 Include_launcher=0 Include_test=0 Shortcuts=0 TargetDir="C:\Program Files\Python311"
+cd C:\Projects\homos\inference\reranker
+& 'C:\Program Files\Python311\python.exe' -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install torch --index-url https://download.pytorch.org/whl/cu130   # newest CUDA build on the index; driver 617.14 supports CUDA 13.4
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+# Model cache outside any user profile, downloaded once before the first start
+[Environment]::SetEnvironmentVariable('HF_HOME', 'C:\ollama\hf', 'Machine')
+$env:HF_HOME = 'C:\ollama\hf'
+.venv\Scripts\python.exe -c "from huggingface_hub import snapshot_download; snapshot_download('BAAI/bge-reranker-v2-m3')"
+```
+
+### Start and reboot survival
+
+Same pattern as Ollama: scheduled task `HOMOS reranker`, trigger "At startup", runs as `SYSTEM` (no desktop login
+needed), no execution time limit, restarts every minute on failure (up to 999 times). Action:
+`powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\ollama\start-reranker.ps1`.
+The service is ready about 11 s after the task starts (model load to the GPU).
+
+`C:\ollama\start-reranker.ps1`:
+
+```powershell
+# Launcher for the "HOMOS reranker" scheduled task, runs as SYSTEM at boot.
+# Reads HF_HOME from the machine environment on every start, because Task Scheduler
+# keeps the environment it had at boot and would miss later changes.
+$env:HF_HOME = [Environment]::GetEnvironmentVariable('HF_HOME', 'Machine')
+# The model is already in HF_HOME: load it from the cache, never wait on the Hugging Face hub at boot.
+$env:HF_HUB_OFFLINE = '1'
+$env:HF_HUB_DISABLE_SYMLINKS_WARNING = '1'
+New-Item -ItemType Directory -Force C:\ollama\logs | Out-Null
+Set-Location C:\Projects\homos\inference\reranker
+# Redirect in cmd, not PowerShell: PowerShell 5.1 wraps native stderr in error records.
+cmd.exe /c '.venv\Scripts\python.exe -m uvicorn app:app --host 0.0.0.0 --port 11435 >> C:\ollama\logs\reranker.log 2>&1'
+```
+
+`RERANK_DEVICE`, `RERANK_MAX_LENGTH` and `RERANK_BATCH_SIZE` are not set, so the defaults apply (`cuda`, 2048, 16).
+For the CPU or 1024-token comparison, add `$env:RERANK_... = '...'` to the launcher and restart the task, then remove it.
+
+The service reads `app.py` only at start. **After a `git pull` that changes `inference/reranker/`, restart the task**
+(as Administrator); if `requirements.txt` changed, run the `pip install -r` line first:
+
+```powershell
+Stop-ScheduledTask -TaskName 'HOMOS reranker'
+Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object CommandLine -match 'uvicorn app:app' | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+Start-ScheduledTask -TaskName 'HOMOS reranker'
+```
+
+(The venv's `python.exe` is a small launcher that starts the real `C:\Program Files\Python311\python.exe` as a
+child process, so two `python.exe` processes per service are normal; stopping the task alone may leave the child.)
+
+### Firewall
+
+Rule `HOMOS reranker (LAN+VPN only)`: inbound, TCP 11435, allow, remote addresses `<lan-subnet>,<vpn-subnet>`
+(the same two subnets as the Ollama rule). No program-based rule for `python.exe`; decline any Windows "allow access"
+prompt for it, it would add a rule without the subnet limit.
+
+### Versions (10 Nov 2026)
+
+Python 3.11.9, torch `2.14.1+cu130` (CUDA 13.0 build), transformers 5.22.2, sentence-transformers 6.2.0,
+fastapi 0.162.2, uvicorn 0.54.0, pydantic 2.14.3. Model snapshot `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`.
+Note: transformers and sentence-transformers are major versions newer than the Mac test (4.49 / 3.4.1); `app.py`
+runs unchanged on them, see the smoke output below.
+
+### Check on the box
+
+```powershell
+Get-ScheduledTask -TaskName 'HOMOS reranker'                              # State: Running
+Get-NetTCPConnection -LocalPort 11435 -State Listen                       # LocalAddress 0.0.0.0
+Invoke-RestMethod http://127.0.0.1:11435/health                           # device cuda, gpu RTX 3090
+Get-NetFirewallRule -DisplayName 'HOMOS reranker (LAN+VPN only)'          # exists, Enabled True
+cd C:\Projects\homos\inference\reranker; $env:PYTHONIOENCODING='utf-8'; .venv\Scripts\python.exe smoke.py http://127.0.0.1:11435
+Get-Content C:\ollama\logs\reranker.log -Tail 20
+```
+
+### `smoke.py` output on the box (10 Nov 2026)
+
+```
+health: {'model': 'BAAI/bge-reranker-v2-m3', 'device': 'cuda', 'cudaAvailable': True, 'gpu': 'NVIDIA GeForce RTX 3090', 'maxLength': 2048, 'torch': '2.14.1+cu130'}
+rerank: {"model": "BAAI/bge-reranker-v2-m3", "device": "cuda", "maxLength": 2048, "scores": [1.7778551409719512e-05, 7.254361844388768e-05, 1.9073577277595177e-05], "truncated": [false, false, false], "elapsedMs": 241.3}
+OK
+```
+
+Same result through the LAN address (`smoke.py http://192.168.1.8:11435` prints `OK`).
+
+### Behaviour the client should expect
+
+- **Scores are probabilities in (0, 1), not raw logits** as in the contract example. sentence-transformers applies a
+  sigmoid by default for a single-label cross-encoder. The order is the same either way (sigmoid is monotonic), so
+  ranking is unaffected; any threshold must be on the 0 to 1 scale. Checked on the box: raw logits for the smoke
+  passages are -10.94, -9.53, -10.87 in fp32 and -10.94, -9.53, -10.87 in fp16, so fp16 does not change the order.
+- Latency with 30 real journal chunks (2000 characters each, none truncated), through the LAN address on the box:
+  first call 630 ms, then about 310 ms per request (server `elapsedMs`). The model stays loaded, there is no idle
+  unload as in Ollama.
+- GPU memory in use with both services loaded: about 3.6 GB of 24 GB.
 
 ## Operations (filled in by CC-Win in step 0.3)
 
