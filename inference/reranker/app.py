@@ -76,16 +76,20 @@ def score(m: CrossEncoder, query: str, documents: list[str], max_length: int) ->
     """Tokenise the pairs ourselves (so max_length is per request, with no shared state to mutate) and return
     the sigmoid of the logit, the same scale CrossEncoder.predict gives a single-label model by default."""
     lengths = [len(ids) for ids in m.tokenizer([query] * len(documents), documents, truncation=False)["input_ids"]]
-    out: list[float] = []
+    # Batch pairs of similar length (as CrossEncoder.predict does), so a batch is not padded up to one long pair.
+    order = sorted(range(len(documents)), key=lambda i: lengths[i])
+    out = [0.0] * len(documents)
     device = next(m.model.parameters()).device
     with torch.inference_mode():
-        for i in range(0, len(documents), BATCH_SIZE):
-            batch = documents[i : i + BATCH_SIZE]
+        for start in range(0, len(order), BATCH_SIZE):
+            idx = order[start : start + BATCH_SIZE]
             enc = m.tokenizer(
-                [query] * len(batch), batch, truncation=True, max_length=max_length, padding=True, return_tensors="pt"
+                [query] * len(idx), [documents[i] for i in idx],
+                truncation=True, max_length=max_length, padding=True, return_tensors="pt",
             ).to(device)
-            logits = m.model(**enc).logits.view(-1).float()
-            out.extend(torch.sigmoid(logits).tolist())
+            probs = torch.sigmoid(m.model(**enc).logits.view(-1).float()).tolist()
+            for i, p in zip(idx, probs):
+                out[i] = p
     return out, [n > max_length for n in lengths]
 
 
