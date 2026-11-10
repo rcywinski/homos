@@ -36,7 +36,20 @@ an RDP session reconnected 6 s before Ollama started, so a logged-in user was pr
 | 10:38:08 | `GET /health` on 11435 | no answer within 10 s (service still starting) |
 | 10:38:42 | `GET /health` on 11435 | HTTP 200, `device cuda`, RTX 3090; next calls 5 to 24 ms |
 
-Box side (CC-Win, from the box logs): boot time, start of both tasks and first logon after boot, still to be added.
+Box side (CC-Win, from the box logs, box clock CET):
+
+| Time | Event |
+|---|---|
+| 10:37:32 | boot |
+| 10:37:46 | both tasks started, as `SYSTEM` |
+| 10:37:51 | both service processes created |
+| 10:37:52 | Ollama listening on 11434 |
+| 10:38:25 | reranker listening on 11435 (34 s after process start on this cold boot; 10 to 11 s on a warm restart) |
+| 10:41:04 | first logon (RDP from 192.168.1.147); no earlier session or reconnect |
+
+So both services started and answered the Mac with nobody logged in. The reranker's own log has no timestamps; its
+listening time comes from the box's connection records. The Mac's 10:38:08 timeout on 11435 fits: the model was still
+loading.
 
 ## Contract: what the Mac expects (step 0.3)
 
@@ -155,15 +168,23 @@ Written by CC-Mac, deployed and operated by CC-Win.
 POST /rerank
 Content-Type: application/json
 
-{ "query": "Why was the narrow range not used again?", "documents": ["...chunk text...", "..."] }
+{ "query": "Why was the narrow range not used again?", "documents": ["...chunk text...", "..."],
+  "maxLength": 2048, "device": "cuda" }
 ```
 
 ```json
 { "model": "BAAI/bge-reranker-v2-m3", "device": "cuda", "maxLength": 2048,
-  "scores": [3.21, -4.05], "truncated": [false, false], "elapsedMs": 85.3 }
+  "scores": [0.9926, 0.00002], "truncated": [false, false], "elapsedMs": 65.7 }
 ```
 
-- `scores` are in the order of `documents`; higher is more relevant; only the order is used.
+- `scores` are in the order of `documents`; higher is more relevant. They are probabilities in (0, 1): the sigmoid of the
+  cross-encoder logit, which sentence-transformers applies by default (an earlier version of this example showed raw
+  logits, which was wrong). A clearly relevant document scores close to 1 (`smoke.py` asserts >= 0.9). Retrieval uses only
+  the order. In fp16 on the GPU, low scores of different documents can come out identical; the client counts such ties.
+- `maxLength` (16 to 8192, default 2048) and `device` (`cuda` default, or `cpu`) are optional and per request; both are
+  echoed in the response. The CPU copy of the model is loaded on the first `cpu` request (the client sends a warm-up
+  call first), so CPU and 1024-token measurements need no restart and no change on the box. `cuda` on a box without
+  CUDA, or `maxLength` out of range, is HTTP 400.
 - At most 100 documents per request; empty query or no documents is HTTP 400 (the client does not retry 4xx).
 - `truncated[i]` is true when the pair is longer than `maxLength` tokens and its tail was cut. With the default 2048
   no pair of the current corpus should be cut (chunks stay under ~1500 tokens); the client counts truncated pairs.
@@ -172,8 +193,6 @@ Content-Type: application/json
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `RERANK_DEVICE` | `cuda` when available | `cpu` only for the one-off latency comparison in 1.6, then back to `cuda` |
-| `RERANK_MAX_LENGTH` | `2048` | `1024` is a speed variant to measure in 1.6 |
 | `RERANK_BATCH_SIZE` | `16` | pairs per forward pass |
 | `HF_HOME` | (set it) | model cache outside any user profile, e.g. `C:\ollama\hf` (the service runs as SYSTEM, like Ollama) |
 
@@ -264,8 +283,8 @@ Set-Location C:\Projects\homos\inference\reranker
 cmd.exe /c '.venv\Scripts\python.exe -m uvicorn app:app --host 0.0.0.0 --port 11435 >> C:\ollama\logs\reranker.log 2>&1'
 ```
 
-`RERANK_DEVICE`, `RERANK_MAX_LENGTH` and `RERANK_BATCH_SIZE` are not set, so the defaults apply (`cuda`, 2048, 16).
-For the CPU or 1024-token comparison, add `$env:RERANK_... = '...'` to the launcher and restart the task, then remove it.
+`RERANK_BATCH_SIZE` is not set, so the default (16) applies. Device and max length are per-request parameters
+(see the contract), so the launcher never changes for a measurement.
 
 The service reads `app.py` only at start. **After a `git pull` that changes `inference/reranker/`, restart the task**
 (as Administrator); if `requirements.txt` changed, run the `pip install -r` line first:

@@ -6,7 +6,8 @@ import type { Chunk } from '../corpus/types';
 import type { Retriever, SearchHit } from '../store/types';
 import { FakeReranker } from './fake';
 import { LocalReranker } from './local';
-import { RerankRetriever } from './retriever';
+import { RerankRetriever, docText } from './retriever';
+import type { RerankDoc, Reranker } from './types';
 
 let passed = 0;
 let failed = 0;
@@ -19,7 +20,7 @@ function check(name: string, cond: boolean, detail?: string) {
 }
 
 function fakeFetch(respond: (body: { query: string; documents: string[] }, n: number) => Response) {
-  const calls: Array<{ url: string; body: { query: string; documents: string[] } }> = [];
+  const calls: Array<{ url: string; body: { query: string; documents: string[]; maxLength?: number; device?: string } }> = [];
   const fn = (async (url: string | URL | Request, init?: RequestInit) => {
     const body = JSON.parse(String(init?.body));
     calls.push({ url: String(url), body });
@@ -42,6 +43,11 @@ async function main() {
     check('sorted by score', out.map((o) => o.id).join('') === 'bca');
     check('truncated flag kept', out[0].truncated === true && out[2].truncated === false);
     check('device and server time recorded', r.lastDevice === 'cuda' && r.lastMaxLength === 2048 && r.serverMs[0] === 12.5);
+    check('defaults not sent', f.calls[0].body.maxLength === undefined && f.calls[0].body.device === undefined);
+    const f2 = fakeFetch((b) => json({ device: 'cpu', maxLength: 1024, scores: b.documents.map(() => 0), truncated: b.documents.map(() => false) }));
+    const r2 = new LocalReranker({ baseUrl: 'x', fetchFn: f2.fn, maxLength: 1024, device: 'cpu' });
+    await r2.rerank('q', [{ id: 'a', text: 'a' }]);
+    check('per-request maxLength and device sent', f2.calls[0].body.maxLength === 1024 && f2.calls[0].body.device === 'cpu' && r2.lastDevice === 'cpu');
     check('empty input, no call', (await r.rerank('q', [])).length === 0 && f.calls.length === 1);
   }
 
@@ -82,6 +88,21 @@ async function main() {
     check('reordered by reranker', hits.map((h) => h.id).join('') === 'cb', hits.map((h) => h.id).join(''));
     check('never adds chunks beyond the candidates', !hits.some((h) => h.id === 'd'));
     check('pairs counted', rr.totalPairs === 3 && rr.truncatedPairs === 0);
+
+    // Ties: a, b share 0.5 (both tied), c is unique; a second query has no tie.
+    const fixed: Reranker = {
+      name: 'fixed',
+      rerank: async (q: string, docs: RerankDoc[]) =>
+        docs
+          .map((d) => ({ id: d.id, score: q === 'tie' ? ({ a: 0.5, b: 0.5, c: 0.9 } as Record<string, number>)[d.id] : d.id.charCodeAt(0), truncated: false }))
+          .sort((x, y) => y.score - x.score),
+    };
+    const rt = new RerankRetriever(first, fixed, chunks, 3);
+    await rt.search(['tie', 'none'], 3);
+    const metaChunk: Chunk = { id: 'j:5', file: 'journal/CONTEXT.md', lineStart: 5, lineEnd: 9, date: '2026-08-11', kind: 'journal-entry', title: 'Sesja X', text: 'tekst' };
+    check('meta header', docText(metaChunk, 'meta') === '[journal/CONTEXT.md | 2026-08-11 | Sesja X]\ntekst' && docText(metaChunk, 'plain') === 'tekst');
+    check('meta header without date', docText({ ...metaChunk, date: undefined }, 'meta').startsWith('[journal/CONTEXT.md | Sesja X]'));
+    check('ties counted', rt.tiedCandidates === 2 && rt.tiedInTop10 === 2 && rt.queriesWithTies === 1, `${rt.tiedCandidates}/${rt.tiedInTop10}/${rt.queriesWithTies}`);
   }
 
   console.log(`${passed} passed, ${failed} failed`);

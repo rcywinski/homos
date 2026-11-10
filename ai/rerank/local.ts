@@ -1,6 +1,7 @@
 /**
  * LocalReranker: client of the reranker service on the GPU box (inference/reranker, contract in inference/README.md).
- * POST /rerank {query, documents} -> {scores, truncated, device, maxLength, elapsedMs}, scores in document order.
+ * POST /rerank {query, documents, maxLength?, device?} -> {scores, truncated, device, maxLength, elapsedMs},
+ * scores in document order. maxLength and device are per request, so a CPU or 1024-token run needs no service restart.
  */
 import type { RerankDoc, RerankResult, Reranker } from './types';
 
@@ -9,6 +10,10 @@ export interface LocalRerankerOptions {
   timeoutMs?: number;
   retries?: number;
   fetchFn?: typeof fetch;
+  /** Tokens per pair; the service default (2048) when omitted. */
+  maxLength?: number;
+  /** 'cuda' or 'cpu'; the service default (cuda) when omitted. */
+  device?: 'cuda' | 'cpu';
 }
 
 interface RerankResponse {
@@ -61,7 +66,7 @@ export class LocalReranker implements Reranker {
         const r = await this.fetchFn(`${this.opts.baseUrl.replace(/\/$/, '')}/rerank`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query, documents }),
+          body: JSON.stringify({ query, documents, maxLength: this.opts.maxLength, device: this.opts.device }),
           signal: controller.signal,
         });
         // 4xx is a request bug (empty query, too many documents): not retried.

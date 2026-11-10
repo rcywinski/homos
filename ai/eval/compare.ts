@@ -13,6 +13,8 @@ interface Result {
   date: string;
   goldenVersion: string;
   retriever: string;
+  corpusHash: string;
+  rerank?: { device: string | null; maxLength: number | null; serverMsMedian: number | null; serverMsP95: number | null; truncatedPairs: number; totalPairs: number; tiedInTop10?: number };
   metrics: { full: Block; journalOnly: Block; byCategory: Record<string, { full: Block; journalOnly: Block }> };
 }
 
@@ -34,6 +36,13 @@ const cell = (b: Block, k: string) => {
 const out: string[] = [];
 out.push(`# Retrieval runs on golden v${version}`, '');
 out.push('Full = any evidence range counts; journal-only = only evidence in `journal/` counts.', '');
+const hashes = [...new Set(results.map((r) => r.corpusHash))];
+out.push(
+  hashes.length === 1
+    ? `All rows share corpus hash \`${hashes[0]}\`.`
+    : `WARNING: rows come from ${hashes.length} corpus hashes (${hashes.join(', ')}); compare only rows with the same hash.`,
+  '',
+);
 out.push('| run | retriever | R@5 | R@10 | R@30 | MRR@10 | R@5 journal | R@10 journal | MRR@10 journal |', '|---|---|---|---|---|---|---|---|---|');
 for (const r of results) {
   const f = r.metrics.full;
@@ -41,6 +50,14 @@ for (const r of results) {
   out.push(
     `| ${r.label} | \`${r.retriever}\` | ${cell(f, 'recall@5')} | ${cell(f, 'recall@10')} | ${cell(f, 'recall@30')} | ${cell(f, 'mrr@10')} | ${cell(j, 'recall@5')} | ${cell(j, 'recall@10')} | ${cell(j, 'mrr@10')} |`,
   );
+}
+const reranked = results.filter((r) => r.rerank);
+if (reranked.length) {
+  out.push('', '## Reranker runs', '', '| run | corpus | device | max_length | server ms median | p95 | truncated pairs | tied in a top 10 |', '|---|---|---|---|---|---|---|---|');
+  for (const r of reranked) {
+    const k = r.rerank!;
+    out.push(`| ${r.label} | \`${r.corpusHash}\` | ${k.device} | ${k.maxLength} | ${k.serverMsMedian} | ${k.serverMsP95} | ${k.truncatedPairs}/${k.totalPairs} | ${k.tiedInTop10 ?? 'n/a'} |`);
+  }
 }
 const cats = [...new Set(results.flatMap((r) => Object.keys(r.metrics.byCategory)))];
 for (const c of cats) {

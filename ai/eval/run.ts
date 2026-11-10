@@ -62,20 +62,26 @@ async function main() {
   const bm25 = () => new Bm25Index(chunks, { stem, dropNie: process.argv.includes('--drop-nie') });
   let reranker: LocalReranker | null = null;
   let rerankRetriever: RerankRetriever | null = null;
-  const makeRetriever = (): Retriever => {
+  const makeRetriever = async (): Promise<Retriever> => {
     if (kind === 'vector') return vector;
     if (kind === 'bm25') return bm25();
     if (kind === 'hybrid') return new HybridRetriever([vector, bm25()]);
-    if (kind === 'hybrid-rerank') {
+    if (kind === 'hybrid-rerank' || kind === 'hybrid-rerank-meta') {
       const rerankUrl = process.env.RERANK_URL;
       if (!rerankUrl) throw new Error('RERANK_URL is not set (see .env.example)');
-      reranker = new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 120_000 });
-      rerankRetriever = new RerankRetriever(new HybridRetriever([vector, bm25()]), reranker, byId, 30);
+      const maxLength = arg('--rerank-max-length') ? Number(arg('--rerank-max-length')) : undefined;
+      const device = arg('--rerank-device') as 'cuda' | 'cpu' | undefined;
+      if (device && !['cuda', 'cpu'].includes(device)) throw new Error('--rerank-device must be cuda or cpu');
+      reranker = new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 300_000, maxLength, device });
+      // Warm-up outside the measurement: on the first CPU request the service loads its CPU copy of the model.
+      await reranker.rerank('warm-up', [{ id: 'w', text: 'warm-up' }]);
+      reranker.serverMs.length = 0;
+      rerankRetriever = new RerankRetriever(new HybridRetriever([vector, bm25()]), reranker, byId, 30, kind === 'hybrid-rerank-meta' ? 'meta' : 'plain');
       return rerankRetriever;
     }
-    throw new Error('--retriever must be vector, bm25, hybrid or hybrid-rerank');
+    throw new Error('--retriever must be vector, bm25, hybrid, hybrid-rerank or hybrid-rerank-meta');
   };
-  const retriever = makeRetriever();
+  const retriever = await makeRetriever();
 
   const t0 = Date.now();
   const rankings = await retriever.search(
@@ -168,6 +174,9 @@ function rerankStats(r: LocalReranker, rr: RerankRetriever) {
     serverMsP95: pct(0.95),
     truncatedPairs: rr.truncatedPairs,
     totalPairs: rr.totalPairs,
+    tiedCandidates: rr.tiedCandidates,
+    tiedInTop10: rr.tiedInTop10,
+    queriesWithTies: rr.queriesWithTies,
   };
 }
 
@@ -178,7 +187,7 @@ const cell = (b: Block, key: string) => {
 };
 
 function renderMarkdown(
-  r: { label: string; date: string; goldenVersion: string; retriever: string; corpusHash: string; chunkCount: number; questions: { total: number; answerable: number }; metrics: { full: Block; journalOnly: Block; byCategory: Record<string, { full: Block; journalOnly: Block }>; relatedAt10: { hits: number; n: number } } },
+  r: { label: string; date: string; goldenVersion: string; retriever: string; corpusHash: string; chunkCount: number; rerank?: ReturnType<typeof rerankStats>; questions: { total: number; answerable: number }; metrics: { full: Block; journalOnly: Block; byCategory: Record<string, { full: Block; journalOnly: Block }>; relatedAt10: { hits: number; n: number } } },
   perQuestion: Array<{ id: string; answerable: string; rank: number | null; rankJournal: number | null; relatedRank: number | null; top5: Array<{ id: string; score: number; tag: string; date: string | null; title: string }> }>,
 ): string {
   const keys = [...KS.map((k) => `recall@${k}`), `mrr@${MRR_K}`];
@@ -186,6 +195,14 @@ function renderMarkdown(
   out.push(`# Retrieval evaluation: ${r.label}`, '');
   out.push(`Date ${r.date}. Golden set v${r.goldenVersion}. Retriever \`${r.retriever}\`. ${r.chunkCount} chunks, corpus hash \`${r.corpusHash}\`.`);
   out.push(`${r.questions.answerable} answerable questions of ${r.questions.total}: one question = ${(100 / r.questions.answerable).toFixed(1)} pp.`, '');
+  if (r.rerank) {
+    const k = r.rerank;
+    out.push(
+      `Reranker: device ${k.device}, max_length ${k.maxLength}, ${k.queries} requests, server time median ${k.serverMsMedian} ms, p95 ${k.serverMsP95} ms.`,
+      `Truncated pairs ${k.truncatedPairs}/${k.totalPairs}. Tied scores: ${k.tiedCandidates}/${k.totalPairs} candidates, ${k.tiedInTop10} of them in a top 10, ${k.queriesWithTies} queries with a tie.`,
+      '',
+    );
+  }
   out.push('## Metrics', '', `| metric | full | journal-only |`, `|---|---|---|`);
   for (const k of keys) out.push(`| ${k} | ${cell(r.metrics.full, k)} | ${cell(r.metrics.journalOnly, k)} |`);
   out.push('', 'Journal-only counts a hit only for evidence ranges in `journal/`; the gap to "full" is the share found only through the English `docs/`.', '');
