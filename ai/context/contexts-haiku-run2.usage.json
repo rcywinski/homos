@@ -1,0 +1,116 @@
+{
+  "runs": [
+    {
+      "date": "2026-11-10T11:40:34.525Z",
+      "model": "claude-haiku-5-5",
+      "prices": {
+        "input": 0.1,
+        "output": 0.5,
+        "cacheWrite": 0.125,
+        "cacheRead": 0.01,
+        "maxPromptTokens": 100000
+      },
+      "promptHash": "6076db4905869d4a",
+      "requested": 957,
+      "done": 957,
+      "errors": [],
+      "retries": 172,
+      "invalidAfterRetry": [
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:9#p1",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:153",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:9#p2",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:187",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:195",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:218",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:242",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:263",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:378",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:413",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:490",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:503",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:521",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:529",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:635",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:546",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:602",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:656",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/PYTANIE-SZEROKOSC-I-SIGMA.md:1",
+          "rule": "must start with \"Undated:\""
+        },
+        {
+          "id": "journal/reports/morning-2026-09-20.md:253",
+          "rule": "date not in the sources: 2026-09-21"
+        },
+        {
+          "id": "docs/ALGORITHM.md:1",
+          "rule": "must start with \"Undated:\""
+        }
+      ],
+      "usage": {
+        "input": 1046199,
+        "cacheWrite": 593947,
+        "cacheRead": 13543632,
+        "output": 203457
+      },
+      "costUsd": 0.416,
+      "capUsd": 1,
+      "stoppedByCap": false,
+      "wallSeconds": 430
+    }
+  ]
+}

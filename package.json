@@ -43,7 +43,8 @@
     "ai:context": "tsx ai/context/cli.ts",
     "ai:context:sample-report": "tsx ai/context/sample-report.ts",
     "ai:queries": "tsx ai/context/query.ts",
-    "ai:context:revalidate": "tsx ai/context/revalidate.ts"
+    "ai:context:revalidate": "tsx ai/context/revalidate.ts",
+    "ai:review:pool": "tsx ai/eval/review-pool.ts"
   },
   "author": "Rafał Cywiński",
   "license": "MIT",

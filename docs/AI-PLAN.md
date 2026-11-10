@@ -140,9 +140,12 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   brief (CASE-STUDY + DECISION-LOG) plus the chunk's parent unit (whole journal entry or whole report) instead of the whole file; English
   contexts, format-validated (metadata date or "Undated:" first, no first person, no date absent from the sources), one retry, failures
   stored empty. Results on golden v1.3, corpus `8d7f9a34` (recall@10 / recall@30): meta-index 65% / 69%, query-pl 69% / 77%,
-  contextual-sonnet 69% / 69%, contextual-haiku 77% / 81%, haiku + query-pl 73% / 85% (22/26). Cost: Sonnet contexts $8.29, Haiku $0.51,
+  contextual-sonnet 69% / 69%, contextual-haiku 77% / 81%, haiku + query-pl 77% / 85% (22/26). Cost: Sonnet contexts $8.29, Haiku $0.51,
   Polish queries $0.05. Known gaps found on the way (not fixed before the review): the BM25 date normaliser misses ISO timestamps and
   "31.08." and reads "APR" as April; `DECYZJE-*` files carry their date only in the file name, not in chunk metadata.
+  Run-to-run spread (second full Haiku run, $0.42): contextual-haiku recall@10 77% -> 73%, recall@30 81% -> 77%; 10 of 26 questions
+  change rank, 1 crosses the top-10 line. haiku + query-pl recall@30 85% -> 77% (4 questions cross the top-30 line). The spread of one
+  generation run is as large as the Haiku vs Sonnet difference, so neither model is shown better. Pooled review list: ai/eval/review/pool-v1.4.md.
 
 - [ ] **1.8 Answer with citations.** `ai/answer/`: `Generator` interface with `ClaudeGenerator` as the phase 1 implementation; prompt with the top chunks, each tagged with its id; Claude answers in a structured output
   `{ answer, citations: [{ chunkId, quote }], notEnoughContext: boolean }`. A verifier checks that every quoted string actually occurs in the cited chunk
