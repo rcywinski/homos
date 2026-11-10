@@ -8,7 +8,7 @@ import type { Chunk } from '../corpus/types';
 import { docText } from '../rerank/retriever';
 
 /** Chunks as the index sees them (text replaced by the indexed text) and the index file suffix. */
-export function indexView(chunks: Chunk[], doc: string | undefined, contexts: string | undefined): { chunks: Chunk[]; suffix: string } {
+export function indexView(chunks: Chunk[], doc: string | undefined, contexts: string | undefined, fileDates = false): { chunks: Chunk[]; suffix: string } {
   if (!doc || doc === 'plain') {
     if (contexts) throw new Error('--contexts needs --doc meta');
     return { chunks, suffix: '' };
@@ -16,6 +16,7 @@ export function indexView(chunks: Chunk[], doc: string | undefined, contexts: st
   if (doc !== 'meta') throw new Error('--doc must be plain or meta');
   const withCtx = contexts ? applyContexts(chunks, contexts) : chunks;
   const tag = contexts ? `.ctx-${contexts.replace(/^.*contexts-/, '').replace(/\.jsonl$/, '')}` : '.meta';
-  return { chunks: withCtx.map((c) => ({ ...c, text: docText(c, 'meta') })), suffix: tag };
+  // File dates change the metadata header, hence the indexed text: a separate index file.
+  return { chunks: withCtx.map((c) => ({ ...c, text: docText(c, 'meta') })), suffix: tag + (fileDates ? '.fd' : '') };
 }
 

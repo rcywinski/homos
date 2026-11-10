@@ -72,6 +72,14 @@ async function main() {
   check('rrf favours agreement', fused[0].id === 'y', JSON.stringify(fused));
   check('rrf score', Math.abs(fused[0].score - (1 / 62 + 1 / 61)) < 1e-12);
 
+  // Date fix (step 1.7, off by default).
+  {
+    const off = tokenize('2026-08-17T05:30Z selector; przegląd 31.08. ok; top-5 APR', { stem: 'none' });
+    const on = tokenize('2026-08-17T05:30Z selector; przegląd 31.08. ok; top-5 APR', { stem: 'none', dateFix: true });
+    check('default unchanged: APR read as a date, timestamp and 31.08. missed', off.includes('d20260405') && !off.includes('d20260817') && !off.includes('d20260831'));
+    check('date fix: timestamp and trailing dot found, APR kept as a word', on.includes('d20260817') && on.includes('d20260831') && !on.includes('d20260405') && on.includes('apr'), on.join(' '));
+  }
+
   console.log(`${passed} passed, ${failed} failed`);
   if (failed) process.exit(1);
 }

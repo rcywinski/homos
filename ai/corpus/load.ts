@@ -41,3 +41,16 @@ export function loadCorpus(root = process.cwd()): Chunk[] {
   }
   return chunks;
 }
+
+/**
+ * Step 1.7, measured as its own row (--file-dates): a chunk without a date whose file name carries one
+ * (journal/DECYZJE-2026-08-26.md) gets that date as metadata, like the morning reports already do.
+ * Off by default so earlier rows reproduce. Only metadata changes; the chunk text and the corpus hash do not.
+ */
+export function withFileDates(chunks: Chunk[]): Chunk[] {
+  return chunks.map((c) => {
+    if (c.date) return c;
+    const m = path.basename(c.file).match(/(20\d\d-\d\d-\d\d)/);
+    return m ? { ...c, date: m[1] } : c;
+  });
+}

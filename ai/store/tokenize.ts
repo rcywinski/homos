@@ -15,6 +15,21 @@ export type Stem = 'none' | 'prefix6';
 export interface TokenizeOptions {
   stem: Stem;
   dropNie?: boolean;
+  /** Step 1.7 date fix (measured as its own row): see dateFixPre. Off by default so earlier rows reproduce. */
+  dateFix?: boolean;
+}
+
+/**
+ * Three gaps of normaliseDates found while validating generated contexts (step 1.7), patched on the raw text:
+ * ISO timestamps (2026-08-17T05:30Z) lack a word boundary after the day; "31.08." is skipped because of the
+ * trailing dot; "APR" (annual percentage rate) reads as April ("top-5 APR" -> 5 April). Uppercase APR becomes
+ * "APR_", which still tokenizes to "apr" but no longer matches the month pattern.
+ */
+export function dateFixPre(text: string): string {
+  return text
+    .replace(/(20\d\d-\d\d-\d\d)T/g, '$1 T')
+    .replace(/\b(\d{1,2}\.\d{2})\.(?!\d)/g, '$1 ')
+    .replace(/\bAPR\b/g, 'APR_');
 }
 
 const MONTHS: Record<string, number> = {
@@ -88,7 +103,7 @@ export function normaliseDates(folded: string): string {
 
 export function tokenize(text: string, opts: TokenizeOptions): string[] {
   const out: string[] = [];
-  for (const raw of normaliseDates(fold(text)).match(/[a-z0-9_#]+/g) ?? []) {
+  for (const raw of normaliseDates(fold(opts.dateFix ? dateFixPre(text) : text)).match(/[a-z0-9_#]+/g) ?? []) {
     const t = raw.replace(/^#+/, '').replace(/^_+|_+$/g, '');
     if (!t || STOP.has(t) || (opts.dropNie && t === 'nie')) continue;
     if (/^d20\d{6}$/.test(t)) {

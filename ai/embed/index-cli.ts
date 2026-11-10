@@ -7,7 +7,7 @@
  * Then runs the step 1.3 smoke check: a Polish question and its English translation must return the same top chunk.
  */
 import 'dotenv/config';
-import { loadCorpus } from '../corpus/load';
+import { loadCorpus, withFileDates } from '../corpus/load';
 import { LocalEmbedder } from './local';
 import { corpusHash, indexPath, writeIndex } from './index-file';
 import { indexView } from './index-view';
@@ -28,7 +28,9 @@ async function main() {
   const baseUrl = process.env.INFERENCE_URL;
   if (!baseUrl) throw new Error('INFERENCE_URL is not set (see .env.example)');
 
-  const view = indexView(loadCorpus(), arg('--doc'), arg('--contexts'));
+  const fileDates = process.argv.includes('--file-dates');
+  const corpus = fileDates ? withFileDates(loadCorpus()) : loadCorpus();
+  const view = indexView(corpus, arg('--doc'), arg('--contexts'), fileDates);
   const chunks = view.chunks;
   const embedder = new LocalEmbedder({
     baseUrl,

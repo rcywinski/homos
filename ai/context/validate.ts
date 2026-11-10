@@ -6,22 +6,10 @@
  *     via the same normalisation BM25 uses: "2026-09-11", "11.09", "11 Sep" are one date).
  */
 import type { ContextRequest } from './types';
-import { fold, isoDateToken, normaliseDates } from '../store/tokenize';
+import { dateFixPre, fold, isoDateToken, normaliseDates } from '../store/tokenize';
 
-// Three known gaps of the BM25 date normaliser, patched here only (changing the tokenizer would change every earlier
-// result): ISO timestamps (2026-08-17T05:30Z) lack a word boundary after the day, "31.08." is skipped because of the
-// trailing dot, and "APR" (annual percentage rate) reads as April ("top-5 APR" -> 5 April).
-const dates = (text: string) =>
-  new Set(
-    normaliseDates(
-      fold(
-        text
-          .replace(/(20\d\d-\d\d-\d\d)T/g, '$1 T')
-          .replace(/\b(\d{1,2}\.\d{2})\.(?!\d)/g, '$1 ')
-          .replace(/\bAPR\b/g, 'rate'),
-      ),
-    ).match(/\bd20\d{6}\b/g) ?? [],
-  );
+// The three normaliser gaps (timestamps, "31.08.", APR) are patched by the same dateFixPre the BM25 date-fix row uses.
+const dates = (text: string) => new Set(normaliseDates(fold(dateFixPre(text))).match(/\bd20\d{6}\b/g) ?? []);
 
 export function validateContext(context: string, req: ContextRequest): string | null {
   const c = req.chunk;

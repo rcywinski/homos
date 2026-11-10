@@ -10,7 +10,7 @@
 import 'dotenv/config';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
-import { loadCorpus } from '../corpus/load';
+import { loadCorpus, withFileDates } from '../corpus/load';
 import type { Chunk } from '../corpus/types';
 import { LocalEmbedder } from '../embed/local';
 import { corpusHash, indexPath, readIndex } from '../embed/index-file';
@@ -49,11 +49,13 @@ async function main() {
   if (!baseUrl) throw new Error('INFERENCE_URL is not set');
 
   const root = process.cwd();
-  const chunks = loadCorpus(root);
+  // --file-dates: dates from file names as metadata (step 1.7, own row); it changes headers, not the corpus hash.
+  const fileDates = process.argv.includes('--file-dates');
+  const chunks = fileDates ? withFileDates(loadCorpus(root)) : loadCorpus(root);
   // --index-doc meta [--contexts file]: the vectors and BM25 index header (+ context) + text (step 1.7);
   // the reranker then gets the same documents (format meta). Default: plain chunk text, as in 1.3 to 1.6.
   const contextsFile = arg('--contexts');
-  const view = indexView(chunks, arg('--index-doc'), contextsFile);
+  const view = indexView(chunks, arg('--index-doc'), contextsFile, fileDates);
   const byId = new Map((contextsFile ? applyContexts(chunks, contextsFile) : chunks).map((c) => [c.id, c]));
   const golden = readFileSync('ai/eval/golden.jsonl', 'utf8')
     .split('\n')
@@ -70,7 +72,7 @@ async function main() {
   // --query-pl file: BM25 gets the question plus its cached Polish rendering and keywords (step 1.7).
   const queryPlFile = arg('--query-pl');
   const queriesPl = queryPlFile ? readQueries(queryPlFile) : null;
-  const plainBm25 = () => new Bm25Index(view.chunks, { stem, dropNie: process.argv.includes('--drop-nie') });
+  const plainBm25 = () => new Bm25Index(view.chunks, { stem, dropNie: process.argv.includes('--drop-nie'), dateFix: process.argv.includes('--date-fix') });
   const bm25 = (): Retriever => {
     if (!queriesPl) return plainBm25();
     return new MappedRetriever(
@@ -166,6 +168,7 @@ async function main() {
     retriever: view.suffix ? `${retriever.name} index=${embedder.name}${view.suffix}` : retriever.name,
     ...(contextsFile ? { contexts: contextsFile } : {}),
     ...(queryPlFile ? { queryPl: queryPlFile } : {}),
+    ...(fileDates ? { fileDates: true } : {}),
     embedder: embedder.name,
     corpusHash: corpusHash(chunks),
     chunkCount: chunks.length,

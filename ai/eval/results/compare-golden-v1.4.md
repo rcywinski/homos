@@ -17,6 +17,9 @@ All rows share corpus hash `8d7f9a3437b43594`.
 | hybrid-rerank-meta-1024-golden-v1-4 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta)` | 65% (17/26) | 69% (18/26) | 77% (20/26) | 0.499 | 50% (13/26) | 58% (15/26) | 0.331 |
 | hybrid-rerank-meta-golden-v1-4 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta)` | 65% (17/26) | 69% (18/26) | 77% (20/26) | 0.499 | 50% (13/26) | 58% (15/26) | 0.331 |
 | hybrid-stem-prefix6-golden-v1-4 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)` | 62% (16/26) | 65% (17/26) | 77% (20/26) | 0.454 | 27% (7/26) | 35% (9/26) | 0.180 |
+| meta-index-date-fix-file-dates-hybrid-rerank-golden-v1-4 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6,date-fix),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.meta.fd` | 65% (17/26) | 69% (18/26) | 81% (21/26) | 0.486 | 54% (14/26) | 62% (16/26) | 0.335 |
+| meta-index-date-fix-hybrid-rerank-golden-v1-4 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6,date-fix),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.meta` | 65% (17/26) | 73% (19/26) | 81% (21/26) | 0.485 | 54% (14/26) | 65% (17/26) | 0.334 |
+| meta-index-file-dates-hybrid-rerank-golden-v1-4 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.meta.fd` | 65% (17/26) | 69% (18/26) | 81% (21/26) | 0.486 | 54% (14/26) | 62% (16/26) | 0.335 |
 | meta-index-hybrid-golden-v1-4 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60) index=ollama-bge-m3.meta` | 62% (16/26) | 69% (18/26) | 81% (21/26) | 0.421 | 27% (7/26) | 46% (12/26) | 0.166 |
 | meta-index-hybrid-rerank-golden-v1-4 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.meta` | 65% (17/26) | 73% (19/26) | 81% (21/26) | 0.485 | 54% (14/26) | 65% (17/26) | 0.334 |
 | query-pl-hybrid-rerank-golden-v1-4 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6)+query-pl,depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.meta` | 65% (17/26) | 77% (20/26) | 81% (21/26) | 0.466 | 58% (15/26) | 73% (19/26) | 0.329 |
@@ -36,6 +39,9 @@ All rows share corpus hash `8d7f9a3437b43594`.
 | hybrid-rerank-golden-v1-4 | `8d7f9a3437b43594` | cuda | 2048 | 359.5 | 472.5 | 0/1020 | 5 |
 | hybrid-rerank-meta-1024-golden-v1-4 | `8d7f9a3437b43594` | cuda | 1024 | 307.3 | 387.7 | 254/1020 | 3 |
 | hybrid-rerank-meta-golden-v1-4 | `8d7f9a3437b43594` | cuda | 2048 | 376.4 | 502.9 | 0/1020 | 3 |
+| meta-index-date-fix-file-dates-hybrid-rerank-golden-v1-4 | `8d7f9a3437b43594` | cuda | 2048 | 363.3 | 488.7 | 0/1020 | 4 |
+| meta-index-date-fix-hybrid-rerank-golden-v1-4 | `8d7f9a3437b43594` | cuda | 2048 | 368.4 | 464.9 | 0/1020 | 4 |
+| meta-index-file-dates-hybrid-rerank-golden-v1-4 | `8d7f9a3437b43594` | cuda | 2048 | 358 | 501.9 | 0/1020 | 4 |
 | meta-index-hybrid-rerank-golden-v1-4 | `8d7f9a3437b43594` | cuda | 2048 | 361.1 | 497.3 | 0/1020 | 4 |
 | query-pl-hybrid-rerank-golden-v1-4 | `8d7f9a3437b43594` | cuda | 2048 | 399.4 | 498.9 | 0/1020 | 2 |
 
@@ -54,6 +60,9 @@ All rows share corpus hash `8d7f9a3437b43594`.
 | hybrid-rerank-meta-1024-golden-v1-4 | 78% (7/9) | 78% (7/9) | 89% (8/9) | 0.578 | 67% (6/9) |
 | hybrid-rerank-meta-golden-v1-4 | 78% (7/9) | 78% (7/9) | 89% (8/9) | 0.578 | 67% (6/9) |
 | hybrid-stem-prefix6-golden-v1-4 | 78% (7/9) | 78% (7/9) | 89% (8/9) | 0.556 | 11% (1/9) |
+| meta-index-date-fix-file-dates-hybrid-rerank-golden-v1-4 | 67% (6/9) | 67% (6/9) | 89% (8/9) | 0.481 | 56% (5/9) |
+| meta-index-date-fix-hybrid-rerank-golden-v1-4 | 67% (6/9) | 78% (7/9) | 89% (8/9) | 0.479 | 67% (6/9) |
+| meta-index-file-dates-hybrid-rerank-golden-v1-4 | 67% (6/9) | 67% (6/9) | 89% (8/9) | 0.481 | 56% (5/9) |
 | meta-index-hybrid-golden-v1-4 | 78% (7/9) | 78% (7/9) | 89% (8/9) | 0.544 | 22% (2/9) |
 | meta-index-hybrid-rerank-golden-v1-4 | 67% (6/9) | 78% (7/9) | 89% (8/9) | 0.479 | 67% (6/9) |
 | query-pl-hybrid-rerank-golden-v1-4 | 67% (6/9) | 67% (6/9) | 78% (7/9) | 0.463 | 67% (6/9) |
@@ -74,6 +83,9 @@ All rows share corpus hash `8d7f9a3437b43594`.
 | hybrid-rerank-meta-1024-golden-v1-4 | 60% (6/10) | 70% (7/10) | 70% (7/10) | 0.494 | 50% (5/10) |
 | hybrid-rerank-meta-golden-v1-4 | 60% (6/10) | 70% (7/10) | 70% (7/10) | 0.494 | 50% (5/10) |
 | hybrid-stem-prefix6-golden-v1-4 | 50% (5/10) | 50% (5/10) | 70% (7/10) | 0.367 | 30% (3/10) |
+| meta-index-date-fix-file-dates-hybrid-rerank-golden-v1-4 | 60% (6/10) | 70% (7/10) | 70% (7/10) | 0.496 | 60% (6/10) |
+| meta-index-date-fix-hybrid-rerank-golden-v1-4 | 60% (6/10) | 70% (7/10) | 70% (7/10) | 0.496 | 60% (6/10) |
+| meta-index-file-dates-hybrid-rerank-golden-v1-4 | 60% (6/10) | 70% (7/10) | 70% (7/10) | 0.496 | 60% (6/10) |
 | meta-index-hybrid-golden-v1-4 | 50% (5/10) | 60% (6/10) | 70% (7/10) | 0.293 | 50% (5/10) |
 | meta-index-hybrid-rerank-golden-v1-4 | 60% (6/10) | 70% (7/10) | 70% (7/10) | 0.496 | 60% (6/10) |
 | query-pl-hybrid-rerank-golden-v1-4 | 60% (6/10) | 80% (8/10) | 80% (8/10) | 0.446 | 70% (7/10) |
@@ -94,6 +106,9 @@ All rows share corpus hash `8d7f9a3437b43594`.
 | hybrid-rerank-meta-1024-golden-v1-4 | 57% (4/7) | 57% (4/7) | 71% (5/7) | 0.405 | 57% (4/7) |
 | hybrid-rerank-meta-golden-v1-4 | 57% (4/7) | 57% (4/7) | 71% (5/7) | 0.405 | 57% (4/7) |
 | hybrid-stem-prefix6-golden-v1-4 | 57% (4/7) | 71% (5/7) | 71% (5/7) | 0.449 | 71% (5/7) |
+| meta-index-date-fix-file-dates-hybrid-rerank-golden-v1-4 | 71% (5/7) | 71% (5/7) | 86% (6/7) | 0.476 | 71% (5/7) |
+| meta-index-date-fix-hybrid-rerank-golden-v1-4 | 71% (5/7) | 71% (5/7) | 86% (6/7) | 0.476 | 71% (5/7) |
+| meta-index-file-dates-hybrid-rerank-golden-v1-4 | 71% (5/7) | 71% (5/7) | 86% (6/7) | 0.476 | 71% (5/7) |
 | meta-index-hybrid-golden-v1-4 | 57% (4/7) | 71% (5/7) | 86% (6/7) | 0.446 | 71% (5/7) |
 | meta-index-hybrid-rerank-golden-v1-4 | 71% (5/7) | 71% (5/7) | 86% (6/7) | 0.476 | 71% (5/7) |
 | query-pl-hybrid-rerank-golden-v1-4 | 71% (5/7) | 86% (6/7) | 86% (6/7) | 0.497 | 86% (6/7) |

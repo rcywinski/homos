@@ -32,7 +32,7 @@ export class Bm25Index implements Retriever {
   ) {
     this.k1 = opts.k1 ?? 1.2;
     this.b = opts.b ?? 0.75;
-    this.name = `bm25(stem=${opts.stem}${opts.dropNie ? ',drop-nie' : ''}${opts.dateMetadata === false ? ',no-date-meta' : ''})`;
+    this.name = `bm25(stem=${opts.stem}${opts.dropNie ? ',drop-nie' : ''}${opts.dateFix ? ',date-fix' : ''}${opts.dateMetadata === false ? ',no-date-meta' : ''})`;
     this.ids = chunks.map((c) => c.id);
     this.tf = chunks.map((c) => {
       const tokens = tokenize(c.text, opts);
