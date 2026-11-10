@@ -135,11 +135,20 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   keywords the journal author would use; vectors get the original question, BM25 gets the original plus the Polish text. Label
   `query-pl-hybrid-rerank`. Rationale: the 1.5 result shows that BM25's weakness here is the question language, not the algorithm.
   Verify: table with the two variants as separate rows next to the earlier ones; `docs/AI-RAG.md` gets its first draft with the table and the cost line.
+  Status 2026-11-10 (not ticked: run-to-run spread, pooled miss review and the AI-RAG draft are still open; no default variant chosen).
+  Design as built: control row `meta-index` first (metadata header in the index, no LLM), the row to beat; contexts from a cached project
+  brief (CASE-STUDY + DECISION-LOG) plus the chunk's parent unit (whole journal entry or whole report) instead of the whole file; English
+  contexts, format-validated (metadata date or "Undated:" first, no first person, no date absent from the sources), one retry, failures
+  stored empty. Results on golden v1.3, corpus `8d7f9a34` (recall@10 / recall@30): meta-index 65% / 69%, query-pl 69% / 77%,
+  contextual-sonnet 69% / 69%, contextual-haiku 77% / 81%, haiku + query-pl 73% / 85% (22/26). Cost: Sonnet contexts $8.29, Haiku $0.51,
+  Polish queries $0.05. Known gaps found on the way (not fixed before the review): the BM25 date normaliser misses ISO timestamps and
+  "31.08." and reads "APR" as April; `DECYZJE-*` files carry their date only in the file name, not in chunk metadata.
 
 - [ ] **1.8 Answer with citations.** `ai/answer/`: `Generator` interface with `ClaudeGenerator` as the phase 1 implementation; prompt with the top chunks, each tagged with its id; Claude answers in a structured output
   `{ answer, citations: [{ chunkId, quote }], notEnoughContext: boolean }`. A verifier checks that every quoted string actually occurs in the cited chunk
   and resolves chunk id to file and lines. The 5 unanswerable golden questions must come back with `notEnoughContext: true`.
   Verify: `npm run ask -- "Why did the live product stay wide?"` prints an answer with `file:lineStart-lineEnd` citations.
+  Note from 1.7: candidates reach 22/26 at top 30 but only 16/26 at top 5, so measure answer quality with 5 and with 10 chunks passed to Claude.
 
 - [ ] **1.9 Answer-quality evaluation.** For the 25 answerable questions: citation accuracy (cited chunk is a golden chunk) and an LLM-as-judge score
   against a short reference answer written by the owner. Add to the results table.

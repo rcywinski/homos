@@ -1,0 +1,32 @@
+{
+  "runs": [
+    {
+      "date": "2026-11-10T11:01:42.657Z",
+      "model": "claude-sonnet-5-5",
+      "usage": {
+        "input": 8115,
+        "cacheWrite": 0,
+        "cacheRead": 0,
+        "output": 2928
+      },
+      "costUsd": 0.0455,
+      "capUsd": 0.5,
+      "errors": [
+        "dated-09: unparsable: PL: Kiedy rynek był płaski i jak długo trwał jedyny live epizod zawężania (narrowing) range?\nKW: płaski rynek, flat mark"
+      ]
+    },
+    {
+      "date": "2026-11-10T11:01:55.558Z",
+      "model": "claude-sonnet-5-5",
+      "usage": {
+        "input": 236,
+        "cacheWrite": 0,
+        "cacheRead": 0,
+        "output": 92
+      },
+      "costUsd": 0.0014,
+      "capUsd": 0.5,
+      "errors": []
+    }
+  ]
+}

@@ -16,6 +16,8 @@ import { LocalEmbedder } from '../embed/local';
 import { corpusHash, indexPath, readIndex } from '../embed/index-file';
 import { indexView } from '../embed/index-view';
 import { applyContexts } from '../context/contexts-file';
+import { expandedQuery, readQueries } from '../context/query';
+import { MappedRetriever } from '../store/mapped';
 import { VectorStore } from '../store/vector';
 import { Bm25Index } from '../store/bm25';
 import { HybridRetriever } from '../store/hybrid';
@@ -65,7 +67,22 @@ async function main() {
   const stem = (arg('--stem') ?? 'none') as Stem;
   if (!['none', 'prefix6'].includes(stem)) throw new Error('--stem must be none or prefix6');
   const vector = new VectorStore(index.ids, index.vectors, embedder);
-  const bm25 = () => new Bm25Index(view.chunks, { stem, dropNie: process.argv.includes('--drop-nie') });
+  // --query-pl file: BM25 gets the question plus its cached Polish rendering and keywords (step 1.7).
+  const queryPlFile = arg('--query-pl');
+  const queriesPl = queryPlFile ? readQueries(queryPlFile) : null;
+  const plainBm25 = () => new Bm25Index(view.chunks, { stem, dropNie: process.argv.includes('--drop-nie') });
+  const bm25 = (): Retriever => {
+    if (!queriesPl) return plainBm25();
+    return new MappedRetriever(
+      plainBm25(),
+      (q) => {
+        const pl = queriesPl.get(q);
+        if (!pl) throw new Error(`no Polish rendering for: ${q}`);
+        return expandedQuery(pl);
+      },
+      'query-pl',
+    );
+  };
   let reranker: LocalReranker | null = null;
   let rerankRetriever: RerankRetriever | null = null;
   const makeRetriever = async (): Promise<Retriever> => {
@@ -148,6 +165,7 @@ async function main() {
     goldenVersion,
     retriever: view.suffix ? `${retriever.name} index=${embedder.name}${view.suffix}` : retriever.name,
     ...(contextsFile ? { contexts: contextsFile } : {}),
+    ...(queryPlFile ? { queryPl: queryPlFile } : {}),
     embedder: embedder.name,
     corpusHash: corpusHash(chunks),
     chunkCount: chunks.length,

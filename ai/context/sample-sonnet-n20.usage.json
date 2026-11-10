@@ -1,0 +1,28 @@
+{
+  "runs": [
+    {
+      "date": "2026-11-10T10:52:25.281Z",
+      "model": "claude-sonnet-5-5",
+      "prices": {
+        "input": 2,
+        "output": 10,
+        "cacheWrite": 2.5,
+        "cacheRead": 0.2
+      },
+      "promptHash": "32874b1f4d731c16",
+      "requested": 20,
+      "done": 20,
+      "errors": [],
+      "usage": {
+        "input": 17916,
+        "cacheWrite": 111218,
+        "cacheRead": 133855,
+        "output": 2956
+      },
+      "costUsd": 0.3702,
+      "capUsd": 2,
+      "stoppedByCap": false,
+      "wallSeconds": 12
+    }
+  ]
+}
