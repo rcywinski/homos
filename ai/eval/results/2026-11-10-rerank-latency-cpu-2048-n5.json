@@ -1,0 +1,44 @@
+{
+  "kind": "latency sample, not an evaluation",
+  "date": "2026-11-10",
+  "device": "cpu",
+  "maxLength": 2048,
+  "doc": "meta",
+  "n": 5,
+  "corpusHash": "8d7f9a3437b43594",
+  "perQuestion": [
+    {
+      "id": "why-01",
+      "pairs": 30,
+      "serverS": 34.753099999999996,
+      "wallS": 34.774
+    },
+    {
+      "id": "why-07",
+      "pairs": 30,
+      "serverS": 35.6725,
+      "wallS": 35.694
+    },
+    {
+      "id": "dated-03",
+      "pairs": 30,
+      "serverS": 38.1129,
+      "wallS": 38.132
+    },
+    {
+      "id": "dated-09",
+      "pairs": 30,
+      "serverS": 45.351699999999994,
+      "wallS": 45.373
+    },
+    {
+      "id": "id-05",
+      "pairs": 30,
+      "serverS": 45.336800000000004,
+      "wallS": 45.358
+    }
+  ],
+  "serverSecondsMedian": 38.1129,
+  "serverSecondsMin": 34.753099999999996,
+  "serverSecondsMax": 45.351699999999994
+}

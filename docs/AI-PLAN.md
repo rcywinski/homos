@@ -110,12 +110,25 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   Polish tokens ("open" vs "propozycje OPEN"), and equal-weight RRF drags good vector hits down. Stemming none vs prefix6 and dropping "nie":
   within one question, "nie" kept. Decision: `hybrid-stem-prefix6` is the candidate generator for 1.6 (its recall@30 is the reranker's ceiling).
 
-- [ ] NEXT **1.6 Reranker.** `[CC-Mac writes the service, CC-Win deploys it]` `inference/`: a small Python service (FastAPI + sentence-transformers on CUDA) on the GPU box with `POST /rerank`
+- [x] 2026-11-10 **1.6 Reranker.** `[CC-Mac writes the service, CC-Win deploys it]` `inference/`: a small Python service (FastAPI + sentence-transformers on CUDA) on the GPU box with `POST /rerank`
   running `bge-reranker-v2-m3`; runs as a Windows service next to Ollama. `ai/rerank/`: `Reranker` interface plus `LocalReranker` client.
   Retrieve 30 with hybrid, rerank, keep 5. Label `hybrid-rerank`. Record latency per query with and without the GPU (CPU fallback flag in the service).
   Verify: table with three rows; latency numbers in `docs/AI-RAG.md`.
+  Selection-bias note (for `docs/AI-RAG.md`): golden v1.3 added why-10 evidence found while the owner read the hybrid-rerank top 5.
+  The human-reading rule held, but the list to read came from one retriever, so that retriever gains most (plain rerank recall@10
+  would be 54%, not 58%, without it; vector is unaffected). Rule from now on: misses are reviewed once, after 1.7, from one list
+  pooled across all runs; no evidence changes before that.
+  Result on golden v1.3, corpus `8d7f9a34` (honest line): rerank matches vector at top 10; ceiling is candidate recall at 30 (17/26); 1.7 targets that.
+  hybrid-rerank recall@10 58% (15/26) = vector 58%, MRR@10 0.349 vs 0.378; it repairs hybrid's top 10 (46% -> 58%). Variant
+  hybrid-rerank-meta (one metadata header line per chunk: file, date, title; declared before measuring): recall@5 54% (14/26),
+  MRR@10 0.403, journal-only recall@10 50% (13/26), the best row, by one question. GPU latency per question (30 pairs, server):
+  median 360 ms, p95 475 ms at max_length 2048, 0/1020 pairs truncated. max_length 1024 measured and rejected: 60 ms faster,
+  23% of pairs truncated, no metric change. CPU: latency sample, n=5 (meta, 2048): median 38.1 s per question (34.8 to 45.4 s),
+  about 100x the GPU. fp16 ties: 3 to 5 candidates per run inside a top 10, none on an evidence chunk.
+  Service: device and max_length are per-request parameters, scores are the sigmoid of the logit (smoke.py asserts >= 0.9 for the
+  relevant document). Box restart without login verified on 10 Nov (inference/README.md). Default for 1.7: hybrid-rerank-meta, 2048.
 
-- [ ] **1.7 Contextual retrieval (Claude).** Before embedding, ask Claude for a one or two sentence context for each chunk given its whole source document,
+- [ ] NEXT **1.7 Contextual retrieval (Claude).** Before embedding, ask Claude for a one or two sentence context for each chunk given its whole source document,
   using prompt caching so the document is paid for once per file, not once per chunk. Prepend the context to the chunk text for embedding and BM25.
   Record tokens and cost. Label `contextual-hybrid-rerank`.
   Second variant, measured separately: query translation/expansion. One Claude call per question returns a Polish rendering plus 3-5 Polish

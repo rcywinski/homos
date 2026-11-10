@@ -38,7 +38,8 @@
     "ai:golden:check": "tsx ai/eval/golden-check-cli.ts",
     "ai:index": "tsx ai/embed/index-cli.ts",
     "ai:eval": "tsx ai/eval/run.ts",
-    "ai:compare": "tsx ai/eval/compare.ts"
+    "ai:compare": "tsx ai/eval/compare.ts",
+    "ai:latency": "tsx ai/eval/latency.ts"
   },
   "author": "Rafał Cywiński",
   "license": "MIT",
