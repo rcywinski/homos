@@ -11,6 +11,8 @@ All rows share corpus hash `8d7f9a3437b43594`.
 | hybrid-rerank-meta-1024-golden-v1-3 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta)` | 54% (14/26) | 58% (15/26) | 65% (17/26) | 0.403 | 42% (11/26) | 50% (13/26) | 0.284 |
 | hybrid-rerank-meta-golden-v1-3 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta)` | 54% (14/26) | 58% (15/26) | 65% (17/26) | 0.403 | 42% (11/26) | 50% (13/26) | 0.284 |
 | hybrid-stem-prefix6-golden-v1-3 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)` | 42% (11/26) | 46% (12/26) | 65% (17/26) | 0.310 | 23% (6/26) | 31% (8/26) | 0.135 |
+| meta-index-hybrid-golden-v1-3 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60) index=ollama-bge-m3.meta` | 42% (11/26) | 58% (15/26) | 69% (18/26) | 0.325 | 23% (6/26) | 42% (11/26) | 0.158 |
+| meta-index-hybrid-rerank-golden-v1-3 | `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.meta` | 62% (16/26) | 65% (17/26) | 69% (18/26) | 0.416 | 50% (13/26) | 58% (15/26) | 0.297 |
 | vector-golden-v1-3 | `vector:ollama-bge-m3` | 50% (13/26) | 58% (15/26) | 58% (15/26) | 0.378 | 27% (7/26) | 46% (12/26) | 0.203 |
 
 ## Reranker runs
@@ -21,6 +23,7 @@ All rows share corpus hash `8d7f9a3437b43594`.
 | hybrid-rerank-golden-v1-3 | `8d7f9a3437b43594` | cuda | 2048 | 359.8 | 474.7 | 0/1020 | 5 |
 | hybrid-rerank-meta-1024-golden-v1-3 | `8d7f9a3437b43594` | cuda | 1024 | 305.7 | 385 | 254/1020 | 3 |
 | hybrid-rerank-meta-golden-v1-3 | `8d7f9a3437b43594` | cuda | 2048 | 374.3 | 499.7 | 0/1020 | 3 |
+| meta-index-hybrid-rerank-golden-v1-3 | `8d7f9a3437b43594` | cuda | 2048 | 368.2 | 496.4 | 0/1020 | 4 |
 
 ## why
 
@@ -31,6 +34,8 @@ All rows share corpus hash `8d7f9a3437b43594`.
 | hybrid-rerank-meta-1024-golden-v1-3 | 78% (7/9) | 78% (7/9) | 78% (7/9) | 0.578 | 56% (5/9) |
 | hybrid-rerank-meta-golden-v1-3 | 78% (7/9) | 78% (7/9) | 78% (7/9) | 0.578 | 56% (5/9) |
 | hybrid-stem-prefix6-golden-v1-3 | 56% (5/9) | 56% (5/9) | 78% (7/9) | 0.417 | 11% (1/9) |
+| meta-index-hybrid-golden-v1-3 | 56% (5/9) | 56% (5/9) | 67% (6/9) | 0.411 | 11% (1/9) |
+| meta-index-hybrid-rerank-golden-v1-3 | 67% (6/9) | 67% (6/9) | 67% (6/9) | 0.467 | 44% (4/9) |
 | vector-golden-v1-3 | 67% (6/9) | 67% (6/9) | 67% (6/9) | 0.500 | 33% (3/9) |
 
 ## dated-fact
@@ -42,6 +47,8 @@ All rows share corpus hash `8d7f9a3437b43594`.
 | hybrid-rerank-meta-1024-golden-v1-3 | 30% (3/10) | 40% (4/10) | 50% (5/10) | 0.244 | 40% (4/10) |
 | hybrid-rerank-meta-golden-v1-3 | 30% (3/10) | 40% (4/10) | 50% (5/10) | 0.244 | 40% (4/10) |
 | hybrid-stem-prefix6-golden-v1-3 | 20% (2/10) | 20% (2/10) | 50% (5/10) | 0.133 | 20% (2/10) |
+| meta-index-hybrid-golden-v1-3 | 20% (2/10) | 50% (5/10) | 60% (6/10) | 0.163 | 50% (5/10) |
+| meta-index-hybrid-rerank-golden-v1-3 | 50% (5/10) | 60% (6/10) | 60% (6/10) | 0.329 | 60% (6/10) |
 | vector-golden-v1-3 | 30% (3/10) | 40% (4/10) | 40% (4/10) | 0.244 | 40% (4/10) |
 
 ## identifier
@@ -53,4 +60,6 @@ All rows share corpus hash `8d7f9a3437b43594`.
 | hybrid-rerank-meta-1024-golden-v1-3 | 57% (4/7) | 57% (4/7) | 71% (5/7) | 0.405 | 57% (4/7) |
 | hybrid-rerank-meta-golden-v1-3 | 57% (4/7) | 57% (4/7) | 71% (5/7) | 0.405 | 57% (4/7) |
 | hybrid-stem-prefix6-golden-v1-3 | 57% (4/7) | 71% (5/7) | 71% (5/7) | 0.425 | 71% (5/7) |
+| meta-index-hybrid-golden-v1-3 | 57% (4/7) | 71% (5/7) | 86% (6/7) | 0.446 | 71% (5/7) |
+| meta-index-hybrid-rerank-golden-v1-3 | 71% (5/7) | 71% (5/7) | 86% (6/7) | 0.476 | 71% (5/7) |
 | vector-golden-v1-3 | 57% (4/7) | 71% (5/7) | 71% (5/7) | 0.413 | 71% (5/7) |

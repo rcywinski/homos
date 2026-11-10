@@ -1,12 +1,21 @@
 /**
- * npm run ai:index
- * Embeds every chunk with the LocalEmbedder (bge-m3 on the inference box) and writes ai/index/ollama-bge-m3.json.
+ * npm run ai:index [-- --doc meta [--contexts ai/context/contexts-<model>.jsonl]]
+ * Embeds every chunk with the LocalEmbedder (bge-m3 on the inference box) and writes ai/index/<name>.json:
+ *   ollama-bge-m3.json            the chunk text (steps 1.3 to 1.6)
+ *   ollama-bge-m3.meta.json       metadata header + text (control row meta-index, step 1.7)
+ *   ollama-bge-m3.ctx-<tag>.json  metadata header + generated context + text (contextual rows, step 1.7)
  * Then runs the step 1.3 smoke check: a Polish question and its English translation must return the same top chunk.
  */
 import 'dotenv/config';
 import { loadCorpus } from '../corpus/load';
 import { LocalEmbedder } from './local';
 import { corpusHash, indexPath, writeIndex } from './index-file';
+import { indexView } from './index-view';
+
+function arg(name: string): string | undefined {
+  const i = process.argv.indexOf(name);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
 
 const SMOKE: Array<[string, string]> = [
   ['Dlaczego zakres cbBTC zawężono 31 sierpnia?', 'Why was the cbBTC range narrowed on 31 August?'],
@@ -19,7 +28,8 @@ async function main() {
   const baseUrl = process.env.INFERENCE_URL;
   if (!baseUrl) throw new Error('INFERENCE_URL is not set (see .env.example)');
 
-  const chunks = loadCorpus();
+  const view = indexView(loadCorpus(), arg('--doc'), arg('--contexts'));
+  const chunks = view.chunks;
   const embedder = new LocalEmbedder({
     baseUrl,
     keepAlive: '30m',
@@ -35,7 +45,7 @@ async function main() {
   const wallTimeMs = Date.now() - t0;
   process.stdout.write('\n');
 
-  const file = indexPath(embedder.name);
+  const file = indexPath(embedder.name + view.suffix);
   writeIndex(file, {
     embedder: embedder.name,
     dims: embedder.dims,

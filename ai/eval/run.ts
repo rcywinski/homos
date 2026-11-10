@@ -14,6 +14,8 @@ import { loadCorpus } from '../corpus/load';
 import type { Chunk } from '../corpus/types';
 import { LocalEmbedder } from '../embed/local';
 import { corpusHash, indexPath, readIndex } from '../embed/index-file';
+import { indexView } from '../embed/index-view';
+import { applyContexts } from '../context/contexts-file';
 import { VectorStore } from '../store/vector';
 import { Bm25Index } from '../store/bm25';
 import { HybridRetriever } from '../store/hybrid';
@@ -46,7 +48,11 @@ async function main() {
 
   const root = process.cwd();
   const chunks = loadCorpus(root);
-  const byId = new Map(chunks.map((c) => [c.id, c]));
+  // --index-doc meta [--contexts file]: the vectors and BM25 index header (+ context) + text (step 1.7);
+  // the reranker then gets the same documents (format meta). Default: plain chunk text, as in 1.3 to 1.6.
+  const contextsFile = arg('--contexts');
+  const view = indexView(chunks, arg('--index-doc'), contextsFile);
+  const byId = new Map((contextsFile ? applyContexts(chunks, contextsFile) : chunks).map((c) => [c.id, c]));
   const golden = readFileSync('ai/eval/golden.jsonl', 'utf8')
     .split('\n')
     .filter((l) => l.trim())
@@ -54,12 +60,12 @@ async function main() {
   const goldenVersion = (JSON.parse(readFileSync('ai/eval/golden-meta.json', 'utf8')) as { version: string }).version;
 
   const embedder = new LocalEmbedder({ baseUrl });
-  const index = readIndex(indexPath(embedder.name, root), chunks);
+  const index = readIndex(indexPath(embedder.name + view.suffix, root), view.chunks);
   const kind = arg('--retriever') ?? 'vector';
   const stem = (arg('--stem') ?? 'none') as Stem;
   if (!['none', 'prefix6'].includes(stem)) throw new Error('--stem must be none or prefix6');
   const vector = new VectorStore(index.ids, index.vectors, embedder);
-  const bm25 = () => new Bm25Index(chunks, { stem, dropNie: process.argv.includes('--drop-nie') });
+  const bm25 = () => new Bm25Index(view.chunks, { stem, dropNie: process.argv.includes('--drop-nie') });
   let reranker: LocalReranker | null = null;
   let rerankRetriever: RerankRetriever | null = null;
   const makeRetriever = async (): Promise<Retriever> => {
@@ -140,7 +146,8 @@ async function main() {
     label,
     date: localDate(),
     goldenVersion,
-    retriever: retriever.name,
+    retriever: view.suffix ? `${retriever.name} index=${embedder.name}${view.suffix}` : retriever.name,
+    ...(contextsFile ? { contexts: contextsFile } : {}),
     embedder: embedder.name,
     corpusHash: corpusHash(chunks),
     chunkCount: chunks.length,

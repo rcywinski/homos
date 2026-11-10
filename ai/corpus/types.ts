@@ -32,6 +32,11 @@ export interface Chunk {
   text: string;
   /** Present only when the source unit was split: 1-based index and total number of parts. */
   part?: { index: number; of: number };
+  /**
+   * Generated context (step 1.7): one or two English sentences written by a model, loaded from a committed
+   * contexts file. Never part of the source text and never part of the corpus hash.
+   */
+  context?: string;
 }
 
 /**

@@ -14,12 +14,14 @@ export type DocFormat = 'plain' | 'meta';
  * `meta` (variant hybrid-rerank-meta, declared before measuring in step 1.6): one header line built only from
  * metadata the chunk already has, then the text. Example:
  *   `[journal/DECYZJE-2026-08-26.md | 2026-08-26 | 11f. (Nowe, 25.08 noc) ANALIZA 720d ...]`
- * Nothing is generated, so this is not contextual retrieval (step 1.7).
+ * When the chunk carries a generated context (step 1.7), it follows the header on its own line.
+ * The same function builds the text for embedding and BM25 in the meta-index and contextual rows, so the
+ * reranker and the index always see the same document.
  */
 export function docText(c: Chunk, format: DocFormat): string {
   if (format === 'plain') return c.text;
   const header = [c.file, c.date, c.title].filter((x) => x && x.trim()).join(' | ');
-  return `[${header}]\n${c.text}`;
+  return c.context ? `[${header}]\n${c.context}\n${c.text}` : `[${header}]\n${c.text}`;
 }
 
 export class RerankRetriever implements Retriever {
