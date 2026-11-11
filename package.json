@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "test": "npm run typecheck && npm run test:math && npm run test:ai && npm run backtest:validate",
     "test:math": "tsx test/v3math.test.ts",
-    "test:ai": "tsx ai/corpus/split.test.ts && tsx ai/embed/embed.test.ts && tsx ai/eval/metrics.test.ts && tsx ai/store/store.test.ts && tsx ai/rerank/rerank.test.ts && tsx ai/context/context.test.ts && tsx ai/answer/answer.test.ts && tsx ai/judge/judge.test.ts",
+    "test:ai": "tsx ai/corpus/split.test.ts && tsx ai/embed/embed.test.ts && tsx ai/eval/metrics.test.ts && tsx ai/store/store.test.ts && tsx ai/rerank/rerank.test.ts && tsx ai/context/context.test.ts && tsx ai/answer/answer.test.ts && tsx ai/judge/judge.test.ts && tsx ai/answer/local.test.ts",
     "backtest:validate": "tsx backtest/validate.ts",
     "backtest": "tsx backtest/run.ts",
     "backtest:selection": "tsx backtest/selection.ts",
@@ -49,7 +49,9 @@
     "ai:answers": "tsx ai/eval/answers.ts",
     "ai:answers:reverify": "tsx ai/answer/reverify.ts",
     "ai:judge": "tsx ai/eval/judge.ts",
-    "ai:blind": "tsx ai/eval/blind.ts"
+    "ai:blind": "tsx ai/eval/blind.ts",
+    "ai:chunk-lists": "tsx ai/eval/chunk-lists.ts",
+    "ai:local-compare": "tsx ai/eval/local-compare.ts"
   },
   "author": "Rafał Cywiński",
   "license": "MIT",
@@ -76,6 +78,7 @@
     "@babel/preset-react": "^7.29.7",
     "@babel/preset-typescript": "^7.24.7",
     "@eslint/js": "^9.39.5",
+    "@huggingface/tokenizers": "^0.2.0",
     "@types/node": "^20.11.28",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",

@@ -2,6 +2,8 @@
  * Retrieval for answering (step 1.8): the variant chosen in 1.7, Haiku contexts (run-1 file) in the index, BM25 gets
  * the question plus its Polish rendering, hybrid RRF, cross-encoder rerank of the top 30 with the metadata header.
  * Returns the top k chunks as source text (no generated context): that is what the generator sees.
+ * Variant "local" (step 1.11, variant B): no cloud step at all, the meta-index plus rerank row of 1.7 (metadata header
+ * in the index and to the reranker, plain question to BM25, no generated context, no query translation).
  */
 import { applyContexts } from '../context/contexts-file';
 import { ClaudeQueryRewriter, expandedQuery, readQueries, type PolishQuery } from '../context/query';
@@ -20,6 +22,8 @@ import { VectorStore } from '../store/vector';
 export const CONTEXTS_FILE = 'ai/context/contexts-haiku.jsonl';
 export const QUERIES_FILE = 'ai/context/queries-pl-sonnet.jsonl';
 
+export type RetrievalVariant = 'chosen' | 'local';
+
 export class AnswerRetrieval {
   readonly name: string;
   private readonly source: Map<string, Chunk>;
@@ -29,26 +33,33 @@ export class AnswerRetrieval {
   /** Questions translated live (not in the cached file), for the cost line. */
   liveTranslations = 0;
 
-  constructor(root = process.cwd()) {
+  constructor(
+    root = process.cwd(),
+    private readonly variant: RetrievalVariant = 'chosen',
+  ) {
     const inferenceUrl = process.env.INFERENCE_URL;
     const rerankUrl = process.env.RERANK_URL;
     if (!inferenceUrl || !rerankUrl) throw new Error('INFERENCE_URL and RERANK_URL must be set (see .env.example)');
     const chunks = loadCorpus(root);
     this.source = new Map(chunks.map((c) => [c.id, c]));
-    const view = indexView(chunks, 'meta', CONTEXTS_FILE);
+    const local = variant === 'local';
+    const view = indexView(chunks, 'meta', local ? undefined : CONTEXTS_FILE);
     const embedder = new LocalEmbedder({ baseUrl: inferenceUrl });
     const index = readIndex(indexPath(embedder.name + view.suffix, root), view.chunks);
-    this.queries = readQueries(QUERIES_FILE);
-    const bm25 = new MappedRetriever(
-      new Bm25Index(view.chunks, { stem: 'prefix6' }),
-      (q) => {
-        const pl = this.queries.get(q);
-        if (!pl) throw new Error(`no Polish rendering for: ${q}`);
-        return expandedQuery(pl);
-      },
-      'query-pl',
-    );
-    const withContext = new Map(applyContexts(chunks, CONTEXTS_FILE).map((c) => [c.id, c]));
+    this.queries = local ? new Map() : readQueries(QUERIES_FILE);
+    const plainBm25 = new Bm25Index(view.chunks, { stem: 'prefix6' });
+    const bm25 = local
+      ? plainBm25
+      : new MappedRetriever(
+          plainBm25,
+          (q) => {
+            const pl = this.queries.get(q);
+            if (!pl) throw new Error(`no Polish rendering for: ${q}`);
+            return expandedQuery(pl);
+          },
+          'query-pl',
+        );
+    const withContext = new Map((local ? chunks : applyContexts(chunks, CONTEXTS_FILE)).map((c) => [c.id, c]));
     const hybrid = new HybridRetriever([new VectorStore(index.ids, index.vectors, embedder), bm25]);
     this.retriever = new RerankRetriever(hybrid, new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 120_000 }), withContext, 30, 'meta');
     this.name = `${this.retriever.name} index=${embedder.name}${view.suffix}`;
@@ -68,7 +79,7 @@ export class AnswerRetrieval {
   }
 
   async retrieve(questions: string[], k: number): Promise<Chunk[][]> {
-    await this.ensureTranslated(questions);
+    if (this.variant !== 'local') await this.ensureTranslated(questions);
     const hits = await this.retriever.search(questions, k);
     return hits.map((list) => list.map((h) => this.source.get(h.id)!));
   }

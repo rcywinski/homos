@@ -223,9 +223,59 @@ inference/reranker/.venv/bin/python inference/reranker/smoke.py "$RERANK_URL"   
 The service was run once on the Mac's CPU (Intel, torch 2.2.2, transformers 4.49, sentence-transformers 3.4.1)
 to check the API shape and `smoke.py`; see the step 1.6 commit. Latency on the Mac is not a measurement of the box.
 
+## Local generator (step 1.11)
+
+**Model:** `qwen3.8:27b` (Ollama digest `aaee06c39dcf`, 27.3B parameters, Q4_K_M, 16.52 GB on disk), approved by the
+owner on 11 Nov 2026 and pulled by CC-Win the same day (download only; free disk on C: afterwards 419.6 GB).
+
+Why this model: the newest dense model that fits next to the embedder and the reranker on the 24 GB card, a 256K
+context window (we need about 16K for 10 chunks), Apache 2.0 licence, thinking mode that can be switched off per
+request. Structured output is enforced by Ollama's `format` parameter with the answer JSON schema. Polish is not
+named on the model card; the step measures it (quotes must be copied verbatim from Polish sources).
+
+Rejected: Gemma 4 31B (19 to 20 GB of weights, too little room for the context); Mistral Small 3.2 24B (fits easily,
+but over a year old). Gemma 4 26B-A4B (MoE, about 4B active parameters, Apache 2.0 since its release on 2 Apr 2026,
+35+ languages per its card) stays a possible extra run, decided by the owner after the Qwen results.
+
+**VRAM budget.** Reranker alone: 3582 MiB of 24576 MiB in use (11 Nov). bge-m3 adds about 0.7 to 1 GB while loaded
+(5-minute keep_alive). The Mac unloads bge-m3 (`keep_alive: 0`) before loading the generator, loads the generator with
+an explicit `num_ctx`, checks `/api/ps` that it is 100% on the GPU, and unloads it after the runs. Nothing on the box
+changes; the model is loaded and unloaded per request from the Mac.
+
+### GPU power limit (step 1.11, 11 Nov 2026)
+
+Why: on 11 Nov 2026 the box lost power 4 times (12:02, 12:07, 12:09, 12:10) while `qwen3.8:27b` was loading or generating: Kernel-Power 41 with bugcheck code 0, no crash dump, no WHEA or display driver error. The power supply cannot hold the RTX 3090's load spikes. The owner had already capped the card at 83% (348.6 W) in MSI Afterburner for gaming, but Afterburner only applies its limit in a logged-in session, and the box serves models without anyone logged in. The owner chose 250 W (60% of the 420 W default).
+
+How it is applied: `C:\ollama\set-gpu-power-limit.ps1` runs `nvidia-smi -pl 250`, reads the limit back and logs to `C:\ollama\logs\gpu-power.log` (it retries for up to 60 s while the driver starts). The limit does not survive a reboot, so it runs:
+
+- as the first line of `start-ollama.ps1` and `start-reranker.ps1`, so no model loads at the default 420 W;
+- from the scheduled task `HOMOS GPU power limit` (SYSTEM): at startup, and 1 minute after any logon, which undoes a higher limit applied by MSI Afterburner at logon.
+
+MSI Afterburner (scheduled task `\MSIAfterburner`, runs at logon of the owner, console or RDP) applies the power limit from its startup profile. It is set to 59% (about 248 W) so that it does not raise the limit; the logon trigger above re-applies 250 W in any case.
+
+Test at 250 W (11 Nov 2026, 12:26 to 12:30): one load of `qwen3.8:27b` with `num_ctx` 16384 (22.5 s), then two generations of 4000 tokens with 8599 and 6096 prompt tokens: 61.4 and 40.4 tokens/s, power at most 250.15 W, temperature at most 57 C, SM clock about 1050 MHz under load, VRAM peak 23.4 of 24 GB with the reranker loaded. The box stayed up. Per-second log with write-through: `C:\ollama\logs\qwen-test-2026-11-11.csv`. A 1-second sample does not show millisecond spikes; the evidence is that the box held.
+
+Check:
+
+```powershell
+nvidia-smi --query-gpu=power.limit,enforced.power.limit --format=csv     # 250.00 W
+Get-Content C:\ollama\logs\gpu-power.log -Tail 5                          # one line per boot, per launcher and per logon
+Get-ScheduledTask -TaskName 'HOMOS GPU power limit'                       # Ready, triggers At startup and At log on
+```
+
+To change the value, edit `$Watts` in `set-gpu-power-limit.ps1` and run the task, and move the Afterburner slider to match.
+
+Notes: the Afterburner 59% line assumes the owner makes that change (in progress). If the box goes down again at 250 W, the next suspect is the PSU itself.
+
+Gemma 4 26B-A4B (`gemma4:26b`, pulled 11 Nov for one extra run): Ollama 0.40.15 loads it with a small speculative
+draft model, and `/api/ps` then reports only about 1.27 GiB, which is not the real footprint. Check full GPU placement in
+the server log ("offloaded 31/31 layers to GPU") or by total VRAM (about 19.5 GiB above the reranker), not by `/api/ps`.
+
+On the Mac side (CC-Mac): a call that gets no response is retried only while `/api/ps` still lists the model; if the box is unreachable or the model is gone (a reboot), the run stops instead of loading the model again (`ai/answer/local.ts`). On 11 Nov the earlier retry logic reloaded the model after two of the reboots.
+
 ## Later
 
-- **Local generator comparison, phase 3.** Extra models pulled into the same Ollama.
+- **Local generator comparison** moved to step 1.11, see "Local generator (step 1.11)" above. Further models, if any, go into the same Ollama.
 
 ## Reranker operations (filled in by CC-Win in step 1.6)
 

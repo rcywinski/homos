@@ -192,6 +192,30 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   frames checked for secrets). Verifier loosened for whitespace only (a line break may match one space or none), all saved
   answers re-verified offline: 283/283 before and after. README free of long dashes. Merge to `main` waits for the owner.
 
+- [x] 2026-11-11 **1.11 Local generator comparison** (moved forward from phase 3, 11 Nov). `[CC-Win pulls the model]` Question: how does a
+  local model on the RTX 3090 compare with Sonnet 5.5 at writing the answer from the same retrieved chunks? `LocalGenerator` on Ollama
+  behind the `Generator` interface; the model is chosen by the owner before anything is pulled (fits in about 20 GB of VRAM next to the
+  embedder and reranker with room for 10 chunks, handles Polish source text, JSON-schema structured output, licence allows this use).
+  Variant A, local generator only: the exact k=10 chunk lists of the Sonnet k=10 run, so only the generator differs; run twice for the
+  spread. Variant B, fully local: meta-index plus rerank retrieval (no generated context, no query translation), then the local generator.
+  Same system prompt, output schema and verifier as Sonnet, no prompt tuning for the local model. Context length set explicitly; every
+  call checks the prompt token count and fails loudly on a mismatch. Invalid structured outputs counted separately, at most one retry.
+  Injection probe first. All settings recorded. All new answers judged blind by the step 1.9 Opus judge, which never learns the generator.
+  Model unloaded after the runs (short keep_alive). Spend cap $4. Report: one table, Sonnet k=10 against A run 1, A run 2 and B (valid
+  outputs, citations verified, quotes over 40 words, unanswerable labelled none, judge correctness and faithfulness, premise handled,
+  median and p95 latency, tokens per second, cost), the spread, and which differences exceed it.
+  Model (owner, 11 Nov): `qwen3.8:27b` (Q4_K_M, 16.52 GB, Apache 2.0, 256K context, thinking switchable), pulled by CC-Win
+  on 11 Nov. Rejected: Gemma 4 31B (too large for the context next to the reranker), Mistral Small 3.2 24B (older). Gemma 4
+  26B-A4B (Apache 2.0 since 2 Apr 2026, 35+ languages) is a possible extra run after the Qwen results. Details in
+  `inference/README.md`. Extra run (owner, 11 Nov): A with thinking on, same chunk lists, card sampling for thinking mode,
+  larger num_predict, thinking text kept out of the verifier and the judge; run after A1, A2 and B.
+  Result (golden v1.4, all local runs at a 250 W GPU limit, judged blind by the 1.9 Opus judge): Sonnet 20/12/2 correct /
+  partially / incorrect; Qwen A 13/16/5 and 12/15/7; Qwen B 17/12/5 and 17/10/7; Qwen A with thinking 14/16/4; Gemma 4 26B-A4B
+  14/13/7. Spread 7 of 34 questions for both A and B. Sonnet beats Qwen A beyond the spread (every changed verdict in
+  Sonnet's favour); B and thinking do not differ from A beyond it. Quotes: Sonnet 0 of 283 unverified, Qwen 24 of 321, Gemma
+  18 of 67, every one caught by the verifier. Qwen about 3x slower (median 12 s); Gemma 4.7 s. The box lost power four times
+  before the 250 W limit; two of those after CC-Mac's retries reloaded the model (fixed). Judge cost $3.18 of the $4 cap.
+
 ## Phase 2: tool-using agent
 
 - [ ] NEXT **2.1 Tool definitions.** `ai/agent/tools.ts`: `search_journal(query)` (phase 1 retrieval), `read_decision_log()`, `read_backtest_results(name)`
@@ -207,8 +231,7 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
 ## Phase 3: optional, only if time allows
 
 - [ ] `/ask` endpoint in `bot/server.ts` and a panel in the cockpit UI.
-- [ ] **Local generator comparison.** `[CC-Win pulls the models]` `LocalGenerator` on Ollama (e.g. Qwen 2.5 14B or 32B, 4-bit, fits in 24 GB) behind the same `Generator`
-  interface. Re-run 1.9 with the local model: same retrieval, same golden set, same judge. Also re-run 1.7 with the local model writing the chunk
+- [ ] **Local contexts.** The local generator comparison moved to step 1.11. Remaining here: re-run 1.7 with the local model writing the chunk
   contexts and compare recall against the Claude-written contexts. Write up as "cloud vs local" in `docs/AI-RAG.md`: quality, latency, cost.
   This answers the question clients actually ask: can this run without sending data to a cloud model, and what does it cost in quality.
 - [ ] `VoyageEmbedder` as a cloud embedding alternative, if 1.4 to 1.6 showed retrieval misses that look like embedding quality.

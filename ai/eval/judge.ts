@@ -1,5 +1,5 @@
 /**
- * npm run ai:judge -- --max-usd <cap> [--concurrency 4]
+ * npm run ai:judge -- --max-usd <cap> [--concurrency 4] [--set 1.9|local]
  * Step 1.9: the Opus 5.5 judge grades every answer of the three generation runs (k5-run1, k5-run2, k10) on golden
  * v1.4. Each answer is one blind call (see ai/judge/items.ts). Verdicts are appended to a JSONL file as they arrive,
  * so an interrupted run resumes without paying twice. Writes the judgments file and a JSON with every item; the
@@ -23,6 +23,24 @@ export const RUNS = [
 export const JUDGMENTS = `${RESULTS}/2026-11-10-judgments-golden-v1-4.jsonl`;
 export const JUDGED = `${RESULTS}/2026-11-10-judged-golden-v1-4.json`;
 
+/**
+ * Step 1.11: the local generator runs, judged by the same judge with the same prompt. Run names stay in the files;
+ * the judge never sees them (ai/judge/items.ts), so it cannot tell which generator wrote an answer.
+ */
+export const LOCAL_RUNS = [
+  { run: 'local-a1', file: `${RESULTS}/2026-11-11-answers-k10-local-a1-golden-v1-4.json` },
+  { run: 'local-a2', file: `${RESULTS}/2026-11-11-answers-k10-local-a2-golden-v1-4.json` },
+  { run: 'local-b', file: `${RESULTS}/2026-11-11-answers-k10-local-b-golden-v1-4.json` },
+  { run: 'local-a-think', file: `${RESULTS}/2026-11-11-answers-k10-local-a-think-golden-v1-4.json` },
+  { run: 'local-b2', file: `${RESULTS}/2026-11-11-answers-k10-local-b2-golden-v1-4.json` },
+  { run: 'local-gemma-a', file: `${RESULTS}/2026-11-11-answers-k10-local-gemma-a-golden-v1-4.json` },
+];
+export const SETS = {
+  '1.9': { runs: RUNS, judgments: JUDGMENTS, judged: JUDGED, date: '2026-11-10' },
+  local: { runs: LOCAL_RUNS, judgments: `${RESULTS}/2026-11-11-judgments-local-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-11-judged-local-golden-v1-4.json`, date: '2026-11-11' },
+};
+export type SetName = keyof typeof SETS;
+
 const arg = (n: string) => (process.argv.includes(n) ? process.argv[process.argv.indexOf(n) + 1] : undefined);
 
 export function loadGolden(): GoldenQuestion[] {
@@ -30,16 +48,17 @@ export function loadGolden(): GoldenQuestion[] {
 }
 
 /** Every answer of every run as a judge item, with any verdict already in the JSONL file attached. */
-export function loadItems(): JudgedItem[] {
+export function loadItems(set: SetName = '1.9'): JudgedItem[] {
+  const { runs, judgments } = SETS[set];
   const golden = new Map(loadGolden().map((q) => [q.id, q]));
   const done = new Map<string, JudgeResult>();
-  if (existsSync(JUDGMENTS))
-    for (const l of readFileSync(JUDGMENTS, 'utf8').split('\n').filter((x) => x.trim())) {
+  if (existsSync(judgments))
+    for (const l of readFileSync(judgments, 'utf8').split('\n').filter((x) => x.trim())) {
       const j = JSON.parse(l) as { run: string; id: string; result: JudgeResult };
       if (j.result.verdict) done.set(`${j.run}|${j.id}`, j.result);
     }
   const items: JudgedItem[] = [];
-  for (const { run, file } of RUNS) {
+  for (const { run, file } of runs.filter((r) => existsSync(r.file) || set === '1.9')) {
     const r = JSON.parse(readFileSync(file, 'utf8')) as { goldenVersion: string; perQuestion: AnswerRecord[] };
     if (r.goldenVersion !== '1.4') throw new Error(`${file}: golden v${r.goldenVersion}, expected 1.4`);
     for (const rec of r.perQuestion) {
@@ -55,7 +74,10 @@ async function main() {
   const maxUsd = Number(arg('--max-usd'));
   if (!(maxUsd > 0)) throw new Error('--max-usd <cap in USD> is required');
   const concurrency = Number(arg('--concurrency') ?? 4);
-  const items = byHash(loadItems());
+  const set = (arg('--set') ?? '1.9') as SetName;
+  if (!SETS[set]) throw new Error(`--set must be one of ${Object.keys(SETS).join(', ')}`);
+  const { judgments, judged, date } = SETS[set];
+  const items = byHash(loadItems(set));
   const todo = items.filter((x) => !x.result);
   const judge = new ClaudeJudge();
   // Worst case of one call: the prompt (about 3 characters per token) plus the whole 8000-token output budget.
@@ -86,17 +108,17 @@ async function main() {
       spent += r.costUsd;
       if (!r.verdict) errors++;
       x.result = r;
-      appendFileSync(JUDGMENTS, JSON.stringify({ run: x.run, id: x.id, result: r }) + '\n');
+      appendFileSync(judgments, JSON.stringify({ run: x.run, id: x.id, result: r }) + '\n');
       process.stdout.write(r.verdict ? '.' : 'x');
     }
   };
   await Promise.all(Array.from({ length: concurrency }, worker));
   process.stdout.write('\n');
 
-  const all = loadItems();
-  writeFileSync(JUDGED, JSON.stringify({ date: '2026-11-10', goldenVersion: '1.4', judge: judge.name, runs: RUNS, items: all }, null, 2) + '\n');
+  const all = loadItems(set);
+  writeFileSync(judged, JSON.stringify({ date, goldenVersion: '1.4', judge: judge.name, runs: SETS[set].runs.filter((r) => existsSync(r.file)), items: all }, null, 2) + '\n');
   const missing = all.filter((x) => !x.result).length;
-  console.log(`spent $${spent.toFixed(4)} this run (cap $${maxUsd})${stopped ? ', STOPPED BY CAP' : ''}; failed calls ${errors}; answers without a verdict ${missing}. Wrote ${JUDGED}`);
+  console.log(`spent $${spent.toFixed(4)} this run (cap $${maxUsd})${stopped ? ', STOPPED BY CAP' : ''}; failed calls ${errors}; answers without a verdict ${missing}. Wrote ${judged}`);
 }
 
 if (require.main === module)

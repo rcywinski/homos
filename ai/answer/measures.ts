@@ -9,7 +9,7 @@
  */
 import type { Answerable } from '../eval/golden';
 import type { TokenUsage } from '../context/types';
-import type { Coverage } from './types';
+import type { Coverage, LocalCallStats } from './types';
 import type { VerifiedCitation } from './verify';
 
 export interface AnswerRecord {
@@ -27,6 +27,10 @@ export interface AnswerRecord {
   ms: number;
   answer: string;
   error?: string;
+  /** The k chunk ids given to the generator, in rank order (stored from step 1.11 on). */
+  chunkIds?: string[];
+  /** Local generator details (step 1.11). */
+  local?: LocalCallStats;
 }
 
 export function citationCounts(rs: AnswerRecord[]) {
@@ -72,5 +76,28 @@ export function costAndLatency(rs: AnswerRecord[]) {
     tokens: { input: sum('input'), cacheWrite: sum('cacheWrite'), cacheRead: sum('cacheRead'), output: sum('output') },
     msMedian: ms[Math.floor(ms.length / 2)] ?? null,
     msP95: ms[Math.min(ms.length - 1, Math.floor(0.95 * ms.length))] ?? null,
+  };
+}
+
+const median = (xs: number[]) => {
+  const s = [...xs].sort((a, b) => a - b);
+  return s.length ? s[Math.floor(s.length / 2)] : null;
+};
+
+/** Local generator measures (step 1.11): structured-output validity, retries, decode speed, thinking tokens. */
+export function localStats(rs: AnswerRecord[]) {
+  const l = rs.map((r) => r.local).filter((x): x is LocalCallStats => !!x);
+  if (!l.length) return null;
+  return {
+    validOutputs: rs.filter((r) => r.coverage !== 'error').length,
+    answers: rs.length,
+    invalidOutputs: l.reduce((s, x) => s + x.invalidOutputs, 0),
+    answersRetried: l.filter((x) => x.retried).length,
+    networkRetries: l.reduce((sum, x) => sum + (x.networkRetries ?? 0), 0),
+    tokensPerSecondMedian: median(l.map((x) => x.tokensPerSecond)),
+    evalTokensMedian: median(l.map((x) => x.evalTokens)),
+    thinkingTokensMedian: median(l.map((x) => x.thinkingTokens)),
+    thinkingTokensMax: Math.max(...l.map((x) => x.thinkingTokens)),
+    promptTokensMax: Math.max(...l.map((x) => x.promptTokensServer)),
   };
 }
