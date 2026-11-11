@@ -47,6 +47,17 @@ async function main() {
     check('Markdown bold dropped by the model still verifies', md.status === 'ok' && md.lines?.[0] === 1757, JSON.stringify(md));
     const bq: Chunk = { ...c, id: 'bq:1', text: '> na mainnet/base/arbitrum, pule bota pomijane\n> (mają 720d z pipeline\'u). Dysk: 0.5 GB/pula' };
     check('blockquote markers across a line break', verifyCitation({ chunkId: 'bq:1', quote: "pule bota pomijane (mają 720d z pipeline'u)" }, new Map([['bq:1', bq]])).status === 'ok');
+    // Line-break rule (step 1.10): the live case of 11 Nov, CONTEXT.md:1336-1337, quote dropped the space at the wrap.
+    // Dashes are escaped so this file stays free of long dashes; the source has an en dash and an em dash here.
+    const wrap = chunks.find((x) => x.file === 'journal/CONTEXT.md' && x.lineStart <= 1336 && x.lineEnd >= 1337)!;
+    const wrapGiven = new Map([[wrap.id, wrap]]);
+    const wrapQuote = 'base-030 57–60%— to samo okno wygrywa/przegrywa';
+    const wq = verifyCitation({ chunkId: wrap.id, quote: wrapQuote }, wrapGiven);
+    check('missing space at a source line break verifies, exact lines', wq.status === 'ok' && wq.lines?.[0] === 1336 && wq.lines?.[1] === 1337, JSON.stringify(wq));
+    check('the same quote with the space verifies too', verifyCitation({ chunkId: wrap.id, quote: 'base-030 57–60% — to samo' }, wrapGiven).status === 'ok');
+    check('missing space inside a line is still not found', verifyCitation({ chunkId: c.id, quote: 'Sam przychód(fee) mówi' }, given).status === 'not-found');
+    check('punctuation is not tolerated', verifyCitation({ chunkId: wrap.id, quote: 'base-030 57-60% - to samo' }, wrapGiven).status === 'not-found');
+    check('extra space inside a word is not tolerated', verifyCitation({ chunkId: c.id, quote: 'Sam przy chód (fee) mówi' }, given).status === 'not-found');
     check('altered quote not found', verifyCitation({ chunkId: c.id, quote: 'zwężanie wygrywa 5×' }, given).status === 'not-found');
     check('pieces joined with an ellipsis not found', verifyCitation({ chunkId: c.id, quote: 'Sam przychód (fee) mówi ... oddaje 97% i 92%' }, given).status === 'not-found');
     check('unknown chunk id', verifyCitation({ chunkId: 'journal/CONTEXT.md:1', quote: 'x' }, given).status === 'unknown-chunk');

@@ -9,11 +9,11 @@
 HOMOS is a TypeScript monorepo I built and ran, with my own capital, to answer one question:
 *can a systematic, rules-based liquidity-provision strategy on Uniswap v3 beat simply holding the two tokens?*
 
-The short answer, after ~6 weeks of backtesting and 25 days of live capital, was **no — not reliably**.
+The short answer, after ~6 weeks of backtesting and 25 days of live capital, was **no, not reliably**.
 The product ("FlatWide": a wide passive range that narrows only in a confirmed flat regime)
 returned **+0.6 % in 22 days** of live LP, which is roughly HODL 50/50 plus fees minus a little impermanent loss.
 The tranche was closed at **+5.5 %** overall, but most of that came from three days of directional
-exposure after the LP was unwound — not from the strategy. The full story, including the decisions
+exposure after the LP was unwound, not from the strategy. The full story, including the decisions
 I would make differently, is in [`docs/CASE-STUDY.md`](docs/CASE-STUDY.md).
 
 **Start here:** [`docs/CASE-STUDY.md`](docs/CASE-STUDY.md) for the story,
@@ -26,24 +26,24 @@ Envio HyperSync, DefiLlama, Express, webpack, ESLint, GitHub Actions; deployed a
 
 What is worth reading here is the engineering and the process:
 
-- **Exact v3 math on `bigint`** (`src/utils/v3math.ts`) — reproduces `@uniswap/v3-sdk` to the wei;
+- **Exact v3 math on `bigint`** (`src/utils/v3math.ts`): reproduces `@uniswap/v3-sdk` to the wei;
   2 925 reference tests (`npm run test:math`). Written after discovering that the legacy float
-  implementation was masking 20–25 % slippage.
-- **A backtesting engine with a hard validation gate** (`backtest/`) — walk-forward windows,
+  implementation was masking 20-25 % slippage.
+- **A backtesting engine with a hard validation gate** (`backtest/`): walk-forward windows,
   regime splits, a 720-day + recent-90-day gate against a HODL 50/50 benchmark, 14 sanity tests
   (`npm run backtest:validate`). The gate is what stopped every "improvement" that only worked on
   the last bullish year.
-- **A propose-only bot** (`bot/`) — a 24/7 observer that prices pools, tracks NFT positions,
+- **A propose-only bot** (`bot/`): a 24/7 observer that prices pools, tracks NFT positions,
   detects regimes and *proposes* actions to a cockpit UI. Nothing executes without a wallet
   signature from the owner. It never held a private key.
-- **A data pipeline** (`scripts/`) — swap-level history via HyperSync (a year of a pool in ~13 min),
+- **A data pipeline** (`scripts/`): swap-level history via HyperSync (a year of a pool in ~13 min),
   DefiLlama APY/TVL history, a nightly pipeline with a morning report and Telegram digest.
-- **Windows 24/7 deployment** (`deploy/`, `docs/INFRA.md`) — NSSM services, scheduled tasks,
+- **Windows 24/7 deployment** (`deploy/`, `docs/INFRA.md`): NSSM services, scheduled tasks,
   LAN/VPN-only API with a bearer token, backups.
-- **A documented decision log** ([`docs/DECISION-LOG.md`](docs/DECISION-LOG.md)) — every
+- **A documented decision log** ([`docs/DECISION-LOG.md`](docs/DECISION-LOG.md)): every
   parameter freeze, revision and exit rule, with the evidence it was based on and, where relevant,
   a note about the bias it was made under.
-- **An AI-assisted workflow** ([`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md)) — the project was
+- **An AI-assisted workflow** ([`docs/AI-WORKFLOW.md`](docs/AI-WORKFLOW.md)): the project was
   developed by one engineer coordinating four specialised Claude sessions through two files in the
   repo (a living journal and a set of hand-off inboxes). The commit history shows it.
 
@@ -113,7 +113,7 @@ npm run backtest         # all strategies on the cached swap data
 ```
 
 There are no hard-coded wallet addresses or RPC keys; public RPC fallbacks are used when none
-are configured. The data caches under `data/` are regenerable — see the headers of `scripts/*.ts`.
+are configured. The data caches under `data/` are regenerable: see the headers of `scripts/*.ts`.
 
 ## AI layer
 
@@ -170,4 +170,4 @@ answers questions over these notes with citations to file and line.
 
 ## License
 
-MIT — see [`LICENSE`](LICENSE).
+MIT, see [`LICENSE`](LICENSE).

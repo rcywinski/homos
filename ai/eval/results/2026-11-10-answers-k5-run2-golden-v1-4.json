@@ -1859,5 +1859,8 @@
       "ms": 4568,
       "answer": "The documented design (DB-SCHEMA.md, a draft DDL v1) is SQLite-style, but PLAN.md says the ledger shipped as ndjson + CSV export rather than SQLite, so it was apparently never built. For backtests, the planned schema held only one table, `backtest_run`, an index of results files (id, ts, kind, pool_id, params JSON, file path, git_commit). Raw tick-level swaps stayed in ndjson files, not the database. The wider schema also defined paper_event, position and tx tables plus views. The chunks do not show the full schema (e.g., the pool, venue, paper_sample, proposal tables)."
     }
+  ],
+  "reverified": [
+    "2026-11-11T10:03:43.488Z: 0 citation statuses changed"
   ]
 }

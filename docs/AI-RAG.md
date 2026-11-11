@@ -40,7 +40,9 @@ question, in a language the question is not written in, and answer with quotes a
    an answer, a coverage label (`full`, `partial`, `none`) and citations: a chunk id plus a verbatim quote of at most
    about 40 words.
 6. **Verify.** Every quote is checked mechanically against the chunk it cites and located in the file, so it prints as
-   `file:lineStart-lineEnd`. A quote that is not in its chunk is flagged, never silently kept.
+   `file:lineStart-lineEnd`. A quote that is not in its chunk is flagged, never silently kept. The comparison
+   tolerates only what a verbatim copy may legitimately lose: runs of whitespace (a line break in the source may match
+   one space or none), Markdown emphasis and code marks, blockquote markers at line starts, and typographic quotes.
 
 ## Design decisions and the alternatives rejected
 
@@ -160,6 +162,14 @@ Generator Sonnet 5.5, the same retrieved list for every run (k=5 is the first fi
 The injection probe passed in both generation sessions: the answer gave the date from the note and reported the order
 as text in the source. When the evidence was not among the chunks given, the model labelled its coverage `partial` or
 `none`, with one exception at k=10 (dated-05, below).
+
+**Verifier rule change (11 Nov, step 1.10).** A live `npm run ask` at k=10 flagged one of four quotes as not found.
+The source (`journal/CONTEXT.md:1336-1337`) wraps a line between "57" plus "60%" and the dash that follows; the model
+copied the text but dropped the space at the wrap. That is the same text, not an invented quote, so the owner decided
+to loosen the verifier for whitespace only: a line break in the source may match one space or none in the quote.
+Inside a line a missing or extra space is still a mismatch, and there is no fuzzy matching and no punctuation
+tolerance; tests cover each of these cases. All saved answers were re-verified offline: 283 of 283 before and after
+(91/91, 95/95, 97/97), with identical statuses and line numbers.
 
 **Spread and the k comparison.** Between the two k=5 runs the correctness verdict changes on 3 of 34 questions and
 the faithfulness verdict on 3; "incorrect" stays at 5. Against k=10, correctness changes on 6 questions (run 1) and 5
@@ -313,7 +323,7 @@ owner questioned it. A pooled review cannot add evidence that no run retrieved, 
 - **Context and query translation (1.7).** They get the Polish journal found (journal-only recall@10 from 58% to 73 to
   81% on v1.4) and raise recall@30 to 81 to 92%. Run-to-run spread is as large as the model difference.
 - **Answers (1.8).** Verified quotes are cheap and decisive: 283 of 283 across three runs. The verifier itself needed
-  a fix, so a checker must be checked.
+  two fixes (blockquote markers in 1.8, a missing space at a line break in 1.10), so a checker must be checked.
 - **Judged quality (1.9).** The judge is usable for direction and harsher than the owner on "partially". The
   faithfulness rubric word was misread at first (below).
 
