@@ -1,0 +1,1898 @@
+{
+  "label": "contextual-sonnet-query-pl-hybrid-rerank-golden-v1-3",
+  "date": "2026-11-10",
+  "goldenVersion": "1.3",
+  "retriever": "hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6)+query-pl,depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.ctx-sonnet",
+  "contexts": "ai/context/contexts-sonnet.jsonl",
+  "queryPl": "ai/context/queries-pl-sonnet.jsonl",
+  "embedder": "ollama-bge-m3",
+  "corpusHash": "8d7f9a3437b43594",
+  "chunkCount": 957,
+  "questions": {
+    "total": 34,
+    "answerable": 26
+  },
+  "searchMs": 15761,
+  "rerank": {
+    "device": "cuda",
+    "maxLength": 2048,
+    "queries": 34,
+    "serverMsMedian": 435.9,
+    "serverMsP95": 542.7,
+    "truncatedPairs": 0,
+    "totalPairs": 1020,
+    "tiedCandidates": 8,
+    "tiedInTop10": 2,
+    "queriesWithTies": 3
+  },
+  "metrics": {
+    "full": {
+      "recall@5": {
+        "hits": 16,
+        "n": 26
+      },
+      "recall@10": {
+        "hits": 18,
+        "n": 26
+      },
+      "recall@30": {
+        "hits": 20,
+        "n": 26
+      },
+      "mrr@10": 0.448
+    },
+    "journalOnly": {
+      "recall@5": {
+        "hits": 15,
+        "n": 26
+      },
+      "recall@10": {
+        "hits": 17,
+        "n": 26
+      },
+      "recall@30": {
+        "hits": 19,
+        "n": 26
+      },
+      "mrr@10": 0.342
+    },
+    "byCategory": {
+      "why": {
+        "full": {
+          "recall@5": {
+            "hits": 5,
+            "n": 9
+          },
+          "recall@10": {
+            "hits": 6,
+            "n": 9
+          },
+          "recall@30": {
+            "hits": 7,
+            "n": 9
+          },
+          "mrr@10": 0.519
+        },
+        "journalOnly": {
+          "recall@5": {
+            "hits": 5,
+            "n": 9
+          },
+          "recall@10": {
+            "hits": 5,
+            "n": 9
+          },
+          "recall@30": {
+            "hits": 6,
+            "n": 9
+          },
+          "mrr@10": 0.306
+        }
+      },
+      "dated-fact": {
+        "full": {
+          "recall@5": {
+            "hits": 6,
+            "n": 10
+          },
+          "recall@10": {
+            "hits": 6,
+            "n": 10
+          },
+          "recall@30": {
+            "hits": 7,
+            "n": 10
+          },
+          "mrr@10": 0.303
+        },
+        "journalOnly": {
+          "recall@5": {
+            "hits": 5,
+            "n": 10
+          },
+          "recall@10": {
+            "hits": 6,
+            "n": 10
+          },
+          "recall@30": {
+            "hits": 7,
+            "n": 10
+          },
+          "mrr@10": 0.218
+        }
+      },
+      "identifier": {
+        "full": {
+          "recall@5": {
+            "hits": 5,
+            "n": 7
+          },
+          "recall@10": {
+            "hits": 6,
+            "n": 7
+          },
+          "recall@30": {
+            "hits": 6,
+            "n": 7
+          },
+          "mrr@10": 0.565
+        },
+        "journalOnly": {
+          "recall@5": {
+            "hits": 5,
+            "n": 7
+          },
+          "recall@10": {
+            "hits": 6,
+            "n": 7
+          },
+          "recall@30": {
+            "hits": 6,
+            "n": 7
+          },
+          "mrr@10": 0.565
+        }
+      }
+    },
+    "relatedAt10": {
+      "hits": 5,
+      "n": 8
+    }
+  },
+  "perQuestion": [
+    {
+      "id": "why-01",
+      "category": "why",
+      "answerable": "yes",
+      "question": "Why didn't we actively re-center the ranges to follow the price (frequent narrowing), instead of staying wide?",
+      "rank": 6,
+      "rankJournal": null,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/RESEARCH-QUEUE.md:926#p2",
+          "score": 0.5098
+        },
+        {
+          "id": "journal/CONTEXT.md:1362#p7",
+          "score": 0.5017
+        },
+        {
+          "id": "journal/CONTEXT.md:1362#p9",
+          "score": 0.4944
+        },
+        {
+          "id": "journal/CONTEXT.md:1362#p8",
+          "score": 0.4384
+        },
+        {
+          "id": "journal/CONTEXT.md:1362#p10",
+          "score": 0.3707
+        },
+        {
+          "id": "docs/CASE-STUDY.md:67",
+          "score": 0.3159
+        },
+        {
+          "id": "journal/CONTEXT.md:1362#p5",
+          "score": 0.2109
+        },
+        {
+          "id": "docs/CASE-STUDY.md:44",
+          "score": 0.1974
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:1155",
+          "score": 0.1687
+        },
+        {
+          "id": "docs/CASE-STUDY.md:105",
+          "score": 0.1519
+        }
+      ]
+    },
+    {
+      "id": "why-02",
+      "category": "why",
+      "answerable": "yes",
+      "question": "Why did we keep the capital commitment small even though ETH and BTC were rising?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/CONTEXT.md:190#p2",
+          "score": 0.4267
+        },
+        {
+          "id": "journal/CONTEXT.md:454",
+          "score": 0.3811
+        },
+        {
+          "id": "journal/CONTEXT.md:4240#p1",
+          "score": 0.322
+        },
+        {
+          "id": "journal/CONTEXT.md:684",
+          "score": 0.2808
+        },
+        {
+          "id": "journal/CONTEXT.md:190#p1",
+          "score": 0.2258
+        },
+        {
+          "id": "journal/CONTEXT.md:101",
+          "score": 0.2251
+        },
+        {
+          "id": "journal/CONTEXT.md:116#p1",
+          "score": 0.223
+        },
+        {
+          "id": "journal/CONTEXT.md:102",
+          "score": 0.2109
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:597#p1",
+          "score": 0.2096
+        },
+        {
+          "id": "docs/CASE-STUDY.md:105",
+          "score": 0.1695
+        }
+      ]
+    },
+    {
+      "id": "why-03",
+      "category": "why",
+      "answerable": "yes",
+      "question": "Why did the 720-day backtests cover only a few pools, and why those particular ones?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "docs/CASE-STUDY.md:44",
+          "score": 0.6971
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:656",
+          "score": 0.574
+        },
+        {
+          "id": "docs/DECISION-LOG.md:22",
+          "score": 0.4273
+        },
+        {
+          "id": "journal/TASKS-ROTATION.md:20",
+          "score": 0.3603
+        },
+        {
+          "id": "journal/TASKS-RECAL.md:89",
+          "score": 0.3467
+        },
+        {
+          "id": "docs/ALGORITHM.md:1",
+          "score": 0.3265
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:1073#p2",
+          "score": 0.3155
+        },
+        {
+          "id": "journal/CONTEXT.md:1362#p8",
+          "score": 0.307
+        },
+        {
+          "id": "journal/CONTEXT.md:2032#p1",
+          "score": 0.2845
+        },
+        {
+          "id": "docs/CASE-STUDY.md:16",
+          "score": 0.2578
+        }
+      ]
+    },
+    {
+      "id": "why-04",
+      "category": "why",
+      "answerable": "yes",
+      "question": "Why did the Claude Code sessions coordinate through hand-off files in the repo instead of messaging each other directly?",
+      "rank": 1,
+      "rankJournal": 2,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "docs/AI-WORKFLOW.md:25",
+          "score": 0.9891
+        },
+        {
+          "id": "journal/CONTEXT.md:3276",
+          "score": 0.927
+        },
+        {
+          "id": "docs/CASE-STUDY.md:105",
+          "score": 0.8891
+        },
+        {
+          "id": "docs/PLAN.md:151",
+          "score": 0.8537
+        },
+        {
+          "id": "journal/HANDOFF.md:3",
+          "score": 0.7515
+        },
+        {
+          "id": "journal/HANDOFF.md:641#p6",
+          "score": 0.503
+        },
+        {
+          "id": "journal/HANDOFF.md:641#p1",
+          "score": 0.4921
+        },
+        {
+          "id": "journal/HANDOFF.md:641#p8",
+          "score": 0.4885
+        },
+        {
+          "id": "journal/HANDOFF.md:641#p3",
+          "score": 0.4734
+        },
+        {
+          "id": "journal/HANDOFF.md:1264#p1",
+          "score": 0.463
+        }
+      ]
+    },
+    {
+      "id": "why-05",
+      "category": "why",
+      "answerable": "yes",
+      "question": "Why did the bot and its API server run on the Windows machine rather than on the Mac I was working on?",
+      "rank": 2,
+      "rankJournal": 2,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/CONTEXT.md:3140",
+          "score": 0.7624
+        },
+        {
+          "id": "journal/CONTEXT.md:3081",
+          "score": 0.6202
+        },
+        {
+          "id": "docs/INFRA.md:8",
+          "score": 0.5714
+        },
+        {
+          "id": "journal/TASKS-INFRA.md:9",
+          "score": 0.4764
+        },
+        {
+          "id": "journal/CONTEXT.md:3005",
+          "score": 0.4409
+        },
+        {
+          "id": "docs/INFRA.md:1",
+          "score": 0.3828
+        },
+        {
+          "id": "docs/UI-DESIGN.md:35",
+          "score": 0.3593
+        },
+        {
+          "id": "journal/CONTEXT.md:2514#p3",
+          "score": 0.3228
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:529#p1",
+          "score": 0.3092
+        },
+        {
+          "id": "docs/INFRA.md:38",
+          "score": 0.3091
+        }
+      ]
+    },
+    {
+      "id": "why-06",
+      "category": "why",
+      "answerable": "yes",
+      "question": "Why did the bot never open, close or re-range positions on its own, and was automatic execution possible at all?",
+      "rank": 20,
+      "rankJournal": 20,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "docs/EMERGENCY.md:1",
+          "score": 0.5383
+        },
+        {
+          "id": "docs/PLAN.md:151",
+          "score": 0.2942
+        },
+        {
+          "id": "docs/UI-DESIGN.md:50",
+          "score": 0.2757
+        },
+        {
+          "id": "journal/CONTEXT.md:2713",
+          "score": 0.2581
+        },
+        {
+          "id": "journal/CONTEXT.md:2347#p2",
+          "score": 0.2542
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:602",
+          "score": 0.209
+        },
+        {
+          "id": "journal/TASKS-UI.md:522#p1",
+          "score": 0.205
+        },
+        {
+          "id": "journal/TASKS-UI.md:69#p2",
+          "score": 0.2026
+        },
+        {
+          "id": "journal/TASKS-UI.md:465#p2",
+          "score": 0.1827
+        },
+        {
+          "id": "journal/TASKS-UI.md:700#p1",
+          "score": 0.1798
+        }
+      ]
+    },
+    {
+      "id": "why-07",
+      "category": "why",
+      "answerable": "partial",
+      "question": "Why wasn't the bot hosted on a cloud server or VPS instead of a home Windows machine?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": 1,
+      "top": [
+        {
+          "id": "docs/UI-DESIGN.md:35",
+          "score": 0.7358
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:684#p2",
+          "score": 0.2611
+        },
+        {
+          "id": "journal/CONTEXT.md:3081",
+          "score": 0.1283
+        },
+        {
+          "id": "docs/PLAN.md:151",
+          "score": 0.0796
+        },
+        {
+          "id": "journal/CONTEXT.md:3005",
+          "score": 0.0682
+        },
+        {
+          "id": "journal/CONTEXT.md:3140",
+          "score": 0.0679
+        },
+        {
+          "id": "docs/CASE-STUDY.md:16",
+          "score": 0.0668
+        },
+        {
+          "id": "journal/TASKS-INFRA.md:9",
+          "score": 0.062
+        },
+        {
+          "id": "docs/INFRA.md:1",
+          "score": 0.0587
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:529#p1",
+          "score": 0.0579
+        }
+      ]
+    },
+    {
+      "id": "why-08",
+      "category": "why",
+      "answerable": "yes",
+      "question": "Why was a crypto/crypto pair (cbBTC/WETH) considered riskier than a crypto/stable pair?",
+      "rank": 1,
+      "rankJournal": 2,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "docs/PAIRS.md:41",
+          "score": 0.8852
+        },
+        {
+          "id": "journal/CONTEXT.md:3806",
+          "score": 0.8706
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:7#p1",
+          "score": 0.803
+        },
+        {
+          "id": "journal/CONTEXT.md:1130#p4",
+          "score": 0.7614
+        },
+        {
+          "id": "journal/reports/morning-2026-09-05.md:114",
+          "score": 0.7324
+        },
+        {
+          "id": "journal/CONTEXT.md:1130#p3",
+          "score": 0.6737
+        },
+        {
+          "id": "docs/ALGORITHM.md:84",
+          "score": 0.6701
+        },
+        {
+          "id": "journal/reports/morning-2026-09-19.md:184",
+          "score": 0.669
+        },
+        {
+          "id": "journal/reports/morning-2026-09-16.md:132",
+          "score": 0.6289
+        },
+        {
+          "id": "journal/reports/morning-2026-09-17.md:151",
+          "score": 0.6171
+        }
+      ]
+    },
+    {
+      "id": "why-09",
+      "category": "why",
+      "answerable": "yes",
+      "question": "Why did the first 365-day backtests suggest some strategies were profitable, while the 720-day tests showed that none passed the gate?",
+      "rank": 1,
+      "rankJournal": 4,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "docs/CASE-STUDY.md:44",
+          "score": 0.9833
+        },
+        {
+          "id": "journal/CONTEXT.md:4554#p5",
+          "score": 0.981
+        },
+        {
+          "id": "docs/DECISION-LOG.md:22",
+          "score": 0.9787
+        },
+        {
+          "id": "journal/CONTEXT.md:96",
+          "score": 0.9356
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:546",
+          "score": 0.906
+        },
+        {
+          "id": "docs/ALGORITHM.md:1",
+          "score": 0.905
+        },
+        {
+          "id": "journal/CONTEXT.md:2178#p1",
+          "score": 0.8963
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:95#p1",
+          "score": 0.8556
+        },
+        {
+          "id": "journal/CONTEXT.md:1362#p9",
+          "score": 0.8549
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:9#p1",
+          "score": 0.8485
+        }
+      ]
+    },
+    {
+      "id": "why-10",
+      "category": "why",
+      "answerable": "yes",
+      "question": "Why did the LP earn less in fees during an uptrend than in a flat market?",
+      "rank": 1,
+      "rankJournal": 1,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/CONTEXT.md:1362#p9",
+          "score": 0.5887
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:546",
+          "score": 0.4714
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:90#p2",
+          "score": 0.3227
+        },
+        {
+          "id": "journal/CONTEXT.md:798#p1",
+          "score": 0.1641
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:635",
+          "score": 0.1637
+        },
+        {
+          "id": "journal/CONTEXT.md:1362#p7",
+          "score": 0.1388
+        },
+        {
+          "id": "journal/CONTEXT.md:755",
+          "score": 0.1292
+        },
+        {
+          "id": "docs/CASE-STUDY.md:105",
+          "score": 0.1148
+        },
+        {
+          "id": "journal/CONTEXT.md:116#p2",
+          "score": 0.1146
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:926#p2",
+          "score": 0.1028
+        }
+      ]
+    },
+    {
+      "id": "dated-01",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "question": "When did the first real capital enter through the application (not counting the legacy positions that were already in pools before HOMOS v2)?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/HANDOFF.md:641#p3",
+          "score": 0.4157
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:153",
+          "score": 0.3971
+        },
+        {
+          "id": "journal/TASKS-UI.md:1042",
+          "score": 0.3388
+        },
+        {
+          "id": "docs/PLAN.md:1",
+          "score": 0.1629
+        },
+        {
+          "id": "journal/CONTEXT.md:3074",
+          "score": 0.1215
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:490",
+          "score": 0.1199
+        },
+        {
+          "id": "journal/HANDOFF.md:254#p7",
+          "score": 0.1146
+        },
+        {
+          "id": "journal/HANDOFF.md:254#p5",
+          "score": 0.1097
+        },
+        {
+          "id": "journal/CONTEXT.md:2871#p1",
+          "score": 0.1007
+        },
+        {
+          "id": "journal/HANDOFF.md:254#p8",
+          "score": 0.0989
+        }
+      ]
+    },
+    {
+      "id": "dated-02",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "question": "When was the first rebalance executed on real capital?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "docs/DB-SCHEMA.md:40#p2",
+          "score": 0.1959
+        },
+        {
+          "id": "journal/CONTEXT.md:1130#p2",
+          "score": 0.1689
+        },
+        {
+          "id": "journal/CONTEXT.md:3473",
+          "score": 0.1138
+        },
+        {
+          "id": "docs/CASE-STUDY.md:67",
+          "score": 0.073
+        },
+        {
+          "id": "journal/KAPITAL-REKOMENDACJA.md:1",
+          "score": 0.0677
+        },
+        {
+          "id": "journal/CONTEXT.md:2347#p3",
+          "score": 0.0639
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:9#p1",
+          "score": 0.0536
+        },
+        {
+          "id": "journal/TASKS-UI.md:1042",
+          "score": 0.0453
+        },
+        {
+          "id": "journal/TASKS-UI.md:225#p1",
+          "score": 0.0369
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:153",
+          "score": 0.0338
+        }
+      ]
+    },
+    {
+      "id": "dated-03",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "question": "Which positions were open on 15 September and what was their profit or loss that day?",
+      "rank": 3,
+      "rankJournal": 3,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/reports/morning-2026-09-15.md:67#p2",
+          "score": 0.4527
+        },
+        {
+          "id": "journal/reports/morning-2026-09-15.md:228",
+          "score": 0.4157
+        },
+        {
+          "id": "journal/reports/morning-2026-09-15.md:217",
+          "score": 0.1533
+        },
+        {
+          "id": "journal/reports/morning-2026-09-18.md:270",
+          "score": 0.1445
+        },
+        {
+          "id": "journal/CONTEXT.md:190#p1",
+          "score": 0.0729
+        },
+        {
+          "id": "journal/reports/morning-2026-09-15.md:195",
+          "score": 0.0724
+        },
+        {
+          "id": "journal/CONTEXT.md:7#p1",
+          "score": 0.0515
+        },
+        {
+          "id": "journal/reports/morning-2026-09-15.md:67#p1",
+          "score": 0.0493
+        },
+        {
+          "id": "journal/reports/morning-2026-09-15.md:112",
+          "score": 0.0492
+        },
+        {
+          "id": "journal/CONTEXT.md:116#p2",
+          "score": 0.0463
+        }
+      ]
+    },
+    {
+      "id": "dated-04",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "question": "When did the last backtest finish?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/reports/morning-2026-08-21.md:7#p2",
+          "score": 0.6387
+        },
+        {
+          "id": "journal/reports/morning-2026-08-22.md:51",
+          "score": 0.5949
+        },
+        {
+          "id": "journal/reports/morning-2026-08-29.md:51",
+          "score": 0.593
+        },
+        {
+          "id": "journal/reports/morning-2026-09-16.md:51",
+          "score": 0.5715
+        },
+        {
+          "id": "journal/reports/morning-2026-08-23.md:51",
+          "score": 0.5353
+        },
+        {
+          "id": "journal/reports/morning-2026-08-21.md:51",
+          "score": 0.5304
+        },
+        {
+          "id": "journal/reports/morning-2026-09-03.md:51",
+          "score": 0.4693
+        },
+        {
+          "id": "journal/reports/morning-2026-08-23.md:7#p2",
+          "score": 0.4615
+        },
+        {
+          "id": "journal/reports/morning-2026-08-24.md:51",
+          "score": 0.4477
+        },
+        {
+          "id": "journal/reports/morning-2026-08-26.md:7#p2",
+          "score": 0.4307
+        }
+      ]
+    },
+    {
+      "id": "dated-05",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "question": "Was there any attempt to protect a position by converting it into a different kind of position, when was it, and what was the result?",
+      "rank": 2,
+      "rankJournal": 2,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/CONTEXT.md:116#p2",
+          "score": 0.0126
+        },
+        {
+          "id": "journal/CONTEXT.md:277#p1",
+          "score": 0.0117
+        },
+        {
+          "id": "journal/TASKS-UI.md:592#p2",
+          "score": 0.0113
+        },
+        {
+          "id": "journal/TASKS-UI.md:773",
+          "score": 0.0079
+        },
+        {
+          "id": "journal/TASKS-UI.md:1000",
+          "score": 0.0064
+        },
+        {
+          "id": "journal/reports/morning-2026-09-10.md:251",
+          "score": 0.0059
+        },
+        {
+          "id": "journal/CONTEXT.md:277#p3",
+          "score": 0.0057
+        },
+        {
+          "id": "journal/CONTEXT.md:2713",
+          "score": 0.0053
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:546",
+          "score": 0.0041
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:1073#p2",
+          "score": 0.0034
+        }
+      ]
+    },
+    {
+      "id": "dated-06",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "question": "When did the nightly run first complete without errors, did errors still happen afterwards, what caused them and how were they fixed?",
+      "rank": 5,
+      "rankJournal": 5,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/reports/morning-2026-09-01.md:51",
+          "score": 0.595
+        },
+        {
+          "id": "journal/reports/morning-2026-08-28.md:51",
+          "score": 0.5173
+        },
+        {
+          "id": "journal/reports/morning-2026-09-20.md:7#p2",
+          "score": 0.489
+        },
+        {
+          "id": "journal/reports/morning-2026-08-29.md:7#p1",
+          "score": 0.4497
+        },
+        {
+          "id": "journal/CONTEXT.md:4411#p1",
+          "score": 0.4331
+        },
+        {
+          "id": "journal/reports/morning-2026-08-22.md:51",
+          "score": 0.309
+        },
+        {
+          "id": "journal/reports/morning-2026-09-02.md:51",
+          "score": 0.29
+        },
+        {
+          "id": "journal/reports/morning-2026-09-16.md:51",
+          "score": 0.1633
+        },
+        {
+          "id": "journal/reports/morning-2026-09-06.md:51",
+          "score": 0.1333
+        },
+        {
+          "id": "journal/CONTEXT.md:4411#p2",
+          "score": 0.0887
+        }
+      ]
+    },
+    {
+      "id": "dated-07",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "question": "What infrastructure problems were there, was anything changed on the production machine while the capital was already invested, and when?",
+      "rank": 11,
+      "rankJournal": 11,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/RESEARCH-QUEUE.md:684#p3",
+          "score": 0.0203
+        },
+        {
+          "id": "docs/AI-WORKFLOW.md:25",
+          "score": 0.0095
+        },
+        {
+          "id": "journal/CONTEXT.md:454",
+          "score": 0.0079
+        },
+        {
+          "id": "journal/CONTEXT.md:2347#p3",
+          "score": 0.0039
+        },
+        {
+          "id": "docs/PLAN.md:151",
+          "score": 0.0038
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:9#p1",
+          "score": 0.0033
+        },
+        {
+          "id": "journal/CONTEXT.md:7#p2",
+          "score": 0.0031
+        },
+        {
+          "id": "journal/CONTEXT.md:3005",
+          "score": 0.003
+        },
+        {
+          "id": "docs/CASE-STUDY.md:67",
+          "score": 0.0028
+        },
+        {
+          "id": "docs/PLAN.md:1",
+          "score": 0.0023
+        }
+      ]
+    },
+    {
+      "id": "dated-08",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "question": "When was the capital withdrawn?",
+      "rank": 2,
+      "rankJournal": 2,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "docs/EMERGENCY.md:88",
+          "score": 0.1406
+        },
+        {
+          "id": "journal/CONTEXT.md:190#p2",
+          "score": 0.044
+        },
+        {
+          "id": "docs/CASE-STUDY.md:67",
+          "score": 0.0372
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:9#p1",
+          "score": 0.0201
+        },
+        {
+          "id": "journal/CONTEXT.md:190#p1",
+          "score": 0.0198
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:218",
+          "score": 0.0172
+        },
+        {
+          "id": "journal/CONTEXT.md:2178#p3",
+          "score": 0.0162
+        },
+        {
+          "id": "journal/CONTEXT.md:101",
+          "score": 0.0158
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:271#p2",
+          "score": 0.0114
+        },
+        {
+          "id": "docs/DECISION-LOG.md:32",
+          "score": 0.0108
+        }
+      ]
+    },
+    {
+      "id": "dated-09",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "question": "When was the market flat, and how long did the only live narrowing episode last?",
+      "rank": 1,
+      "rankJournal": 7,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "docs/CASE-STUDY.md:67",
+          "score": 0.6277
+        },
+        {
+          "id": "journal/CONTEXT.md:277#p4",
+          "score": 0.4997
+        },
+        {
+          "id": "journal/reports/morning-2026-09-19.md:101",
+          "score": 0.2067
+        },
+        {
+          "id": "docs/DECISION-LOG.md:28",
+          "score": 0.2028
+        },
+        {
+          "id": "journal/reports/morning-2026-09-11.md:251",
+          "score": 0.1876
+        },
+        {
+          "id": "journal/CONTEXT.md:1880#p3",
+          "score": 0.1633
+        },
+        {
+          "id": "journal/CONTEXT.md:1130#p1",
+          "score": 0.148
+        },
+        {
+          "id": "journal/CONTEXT.md:1880#p2",
+          "score": 0.116
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:926#p1",
+          "score": 0.0972
+        },
+        {
+          "id": "journal/CONTEXT.md:1362#p6",
+          "score": 0.0955
+        }
+      ]
+    },
+    {
+      "id": "dated-10",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "question": "How many times, and when, did the paper-trading bot rebalance before real capital went in?",
+      "rank": 2,
+      "rankJournal": 2,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:378",
+          "score": 0.8721
+        },
+        {
+          "id": "journal/CONTEXT.md:4165",
+          "score": 0.8174
+        },
+        {
+          "id": "journal/TASKS-UI.md:225#p1",
+          "score": 0.7953
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:9#p1",
+          "score": 0.7921
+        },
+        {
+          "id": "journal/CONTEXT.md:3473",
+          "score": 0.785
+        },
+        {
+          "id": "journal/CONTEXT.md:2623",
+          "score": 0.7502
+        },
+        {
+          "id": "journal/TASKS-UI.md:773",
+          "score": 0.6857
+        },
+        {
+          "id": "journal/TASKS-UI.md:380#p1",
+          "score": 0.6538
+        },
+        {
+          "id": "journal/TASKS-UI.md:225#p2",
+          "score": 0.6244
+        },
+        {
+          "id": "journal/PYTANIE-SZEROKOSC-I-SIGMA.md:10",
+          "score": 0.5494
+        }
+      ]
+    },
+    {
+      "id": "id-01",
+      "category": "identifier",
+      "answerable": "yes",
+      "question": "Is FLAT_NARROW a specific position or some kind of range algorithm?",
+      "rank": 8,
+      "rankJournal": 8,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/reports/morning-2026-09-19.md:101",
+          "score": 0.8612
+        },
+        {
+          "id": "journal/reports/morning-2026-09-20.md:101",
+          "score": 0.8219
+        },
+        {
+          "id": "journal/reports/morning-2026-09-16.md:101",
+          "score": 0.8206
+        },
+        {
+          "id": "journal/reports/morning-2026-09-22.md:101",
+          "score": 0.8084
+        },
+        {
+          "id": "journal/reports/morning-2026-09-18.md:101",
+          "score": 0.784
+        },
+        {
+          "id": "journal/reports/morning-2026-09-21.md:101",
+          "score": 0.7737
+        },
+        {
+          "id": "journal/reports/morning-2026-09-23.md:101",
+          "score": 0.771
+        },
+        {
+          "id": "journal/reports/morning-2026-09-17.md:101",
+          "score": 0.7565
+        },
+        {
+          "id": "journal/HANDOFF.md:254#p4",
+          "score": 0.7417
+        },
+        {
+          "id": "journal/HANDOFF.md:641#p4",
+          "score": 0.7084
+        }
+      ]
+    },
+    {
+      "id": "id-02",
+      "category": "identifier",
+      "answerable": "yes",
+      "question": "Is position #5978579 a wide or a narrow position?",
+      "rank": 1,
+      "rankJournal": 1,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/reports/morning-2026-09-14.md:276",
+          "score": 0.9943
+        },
+        {
+          "id": "journal/reports/morning-2026-09-17.md:256",
+          "score": 0.9907
+        },
+        {
+          "id": "journal/reports/morning-2026-09-16.md:237",
+          "score": 0.9837
+        },
+        {
+          "id": "journal/reports/morning-2026-09-12.md:276",
+          "score": 0.9835
+        },
+        {
+          "id": "journal/reports/morning-2026-09-15.md:217",
+          "score": 0.9829
+        },
+        {
+          "id": "journal/reports/morning-2026-09-16.md:101",
+          "score": 0.9796
+        },
+        {
+          "id": "journal/reports/morning-2026-09-17.md:101",
+          "score": 0.9761
+        },
+        {
+          "id": "journal/reports/morning-2026-09-22.md:101",
+          "score": 0.975
+        },
+        {
+          "id": "journal/reports/morning-2026-09-13.md:276",
+          "score": 0.9736
+        },
+        {
+          "id": "journal/reports/morning-2026-09-18.md:270",
+          "score": 0.9725
+        }
+      ]
+    },
+    {
+      "id": "id-03",
+      "category": "identifier",
+      "answerable": "yes",
+      "question": "Was the range of position #5886957 ever changed, and when?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/reports/morning-2026-09-14.md:276",
+          "score": 0.8643
+        },
+        {
+          "id": "journal/reports/morning-2026-09-04.md:239",
+          "score": 0.8462
+        },
+        {
+          "id": "journal/reports/morning-2026-09-17.md:256",
+          "score": 0.8278
+        },
+        {
+          "id": "journal/reports/morning-2026-09-18.md:270",
+          "score": 0.8043
+        },
+        {
+          "id": "journal/reports/morning-2026-09-02.md:219",
+          "score": 0.799
+        },
+        {
+          "id": "journal/reports/morning-2026-08-30.md:204",
+          "score": 0.7936
+        },
+        {
+          "id": "journal/reports/morning-2026-09-08.md:217",
+          "score": 0.7884
+        },
+        {
+          "id": "journal/reports/morning-2026-09-12.md:276",
+          "score": 0.7842
+        },
+        {
+          "id": "journal/reports/morning-2026-09-09.md:232",
+          "score": 0.7842
+        },
+        {
+          "id": "journal/reports/morning-2026-09-15.md:217",
+          "score": 0.782
+        }
+      ]
+    },
+    {
+      "id": "id-04",
+      "category": "identifier",
+      "answerable": "yes",
+      "question": "What set of tasks was in the D0 package, and was it about project functionality or about tests?",
+      "rank": 1,
+      "rankJournal": 1,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/RESEARCH-QUEUE.md:498",
+          "score": 0.0774
+        },
+        {
+          "id": "docs/PLAN.md:151",
+          "score": 0.0116
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:509",
+          "score": 0.0045
+        },
+        {
+          "id": "journal/CONTEXT.md:7#p2",
+          "score": 0.0045
+        },
+        {
+          "id": "journal/HANDOFF.md:641#p2",
+          "score": 0.0044
+        },
+        {
+          "id": "journal/TASKS-WINDOWS-ADDENDUM.md:1",
+          "score": 0.0033
+        },
+        {
+          "id": "docs/PLAN.md:61",
+          "score": 0.0032
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:684#p3",
+          "score": 0.0031
+        },
+        {
+          "id": "journal/TASKS-INFRA.md:9",
+          "score": 0.0031
+        },
+        {
+          "id": "journal/CONTEXT.md:4300#p2",
+          "score": 0.0027
+        }
+      ]
+    },
+    {
+      "id": "id-05",
+      "category": "identifier",
+      "answerable": "yes",
+      "question": "What does the function fetchFreshPool do?",
+      "rank": 1,
+      "rankJournal": 1,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/HANDOFF.md:254#p1",
+          "score": 0.6274
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:7#p2",
+          "score": 0.2784
+        },
+        {
+          "id": "journal/TASKS-UI.md:225#p1",
+          "score": 0.108
+        },
+        {
+          "id": "journal/CONTEXT.md:4195",
+          "score": 0.0915
+        },
+        {
+          "id": "journal/TASKS-UI.md:317#p1",
+          "score": 0.0774
+        },
+        {
+          "id": "journal/CONTEXT.md:4472#p1",
+          "score": 0.0674
+        },
+        {
+          "id": "journal/CONTEXT.md:4085#p1",
+          "score": 0.0598
+        },
+        {
+          "id": "journal/CONTEXT.md:2796#p1",
+          "score": 0.0472
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:529#p1",
+          "score": 0.0439
+        },
+        {
+          "id": "journal/CONTEXT.md:2871#p1",
+          "score": 0.0289
+        }
+      ]
+    },
+    {
+      "id": "id-06",
+      "category": "identifier",
+      "answerable": "yes",
+      "question": "What project stage was E8.2?",
+      "rank": 2,
+      "rankJournal": 2,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/RESEARCH-QUEUE.md:367#p1",
+          "score": 0.772
+        },
+        {
+          "id": "journal/CONTEXT.md:684",
+          "score": 0.7598
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:294#p1",
+          "score": 0.6763
+        },
+        {
+          "id": "journal/CONTEXT.md:454",
+          "score": 0.6687
+        },
+        {
+          "id": "journal/CONTEXT.md:721",
+          "score": 0.651
+        },
+        {
+          "id": "journal/CONTEXT.md:593",
+          "score": 0.5294
+        },
+        {
+          "id": "journal/CONTEXT.md:548",
+          "score": 0.4964
+        },
+        {
+          "id": "journal/HANDOFF.md:29#p1",
+          "score": 0.4445
+        },
+        {
+          "id": "journal/HANDOFF.md:29#p2",
+          "score": 0.4366
+        },
+        {
+          "id": "journal/CONTEXT.md:500",
+          "score": 0.418
+        }
+      ]
+    },
+    {
+      "id": "id-07",
+      "category": "identifier",
+      "answerable": "yes",
+      "question": "In which database were the backtest results stored?",
+      "rank": 3,
+      "rankJournal": 3,
+      "relatedRank": 1,
+      "top": [
+        {
+          "id": "docs/DB-SCHEMA.md:164",
+          "score": 0.9076
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:597#p1",
+          "score": 0.3482
+        },
+        {
+          "id": "journal/CONTEXT.md:2989",
+          "score": 0.2909
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:7#p1",
+          "score": 0.2834
+        },
+        {
+          "id": "journal/HANDOFF.md:1264#p2",
+          "score": 0.2617
+        },
+        {
+          "id": "journal/DECYZJE-2026-08-26.md:546",
+          "score": 0.2117
+        },
+        {
+          "id": "journal/CONTEXT.md:3806",
+          "score": 0.2028
+        },
+        {
+          "id": "journal/reports/morning-2026-08-22.md:7#p2",
+          "score": 0.1907
+        },
+        {
+          "id": "journal/reports/morning-2026-09-01.md:7#p2",
+          "score": 0.1846
+        },
+        {
+          "id": "journal/reports/morning-2026-08-30.md:51",
+          "score": 0.1845
+        }
+      ]
+    },
+    {
+      "id": "na-01",
+      "category": "no-answer",
+      "answerable": "partial",
+      "question": "How much tax should I pay after closing these positions, did the application calculate it, and on what basis?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": 2,
+      "top": [
+        {
+          "id": "journal/TASKS-LEDGER.md:36",
+          "score": 0.1548
+        },
+        {
+          "id": "journal/TASKS-LEDGER.md:21",
+          "score": 0.0919
+        },
+        {
+          "id": "docs/UI-DESIGN.md:100",
+          "score": 0.0231
+        },
+        {
+          "id": "docs/EMERGENCY.md:88",
+          "score": 0.0222
+        },
+        {
+          "id": "journal/TASKS-LEDGER.md:1",
+          "score": 0.0215
+        },
+        {
+          "id": "journal/TASKS-UI.md:1000",
+          "score": 0.0183
+        },
+        {
+          "id": "journal/HANDOFF.md:641#p10",
+          "score": 0.0091
+        },
+        {
+          "id": "docs/UI-DESIGN.md:108",
+          "score": 0.0089
+        },
+        {
+          "id": "journal/TASKS-UI.md:804#p1",
+          "score": 0.0085
+        },
+        {
+          "id": "journal/TASKS-LEDGER.md:64",
+          "score": 0.0085
+        }
+      ]
+    },
+    {
+      "id": "na-02",
+      "category": "no-answer",
+      "answerable": "partial",
+      "question": "What were the backtest results for the Solana network?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": 3,
+      "top": [
+        {
+          "id": "docs/CASE-STUDY.md:44",
+          "score": 0.0703
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:95#p3",
+          "score": 0.0438
+        },
+        {
+          "id": "journal/CONTEXT.md:548",
+          "score": 0.0373
+        },
+        {
+          "id": "journal/reports/morning-2026-08-20.md:51",
+          "score": 0.0346
+        },
+        {
+          "id": "journal/reports/morning-2026-08-29.md:7#p2",
+          "score": 0.0328
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:597#p1",
+          "score": 0.0286
+        },
+        {
+          "id": "journal/CONTEXT.md:2347#p3",
+          "score": 0.0208
+        },
+        {
+          "id": "journal/CONTEXT.md:3344",
+          "score": 0.0154
+        },
+        {
+          "id": "journal/CONTEXT.md:3054",
+          "score": 0.0143
+        },
+        {
+          "id": "journal/CONTEXT.md:3806",
+          "score": 0.0133
+        }
+      ]
+    },
+    {
+      "id": "na-03",
+      "category": "no-answer",
+      "answerable": "partial",
+      "question": "How much did the GMX positions earn at the moment of switching from crypto pairs to shorts?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": 4,
+      "top": [
+        {
+          "id": "journal/TASKS-UI.md:700#p1",
+          "score": 0.7167
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:684#p3",
+          "score": 0.7128
+        },
+        {
+          "id": "journal/CONTEXT.md:2347#p2",
+          "score": 0.6931
+        },
+        {
+          "id": "journal/CONTEXT.md:3519",
+          "score": 0.6267
+        },
+        {
+          "id": "journal/CONTEXT.md:3503",
+          "score": 0.5848
+        },
+        {
+          "id": "journal/reports/morning-2026-09-14.md:101",
+          "score": 0.5113
+        },
+        {
+          "id": "journal/CONTEXT.md:684",
+          "score": 0.5087
+        },
+        {
+          "id": "journal/CONTEXT.md:3375",
+          "score": 0.5004
+        },
+        {
+          "id": "journal/reports/morning-2026-09-12.md:101",
+          "score": 0.4669
+        },
+        {
+          "id": "journal/TASKS-UI.md:700#p2",
+          "score": 0.4547
+        }
+      ]
+    },
+    {
+      "id": "na-04",
+      "category": "no-answer",
+      "answerable": "no",
+      "question": "How much did the electricity for the Windows server cost per month?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "journal/TASKS-WINDOWS.md:16",
+          "score": 0.0557
+        },
+        {
+          "id": "docs/INFRA.md:8",
+          "score": 0.0289
+        },
+        {
+          "id": "journal/CONTEXT.md:3081",
+          "score": 0.0216
+        },
+        {
+          "id": "journal/CONTEXT.md:3140",
+          "score": 0.0057
+        },
+        {
+          "id": "journal/CONTEXT.md:3427",
+          "score": 0.0044
+        },
+        {
+          "id": "docs/CASE-STUDY.md:16",
+          "score": 0.0029
+        },
+        {
+          "id": "journal/CONTEXT.md:1362#p3",
+          "score": 0.0016
+        },
+        {
+          "id": "journal/CONTEXT.md:3165",
+          "score": 0.0015
+        },
+        {
+          "id": "journal/TASKS-LEDGER.md:36",
+          "score": 0.0014
+        },
+        {
+          "id": "journal/TASKS-UI.md:1237",
+          "score": 0.0013
+        }
+      ]
+    },
+    {
+      "id": "na-05",
+      "category": "no-answer",
+      "answerable": "no",
+      "question": "What were the results for October 2026?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "docs/CASE-STUDY.md:141",
+          "score": 0.1904
+        },
+        {
+          "id": "journal/reports/morning-2026-09-10.md:7#p2",
+          "score": 0.029
+        },
+        {
+          "id": "journal/CONTEXT.md:2032#p2",
+          "score": 0.0266
+        },
+        {
+          "id": "journal/CONTEXT.md:2347#p3",
+          "score": 0.0243
+        },
+        {
+          "id": "journal/reports/morning-2026-09-05.md:7#p2",
+          "score": 0.024
+        },
+        {
+          "id": "journal/reports/morning-2026-09-10.md:7#p1",
+          "score": 0.0235
+        },
+        {
+          "id": "journal/reports/morning-2026-09-14.md:7#p2",
+          "score": 0.0225
+        },
+        {
+          "id": "journal/reports/morning-2026-09-10.md:51",
+          "score": 0.0214
+        },
+        {
+          "id": "journal/CONTEXT.md:3595",
+          "score": 0.0204
+        },
+        {
+          "id": "journal/reports/morning-2026-09-13.md:51",
+          "score": 0.0199
+        }
+      ]
+    },
+    {
+      "id": "na-06",
+      "category": "no-answer",
+      "answerable": "no",
+      "question": "How many tokens were consumed building the project?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": null,
+      "top": [
+        {
+          "id": "docs/CASE-STUDY.md:67",
+          "score": 0.0224
+        },
+        {
+          "id": "journal/CONTEXT.md:7#p1",
+          "score": 0.0182
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:367#p1",
+          "score": 0.0172
+        },
+        {
+          "id": "journal/TASKS-INFRA.md:9",
+          "score": 0.0154
+        },
+        {
+          "id": "journal/CONTEXT.md:4554#p4",
+          "score": 0.0103
+        },
+        {
+          "id": "journal/CONTEXT.md:4554#p2",
+          "score": 0.0083
+        },
+        {
+          "id": "journal/CONTEXT.md:2347#p1",
+          "score": 0.0082
+        },
+        {
+          "id": "journal/HANDOFF.md:1264#p1",
+          "score": 0.0067
+        },
+        {
+          "id": "journal/CONTEXT.md:7#p2",
+          "score": 0.0063
+        },
+        {
+          "id": "journal/TASKS-UI.md:183",
+          "score": 0.0063
+        }
+      ]
+    },
+    {
+      "id": "na-07",
+      "category": "no-answer",
+      "answerable": "partial",
+      "question": "What was the structure of the SQL database holding the backtest data?",
+      "rank": null,
+      "rankJournal": null,
+      "relatedRank": 2,
+      "top": [
+        {
+          "id": "docs/DB-SCHEMA.md:164",
+          "score": 0.4276
+        },
+        {
+          "id": "docs/DB-SCHEMA.md:40#p2",
+          "score": 0.4155
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:684#p2",
+          "score": 0.236
+        },
+        {
+          "id": "docs/PLAN.md:151",
+          "score": 0.1657
+        },
+        {
+          "id": "journal/reports/morning-2026-08-26.md:7#p2",
+          "score": 0.0924
+        },
+        {
+          "id": "journal/CONTEXT.md:2989",
+          "score": 0.0781
+        },
+        {
+          "id": "journal/reports/morning-2026-08-25.md:7#p2",
+          "score": 0.063
+        },
+        {
+          "id": "journal/reports/morning-2026-09-01.md:7#p2",
+          "score": 0.0574
+        },
+        {
+          "id": "journal/CONTEXT.md:86",
+          "score": 0.0513
+        },
+        {
+          "id": "journal/RESEARCH-QUEUE.md:684#p1",
+          "score": 0.0473
+        }
+      ]
+    }
+  ]
+}

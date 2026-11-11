@@ -1,0 +1,631 @@
+{
+  "date": "2026-11-10",
+  "goldenVersion": "1.4",
+  "judge": "judge:claude-opus-5-5(effort=medium)",
+  "summaries": {
+    "k5-run1": {
+      "n": 34,
+      "correctness": {
+        "correct": 17,
+        "partially_correct": 12,
+        "incorrect": 5,
+        "error": 0
+      },
+      "answerableYes": {
+        "correct": 9,
+        "partially_correct": 12,
+        "incorrect": 5,
+        "error": 0
+      },
+      "faithfulness": {
+        "supported": 6,
+        "partly_supported": 28,
+        "unsupported": 0,
+        "error": 0
+      },
+      "premise": {
+        "handled": 8,
+        "notHandled": 0,
+        "n": 8
+      },
+      "judgeCostUsd": 0.526
+    },
+    "k5-run2": {
+      "n": 34,
+      "correctness": {
+        "correct": 18,
+        "partially_correct": 11,
+        "incorrect": 5,
+        "error": 0
+      },
+      "answerableYes": {
+        "correct": 11,
+        "partially_correct": 10,
+        "incorrect": 5,
+        "error": 0
+      },
+      "faithfulness": {
+        "supported": 5,
+        "partly_supported": 29,
+        "unsupported": 0,
+        "error": 0
+      },
+      "premise": {
+        "handled": 7,
+        "notHandled": 1,
+        "n": 8
+      },
+      "judgeCostUsd": 0.5254
+    },
+    "k10": {
+      "n": 34,
+      "correctness": {
+        "correct": 20,
+        "partially_correct": 12,
+        "incorrect": 2,
+        "error": 0
+      },
+      "answerableYes": {
+        "correct": 12,
+        "partially_correct": 12,
+        "incorrect": 2,
+        "error": 0
+      },
+      "faithfulness": {
+        "supported": 6,
+        "partly_supported": 28,
+        "unsupported": 0,
+        "error": 0
+      },
+      "premise": {
+        "handled": 8,
+        "notHandled": 0,
+        "n": 8
+      },
+      "judgeCostUsd": 0.5334
+    }
+  },
+  "spread": {
+    "n": 34,
+    "correctness": [
+      {
+        "id": "id-02",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "id-03",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "na-02",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        }
+      }
+    ],
+    "faithfulness": [
+      {
+        "id": "why-03",
+        "a": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "incorrect",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "why-05",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "na-06",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        }
+      }
+    ]
+  },
+  "k10vsRun1": {
+    "n": 34,
+    "correctness": [
+      {
+        "id": "why-03",
+        "a": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "why-05",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "dated-04",
+        "a": {
+          "correctness": "incorrect",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "dated-07",
+        "a": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "id-02",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "id-03",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        }
+      }
+    ],
+    "faithfulness": [
+      {
+        "id": "dated-10",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "id-05",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "id-07",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "na-04",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        }
+      }
+    ]
+  },
+  "k10vsRun2": {
+    "n": 34,
+    "correctness": [
+      {
+        "id": "why-03",
+        "a": {
+          "correctness": "incorrect",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "why-05",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "dated-04",
+        "a": {
+          "correctness": "incorrect",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "dated-07",
+        "a": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "na-02",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        }
+      }
+    ],
+    "faithfulness": [
+      {
+        "id": "why-03",
+        "a": {
+          "correctness": "incorrect",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "why-05",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "dated-10",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "id-05",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "id-07",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "na-04",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "na-06",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        }
+      }
+    ]
+  },
+  "agreement": {
+    "correctness": {
+      "n": 8,
+      "exact": 5,
+      "withinOne": 8
+    },
+    "faithfulness": {
+      "n": 8,
+      "exact": 5,
+      "withinOne": 8
+    },
+    "ungraded": [],
+    "rows": [
+      {
+        "label": "B01",
+        "run": "k5-run2",
+        "id": "na-07",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "correct",
+          "faithfulness": "supported",
+          "note": "cytat z PLAN.md dotyczy księgi transakcji, nie backtestów"
+        },
+        "judge": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "The answer matches the reference: it says the SQLite schema was only a design that was apparently never built, and that `backtest_run` was meant just to index results files.",
+          "faithfulnessReason": "Several claims have no backing in the quotes, which show only the id, ts and kind columns and say data stays in files. Unbacked are the other `backtest_run` columns (pool_id, params, file path, git_commit), the ndjson tick-level swaps, the paper_event/position/tx tables and the 'draft DDL v1' label."
+        }
+      },
+      {
+        "label": "B02",
+        "run": "k5-run2",
+        "id": "na-06",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        },
+        "judge": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "The answer correctly states that the sources give no token consumption figure, which matches the reference.",
+          "faithfulnessReason": "The answer cites no quotes, yet it makes specific claims (Node heap 8GB/12288 MB, cbBTC/WETH/USDC) that nothing backs, while its core statement that the sources lack the information needs no support."
+        }
+      },
+      {
+        "label": "B03",
+        "run": "k5-run2",
+        "id": "dated-10",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "note": "daty 21.08 nie ma w cytatach; odpowiedź podaje 3 z 4 i zaznacza, że dalszy okres nie jest pokryty,"
+        },
+        "judge": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "It correctly identifies the three 21.08 rebalances on mainnet-030, mainnet-005 and base-030, but misses the fourth on arbitrum-005 between 22.08 and 23.08, and wrongly says the later count is not covered.",
+          "faithfulnessReason": "The three rebalances and the 18.08 start are backed by the quotes, but the '08:45 report' time and the 2026-08-21 date are not in any quote, and the cited OBSERVE-mode quote comes from 26.08, not 21.08."
+        }
+      },
+      {
+        "label": "B04",
+        "run": "k5-run1",
+        "id": "dated-05",
+        "inAgreementSample": false,
+        "owner": {
+          "correctness": "incorrect",
+          "faithfulness": "supported",
+          "note": "odpowiedź opisuje rozszerzenie zakresu, a nie zamianę na inny typ pozycji; pytanie jest pod tym względem precyzyjne (\"different kind of position\" to nie ta sama pula z innym zakresem). Nieprecyzyjne jest to, czy chodzi o realny kapitał, czy o paper trading. Odpowiedź jest nie na temat, ale to, co twierdzi, ma pokrycie w cytatach."
+        },
+        "judge": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "The reference describes hedge tests (a GMX ETH short opened on 17.08 and closed on 18.08, a $15 app test on 20.08, and a BTC short rejected on 11.09), whereas the answer says no such attempt is described and points instead to a FLAT_WIDEN rebalance, missing the key point.",
+          "faithfulnessReason": "The −$32.08, fee/IL, burn/mint times and $0.6–0.7 cost are quoted, but the position IDs, the 31.08 opening date, the 11.09 date and the FLAT_WIDEN label do not appear in the cited quotes."
+        }
+      },
+      {
+        "label": "B05",
+        "run": "k10",
+        "id": "dated-04",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        },
+        "judge": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported",
+          "correctnessReason": "It gets the pipeline backtest-run finishing on 23.09 at 05:03 UTC right, but misses the ambiguity the reference stresses, namely that the last research backtest was E8.3 received on 08.09.",
+          "faithfulnessReason": "The quote shows the backtest-run step on 2026-09-23 at 05:03:07.956Z with exit 0, and the remaining statements are hedges about what the sources cover."
+        }
+      },
+      {
+        "label": "B06",
+        "run": "k10",
+        "id": "na-05",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "note": "skoro odpowiedź podaje log z 16.09 i okres trwania projektu (sierpień do września), te zdania też powinny mieć cytat; cytowany jest tylko wiersz z raportu z 1.09."
+        },
+        "judge": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "It correctly states there are no October 2026 results, which matches the reference's core point, though it omits the 21.09 sale, the 22–23.09 closure and the moot 24.10 review.",
+          "faithfulnessReason": "The $64255 equity and +$4255 PnL figures are backed by the quote, but the August–September timeframe, the 2026-09-16 pipeline log and the 'six pools' claim do not appear in any cited quote."
+        }
+      },
+      {
+        "label": "B07",
+        "run": "k5-run2",
+        "id": "why-06",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "correct",
+          "faithfulness": "supported",
+          "note": "dobrze dobrane cytaty, odpowiedź obszerna."
+        },
+        "judge": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "The answer correctly says the bot only proposed, the owner signed, and AUTO was never enabled, but it misses the reasons in the reference (no wallet key on the server, AUTO as a deliberate later rung of the OBSERVE-PROPOSE-AUTO trust path, and the signing-delay cost) and wrongly claims the sources give no underlying reason.",
+          "faithfulnessReason": "The core claims are backed by the quotes, but details such as 'Phase 3' and the mapping of open/rebalance/close to PROPOSE do not appear in any cited quote."
+        }
+      },
+      {
+        "label": "B08",
+        "run": "k5-run2",
+        "id": "dated-01",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported",
+          "note": "odpowiedź nie podaje daty wejścia kapitału; cytat to tylko tytuł punktu agendy, a nie to, co się faktycznie stało i kiedy."
+        },
+        "judge": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "The reference gives 27.08 as the date, when both FlatWide legs were minted, but the answer says the sources give no date.",
+          "faithfulnessReason": "The quote supports only that the first real LP entry was a decision topic on 26.08; details such as the $6k tranche on Base and the paper-trading figures are not in it."
+        }
+      },
+      {
+        "label": "B09",
+        "run": "k5-run1",
+        "id": "dated-04",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "incorrect",
+          "faithfulness": "supported",
+          "note": "pytanie dotyczy konkretnie ostatniego backtestu, a odpowiedź podaje datę, która ostatnia nie jest; zastrzeżenie o możliwych późniejszych nie odpowiada na precyzyjne pytanie. Cytat potwierdza, że backtest 21.09 się odbył."
+        },
+        "judge": {
+          "correctness": "incorrect",
+          "faithfulness": "supported",
+          "correctnessReason": "The answer names 21.09 05:06 as the last backtest, contradicting the reference's 23.09 05:03 UTC, and it does not mention the research backtest E8.3 from 08.09.",
+          "faithfulnessReason": "The quote confirms that the backtest-run step finished with exit 0 at 2026-09-21T05:06:46 UTC."
+        }
+      },
+      {
+        "label": "B10",
+        "run": "k10",
+        "id": "dated-05",
+        "inAgreementSample": false,
+        "owner": {
+          "correctness": "partially_correct",
+          "faithfulness": "supported",
+          "note": "zmiana zakresu jest częściowo zabezpieczeniem, ale nie jest zmianą rodzaju pozycji: to nadal ta sama para w puli płynności, tylko w innym zakresie. W pytaniu chodziło o przejście na GMX."
+        },
+        "judge": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "The reference describes hedge tests (a $150 GMX ETH short on 17–18.08, a $15 app test on 20.08, and a rejected BTC short on 11.09), while the answer describes an unrelated range-narrowing experiment and misses all of these.",
+          "faithfulnessReason": "The quotes back the 31.08→11.09 n=1 result, the 100% cbBTC exit and the −$32.08 net with fees $12.6 vs IL −$45, but not the ±40% range, the position IDs #5908083 and #5978579, the FLAT_WIDEN replacement or the 'illustration' remark."
+        }
+      }
+    ]
+  },
+  "grading": {
+    "procedure": [
+      "The owner graded blind on 10 and 11 Nov 2026. He did not open blind-1.9-key.json or the judge result files before grading.",
+      "The analysis session explained what quotes and terms mean and typed the owner's dictated grades into the file. It did not see the judge verdicts and did not suggest grades.",
+      "The owner first read 'faithfulness' as 'does the answer address the question'. After the rubric was re-read to him he revised two items before scoring: B03 from unsupported to partly_supported, B04 from unsupported to supported. This is a finding about the rubric wording."
+    ],
+    "revisions": [
+      {
+        "label": "B03",
+        "field": "faithfulness",
+        "from": "unsupported",
+        "to": "partly_supported"
+      },
+      {
+        "label": "B04",
+        "field": "faithfulness",
+        "from": "unsupported",
+        "to": "supported"
+      }
+    ],
+    "gloss": {
+      "B01": "The PLAN.md quote is about the transaction ledger, not about backtests.",
+      "B03": "The 21.08 date is not in the quotes; the answer gives 3 of the 4 and says the later period is not covered.",
+      "B04": "The answer describes widening the range, not a switch to a different kind of position; the question is precise on that point ('a different kind of position' is not the same pool with another range). What is imprecise is whether real capital or paper trading is meant. The answer is off topic, but what it claims is backed by the quotes.",
+      "B06": "Since the answer gives the 16.09 log and the project's span (August to September), those sentences should carry a quote too; only the row from the 1.09 report is cited.",
+      "B07": "Well-chosen quotes, a thorough answer.",
+      "B08": "The answer does not give the date the capital went in; the quote is only the title of an agenda item, not what actually happened and when.",
+      "B09": "The question asks specifically for the last backtest, and the answer gives a date that is not the last one; the caveat about possible later ones does not answer a precise question. The quote confirms the 21.09 backtest took place.",
+      "B10": "Changing the range is partly a protection, but it is not a change of position type: still the same pair in a liquidity pool, only with another range. The question was about the move to GMX."
+    }
+  }
+}

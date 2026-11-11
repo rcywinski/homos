@@ -1,0 +1,12 @@
+# Reranker service (inference/reranker/app.py).
+# torch is NOT listed: install the CUDA build matching the box's driver first, from the PyTorch CUDA index
+# (see inference/README.md, "Reranker"), then: pip install -r requirements.txt
+# Ranges, not pins: the code avoids APIs that changed between these versions. The exact versions installed on
+# the box are recorded in inference/README.md ("Reranker operations").
+# Tested on the Mac (CPU, 9 Nov 2026): torch 2.2.2, transformers 4.49.0, sentence-transformers 3.4.1,
+# fastapi 0.162.2, uvicorn 0.54.0, pydantic 2.14.3.
+fastapi>=0.110
+uvicorn>=0.29
+pydantic>=2.6
+sentence-transformers>=3.0
+transformers>=4.41

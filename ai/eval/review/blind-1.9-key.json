@@ -1,0 +1,65 @@
+{
+  "rule": "ai/judge/blind.ts",
+  "key": [
+    {
+      "label": "B01",
+      "run": "k5-run2",
+      "id": "na-07",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B02",
+      "run": "k5-run2",
+      "id": "na-06",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B03",
+      "run": "k5-run2",
+      "id": "dated-10",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B04",
+      "run": "k5-run1",
+      "id": "dated-05",
+      "inAgreementSample": false
+    },
+    {
+      "label": "B05",
+      "run": "k10",
+      "id": "dated-04",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B06",
+      "run": "k10",
+      "id": "na-05",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B07",
+      "run": "k5-run2",
+      "id": "why-06",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B08",
+      "run": "k5-run2",
+      "id": "dated-01",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B09",
+      "run": "k5-run1",
+      "id": "dated-04",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B10",
+      "run": "k10",
+      "id": "dated-05",
+      "inAgreementSample": false
+    }
+  ]
+}

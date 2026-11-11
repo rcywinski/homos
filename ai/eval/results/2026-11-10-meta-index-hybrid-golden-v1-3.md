@@ -1,0 +1,301 @@
+# Retrieval evaluation: meta-index-hybrid-golden-v1-3
+
+Date 2026-11-10. Golden set v1.3. Retriever `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60) index=ollama-bge-m3.meta`. 957 chunks, corpus hash `8d7f9a3437b43594`.
+26 answerable questions of 34: one question = 3.8 pp.
+
+## Metrics
+
+| metric | full | journal-only |
+|---|---|---|
+| recall@5 | 42% (11/26) | 23% (6/26) |
+| recall@10 | 58% (15/26) | 42% (11/26) |
+| recall@30 | 69% (18/26) | 62% (16/26) |
+| mrr@10 | 0.325 | 0.158 |
+
+Journal-only counts a hit only for evidence ranges in `journal/`; the gap to "full" is the share found only through the English `docs/`.
+
+## By category
+
+| category | recall@5 | recall@10 | recall@30 | mrr@10 | recall@10 journal-only |
+|---|---|---|---|---|---|
+| why | 56% (5/9) | 56% (5/9) | 67% (6/9) | 0.411 | 11% (1/9) |
+| dated-fact | 20% (2/10) | 50% (5/10) | 60% (6/10) | 0.163 | 50% (5/10) |
+| identifier | 57% (4/7) | 71% (5/7) | 86% (6/7) | 0.446 | 71% (5/7) |
+
+Partial/no questions, related chunk in top 10 (informational): 63% (5/8).
+
+## Per question: first hit and top 5
+
+For human review. `miss` = not an evidence hit; a reviewer may decide it does answer the question (then: golden v1.x, never automatically).
+
+**why-01**, first hit: 2 (journal-only 85)
+
+- miss    0.032 `docs/PLAN.md:99`  3.6. The rebalance policy is richer than "went out of range → move it"
+- hit     0.030 `docs/CASE-STUDY.md:67` 2026-08-27 4. Live capital (27 Aug – 21 Sep 2026)
+- miss    0.030 `docs/CASE-STUDY.md:105`  5. Conclusions
+- miss    0.028 `docs/ALGORITHM.md:27`  2. Position range (advisor — src/utils/advisor.ts)
+- miss    0.027 `docs/CASE-STUDY.md:44`  3. What the backtests said
+
+**why-02**, first hit: 127 (journal-only 127)
+
+- miss    0.032 `docs/CASE-STUDY.md:67` 2026-08-27 4. Live capital (27 Aug – 21 Sep 2026)
+- miss    0.030 `docs/CASE-STUDY.md:105`  5. Conclusions
+- miss    0.027 `docs/PAIRS.md:15`  1. Key finding: the original pool is a weak choice
+- miss    0.027 `docs/PAIRS.md:64`  D. Alt/ETH — high APR, high risk (not for now)
+- miss    0.026 `docs/DECISION-LOG.md:30` 2026-09-18 Decision of 2026-09-18
+
+**why-03**, first hit: 91 (journal-only 91)
+
+- miss    0.032 `docs/CASE-STUDY.md:44`  3. What the backtests said
+- miss    0.032 `docs/ALGORITHM.md:1`  ALGORITHM.md — v1.2 (frozen 11 Aug 2026; §4 revisions: v1.1 11 Aug, v1
+- miss    0.031 `docs/DECISION-LOG.md:22` 2026-08-26 Decision of 2026-08-26
+- miss    0.031 `docs/PAIRS.md:1`  Pair and pool analysis — LP portfolio diversification
+- miss    0.029 `docs/DECISION-LOG.md:26` 2026-08-31 Decision of 2026-08-31
+
+**why-04**, first hit: 1 (journal-only 9)
+
+- hit     0.033 `docs/AI-WORKFLOW.md:25`  The two coordination files
+- miss    0.032 `docs/AI-WORKFLOW.md:8`  The four roles
+- miss    0.029 `docs/AI-WORKFLOW.md:1`  How the project was run with AI sessions
+- miss    0.029 `journal/CONTEXT.md:3074` 2026-08-10 2026-08-10 — Sesja terminalowa (Claude Code): operator gita + fetch:ll
+- miss    0.028 `docs/PLAN.md:151`  5. Planned vs built
+
+**why-05**, first hit: 5 (journal-only 11)
+
+- miss    0.032 `docs/INFRA.md:52`  3. Code flow: Mac (development) → Windows (server)
+- miss    0.031 `docs/CASE-STUDY.md:16`  2. What I built (August 2026)
+- miss    0.031 `docs/INFRA.md:8`  1. Architecture (as built)
+- miss    0.030 `docs/INFRA.md:38`  2. Network and security
+- hit     0.030 `docs/INFRA.md:1`  INFRA.md — infrastructure: bot on Windows, Mac/iPhone clients over LAN
+
+**why-06**, first hit: 36 (journal-only 36)
+
+- miss    0.030 `docs/EMERGENCY.md:33`  2. Option A — delta-neutral hedge (preferred: reversible, the LP stays
+- miss    0.029 `docs/EMERGENCY.md:1`  _Historical runbook. The product was wound down in September 2026; kep
+- miss    0.029 `docs/PLAN.md:151`  5. Planned vs built
+- miss    0.028 `journal/CONTEXT.md:2347#p2` 2026-08-20 2026-08-20 — Sesja analityczna (Fable) — odbiór nocy: PIERWSZY CZYSTY 
+- miss    0.027 `docs/UI-DESIGN.md:92`  4.3 Autopilot *(not implemented)*
+
+**why-07**, answerable partial; first related: 3
+
+- miss    0.032 `docs/INFRA.md:1`  INFRA.md — infrastructure: bot on Windows, Mac/iPhone clients over LAN
+- miss    0.031 `docs/INFRA.md:38`  2. Network and security
+- related 0.031 `docs/UI-DESIGN.md:35`  2. Architecture: who does what
+- miss    0.030 `docs/PLAN.md:151`  5. Planned vs built
+- miss    0.030 `journal/CONTEXT.md:3140` 2026-08-10 2026-08-10 — Sesja: usługi Windows (NSSM) zamiast pm2-windows-startup
+
+**why-08**, first hit: 22 (journal-only 26)
+
+- miss    0.033 `docs/ALGORITHM.md:84` 2026-08-11 6. Portfolio (revision of 11 Aug; the original candidate list is in [`
+- miss    0.030 `journal/reports/morning-2026-09-03.md:134` 2026-09-03 RANKING WIDE (pod produkt, top 10)
+- miss    0.030 `journal/reports/morning-2026-09-15.md:112` 2026-09-15 RANKING WIDE (pod produkt, top 10)
+- miss    0.029 `journal/reports/morning-2026-09-12.md:171` 2026-09-12 RANKING WIDE (pod produkt, top 10)
+- miss    0.028 `docs/DECISION-LOG.md:28` 2026-09-11 Decision of 2026-09-11
+
+**why-09**, first hit: 1 (journal-only 46)
+
+- hit     0.033 `docs/CASE-STUDY.md:44`  3. What the backtests said
+- hit     0.032 `docs/DECISION-LOG.md:22` 2026-08-26 Decision of 2026-08-26
+- miss    0.031 `docs/CASE-STUDY.md:67` 2026-08-27 4. Live capital (27 Aug – 21 Sep 2026)
+- miss    0.031 `docs/DECISION-LOG.md:26` 2026-08-31 Decision of 2026-08-31
+- miss    0.028 `docs/DECISION-LOG.md:15` 2026-08-11 Decision of 2026-08-11
+
+**why-10**, first hit: 1 (journal-only 21)
+
+- hit     0.033 `docs/CASE-STUDY.md:5`  1. The question
+- miss    0.032 `docs/CASE-STUDY.md:105`  5. Conclusions
+- miss    0.029 `docs/PLAN.md:91`  3.4. Funding rate is not only a cost — it can be income
+- miss    0.027 `docs/PLAN.md:99`  3.6. The rebalance policy is richer than "went out of range → move it"
+- miss    0.026 `docs/CASE-STUDY.md:141`  7. Numbers, for the record
+
+**dated-01**, first hit: - (journal-only -)
+
+- miss    0.032 `docs/PLAN.md:1`  HOMOS v2 — Project plan: Automated Liquidity Manager (ALM)
+- miss    0.029 `docs/CASE-STUDY.md:1`  HOMOS — case study
+- miss    0.026 `journal/HANDOFF.md:641#p3`  @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- miss    0.025 `docs/DB-SCHEMA.md:1`  DB-SCHEMA.md — HOMOS database design (SQLite)
+- miss    0.023 `docs/DECISION-LOG.md:23` 2026-08-26 Decision of 2026-08-26
+
+**dated-02**, first hit: 83 (journal-only 83)
+
+- miss    0.031 `docs/PAIRS.md:69`  3. Portfolio sketch to be validated in the backtest (capital $5–25k)
+- miss    0.028 `docs/PLAN.md:95`  3.5. MEV and execution
+- miss    0.028 `docs/CASE-STUDY.md:67` 2026-08-27 4. Live capital (27 Aug – 21 Sep 2026)
+- miss    0.027 `docs/CASE-STUDY.md:44`  3. What the backtests said
+- miss    0.027 `docs/DB-SCHEMA.md:174`  4. Planned rollout (not carried out)
+
+**dated-03**, first hit: 6 (journal-only 6)
+
+- miss    0.030 `journal/reports/morning-2026-09-15.md:228` 2026-09-15 PAPER TRADING (start 2026-08-18, $10000/pula)
+- miss    0.030 `journal/reports/morning-2026-09-15.md:101` 2026-09-15 propozycje OPEN (0)
+- miss    0.026 `docs/UI-DESIGN.md:135`  7. Rotation policy: weakest position → better opportunity
+- miss    0.024 `journal/CONTEXT.md:246` 2026-09-16 2026-09-16 ~09:xx — BRIEF (Fable + Rafał): automat czysty, bilans −4.2
+- miss    0.023 `docs/CASE-STUDY.md:67` 2026-08-27 4. Live capital (27 Aug – 21 Sep 2026)
+
+**dated-04**, first hit: 48 (journal-only 48)
+
+- miss    0.030 `journal/HANDOFF.md:641#p12`  @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- miss    0.029 `journal/reports/morning-2026-08-26.md:7#p2` 2026-08-26 pipeline.log (ostatni przebieg)
+- miss    0.029 `journal/reports/morning-2026-08-26.md:51` 2026-08-26 pipeline-task.log (tail)
+- miss    0.029 `journal/reports/morning-2026-09-02.md:51` 2026-09-02 pipeline-task.log (tail)
+- miss    0.028 `journal/reports/morning-2026-08-20.md:7#p2` 2026-08-20 pipeline.log (ostatni przebieg)
+
+**dated-05**, first hit: 169 (journal-only 169)
+
+- miss    0.030 `docs/PLAN.md:99`  3.6. The rebalance policy is richer than "went out of range → move it"
+- miss    0.030 `docs/EMERGENCY.md:81`  5. What this document does not cover
+- miss    0.028 `docs/PLAN.md:37`  2.2. A hand-written "PositionLike" instead of the SDK (`liquidityManag
+- miss    0.026 `journal/TASKS-UI.md:126#p2`  PARTIA 4 — Karty propozycji: Zatwierdź / Modyfikuj / Odrzuć (+2 fixy z
+- miss    0.024 `docs/UI-DESIGN.md:135`  7. Rotation policy: weakest position → better opportunity
+
+**dated-06**, first hit: 14 (journal-only 14)
+
+- miss    0.031 `docs/CASE-STUDY.md:67` 2026-08-27 4. Live capital (27 Aug – 21 Sep 2026)
+- miss    0.028 `docs/CASE-STUDY.md:44`  3. What the backtests said
+- miss    0.024 `journal/CONTEXT.md:4554#p4` 2026-08-25 2026-08-25 08:1x — Brief poranny (Fable) — on-ramp Kraken ZALICZONY E2
+- miss    0.024 `docs/DECISION-LOG.md:26` 2026-08-31 Decision of 2026-08-31
+- miss    0.022 `journal/CONTEXT.md:93` 2026-08-19 Decyzja z 2026-08-19
+
+**dated-07**, first hit: 10 (journal-only 10)
+
+- miss    0.031 `docs/CASE-STUDY.md:44`  3. What the backtests said
+- miss    0.030 `docs/CASE-STUDY.md:67` 2026-08-27 4. Live capital (27 Aug – 21 Sep 2026)
+- miss    0.028 `docs/UI-DESIGN.md:1`  UI-DESIGN.md — autopilot and the morning cockpit
+- miss    0.026 `docs/PLAN.md:177`  6. Main risks (summary)
+- miss    0.026 `docs/PLAN.md:1`  HOMOS v2 — Project plan: Automated Liquidity Manager (ALM)
+
+**dated-08**, first hit: 9 (journal-only 9)
+
+- miss    0.033 `docs/EMERGENCY.md:88`  6. Off-ramp lessons
+- miss    0.030 `docs/DECISION-LOG.md:32` 2026-09-22 Decision of 2026-09-22
+- miss    0.029 `docs/DECISION-LOG.md:17` 2026-08-18 Decision of 2026-08-18
+- miss    0.028 `docs/PLAN.md:117`  3.8. Operational risks omitted entirely
+- miss    0.026 `docs/DECISION-LOG.md:10` 2026-08-10 Decision of 2026-08-10
+
+**dated-09**, first hit: 1 (journal-only 4)
+
+- hit     0.033 `docs/CASE-STUDY.md:67` 2026-08-27 4. Live capital (27 Aug – 21 Sep 2026)
+- hit     0.032 `docs/DECISION-LOG.md:28` 2026-09-11 Decision of 2026-09-11
+- miss    0.030 `docs/DECISION-LOG.md:26` 2026-08-31 Decision of 2026-08-31
+- hit     0.028 `journal/CONTEXT.md:1130#p1` 2026-08-31 2026-08-31 ~przegląd (Fable-desktop + Rafał) — przegląd poranny + DECY
+- miss    0.027 `journal/reports/morning-2026-09-16.md:101` 2026-09-16 propozycje OPEN (1)
+
+**dated-10**, first hit: 4 (journal-only 4)
+
+- miss    0.032 `journal/TASKS-UI.md:225#p1`  PARTIA 5 — PAPER TRADING: wizualizacja wirtualnego portfela ✅ wykonana
+- miss    0.032 `docs/CASE-STUDY.md:67` 2026-08-27 4. Live capital (27 Aug – 21 Sep 2026)
+- miss    0.030 `journal/CONTEXT.md:3473` 2026-08-18 2026-08-18 ~11:3x — PAPER TRADING ZBUDOWANY (decyzja Rafała: "rozpiszm
+- hit     0.030 `journal/CONTEXT.md:4165` 2026-08-21 2026-08-21 09:1x — Brief z przebiegów nocnych (raport 08:45): PIERWSZE
+- miss    0.027 `journal/CONTEXT.md:2623` 2026-08-18 2026-08-18 — Sesja UI (Sonnet) — Partia 5: wizualizacja paper-tradingu
+
+**id-01**, first hit: 1 (journal-only 1)
+
+- hit     0.033 `journal/TASKS-UI.md:1134`  PARTIA 16 — karty propozycji FLAT_NARROW / FLAT_WIDEN (produkt FlatWid
+- miss    0.031 `journal/reports/morning-2026-09-16.md:101` 2026-09-16 propozycje OPEN (1)
+- miss    0.030 `journal/reports/morning-2026-09-23.md:101` 2026-09-23 propozycje OPEN (1)
+- hit     0.030 `journal/reports/morning-2026-09-17.md:101` 2026-09-17 propozycje OPEN (2)
+- hit     0.029 `docs/EMERGENCY.md:81`  5. What this document does not cover
+
+**id-02**, first hit: 8 (journal-only 8)
+
+- miss    0.032 `docs/ALGORITHM.md:27`  2. Position range (advisor — src/utils/advisor.ts)
+- miss    0.031 `journal/TASKS-UI.md:1190`  PARTIA 17 — panel zbiorczy REALNYCH pozycji + linia CYKLU FlatWide ✅ w
+- miss    0.027 `journal/reports/morning-2026-09-16.md:101` 2026-09-16 propozycje OPEN (1)
+- miss    0.026 `journal/reports/morning-2026-09-17.md:101` 2026-09-17 propozycje OPEN (2)
+- miss    0.026 `docs/EMERGENCY.md:81`  5. What this document does not cover
+
+**id-03**, first hit: 52 (journal-only 52)
+
+- miss    0.029 `journal/TASKS-UI.md:773`  Partia 11 (21.08, Fable za zgodą Rafała — normalnie lane @Sonnet): iko
+- miss    0.026 `journal/reports/morning-2026-08-29.md:181` 2026-08-29 POZYCJE REALNE (produkt FlatWide)
+- miss    0.025 `docs/UI-DESIGN.md:135`  7. Rotation policy: weakest position → better opportunity
+- miss    0.024 `journal/HANDOFF.md:641#p5`  @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- miss    0.022 `docs/PLAN.md:99`  3.6. The rebalance policy is richer than "went out of range → move it"
+
+**id-04**, first hit: 14 (journal-only 14)
+
+- miss    0.032 `docs/AI-WORKFLOW.md:25`  The two coordination files
+- miss    0.032 `docs/AI-WORKFLOW.md:1`  How the project was run with AI sessions
+- miss    0.031 `docs/PLAN.md:151`  5. Planned vs built
+- miss    0.027 `journal/HANDOFF.md:641#p2`  @CC-Mac (Claude Code, iTerm na Macu — git i skrypty)
+- miss    0.027 `journal/TASKS-WINDOWS-ADDENDUM.md:1`  TASKS-WINDOWS — ADDENDUM: boty mają być NIEWIDOCZNE
+
+**id-05**, first hit: 1 (journal-only 1)
+
+- hit     0.032 `journal/HANDOFF.md:254#p1`  @Sonnet (sesja UI, Cowork)
+- miss    0.023 `journal/CONTEXT.md:3806` 2026-08-11 2026-08-11 — Sesja Fable-desktop: FIX WYCENY PAR WETH-owych W SILNIKU 
+- miss    0.016 `docs/PLAN.md:131`  4. Where the profit comes from — the objective function
+- miss    0.016 `journal/CONTEXT.md:4085#p1` 2026-08-21 2026-08-21 (Fable, po briefie) — FIX: zamrożony `latest` w fetch-swaps
+- hit     0.016 `journal/CONTEXT.md:246` 2026-09-16 2026-09-16 ~09:xx — BRIEF (Fable + Rafał): automat czysty, bilans −4.2
+
+**id-06**, first hit: 2 (journal-only 2)
+
+- miss    0.033 `journal/RESEARCH-QUEUE.md:367#p1`  E8 — MECHANIKA TESTÓW + PODZIAŁ PRACY (Fable 07.09 wieczór; kod NAPISA
+- hit     0.032 `journal/CONTEXT.md:684` 2026-09-07 2026-09-07 ~późny wieczór — ODBIÓR E8.0–E8.2 (CC-Mac, ~1h od zlecenia)
+- miss    0.032 `journal/CONTEXT.md:721` 2026-09-07 2026-09-07 ~wieczór — PRZEGLĄD DZIENNIKA + KOLEJKA PO 24.09 (Fable + R
+- hit     0.032 `journal/CONTEXT.md:454` 2026-09-09 2026-09-09 ~wieczór — ODBIÓR E8.2f (CC-Win): kotwica 12:00 UTC DZIAŁA 
+- miss    0.032 `journal/CONTEXT.md:593` 2026-09-08 2026-09-08 ~rano — BRIEF (Fable + Rafał): odbiór E8.2c (CC-Mac) + E8.3
+
+**id-07**, first hit: 2 (journal-only 2)
+
+- related 0.033 `docs/DB-SCHEMA.md:164`  3. What is deliberately outside the database
+- hit     0.030 `journal/CONTEXT.md:2989` 2026-08-10 2026-08-10 — Sesja 3: FAZA 1 START — pipeline danych + silnik backtest
+- hit     0.029 `docs/DB-SCHEMA.md:1`  DB-SCHEMA.md — HOMOS database design (SQLite)
+- miss    0.029 `docs/PLAN.md:108`  3.7. Backtest quality decides everything
+- miss    0.028 `journal/RESEARCH-QUEUE.md:812`  G. ULEPSZENIA INFRASTRUKTURY KOLEJKI (backlog, niepilne)
+
+**na-01**, answerable partial; first related: 109
+
+- miss    0.032 `docs/EMERGENCY.md:88`  6. Off-ramp lessons
+- miss    0.030 `docs/CASE-STUDY.md:67` 2026-08-27 4. Live capital (27 Aug – 21 Sep 2026)
+- miss    0.029 `docs/UI-DESIGN.md:135`  7. Rotation policy: weakest position → better opportunity
+- miss    0.029 `docs/UI-DESIGN.md:78`  4.2 Positions
+- miss    0.028 `docs/DECISION-LOG.md:31` 2026-09-21 Decision of 2026-09-21
+
+**na-02**, answerable partial; first related: 9
+
+- miss    0.030 `docs/PLAN.md:108`  3.7. Backtest quality decides everything
+- miss    0.027 `docs/PAIRS.md:69`  3. Portfolio sketch to be validated in the backtest (capital $5–25k)
+- miss    0.026 `journal/RESEARCH-QUEUE.md:812`  G. ULEPSZENIA INFRASTRUKTURY KOLEJKI (backlog, niepilne)
+- miss    0.025 `journal/HANDOFF.md:254#p2`  @Sonnet (sesja UI, Cowork)
+- miss    0.023 `journal/RESEARCH-QUEUE.md:597#p1` 2026-08-10 F. SLEEVE PAR SPIĘTYCH (pomysł z interfejsu bota znajomego — 2026-08-1
+
+**na-03**, answerable partial; first related: 7
+
+- miss    0.031 `docs/DECISION-LOG.md:28` 2026-09-11 Decision of 2026-09-11
+- miss    0.029 `journal/TASKS-UI.md:700#p1`  PARTIA 11 — Hedge GMX widoczny w aplikacji ✅ wykonana (uwaga Rafała po
+- miss    0.028 `docs/EMERGENCY.md:33`  2. Option A — delta-neutral hedge (preferred: reversible, the LP stays
+- miss    0.028 `journal/TASKS-UI.md:700#p2`  PARTIA 11 — Hedge GMX widoczny w aplikacji ✅ wykonana (uwaga Rafała po
+- miss    0.026 `journal/CONTEXT.md:2347#p2` 2026-08-20 2026-08-20 — Sesja analityczna (Fable) — odbiór nocy: PIERWSZY CZYSTY 
+
+**na-04**, answerable no; first related: 174
+
+- miss    0.028 `docs/INFRA.md:8`  1. Architecture (as built)
+- miss    0.027 `docs/AI-WORKFLOW.md:81`  What did not
+- miss    0.025 `docs/UI-DESIGN.md:64`  4.1 Cockpit (start screen — 30 seconds of reading)
+- miss    0.024 `journal/CONTEXT.md:3081` 2026-08-10 2026-08-10 — Sesja Windows: serwer 24/7 uruchomiony (tryb OBSERWUJ)
+- miss    0.023 `docs/CASE-STUDY.md:16`  2. What I built (August 2026)
+
+**na-05**, answerable no; first related: -
+
+- miss    0.027 `docs/CASE-STUDY.md:141`  7. Numbers, for the record
+- miss    0.026 `journal/reports/morning-2026-09-10.md:51` 2026-09-10 pipeline-task.log (tail)
+- miss    0.025 `journal/reports/morning-2026-09-03.md:7#p1` 2026-09-03 pipeline.log (ostatni przebieg)
+- miss    0.025 `journal/reports/morning-2026-09-11.md:51` 2026-09-11 pipeline-task.log (tail)
+- miss    0.023 `journal/reports/morning-2026-09-10.md:7#p1` 2026-09-10 pipeline.log (ostatni przebieg)
+
+**na-06**, answerable no; first related: 10
+
+- miss    0.029 `docs/AI-WORKFLOW.md:1`  How the project was run with AI sessions
+- miss    0.029 `docs/PLAN.md:1`  HOMOS v2 — Project plan: Automated Liquidity Manager (ALM)
+- miss    0.027 `docs/PLAN.md:151`  5. Planned vs built
+- miss    0.026 `journal/TASKS-UI.md:183`  PARTIA 4b — wpięcie buildera pod [Zatwierdź] (PO skończeniu Partii 4)
+- miss    0.024 `journal/CONTEXT.md:2796#p1` 2026-08-10 2026-08-10 — Sesja UI (Sonnet) — Partia 3: akcje na kartach kokpitu + 
+
+**na-07**, answerable partial; first related: 2
+
+- miss    0.033 `docs/DB-SCHEMA.md:164`  3. What is deliberately outside the database
+- related 0.033 `docs/DB-SCHEMA.md:1`  DB-SCHEMA.md — HOMOS database design (SQLite)
+- miss    0.030 `docs/DB-SCHEMA.md:13`  1. Design principles (more important than the specific tables)
+- miss    0.027 `docs/DB-SCHEMA.md:174`  4. Planned rollout (not carried out)
+- miss    0.024 `journal/reports/morning-2026-09-23.md:51` 2026-09-23 pipeline-task.log (tail)

@@ -21,7 +21,16 @@ public/bundle.js*
 data/
 .agent/
 .bot/
+# Snapshot of the live bot state from the decommissioned server (Aug-Sep 2026). Kept locally,
+# not committed: it may feed the agent tools in phase 2.
+.bot-live-backup/
 backtest/results/
+# AI layer: generated embeddings and search indexes (rebuild with npm run ai:index).
+# Evaluation results in ai/eval/results/ are committed on purpose.
+ai/index/
+# Python (inference/ services): bytecode cache and virtual environments.
+__pycache__/
+.venv/
 
 # IDE and Editor files
 .idea/
@@ -52,6 +61,3 @@ yarn-error.log*
 public/*.bundle.js
 public/*.bundle.js.LICENSE.txt
 
-# Private working journal and generated morning reports
-private-journal/
-reports/

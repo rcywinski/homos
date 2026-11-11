@@ -76,3 +76,7 @@ The planned order was: repository on GitHub → Node, clone and services on Wind
 in OBSERVE mode plus the API/UI server → firewall, token and an iPhone test over the VPN →
 PROPOSE → AUTO along the trust path. Everything up to PROPOSE was built; PROPOSE mode was
 used for the whole live period (27 Aug – 21 Sep 2026). AUTO was never enabled.
+
+## 6. Inference box (since Nov 2026)
+
+After the project closed, this machine became the local inference server for the AI layer; see [`inference/README.md`](../inference/README.md).
