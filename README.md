@@ -139,6 +139,8 @@ Measured on a golden set of 34 questions (26 with evidence in the sources, 8 wit
 npm run ask -- "Why did the live product stay wide?"
 ```
 
+![npm run ask answering one question with four verified citations](docs/media/ask.gif)
+
 Design, every measured variant, what did not work and the open points: [`docs/AI-RAG.md`](docs/AI-RAG.md).
 
 ## Repository map

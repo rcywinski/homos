@@ -179,13 +179,18 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   8/8 within one step; the judge is the stricter grader in every disagreement. The owner first read "faithfulness" as
   relevance and revised two grades after the rubric was re-read: rename it in the next rubric. Total cost $2.19.
 
-- [ ] NEXT **1.10 Write-up.** `docs/AI-RAG.md`: the question this layer answers, the corpus, each design decision with the alternative rejected
+- [x] 2026-11-11 **1.10 Write-up.** `docs/AI-RAG.md`: the question this layer answers, the corpus, each design decision with the alternative rejected
   (structure-based chunking vs fixed size, no vector database at this scale, hybrid, reranker, contextual retrieval), the evaluation table, costs,
   three example transcripts with citations, what did not work. README section "AI layer". A short GIF of the CLI.
   Merge `ai-layer` to `main`.
   Decision (owner, 11 Nov, after 1.9): k=10 is the default for `npm run ask` and for the write-up. Reason: against both k=5
   runs every correctness change favours k=10 and "incorrect" drops from 5 to 2, which is 2 to 3 questions above the
   run-to-run spread. Caveat: k=10 has a single run, so its own spread is unknown.
+  Result: `docs/AI-RAG.md` rewritten as the phase 1 write-up (pipeline, decisions with rejected alternatives, v1.3 and v1.4
+  tables, answers and judged quality, three k=10 answers, costs $13.49, lessons including wrong predictions, limitations).
+  README section "AI layer" with the headline numbers and `docs/media/ask.gif` (recorded with VHS from `docs/media/ask.tape`,
+  frames checked for secrets). Verifier loosened for whitespace only (a line break may match one space or none), all saved
+  answers re-verified offline: 283/283 before and after. README free of long dashes. Merge to `main` waits for the owner.
 
 ## Phase 2: tool-using agent
 
