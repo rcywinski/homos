@@ -334,6 +334,72 @@ correct answers beyond the spread, and about 7 quotes in 100 that are not in the
 is about three times slower at 250 W. A fully local pipeline is therefore possible without hiding errors, at a cost in
 answer quality.
 
+## Local generator tuning (step 1.12)
+
+Question: how much of the gap between `qwen3.8:27b` and Sonnet comes from settings, prompt and citation design rather
+than from the model? Same chunks (variant A), thinking off, 250 W, the same pre-run checks and blind Opus judge; two runs
+per variant; baseline Qwen A runs 1 and 2 from step 1.11. The Sonnet prompt and results are untouched.
+
+- **S, sampling only:** every repetition penalty off (presence 0, frequency 0, repeat 1.0); temperature, top_p and top_k
+  from the card. Hypothesis: the card's presence penalty of 1.5 hurts verbatim quoting. What the penalty applies to
+  (Ollama source, not in its API docs): Ollama passes `presence_penalty`, `frequency_penalty`, `repeat_penalty` and
+  `repeat_last_n` (default 64) to llama.cpp's server, which feeds the prompt tokens into the sampler history too; the
+  penalty covers the last 64 tokens of prompt plus output, exactly the tokens a quote repeats.
+- **P, S plus a prompt for local models** (`ai/answer/prompt-local.ts`): quoting rules (one contiguous span of one chunk,
+  never an ellipsis, never two places joined, Polish letters kept, at most 40 words) and one worked example on an
+  invented chunk. Written once from the 1.11 failure types and not revised after results.
+- **L, S plus citation by reference:** every chunk is shown with numbered units (lines; a line over 40 words split at
+  sentence boundaries); the model returns chunk id plus first and last unit and the code extracts the quote. The judge
+  sees the extracted quotes like any other quotes. Verified by construction, so valid references are reported instead.
+
+`num_ctx` 16384 for S; the longest P and L prompts (14516 and 15677 tokens) needed 17408 and 18432 (the smallest that
+hold them plus 2048 output tokens). `num_ctx` sets capacity only.
+
+| measure | Sonnet | Qwen A1 | Qwen A2 | S1 | S2 | P1 | P2 | L1 | L2 |
+|---|---|---|---|---|---|---|---|---|---|
+| citations verified | 97/97 | 59/65 | 53/57 | 65/68 | 60/67 | 84/87 | 74/77 | n/a | n/a |
+| valid references (L) | | | | | | | | 76/76 | 77/77 |
+| quotes over 40 words | 0 | 1 | 1 | 0 | 0 | 0 | 0 | 28 | 23 |
+| unanswerable labelled `none` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 |
+| judge: correct / partially / incorrect | 20 / 12 / 2 | 13 / 16 / 5 | 12 / 15 / 7 | 12 / 15 / 7 | 14 / 13 / 7 | 16 / 13 / 5 | 16 / 11 / 7 | 14 / 16 / 4 | 15 / 15 / 4 |
+| judge: supported / partly / unsupported | 6 / 28 / 0 | 3 / 30 / 1 | 2 / 29 / 3 | 2 / 30 / 2 | 4 / 28 / 2 | 1 / 32 / 1 | 6 / 25 / 3 | 11 / 21 / 1 | 9 / 25 / 0 |
+| judge: premise handled | 8/8 | 7/8 | 6/8 | 6/8 | 6/8 | 7/8 | 7/8 | 6/8 | 7/8 |
+| latency median / p95 (s) | 4.1 / 7.4 | 12.4 / 16.2 | 12.8 / 17.4 | 13.1 / 17.1 | 12.6 / 16.8 | 13.0 / 17.6 | 12.8 / 17.6 | 13.3 / 17.9 | 13.4 / 18.8 |
+| decode tokens per second | n/a | 60.2 | 60.5 | 60.1 | 61.1 | 62.9 | 61.5 | 58.3 | 61.1 |
+
+All runs: 34/34 valid structured outputs, no retry, injection probe passed. Report:
+`ai/eval/results/2026-11-11-tuning-compare-golden-v1-4.md`.
+
+**Against the baseline**, a variant counts as different only when the gap between its two runs and the two baseline
+runs is larger than the wider of the two spreads:
+
+- **S: no difference.** Unverified quotes 3/68 and 7/67 against 6/65 and 4/57; correct 12 and 14 against 13 and 12;
+  per question 14 changes up and 14 down over the four pairs. The presence-penalty hypothesis is not supported.
+  Unverified quotes in S (10): a word ending changed (twice: "zwężenie" for "zwężanie", "połączone" for "połączony"),
+  pieces joined with "...", a closing bracket added, quotation marks dropped (a quoted name, a JSON object), comments
+  dropped from inside a `CREATE TABLE` (twice), and "Phase 3" and "Phase 4" added to table rows that say "3" and "4".
+- **P: fewer bad quotes and more correct answers, beyond the spread on both counts.** Unverified quotes 3/87 and 3/77
+  (3.4% and 3.9%) against 6/65 and 4/57 (9.2% and 7.0%); correct 16 and 16 against 13 and 12; incorrect unchanged
+  (5 and 7). Per question the changes (5 to 7 per pair) are the size of the spread, but 18 go up and 5 down. The
+  remaining unverified quotes in P (6): a letter or its case changed (twice: "zwężenie", "zwężanie" for "Zwężanie"),
+  "..." inside a quote (once, despite the rule), a phrase reworded ("rebalansów" for "przy 65 i 88 rebalansach"), a
+  "current pace" figure for id-06 that is not in the cited chunk, and a SQL comment copied without the comment marker
+  of its second line.
+- **L: no bad quotes by construction, correctness within the spread.** 76/76 and 77/77 valid references, none outside
+  the chunks, no invalid range; but 28 and 23 extracted quotes are over 40 words (median 32 and 29, up to 188),
+  because the model picks whole units or long ranges. Correct 14 and 15, incorrect 4 and 4: within the spread.
+  The judge rates 11 and 9 answers fully supported against 3 and 2: longer quotes carry more of the claims, the same
+  measurement effect as the 40-word cap in 1.9, not a change in what the model writes.
+
+**Answer.** On these 34 questions, about half of the gap in correct answers (Sonnet 20, Qwen 12 to 13) closes with a
+prompt written for the local model (P: 16), and its bad-quote rate drops by more than half; switching off the
+repetition penalties alone does nothing. Citation by reference removes bad quotes entirely but makes quotes long. The
+rest of the gap, 4 correct answers and the remaining bad quotes, is the model. Every remaining bad quote was again
+caught by the verifier.
+
+The box: all six runs at 250 W, limit constant, power at most 254.11 W, temperature at most 61 C, VRAM peak 23 249 MiB
+(about 70 MiB more per 1024 of `num_ctx`), no alert, no reboot.
+
 ## Cost and latency
 
 | item | cost (USD) |
@@ -348,6 +414,7 @@ answer quality.
 | judge, 102 answers (Opus 5.5, step 1.9) | 1.58 |
 | **total, steps 1.7 to 1.9** | **13.49** |
 | judge, 204 local answers (Opus 5.5, step 1.11); local generation itself costs nothing | 3.18 |
+| judge, 204 tuning answers (Opus 5.5, step 1.12) | 3.17 |
 
 Real usage from the API's usage fields. In the context runs 89% of input tokens were cache reads. Claude's tokenizer
 counts this text at about 1.4 times the estimate tuned for `bge-m3`, so the hard spend caps use a 2x margin. A full
@@ -466,6 +533,9 @@ reference answer against the sources found these errors; they are a reason this 
 
 ## Limitations and open points
 
+- **Local generator tuning (step 1.12).** The variants were tuned and measured on the same 34 questions, with no
+  held-out set, so the P prompt's gain may be smaller on new questions; the prompt was written once, before any result,
+  to limit that. Thinking was off in every tuning run; all at 250 W; P and L needed a larger `num_ctx` than S.
 - **Local generator comparison (step 1.11).** The local models got the Sonnet prompt with no tuning; thinking was off
   in every run except the one thinking run; all local runs ran at a 250 W GPU power limit, which lowers tokens per
   second; the thinking run and the Gemma run are single runs; Gemma ran with Ollama's speculative draft model, which

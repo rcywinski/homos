@@ -23,6 +23,7 @@ import type { Generator } from '../answer/types';
 import { loadCorpus } from '../corpus/load';
 import type { Chunk } from '../corpus/types';
 import { CHUNK_LISTS } from './chunk-lists';
+import { LOCAL_QUOTE_SYSTEM, LOCAL_REF_SYSTEM } from '../answer/prompt-local';
 import { overlaps, type GoldenQuestion } from './golden';
 import { fmtRatio } from './metrics';
 
@@ -49,12 +50,14 @@ async function main() {
   const local = arg('--generator') === 'local';
   const think = process.argv.includes('--think');
   const model = arg('--model') ?? LOCAL_MODEL;
+  const variant = (arg('--variant') ?? 'base') as TuningVariant;
+  if (!['base', 'S', 'P', 'L'].includes(variant)) throw new Error('--variant must be base, S, P or L');
   const chunksFrom = arg('--chunks');
   const ks = (arg('--k') ?? (chunksFrom ? '10' : '5,10')).split(',').map(Number).sort((a, b) => a - b);
   const golden = readFileSync('ai/eval/golden.jsonl', 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l) as GoldenQuestion);
   const goldenVersion = (JSON.parse(readFileSync('ai/eval/golden-meta.json', 'utf8')) as { version: string }).version;
   const baseUrl = process.env.INFERENCE_URL ?? '';
-  const gen: Generator = local ? new LocalGenerator(localOptions(baseUrl, think, model)) : new ClaudeGenerator('sonnet');
+  const gen: Generator = local ? new LocalGenerator(localOptions(baseUrl, think, model, variant)) : new ClaudeGenerator('sonnet');
   let vram: unknown = null;
   if (local) {
     // VRAM: the embedder leaves the GPU before the generator loads.
@@ -178,7 +181,32 @@ export const LOCAL_MODELS = [LOCAL_MODEL, GEMMA_MODEL];
  * Gemma 4 26B-A4B (owner's extra run, variant A only, thinking off): sampling from its Hugging Face card (one setting
  * for all uses: temperature 1.0, top_p 0.95, top_k 64), its own tokenizer, the same num_ctx and num_predict.
  */
-export function localOptions(baseUrl: string, think: boolean, model = LOCAL_MODEL) {
+export type TuningVariant = 'base' | 'S' | 'P' | 'L';
+
+/**
+ * Step 1.12 variants of the Qwen run without thinking. S: every repetition penalty off (presence 0, frequency 0,
+ * repeat 1.0), temperature, top_p, top_k as on the card; Ollama passes these to llama.cpp's server, which feeds the
+ * prompt tokens into the sampler history too, so a penalty covers the last repeat_last_n (default 64) tokens of prompt
+ * plus answer, exactly the tokens a quote repeats. P: S plus the quoting prompt. L: S plus citation by reference.
+ */
+function tuned(base: ReturnType<typeof qwenOptions>, variant: TuningVariant) {
+  if (variant === 'base') return base;
+  if (base.think) throw new Error('step 1.12 variants are thinking-off only');
+  const sampling = { ...base.sampling, presence_penalty: 0, frequency_penalty: 0, repeat_penalty: 1.0 };
+  if (variant === 'S') return { ...base, sampling };
+  // num_ctx: the longest P prompt is 14516 tokens and the longest L prompt (numbered units) 15677 by the Qwen tokenizer,
+  // so 16384 cannot hold them plus num_predict 2048; the smallest 1024-multiples that do (owner's rule from 1.11).
+  if (variant === 'P') return { ...base, sampling, numCtx: 17408, system: LOCAL_QUOTE_SYSTEM, systemName: 'LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)' };
+  return { ...base, sampling, numCtx: 18432, system: LOCAL_REF_SYSTEM, systemName: 'LOCAL_REF_SYSTEM (ai/answer/prompt-local.ts)', citeMode: 'ref' as const };
+}
+
+export function localOptions(baseUrl: string, think: boolean, model = LOCAL_MODEL, variant: TuningVariant = 'base') {
+  if (model === LOCAL_MODEL) return tuned(qwenOptions(baseUrl, think), variant);
+  if (variant !== 'base') throw new Error('step 1.12 variants are for qwen3.8:27b only');
+  return otherOptions(baseUrl, think, model);
+}
+
+function otherOptions(baseUrl: string, think: boolean, model: string) {
   if (model === GEMMA_MODEL) {
     if (think) throw new Error('the Gemma run is thinking-off only (owner, 11 Nov)');
     return {
@@ -195,7 +223,10 @@ export function localOptions(baseUrl: string, think: boolean, model = LOCAL_MODE
       maxNetworkRetries: 0,
     };
   }
-  if (model !== LOCAL_MODEL) throw new Error(`unknown local model ${model}`);
+  throw new Error(`unknown local model ${model}`);
+}
+
+function qwenOptions(baseUrl: string, think: boolean) {
   return {
     baseUrl,
     model: LOCAL_MODEL,

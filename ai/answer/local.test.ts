@@ -3,7 +3,12 @@
  * tokenizer. Run: npx tsx ai/answer/local.test.ts
  */
 import type { Chunk } from '../corpus/types';
-import { LocalGenerator, parseAnswer, type LocalGenOptions } from './local';
+import { loadCorpus } from '../corpus/load';
+import { LocalGenerator, parseAnswer, parseRefAnswer, resolveRefs, type LocalGenOptions } from './local';
+import { ANSWER_SYSTEM } from './prompt';
+import { LOCAL_QUOTE_SYSTEM, LOCAL_REF_SYSTEM, refUserPrompt } from './prompt-local';
+import { chunkUnits, extractRef } from './units';
+import { verifyCitation } from './verify';
 
 let passed = 0;
 let failed = 0;
@@ -145,6 +150,47 @@ async function main() {
     const r = await new LocalGenerator(opts(f.fetchFn, { think: true })).generate('q', [chunk]);
     check('thinking tokens counted and text kept apart', r.local?.thinkingTokens === 10 && r.local?.thinking?.startsWith('The user') === true && !r.output?.answer.includes('The user'));
     check('think true sent', (f.bodies[0] as { think: boolean }).think === true);
+  }
+
+  // 6. Step 1.12 prompts: the Sonnet prompt is untouched, P adds the quoting rules and an invented example, L asks for
+  // references; the example chunk is not in the corpus.
+  {
+    check('P keeps the Sonnet prompt apart from the citation rule', LOCAL_QUOTE_SYSTEM.startsWith(ANSWER_SYSTEM.split('- Cite the passages')[0]) && LOCAL_QUOTE_SYSTEM !== ANSWER_SYSTEM);
+    check('P has the five quoting rules', ['contiguous span', 'Never use an ellipsis', 'Never join text from two places', 'Polish letters exactly', 'At most 40 words'].every((r) => LOCAL_QUOTE_SYSTEM.includes(r)));
+    check('L asks for unit references, not copied text', /firstUnit and lastUnit/.test(LOCAL_REF_SYSTEM) && !/quote copied verbatim/.test(LOCAL_REF_SYSTEM));
+    const corpus = loadCorpus();
+    check('the example chunk is invented (not in the corpus)', !corpus.some((c) => c.id === 'example:1' || c.text.includes('przegląd puli testowej')));
+  }
+
+  // 7. Units and references (variant L).
+  {
+    const c: Chunk = { ...chunk, id: 'u:1', text: `> pierwsza linia
+> druga linia
+
+${Array(30).fill('słowo').join(' ')}. ${Array(20).fill('inne').join(' ')}.` };
+    const u = chunkUnits(c);
+    check('units: blank lines dropped, blockquote markers stripped, long line split at a sentence', u.length === 4 && u[0].text === 'pierwsza linia' && u[2].text.endsWith('słowo.') && u[3].text.startsWith('inne'), JSON.stringify(u.map((x) => x.text.slice(0, 20))));
+    const given = new Map([[c.id, c]]);
+    const ok = extractRef({ chunkId: 'u:1', firstUnit: 1, lastUnit: 2 }, given);
+    check('reference extracts the joined units', 'quote' in ok && ok.quote === 'pierwsza linia druga linia');
+    check('extracted quote passes the verifier', 'quote' in ok && verifyCitation({ chunkId: 'u:1', quote: ok.quote }, given).status === 'ok');
+    check('reference outside the given chunks', 'problem' in extractRef({ chunkId: 'x', firstUnit: 1, lastUnit: 1 }, given) && (extractRef({ chunkId: 'x', firstUnit: 1, lastUnit: 1 }, given) as { problem: string }).problem === 'outside');
+    for (const [a, b] of [[0, 1], [2, 1], [1, 5], [1.5, 2]])
+      check(`invalid range ${a}-${b}`, (extractRef({ chunkId: 'u:1', firstUnit: a, lastUnit: b }, given) as { problem?: string }).problem === 'invalid-range');
+    const r = resolveRefs({ answer: 'a', coverage: 'full', citations: [{ chunkId: 'u:1', firstUnit: 1, lastUnit: 1 }, { chunkId: 'u:1', firstUnit: 3, lastUnit: 4 }, { chunkId: 'zz', firstUnit: 1, lastUnit: 1 }, { chunkId: 'u:1', firstUnit: 9, lastUnit: 9 }] }, [c]);
+    check('resolveRefs counts valid, outside, invalid and over-long; keeps only extracted quotes', r.stats.refs === 4 && r.stats.valid === 2 && r.stats.outside === 1 && r.stats.invalidRange === 1 && r.stats.overLong === 1 && r.output.citations.length === 2, JSON.stringify(r.stats));
+    check('parseRefAnswer rejects copied quotes', parseRefAnswer(good) === null && parseRefAnswer(JSON.stringify({ answer: 'a', coverage: 'none', citations: [{ chunkId: 'u:1', firstUnit: 1, lastUnit: 1 }] })) !== null);
+    check('ref prompt shows numbered units', refUserPrompt('q', [c]).includes('[1] pierwsza linia') && refUserPrompt('q', [c]).includes('[4] inne'));
+  }
+
+  // 8. Generator in ref mode: variant prompt and schema sent, quotes extracted by the code.
+  {
+    const refReply = JSON.stringify({ answer: 'Closed on 31.08.', coverage: 'full', citations: [{ chunkId: chunk.id, firstUnit: 1, lastUnit: 1 }] });
+    const f = fakeOllama([{ content: refReply }]);
+    const r = await new LocalGenerator(opts(f.fetchFn, { system: LOCAL_REF_SYSTEM, systemName: 'L', citeMode: 'ref' })).generate('q', [chunk]);
+    const b = f.bodies[0] as { messages: Array<{ content: string }>; format: { properties: Record<string, unknown> } };
+    check('ref mode sends the L prompt and the reference schema', b.messages[0].content === LOCAL_REF_SYSTEM && 'citations' in b.format.properties && JSON.stringify(b.format).includes('firstUnit'));
+    check('ref mode returns the extracted quote and ref stats', r.output?.citations[0].quote === 'pozycja zamknięta 31.08' && r.local?.refStats?.valid === 1, JSON.stringify(r.output));
   }
 
   console.log(`${passed} passed, ${failed} failed`);

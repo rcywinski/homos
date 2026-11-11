@@ -35,9 +35,13 @@ export const LOCAL_RUNS = [
   { run: 'local-b2', file: `${RESULTS}/2026-11-11-answers-k10-local-b2-golden-v1-4.json` },
   { run: 'local-gemma-a', file: `${RESULTS}/2026-11-11-answers-k10-local-gemma-a-golden-v1-4.json` },
 ];
+/** Step 1.12: Qwen tuning variants S (sampling), P (quoting prompt), L (citation by reference), two runs each. */
+export const TUNING_RUNS = ['s1', 's2', 'p1', 'p2', 'l1', 'l2'].map((t) => ({ run: `local-${t}`, file: `${RESULTS}/2026-11-11-answers-k10-local-${t}-golden-v1-4.json` }));
+
 export const SETS = {
   '1.9': { runs: RUNS, judgments: JUDGMENTS, judged: JUDGED, date: '2026-11-10' },
   local: { runs: LOCAL_RUNS, judgments: `${RESULTS}/2026-11-11-judgments-local-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-11-judged-local-golden-v1-4.json`, date: '2026-11-11' },
+  tuning: { runs: TUNING_RUNS, judgments: `${RESULTS}/2026-11-11-judgments-tuning-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-11-judged-tuning-golden-v1-4.json`, date: '2026-11-11' },
 };
 export type SetName = keyof typeof SETS;
 

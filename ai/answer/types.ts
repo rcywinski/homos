@@ -38,6 +38,8 @@ export interface LocalCallStats {
   networkRetries: number;
   retried: boolean;
   doneReason: string;
+  /** Citation by reference (step 1.12, L): references given, valid, outside the given chunks, invalid ranges, over 40 words. */
+  refStats?: { refs: number; valid: number; outside: number; invalidRange: number; overLong: number };
 }
 
 export interface GeneratorResult {

@@ -15,7 +15,9 @@
 import { readFileSync } from 'fs';
 import { Tokenizer } from '@huggingface/tokenizers';
 import type { Chunk } from '../corpus/types';
-import { ANSWER_SCHEMA, ANSWER_SYSTEM, answerUserPrompt } from './prompt';
+import { ANSWER_SCHEMA, ANSWER_SYSTEM, answerUserPrompt, MAX_QUOTE_WORDS } from './prompt';
+import { REF_SCHEMA, refUserPrompt } from './prompt-local';
+import { extractRef, type Ref } from './units';
 import type { Coverage, GeneratedAnswer, Generator, GeneratorResult, LocalCallStats } from './types';
 
 export interface LocalGenOptions {
@@ -38,6 +40,12 @@ export interface LocalGenOptions {
    * (11 Nov 2026): 0, so the run stops at the first transport failure. Default 0.
    */
   maxNetworkRetries?: number;
+  /** System prompt; default the Sonnet one (ANSWER_SYSTEM). Step 1.12 variants P and L use ./prompt-local.ts. */
+  system?: string;
+  /** Name of the system prompt, for the result file. */
+  systemName?: string;
+  /** 'quote' (default): the model copies quotes; 'ref' (step 1.12, L): the model cites unit ranges, the code extracts. */
+  citeMode?: 'quote' | 'ref';
   /** For tests: a token counter instead of the tokenizer files. */
   countTokens?: (text: string) => number;
 }
@@ -77,6 +85,49 @@ export function parseAnswer(raw: string): GeneratedAnswer | null {
   return a as unknown as GeneratedAnswer;
 }
 
+/** A citation-by-reference answer (variant L) if it matches REF_SCHEMA exactly, else null. */
+export function parseRefAnswer(raw: string): { answer: string; coverage: Coverage; citations: Ref[] } | null {
+  let o: unknown;
+  try {
+    o = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return null;
+  const a = o as Record<string, unknown>;
+  if (Object.keys(a).some((k) => !['answer', 'coverage', 'citations'].includes(k))) return null;
+  if (typeof a.answer !== 'string' || !COVERAGE.includes(a.coverage as Coverage) || !Array.isArray(a.citations)) return null;
+  for (const c of a.citations as unknown[]) {
+    if (!c || typeof c !== 'object') return null;
+    const r = c as Record<string, unknown>;
+    if (Object.keys(r).some((k) => !['chunkId', 'firstUnit', 'lastUnit'].includes(k))) return null;
+    if (typeof r.chunkId !== 'string' || !Number.isInteger(r.firstUnit) || !Number.isInteger(r.lastUnit)) return null;
+  }
+  return a as unknown as { answer: string; coverage: Coverage; citations: Ref[] };
+}
+
+/**
+ * Turns references into ordinary citations with extracted quotes. References outside the given chunks and invalid
+ * ranges have no text: they are counted and left out, so the verifier and the judge see only extracted quotes.
+ */
+export function resolveRefs(a: { answer: string; coverage: Coverage; citations: Ref[] }, chunks: Chunk[]) {
+  const given = new Map(chunks.map((c) => [c.id, c]));
+  const stats = { refs: a.citations.length, valid: 0, outside: 0, invalidRange: 0, overLong: 0 };
+  const citations: GeneratedAnswer['citations'] = [];
+  for (const ref of a.citations) {
+    const x = extractRef(ref, given);
+    if ('problem' in x) {
+      if (x.problem === 'outside') stats.outside++;
+      else stats.invalidRange++;
+      continue;
+    }
+    stats.valid++;
+    if (x.words > MAX_QUOTE_WORDS) stats.overLong++;
+    citations.push({ chunkId: ref.chunkId, quote: x.quote });
+  }
+  return { output: { answer: a.answer, coverage: a.coverage, citations } as GeneratedAnswer, stats };
+}
+
 export class LocalGenerator implements Generator {
   readonly name: string;
   private readonly fetchFn: typeof fetch;
@@ -84,16 +135,28 @@ export class LocalGenerator implements Generator {
   /** Chat-template overhead in tokens, measured on the first call. */
   templateOverhead: number | null = null;
 
+  private get system(): string {
+    return this.o.system ?? ANSWER_SYSTEM;
+  }
+
   constructor(private readonly o: LocalGenOptions) {
-    this.name = `answer:ollama:${o.model}(think=${o.think},num_ctx=${o.numCtx},num_predict=${o.numPredict},temperature=${o.sampling.temperature})`;
+    this.name = `answer:ollama:${o.model}(think=${o.think},num_ctx=${o.numCtx},num_predict=${o.numPredict},temperature=${o.sampling.temperature},presence_penalty=${o.sampling.presence_penalty},prompt=${o.systemName ?? 'ANSWER_SYSTEM'},cite=${o.citeMode ?? 'quote'})`;
     this.fetchFn = o.fetchFn ?? fetch;
     this.count = o.countTokens ?? loadTokenCounter(o.tokenizerDir);
   }
 
   /** Every setting that shapes the output, for the result file. */
   settings() {
-    const { baseUrl: _b, fetchFn: _f, countTokens: _c, tokenizerDir, ...rest } = this.o;
-    return { ...rest, tokenizer: tokenizerDir, format: 'ANSWER_SCHEMA (ai/answer/prompt.ts)', stream: false, seed: 'not set' };
+    const { baseUrl: _b, fetchFn: _f, countTokens: _c, system: _s, tokenizerDir, ...rest } = this.o;
+    const ref = this.o.citeMode === 'ref';
+    return {
+      ...rest,
+      systemName: this.o.systemName ?? 'ANSWER_SYSTEM (ai/answer/prompt.ts)',
+      tokenizer: tokenizerDir,
+      format: ref ? 'REF_SCHEMA (ai/answer/prompt-local.ts)' : 'ANSWER_SCHEMA (ai/answer/prompt.ts)',
+      stream: false,
+      seed: 'not set',
+    };
   }
 
   private async chat(user: string): Promise<{ r: OllamaChatResponse; ms: number }> {
@@ -108,10 +171,10 @@ export class LocalGenerator implements Generator {
         body: JSON.stringify({
           model: this.o.model,
           messages: [
-            { role: 'system', content: ANSWER_SYSTEM },
+            { role: 'system', content: this.system },
             { role: 'user', content: user },
           ],
-          format: ANSWER_SCHEMA,
+          format: this.o.citeMode === 'ref' ? REF_SCHEMA : ANSWER_SCHEMA,
           think: this.o.think,
           stream: false,
           keep_alive: this.o.keepAlive,
@@ -127,8 +190,8 @@ export class LocalGenerator implements Generator {
 
   /** Expected prompt tokens without the template overhead, and the pre-call fit check. */
   promptTokens(question: string, chunks: Chunk[]): { user: string; bare: number } {
-    const user = answerUserPrompt(question, chunks);
-    const bare = this.count(ANSWER_SYSTEM) + this.count(user);
+    const user = this.o.citeMode === 'ref' ? refUserPrompt(question, chunks) : answerUserPrompt(question, chunks);
+    const bare = this.count(this.system) + this.count(user);
     const overhead = this.templateOverhead ?? 0;
     if (bare + overhead + this.o.numPredict > this.o.numCtx)
       throw new Error(`prompt does not fit: ${bare + overhead} prompt tokens + num_predict ${this.o.numPredict} > num_ctx ${this.o.numCtx}`);
@@ -174,8 +237,17 @@ export class LocalGenerator implements Generator {
       ms += callMs;
       last = r;
       expected = this.checkServerCount(bare, r.prompt_eval_count ?? -1);
-      const out = r.done_reason === 'length' ? null : parseAnswer(r.message?.content ?? '');
-      if (out) return this.result(out, r, ms, expected, invalid, attempt > 0, network);
+      if (this.o.citeMode === 'ref') {
+        const refs = r.done_reason === 'length' ? null : parseRefAnswer(r.message?.content ?? '');
+        if (refs) {
+          const { output, stats } = resolveRefs(refs, chunks);
+          const res = this.result(output, r, ms, expected, invalid, attempt > 0, network);
+          return { ...res, local: { ...res.local!, refStats: stats } };
+        }
+      } else {
+        const out = r.done_reason === 'length' ? null : parseAnswer(r.message?.content ?? '');
+        if (out) return this.result(out, r, ms, expected, invalid, attempt > 0, network);
+      }
       invalid++;
     }
     return { ...this.result(null, last, ms, expected, invalid, true, network), error: last.done_reason === 'length' ? 'num_predict reached' : 'invalid structured output' };

@@ -1,0 +1,530 @@
+{
+  "date": "2026-11-11",
+  "goldenVersion": "1.4",
+  "columns": [
+    {
+      "run": "k10",
+      "generator": "answer:claude-sonnet-5-5(effort=medium)",
+      "settings": null,
+      "local": null
+    },
+    {
+      "run": "local-a1",
+      "generator": "answer:ollama:qwen3.8:27b(think=false,num_ctx=16384,num_predict=2048,temperature=0.7)",
+      "settings": {
+        "model": "qwen3.8:27b",
+        "think": false,
+        "numCtx": 16384,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 1.5,
+          "repeat_penalty": 1
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "tokenizer": "ai/index/tokenizers/qwen3.8-27b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      },
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 60.2,
+        "evalTokensMedian": 277,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14119,
+        "refStats": null
+      }
+    },
+    {
+      "run": "local-a2",
+      "generator": "answer:ollama:qwen3.8:27b(think=false,num_ctx=16384,num_predict=2048,temperature=0.7)",
+      "settings": {
+        "model": "qwen3.8:27b",
+        "think": false,
+        "numCtx": 16384,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 1.5,
+          "repeat_penalty": 1
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "tokenizer": "ai/index/tokenizers/qwen3.8-27b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      },
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 60.5,
+        "evalTokensMedian": 242,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14119,
+        "refStats": null
+      }
+    },
+    {
+      "run": "local-s1",
+      "generator": "answer:ollama:qwen3.8:27b(think=false,num_ctx=16384,num_predict=2048,temperature=0.7,presence_penalty=0,prompt=ANSWER_SYSTEM,cite=quote)",
+      "settings": {
+        "model": "qwen3.8:27b",
+        "think": false,
+        "numCtx": 16384,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1,
+          "frequency_penalty": 0
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "ANSWER_SYSTEM (ai/answer/prompt.ts)",
+        "tokenizer": "ai/index/tokenizers/qwen3.8-27b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      },
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 60.1,
+        "evalTokensMedian": 281,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14119,
+        "refStats": null
+      }
+    },
+    {
+      "run": "local-s2",
+      "generator": "answer:ollama:qwen3.8:27b(think=false,num_ctx=16384,num_predict=2048,temperature=0.7,presence_penalty=0,prompt=ANSWER_SYSTEM,cite=quote)",
+      "settings": {
+        "model": "qwen3.8:27b",
+        "think": false,
+        "numCtx": 16384,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1,
+          "frequency_penalty": 0
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "ANSWER_SYSTEM (ai/answer/prompt.ts)",
+        "tokenizer": "ai/index/tokenizers/qwen3.8-27b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      },
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 61.1,
+        "evalTokensMedian": 258,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14119,
+        "refStats": null
+      }
+    },
+    {
+      "run": "local-p1",
+      "generator": "answer:ollama:qwen3.8:27b(think=false,num_ctx=17408,num_predict=2048,temperature=0.7,presence_penalty=0,prompt=LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts),cite=quote)",
+      "settings": {
+        "model": "qwen3.8:27b",
+        "think": false,
+        "numCtx": 17408,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1,
+          "frequency_penalty": 0
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)",
+        "tokenizer": "ai/index/tokenizers/qwen3.8-27b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      },
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 62.9,
+        "evalTokensMedian": 276,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14533,
+        "refStats": null
+      }
+    },
+    {
+      "run": "local-p2",
+      "generator": "answer:ollama:qwen3.8:27b(think=false,num_ctx=17408,num_predict=2048,temperature=0.7,presence_penalty=0,prompt=LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts),cite=quote)",
+      "settings": {
+        "model": "qwen3.8:27b",
+        "think": false,
+        "numCtx": 17408,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1,
+          "frequency_penalty": 0
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)",
+        "tokenizer": "ai/index/tokenizers/qwen3.8-27b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      },
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 61.5,
+        "evalTokensMedian": 252,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14533,
+        "refStats": null
+      }
+    },
+    {
+      "run": "local-l1",
+      "generator": "answer:ollama:qwen3.8:27b(think=false,num_ctx=18432,num_predict=2048,temperature=0.7,presence_penalty=0,prompt=LOCAL_REF_SYSTEM (ai/answer/prompt-local.ts),cite=ref)",
+      "settings": {
+        "model": "qwen3.8:27b",
+        "think": false,
+        "numCtx": 18432,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1,
+          "frequency_penalty": 0
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "LOCAL_REF_SYSTEM (ai/answer/prompt-local.ts)",
+        "citeMode": "ref",
+        "tokenizer": "ai/index/tokenizers/qwen3.8-27b",
+        "format": "REF_SCHEMA (ai/answer/prompt-local.ts)",
+        "stream": false,
+        "seed": "not set"
+      },
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 58.3,
+        "evalTokensMedian": 225,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 15694,
+        "refStats": {
+          "refs": 76,
+          "valid": 76,
+          "outside": 0,
+          "invalidRange": 0,
+          "overLong": 28
+        }
+      }
+    },
+    {
+      "run": "local-l2",
+      "generator": "answer:ollama:qwen3.8:27b(think=false,num_ctx=18432,num_predict=2048,temperature=0.7,presence_penalty=0,prompt=LOCAL_REF_SYSTEM (ai/answer/prompt-local.ts),cite=ref)",
+      "settings": {
+        "model": "qwen3.8:27b",
+        "think": false,
+        "numCtx": 18432,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1,
+          "frequency_penalty": 0
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "LOCAL_REF_SYSTEM (ai/answer/prompt-local.ts)",
+        "citeMode": "ref",
+        "tokenizer": "ai/index/tokenizers/qwen3.8-27b",
+        "format": "REF_SCHEMA (ai/answer/prompt-local.ts)",
+        "stream": false,
+        "seed": "not set"
+      },
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 61.1,
+        "evalTokensMedian": 213,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 15694,
+        "refStats": {
+          "refs": 77,
+          "valid": 77,
+          "outside": 0,
+          "invalidRange": 0,
+          "overLong": 23
+        }
+      }
+    }
+  ],
+  "variants": [
+    {
+      "variant": "S",
+      "citations": {
+        "unverified": [
+          3,
+          7
+        ],
+        "totals": [
+          68,
+          67
+        ],
+        "baselineUnverified": [
+          6,
+          4
+        ],
+        "baselineTotals": [
+          65,
+          57
+        ],
+        "rate": {
+          "gap": 0,
+          "width": 0.06035996488147497,
+          "exceeds": false
+        }
+      },
+      "correctness": {
+        "correct": [
+          12,
+          14
+        ],
+        "baselineCorrect": [
+          13,
+          12
+        ],
+        "correctRange": {
+          "gap": 0,
+          "width": 2,
+          "exceeds": false
+        },
+        "incorrect": [
+          7,
+          7
+        ],
+        "baselineIncorrect": [
+          5,
+          7
+        ],
+        "incorrectRange": {
+          "gap": 0,
+          "width": 2,
+          "exceeds": false
+        },
+        "perQuestion": {
+          "baselineSpread": 7,
+          "variantSpread": 8,
+          "crossChanges": [
+            7,
+            10,
+            2,
+            9
+          ],
+          "crossUp": 14,
+          "crossDown": 14
+        }
+      }
+    },
+    {
+      "variant": "P",
+      "citations": {
+        "unverified": [
+          3,
+          3
+        ],
+        "totals": [
+          87,
+          77
+        ],
+        "baselineUnverified": [
+          6,
+          4
+        ],
+        "baselineTotals": [
+          65,
+          57
+        ],
+        "rate": {
+          "gap": 0.031214399635452264,
+          "width": 0.02213225371120109,
+          "exceeds": true
+        }
+      },
+      "correctness": {
+        "correct": [
+          16,
+          16
+        ],
+        "baselineCorrect": [
+          13,
+          12
+        ],
+        "correctRange": {
+          "gap": 3,
+          "width": 1,
+          "exceeds": true
+        },
+        "incorrect": [
+          5,
+          7
+        ],
+        "baselineIncorrect": [
+          5,
+          7
+        ],
+        "incorrectRange": {
+          "gap": 0,
+          "width": 2,
+          "exceeds": false
+        },
+        "perQuestion": {
+          "baselineSpread": 7,
+          "variantSpread": 4,
+          "crossChanges": [
+            7,
+            5,
+            6,
+            5
+          ],
+          "crossUp": 18,
+          "crossDown": 5
+        }
+      }
+    },
+    {
+      "variant": "L",
+      "citations": {
+        "note": "citation by reference: verified by construction, not comparable",
+        "validRefs": [
+          {
+            "refs": 76,
+            "valid": 76,
+            "outside": 0,
+            "invalidRange": 0,
+            "overLong": 28
+          },
+          {
+            "refs": 77,
+            "valid": 77,
+            "outside": 0,
+            "invalidRange": 0,
+            "overLong": 23
+          }
+        ]
+      },
+      "correctness": {
+        "correct": [
+          14,
+          15
+        ],
+        "baselineCorrect": [
+          13,
+          12
+        ],
+        "correctRange": {
+          "gap": 1,
+          "width": 1,
+          "exceeds": false
+        },
+        "incorrect": [
+          4,
+          4
+        ],
+        "baselineIncorrect": [
+          5,
+          7
+        ],
+        "incorrectRange": {
+          "gap": 1,
+          "width": 2,
+          "exceeds": false
+        },
+        "perQuestion": {
+          "baselineSpread": 7,
+          "variantSpread": 9,
+          "crossChanges": [
+            8,
+            5,
+            7,
+            7
+          ],
+          "crossUp": 21,
+          "crossDown": 6
+        }
+      }
+    }
+  ]
+}
