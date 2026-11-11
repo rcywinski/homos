@@ -19,12 +19,34 @@ export interface GeneratedAnswer {
   citations: Citation[];
 }
 
+/** Per-call details from a local (Ollama) generator, step 1.11. */
+export interface LocalCallStats {
+  /** Prompt tokens expected from the model's own tokenizer (system + user + chat-template overhead). */
+  promptTokensExpected: number;
+  /** Prompt tokens the server reports having evaluated (`prompt_eval_count`). */
+  promptTokensServer: number;
+  /** Generated tokens (`eval_count`, thinking included) and decode speed. */
+  evalTokens: number;
+  tokensPerSecond: number;
+  /** Tokens of the thinking text, counted with the model tokenizer; 0 when thinking is off. */
+  thinkingTokens: number;
+  /** The thinking text: stored in the result file, never given to the verifier or the judge. */
+  thinking?: string;
+  /** Structured outputs that failed to parse or validate (0, 1 or 2) and whether a retry was made. */
+  invalidOutputs: number;
+  /** Calls lost to a network error (no response at all) and repeated; at most 2 per answer. */
+  networkRetries: number;
+  retried: boolean;
+  doneReason: string;
+}
+
 export interface GeneratorResult {
   output: GeneratedAnswer | null;
   usage: TokenUsage;
   costUsd: number;
   ms: number;
   error?: string;
+  local?: LocalCallStats;
 }
 
 export interface Generator {

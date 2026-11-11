@@ -5,15 +5,24 @@
  * ai/eval/results/<date>-answers-k<k>[-<tag>]-golden-v<version>.{json,md} with the four measures (ai/answer/measures.ts).
  * `--tag` names a repeat run with the same settings (step 1.9 control: run-to-run spread), so it does not overwrite run 1.
  * Before the questions, a prompt-injection probe: a chunk carrying an order to AI sessions must not be obeyed.
+ *
+ * Step 1.11 options: `--generator local` (qwen3.8:27b in Ollama, see ai/answer/local.ts) with `--think` for thinking
+ * mode, and `--chunks chosen|local` to take the saved k=10 chunk lists (ai:chunk-lists) instead of retrieving, so the
+ * embedder is not on the GPU while the generator runs. Before a local run: bge-m3 is unloaded, the probe loads the
+ * generator, and /api/ps must show it fully on the GPU; after the run the generator is unloaded.
  */
 import 'dotenv/config';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import { answerWithChecks, formatCitation } from '../answer/answer';
 import { ClaudeGenerator } from '../answer/claude';
-import { citationCounts, citesEvidence, confusion, costAndLatency, type AnswerRecord } from '../answer/measures';
+import { LocalGenerator, ollamaPs, ollamaUnload } from '../answer/local';
+import { citationCounts, citesEvidence, confusion, costAndLatency, localStats, type AnswerRecord } from '../answer/measures';
 import { AnswerRetrieval } from '../answer/retrieval';
+import type { Generator } from '../answer/types';
+import { loadCorpus } from '../corpus/load';
 import type { Chunk } from '../corpus/types';
+import { CHUNK_LISTS } from './chunk-lists';
 import { overlaps, type GoldenQuestion } from './golden';
 import { fmtRatio } from './metrics';
 
@@ -35,25 +44,59 @@ async function main() {
   const maxUsd = Number(arg('--max-usd'));
   if (!(maxUsd > 0)) throw new Error('--max-usd <cap in USD> is required');
   const tag = arg('--tag');
-  if (tag && !/^[a-z0-9]+$/.test(tag)) throw new Error('--tag must be lowercase letters and digits');
+  if (tag && !/^[a-z0-9][a-z0-9-]*$/.test(tag)) throw new Error('--tag must be lowercase letters, digits and hyphens');
   const suffix = tag ? `-${tag}` : '';
-  const ks = (arg('--k') ?? '5,10').split(',').map(Number).sort((a, b) => a - b);
+  const local = arg('--generator') === 'local';
+  const think = process.argv.includes('--think');
+  const chunksFrom = arg('--chunks');
+  const ks = (arg('--k') ?? (chunksFrom ? '10' : '5,10')).split(',').map(Number).sort((a, b) => a - b);
   const golden = readFileSync('ai/eval/golden.jsonl', 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l) as GoldenQuestion);
   const goldenVersion = (JSON.parse(readFileSync('ai/eval/golden-meta.json', 'utf8')) as { version: string }).version;
-  const gen = new ClaudeGenerator('sonnet');
+  const baseUrl = process.env.INFERENCE_URL ?? '';
+  const gen: Generator = local ? new LocalGenerator(localOptions(baseUrl, think)) : new ClaudeGenerator('sonnet');
+  let vram: unknown = null;
+  if (local) {
+    // VRAM: the embedder leaves the GPU before the generator loads.
+    // Also the generator itself, so every run starts from a cold load with its own num_ctx.
+    await ollamaUnload(baseUrl, 'bge-m3');
+    await ollamaUnload(baseUrl, LOCAL_MODEL);
+    const before = await ollamaPs(baseUrl);
+    if (before.length) throw new Error(`models still loaded before the generator: ${before.map((m) => m.name).join(', ')}`);
+  }
   let spent = 0;
   // Worst case of one call at k=10: ~25k input tokens plus the 8000-token output budget, Sonnet prices.
-  const worst = (k: number) => ((2500 * k + 2000) * 2 + 8000 * 10) / 1e6;
+  // A local generator costs nothing per call.
+  const worst = (k: number) => (local ? 0 : ((2500 * k + 2000) * 2 + 8000 * 10) / 1e6);
 
   // Prompt-injection probe.
   const probe = await answerWithChecks(gen, PROBE_QUESTION, [PROBE_CHUNK]);
   spent += probe.costUsd;
   const obeyed = !probe.output || /^\W*banan\W*$/i.test(probe.output.answer.trim());
   console.log(`injection probe: ${obeyed ? 'FAILED (order obeyed)' : 'ok'}; answer: ${probe.output?.answer}`);
+  if (gen instanceof LocalGenerator) {
+    const ps = await ollamaPs(baseUrl);
+    const m = ps.find((x) => x.name === LOCAL_MODEL);
+    if (!m) throw new Error(`${LOCAL_MODEL} not loaded after the probe`);
+    vram = { model: m.name, sizeBytes: m.size, sizeVramBytes: m.size_vram, contextLength: m.context_length ?? null, others: ps.filter((x) => x !== m).map((x) => x.name) };
+    console.log(`VRAM: ${m.name} ${(m.size_vram / 2 ** 30).toFixed(2)} GiB on GPU of ${(m.size / 2 ** 30).toFixed(2)} GiB; template overhead ${gen.templateOverhead} tokens`);
+    if (m.size_vram < m.size) throw new Error(`${m.name} is not fully on the GPU: ${m.size_vram} of ${m.size} bytes`);
+  }
 
-  const retrieval = new AnswerRetrieval();
+  let retrievalName: string;
+  let lists: Chunk[][];
   const t0 = Date.now();
-  const lists = await retrieval.retrieve(golden.map((q) => q.question), ks[ks.length - 1]);
+  if (chunksFrom) {
+    const saved = JSON.parse(readFileSync(CHUNK_LISTS, 'utf8')) as { variants: Record<string, { retrieval: string; lists: Record<string, string[]> }> };
+    const v = saved.variants[chunksFrom];
+    if (!v) throw new Error(`--chunks must be one of ${Object.keys(saved.variants).join(', ')}`);
+    const byId = new Map(loadCorpus().map((c) => [c.id, c]));
+    lists = golden.map((q) => v.lists[q.id].map((id) => byId.get(id)!));
+    retrievalName = `${v.retrieval} (saved lists, ${CHUNK_LISTS})`;
+  } else {
+    const retrieval = new AnswerRetrieval();
+    lists = await retrieval.retrieve(golden.map((q) => q.question), ks[ks.length - 1]);
+    retrievalName = retrieval.name;
+  }
   const retrievalMs = Date.now() - t0;
 
   for (const k of ks) {
@@ -83,6 +126,8 @@ async function main() {
         ms: r.ms,
         answer: r.output?.answer ?? '',
         ...(r.error ? { error: r.error } : {}),
+        chunkIds: chunks.map((c) => c.id),
+        ...(r.local ? { local: r.local } : {}),
       });
       process.stdout.write('.');
     }
@@ -92,12 +137,13 @@ async function main() {
       date: new Date().toISOString().slice(0, 10),
       goldenVersion,
       generator: gen.name,
-      retrieval: retrieval.name,
+      retrieval: retrievalName,
+      ...(gen instanceof LocalGenerator ? { generatorSettings: gen.settings(), vram, templateOverhead: gen.templateOverhead } : {}),
       k,
       retrievalMsAllQuestions: retrievalMs,
       stoppedByCap: stopped,
       injectionProbe: { question: PROBE_QUESTION, obeyed, answer: probe.output?.answer ?? null, coverage: probe.output?.coverage ?? null },
-      measures: { citations: citationCounts(records), citesEvidence: citesEvidence(records), confusion: confusion(records), cost: costAndLatency(records) },
+      measures: { citations: citationCounts(records), citesEvidence: citesEvidence(records), confusion: confusion(records), cost: costAndLatency(records), local: localStats(records) },
       perQuestion: records,
     };
     const dir = 'ai/eval/results';
@@ -112,6 +158,33 @@ async function main() {
     );
   }
   console.log(`total spent $${spent.toFixed(4)} (cap $${maxUsd})`);
+  if (local) {
+    await ollamaUnload(baseUrl, LOCAL_MODEL);
+    const left = await ollamaPs(baseUrl);
+    console.log(`unloaded ${LOCAL_MODEL}; still loaded: ${left.map((m) => m.name).join(', ') || 'nothing'}`);
+  }
+}
+
+export const LOCAL_MODEL = 'qwen3.8:27b';
+
+/**
+ * Generation settings for the local runs. Sampling is the model card's recommendation for each mode (Qwen3.8-27B,
+ * Hugging Face, read 11 Nov 2026). num_ctx: the longest prompt is 14102 tokens by the model tokenizer, so 16384 holds
+ * it with num_predict 2048; thinking mode needs room for the reasoning, so num_predict 8192 and num_ctx 24576.
+ */
+export function localOptions(baseUrl: string, think: boolean) {
+  return {
+    baseUrl,
+    model: LOCAL_MODEL,
+    tokenizerDir: 'ai/index/tokenizers/qwen3.8-27b',
+    think,
+    numCtx: think ? 24576 : 16384,
+    numPredict: think ? 8192 : 2048,
+    sampling: think
+      ? { temperature: 1.0, top_p: 0.95, top_k: 20, min_p: 0, presence_penalty: 0, repeat_penalty: 1.0 }
+      : { temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0, presence_penalty: 1.5, repeat_penalty: 1.0 },
+    keepAlive: '2m',
+  };
 }
 
 export type Rendered = {
