@@ -1,4 +1,4 @@
-# HOMOS — a Uniswap v3 concentrated-liquidity research stack
+# HOMOS: a Uniswap v3 concentrated-liquidity research stack
 
 [![CI](https://github.com/rcywinski/homos/actions/workflows/ci.yml/badge.svg)](https://github.com/rcywinski/homos/actions/workflows/ci.yml)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
@@ -114,6 +114,32 @@ npm run backtest         # all strategies on the cached swap data
 
 There are no hard-coded wallet addresses or RPC keys; public RPC fallbacks are used when none
 are configured. The data caches under `data/` are regenerable — see the headers of `scripts/*.ts`.
+
+## AI layer
+
+Since November 2026 the repo has a retrieval layer (`ai/`) that answers English questions about the project from
+the Polish journal and the English docs, with every claim backed by a verbatim quote that is checked against the
+source and printed as `file:lines`. Hybrid search (local `bge-m3` vectors plus BM25 on a Polish rendering of the
+question), a local cross-encoder reranker, short English context per chunk written by Claude Haiku 5.5, answers by
+Claude Sonnet 5.5, quality judged by Claude Opus 5.5.
+
+Measured on a golden set of 34 questions (26 with evidence in the sources, 8 with a false premise or no answer):
+
+| | |
+|---|---|
+| Retrieval, recall@10 / recall@30 (the variant used for answering) | 77% (20/26) / 92% (24/26) |
+| Citations verified against the source, 10 chunks per answer | 97 of 97 |
+| Questions with no answer in the sources answered as such | 3 of 3 |
+| Judge (Opus 5.5): correct / partially correct / incorrect | 20 / 12 / 2 of 34 |
+| Judge against the owner's blind grades, correctness | 5 of 8 exact, 8 of 8 within one step |
+| Cost and time per answer | about $0.03, median 4.1 s |
+
+```bash
+# needs ANTHROPIC_API_KEY, INFERENCE_URL and RERANK_URL in .env, and the inference box (inference/README.md)
+npm run ask -- "Why did the live product stay wide?"
+```
+
+Design, every measured variant, what did not work and the open points: [`docs/AI-RAG.md`](docs/AI-RAG.md).
 
 ## Repository map
 

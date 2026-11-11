@@ -183,6 +183,9 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   (structure-based chunking vs fixed size, no vector database at this scale, hybrid, reranker, contextual retrieval), the evaluation table, costs,
   three example transcripts with citations, what did not work. README section "AI layer". A short GIF of the CLI.
   Merge `ai-layer` to `main`.
+  Decision (owner, 11 Nov, after 1.9): k=10 is the default for `npm run ask` and for the write-up. Reason: against both k=5
+  runs every correctness change favours k=10 and "incorrect" drops from 5 to 2, which is 2 to 3 questions above the
+  run-to-run spread. Caveat: k=10 has a single run, so its own spread is unknown.
 
 ## Phase 2: tool-using agent
 
