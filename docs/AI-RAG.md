@@ -20,6 +20,9 @@ owner's chat session: plan changes, explanations and interpretation of results, 
   questions answered "not in the sources". An Opus 5.5 judge rates 20 of 34 answers correct, 12 partially correct and
   2 incorrect. On 8 answers graded blind by the owner it agrees exactly on 5 and within one step on all 8.
 - Cost of all measured runs, steps 1.7 to 1.9: $13.49.
+- Cloud vs local (step 1.11): a local `qwen3.8:27b` on the RTX 3090 box writes valid answers to the same chunks but
+  is clearly weaker than Sonnet 5.5 (13 and 12 of 34 correct against 20; 24 of 321 quotes not in their source,
+  every one caught by the verifier) and about three times slower at a 250 W power limit.
 
 ## What the problem is
 
@@ -252,6 +255,85 @@ shorts?" Coverage `none`. Judge: correct, premise corrected, partly supported.
 - `journal/CONTEXT.md:3522` "Koszty ciągłe: borrow $0.00, funding +$0.06 DLA NAS"
 - `journal/RESEARCH-QUEUE.md:794` "MODUŁ SHORTÓW KIERUNKOWYCH (pomysł Rafała, 17.08)"
 
+## Cloud vs local generator (step 1.11)
+
+The question clients ask: can the answer be written without sending the sources to a cloud model, and what does it
+cost in quality? The local generator is `qwen3.8:27b` (Q4_K_M, Apache 2.0) in Ollama on the RTX 3090 box, behind the
+same `Generator` interface, with the same system prompt, output schema (Ollama `format`) and verifier as Sonnet. One
+extra run uses Gemma 4 26B-A4B (MoE, about 4B active parameters, Apache 2.0).
+
+- **Variant A** (only the generator differs): the exact k=10 chunk lists of the Sonnet k=10 run. Those lists were not
+  saved in step 1.8, so retrieval was rerun twice before any generation: it reproduced every check that can be made
+  against the saved run (the same evidence status on all 34 questions, all 97 chunks Sonnet cited present) and gave
+  identical lists both times. The lists are saved now and every run records its chunk ids.
+- **Variant B** (fully local): meta-index plus rerank retrieval, no generated context and no query translation, so no
+  step leaves the house; recall@10 19/26, the same as its row in step 1.7.
+- Settings, recorded in every result file: thinking off for A, B and Gemma; sampling from each model card for the
+  chosen mode (Qwen without thinking: temperature 0.7, top_p 0.8, top_k 20, presence penalty 1.5; Qwen with thinking:
+  1.0, 0.95, 20, 0; Gemma: 1.0, 0.95, 64); no seed; `num_ctx` 16384 (Qwen), 24576 (Qwen with thinking, num_predict
+  8192), 17408 (Gemma, whose tokenizer counts the longest prompt at 14672 tokens, so 16384 could not hold it plus
+  2048 output tokens). Every call checks the prompt length with the model's own tokenizer before the call and against
+  the server's count after it; all calls matched. The embedder is unloaded before the generator loads.
+- All answers were judged by the step 1.9 Opus judge with the same prompt, blind to the generator.
+
+| measure | Sonnet 5.5 | Qwen A, run 1 | Qwen A, run 2 | Qwen B, run 1 | Qwen B, run 2 | Qwen A, thinking | Gemma A |
+|---|---|---|---|---|---|---|---|
+| valid structured outputs | 34/34 | 34/34 | 34/34 | 34/34 | 34/34 | 34/34 | 34/34 |
+| citations verified | 97/97 | 59/65 | 53/57 | 58/62 | 52/58 | 74/79 | 49/67 |
+| quotes over 40 words | 0 | 1 | 1 | 0 | 0 | 0 | 7 |
+| unanswerable labelled `none` | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 | 2/3 |
+| judge: correct / partially / incorrect | 20 / 12 / 2 | 13 / 16 / 5 | 12 / 15 / 7 | 17 / 12 / 5 | 17 / 10 / 7 | 14 / 16 / 4 | 14 / 13 / 7 |
+| judge: supported / partly / unsupported | 6 / 28 / 0 | 3 / 30 / 1 | 2 / 29 / 3 | 3 / 30 / 1 | 2 / 31 / 1 | 3 / 28 / 3 | 6 / 24 / 4 |
+| judge: premise handled (8 partial and no) | 8/8 | 7/8 | 6/8 | 7/8 | 7/8 | 7/8 | 6/8 |
+| latency median / p95 (s) | 4.1 / 7.4 | 12.4 / 16.2 | 12.8 / 17.4 | 12.1 / 17.2 | 11.8 / 15.8 | 23.2 / 42.7 | 4.7 / 6.9 |
+| decode tokens per second, median | not reported | 60.2 | 60.5 | 59.1 | 61.2 | 61.8 | 163 |
+| thinking tokens per answer, median / max | 0 | 0 | 0 | 0 | 0 | 618 / 2113 | 0 |
+| API cost | $1.049 | $0 | $0 | $0 | $0 | $0 | $0 |
+
+All local runs at a 250 W GPU power limit. The injection probe passed in every run. No structured output was invalid,
+no answer needed a retry. Report with every per-question change: `ai/eval/results/2026-11-11-local-compare-golden-v1-4.md`.
+
+**Spread.** Two runs with the same chunks and settings: Qwen A changes the correctness verdict on 7 of 34 questions
+(2 up, 5 down), Qwen B on 7 (3 up, 4 down). So differences of about 7 questions in either direction are noise here.
+
+**What exceeds the spread.**
+- **Sonnet against Qwen A.** Correctness differs on 9 and 11 questions, every one of them in Sonnet's favour; correct
+  answers 20 against 13 and 12, incorrect 2 against 5 and 7. Same chunks, so this is the generator.
+- **Quotes.** Sonnet: 0 unverified quotes in 283 over three runs. Qwen: 24 of 321 quotes over its five runs were not
+  in the cited chunk (7.5%), plus 1 citing a chunk the model was not given; Gemma: 18 of 67. The 19 failures read by hand
+  (Qwen A1, A2, B1 and thinking) were all real: pieces joined with an ellipsis, typos inside the quote ("al fy",
+  "fłacie"), sentences merged from two places. **The verifier caught every bad quote**: a quote passes only if it
+  occurs in the cited chunk (whitespace aside), so none of these reached a reader as verified.
+- **Gemma against Sonnet.** Correctness differs on 9 questions, all in Sonnet's favour, and Gemma's quotes are the
+  worst (49 of 67 verified, 7 over 40 words, golden evidence cited on 11 of 26 answerable questions against 17 to 18
+  for Qwen); one unanswerable question (na-04) got `partial`. It is fast: 163 tokens per second and a median of 4.7 s,
+  close to Sonnet, because only about 4B parameters are active per token and Ollama runs it with a small speculative
+  draft model.
+
+**What does not exceed it.**
+- **Qwen B against Qwen A.** B has more correct answers in both runs (17 and 17 against 13 and 12), but against B run
+  2 the per-question changes (8 and 7) are the size of the spread, and B run 2 has 7 incorrect like A run 2. Fully
+  local retrieval is at least not worse than the cloud-assisted one for this generator; a lead is not shown.
+- **Thinking.** 14 / 16 / 4 sits between the two runs without thinking; the per-question changes (12 and 10) go both
+  ways. It costs twice the time (median 23.2 s, p95 42.7 s) for no measured gain.
+- **Gemma against Qwen A.** 14 / 13 / 7 is inside Qwen's range on correctness; its quotes are worse.
+
+**The box.** On 11 Nov the box lost power four times while `qwen3.8:27b` was loading or generating (Kernel-Power 41,
+no crash dump, no driver error): the power supply did not hold the card's load spikes at its earlier limit. Two of the
+four came from CC-Mac's own retry logic, which reloaded the model after a reboot it took for a network error; retries
+now stop when the box or the model is gone, and the owner's rule for the runs was no retries at all. The owner set a
+250 W GPU power limit, applied at boot by a SYSTEM task (`inference/README.md`). All local runs above ran at 250 W
+with a per-second log: limit constant, power at most 255.05 W in one isolated sample, temperature at most 60 C, VRAM
+peak 23 717 of 24 576 MiB (Qwen with thinking at `num_ctx` 24576, the practical ceiling of this box). For Gemma,
+Ollama's `/api/ps` reported only 1.27 GiB, which is wrong; the server log shows all 31 layers offloaded to the GPU
+and total VRAM rose to 23.7 GB.
+
+**Answer to the question.** On this box, a local 27B model writes valid structured answers to the same chunks, labels
+the unanswerable questions correctly, and costs nothing per call, but it is clearly weaker than Sonnet 5.5: fewer
+correct answers beyond the spread, and about 7 quotes in 100 that are not in their source (all caught by the verifier). It
+is about three times slower at 250 W. A fully local pipeline is therefore possible without hiding errors, at a cost in
+answer quality.
+
 ## Cost and latency
 
 | item | cost (USD) |
@@ -265,6 +347,7 @@ shorts?" Coverage `none`. Judge: correct, premise corrected, partly supported.
 | answers, second k=5 run plus the probe (Sonnet, step 1.9) | 0.60 |
 | judge, 102 answers (Opus 5.5, step 1.9) | 1.58 |
 | **total, steps 1.7 to 1.9** | **13.49** |
+| judge, 204 local answers (Opus 5.5, step 1.11); local generation itself costs nothing | 3.18 |
 
 Real usage from the API's usage fields. In the context runs 89% of input tokens were cache reads. Claude's tokenizer
 counts this text at about 1.4 times the estimate tuned for `bge-m3`, so the hard spend caps use a 2x margin. A full
@@ -383,6 +466,10 @@ reference answer against the sources found these errors; they are a reason this 
 
 ## Limitations and open points
 
+- **Local generator comparison (step 1.11).** The local models got the Sonnet prompt with no tuning; thinking was off
+  in every run except the one thinking run; all local runs ran at a 250 W GPU power limit, which lowers tokens per
+  second; the thinking run and the Gemma run are single runs; Gemma ran with Ollama's speculative draft model, which
+  raises its speed; sampling followed each model card, so no two local runs are identical by design.
 - **dated-05 is a known retrieval failure.** The question says "a different kind of position"; the journal says
   "GMX" and "hedge". In the variant used for answering the first evidence chunk is at rank 28, outside the 10 given,
   and both answers describe a range change instead. Only one measured row (contextual Sonnet + query-pl) ranks it in

@@ -121,7 +121,7 @@
     },
     {
       "run": "local-b",
-      "label": "local B (fully local)",
+      "label": "local B, run 1 (fully local)",
       "generator": "answer:ollama:qwen3.8:27b(think=false,num_ctx=16384,num_predict=2048,temperature=0.7)",
       "retrieval": "hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.meta (saved lists, ai/eval/results/2026-11-11-chunk-lists-k10-golden-v1-4.json)",
       "generatorSettings": {
@@ -223,6 +223,112 @@
         "thinkingTokensMedian": 618,
         "thinkingTokensMax": 2113,
         "promptTokensMax": 14117
+      }
+    },
+    {
+      "run": "local-b2",
+      "label": "local B, run 2",
+      "generator": "answer:ollama:qwen3.8:27b(think=false,num_ctx=16384,num_predict=2048,temperature=0.7)",
+      "retrieval": "hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.meta (saved lists, ai/eval/results/2026-11-11-chunk-lists-k10-golden-v1-4.json)",
+      "generatorSettings": {
+        "model": "qwen3.8:27b",
+        "think": false,
+        "numCtx": 16384,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 0.7,
+          "top_p": 0.8,
+          "top_k": 20,
+          "min_p": 0,
+          "presence_penalty": 1.5,
+          "repeat_penalty": 1
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "tokenizer": "ai/index/tokenizers/qwen3.8-27b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      },
+      "box": {
+        "gpu": "RTX 3090 24 GB",
+        "gpuPowerLimitW": 250,
+        "defaultPowerLimitW": 420,
+        "ollama": "0.40.15",
+        "note": "limit set at boot by the SYSTEM task \"HOMOS GPU power limit\"; confirmed by CC-Win before the runs"
+      },
+      "vram": {
+        "model": "qwen3.8:27b",
+        "sizeBytes": 17361996347,
+        "sizeVramBytes": 17361996347,
+        "contextLength": 16384,
+        "others": []
+      },
+      "templateOverhead": 17,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 61.2,
+        "evalTokensMedian": 250,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14119
+      }
+    },
+    {
+      "run": "local-gemma-a",
+      "label": "Gemma 4 26B-A4B, A",
+      "generator": "answer:ollama:gemma4:26b(think=false,num_ctx=17408,num_predict=2048,temperature=1)",
+      "retrieval": "hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6)+query-pl,depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.ctx-haiku (saved lists, ai/eval/results/2026-11-11-chunk-lists-k10-golden-v1-4.json)",
+      "generatorSettings": {
+        "model": "gemma4:26b",
+        "think": false,
+        "numCtx": 17408,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 64,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "tokenizer": "ai/index/tokenizers/gemma-4-26b-a4b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      },
+      "box": {
+        "gpu": "RTX 3090 24 GB",
+        "gpuPowerLimitW": 250,
+        "defaultPowerLimitW": 420,
+        "ollama": "0.40.15",
+        "note": "limit set at boot by the SYSTEM task \"HOMOS GPU power limit\"; confirmed by CC-Win before the runs"
+      },
+      "vram": {
+        "model": "gemma4:26b",
+        "sizeBytes": 1363169769,
+        "sizeVramBytes": 1363169769,
+        "contextLength": 17408,
+        "others": []
+      },
+      "templateOverhead": 18,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 163,
+        "evalTokensMedian": 348,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14690
       }
     }
   ],
@@ -361,6 +467,60 @@
         "n": 8
       },
       "judgeCostUsd": 0.5535
+    },
+    "local-b2": {
+      "n": 34,
+      "correctness": {
+        "correct": 17,
+        "partially_correct": 10,
+        "incorrect": 7,
+        "error": 0
+      },
+      "answerableYes": {
+        "correct": 12,
+        "partially_correct": 8,
+        "incorrect": 6,
+        "error": 0
+      },
+      "faithfulness": {
+        "supported": 2,
+        "partly_supported": 31,
+        "unsupported": 1,
+        "error": 0
+      },
+      "premise": {
+        "handled": 7,
+        "notHandled": 1,
+        "n": 8
+      },
+      "judgeCostUsd": 0.5219
+    },
+    "local-gemma-a": {
+      "n": 34,
+      "correctness": {
+        "correct": 14,
+        "partially_correct": 13,
+        "incorrect": 7,
+        "error": 0
+      },
+      "answerableYes": {
+        "correct": 9,
+        "partially_correct": 11,
+        "incorrect": 6,
+        "error": 0
+      },
+      "faithfulness": {
+        "supported": 6,
+        "partly_supported": 24,
+        "unsupported": 4,
+        "error": 0
+      },
+      "premise": {
+        "handled": 6,
+        "notHandled": 2,
+        "n": 8
+      },
+      "judgeCostUsd": 0.5188
     }
   },
   "spread": {
@@ -476,6 +636,145 @@
         "b": {
           "correctness": "partially_correct",
           "faithfulness": "unsupported"
+        }
+      }
+    ]
+  },
+  "spreadB": {
+    "n": 34,
+    "correctness": [
+      {
+        "id": "why-06",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "dated-01",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "unsupported"
+        },
+        "b": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "dated-07",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "id-03",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "na-01",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "na-02",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "unsupported"
+        }
+      },
+      {
+        "id": "na-05",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        }
+      }
+    ],
+    "faithfulness": [
+      {
+        "id": "dated-01",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "unsupported"
+        },
+        "b": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "id-02",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        }
+      },
+      {
+        "id": "id-07",
+        "a": {
+          "correctness": "incorrect",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "incorrect",
+          "faithfulness": "partly_supported"
+        }
+      },
+      {
+        "id": "na-02",
+        "a": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
+        },
+        "b": {
+          "correctness": "correct",
+          "faithfulness": "unsupported"
+        }
+      },
+      {
+        "id": "na-05",
+        "a": {
+          "correctness": "correct",
+          "faithfulness": "supported"
+        },
+        "b": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported"
         }
       }
     ]
@@ -1652,6 +1951,888 @@
           "b": {
             "correctness": "correct",
             "faithfulness": "partly_supported"
+          }
+        }
+      ]
+    },
+    "local-a1 vs local-b2": {
+      "n": 34,
+      "correctness": [
+        {
+          "id": "why-02",
+          "a": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-03",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-04",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-07",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "dated-04",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "dated-06",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "dated-07",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "na-02",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "unsupported"
+          }
+        }
+      ],
+      "faithfulness": [
+        {
+          "id": "dated-04",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "id-02",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "id-05",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "na-02",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "na-03",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        }
+      ]
+    },
+    "local-a2 vs local-b2": {
+      "n": 34,
+      "correctness": [
+        {
+          "id": "why-03",
+          "a": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-07",
+          "a": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "dated-04",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "dated-06",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "id-05",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "id-06",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "na-02",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "unsupported"
+          }
+        }
+      ],
+      "faithfulness": [
+        {
+          "id": "id-02",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "id-03",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "unsupported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "id-05",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "id-06",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "na-02",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "na-03",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        }
+      ]
+    },
+    "k10 vs local-gemma-a": {
+      "n": 34,
+      "correctness": [
+        {
+          "id": "why-02",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-03",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-07",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-08",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-10",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "id-03",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "id-05",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "na-03",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "na-07",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          }
+        }
+      ],
+      "faithfulness": [
+        {
+          "id": "why-05",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-09",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "why-10",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "dated-01",
+          "a": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "dated-10",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "id-03",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "id-04",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "id-05",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "id-07",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "na-03",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "na-04",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          }
+        }
+      ]
+    },
+    "local-a1 vs local-gemma-a": {
+      "n": 34,
+      "correctness": [
+        {
+          "id": "why-03",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-04",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-10",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "id-03",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "id-05",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "id-07",
+          "a": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "na-02",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "na-05",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        }
+      ],
+      "faithfulness": [
+        {
+          "id": "why-09",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "why-10",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "dated-01",
+          "a": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "id-03",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "id-04",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "na-04",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          }
+        }
+      ]
+    },
+    "local-a2 vs local-gemma-a": {
+      "n": 34,
+      "correctness": [
+        {
+          "id": "why-02",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-07",
+          "a": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "why-10",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "dated-07",
+          "a": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "id-03",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "unsupported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "id-05",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "id-06",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "id-07",
+          "a": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "na-02",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "na-05",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        }
+      ],
+      "faithfulness": [
+        {
+          "id": "why-09",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "why-10",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "dated-01",
+          "a": {
+            "correctness": "incorrect",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "incorrect",
+            "faithfulness": "unsupported"
+          }
+        },
+        {
+          "id": "dated-04",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "id-04",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          }
+        },
+        {
+          "id": "id-06",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "unsupported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "na-04",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "supported"
           }
         }
       ]

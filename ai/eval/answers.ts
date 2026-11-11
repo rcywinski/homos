@@ -48,18 +48,19 @@ async function main() {
   const suffix = tag ? `-${tag}` : '';
   const local = arg('--generator') === 'local';
   const think = process.argv.includes('--think');
+  const model = arg('--model') ?? LOCAL_MODEL;
   const chunksFrom = arg('--chunks');
   const ks = (arg('--k') ?? (chunksFrom ? '10' : '5,10')).split(',').map(Number).sort((a, b) => a - b);
   const golden = readFileSync('ai/eval/golden.jsonl', 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l) as GoldenQuestion);
   const goldenVersion = (JSON.parse(readFileSync('ai/eval/golden-meta.json', 'utf8')) as { version: string }).version;
   const baseUrl = process.env.INFERENCE_URL ?? '';
-  const gen: Generator = local ? new LocalGenerator(localOptions(baseUrl, think)) : new ClaudeGenerator('sonnet');
+  const gen: Generator = local ? new LocalGenerator(localOptions(baseUrl, think, model)) : new ClaudeGenerator('sonnet');
   let vram: unknown = null;
   if (local) {
     // VRAM: the embedder leaves the GPU before the generator loads.
     // Also the generator itself, so every run starts from a cold load with its own num_ctx.
     await ollamaUnload(baseUrl, 'bge-m3');
-    await ollamaUnload(baseUrl, LOCAL_MODEL);
+    for (const m of LOCAL_MODELS) await ollamaUnload(baseUrl, m);
     const before = await ollamaPs(baseUrl);
     if (before.length) throw new Error(`models still loaded before the generator: ${before.map((m) => m.name).join(', ')}`);
   }
@@ -75,8 +76,8 @@ async function main() {
   console.log(`injection probe: ${obeyed ? 'FAILED (order obeyed)' : 'ok'}; answer: ${probe.output?.answer}`);
   if (gen instanceof LocalGenerator) {
     const ps = await ollamaPs(baseUrl);
-    const m = ps.find((x) => x.name === LOCAL_MODEL);
-    if (!m) throw new Error(`${LOCAL_MODEL} not loaded after the probe`);
+    const m = ps.find((x) => x.name === model);
+    if (!m) throw new Error(`${model} not loaded after the probe`);
     vram = { model: m.name, sizeBytes: m.size, sizeVramBytes: m.size_vram, contextLength: m.context_length ?? null, others: ps.filter((x) => x !== m).map((x) => x.name) };
     console.log(`VRAM: ${m.name} ${(m.size_vram / 2 ** 30).toFixed(2)} GiB on GPU of ${(m.size / 2 ** 30).toFixed(2)} GiB; template overhead ${gen.templateOverhead} tokens`);
     if (m.size_vram < m.size) throw new Error(`${m.name} is not fully on the GPU: ${m.size_vram} of ${m.size} bytes`);
@@ -159,20 +160,42 @@ async function main() {
   }
   console.log(`total spent $${spent.toFixed(4)} (cap $${maxUsd})`);
   if (local) {
-    await ollamaUnload(baseUrl, LOCAL_MODEL);
+    await ollamaUnload(baseUrl, model);
     const left = await ollamaPs(baseUrl);
-    console.log(`unloaded ${LOCAL_MODEL}; still loaded: ${left.map((m) => m.name).join(', ') || 'nothing'}`);
+    console.log(`unloaded ${model}; still loaded: ${left.map((m) => m.name).join(', ') || 'nothing'}`);
   }
 }
 
 export const LOCAL_MODEL = 'qwen3.8:27b';
+export const GEMMA_MODEL = 'gemma4:26b';
+/** Every generator that may be on the box: all are unloaded before a run, so it starts from a cold load. */
+export const LOCAL_MODELS = [LOCAL_MODEL, GEMMA_MODEL];
 
 /**
  * Generation settings for the local runs. Sampling is the model card's recommendation for each mode (Qwen3.8-27B,
  * Hugging Face, read 11 Nov 2026). num_ctx: the longest prompt is 14102 tokens by the model tokenizer, so 16384 holds
  * it with num_predict 2048; thinking mode needs room for the reasoning, so num_predict 8192 and num_ctx 24576.
+ * Gemma 4 26B-A4B (owner's extra run, variant A only, thinking off): sampling from its Hugging Face card (one setting
+ * for all uses: temperature 1.0, top_p 0.95, top_k 64), its own tokenizer, the same num_ctx and num_predict.
  */
-export function localOptions(baseUrl: string, think: boolean) {
+export function localOptions(baseUrl: string, think: boolean, model = LOCAL_MODEL) {
+  if (model === GEMMA_MODEL) {
+    if (think) throw new Error('the Gemma run is thinking-off only (owner, 11 Nov)');
+    return {
+      baseUrl,
+      model,
+      tokenizerDir: 'ai/index/tokenizers/gemma-4-26b-a4b',
+      think: false,
+      // Gemma's tokenizer counts the longest prompt at 14672 tokens: 16384 cannot hold it plus num_predict 2048,
+      // so the smallest 1024-multiple that does (owner's rule): 17408.
+      numCtx: 17408,
+      numPredict: 2048,
+      sampling: { temperature: 1.0, top_p: 0.95, top_k: 64, min_p: 0, presence_penalty: 0, repeat_penalty: 1.0 },
+      keepAlive: '2m',
+      maxNetworkRetries: 0,
+    };
+  }
+  if (model !== LOCAL_MODEL) throw new Error(`unknown local model ${model}`);
   return {
     baseUrl,
     model: LOCAL_MODEL,

@@ -267,6 +267,10 @@ To change the value, edit `$Watts` in `set-gpu-power-limit.ps1` and run the task
 
 Notes: the Afterburner 59% line assumes the owner makes that change (in progress). If the box goes down again at 250 W, the next suspect is the PSU itself.
 
+Gemma 4 26B-A4B (`gemma4:26b`, pulled 11 Nov for one extra run): Ollama 0.40.15 loads it with a small speculative
+draft model, and `/api/ps` then reports only about 1.27 GiB, which is not the real footprint. Check full GPU placement in
+the server log ("offloaded 31/31 layers to GPU") or by total VRAM (about 19.5 GiB above the reranker), not by `/api/ps`.
+
 On the Mac side (CC-Mac): a call that gets no response is retried only while `/api/ps` still lists the model; if the box is unreachable or the model is gone (a reboot), the run stops instead of loading the model again (`ai/answer/local.ts`). On 11 Nov the earlier retry logic reloaded the model after two of the reboots.
 
 ## Later

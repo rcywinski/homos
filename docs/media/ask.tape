@@ -20,5 +20,10 @@ Sleep 500ms
 Type 'npm run -s ask -- "Why did the live product stay wide?"'
 Sleep 600ms
 Enter
+# About 1 s of the real wait stays visible; the rest is cut (Hide) and the final screen holds about 14 s.
+# The real time of the call is in the last output line.
+Sleep 1s
+Hide
 Wait+Screen@90s /chunks given/
-Sleep 15s
+Show
+Sleep 14s

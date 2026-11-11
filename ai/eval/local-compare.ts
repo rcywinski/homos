@@ -25,7 +25,7 @@ function main() {
   const cols: Column[] = [
     { run: 'k10', label: 'Sonnet 5.5, k=10', answers: JSON.parse(readFileSync(`${RESULTS}/2026-11-10-answers-k10-golden-v1-4.json`, 'utf8')), judged: judged19.filter((x) => x.run === 'k10') },
   ];
-  const labels: Record<string, string> = { 'local-a1': 'local A, run 1', 'local-a2': 'local A, run 2', 'local-b': 'local B (fully local)', 'local-a-think': 'local A, thinking' };
+  const labels: Record<string, string> = { 'local-a1': 'local A, run 1', 'local-a2': 'local A, run 2', 'local-b': 'local B, run 1 (fully local)', 'local-a-think': 'local A, thinking', 'local-b2': 'local B, run 2', 'local-gemma-a': 'Gemma 4 26B-A4B, A' };
   for (const { run, file } of LOCAL_RUNS)
     if (existsSync(file)) cols.push({ run, label: labels[run], answers: JSON.parse(readFileSync(file, 'utf8')), judged: judgedLocal.filter((x) => x.run === run) });
   for (const c of cols) {
@@ -54,6 +54,7 @@ function main() {
   const byRun = new Map(cols.map((c) => [c.run, c]));
   const pair = (a: string, b: string) => (byRun.has(a) && byRun.has(b) ? changes(byRun.get(a)!.judged, byRun.get(b)!.judged) : null);
   const spread = pair('local-a1', 'local-a2');
+  const spreadB = pair('local-b', 'local-b2');
   const comparisons = Object.fromEntries(
     [
       ['k10', 'local-a1'],
@@ -62,13 +63,18 @@ function main() {
       ['local-a2', 'local-b'],
       ['local-a1', 'local-a-think'],
       ['local-a2', 'local-a-think'],
+      ['local-a1', 'local-b2'],
+      ['local-a2', 'local-b2'],
+      ['k10', 'local-gemma-a'],
+      ['local-a1', 'local-gemma-a'],
+      ['local-a2', 'local-gemma-a'],
     ]
       .map(([a, b]) => [`${a} vs ${b}`, pair(a, b)] as const)
       .filter(([, v]) => v),
   );
   const counts = Object.fromEntries(cols.map((c) => [c.run, runSummary(c.judged)]));
 
-  writeFileSync(`${OUT}.json`, JSON.stringify({ date: '2026-11-11', goldenVersion: '1.4', columns: cols.map((c) => ({ run: c.run, label: c.label, generator: c.answers.generator, retrieval: c.answers.retrieval, generatorSettings: c.answers.generatorSettings ?? null, box: c.answers.box ?? null, vram: c.answers.vram ?? null, templateOverhead: c.answers.templateOverhead ?? null, local: localStats(c.answers.perQuestion) })), counts, spread, comparisons }, null, 2) + '\n');
+  writeFileSync(`${OUT}.json`, JSON.stringify({ date: '2026-11-11', goldenVersion: '1.4', columns: cols.map((c) => ({ run: c.run, label: c.label, generator: c.answers.generator, retrieval: c.answers.retrieval, generatorSettings: c.answers.generatorSettings ?? null, box: c.answers.box ?? null, vram: c.answers.vram ?? null, templateOverhead: c.answers.templateOverhead ?? null, local: localStats(c.answers.perQuestion) })), counts, spread, spreadB, comparisons }, null, 2) + '\n');
 
   const out = ['# Local generator against Sonnet 5.5 (step 1.11)', '', 'Golden set v1.4, k=10 chunks. All answers judged by the step 1.9 Opus 5.5 judge, blind to the generator.', ''];
   out.push(`| measure | ${cols.map((c) => c.label).join(' | ')} |`, `|---|${cols.map(() => '---').join('|')}|`);
@@ -79,6 +85,11 @@ function main() {
     out.push('## Run-to-run spread (local A run 1 vs run 2, same chunks and settings)', '', `Correctness changed on ${spread.correctness.length} of ${spread.n} questions, faithfulness on ${spread.faithfulness.length}.`, '');
     for (const x of spread.correctness) out.push(`- ${x.id}: correctness ${x.a.correctness} -> ${x.b.correctness}`);
     for (const x of spread.faithfulness) out.push(`- ${x.id}: faithfulness ${x.a.faithfulness} -> ${x.b.faithfulness}`);
+  }
+  if (spreadB) {
+    out.push('', '## Run-to-run spread (local B run 1 vs run 2, same chunks and settings)', '', `Correctness changed on ${spreadB.correctness.length} of ${spreadB.n} questions, faithfulness on ${spreadB.faithfulness.length}.`, '');
+    for (const x of spreadB.correctness) out.push(`- ${x.id}: correctness ${x.a.correctness} -> ${x.b.correctness}`);
+    for (const x of spreadB.faithfulness) out.push(`- ${x.id}: faithfulness ${x.a.faithfulness} -> ${x.b.faithfulness}`);
   }
   for (const [name, c] of Object.entries(comparisons)) {
     if (!c) continue;

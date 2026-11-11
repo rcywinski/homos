@@ -209,6 +209,8 @@ export async function ollamaPs(baseUrl: string, fetchFn: typeof fetch = fetch) {
 /** Unloads a model now (keep_alive 0) and waits until /api/ps no longer lists it (it lags by a few seconds). */
 export async function ollamaUnload(baseUrl: string, model: string, fetchFn: typeof fetch = fetch, waitMs = 15_000) {
   const res = await fetchFn(`${baseUrl.replace(/\/$/, '')}/api/generate`, { method: 'POST', body: JSON.stringify({ model, keep_alive: 0 }) });
+  // 404: the model is not on the box at all, so it cannot be loaded either.
+  if (res.status === 404) return;
   if (!res.ok) throw new Error(`unload ${model}: ${res.status}`);
   const name = model.includes(':') ? model : `${model}:latest`;
   for (let t = 0; t < waitMs; t += 500) {

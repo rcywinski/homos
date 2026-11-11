@@ -135,6 +135,7 @@ Measured on a golden set of 34 questions (26 with evidence in the sources, 8 wit
 | Judge (Opus 5.5): correct / partially correct / incorrect | 20 / 12 / 2 of 34 |
 | Judge against the owner's blind grades, correctness | 5 of 8 exact, 8 of 8 within one step |
 | Cost and time per answer | about $0.03, median 4.1 s |
+| Local generator instead of Sonnet (`qwen3.8:27b` on the RTX 3090, same chunks), judge correct / partially / incorrect | 13 / 16 / 5 and 12 / 15 / 7 of 34 in two runs, against 20 / 12 / 2 |
 
 ```bash
 # needs ANTHROPIC_API_KEY, INFERENCE_URL and RERANK_URL in .env, and the inference box (inference/README.md)
@@ -142,6 +143,8 @@ npm run ask -- "Why did the live product stay wide?"
 ```
 
 ![npm run ask answering one question, every citation verified](docs/media/ask.gif)
+
+The wait for the answer is cut in the recording; the real time of the call is in the last output line.
 
 Design, every measured variant, what did not work and the open points: [`docs/AI-RAG.md`](docs/AI-RAG.md).
 

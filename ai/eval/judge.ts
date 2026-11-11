@@ -32,6 +32,8 @@ export const LOCAL_RUNS = [
   { run: 'local-a2', file: `${RESULTS}/2026-11-11-answers-k10-local-a2-golden-v1-4.json` },
   { run: 'local-b', file: `${RESULTS}/2026-11-11-answers-k10-local-b-golden-v1-4.json` },
   { run: 'local-a-think', file: `${RESULTS}/2026-11-11-answers-k10-local-a-think-golden-v1-4.json` },
+  { run: 'local-b2', file: `${RESULTS}/2026-11-11-answers-k10-local-b2-golden-v1-4.json` },
+  { run: 'local-gemma-a', file: `${RESULTS}/2026-11-11-answers-k10-local-gemma-a-golden-v1-4.json` },
 ];
 export const SETS = {
   '1.9': { runs: RUNS, judgments: JUDGMENTS, judged: JUDGED, date: '2026-11-10' },
