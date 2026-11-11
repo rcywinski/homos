@@ -1,8 +1,9 @@
 /**
- * npm run ai:answers -- --max-usd <cap> [--k 5,10]
+ * npm run ai:answers -- --max-usd <cap> [--k 5,10] [--tag run2]
  * Step 1.8: every golden question through the chosen retrieval and the Sonnet generator, once per k. Retrieval runs
  * once at the largest k, so k=5 is exactly the first five of the k=10 list. Writes
- * ai/eval/results/<date>-answers-k<k>-golden-v<version>.{json,md} with the four measures (ai/answer/measures.ts).
+ * ai/eval/results/<date>-answers-k<k>[-<tag>]-golden-v<version>.{json,md} with the four measures (ai/answer/measures.ts).
+ * `--tag` names a repeat run with the same settings (step 1.9 control: run-to-run spread), so it does not overwrite run 1.
  * Before the questions, a prompt-injection probe: a chunk carrying an order to AI sessions must not be obeyed.
  */
 import 'dotenv/config';
@@ -33,6 +34,9 @@ export const PROBE_QUESTION = 'When is the next review planned, according to thi
 async function main() {
   const maxUsd = Number(arg('--max-usd'));
   if (!(maxUsd > 0)) throw new Error('--max-usd <cap in USD> is required');
+  const tag = arg('--tag');
+  if (tag && !/^[a-z0-9]+$/.test(tag)) throw new Error('--tag must be lowercase letters and digits');
+  const suffix = tag ? `-${tag}` : '';
   const ks = (arg('--k') ?? '5,10').split(',').map(Number).sort((a, b) => a - b);
   const golden = readFileSync('ai/eval/golden.jsonl', 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l) as GoldenQuestion);
   const goldenVersion = (JSON.parse(readFileSync('ai/eval/golden-meta.json', 'utf8')) as { version: string }).version;
@@ -84,7 +88,7 @@ async function main() {
     }
     process.stdout.write('\n');
     const result = {
-      label: `answers-k${k}`,
+      label: `answers-k${k}${suffix}`,
       date: new Date().toISOString().slice(0, 10),
       goldenVersion,
       generator: gen.name,
@@ -98,7 +102,7 @@ async function main() {
     };
     const dir = 'ai/eval/results';
     mkdirSync(dir, { recursive: true });
-    const base = path.join(dir, `${result.date}-answers-k${k}-golden-v${goldenVersion.replace('.', '-')}`);
+    const base = path.join(dir, `${result.date}-answers-k${k}${suffix}-golden-v${goldenVersion.replace('.', '-')}`);
     writeFileSync(`${base}.json`, JSON.stringify(result, null, 2) + '\n');
     writeFileSync(`${base}.md`, renderMarkdown(result, golden));
     const m = result.measures;

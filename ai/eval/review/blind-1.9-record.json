@@ -1,0 +1,21 @@
+{
+  "procedure": [
+    "The owner graded blind on 10 and 11 Nov 2026. He did not open blind-1.9-key.json or the judge result files before grading.",
+    "The analysis session explained what quotes and terms mean and typed the owner's dictated grades into the file. It did not see the judge verdicts and did not suggest grades.",
+    "The owner first read 'faithfulness' as 'does the answer address the question'. After the rubric was re-read to him he revised two items before scoring: B03 from unsupported to partly_supported, B04 from unsupported to supported. This is a finding about the rubric wording."
+  ],
+  "revisions": [
+    { "label": "B03", "field": "faithfulness", "from": "unsupported", "to": "partly_supported" },
+    { "label": "B04", "field": "faithfulness", "from": "unsupported", "to": "supported" }
+  ],
+  "gloss": {
+    "B01": "The PLAN.md quote is about the transaction ledger, not about backtests.",
+    "B03": "The 21.08 date is not in the quotes; the answer gives 3 of the 4 and says the later period is not covered.",
+    "B04": "The answer describes widening the range, not a switch to a different kind of position; the question is precise on that point ('a different kind of position' is not the same pool with another range). What is imprecise is whether real capital or paper trading is meant. The answer is off topic, but what it claims is backed by the quotes.",
+    "B06": "Since the answer gives the 16.09 log and the project's span (August to September), those sentences should carry a quote too; only the row from the 1.09 report is cited.",
+    "B07": "Well-chosen quotes, a thorough answer.",
+    "B08": "The answer does not give the date the capital went in; the quote is only the title of an agenda item, not what actually happened and when.",
+    "B09": "The question asks specifically for the last backtest, and the answer gives a date that is not the last one; the caveat about possible later ones does not answer a precise question. The quote confirms the 21.09 backtest took place.",
+    "B10": "Changing the range is partly a protection, but it is not a change of position type: still the same pair in a liquidity pool, only with another range. The question was about the move to GMX."
+  }
+}

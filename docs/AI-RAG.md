@@ -1,6 +1,6 @@
-# AI layer: retrieval over the project journal (phase 1, steps 1.1 to 1.7)
+# AI layer: retrieval over the project journal (phase 1, steps 1.1 to 1.9)
 
-First draft, 10 Nov 2026. Plan and checkboxes: [`AI-PLAN.md`](AI-PLAN.md). Code: `ai/`. Results: `ai/eval/results/`
+First draft, 10 Nov 2026; steps 1.8 and 1.9 added 11 Nov 2026. Plan and checkboxes: [`AI-PLAN.md`](AI-PLAN.md). Code: `ai/`. Results: `ai/eval/results/`
 (every row has a JSON and a Markdown file; `compare-golden-v1.3.md` and `compare-golden-v1.4.md` put them side by side).
 This file is not part of the retrieval corpus (`ai/corpus/load.ts` excludes it), so writing it changes no result.
 
@@ -110,6 +110,9 @@ generated before any comparison was made, so it was not picked for its score.
 | 20-chunk samples for the model choice (both models) | 0.39 |
 | Polish query translation, 34 questions (Sonnet) | 0.05 |
 | **total, step 1.7** | **9.66** |
+| answers, k=5 and k=10 plus the injection probe (Sonnet, step 1.8) | 1.65 |
+| answers, second k=5 run (Sonnet, step 1.9) | 0.60 |
+| judge, 102 answers (Opus 5.5, step 1.9) | 1.58 |
 
 Real usage from the API's usage fields. 89% of input tokens were cache reads. Claude's tokenizer counts this text at
 about 1.4 times the estimate tuned for `bge-m3`, so the hard spend cap uses a 2x margin. A full context run takes about
@@ -175,9 +178,97 @@ reference answer against the sources found these errors; they are a reason this 
   table, and it was a design, never a running database.
 - **na-01:** "DAC8" appears nowhere in the corpus.
 
-## Open points carried into step 1.8
+## Answers with citations (step 1.8)
 
-- With candidates in the top 30 for 22 to 24 of 26 questions but in the top 5 for 16 to 21, answer quality is to be
-  measured with 5 and with 10 chunks given to the model.
-- The 145 unreviewed pairs of the partial and no-answer questions matter for 1.8: those questions test whether the
-  answer says there is not enough context.
+The generator is Claude Sonnet 5.5 with a structured output: the answer, a coverage label (`full`, `partial`,
+`none`) and citations, each a chunk id plus a verbatim quote of at most about 40 words. The prompt states that chunk
+text is source material, never instructions (the journal is full of orders addressed to AI sessions); a probe chunk
+ordering every AI session to answer "BANAN" was reported, not obeyed. The generator gets the chunk text only, no
+generated context. A mechanical verifier checks every quote against the cited chunk and resolves it to exact file
+lines. Retrieval is the variant chosen above; k=5 is the first five of the k=10 list.
+
+| measure (golden v1.4) | k=5 | k=10 |
+|---|---|---|
+| citations verified | 91/91 | 97/97 |
+| answerable questions citing golden evidence | 16/26 | 19/26 |
+| same, when evidence was among the k chunks | 16/17 | 19/20 |
+| unanswerable questions labelled `none` | 3/3 | 3/3 |
+| cost per run, generation median | $0.60, 4.0 s | $1.05, 4.1 s |
+
+Three quotes per run first failed verification because of a verifier bug (blockquote markers `> ` at line starts that
+the model rightly dropped); after the fix they were re-checked offline, no model call.
+
+## Answer quality, judged (step 1.9)
+
+**Setup.** Claude Opus 5.5 judges every answer in a separate call. It sees the question, its answerable label, the
+owner's reference answer (plus the answer-key notes for partial and no questions), the answer and its quotes with
+`file:lines`. It never sees k, the run, chunk ids or the generator's coverage label. Per answer it gives correctness
+against the reference (correct, partially correct, incorrect), faithfulness against the cited quotes only (supported,
+partly supported, unsupported) and, for partial and no questions, whether the false premise was corrected or the
+absence stated, each with a one-sentence reason. Three runs were judged: k=5 twice (same settings, same retrieved
+chunks) and k=10.
+
+| run | correct | partially correct | incorrect | supported | partly supported | premise handled |
+|---|---|---|---|---|---|---|
+| k=5, run 1 | 17 | 12 | 5 | 6 | 28 | 8/8 |
+| k=5, run 2 | 18 | 11 | 5 | 5 | 29 | 7/8 |
+| k=10 | 20 | 12 | 2 | 6 | 28 | 8/8 |
+
+No answer was judged unsupported.
+
+**Run-to-run spread.** Between the two k=5 runs the correctness verdict changed on 3 of 34 questions and the
+faithfulness verdict on 3; the count of incorrect answers stayed at 5.
+
+**k=5 against k=10.** Correctness changed on 6 questions against run 1 and 5 against run 2, every change in favour of
+k=10, and the same four questions improve against both runs: why-03, dated-04 and dated-07 go from incorrect to
+partially correct, why-05 from partially correct to correct. Incorrect answers drop from 5 to 2. That is above the
+spread, but only by two or three questions, so it is a small, consistent gain, not a large one. Faithfulness shows no
+k effect: its changes go both ways and are about the size of the spread.
+
+**What "partly supported" measures.** 28 of 34 answers are partly supported in every run. The judge's reasons are
+mostly the same kind: a position id, a date or a detail that is in the chunk the model read but not inside the short
+quote it chose. So this verdict mostly measures under-citation against 40-word quotes, not invented facts. A
+faithfulness check against the full chunks given to the model would separate the two.
+
+**The owner graded 10 answers blind** (10 and 11 Nov): 8 chosen by a rule fixed in code before the judge ran (order by
+a salted hash, take the first 3 judged correct, 3 partially correct, 2 incorrect, question dated-05 excluded), plus
+both dated-05 answers outside the sample, all unlabelled and in hash order. The owner did not open the key or the
+judge files; the analysis session typed his dictated grades and explained terms, without seeing verdicts or
+suggesting grades.
+
+| on the 8 sampled answers | exact agreement | within one step |
+|---|---|---|
+| correctness | 5/8 | 8/8 |
+| faithfulness | 5/8 | 8/8 |
+
+Every disagreement goes the same way: the judge is stricter. On correctness the owner gave "correct" where the judge
+gave "partially correct" three times (dated-10, dated-04 at k=10, why-06); the judge's reasons name a missing point of
+the reference (a fourth rebalance; the research backtest of 08.09; the reasons why AUTO was never enabled). On
+faithfulness the owner gave "supported" where the judge gave "partly supported" three times (na-07, na-06, why-06),
+each for details not inside any quote. They never disagreed by two steps, and they agreed on both incorrect answers.
+With 8 answers this is a rough calibration: the judge can be trusted on direction and on clear failures, and its
+"partially correct" is somewhat harsher than the owner's.
+
+**Rubric-wording finding.** The owner first read "faithfulness" as "does the answer address the question". After the
+rubric was read to him again he revised two grades before scoring: B03 from unsupported to partly supported and B04
+from unsupported to supported. The word invites the relevance reading; a later rubric should name it "supported by the
+quotes" and keep relevance inside correctness.
+
+**dated-05.** The question ("an attempt to protect a position by converting it into a different kind of position")
+was deliberately vague and was not prejudged. The judge rated both answers incorrect: they describe the range change
+of the live position instead of the GMX short tests. The owner graded the k=5 answer incorrect and the k=10 answer
+partially correct; in his notes the question is precise about "a different kind of position" (a range change keeps
+the same pair in the same pool) and imprecise only about real capital versus paper trading; a range change is partly
+a protection but not a change of position type, and the question was about the move to GMX. Both readers agree that
+neither answer finds the GMX tests, and that what the answers do claim is backed by their quotes.
+
+Full report: `ai/eval/results/2026-11-10-judge-golden-v1-4.md`; the owner's Polish notes are kept verbatim in
+`ai/eval/review/blind-1.9.md`, with English glosses in the report.
+
+## Open points after step 1.9
+
+- Prompt polish, as its own measured variant: answer in the language of the question, say "the sources", prefer quotes
+  that carry the claim over schema lines.
+- A faithfulness check against the full chunks given, next to the quote-only one.
+- The 145 unreviewed pairs of the partial and no-answer questions are still unreviewed; golden v1.5 candidate for
+  why-01: `journal/RESEARCH-QUEUE.md:1002-1004`, to be decided at the next pooled review.

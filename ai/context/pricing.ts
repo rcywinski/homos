@@ -18,6 +18,8 @@ export interface Price {
 export const MODELS = {
   haiku: { id: 'claude-haiku-5-5', price: { input: 0.1, output: 0.5, cacheWrite: 0.125, cacheRead: 0.01, maxPromptTokens: 100_000 } },
   sonnet: { id: 'claude-sonnet-5-5', price: { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 } },
+  // Opus 5.5: $4 / $20, cache reads 0.05x ($0.20) as listed; cache writes are not used by the judge.
+  opus: { id: 'claude-opus-5-5', price: { input: 4, output: 20, cacheWrite: 5, cacheRead: 0.2 } },
 } as const satisfies Record<string, { id: string; price: Price }>;
 
 export type ModelKey = keyof typeof MODELS;

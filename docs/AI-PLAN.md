@@ -169,10 +169,17 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
     never "the chunks"; prefer quotes that carry the claim over schema lines such as `CREATE TABLE`.
   - Golden v1.5 evidence candidate, not to be added before the next pooled review: `journal/RESEARCH-QUEUE.md:1002-1004` for why-01.
 
-- [ ] NEXT **1.9 Answer-quality evaluation.** For the 25 answerable questions: citation accuracy (cited chunk is a golden chunk) and an LLM-as-judge score
+- [x] 2026-11-11 **1.9 Answer-quality evaluation.** For the 25 answerable questions: citation accuracy (cited chunk is a golden chunk) and an LLM-as-judge score
   against a short reference answer written by the owner. Add to the results table.
+  Result (golden v1.4, Opus 5.5 judge blind to k and run; citation accuracy was already measured in 1.8): correct /
+  partially correct / incorrect 17/12/5 and 18/11/5 for two k=5 runs, 20/12/2 for k=10. Spread between the k=5 runs:
+  3 of 34 correctness verdicts; k=10 changes 5 to 6, all improvements, the same four against both runs, so a small,
+  consistent gain. Faithfulness is mostly "partly supported" (28 of 34 per run, under-citation against 40-word quotes),
+  no k effect. Owner's blind grading of 8 sampled answers: exact agreement 5/8 on correctness and 5/8 on faithfulness,
+  8/8 within one step; the judge is the stricter grader in every disagreement. The owner first read "faithfulness" as
+  relevance and revised two grades after the rubric was re-read: rename it in the next rubric. Total cost $2.19.
 
-- [ ] **1.10 Write-up.** `docs/AI-RAG.md`: the question this layer answers, the corpus, each design decision with the alternative rejected
+- [ ] NEXT **1.10 Write-up.** `docs/AI-RAG.md`: the question this layer answers, the corpus, each design decision with the alternative rejected
   (structure-based chunking vs fixed size, no vector database at this scale, hybrid, reranker, contextual retrieval), the evaluation table, costs,
   three example transcripts with citations, what did not work. README section "AI layer". A short GIF of the CLI.
   Merge `ai-layer` to `main`.
