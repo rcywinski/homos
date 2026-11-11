@@ -118,8 +118,8 @@ are configured. The data caches under `data/` are regenerable: see the headers o
 ## AI layer
 
 Since November 2026 the repo has a retrieval layer (`ai/`) that answers English questions about the project from
-the Polish journal and the English docs, with every claim backed by a verbatim quote that is checked against the
-source and printed as `file:lines`. Hybrid search (local `bge-m3` vectors plus BM25 on a Polish rendering of the
+the Polish journal and the English docs. Every answer carries verbatim quotes that are checked against the source
+and printed as `file:lines`. Hybrid search (local `bge-m3` vectors plus BM25 on a Polish rendering of the
 question), a local cross-encoder reranker, short English context per chunk written by Claude Haiku 5.5, answers by
 Claude Sonnet 5.5, quality judged by Claude Opus 5.5.
 
@@ -127,7 +127,9 @@ Measured on a golden set of 34 questions (26 with evidence in the sources, 8 wit
 
 | | |
 |---|---|
-| Retrieval, recall@10 / recall@30 (the variant used for answering) | 77% (20/26) / 92% (24/26) |
+| Retrieval, recall@10 / recall@30, the variant used for answering | 77% (20/26) / 92% (24/26) |
+| Retrieval, recall@10 / recall@30, plain vector baseline | 77% (20/26) / 77% (20/26) |
+| Journal-only recall@10 (evidence in the Polish journal), vector vs the variant used | 58% (15/26) vs 77% (20/26) |
 | Citations verified against the source, 10 chunks per answer | 97 of 97 |
 | Questions with no answer in the sources answered as such | 3 of 3 |
 | Judge (Opus 5.5): correct / partially correct / incorrect | 20 / 12 / 2 of 34 |
@@ -139,7 +141,7 @@ Measured on a golden set of 34 questions (26 with evidence in the sources, 8 wit
 npm run ask -- "Why did the live product stay wide?"
 ```
 
-![npm run ask answering one question with four verified citations](docs/media/ask.gif)
+![npm run ask answering one question, every citation verified](docs/media/ask.gif)
 
 Design, every measured variant, what did not work and the open points: [`docs/AI-RAG.md`](docs/AI-RAG.md).
 

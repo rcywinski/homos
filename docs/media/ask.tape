@@ -6,7 +6,7 @@ Output docs/media/ask.gif
 Set Shell "bash"
 Set FontSize 18
 Set Width 1400
-Set Height 900
+Set Height 600
 Set Padding 24
 Set TypingSpeed 45ms
 Set Theme "Builtin Dark"
@@ -21,4 +21,4 @@ Type 'npm run -s ask -- "Why did the live product stay wide?"'
 Sleep 600ms
 Enter
 Wait+Screen@90s /chunks given/
-Sleep 8s
+Sleep 15s

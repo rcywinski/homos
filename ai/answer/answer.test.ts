@@ -10,6 +10,7 @@ import { FakeGenerator } from './fake';
 import { citesEvidence, confusion, type AnswerRecord } from './measures';
 import { ANSWER_SYSTEM, answerUserPrompt } from './prompt';
 import { locateInFile, verifyCitation } from './verify';
+import { wrapText } from './wrap';
 
 let passed = 0;
 let failed = 0;
@@ -64,6 +65,20 @@ async function main() {
     const long = verifyCitation({ chunkId: c.id, quote: Array(45).fill('słowo').join(' ') }, given);
     check('over-long quote flagged', long.tooLong && long.words === 45);
     check('locate returns null outside the range', locateInFile('Sam przychód (fee)', 'journal/CONTEXT.md', 1, 100) === null);
+  }
+
+  // Word wrap for npm run ask: no word split at a line end, every line within the width, indent kept.
+  {
+    const text = 'The product stayed wide (±40/±50 idle widths) because a walkforward idle-width test found the fullperiod maximum for ±80% was an artifact.';
+    const w = wrapText(text, 40);
+    const lines = w.split('\n');
+    check('wrap: every line within the width', lines.every((l) => l.length <= 40), w);
+    check('wrap: words are never split', w.replace(/\n/g, ' ') === text && lines.every((l) => !l.startsWith(' ') && !l.endsWith(' ')), w);
+    check('wrap: breaks only where the text had a space', lines.slice(0, -1).every((l, i) => text.includes(`${l.split(' ').pop()} ${lines[i + 1].split(' ')[0]}`)));
+    const ind = wrapText('"win-rate IDENTYCZNE na wszystkich szerokościach"', 20, '    ').split('\n');
+    check('wrap: indent on every line', ind.length > 1 && ind.every((l) => l.startsWith('    ') && l.length <= 20), ind.join('|'));
+    check('wrap: a word longer than the line stays whole', wrapText('a journal/reports/morning-2026-09-18.md:279 b', 10) === 'a\njournal/reports/morning-2026-09-18.md:279\nb');
+    check('wrap: existing line breaks kept', wrapText('one\ntwo', 80) === 'one\ntwo');
   }
 
   // 3. Generate + verify with a fake generator.

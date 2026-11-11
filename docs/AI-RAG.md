@@ -5,6 +5,11 @@ Results: `ai/eval/results/` (every run has a JSON and a Markdown file; `compare-
 `compare-golden-v1.4.md` put the retrieval rows side by side). This file is not part of the retrieval corpus
 (`ai/corpus/load.ts` excludes it), so writing it changes no result.
 
+Three sessions built this layer: **CC-Mac** (Claude Code on the Mac: all code, git and evaluation runs), **CC-Win**
+(Claude Code on the Windows GPU box: only operating the inference services) and the **analysis session** (the
+owner's chat session: plan changes, explanations and interpretation of results, no code); see `CLAUDE.md`,
+"Sessions and coordination".
+
 ## In short
 
 - The test: 34 golden questions, 26 with evidence in the sources and 8 whose premise is false or whose answer is not
