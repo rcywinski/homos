@@ -192,9 +192,22 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   frames checked for secrets). Verifier loosened for whitespace only (a line break may match one space or none), all saved
   answers re-verified offline: 283/283 before and after. README free of long dashes. Merge to `main` waits for the owner.
 
+- [ ] NEXT **1.11 Local generator comparison** (moved forward from phase 3, 11 Nov). `[CC-Win pulls the model]` Question: how does a
+  local model on the RTX 3090 compare with Sonnet 5.5 at writing the answer from the same retrieved chunks? `LocalGenerator` on Ollama
+  behind the `Generator` interface; the model is chosen by the owner before anything is pulled (fits in about 20 GB of VRAM next to the
+  embedder and reranker with room for 10 chunks, handles Polish source text, JSON-schema structured output, licence allows this use).
+  Variant A, local generator only: the exact k=10 chunk lists of the Sonnet k=10 run, so only the generator differs; run twice for the
+  spread. Variant B, fully local: meta-index plus rerank retrieval (no generated context, no query translation), then the local generator.
+  Same system prompt, output schema and verifier as Sonnet, no prompt tuning for the local model. Context length set explicitly; every
+  call checks the prompt token count and fails loudly on a mismatch. Invalid structured outputs counted separately, at most one retry.
+  Injection probe first. All settings recorded. All new answers judged blind by the step 1.9 Opus judge, which never learns the generator.
+  Model unloaded after the runs (short keep_alive). Spend cap $4. Report: one table, Sonnet k=10 against A run 1, A run 2 and B (valid
+  outputs, citations verified, quotes over 40 words, unanswerable labelled none, judge correctness and faithfulness, premise handled,
+  median and p95 latency, tokens per second, cost), the spread, and which differences exceed it.
+
 ## Phase 2: tool-using agent
 
-- [ ] NEXT **2.1 Tool definitions.** `ai/agent/tools.ts`: `search_journal(query)` (phase 1 retrieval), `read_decision_log()`, `read_backtest_results(name)`
+- [ ] **2.1 Tool definitions.** `ai/agent/tools.ts`: `search_journal(query)` (phase 1 retrieval), `read_decision_log()`, `read_backtest_results(name)`
   (JSON in `backtest/results/`, restored from `journal-final` for the e8 and walk-forward runs), `list_backtest_configs()`.
   Each tool has a JSON schema, a pure handler and a unit test.
 - [ ] **2.2 Agentic loop.** `ai/agent/run.ts`: Anthropic SDK tool use, max 10 steps, every tool call and result logged to `ai/agent/logs/` (gitignored),
@@ -207,8 +220,7 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
 ## Phase 3: optional, only if time allows
 
 - [ ] `/ask` endpoint in `bot/server.ts` and a panel in the cockpit UI.
-- [ ] **Local generator comparison.** `[CC-Win pulls the models]` `LocalGenerator` on Ollama (e.g. Qwen 2.5 14B or 32B, 4-bit, fits in 24 GB) behind the same `Generator`
-  interface. Re-run 1.9 with the local model: same retrieval, same golden set, same judge. Also re-run 1.7 with the local model writing the chunk
+- [ ] **Local contexts.** The local generator comparison moved to step 1.11. Remaining here: re-run 1.7 with the local model writing the chunk
   contexts and compare recall against the Claude-written contexts. Write up as "cloud vs local" in `docs/AI-RAG.md`: quality, latency, cost.
   This answers the question clients actually ask: can this run without sending data to a cloud model, and what does it cost in quality.
 - [ ] `VoyageEmbedder` as a cloud embedding alternative, if 1.4 to 1.6 showed retrieval misses that look like embedding quality.
