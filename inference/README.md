@@ -223,9 +223,28 @@ inference/reranker/.venv/bin/python inference/reranker/smoke.py "$RERANK_URL"   
 The service was run once on the Mac's CPU (Intel, torch 2.2.2, transformers 4.49, sentence-transformers 3.4.1)
 to check the API shape and `smoke.py`; see the step 1.6 commit. Latency on the Mac is not a measurement of the box.
 
+## Local generator (step 1.11)
+
+**Model:** `qwen3.8:27b` (Ollama digest `aaee06c39dcf`, 27.3B parameters, Q4_K_M, 16.52 GB on disk), approved by the
+owner on 11 Nov 2026 and pulled by CC-Win the same day (download only; free disk on C: afterwards 419.6 GB).
+
+Why this model: the newest dense model that fits next to the embedder and the reranker on the 24 GB card, a 256K
+context window (we need about 16K for 10 chunks), Apache 2.0 licence, thinking mode that can be switched off per
+request. Structured output is enforced by Ollama's `format` parameter with the answer JSON schema. Polish is not
+named on the model card; the step measures it (quotes must be copied verbatim from Polish sources).
+
+Rejected: Gemma 4 31B (19 to 20 GB of weights, too little room for the context); Mistral Small 3.2 24B (fits easily,
+but over a year old). Gemma 4 26B-A4B (MoE, about 4B active parameters, Apache 2.0 since its release on 2 Apr 2026,
+35+ languages per its card) stays a possible extra run, decided by the owner after the Qwen results.
+
+**VRAM budget.** Reranker alone: 3582 MiB of 24576 MiB in use (11 Nov). bge-m3 adds about 0.7 to 1 GB while loaded
+(5-minute keep_alive). The Mac unloads bge-m3 (`keep_alive: 0`) before loading the generator, loads the generator with
+an explicit `num_ctx`, checks `/api/ps` that it is 100% on the GPU, and unloads it after the runs. Nothing on the box
+changes; the model is loaded and unloaded per request from the Mac.
+
 ## Later
 
-- **Local generator comparison, phase 3.** Extra models pulled into the same Ollama.
+- **Local generator comparison** moved to step 1.11, see "Local generator (step 1.11)" above. Further models, if any, go into the same Ollama.
 
 ## Reranker operations (filled in by CC-Win in step 1.6)
 

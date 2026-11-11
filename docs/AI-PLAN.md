@@ -204,6 +204,11 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   Model unloaded after the runs (short keep_alive). Spend cap $4. Report: one table, Sonnet k=10 against A run 1, A run 2 and B (valid
   outputs, citations verified, quotes over 40 words, unanswerable labelled none, judge correctness and faithfulness, premise handled,
   median and p95 latency, tokens per second, cost), the spread, and which differences exceed it.
+  Model (owner, 11 Nov): `qwen3.8:27b` (Q4_K_M, 16.52 GB, Apache 2.0, 256K context, thinking switchable), pulled by CC-Win
+  on 11 Nov. Rejected: Gemma 4 31B (too large for the context next to the reranker), Mistral Small 3.2 24B (older). Gemma 4
+  26B-A4B (Apache 2.0 since 2 Apr 2026, 35+ languages) is a possible extra run after the Qwen results. Details in
+  `inference/README.md`. Extra run (owner, 11 Nov): A with thinking on, same chunk lists, card sampling for thinking mode,
+  larger num_predict, thinking text kept out of the verifier and the judge; run after A1, A2 and B.
 
 ## Phase 2: tool-using agent
 
