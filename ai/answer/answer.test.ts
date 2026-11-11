@@ -52,10 +52,10 @@ async function main() {
     // Dashes are escaped so this file stays free of long dashes; the source has an en dash and an em dash here.
     const wrap = chunks.find((x) => x.file === 'journal/CONTEXT.md' && x.lineStart <= 1336 && x.lineEnd >= 1337)!;
     const wrapGiven = new Map([[wrap.id, wrap]]);
-    const wrapQuote = 'base-030 57–60%— to samo okno wygrywa/przegrywa';
+    const wrapQuote = 'base-030 57\u201360%\u2014 to samo okno wygrywa/przegrywa';
     const wq = verifyCitation({ chunkId: wrap.id, quote: wrapQuote }, wrapGiven);
     check('missing space at a source line break verifies, exact lines', wq.status === 'ok' && wq.lines?.[0] === 1336 && wq.lines?.[1] === 1337, JSON.stringify(wq));
-    check('the same quote with the space verifies too', verifyCitation({ chunkId: wrap.id, quote: 'base-030 57–60% — to samo' }, wrapGiven).status === 'ok');
+    check('the same quote with the space verifies too', verifyCitation({ chunkId: wrap.id, quote: 'base-030 57\u201360% \u2014 to samo' }, wrapGiven).status === 'ok');
     check('missing space inside a line is still not found', verifyCitation({ chunkId: c.id, quote: 'Sam przychód(fee) mówi' }, given).status === 'not-found');
     check('punctuation is not tolerated', verifyCitation({ chunkId: wrap.id, quote: 'base-030 57-60% - to samo' }, wrapGiven).status === 'not-found');
     check('extra space inside a word is not tolerated', verifyCitation({ chunkId: c.id, quote: 'Sam przy chód (fee) mówi' }, given).status === 'not-found');
