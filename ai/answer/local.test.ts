@@ -123,16 +123,19 @@ async function main() {
         return f.fetchFn(url, init);
       }) as unknown as typeof fetch;
     };
-    const r = await new LocalGenerator(opts(box(1, ['qwen3.8:27b']))).generate('q', [chunk]);
+    let msg0 = '';
+    await new LocalGenerator(opts(box(1, ['qwen3.8:27b']))).generate('q', [chunk]).catch((e: Error) => (msg0 = e.message));
+    check('default (owner rule, step 1.11): the first network failure stops the run', msg0 === 'fetch failed', msg0);
+    const r = await new LocalGenerator(opts(box(1, ['qwen3.8:27b']), { maxNetworkRetries: 2 })).generate('q', [chunk]);
     check('network failure with the model still loaded: repeated and counted', r.output !== null && r.local?.networkRetries === 1 && r.local?.invalidOutputs === 0);
     let msg = '';
-    await new LocalGenerator(opts(box(9, ['qwen3.8:27b']))).generate('q', [chunk]).catch((e: Error) => (msg = e.message));
+    await new LocalGenerator(opts(box(9, ['qwen3.8:27b']), { maxNetworkRetries: 2 })).generate('q', [chunk]).catch((e: Error) => (msg = e.message));
     check('third network failure throws', msg === 'fetch failed', msg);
     msg = '';
-    await new LocalGenerator(opts(box(1, []))).generate('q', [chunk]).catch((e: Error) => (msg = e.message));
+    await new LocalGenerator(opts(box(1, []), { maxNetworkRetries: 2 })).generate('q', [chunk]).catch((e: Error) => (msg = e.message));
     check('model gone after a failure: stop, do not reload', /no longer loaded/.test(msg), msg);
     msg = '';
-    await new LocalGenerator(opts(box(1, null))).generate('q', [chunk]).catch((e: Error) => (msg = e.message));
+    await new LocalGenerator(opts(box(1, null), { maxNetworkRetries: 2 })).generate('q', [chunk]).catch((e: Error) => (msg = e.message));
     check('box unreachable after a failure: stop', /unreachable/.test(msg), msg);
   }
 

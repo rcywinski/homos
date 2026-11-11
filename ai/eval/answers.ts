@@ -138,7 +138,7 @@ async function main() {
       goldenVersion,
       generator: gen.name,
       retrieval: retrievalName,
-      ...(gen instanceof LocalGenerator ? { generatorSettings: gen.settings(), vram, templateOverhead: gen.templateOverhead } : {}),
+      ...(gen instanceof LocalGenerator ? { generatorSettings: gen.settings(), box: BOX, vram, templateOverhead: gen.templateOverhead } : {}),
       k,
       retrievalMsAllQuestions: retrievalMs,
       stoppedByCap: stopped,
@@ -184,8 +184,15 @@ export function localOptions(baseUrl: string, think: boolean) {
       ? { temperature: 1.0, top_p: 0.95, top_k: 20, min_p: 0, presence_penalty: 0, repeat_penalty: 1.0 }
       : { temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0, presence_penalty: 1.5, repeat_penalty: 1.0 },
     keepAlive: '2m',
+    maxNetworkRetries: 0,
   };
 }
+
+/**
+ * State of the inference box during the local runs, recorded in every local result file. The 250 W GPU power limit
+ * (owner's decision, 11 Nov 2026, after four power losses at the default) lowers decode speed; see inference/README.md.
+ */
+export const BOX = { gpu: 'RTX 3090 24 GB', gpuPowerLimitW: 250, defaultPowerLimitW: 420, ollama: '0.40.15', note: 'limit set at boot by the SYSTEM task "HOMOS GPU power limit"; confirmed by CC-Win before the runs' };
 
 export type Rendered = {
   label: string;

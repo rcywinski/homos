@@ -33,6 +33,11 @@ export interface LocalGenOptions {
   tolerance?: number;
   timeoutMs?: number;
   fetchFn?: typeof fetch;
+  /**
+   * Calls that got no response at all, repeated while the model is still loaded. The owner's rule for step 1.11
+   * (11 Nov 2026): 0, so the run stops at the first transport failure. Default 0.
+   */
+  maxNetworkRetries?: number;
   /** For tests: a token counter instead of the tokenizer files. */
   countTokens?: (text: string) => number;
 }
@@ -158,7 +163,7 @@ export class LocalGenerator implements Generator {
           // A transport failure (no response) is repeated at most twice per answer, counted apart from invalid outputs,
           // and only while the model is still loaded on the box. On 11 Nov 2026 the box lost power under load; a retry
           // after its reboot would have loaded the model again, and did. So: box unreachable or model gone = stop.
-          if (!(e instanceof TypeError) || network >= 2) throw e;
+          if (!(e instanceof TypeError) || network >= (this.o.maxNetworkRetries ?? 0)) throw e;
           const loaded = await ollamaPs(this.o.baseUrl, this.fetchFn).catch(() => null);
           if (!loaded) throw new Error(`inference box unreachable after a failed call; not retrying (${e.message})`);
           if (!loaded.some((m) => m.name === this.o.model)) throw new Error(`${this.o.model} is no longer loaded (box or Ollama restarted?); not reloading it`);

@@ -15,7 +15,7 @@ const OUT = `${RESULTS}/2026-11-11-local-compare-golden-v1-4`;
 interface Column {
   run: string;
   label: string;
-  answers: { generator: string; retrieval: string; generatorSettings?: unknown; vram?: unknown; templateOverhead?: number; injectionProbe: { obeyed: boolean }; perQuestion: AnswerRecord[] };
+  answers: { generator: string; retrieval: string; generatorSettings?: unknown; box?: { gpuPowerLimitW: number }; vram?: unknown; templateOverhead?: number; injectionProbe: { obeyed: boolean }; perQuestion: AnswerRecord[] };
   judged: JudgedItem[];
 }
 
@@ -45,9 +45,10 @@ function main() {
     ['injection probe', (c) => (c.answers.injectionProbe.obeyed ? 'FAILED' : 'passed')],
     ['latency median / p95 (s)', (c) => { const k = costAndLatency(c.answers.perQuestion); return `${((k.msMedian ?? 0) / 1000).toFixed(1)} / ${((k.msP95 ?? 0) / 1000).toFixed(1)}`; }],
     ['decode tokens per second, median', (c) => String(localStats(c.answers.perQuestion)?.tokensPerSecondMedian ?? 'n/a (not reported by the API)')],
-    ['generated tokens per answer, median', (c) => String(localStats(c.answers.perQuestion)?.evalTokensMedian ?? costAndLatency(c.answers.perQuestion).tokens.output / c.answers.perQuestion.length)],
+    ['generated tokens per answer, median', (c) => { const o = c.answers.perQuestion.map((r) => r.usage.output).sort((x, y) => x - y); return String(o[Math.floor(o.length / 2)]); }],
     ['thinking tokens per answer, median / max', (c) => { const l = localStats(c.answers.perQuestion); return l && l.thinkingTokensMax > 0 ? `${l.thinkingTokensMedian} / ${l.thinkingTokensMax}` : '0'; }],
     ['API cost', (c) => `$${costAndLatency(c.answers.perQuestion).costUsd}`],
+    ['GPU power limit', (c) => (c.answers.box ? `${c.answers.box.gpuPowerLimitW} W` : 'n/a (cloud)')],
   ];
 
   const byRun = new Map(cols.map((c) => [c.run, c]));
@@ -67,7 +68,7 @@ function main() {
   );
   const counts = Object.fromEntries(cols.map((c) => [c.run, runSummary(c.judged)]));
 
-  writeFileSync(`${OUT}.json`, JSON.stringify({ date: '2026-11-11', goldenVersion: '1.4', columns: cols.map((c) => ({ run: c.run, label: c.label, generator: c.answers.generator, retrieval: c.answers.retrieval, generatorSettings: c.answers.generatorSettings ?? null, vram: c.answers.vram ?? null, templateOverhead: c.answers.templateOverhead ?? null, local: localStats(c.answers.perQuestion) })), counts, spread, comparisons }, null, 2) + '\n');
+  writeFileSync(`${OUT}.json`, JSON.stringify({ date: '2026-11-11', goldenVersion: '1.4', columns: cols.map((c) => ({ run: c.run, label: c.label, generator: c.answers.generator, retrieval: c.answers.retrieval, generatorSettings: c.answers.generatorSettings ?? null, box: c.answers.box ?? null, vram: c.answers.vram ?? null, templateOverhead: c.answers.templateOverhead ?? null, local: localStats(c.answers.perQuestion) })), counts, spread, comparisons }, null, 2) + '\n');
 
   const out = ['# Local generator against Sonnet 5.5 (step 1.11)', '', 'Golden set v1.4, k=10 chunks. All answers judged by the step 1.9 Opus 5.5 judge, blind to the generator.', ''];
   out.push(`| measure | ${cols.map((c) => c.label).join(' | ')} |`, `|---|${cols.map(() => '---').join('|')}|`);
