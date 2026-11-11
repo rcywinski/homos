@@ -194,7 +194,7 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
 
 ## Phase 2: tool-using agent
 
-- [ ] **2.1 Tool definitions.** `ai/agent/tools.ts`: `search_journal(query)` (phase 1 retrieval), `read_decision_log()`, `read_backtest_results(name)`
+- [ ] NEXT **2.1 Tool definitions.** `ai/agent/tools.ts`: `search_journal(query)` (phase 1 retrieval), `read_decision_log()`, `read_backtest_results(name)`
   (JSON in `backtest/results/`, restored from `journal-final` for the e8 and walk-forward runs), `list_backtest_configs()`.
   Each tool has a JSON schema, a pure handler and a unit test.
 - [ ] **2.2 Agentic loop.** `ai/agent/run.ts`: Anthropic SDK tool use, max 10 steps, every tool call and result logged to `ai/agent/logs/` (gitignored),
