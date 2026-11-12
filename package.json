@@ -59,7 +59,8 @@
     "ai:agent:refs": "tsx ai/eval/agent-refs.ts",
     "ai:agent:tasks-review": "tsx ai/eval/agent-tasks-review.ts",
     "ai:agent:eval": "tsx ai/eval/agent-run.ts",
-    "ai:agent:judge": "tsx ai/eval/agent-judge.ts"
+    "ai:agent:judge": "tsx ai/eval/agent-judge.ts",
+    "ai:agent:missing": "tsx ai/eval/agent-missing.ts"
   },
   "author": "Rafał Cywiński",
   "license": "MIT",
