@@ -7,10 +7,11 @@ import type Anthropic from '@anthropic-ai/sdk';
 import type { Chunk } from '../corpus/types';
 import { DirResultsStore } from './handlers';
 import { AnthropicAgentModel, parseAgentAnswer, strictSchema, type AgentAnswer, type AgentConversation, type AgentModel, type MessagesClient, type ToolCall, type ToolReply, type Turn } from './model';
-import { AGENT_SCHEMA, AGENT_SYSTEM, FINAL_NOTES } from './prompt';
+import { AGENT_SCHEMA, AGENT_SYSTEM, AGENT_SYSTEM_B, B_ADDITIONS, FINAL_NOTES } from './prompt';
 import { canonical, runAgent } from './run';
 import { DECISION_LOG, runTool, TOOL_DATA_RULE, toolDefinitions, type ToolDeps } from './tools';
-import { unbackedNumbers, verifyDataRef, type CallForCheck } from './verify';
+import { citationPool, unbackedNumbers, verifyDataRef, type CallForCheck } from './verify';
+import { verifyCitation } from '../answer/verify';
 
 let passed = 0;
 let failed = 0;
@@ -176,6 +177,13 @@ async function main() {
     check('unbacked numbers: 2 is in the quote, 10 is not', JSON.stringify(r.verification!.unbackedNumbers) === '["10"]', JSON.stringify(r.verification!.unbackedNumbers));
     const m2 = new FakeModel([{ answer: ans('x', { citations: [{ chunkId: DECISION_LOG, quote: 'Backtesting before any deployment.' }] }) }]);
     check('decision log quote without reading it is unknown', (await runAgent(m2, deps(), 'q')).verification!.citations[0].status === 'unknown-chunk');
+    const legendRead = await runTool(deps(), 'read_backtest_results', { name: 'walkforward-fixture-pool-45d', path: ['id'] });
+    const lc = [{ name: 'read_backtest_results', args: { name: 'walkforward-fixture-pool-45d', path: ['id'] }, ...legendRead }];
+    const pool = citationPool(lc);
+    check('legend of a result read in this run is citable', pool.has('legend:walkforward-fixture-pool-45d') && verifyCitation({ chunkId: 'legend:walkforward-fixture-pool-45d', quote: 'a strategy is sound with winPct >= 65 and worst > -3' }, pool).status === 'ok');
+    check('a quote not in the legend fails', verifyCitation({ chunkId: 'legend:walkforward-fixture-pool-45d', quote: 'winPct >= 70' }, pool).status === 'not-found');
+    check('a legend of a result not read is unknown', verifyCitation({ chunkId: 'legend:walkforward-other', quote: 'x' }, pool).status === 'unknown-chunk');
+    check('prompt B = prompt A plus exactly the five sentences', AGENT_SYSTEM_B.length === AGENT_SYSTEM.length + Object.values(B_ADDITIONS).reduce((n, x) => n + x.length, 0) + 4 * 3 + 1 && Object.values(B_ADDITIONS).every((x) => AGENT_SYSTEM_B.includes(x)) && !/[\u2013\u2014]/.test(AGENT_SYSTEM_B), String(AGENT_SYSTEM_B.length - AGENT_SYSTEM.length));
     check('unbackedNumbers ignores verified values', unbackedNumbers(ans('a 1.5 b 7'), [], [{ name: 'n', path: [], value: '1.5', status: 'ok' }]).join() === '7');
   }
 

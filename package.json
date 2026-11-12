@@ -55,7 +55,9 @@
     "ai:tuning-compare": "tsx ai/eval/tuning-compare.ts",
     "ai:restore-results": "tsx ai/agent/restore-results.ts",
     "agent:ask": "tsx ai/agent/cli.ts",
-    "ai:agent:probe": "tsx ai/agent/probe.ts"
+    "ai:agent:probe": "tsx ai/agent/probe.ts",
+    "ai:agent:refs": "tsx ai/eval/agent-refs.ts",
+    "ai:agent:tasks-review": "tsx ai/eval/agent-tasks-review.ts"
   },
   "author": "Rafał Cywiński",
   "license": "MIT",

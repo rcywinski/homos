@@ -1,7 +1,9 @@
 /**
  * Mechanical check of the agent's final answer (step 2.2), no model involved.
  *   - citations: verifyCitation from phase 1, against the chunks search_journal returned in this run, plus the
- *     decision log as one pseudo-chunk (id docs/DECISION-LOG.md) when read_decision_log was called in this run;
+ *     decision log as one pseudo-chunk (id docs/DECISION-LOG.md) when read_decision_log was called in this run, plus
+ *     (step 2.4) the legend of every result read in this run as a pseudo-chunk with id legend:<result name>, so a
+ *     threshold or definition taken from a legend can be cited and checked like any other quote;
  *   - dataRefs: a number from a backtest file must come from a read_backtest_results call made in this run with the
  *     same name and a path that is a prefix of the reference's path; the value at the reference's path must be in the
  *     data that call returned (an overview with markers does not count); the written value must equal the stored one
@@ -10,11 +12,18 @@
  *   - unbacked numbers: numbers in the answer that appear neither in a verified quote nor in a verified dataRef.
  *     Reported, not failed: a date or a count can be legitimate without a reference.
  */
+import { readFileSync } from 'fs';
+import path from 'path';
 import type { Chunk } from '../corpus/types';
 import { verifyCitation, type VerifiedCitation } from '../answer/verify';
 import { resolvePath } from './handlers';
 import type { AgentAnswer, DataRef } from './model';
 import { DECISION_LOG } from './tools';
+
+/** Where the legend text lives; a legend citation is located in this file when the quote is found there. */
+const LEGEND_FILE = 'ai/agent/legend.ts';
+let legendLineCount = 0;
+const legendLines = () => (legendLineCount ||= readFileSync(path.join(__dirname, 'legend.ts'), 'utf8').split('\n').length);
 
 /** What the verifier needs from one executed tool call. */
 export interface CallForCheck {
@@ -48,6 +57,11 @@ export function citationPool(calls: CallForCheck[]): Map<string, Chunk> {
   for (const c of calls) {
     if (c.isError) continue;
     if (c.name === 'search_journal') for (const ch of c.chunks ?? []) pool.set(ch.id, ch);
+    if (c.name === 'read_backtest_results') {
+      const name = (c.args as { name?: string }).name;
+      const legend = unwrap(c.content).split('\n[data]\n')[0];
+      if (name && legend.startsWith('[legend')) pool.set(`legend:${name}`, { id: `legend:${name}`, file: LEGEND_FILE, lineStart: 1, lineEnd: legendLines(), kind: 'doc-section', title: `Legend of ${name}`, text: legend });
+    }
     if (c.name === 'read_decision_log') {
       const text = unwrap(c.content);
       pool.set(DECISION_LOG, { id: DECISION_LOG, file: DECISION_LOG, lineStart: 1, lineEnd: text.split('\n').length, kind: 'doc-section', title: 'Decision log', text });

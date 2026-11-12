@@ -173,3 +173,96 @@ in the step 2.3 report and in `ai/agent/jobs.ts`. `funding_carry` with `BENCH_AP
   cannot cite?
 - Should legend text and job output become citable (for example the gate criteria), or should the agent be told to cite
   the decision log for them?
+
+## 2026-11-12, step 2.4 pre-check: interrupting the CLI left the job running (fixed, `d2423e3`)
+
+**Decision.** A job now starts as the leader of its own process group, and the runner kills the whole group at the
+timeout, on SIGINT, SIGTERM or SIGHUP to the agent process, and when the agent process exits; the lock is removed on
+the way out and the signal is raised again so the process ends as it normally would.
+
+**Alternatives.** Killing only the direct child (the previous code: the job runs as tsx, which starts a second node
+process, so the grandchild could survive). Relying on the terminal's Ctrl+C reaching the whole group (true for Ctrl+C,
+not for `kill <pid>` of the CLI).
+
+**Evidence.** Before the fix, a driver running the fixture job through the real SpawnRunner with the tsx prefix was
+killed with SIGTERM and with SIGINT sent to the driver alone: in both cases the job processes kept running (cleaned up
+by hand). After the fix the same check left no job process and no lock. Tests in `ai/agent/jobs.test.ts`: SIGTERM and
+SIGINT to the CLI process alone, SIGINT and SIGHUP to the CLI's process group (a terminal's Ctrl+C or hangup), and a
+timeout under the tsx prefix; each checks that the job's node process is gone and the lock removed.
+
+**Open.** SIGHUP sent to the tsx wrapper alone is not relayed by tsx (it relays SIGINT and SIGTERM only); a closing
+terminal signals the whole group, so this case is not a real one and is not tested.
+
+**Review questions.** Can the group kill reach a process that is not the job's (process id reuse between the job's end
+and the final kill)? Is SIGTERM then SIGKILL after 5 s right for a job killed mid-write?
+
+## 2026-11-12, step 2.4: evaluation plan approved (owner)
+
+**Decision.** 18 tasks, 3 per category: journal only, decision log, saved backtest numbers, journal plus backtest, tasks
+that need a job, false premise or unanswerable. Variants: A, the 2.2 prompt at effort medium, two runs; B, the 2.2 prompt
+plus five sentences written once before any evaluation run, two runs; C, the 2.2 prompt at effort high, one run, same
+$0.50 cap per question. Spend cap for the step: $25. Job tasks run unattended with `--yes-jobs`. Blind owner grading of
+about 6 answers, chosen by a rule fixed in code before the runs. Results are reported for the whole set first; with 3
+tasks per category one task is 33 points, so per-category numbers are shown but not compared. Redundant reads whose path
+is later used in a dataRef of the same answer are reported separately (the owner's hypothesis from the manual runs: the
+model rereads a field because it wants a path to cite).
+
+**Alternatives.** More runs per variant (rejected for cost; two runs give a spread for A and B). Testing effort high on
+the B prompt as well (not chosen: C isolates the effort question on the unchanged prompt).
+
+**Evidence.** Owner's approval in the CC-Mac session, 12 Nov 2026. Plan text in the step 2.4 report.
+
+**Open.** Everything; nothing has run.
+
+**Review questions.** Is one run of C enough to say anything about effort? Is a set of 18 tasks enough to separate A
+from B beyond the run-to-run spread?
+
+## 2026-11-12, step 2.4: variant B written before any run; legend text becomes citable
+
+**Decision.** Variant B (`AGENT_SYSTEM_B` in `ai/agent/prompt.ts`) is the 2.2 prompt plus five sentences and nothing
+else: a stopping rule; never request a value already received, read a whole object once instead of field by field;
+every call must look for something not yet in hand; (a) a number inside a result already read is covered for its
+dataRef by that read's path; (b) a threshold or definition taken from a result's legend is backed by a citation with
+chunkId `legend:<result name>` and a verbatim quote from that legend, or by the decision log or journal if they state
+the same rule. For (b) the verifier now accepts legend citations: the legend of every result read in the run is a
+pseudo-chunk, checked like any other quote. This is a change to the shared checker, so it applies to every variant, but
+only B is told about it.
+
+**Alternatives for (b).** Require the answer to say that a threshold comes from the legend, without a citation
+(rejected: not mechanically checkable, so it would not move the "numbers without a quote or reference" measure in a
+verifiable way). Make the job's stdout tail citable too (rejected: numbers must come from a read of the result file, so
+they carry a path; the stdout tail stays data only).
+
+**Evidence.** `ai/agent/prompt.ts` (`B_ADDITIONS`, `AGENT_SYSTEM_B`), `ai/agent/verify.ts` (`citationPool`), tests in
+`ai/agent/run.test.ts` (B is A plus exactly the five sentences; legend quote verified; a quote not in the legend fails; a
+legend of a result not read is unknown). Committed before any evaluation run.
+
+**Open.** The legend is text written in this repository from the backtest scripts, not a project source from 2026; a
+legend citation is weaker evidence than the decision log, which is why B prefers the decision log or journal when they
+state the same rule.
+
+**Review questions.** Was B written before any evaluation result (check the commit order)? Does making legends citable
+for all variants change A's measures compared with 2.2?
+
+## 2026-11-12, step 2.4: task set and reference numbers prepared for review
+
+**Decision.** The 18 tasks are in `ai/eval/agent-tasks.jsonl`, with the reference answer, the required sources
+(acceptable chunk ids per group, result names and paths, the required job) and the expected tools; a readable copy for
+the owner's review is `ai/eval/agent-tasks-review.md`. The development questions of 2.2 and 2.3 are listed in
+`ai/eval/agent-tasks-dev.json` and excluded. References come from the files: journal and decision log text, saved result
+files, and for the three job tasks, reference runs (`ai/eval/agent-refs.ts`: each job twice through the real
+SpawnRunner in a temporary directory, outputs compared byte for byte; first output kept in `ai/eval/agent-refs/`).
+
+**Choices inside the set.** The v1.2 claim of the decision log (73% / -2.88 and 81% / -2.74 on base-030) was a candidate
+for a journal plus backtest task but no saved file holds those numbers, so it was dropped; the v1.1 claim (68%, -2.52)
+matches the canonical 45-day base-005 file and is used instead. The GM-BTC/USD task (x-03) expects the answer to notice
+that the saved file differs slightly from the journal's 7 Sep numbers (2.35 against 2.30 per window, 93.9% against 91%),
+explained by the price-data fixes the journal records on 9 Sep. The 720-day task (p-02) expects the answer to say the job
+cannot run and to report the saved 720-day result. The excluded-pool task (p-01) expects the answer to say the job
+cannot run and to label any saved alternative as a different setting. The strategy in p-03 ("passive ±20%") exists in no
+saved file (checked across all 72).
+
+**Open.** The owner's review of the set; nothing else runs until he approves it.
+
+**Review questions.** Are the acceptable chunk ids too narrow (a correct answer citing another chunk with the same fact
+counts as a missing required source)? Are the job references stable on another machine or Node version?
