@@ -33,7 +33,7 @@ function deps(over: Partial<ToolDeps> = {}): ToolDeps & { queries: string[] } {
     journal: {
       async search(q, k) {
         queries.push(q);
-        return Array.from({ length: k }, (_, i) => chunk(i + 1));
+        return { chunks: Array.from({ length: k }, (_, i) => chunk(i + 1)), costUsd: 0 };
       },
     },
     results: new DirResultsStore(FIXTURES),
@@ -163,7 +163,7 @@ async function main() {
   // 6. search_journal: phase 1 retrieval, k=10, chunk ids with file:lines, quotes still verify.
   {
     const c3 = chunk(3, 'Produkt live zostaje szeroki, bo wąskie zakresy przegrały w walk-forward.');
-    const d = deps({ journal: { search: async (_q, k) => [chunk(1), chunk(2), c3].slice(0, k) } });
+    const d = deps({ journal: { search: async (_q, k) => ({ chunks: [chunk(1), chunk(2), c3].slice(0, k), costUsd: 0.001 }) } });
     const r = await runTool(d, 'search_journal', { query: '  why wide?  ' });
     const body = inner(r.content);
     check('search returns chunk blocks with id, file and lines', !r.isError && body.includes('<chunk id="journal/CONTEXT.md:3" file="journal/CONTEXT.md" lines="3-4" date="2026-09-01">'), body);
@@ -172,6 +172,7 @@ async function main() {
     check('query is trimmed and k is 10', fake.queries[0] === 'why wide?');
     const k = (await runTool(fake, 'search_journal', { query: 'q' })).content.match(/<chunk /g)?.length;
     check('ten chunks returned', k === 10, String(k));
+    check('search result carries its chunks and the cost of model calls inside it', r.chunks?.map((c) => c.id).join() === 'journal/CONTEXT.md:1,journal/CONTEXT.md:2,journal/CONTEXT.md:3' && r.costUsd === 0.001);
     check('a quote from the returned text verifies with the phase 1 verifier', verifyCitation({ chunkId: c3.id, quote: 'wąskie zakresy przegrały w walk-forward' }, new Map([[c3.id, c3]])).status === 'ok');
     const blank = await runTool(d, 'search_journal', { query: '   ' });
     check('blank query is a tool error', blank.isError && blank.content === 'query is empty');

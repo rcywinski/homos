@@ -8,6 +8,7 @@
 import { applyContexts } from '../context/contexts-file';
 import { ClaudeQueryRewriter, expandedQuery, readQueries, type PolishQuery } from '../context/query';
 import { loadCorpus } from '../corpus/load';
+import type { TokenUsage } from '../context/types';
 import type { Chunk } from '../corpus/types';
 import { indexPath, readIndex } from '../embed/index-file';
 import { indexView } from '../embed/index-view';
@@ -24,6 +25,9 @@ export const QUERIES_FILE = 'ai/context/queries-pl-sonnet.jsonl';
 
 export type RetrievalVariant = 'chosen' | 'local';
 
+/** Model of the live query translation (step 1.7 measured Sonnet). */
+export const QUERY_MODEL = 'sonnet' as const;
+
 export class AnswerRetrieval {
   readonly name: string;
   private readonly source: Map<string, Chunk>;
@@ -32,6 +36,8 @@ export class AnswerRetrieval {
   private rewriter: ClaudeQueryRewriter | null = null;
   /** Questions translated live (not in the cached file), for the cost line. */
   liveTranslations = 0;
+  /** Called with the token usage of every live translation call (step 2.2: the agent counts it in its spend). */
+  onUsage: ((u: TokenUsage) => void) | null = null;
 
   constructor(
     root = process.cwd(),
@@ -69,9 +75,13 @@ export class AnswerRetrieval {
   private async ensureTranslated(questions: string[]): Promise<void> {
     for (const q of questions) {
       if (this.queries.has(q)) continue;
-      this.rewriter ??= new ClaudeQueryRewriter('sonnet');
+      this.rewriter ??= new ClaudeQueryRewriter(QUERY_MODEL);
       let r = await this.rewriter.rewrite(q);
-      if (!r.result) r = await this.rewriter.rewrite(q);
+      this.onUsage?.(r.usage);
+      if (!r.result) {
+        r = await this.rewriter.rewrite(q);
+        this.onUsage?.(r.usage);
+      }
       if (!r.result) throw new Error(`query translation failed: ${r.error}`);
       this.queries.set(q, r.result);
       this.liveTranslations++;

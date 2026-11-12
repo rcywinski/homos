@@ -250,9 +250,17 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   extracts the 72 JSON files from tag `journal-final` into the gitignored `backtest/results/`. Addition (owner): every
   `read_backtest_results` result starts with a legend of the file family's fields (meaning, unit, defining script, in
   `ai/agent/legend.ts`); fields not documented in the repository are marked as such. 95 offline tests.
-- [ ] NEXT **2.2 Agentic loop.** `ai/agent/run.ts`: Anthropic SDK tool use, max 10 steps, every tool call and result logged to `ai/agent/logs/` (gitignored),
+- [x] 2026-11-12 **2.2 Agentic loop.** `ai/agent/run.ts`: Anthropic SDK tool use, max 10 steps, every tool call and result logged to `ai/agent/logs/` (gitignored),
   final answer with citations reused from 1.8. `npm run agent:ask -- "Would FlatWide have passed the gate with a 3 percent narrowing?"`.
-- [ ] **2.3 Whitelisted job execution.** `run_backtest(config)` drops a job file for `scripts/agent-runner.ts` and polls `.agent/status.json`.
+  Done: own loop behind an `AgentModel` interface ("a turn with tools" or "a final turn without tools"); everything
+  Anthropic-specific (thinking blocks passed back unchanged, `tool_choice` none for the final turn, strict tool schemas,
+  structured output, cache markers) is inside `AnthropicAgentModel`. Sonnet 5.5, effort medium; at most 10 turns, the
+  last one final; a repeated identical call is not run, the third forces the final turn; $0.50 cap per question,
+  including the query translation inside search_journal. Final answer: phase 1 citations through verifyCitation, plus
+  `dataRefs` for backtest numbers, checked against the calls of the run. CLI is `npm run agent -- "question"`. Injection
+  probe: 2/2 passed (`ai/eval/results/2026-11-12-agent-injection-probe.md`). Manual questions with traces and the phase 1
+  comparison: `ai/eval/results/2026-11-12-agent-manual-questions.md`. Step spend $0.68 of the $3 cap.
+- [ ] NEXT **2.3 Whitelisted job execution.** `run_backtest(config)` drops a job file for `scripts/agent-runner.ts` and polls `.agent/status.json`.
   The agent can only choose a whitelisted script, never a command. Document this as the security boundary.
 - [ ] **2.4 Agent evaluation and write-up.** 10 multi-step questions with expected tool sequences; measure whether the right tools were called and the
   answer cites the right evidence. Add a section to `docs/AI-RAG.md`, three transcripts, README update

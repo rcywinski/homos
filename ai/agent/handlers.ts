@@ -9,9 +9,12 @@ import { chunkBlock } from '../answer/prompt';
 import type { Chunk } from '../corpus/types';
 import { legendText } from './legend';
 
-/** Phase 1 retrieval as the agent sees it: top k source chunks for one query. */
+/**
+ * Phase 1 retrieval as the agent sees it: top k source chunks for one query, plus the cost of any model call made
+ * inside the search (the Polish query translation of the chosen variant), so the agent's spend includes it.
+ */
 export interface JournalSearch {
-  search(query: string, k: number): Promise<Chunk[]>;
+  search(query: string, k: number): Promise<{ chunks: Chunk[]; costUsd: number }>;
 }
 
 /** Backtest result files: names (file name without .json) and their text. */
@@ -57,11 +60,11 @@ export class DirResultsStore implements ResultsStore {
 }
 
 /** One block per chunk, best first, in the phase 1 format (id, file, lines, date, source text). */
-export async function searchJournal(search: JournalSearch, query: string): Promise<string[]> {
+export async function searchJournal(search: JournalSearch, query: string): Promise<{ blocks: string[]; chunks: Chunk[]; costUsd: number }> {
   const q = query.trim();
   if (!q) throw new ToolError('query is empty');
-  const chunks = await search.search(q, SEARCH_K);
-  return chunks.map(chunkBlock);
+  const { chunks, costUsd } = await search.search(q, SEARCH_K);
+  return { blocks: chunks.map(chunkBlock), chunks, costUsd };
 }
 
 export function readDecisionLog(readText: () => string): string {
