@@ -4,7 +4,10 @@
  *   - gives the child a minimal environment: PATH, HOME, HOMOS_RESULTS_DIR (the job's own output directory) and the
  *     plan's variables; no API keys;
  *   - runs one job at a time: an in-process flag plus a lock file with the owner's PID (stale locks are removed);
- *   - kills the job at its timeout (SIGTERM, then SIGKILL after 5 s);
+ *   - starts the job as the leader of its own process group and always kills the whole group: at the timeout (SIGTERM,
+ *     then SIGKILL after 5 s), and when this process is interrupted or terminated (SIGINT, SIGTERM, SIGHUP) or exits
+ *     while the job runs. Without this, killing the CLI left the job (tsx and its node child) running (checked
+ *     12 Nov 2026 with SIGTERM and SIGINT sent to the parent alone);
  *   - keeps the last 4 000 characters of stdout and stderr for the tool result and writes the full output to job.log
  *     in the job's directory, cut at 5 MB;
  *   - checks that the saved results in backtest/results/ are byte-identical before and after the job.
@@ -99,7 +102,30 @@ export class SpawnRunner implements JobRunner {
       const before = dirHash(this.canonicalDir);
       const t0 = Date.now();
       const env: NodeJS.ProcessEnv = { PATH: process.env.PATH ?? '', HOME: process.env.HOME ?? '', HOMOS_RESULTS_DIR: outDir, ...plan.env };
-      const child = spawn(this.command.bin, [...this.command.pre, plan.script, ...plan.scriptArgs], { cwd: this.root, env, shell: false, stdio: ['ignore', 'pipe', 'pipe'] });
+      const child = spawn(this.command.bin, [...this.command.pre, plan.script, ...plan.scriptArgs], { cwd: this.root, env, shell: false, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
+      const killGroup = (sig: NodeJS.Signals) => {
+        if (child.pid === undefined) return;
+        try {
+          process.kill(-child.pid, sig);
+        } catch {
+          // the group is already gone
+        }
+      };
+      const lockPath = lockFile as string;
+      const onSignal = (sig: NodeJS.Signals) => {
+        killGroup('SIGTERM');
+        rmSync(lockPath, { force: true });
+        removeHandlers();
+        process.kill(process.pid, sig);
+      };
+      const onExit = () => killGroup('SIGKILL');
+      const handlers = (['SIGINT', 'SIGTERM', 'SIGHUP'] as const).map((sig) => [sig, () => onSignal(sig)] as const);
+      const removeHandlers = () => {
+        for (const [sig, h] of handlers) process.removeListener(sig, h);
+        process.removeListener('exit', onExit);
+      };
+      for (const [sig, h] of handlers) process.on(sig, h);
+      process.on('exit', onExit);
       const logFd = openSync(path.join(outDir, 'job.log'), 'w');
       let logged = 0;
       let logCut = false;
@@ -127,8 +153,8 @@ export class SpawnRunner implements JobRunner {
       let killer: NodeJS.Timeout | null = null;
       const timer = setTimeout(() => {
         timedOut = true;
-        child.kill('SIGTERM');
-        killer = setTimeout(() => child.kill('SIGKILL'), 5000);
+        killGroup('SIGTERM');
+        killer = setTimeout(() => killGroup('SIGKILL'), 5000);
       }, plan.timeoutMs);
       const [exitCode, signal] = await new Promise<[number | null, string | null]>((resolve) => {
         child.on('close', (code, sig) => resolve([code, sig]));
@@ -139,6 +165,9 @@ export class SpawnRunner implements JobRunner {
       });
       clearTimeout(timer);
       if (killer) clearTimeout(killer);
+      // Anything the job left behind in its group goes too.
+      killGroup('SIGKILL');
+      removeHandlers();
       closeSync(logFd);
       const outputFile = path.join(outDir, plan.output);
       return {

@@ -3,6 +3,7 @@
  * approval, job results in the listing, and the real SpawnRunner on a harmless fixture script (no shell, minimal
  * environment, timeout, output caps, one job at a time, saved-results check). Run: npx tsx ai/agent/jobs.test.ts
  */
+import { spawn } from 'child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'fs';
 import os from 'os';
 import path from 'path';
@@ -219,6 +220,67 @@ async function main() {
       else process.env.ANTHROPIC_API_KEY = saved;
       rmSync(tmp, { recursive: true, force: true });
     }
+  }
+
+  // 6. Interruption and timeout kill the whole job process group (tsx and its node child), not only the direct child.
+  {
+    const alive = (pid: number) => {
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const waitFor = async (f: () => boolean, ms: number) => {
+      for (let t = 0; t < ms && !f(); t += 100) await wait(100);
+      return f();
+    };
+    const tsxCli = path.join(ROOT, 'node_modules/tsx/dist/cli.mjs');
+    // kill <pid> of the CLI alone (tsx relays SIGINT and SIGTERM to the agent process), and a terminal's Ctrl+C or
+    // hangup, which signals the whole foreground group. SIGHUP to the tsx wrapper alone is not relayed by tsx; that
+    // case is not a real one (a closing terminal signals the group) and is not tested.
+    const cases: Array<{ sig: NodeJS.Signals; group: boolean }> = [
+      { sig: 'SIGTERM', group: false },
+      { sig: 'SIGINT', group: false },
+      { sig: 'SIGINT', group: true },
+      { sig: 'SIGHUP', group: true },
+    ];
+    for (const { sig, group } of cases) {
+      const label = `${sig} to the CLI ${group ? 'process group (terminal)' : 'process alone (kill)'}`;
+      const runs = mkdtempSync(path.join(os.tmpdir(), 'homos-int-'));
+      try {
+        const driver = spawn(process.execPath, [tsxCli, path.join(__dirname, 'fixtures/jobs/driver.ts'), runs], { stdio: 'ignore', detached: group });
+        const pidFile = path.join(runs, 'j20261112T120000n1', 'pid.txt');
+        const started = await waitFor(() => existsSync(pidFile), 20_000);
+        const jobPid = started ? Number(readFileSync(pidFile, 'utf8')) : 0;
+        check(`${label}: the job started under the tsx prefix`, started && alive(jobPid));
+        const exited = new Promise<void>((r) => driver.on('exit', () => r()));
+        if (group) process.kill(-driver.pid!, sig);
+        else driver.kill(sig);
+        await exited;
+        const gone = await waitFor(() => !alive(jobPid), 5_000);
+        check(`${label}: the job process is gone`, gone, `job pid ${jobPid}`);
+        check(`${label}: the lock is removed`, await waitFor(() => !existsSync(path.join(runs, '.lock')), 5_000));
+        if (!gone && jobPid) process.kill(jobPid, 'SIGKILL');
+      } finally {
+        rmSync(runs, { recursive: true, force: true });
+      }
+    }
+    const tmp = mkdtempSync(path.join(os.tmpdir(), 'homos-to-'));
+    try {
+      const runner = new SpawnRunner(ROOT, path.join(tmp, 'runs'), path.join(tmp, 'canon'));
+      const p = runner.run('j20261112T000009n9', { job: 'walkforward', args: {}, script: 'ai/agent/fixtures/jobs/echo-job.mjs', scriptArgs: ['sleep'], env: {}, output: 'x.json', timeoutMs: 4000 });
+      const pidFile = path.join(tmp, 'runs', 'j20261112T000009n9', 'pid.txt');
+      await waitFor(() => existsSync(pidFile), 10_000);
+      const jobPid = Number(readFileSync(pidFile, 'utf8'));
+      const o = await p;
+      check('timeout under the tsx prefix kills the node grandchild too', o.timedOut && (await waitFor(() => !alive(jobPid), 5_000)), `job pid ${jobPid}`);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+    check('no handlers left behind after a run', process.listenerCount('SIGINT') === 0 && process.listenerCount('SIGTERM') === 0 && process.listenerCount('exit') === 0);
   }
 
   console.log(`${passed} passed, ${failed} failed`);
