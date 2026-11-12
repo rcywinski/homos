@@ -247,7 +247,9 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   `search_journal` 36 000, whole chunks only (measured: longest k=10 result on the golden set 30 918, largest chunk
   block 3 589, so k=10 is never cut). Errors return as tool results; results are wrapped in `<tool_data>` and are data,
   never instructions. Result files restored locally, not committed (owner decision): `npm run ai:restore-results`
-  extracts the 72 JSON files from tag `journal-final` into the gitignored `backtest/results/`. 76 offline tests.
+  extracts the 72 JSON files from tag `journal-final` into the gitignored `backtest/results/`. Addition (owner): every
+  `read_backtest_results` result starts with a legend of the file family's fields (meaning, unit, defining script, in
+  `ai/agent/legend.ts`); fields not documented in the repository are marked as such. 95 offline tests.
 - [ ] NEXT **2.2 Agentic loop.** `ai/agent/run.ts`: Anthropic SDK tool use, max 10 steps, every tool call and result logged to `ai/agent/logs/` (gitignored),
   final answer with citations reused from 1.8. `npm run agent:ask -- "Would FlatWide have passed the gate with a 3 percent narrowing?"`.
 - [ ] **2.3 Whitelisted job execution.** `run_backtest(config)` drops a job file for `scripts/agent-runner.ts` and polls `.agent/status.json`.

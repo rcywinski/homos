@@ -7,7 +7,9 @@ import os from 'os';
 import path from 'path';
 import type { Chunk } from '../corpus/types';
 import { verifyCitation } from '../answer/verify';
+import { existsSync } from 'fs';
 import { DirResultsStore, overview, resolvePath, type ResultsStore } from './handlers';
+import { legendFor, legendText } from './legend';
 import { capBlocks, capText, runTool, SEARCH_CAP, TEXT_CAP, toolDefinitions, TOOL_DATA_RULE, TOOLS, type ToolDeps } from './tools';
 import { validateArgs } from './validate';
 
@@ -41,6 +43,8 @@ function deps(over: Partial<ToolDeps> = {}): ToolDeps & { queries: string[] } {
 }
 
 const inner = (s: string) => s.replace(/^<tool_data tool="[^"]+">\n/, '').replace(/\n<\/tool_data>$/, '');
+/** The JSON after the legend of a read_backtest_results result. */
+const data = (s: string) => JSON.parse(inner(s).split('\n[data]\n')[1]);
 
 async function main() {
   // 1. Definitions: four tools, read-only names, schemas closed to extra fields.
@@ -101,9 +105,9 @@ async function main() {
       const listed = await runTool(d, 'list_backtest_configs', {});
       check('list_backtest_configs returns the names', !listed.isError && JSON.parse(inner(listed.content)).names[1] === 'walkforward-a-30d');
       const upper = await runTool(d, 'read_backtest_results', { name: 'e8-carry-BTCUSDT-30d' });
-      check('a listed name with capitals is read', !upper.isError && JSON.parse(inner(upper.content)).b === 2, upper.content);
+      check('a listed name with capitals is read', !upper.isError && data(upper.content).b === 2, upper.content);
       const ok = await runTool(d, 'read_backtest_results', { name: 'walkforward-a-30d' });
-      check('a listed name is read', !ok.isError && JSON.parse(inner(ok.content)).a === 1, ok.content);
+      check('a listed name is read', !ok.isError && data(ok.content).a === 1, ok.content);
       const attempts = ['../../.env', '/etc/passwd', 'walkforward-a-30d/../x', '..%2f..%2f.env', '%2e%2e', 'walkforward-a-30d.json', 'link-to-outside', 'E8-CARRY-BTCUSDT-30D', 'WALKFORWARD-A-30D', 'under_score', 'with space', 'sub', 'report', `../homos-secret-${process.pid}`, ''];
       for (const name of attempts) {
         const r = await runTool(d, 'read_backtest_results', { name });
@@ -122,11 +126,11 @@ async function main() {
     const d = deps();
     const name = 'walkforward-fixture-pool-45d';
     const r = await runTool(d, 'read_backtest_results', { name, path: ['byStrat', 'Pasywny ±50%', 'WSZYSTKIE'] });
-    check('key with ± and % resolves', !r.isError && JSON.parse(inner(r.content)).winPct === 62.4, r.content);
+    check('key with ± and % resolves', !r.isError && data(r.content).winPct === 62.4, r.content);
     const s = await runTool(d, 'read_backtest_results', { name, path: ['byStrat', 'Pasywny ±50%', 'WETH/USDC'] });
-    check('key with a slash resolves as one key', !s.isError && JSON.parse(inner(s.content)).mean === 0.12, s.content);
+    check('key with a slash resolves as one key', !s.isError && data(s.content).mean === 0.12, s.content);
     const a = await runTool(d, 'read_backtest_results', { name, path: ['windows', '1', 'regime'] });
-    check('array index as a string', !a.isError && JSON.parse(inner(a.content)) === 'down', a.content);
+    check('array index as a string', !a.isError && data(a.content) === 'down', a.content);
     for (const p of [['__proto__'], ['constructor'], ['byStrat', 'constructor'], ['byStrat', '__proto__', 'toString'], ['windows', 'length'], ['windows', '01'], ['windows', '3'], ['windows', '-1'], ['id', 'length'], ['hasOwnProperty']]) {
       const x = await runTool(d, 'read_backtest_results', { name, path: p });
       check(`rejects path ${JSON.stringify(p)}`, x.isError && /is not a key|is not an index|below a plain value/.test(x.content), x.content);
@@ -144,9 +148,9 @@ async function main() {
     const store: ResultsStore = { list: () => ['big-one'], read: () => JSON.stringify(big) };
     const r = await runTool(deps({ results: store }), 'read_backtest_results', { name: 'big-one' });
     const body = inner(r.content);
-    check('large file returns an overview with a marker', !r.isError && body.startsWith('[overview: the whole file is ') && body.includes('<4997 more items>') && body.length <= TEXT_CAP + 200, body.slice(0, 200));
+    check('large file returns an overview with a marker', !r.isError && body.startsWith('[legend: none for this file') && body.includes('\n[overview: the whole file is ') && body.includes('<4997 more items>') && body.length <= TEXT_CAP + 200, body.slice(0, 200));
     const p = await runTool(deps({ results: store }), 'read_backtest_results', { name: 'big-one', path: ['rows', '7'] });
-    check('a part of a large file is returned in full', !p.isError && JSON.parse(inner(p.content)).v.deep[1] === 7);
+    check('a part of a large file is returned in full', !p.isError && data(p.content).v.deep[1] === 7);
     check('overview depth markers', JSON.stringify(overview({ a: { b: { c: 1 } }, l: [1, 2, 3, 4] }, 2)) === '{"a":{"b":"<object with 1 keys: c>"},"l":[1,2,3,"<1 more items>"]}', JSON.stringify(overview({ a: { b: { c: 1 } }, l: [1, 2, 3, 4] }, 2)));
     const huge = (await runTool(deps({ readDecisionLog: () => 'x'.repeat(TEXT_CAP + 50) }), 'read_decision_log', {})).content;
     check('decision log is capped at 12 000 with a marker', huge.includes(`[cut: shown ${TEXT_CAP} of ${TEXT_CAP + 50} characters]`));
@@ -191,6 +195,22 @@ async function main() {
     check('the result cannot close the wrapper early', (inj.content.match(/<\/tool_data>/g) ?? []).length === 1 && inj.content.includes('<\\/tool_data>'));
     const ok = await runTool(deps(), 'read_decision_log', {});
     check('decision log is wrapped as data', !ok.isError && ok.content.startsWith('<tool_data tool="read_decision_log">'));
+  }
+
+  // 8. Legends: every family has one, from a named source file that exists; unknown names say so.
+  {
+    const names = ['walkforward-base-weth-usdc-005-365d-45d', 'e8-timing-30d', 'e8-carry-BTCUSDT-30d', 'e8-house-GLP-mix-90d-cut', 'pegged-mainnet-usdc-usdt-001-endL', 'scan-universe', 'e8-bench-2026-09-07'];
+    for (const n of names) {
+      const l = legendFor(n);
+      check(`legend for ${n}`, !!l && l.lines.length > 0);
+      check(`legend source exists for ${n}`, !!l && l.source.split(', ').every((f) => existsSync(path.join(__dirname, '..', '..', f))), l?.source);
+    }
+    check('legends have no em or en dashes', names.every((n) => !/[\u2013\u2014]/.test(legendText(n))));
+    check('unknown family says the meanings are not documented', legendText('other-file').includes('not documented'));
+    const r = await runTool(deps(), 'read_backtest_results', { name: 'walkforward-fixture-pool-45d', path: ['byStrat'] });
+    check('result starts with the walk-forward legend, then the data', inner(r.content).startsWith('[legend: walk-forward; definitions from backtest/walkforward.ts') && data(r.content)['Pasywny ±50%'].WSZYSTKIE.windows === 3, r.content.slice(0, 120));
+    check('legend plus data stay within the cap', inner(r.content).length <= TEXT_CAP);
+    check('e8-timing legend says v is % vs HODL', legendFor('e8-timing-30d')!.lines.some((x) => x.includes('% vs HODL')));
   }
 
   console.log(`${passed} passed, ${failed} failed`);

@@ -7,6 +7,7 @@ import { lstatSync, readdirSync, readFileSync } from 'fs';
 import path from 'path';
 import { chunkBlock } from '../answer/prompt';
 import type { Chunk } from '../corpus/types';
+import { legendText } from './legend';
 
 /** Phase 1 retrieval as the agent sees it: top k source chunks for one query. */
 export interface JournalSearch {
@@ -112,8 +113,9 @@ export function overview(v: unknown, depth: number): unknown {
 export const OVERVIEW_DEPTH = 2;
 
 /**
- * The value at `keys` in one result file: in full when it fits in `cap` characters, otherwise an overview with a
- * marker saying so (a cut in the middle of JSON would be unreadable).
+ * The value at `keys` in one result file, after the legend of the file's family (legend.ts): the data in full when
+ * legend plus data fit in `cap` characters, otherwise an overview with a marker saying so (a cut in the middle of
+ * JSON would be unreadable).
  */
 export function readBacktestResults(store: ResultsStore, name: string, keys: string[], cap: number): string {
   if (!RESULT_NAME.test(name)) throw new ToolError(`invalid result name "${name}"; call list_backtest_configs for the valid names`);
@@ -124,8 +126,11 @@ export function readBacktestResults(store: ResultsStore, name: string, keys: str
   } catch {
     throw new ToolError(`result file "${name}" is not valid JSON`);
   }
-  const full = JSON.stringify(resolvePath(data, keys), null, 1);
-  if (full.length <= cap) return full;
+  const legend = legendText(name);
+  const room = cap - legend.length - 1;
+  const value = resolvePath(data, keys);
+  const full = JSON.stringify(value, null, 1);
+  if (full.length <= room) return `${legend}\n${full}`;
   const where = keys.length ? `the value at path ${JSON.stringify(keys)}` : `the whole file`;
-  return `[overview: ${where} is ${full.length} characters, over the ${cap} limit; deeper values are shown as markers; pass a longer path to read a part]\n${JSON.stringify(overview(resolvePath(data, keys), OVERVIEW_DEPTH), null, 1)}`;
+  return `${legend}\n[overview: ${where} is ${full.length} characters, over the ${room} left for data within the ${cap} limit; deeper values are shown as markers; pass a longer path to read a part]\n${JSON.stringify(overview(value, OVERVIEW_DEPTH), null, 1)}`;
 }
