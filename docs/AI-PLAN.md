@@ -238,15 +238,23 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
 
 ## Phase 2: tool-using agent
 
-- [ ] NEXT **2.1 Tool definitions.** `ai/agent/tools.ts`: `search_journal(query)` (phase 1 retrieval), `read_decision_log()`, `read_backtest_results(name)`
+- [x] 2026-11-12 **2.1 Tool definitions.** `ai/agent/tools.ts`: `search_journal(query)` (phase 1 retrieval), `read_decision_log()`, `read_backtest_results(name)`
   (JSON in `backtest/results/`, restored from `journal-final` for the e8 and walk-forward runs), `list_backtest_configs()`.
   Each tool has a JSON schema, a pure handler and a unit test.
-- [ ] **2.2 Agentic loop.** `ai/agent/run.ts`: Anthropic SDK tool use, max 10 steps, every tool call and result logged to `ai/agent/logs/` (gitignored),
+  Done: four read-only tools, own schema validator (anything outside the schema is rejected), `read_backtest_results`
+  accepts only names listed by `list_backtest_configs` and an optional `path` (array of keys, own properties only).
+  Caps: 12 000 characters for results and the decision log (a larger result comes back as an overview with a marker);
+  `search_journal` 36 000, whole chunks only (measured: longest k=10 result on the golden set 30 918, largest chunk
+  block 3 589, so k=10 is never cut). Errors return as tool results; results are wrapped in `<tool_data>` and are data,
+  never instructions. Result files restored locally, not committed (owner decision): `npm run ai:restore-results`
+  extracts the 72 JSON files from tag `journal-final` into the gitignored `backtest/results/`. 76 offline tests.
+- [ ] NEXT **2.2 Agentic loop.** `ai/agent/run.ts`: Anthropic SDK tool use, max 10 steps, every tool call and result logged to `ai/agent/logs/` (gitignored),
   final answer with citations reused from 1.8. `npm run agent:ask -- "Would FlatWide have passed the gate with a 3 percent narrowing?"`.
 - [ ] **2.3 Whitelisted job execution.** `run_backtest(config)` drops a job file for `scripts/agent-runner.ts` and polls `.agent/status.json`.
   The agent can only choose a whitelisted script, never a command. Document this as the security boundary.
 - [ ] **2.4 Agent evaluation and write-up.** 10 multi-step questions with expected tool sequences; measure whether the right tools were called and the
-  answer cites the right evidence. Add a section to `docs/AI-RAG.md`, three transcripts, README update. Merge to `main`.
+  answer cites the right evidence. Add a section to `docs/AI-RAG.md`, three transcripts, README update
+  (mention `npm run ai:restore-results` in the README AI section, owner decision in 2.1). Merge to `main`.
 
 ## Phase 3: optional, only if time allows
 
