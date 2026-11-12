@@ -99,5 +99,14 @@ export function localStats(rs: AnswerRecord[]) {
     thinkingTokensMedian: median(l.map((x) => x.thinkingTokens)),
     thinkingTokensMax: Math.max(...l.map((x) => x.thinkingTokens)),
     promptTokensMax: Math.max(...l.map((x) => x.promptTokensServer)),
+    refStats: l.some((x) => x.refStats)
+      ? l.reduce(
+          (t, x) => {
+            const r = x.refStats ?? { refs: 0, valid: 0, outside: 0, invalidRange: 0, overLong: 0 };
+            return { refs: t.refs + r.refs, valid: t.valid + r.valid, outside: t.outside + r.outside, invalidRange: t.invalidRange + r.invalidRange, overLong: t.overLong + r.overLong };
+          },
+          { refs: 0, valid: 0, outside: 0, invalidRange: 0, overLong: 0 },
+        )
+      : null,
   };
 }

@@ -216,6 +216,26 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   18 of 67, every one caught by the verifier. Qwen about 3x slower (median 12 s); Gemma 4.7 s. The box lost power four times
   before the 250 W limit; two of those after CC-Mac's retries reloaded the model (fixed). Judge cost $3.18 of the $4 cap.
 
+- [x] 2026-11-11 **1.12 Local generator tuning** (owner, 11 Nov, approved in advance). Question: how much of the gap between
+  qwen3.8:27b and Sonnet comes from settings, prompt and citation design rather than from the model? Variant A chunk lists,
+  thinking off, num_ctx as in 1.11, 250 W with CC-Win logging, the same pre-run checks, no network retries, the same blind
+  Opus judge. Two runs per variant; baseline Qwen A runs 1 and 2 of 1.11; the Sonnet prompt and results stay untouched.
+  S: sampling only, every repetition penalty off (presence 0, frequency 0, repeat 1.0), temperature, top_p, top_k from the
+  card. Hypothesis to test: the card's presence penalty 1.5 hurts verbatim quoting. P: S plus a separate prompt for local
+  models with quoting rules (one contiguous span, no ellipsis, no joining, exact Polish diacritics, at most 40 words) and one
+  worked example on an invented chunk, written once from the 1.11 failure types and not revised after results. L: S plus
+  citation by reference: numbered units per chunk, the model returns chunk id and first and last unit, the code extracts
+  the quote; references outside the chunks, invalid ranges and extracted quotes over 40 words counted separately; valid
+  references reported instead of citations verified (not comparable). Order S1, S2, P1, P2, L1, L2, then the judge; model
+  unloaded at the end. Spend cap $5. Report: one table (Sonnet k=10, Qwen A1 and A2, then the six runs), per variant whether
+  citations and judged correctness differ from the baseline by more than the spread, what the unverified quotes look like
+  in S and P. Tuned and measured on the same 34 questions: say so in the limitations.
+  Result (judge correct / partially / incorrect; Sonnet 20/12/2, baseline Qwen 13/16/5 and 12/15/7): S 12/15/7 and 14/13/7,
+  no difference, presence-penalty hypothesis not supported; P 16/13/5 and 16/11/7, unverified quotes 3.4% and 3.9% against
+  9.2% and 7.0%, both beyond the spread; L 14/16/4 and 15/15/4, within the spread, 0 bad references but 23 to 28 extracted
+  quotes over 40 words. About half the gap in correct answers closes with the local prompt; the rest is the model. num_ctx
+  17408 (P) and 18432 (L). Judge $3.17 of the $5 cap. Not merged.
+
 ## Phase 2: tool-using agent
 
 - [ ] NEXT **2.1 Tool definitions.** `ai/agent/tools.ts`: `search_journal(query)` (phase 1 retrieval), `read_decision_log()`, `read_backtest_results(name)`

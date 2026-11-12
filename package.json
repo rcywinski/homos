@@ -51,7 +51,8 @@
     "ai:judge": "tsx ai/eval/judge.ts",
     "ai:blind": "tsx ai/eval/blind.ts",
     "ai:chunk-lists": "tsx ai/eval/chunk-lists.ts",
-    "ai:local-compare": "tsx ai/eval/local-compare.ts"
+    "ai:local-compare": "tsx ai/eval/local-compare.ts",
+    "ai:tuning-compare": "tsx ai/eval/tuning-compare.ts"
   },
   "author": "Rafał Cywiński",
   "license": "MIT",
