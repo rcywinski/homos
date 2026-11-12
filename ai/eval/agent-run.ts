@@ -27,6 +27,11 @@ export const RUNS: Record<string, { prompt: PromptVariant; effort: AgentEffort }
   B2: { prompt: 'B', effort: 'medium' },
 };
 export const STEP_CAP_USD = 25;
+/**
+ * Kept free for the judge while the runs go (added 12 Nov during run A1, when the first tasks cost about $0.25 each):
+ * without it the runs could use the whole cap and leave nothing to judge them.
+ */
+export const JUDGE_RESERVE_USD = 4;
 export const RESULTS = 'ai/eval/results';
 export const EVAL_PREFIX = '2026-11-12-agent-eval-';
 export const JUDGED_FILE = `${RESULTS}/2026-11-12-agent-judged.json`;
@@ -59,9 +64,9 @@ async function main() {
   const save = () => writeFileSync(out, JSON.stringify({ date: '2026-11-12', run, prompt: cfg.prompt, effort: cfg.effort, model: model.name, settings: model.settings(), capPerQuestionUsd: DEFAULT_CAP_USD, tasks: rows }, null, 2) + '\n');
   for (const task of tasks) {
     const spent = stepSpent() + rows.reduce((n: number, r) => n + (r as { costUsd: number }).costUsd, 0);
-    if (spent + DEFAULT_CAP_USD > STEP_CAP_USD) {
+    if (spent + DEFAULT_CAP_USD > STEP_CAP_USD - JUDGE_RESERVE_USD) {
       save();
-      throw new Error(`stopping before ${task.id}: step spend $${spent.toFixed(4)}, one more question may cost $${DEFAULT_CAP_USD} (cap $${STEP_CAP_USD})`);
+      throw new Error(`stopping before ${task.id}: step spend $${spent.toFixed(4)}, one more question may cost $${DEFAULT_CAP_USD} (cap $${STEP_CAP_USD}, $${JUDGE_RESERVE_USD} kept for the judge)`);
     }
     const deps = realDeps(process.cwd(), task.jobs ? { approve: async () => true, runsDir } : undefined);
     const log = new JsonlLog(`eval-${run}-${task.id}`);

@@ -305,3 +305,21 @@ verification status.
   worded like the references. The owner's blind grading partly checks this.
 - Showing the judge the stored value of each dataRef gives it a mechanical lookup the 1.9 judge did not have for quotes.
   Does that make faithfulness easier to earn for numbers than for text?
+
+## 2026-11-12, step 2.4: judge reserve added to the run budget guard (during run A1)
+
+**Decision.** The evaluation runs stop when the next question could take the step spend above $21, keeping $4 of the
+$25 cap for the judge. Changed in `ai/eval/agent-run.ts` while run A1 was going (A1 itself ran with the old guard; B1
+onward load the new one). Nothing about the measures, prompts or tasks changed.
+
+**Why.** The first five A1 tasks cost $0.07 to $0.31 each (four of them stopped by the per-question spend reserve), so
+five runs of 18 tasks could use nearly the whole cap and leave nothing to judge them.
+
+**Alternatives.** Keep the old guard and judge whatever money is left (rejected: an evaluation without a judge has no
+correctness measure). Stop and ask the owner (not done: the change only protects the cap the owner set; if the reserve
+cuts the last run short, that is reported).
+
+**Open.** If B2 is cut short, the comparison has fewer B answers; reported with the results.
+
+**Review questions.** Was changing the guard mid-evaluation acceptable, given that it cannot change any answer, only
+where the runs stop?
