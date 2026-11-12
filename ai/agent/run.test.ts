@@ -78,7 +78,7 @@ async function main() {
   // 1. Prompt and schema.
   {
     check('system prompt carries the tool-data rule', AGENT_SYSTEM.includes(TOOL_DATA_RULE));
-    check('system prompt has no em or en dashes', !/[–—]/.test(AGENT_SYSTEM) && Object.values(FINAL_NOTES).every((n) => !/[–—]/.test(n)));
+    check('system prompt has no em or en dashes', !/[\u2013\u2014]/.test(AGENT_SYSTEM) && Object.values(FINAL_NOTES).every((n) => !/[\u2013\u2014]/.test(n)));
     check('schema requires citations and dataRefs', JSON.stringify(AGENT_SCHEMA.required) === '["answer","coverage","citations","dataRefs"]');
     check('parseAgentAnswer accepts a valid answer and rejects a bad one', parseAgentAnswer(JSON.stringify(ans('a'))) !== null && parseAgentAnswer('{"answer":"a"}') === null && parseAgentAnswer('not json') === null);
   }
