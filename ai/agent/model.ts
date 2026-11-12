@@ -76,6 +76,7 @@ export interface AgentModel {
 }
 
 export const AGENT_EFFORT = 'medium' as const;
+export type AgentEffort = 'low' | 'medium' | 'high';
 export const AGENT_MAX_TOKENS = 8000;
 /** Anthropic prompt cache lifetime with the default (5-minute) markers. */
 export const CACHE_TTL_MS = 5 * 60_000;
@@ -117,17 +118,18 @@ export class AnthropicAgentModel implements AgentModel {
   constructor(
     private readonly key: ModelKey = 'sonnet',
     client?: MessagesClient,
+    private readonly effort: AgentEffort = AGENT_EFFORT,
   ) {
-    this.name = `agent:${MODELS[key].id}(effort=${AGENT_EFFORT})`;
+    this.name = `agent:${MODELS[key].id}(effort=${effort})`;
     this.client = client ?? new Anthropic({ maxRetries: 4 });
   }
 
   settings() {
-    return { model: MODELS[this.key].id, effort: AGENT_EFFORT, maxTokens: AGENT_MAX_TOKENS, thinking: 'adaptive, display summarized (logged)', strictTools: true, cache: 'system marker + automatic tail' };
+    return { model: MODELS[this.key].id, effort: this.effort, maxTokens: AGENT_MAX_TOKENS, thinking: 'adaptive, display summarized (logged)', strictTools: true, cache: 'system marker + automatic tail' };
   }
 
   start(system: string, tools: ToolDefinition[], schema: Record<string, unknown>, question: string): AgentConversation {
-    return new AnthropicConversation(this.client, this.key, system, tools, schema, question);
+    return new AnthropicConversation(this.client, this.key, system, tools, schema, question, this.effort);
   }
 }
 
@@ -145,6 +147,7 @@ class AnthropicConversation implements AgentConversation {
     tools: ToolDefinition[],
     private readonly schema: Record<string, unknown>,
     question: string,
+    private readonly effort: AgentEffort = AGENT_EFFORT,
   ) {
     this.messages = [{ role: 'user', content: question }];
     this.tools = tools.map((t) => ({ name: t.name, description: t.description, input_schema: strictSchema(t.input_schema) as Anthropic.Tool.InputSchema, strict: true }));
@@ -193,7 +196,7 @@ class AnthropicConversation implements AgentConversation {
       ...(final ? { tool_choice: { type: 'none' as const } } : {}),
       messages: this.messages,
       thinking: { type: 'adaptive', display: 'summarized' },
-      output_config: { effort: AGENT_EFFORT, format: { type: 'json_schema', schema: this.schema } },
+      output_config: { effort: this.effort, format: { type: 'json_schema', schema: this.schema } },
       cache_control: { type: 'ephemeral' },
     });
     // The assistant turn goes back exactly as returned, thinking blocks included.

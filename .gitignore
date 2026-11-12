@@ -33,6 +33,8 @@ ai/index/
 ai/agent/logs/
 # Agent job outputs (step 2.3): one directory per job id with the plan, the log and the result.
 ai/agent/runs/
+# Job outputs of the step 2.4 evaluation runs, one directory per run.
+ai/agent/runs-eval/
 # Python (inference/ services): bytecode cache and virtual environments.
 __pycache__/
 .venv/

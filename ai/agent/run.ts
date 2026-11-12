@@ -13,7 +13,7 @@ import type { Chunk } from '../corpus/types';
 import type { TokenUsage } from '../context/types';
 import { addUsage, zeroUsage } from './usage';
 import type { AgentAnswer, AgentModel, ToolReply, Turn } from './model';
-import { AGENT_SCHEMA, AGENT_SYSTEM, FINAL_NOTES, JOBS_ADDENDUM, MAX_STEPS, type FinalReason } from './prompt';
+import { AGENT_SCHEMA, FINAL_NOTES, JOBS_ADDENDUM, MAX_STEPS, SYSTEM_PROMPTS, type FinalReason, type PromptVariant } from './prompt';
 import { runTool, SEARCH_CAP, toolDefinitions, type ToolDeps } from './tools';
 import { nullLog, type EventSink } from './log';
 import { verifyAgentAnswer, type AgentVerification } from './verify';
@@ -76,6 +76,8 @@ export interface RunOptions {
   onTurn?: (t: TurnRecord) => void;
   onCall?: (c: ToolCallRecord) => void;
   root?: string;
+  /** System prompt variant (step 2.4): A is the 2.2 prompt (default), B adds five sentences. */
+  prompt?: PromptVariant;
 }
 
 /** JSON with object keys sorted, so equal arguments give equal keys whatever their order. */
@@ -96,10 +98,11 @@ export async function runAgent(model: AgentModel, deps: ToolDeps, question: stri
   let modelCost = 0;
   let toolCost = 0;
   const spent = () => modelCost + toolCost;
-  log.write({ event: 'start', question, model: model.name, settings: model.settings(), maxSteps, capUsd, jobs: !!deps.jobs });
+  log.write({ event: 'start', question, model: model.name, settings: model.settings(), maxSteps, capUsd, jobs: !!deps.jobs, prompt: opts.prompt ?? 'A' });
 
   const jobs = !!deps.jobs;
-  const system = jobs ? `${AGENT_SYSTEM}\n\n${JOBS_ADDENDUM}` : AGENT_SYSTEM;
+  const base = SYSTEM_PROMPTS[opts.prompt ?? 'A'];
+  const system = jobs ? `${base}\n\n${JOBS_ADDENDUM}` : base;
   const conv = model.start(system, toolDefinitions(jobs), AGENT_SCHEMA as unknown as Record<string, unknown>, question);
   let lastTurnEnd = Date.now();
   let replies: ToolReply[] = [];

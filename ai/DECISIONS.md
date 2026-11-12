@@ -266,3 +266,42 @@ saved file (checked across all 72).
 
 **Review questions.** Are the acceptable chunk ids too narrow (a correct answer citing another chunk with the same fact
 counts as a missing required source)? Are the job references stable on another machine or Node version?
+
+## 2026-11-12, step 2.4: task set approved; rules for the comparison (owner)
+
+**Decision.** The task set is approved as prepared (the analysis session spot-checked p-03, d-01 and d-02 against the
+files). Before the runs, two pieces of metadata were added for the judge only: an answerable label (`partial` for p-01
+and p-02, `no` for p-03, `yes` otherwise), which selects the premise grade of the 1.9 rubric, and a note for p-02 in
+the style of p-01 and p-03 (the judge sees notes for partial and no tasks, as in 1.9). Owner answers to the four review
+questions:
+- An unrequested job in p-01 or p-02 is counted in a separate "unneeded job" counter per variant, not as a missing
+  required source; the judge scores the content as usual.
+- The accepted chunks stay narrow. After all runs and before any comparison, one pooled list of every "required source
+  missing" case from all variants together, with the cited chunks, goes to the owner; a chunk is added only if reading
+  it shows it answers the question. Results are reported before and after that review. (The lesson from the phase 1
+  selection bias: the accepted set is revised once, for all variants together, not per variant after seeing scores.)
+- x-02 stays as it is.
+- The required source of x-03 does not include the legend. Legend citations are a separate measure and an intended
+  effect of prompt B, since only B is told the legend is citable.
+
+Run order A1, B1, C, A2, B2, then the judge, within $25. The blind grading file for the owner is prepared before any
+judge verdict is shown. Blind sample rule, fixed in `ai/eval/agent-judge.ts` before any run: one answer per category; in
+each category the task with the smallest sha256("agent-blind-v1|<category>|<task id>"); runs rotate over the categories
+as A1, B1, C, A2, B2, A1. Every evaluation run uses its own empty job directory (`ai/agent/runs-eval/<run>/`), so no run
+sees another run's job results.
+
+**What the judge sees.** The 1.9 judge prompt and rubric unchanged. Evidence is every citation with file and lines (a
+legend citation as "legend of <result>") and every dataRef as "result <name>, path [...]" with the value found at that
+path in the data the run read, or a note that no such value was read. Not the run, variant, prompt, effort, steps or
+verification status.
+
+**Evidence.** `ai/eval/agent-run.ts`, `ai/eval/agent-measures.ts`, `ai/eval/agent-judge.ts`, tests in
+`ai/eval/agent-eval.test.ts`; committed before the first evaluation run.
+
+**Open.** The runs, the judge, the pooled review of missing required sources, the owner's blind grading.
+
+**Review questions.**
+- The reference answers were written by an Opus 5.5 session and the judge is Opus 5.5, so the judge may favour answers
+  worded like the references. The owner's blind grading partly checks this.
+- Showing the judge the stored value of each dataRef gives it a mechanical lookup the 1.9 judge did not have for quotes.
+  Does that make faithfulness easier to earn for numbers than for text?

@@ -278,6 +278,8 @@
 
 **Expected tools.** list_backtest_configs, read_backtest_results, run_backtest (rejected) or none
 
+**Note.** Correct: says a 720-day job cannot run and reports the saved 720-day result, labelled as the saved run it is.
+
 ## p-03: False premise or unanswerable
 
 **Question.** In the canonical 45-day walk-forward for Base WETH/USDC 0.30%, how did the passive ±20% strategy do?

@@ -218,7 +218,7 @@ export async function runTool(deps: ToolDeps, name: string, args: unknown): Prom
  * Real dependencies: phase 1 retrieval (variant chosen, k=10), the restored result files, the decision log. With
  * `jobs`, also run_backtest and the job results (ai/agent/runs/) in the results listing.
  */
-export function realDeps(root = process.cwd(), jobs?: { approve: JobDeps['approve']; runner?: JobRunner }): ToolDeps {
+export function realDeps(root = process.cwd(), jobs?: { approve: JobDeps['approve']; runner?: JobRunner; runsDir?: string }): ToolDeps {
   const saved = new DirResultsStore(path.join(root, RESULTS_DIR));
   let retrieval: AnswerRetrieval | null = null;
   return {
@@ -231,8 +231,8 @@ export function realDeps(root = process.cwd(), jobs?: { approve: JobDeps['approv
         return { chunks, costUsd };
       },
     },
-    results: jobs ? new CompositeResultsStore([saved, new RunsResultsStore(path.join(root, RUNS_DIR))]) : saved,
+    results: jobs ? new CompositeResultsStore([saved, new RunsResultsStore(jobs.runsDir ?? path.join(root, RUNS_DIR))]) : saved,
     readDecisionLog: () => readFileSync(path.join(root, DECISION_LOG), 'utf8'),
-    ...(jobs ? { jobs: { runner: jobs.runner ?? new SpawnRunner(root), approve: jobs.approve, maxPerQuestion: 1, started: 0 } } : {}),
+    ...(jobs ? { jobs: { runner: jobs.runner ?? new SpawnRunner(root, jobs.runsDir), approve: jobs.approve, maxPerQuestion: 1, started: 0 } } : {}),
   };
 }
