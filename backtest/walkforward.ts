@@ -25,7 +25,9 @@ import { runStrategy, Strategy, ethUsd } from './engine';
 import { hodl5050, cash100, flatOnlyLP, passiveWide, passiveW, passiveAsym, fixedNaive, innerTrig, volAdaptive, volAdaptiveTrend, volAdaptiveHedge } from './strategies';
 import { loadPool, loadFunding } from './load'; // shared loader (also handles quote:'WETH' pairs)
 
-const OUT = path.join(__dirname, 'results');
+// HOMOS_RESULTS_DIR (AI layer step 2.3): the agent's job runner writes to its own directory, so the saved
+// results in backtest/results/ are never overwritten. Unset, the output path is unchanged.
+const OUT = process.env.HOMOS_RESULTS_DIR ? path.resolve(process.env.HOMOS_RESULTS_DIR) : path.join(__dirname, 'results');
 
 const pct = (v: number) => (v >= 0 ? '+' : '') + v.toFixed(2);
 

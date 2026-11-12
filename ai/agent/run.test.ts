@@ -59,7 +59,7 @@ class FakeModel implements AgentModel {
     const next = (mode: 'tools' | 'final', replies: ToolReply[], note?: string): Turn => {
       this.asked.push({ mode, replies, note });
       const s = this.script[Math.min(i++, this.script.length - 1)];
-      const base = { usage, costUsd: s.cost ?? 0.01, ms: 1, stopReason: s.calls ? 'tool_use' : 'end_turn', text: '' };
+      const base = { usage, costUsd: s.cost ?? 0.01, ms: 1, stopReason: s.calls ? 'tool_use' : 'end_turn', text: '', reasoning: '', reasoningTokens: null };
       if (mode === 'final' || !s.calls) return { ...base, kind: 'final', output: s.answer ?? null, ...(s.answer ? {} : { error: 'no answer' }) };
       return { ...base, kind: 'tools', calls: s.calls };
     };
@@ -205,6 +205,9 @@ async function main() {
     check('final turn returns the parsed answer', t2.kind === 'final' && t2.output?.answer === 'A.');
     check('strict tools without length limits', b0.tools.every((t) => t.strict === true) && !JSON.stringify(b0.tools).includes('maxLength') && !JSON.stringify(b0.tools).includes('maxItems'));
     check('cache marker on the system prompt and automatic tail caching', (b0.system[0].cache_control as { type: string }).type === 'ephemeral' && (b0.cache_control as { type: string }).type === 'ephemeral');
+    check('adaptive thinking with summarized display', JSON.stringify(b0.thinking) === '{"type":"adaptive","display":"summarized"}');
+    check('thinking summary returned as reasoning', t1.reasoning === 'plan');
+    check('estimate after the cache lifetime is higher', conv.estimateNextUsd(0, 6 * 60_000) > conv.estimateNextUsd(0, 60_000));
     check('structured output and effort medium', JSON.stringify((b0.output_config as Record<string, unknown>).format).includes('dataRefs') && (b0.output_config as { effort: string }).effort === 'medium');
     check('no tool_choice in the tool turn, none in the final turn', !('tool_choice' in b0) && JSON.stringify((bodies[1] as unknown as Record<string, unknown>).tool_choice) === '{"type":"none"}');
     const msgs = bodies[1].messages as Array<{ role: string; content: unknown }>;
@@ -212,6 +215,8 @@ async function main() {
     check('first request is a prefix of the second (append-only)', JSON.stringify(bodies[1].messages.slice(0, 1)) === JSON.stringify(bodies[0].messages));
     check('cost from usage at Sonnet prices', Math.abs(t1.costUsd - (1000 * 2 + 500 * 2.5 + 2000 * 0.2 + 100 * 10) / 1e6) < 1e-12, String(t1.costUsd));
     check('estimate assumes the history is cached', conv.estimateNextUsd(0) > 0 && conv.estimateNextUsd(10_000) > conv.estimateNextUsd(0));
+    check('strictSchema drops numeric ranges and keeps the enum', JSON.stringify(strictSchema({ type: 'integer', minimum: 1, maximum: 9, description: 'd' })) === '{"type":"integer","description":"d"}');
+    check('job tool schema sent without ranges', !JSON.stringify(strictSchema(toolDefinitions(true)[4].input_schema)).match(/minimum|maximum|maxLength/) && JSON.stringify(strictSchema(toolDefinitions(true)[4].input_schema)).includes('optimism-weth-usdc-030-365d'));
     check('strictSchema drops only length limits', JSON.stringify(strictSchema({ type: 'string', maxLength: 3, enum: ['a'] })) === '{"type":"string","enum":["a"]}');
   }
 

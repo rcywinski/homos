@@ -48,6 +48,10 @@ interface TurnBase {
   stopReason: string;
   /** Visible text the model wrote in this turn besides tool calls or the answer (may be empty). */
   text: string;
+  /** The provider's summary of the model's reasoning in this turn, when it returns one (may be empty). Logged only. */
+  reasoning: string;
+  /** Output tokens spent on reasoning in this turn, when the provider reports it; null otherwise. */
+  reasoningTokens: number | null;
 }
 
 export type Turn = TurnBase & ({ kind: 'tools'; calls: ToolCall[] } | { kind: 'final'; output: AgentAnswer | null; error?: string });
@@ -58,10 +62,11 @@ export interface AgentConversation {
   /** A turn that must be the final answer: no tool call is possible. `note` tells the model why. */
   finalTurn(replies: ToolReply[], note: string): Promise<Turn>;
   /**
-   * Estimated upper cost of the next turn, USD, when `replyChars` characters of tool results are added. Assumes the
-   * history so far is read from the provider's cache; the spend is checked against actual costs after every turn.
+   * Estimated upper cost of the next turn, USD, when `replyChars` characters of tool results are added and `idleMs`
+   * have passed since the last turn (a long job can outlive a provider's cache). The spend is checked against actual
+   * costs after every turn.
    */
-  estimateNextUsd(replyChars: number): number;
+  estimateNextUsd(replyChars: number, idleMs?: number): number;
 }
 
 export interface AgentModel {
@@ -72,13 +77,15 @@ export interface AgentModel {
 
 export const AGENT_EFFORT = 'medium' as const;
 export const AGENT_MAX_TOKENS = 8000;
+/** Anthropic prompt cache lifetime with the default (5-minute) markers. */
+export const CACHE_TTL_MS = 5 * 60_000;
 
-/** Strict tool schemas do not take string or array length limits: drop them (tools.ts validates them anyway). */
+/** Strict tool schemas take no length limits and no numeric ranges: drop them (tools.ts validates them anyway). */
 export function strictSchema(s: unknown): unknown {
   if (Array.isArray(s)) return s.map(strictSchema);
   if (typeof s !== 'object' || s === null) return s;
   const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(s)) if (!['minLength', 'maxLength', 'minItems', 'maxItems'].includes(k)) out[k] = strictSchema(v);
+  for (const [k, v] of Object.entries(s)) if (!['minLength', 'maxLength', 'minItems', 'maxItems', 'minimum', 'maximum'].includes(k)) out[k] = strictSchema(v);
   return out;
 }
 
@@ -116,7 +123,7 @@ export class AnthropicAgentModel implements AgentModel {
   }
 
   settings() {
-    return { model: MODELS[this.key].id, effort: AGENT_EFFORT, maxTokens: AGENT_MAX_TOKENS, thinking: 'adaptive (model default)', strictTools: true, cache: 'system marker + automatic tail' };
+    return { model: MODELS[this.key].id, effort: AGENT_EFFORT, maxTokens: AGENT_MAX_TOKENS, thinking: 'adaptive, display summarized (logged)', strictTools: true, cache: 'system marker + automatic tail' };
   }
 
   start(system: string, tools: ToolDefinition[], schema: Record<string, unknown>, question: string): AgentConversation {
@@ -154,11 +161,13 @@ class AnthropicConversation implements AgentConversation {
     return this.call(true);
   }
 
-  estimateNextUsd(replyChars: number): number {
+  estimateNextUsd(replyChars: number, idleMs = 0): number {
     const p = MODELS[this.key].price;
     // About 1 token per 2 characters for Polish and JSON (an overestimate for English).
     const fresh = this.lastPromptTokens === 0 ? this.firstPromptChars / 2 : this.lastOutputTokens + replyChars / 2;
-    return (this.lastPromptTokens * p.cacheRead + fresh * p.cacheWrite + AGENT_MAX_TOKENS * p.output) / 1e6;
+    // After the cache lifetime the whole history is written to the cache again instead of read from it.
+    const cachedPrice = idleMs > CACHE_TTL_MS ? p.cacheWrite : p.cacheRead;
+    return (this.lastPromptTokens * cachedPrice + fresh * p.cacheWrite + AGENT_MAX_TOKENS * p.output) / 1e6;
   }
 
   /** Tool results go back in one user message; a final-turn note is a text block after them. History is append-only. */
@@ -183,6 +192,7 @@ class AnthropicConversation implements AgentConversation {
       tools: this.tools,
       ...(final ? { tool_choice: { type: 'none' as const } } : {}),
       messages: this.messages,
+      thinking: { type: 'adaptive', display: 'summarized' },
       output_config: { effort: AGENT_EFFORT, format: { type: 'json_schema', schema: this.schema } },
       cache_control: { type: 'ephemeral' },
     });
@@ -197,7 +207,9 @@ class AnthropicConversation implements AgentConversation {
     this.lastPromptTokens = usage.input + usage.cacheWrite + usage.cacheRead;
     this.lastOutputTokens = usage.output;
     const text = res.content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('\n');
-    const base = { usage, costUsd: usd(usage, MODELS[this.key].price), ms: Date.now() - t0, stopReason: String(res.stop_reason) };
+    const reasoning = res.content.flatMap((b) => (b.type === 'thinking' && b.thinking ? [b.thinking] : [])).join('\n');
+    const reasoningTokens = res.usage.output_tokens_details?.thinking_tokens ?? null;
+    const base = { usage, costUsd: usd(usage, MODELS[this.key].price), ms: Date.now() - t0, stopReason: String(res.stop_reason), reasoning, reasoningTokens };
     const calls = res.content.flatMap((b) => (b.type === 'tool_use' ? [{ id: b.id, name: b.name, args: b.input }] : []));
     if (res.stop_reason === 'tool_use' && calls.length) return { ...base, text, kind: 'tools', calls };
     if (res.stop_reason === 'refusal' || res.stop_reason === 'max_tokens') return { ...base, text, kind: 'final', output: null, error: String(res.stop_reason) };

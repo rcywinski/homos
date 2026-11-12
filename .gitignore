@@ -31,6 +31,8 @@ ai/index/
 # Agent run logs (step 2.2): one JSONL per question, full tool results; selected transcripts are copied to
 # ai/eval/results/ on purpose.
 ai/agent/logs/
+# Agent job outputs (step 2.3): one directory per job id with the plan, the log and the result.
+ai/agent/runs/
 # Python (inference/ services): bytecode cache and virtual environments.
 __pycache__/
 .venv/

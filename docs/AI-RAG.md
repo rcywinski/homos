@@ -533,6 +533,14 @@ reference answer against the sources found these errors; they are a reason this 
 
 ## Limitations and open points
 
+- **Agent jobs (step 2.3).** The input data of every job (swap caches, funding series) exists only on the owner's Mac,
+  in the gitignored `data/` directory; it is not in the repository or in tag `journal-final`, so a reader of the repo
+  cannot run `run_backtest`: only the saved results (`npm run ai:restore-results`) work everywhere. 720-day jobs are out
+  of scope: their swap caches are gone and refetching them needs RPC keys and hours of downloads. The allowlist holds
+  only the five pools whose walk-forward was fast enough when measured (39 to 154 s); the four slowest, among them the
+  main Base and Arbitrum WETH/USDC 0.05% pools, are left out. A job runs today's code: re-running the canonical 45-day
+  Base WETH/USDC 0.30% walk-forward gives the same strategies and win rates as the saved `-kanon` file but slightly
+  different means (passive ±50%: -0.736 against -0.707), because the saved file came from an older engine version.
 - **Local generator tuning (step 1.12).** The variants were tuned and measured on the same 34 questions, with no
   held-out set, so the P prompt's gain may be smaller on new questions; the prompt was written once, before any result,
   to limit that. Thinking was off in every tuning run; all at 250 W; P and L needed a larger `num_ctx` than S.

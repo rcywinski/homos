@@ -1,7 +1,8 @@
 # Agent manual questions (step 2.2)
 
 2026-11-12. Agent: Sonnet 5.5, effort medium, the four read-only tools, at most 10 model turns, cap $0.50 per
-question. Printed by `npm run agent`; the full runs, including every tool result, are in the local logs
+question. Printed by the agent CLI (`npm run agent:ask` since step 2.3, which restored `npm run agent` for the old
+job runner); the full runs, including every tool result, are in the local logs
 (`ai/agent/logs/`, gitignored). Result files restored with `npm run ai:restore-results`.
 
 Note on (b): it ran before a verifier fix. The model wrote the mean with a typographic minus (U+2212, "−0.71"), which
@@ -11,7 +12,7 @@ output.
 
 ## (a) Journal only, next to phase 1 (`npm run ask`, k=10)
 
-| | phase 1 `npm run ask` | agent `npm run agent` |
+| | phase 1 `npm run ask` | agent `npm run agent:ask` |
 |---|---|---|
 | coverage | partial | full |
 | citations verified | 4/4 | 5/6 (one paraphrase, caught) |

@@ -47,7 +47,7 @@ const LEGENDS: Array<{ test: (name: string) => boolean } & Legend> = [
     ],
   },
   {
-    test: (n) => n.startsWith('e8-carry'),
+    test: (n) => n.startsWith('e8-carry') || n.startsWith('funding-carry-'),
     family: 'funding cash-and-carry (experiment 8)',
     source: 'backtest/funding-carry.ts',
     lines: [
@@ -107,7 +107,9 @@ const LEGENDS: Array<{ test: (name: string) => boolean } & Legend> = [
 ];
 
 export function legendFor(name: string): Legend | null {
-  const l = LEGENDS.find((x) => x.test(name));
+  // A job result (run-<jobId>-<output>) has the legend of the script that wrote it.
+  const base = name.replace(/^run-j\d{8}T\d{6}n\d+-/, '');
+  const l = LEGENDS.find((x) => x.test(base));
   return l ? { family: l.family, source: l.source, lines: l.lines } : null;
 }
 

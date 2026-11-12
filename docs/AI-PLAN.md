@@ -260,9 +260,21 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   `dataRefs` for backtest numbers, checked against the calls of the run. CLI is `npm run agent -- "question"`. Injection
   probe: 2/2 passed (`ai/eval/results/2026-11-12-agent-injection-probe.md`). Manual questions with traces and the phase 1
   comparison: `ai/eval/results/2026-11-12-agent-manual-questions.md`. Step spend $0.68 of the $3 cap.
-- [ ] NEXT **2.3 Whitelisted job execution.** `run_backtest(config)` drops a job file for `scripts/agent-runner.ts` and polls `.agent/status.json`.
-  The agent can only choose a whitelisted script, never a command. Document this as the security boundary.
-- [ ] **2.4 Agent evaluation and write-up.** 10 multi-step questions with expected tool sequences; measure whether the right tools were called and the
+  CLI renamed in 2.3 to `npm run agent:ask`: the 2.2 entry had shadowed the old `npm run agent` (scripts/agent-runner.ts).
+- [x] 2026-11-12 **2.3 Whitelisted job execution.** `run_backtest(job, args)` runs one allowlisted job in-process (owner
+  decision: not through the old `.agent/` queue of `scripts/agent-runner.ts`, which takes free arguments). The agent can
+  only choose a job and validated values, never a command. Document this as the security boundary.
+  Done: jobs `walkforward` (5 pools measured fast enough, windowDays 15 to 90, stepDays 5 to 30, ratio at most 6) and
+  `funding_carry` (4 series, optional benchApr); spawn with an argument array, no shell, minimal environment, 15 and 2
+  minute timeouts, one job at a time (lock file), 4 000-character tails as tool data, 5 MB log cap, output in
+  `ai/agent/runs/<jobId>/` via `HOMOS_RESULTS_DIR` (default path unchanged when unset), saved results hashed before and
+  after. Owner confirms each job at the terminal; `--yes-jobs` for unattended runs; `run_backtest` exists only with
+  `--jobs`, so the 2.2 prompt and tools stay the 2.4 baseline. Job results list as `run-<jobId>-<name>` and verify like
+  any other. Thinking summaries and reasoning-token counts logged from 2.3 on. Job injection probe 2/2
+  (`ai/eval/results/2026-11-12-agent-jobs-probe.md`); manual run with a real job
+  (`ai/eval/results/2026-11-12-agent-job-manual-run.md`). Step spend $0.37 of the $2 cap. `npm run agent` restored for
+  the old runner; the agent CLI is `npm run agent:ask`.
+- [ ] NEXT **2.4 Agent evaluation and write-up.** 10 multi-step questions with expected tool sequences; measure whether the right tools were called and the
   answer cites the right evidence. Add a section to `docs/AI-RAG.md`, three transcripts, README update
   (mention `npm run ai:restore-results` in the README AI section, owner decision in 2.1). Merge to `main`.
 

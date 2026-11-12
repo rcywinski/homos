@@ -60,6 +60,60 @@ export class DirResultsStore implements ResultsStore {
 }
 
 /** One block per chunk, best first, in the phase 1 format (id, file, lines, date, source text). */
+const JOB_DIR = /^j\d{8}T\d{6}n\d+$/;
+
+/**
+ * Results written by run_backtest jobs (step 2.3): ai/agent/runs/<jobId>/<output>.json, listed as
+ * run-<jobId>-<output>. Only directories named like a job id (made by the code) and regular result files count;
+ * job.json (the plan) is not a result.
+ */
+export class RunsResultsStore implements ResultsStore {
+  constructor(readonly dir: string) {}
+
+  private entries(): Map<string, string> {
+    const m = new Map<string, string>();
+    let ids: string[] = [];
+    try {
+      ids = readdirSync(this.dir);
+    } catch {
+      return m;
+    }
+    for (const id of ids.filter((x) => JOB_DIR.test(x)).sort()) {
+      const d = path.join(this.dir, id);
+      if (!lstatSync(d).isDirectory()) continue;
+      for (const f of readdirSync(d).sort()) {
+        if (f === 'job.json' || !f.endsWith('.json') || !RESULT_NAME.test(f.slice(0, -5))) continue;
+        if (!lstatSync(path.join(d, f)).isFile()) continue;
+        m.set(`run-${id}-${f.slice(0, -5)}`, path.join(d, f));
+      }
+    }
+    return m;
+  }
+
+  list(): string[] {
+    return [...this.entries().keys()];
+  }
+
+  read(name: string): string {
+    const file = this.entries().get(name);
+    if (!file) throw new ToolError(`unknown result name "${name}"; call list_backtest_configs for the valid names`);
+    return readFileSync(file, 'utf8');
+  }
+}
+
+/** Saved results first, then job results. */
+export class CompositeResultsStore implements ResultsStore {
+  constructor(private readonly stores: ResultsStore[]) {}
+  list(): string[] {
+    return this.stores.flatMap((s) => s.list());
+  }
+  read(name: string): string {
+    const s = this.stores.find((x) => x.list().includes(name));
+    if (!s) throw new ToolError(`unknown result name "${name}"; call list_backtest_configs for the valid names`);
+    return s.read(name);
+  }
+}
+
 export async function searchJournal(search: JournalSearch, query: string): Promise<{ blocks: string[]; chunks: Chunk[]; costUsd: number }> {
   const q = query.trim();
   if (!q) throw new ToolError('query is empty');

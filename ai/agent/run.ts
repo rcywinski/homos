@@ -13,7 +13,7 @@ import type { Chunk } from '../corpus/types';
 import type { TokenUsage } from '../context/types';
 import { addUsage, zeroUsage } from './usage';
 import type { AgentAnswer, AgentModel, ToolReply, Turn } from './model';
-import { AGENT_SCHEMA, AGENT_SYSTEM, FINAL_NOTES, MAX_STEPS, type FinalReason } from './prompt';
+import { AGENT_SCHEMA, AGENT_SYSTEM, FINAL_NOTES, JOBS_ADDENDUM, MAX_STEPS, type FinalReason } from './prompt';
 import { runTool, SEARCH_CAP, toolDefinitions, type ToolDeps } from './tools';
 import { nullLog, type EventSink } from './log';
 import { verifyAgentAnswer, type AgentVerification } from './verify';
@@ -43,6 +43,8 @@ export interface TurnRecord {
   kind: Turn['kind'];
   stopReason: string;
   text: string;
+  reasoning: string;
+  reasoningTokens: number | null;
   usage: TokenUsage;
   costUsd: number;
   ms: number;
@@ -94,9 +96,12 @@ export async function runAgent(model: AgentModel, deps: ToolDeps, question: stri
   let modelCost = 0;
   let toolCost = 0;
   const spent = () => modelCost + toolCost;
-  log.write({ event: 'start', question, model: model.name, settings: model.settings(), maxSteps, capUsd });
+  log.write({ event: 'start', question, model: model.name, settings: model.settings(), maxSteps, capUsd, jobs: !!deps.jobs });
 
-  const conv = model.start(AGENT_SYSTEM, toolDefinitions(), AGENT_SCHEMA as unknown as Record<string, unknown>, question);
+  const jobs = !!deps.jobs;
+  const system = jobs ? `${AGENT_SYSTEM}\n\n${JOBS_ADDENDUM}` : AGENT_SYSTEM;
+  const conv = model.start(system, toolDefinitions(jobs), AGENT_SCHEMA as unknown as Record<string, unknown>, question);
+  let lastTurnEnd = Date.now();
   let replies: ToolReply[] = [];
   let force: FinalReason | null = null;
   const seen = new Map<string, { step: number; count: number }>();
@@ -106,12 +111,14 @@ export async function runAgent(model: AgentModel, deps: ToolDeps, question: stri
 
   for (let step = 1; step <= maxSteps; step++) {
     const replyChars = replies.reduce((s, r) => s + r.content.length, 0);
+    const idleMs = Date.now() - lastTurnEnd;
     let reason: FinalReason | null = force ?? (step === maxSteps ? 'step-limit' : null);
     if (!reason) {
-      const room = conv.estimateNextUsd(replyChars) + conv.estimateNextUsd(replyChars + SEARCH_CAP);
+      // Reserve for a final turn after one more round of results; with jobs, that round may outlive the cache.
+      const room = conv.estimateNextUsd(replyChars, idleMs) + conv.estimateNextUsd(replyChars + SEARCH_CAP, jobs ? Infinity : 0);
       if (spent() + room > capUsd) reason = 'spend-cap';
     }
-    if (reason && spent() + conv.estimateNextUsd(replyChars) > capUsd) {
+    if (reason && spent() + conv.estimateNextUsd(replyChars, idleMs) > capUsd) {
       status = 'spend-cap';
       error = `stopped before step ${step}: spent $${spent().toFixed(4)}, a final turn could exceed the $${capUsd} cap`;
       log.write({ event: 'stop', step, reason: error });
@@ -119,9 +126,10 @@ export async function runAgent(model: AgentModel, deps: ToolDeps, question: stri
     }
 
     const turn = reason ? await conv.finalTurn(replies, FINAL_NOTES[reason]) : await conv.turnWithTools(replies);
+    lastTurnEnd = Date.now();
     usage = addUsage(usage, turn.usage);
     modelCost += turn.costUsd;
-    const rec: TurnRecord = { step, mode: reason ? 'final' : 'tools', kind: turn.kind, stopReason: turn.stopReason, text: turn.text, usage: turn.usage, costUsd: turn.costUsd, ms: turn.ms };
+    const rec: TurnRecord = { step, mode: reason ? 'final' : 'tools', kind: turn.kind, stopReason: turn.stopReason, text: turn.text, reasoning: turn.reasoning, reasoningTokens: turn.reasoningTokens, usage: turn.usage, costUsd: turn.costUsd, ms: turn.ms };
     if (turn.kind === 'tools') rec.calls = turn.calls;
     turns.push(rec);
     log.write({ event: 'model_turn', ...rec, ...(turn.kind === 'final' ? { output: turn.output, error: turn.error } : {}) });

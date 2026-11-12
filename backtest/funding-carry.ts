@@ -37,7 +37,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const OUT = path.join(__dirname, 'results');
+// HOMOS_RESULTS_DIR (AI layer step 2.3): the agent's job runner writes to its own directory, so the saved
+// results in backtest/results/ are never overwritten. Unset, the output path is unchanged.
+const OUT = process.env.HOMOS_RESULTS_DIR ? path.resolve(process.env.HOMOS_RESULTS_DIR) : path.join(__dirname, 'results');
 const DAY = 86400_000;
 const env = (k: string, d: number) => (process.env[k] !== undefined ? Number(process.env[k]) : d);
 const BENCH_APR = env('BENCH_APR', 4.5);
