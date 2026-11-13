@@ -242,30 +242,21 @@ but over a year old). Gemma 4 26B-A4B (MoE, about 4B active parameters, Apache 2
 an explicit `num_ctx`, checks `/api/ps` that it is 100% on the GPU, and unloads it after the runs. Nothing on the box
 changes; the model is loaded and unloaded per request from the Mac.
 
-### GPU power limit (step 1.11, 11 Nov 2026)
+### GPU power limit
 
-Why: on 11 Nov 2026 the box lost power 4 times (12:02, 12:07, 12:09, 12:10) while `qwen3.8:27b` was loading or generating: Kernel-Power 41 with bugcheck code 0, no crash dump, no WHEA or display driver error. The power supply cannot hold the RTX 3090's load spikes. The owner had already capped the card at 83% (348.6 W) in MSI Afterburner for gaming, but Afterburner only applies its limit in a logged-in session, and the box serves models without anyone logged in. The owner chose 250 W (60% of the 420 W default).
+On 11 Nov 2026 the box lost power 4 times under qwen3.8:27b (Kernel-Power 41, bugcheck 0, no dump). The old PSU could not hold the RTX 3090's load spikes. As a workaround, a SYSTEM task ("HOMOS GPU power limit") and both launchers capped the card at 250 W with `nvidia-smi -pl 250`.
 
-How it is applied: `C:\ollama\set-gpu-power-limit.ps1` runs `nvidia-smi -pl 250`, reads the limit back and logs to `C:\ollama\logs\gpu-power.log` (it retries for up to 60 s while the driver starts). The limit does not survive a reboot, so it runs:
+On 13 Nov 2026 the PSU was replaced with a 1200 W be quiet! unit and the cap was removed:
+- The task is disabled.
+- The launchers no longer call the script.
+- MSI Afterburner applies 100% at logon.
+- The card runs at its default limit of 420 W.
 
-- as the first line of `start-ollama.ps1` and `start-reranker.ps1`, so no model loads at the default 420 W;
-- from the scheduled task `HOMOS GPU power limit` (SYSTEM): at startup, and 1 minute after any logon, which undoes a higher limit applied by MSI Afterburner at logon.
+A watched full-load test passed: qwen3.8:27b at num_ctx 16384 generating 4000 tokens alongside back-to-back reranker calls. It drew up to 421 W (397 W on average) and reached 69 C, with no shutdown.
 
-MSI Afterburner (scheduled task `\MSIAfterburner`, runs at logon of the owner, console or RDP) applies the power limit from its startup profile. It is set to 59% (about 248 W) so that it does not raise the limit; the logon trigger above re-applies 250 W in any case.
+Rollback: run `Enable-ScheduledTask "HOMOS GPU power limit"`, re-add `& C:\ollama\set-gpu-power-limit.ps1` as the first line of both launchers, and set Afterburner to 59%.
 
-Test at 250 W (11 Nov 2026, 12:26 to 12:30): one load of `qwen3.8:27b` with `num_ctx` 16384 (22.5 s), then two generations of 4000 tokens with 8599 and 6096 prompt tokens: 61.4 and 40.4 tokens/s, power at most 250.15 W, temperature at most 57 C, SM clock about 1050 MHz under load, VRAM peak 23.4 of 24 GB with the reranker loaded. The box stayed up. Per-second log with write-through: `C:\ollama\logs\qwen-test-2026-11-11.csv`. A 1-second sample does not show millisecond spikes; the evidence is that the box held.
-
-Check:
-
-```powershell
-nvidia-smi --query-gpu=power.limit,enforced.power.limit --format=csv     # 250.00 W
-Get-Content C:\ollama\logs\gpu-power.log -Tail 5                          # one line per boot, per launcher and per logon
-Get-ScheduledTask -TaskName 'HOMOS GPU power limit'                       # Ready, triggers At startup and At log on
-```
-
-To change the value, edit `$Watts` in `set-gpu-power-limit.ps1` and run the task, and move the Afterburner slider to match.
-
-Notes: the Afterburner 59% line assumes the owner makes that change (in progress). If the box goes down again at 250 W, the next suspect is the PSU itself.
+Note for the 1.11/1.12 tok/s figures: they were measured at 250 W. In this test qwen generated at 33.9 tok/s, but that ran alongside the reranker load and with a longer prompt, so it is not directly comparable.
 
 Gemma 4 26B-A4B (`gemma4:26b`, pulled 11 Nov for one extra run): Ollama 0.40.15 loads it with a small speculative
 draft model, and `/api/ps` then reports only about 1.27 GiB, which is not the real footprint. Check full GPU placement in
