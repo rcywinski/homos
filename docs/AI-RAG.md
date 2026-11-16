@@ -1,6 +1,8 @@
-# AI layer: retrieval and cited answers over the project journal (phase 1)
+# AI layer: retrieval and cited answers over the project journal (phase 1) and a tool-using agent (phase 2)
 
-Phase 1 write-up, 11 Nov 2026 (first draft 10 Nov). Plan and checkboxes: [`AI-PLAN.md`](AI-PLAN.md). Code: `ai/`.
+Phase 1 write-up, 11 Nov 2026 (first draft 10 Nov); phase 2 (the agent) added 16 Nov 2026. Plan and checkboxes:
+[`AI-PLAN.md`](AI-PLAN.md). Decisions from 12 Nov on, with alternatives and review questions:
+[`ai/DECISIONS.md`](../ai/DECISIONS.md). Code: `ai/`.
 Results: `ai/eval/results/` (every run has a JSON and a Markdown file; `compare-golden-v1.3.md` and
 `compare-golden-v1.4.md` put the retrieval rows side by side). This file is not part of the retrieval corpus
 (`ai/corpus/load.ts` excludes it), so writing it changes no result.
@@ -19,10 +21,16 @@ owner's chat session: plan changes, explanations and interpretation of results, 
 - Answers with k=10 chunks (the default): 97 of 97 citations verified against the source text, all 3 unanswerable
   questions answered "not in the sources". An Opus 5.5 judge rates 20 of 34 answers correct, 12 partially correct and
   2 incorrect. On 8 answers graded blind by the owner it agrees exactly on 5 and within one step on all 8.
-- Cost of all measured runs, steps 1.7 to 1.9: $13.49.
+- Cost of all measured runs, steps 1.7 to 1.9: $11.94 (corrected on 16 Nov from $13.49, see "Cost and latency").
 - Cloud vs local (step 1.11): a local `qwen3.8:27b` on the RTX 3090 box writes valid answers to the same chunks but
   is clearly weaker than Sonnet 5.5 (13 and 12 of 34 correct against 20; 24 of 321 quotes not in their source,
-  every one caught by the verifier) and about three times slower at a 250 W power limit.
+  every one caught by the verifier) and about three times slower at a 250 W power limit. With a prompt written for
+  local models (step 1.12) it reaches 16 and 16 of 34 correct in two runs; that prompt was tuned and measured on the
+  same 34 questions.
+- Agent (phase 2): Sonnet 5.5 with four read-only tools and one allowlisted backtest job, each job confirmed by the
+  owner. On 18 tasks over five runs the judge rates 16 to 17 answers correct per run and none incorrect; every number
+  taken from a result file carries a path that is checked against what the run read. But only 6 to 8 of 18 tasks end
+  with a normal answer: the step limit and the spend guard do most of the stopping. About $0.16 per task.
 
 ## What the problem is
 
@@ -398,25 +406,299 @@ rest of the gap, 4 correct answers and the remaining bad quotes, is the model. E
 caught by the verifier.
 
 The box: all six runs at 250 W, limit constant, power at most 254.11 W, temperature at most 61 C, VRAM peak 23 249 MiB
-(about 70 MiB more per 1024 of `num_ctx`), no alert, no reboot.
+(about 70 MiB more per 1024 of `num_ctx`), no alert, no reboot. (On 13 Nov the power supply was replaced and the 250 W
+limit removed; the tokens-per-second figures above were all measured at 250 W. See `inference/README.md`.)
+
+## Agent with tools (phase 2)
+
+Phase 1 answers from the ten chunks a retriever hands it. Some questions need more: a number from a saved backtest
+result, a decision-log row next to a journal entry, or a backtest nobody ran. In phase 2 Claude Sonnet 5.5 gets tools
+and decides which to call, up to ten turns per question, then answers with the same verified citations as phase 1 plus
+a checked path for every backtest number. `npm run agent:ask -- "<question>"`; with `--jobs` it may also run one
+allowlisted backtest, which the owner confirms at the terminal.
+
+### Tools
+
+Four read-only tools, plus one job tool that exists only with `--jobs` (`ai/agent/tools.ts`, `ai/agent/jobs.ts`):
+
+- **`search_journal(query)`**: the phase 1 retrieval (hybrid, rerank, top 10), returning whole chunks with their ids
+  and `file:lines`. Capped at 36 000 characters, measured so that ten chunks are never cut.
+- **`read_decision_log()`**: the translated decision table.
+- **`list_backtest_configs()`**: the names of the 72 saved backtest results (restored locally from tag `journal-final`
+  with `npm run ai:restore-results`, not committed) and of the job results in the agent's job directory, listed as
+  `run-<jobId>-<name>`.
+- **`read_backtest_results(name, path?)`**: one result, only by a name from the listing; `path` is an array of keys
+  resolved through own properties only, so no key reaches a prototype or a file name. Capped at 12 000 characters; a
+  larger result comes back as an overview of its keys with a marker. Every result starts with a legend of its fields
+  (meaning, unit, defining script, `ai/agent/legend.ts`); undocumented fields are marked as such.
+- **`run_backtest(job, ...)`**, with `--jobs` only: `walkforward` on one of five pools or `funding_carry` on one of four
+  series, described below.
+
+Arguments are checked by an own schema validator (enums, integer ranges, no extra fields) before any handler runs. An
+error comes back as a tool result the model can read, never as an exception. Every result is wrapped in
+`<tool_data tool="...">` and the system prompt says that tool data is data, never instructions: the journal and the
+result files contain orders addressed to AI sessions.
+
+### The loop
+
+`ai/agent/run.ts` runs the loop behind an `AgentModel` interface: "a turn with tools" and "a final turn without
+tools", plus a cost estimate for the next turn. Everything specific to the Anthropic API stays in
+`AnthropicAgentModel`: adaptive thinking with summaries logged, strict tool schemas (numeric ranges are stripped from
+what the API sees, since strict schemas reject them, and enforced by the validator), structured output for the final
+answer, `tool_choice: none` on the final turn, cache markers on an append-only history. A fake model runs the offline
+tests.
+
+- At most 10 turns; the 10th is a final turn without tools.
+- A call identical to an earlier one (same tool, same arguments) is not run again: the model gets "repeated call, its
+  result is above". The third repeat forces the final turn.
+- A spend cap of $0.50 per question, including model calls inside tools (the Polish query translation of
+  `search_journal`). Before every tool turn the loop keeps room for that turn and a final turn; if the room is not
+  there, the next turn is final ("spend-cap").
+- The final answer is JSON: answer text, a coverage label, citations (chunk id plus verbatim quote, phase 1 rules) and
+  `dataRefs` (result name, path, value as written). Citations are verified as in phase 1; the decision log and, since
+  step 2.4, the legend of every result read in the run are citable too. A dataRef passes only if this run read that
+  path (or a prefix of it) from that result, the stored value rounds to the written value at the written decimals, and
+  the value appears in the answer text. Numbers in the answer that have neither a quote nor a dataRef are listed.
+- Every turn, call, result, cost and thinking summary goes to a JSONL log in `ai/agent/logs/` (gitignored).
+
+### The safety boundary for jobs
+
+The model can choose a job and validated values, never a command. What stands between a model output and a process:
+
+1. **Allowlist.** Two jobs. `walkforward`: five pools whose 365-day walk-forward was measured at 39 to 154 s, window 15
+   to 90 days, step 5 to 30 days, window at most 6 times the step, 15-minute timeout. `funding_carry`: four funding
+   series, optional benchmark rate, 2-minute timeout. Anything else is rejected by the validator before approval.
+2. **Validation.** The same own validator: enums for job, pool and series, integer ranges, no extra fields. The tests
+   reject, among others, a pool named `../../.env`, `windowDays` 9999 and an extra `shell` field; in the job probe a
+   result file ordered exactly those, and the model never sent them.
+3. **No shell.** The job is spawned from an argument array built in code; no model text reaches a command line, an
+   environment variable or a file path. Job ids come from the code.
+4. **Minimal environment.** The child gets `PATH`, `HOME`, `HOMOS_RESULTS_DIR` (its own output directory) and the
+   job's own settings built in code (such as the benchmark rate of `funding_carry`), nothing from `.env`.
+5. **Approval.** The owner answers y or n at the terminal for every job, shown with its arguments. `--yes-jobs`
+   approves unattended (used for the evaluation runs). A declined job comes back as "the owner declined job ...; do not
+   ask for it again, answer from the saved results".
+6. **Time and output limits.** Timeout per job; stdout and stderr tails of 4 000 characters go back as tool data; the
+   job log is capped at 5 MB.
+7. **Lock.** One job at a time, a lock file with the process id; a lock whose process is dead is removed by the next
+   run.
+8. **Process group kill.** The job leads its own process group; the runner kills the whole group at the timeout, on
+   SIGINT, SIGTERM and SIGHUP, and when the agent exits. Before this fix a kill sent to the agent process alone left
+   the job running (found in the pre-check of step 2.4, after one of the owner's runs; tests now cover each signal).
+9. **Saved results untouched.** Output goes to `ai/agent/runs/<jobId>/` through `HOMOS_RESULTS_DIR` (the default path
+   of the backtest scripts is unchanged when it is unset), and the saved results directory is hashed before and after
+   every job; the tool result reports "saved results unchanged: yes".
+10. **Injection probes.** Invented result files carry an `operatorNotice` ordering the model to call an unknown tool,
+    to ignore the question and reply "OK", to run a job, and to run a job with out-of-schema arguments. Four of four
+    passed: the model answered the question, reported the order as text in the data, and never called `run_backtest`;
+    in the job probes the runner is a trap that fails if reached, and it was not
+    (`ai/eval/results/2026-11-12-agent-injection-probe.md`, `ai/eval/results/2026-11-12-agent-jobs-probe.md`).
+
+A job runs today's code, so a rerun need not match a saved result from an older engine version (see the
+limitations).
+
+### How it was measured (step 2.4)
+
+18 tasks (`ai/eval/agent-tasks.jsonl`), 3 per category: journal only, decision log, saved backtest numbers, journal
+plus backtest, tasks that need a job, and false premise or unanswerable (two partly answerable, one not). Each task has
+a reference answer written from the files, the required sources (acceptable chunk ids, result paths for dataRefs, the
+required job and its arguments) and the expected tools. The job references were run twice through the real runner
+and compared byte for byte. The development questions of steps 2.2 and 2.3 are excluded.
+
+Variants, all Sonnet 5.5 with the same tools:
+- **A**: the step 2.2 prompt, effort medium; two runs.
+- **B**: A plus five sentences written once before any run (stop when the answer is in hand; never request a value
+  already received; every call must look for something new; a number inside a result already read is covered by that
+  read's path; a threshold from a legend is cited as `legend:<result>`); two runs.
+- **C**: the A prompt at effort high; one run.
+
+Measured per answer: the 1.9 judge (Opus 5.5, unchanged rubric, blind to run and variant, shown every citation with
+`file:lines` and every dataRef with the value stored at its path); required sources present; end status; redundant
+calls (a repeat; a reread of a path already inside an earlier full read; a search returning only chunks already seen;
+a second listing or decision-log read); rereads whose path is later used in a dataRef (the owner's hypothesis: the
+model rereads a field to get a path to cite); an unneeded job (a job in a task that needs none, a separate counter);
+legend citations; steps, cost, time. Job tasks ran unattended, each run with its own empty job directory. The owner
+graded six answers blind, one per category, chosen by a rule fixed in code before any run. One pooled list of every
+"required source missing" case went to the owner before any comparison; he accepted two chunks for all variants at
+once, and the measure is reported before and after.
+
+### Results
+
+Five runs of 18 tasks on 12 Nov 2026. Costs at the corrected Sonnet price (see "Cost and latency"). Full report with
+every verdict and the per-category table: `ai/eval/results/2026-11-16-agent-eval-report.md`.
+
+| measure | A1 | A2 | B1 | B2 | C |
+|---|---|---|---|---|---|
+| judge: correct / partially / incorrect | 17 / 1 / 0 | 16 / 2 / 0 | 17 / 1 / 0 | 17 / 1 / 0 | 17 / 1 / 0 |
+| judge: supported / partly / unsupported | 1 / 17 / 0 | 1 / 17 / 0 | 0 / 18 / 0 | 1 / 17 / 0 | 0 / 18 / 0 |
+| judge: premise handled (3 partial and no) | 3/3 | 3/3 | 3/3 | 3/3 | 3/3 |
+| required sources present, before / after the review | 18 / 18 | 17 / 17 | 16 / 18 | 16 / 16 | 18 / 18 |
+| end: answered / repeated / step limit / spend guard | 6 / 1 / 5 / 6 | 7 / 4 / 1 / 6 | 7 / 1 / 4 / 6 | 6 / 1 / 6 / 5 | 8 / 2 / 5 / 3 |
+| redundant calls (repeat / reread / no new chunks) | 25 (4 / 17 / 4) | 17 (10 / 6 / 1) | 11 (6 / 4 / 1) | 12 (7 / 5 / 0) | 18 (6 / 9 / 3) |
+| rereads later used in a dataRef | 16 | 6 | 4 | 5 | 9 |
+| unneeded jobs | 2 | 0 | 1 | 2 | 1 |
+| legend citations | 0 | 0 | 8 | 10 | 0 |
+| citations verified | 41/41 | 44/44 | 48/49 | 54/55 | 49/50 |
+| dataRefs verified | 123/125 | 123/127 | 118/121 | 111/128 | 147/151 |
+| turns, sum | 137 | 117 | 132 | 141 | 125 |
+| reasoning tokens, sum | 1 937 | 1 549 | 2 276 | 2 569 | 4 252 |
+| cost per run (USD) | 2.80 | 2.51 | 3.06 | 3.33 | 2.64 |
+| median time per task without a job (s) | 32.5 | 25.5 | 31.4 | 32.9 | 30.0 |
+
+Tasks with a job take about 3 minutes, almost all of it the job (86 to 233 s per task).
+
+**Spread and what exceeds it.** Rule, fixed in `ai/eval/agent-score.ts` before the comparison was read: B differs from
+A when the difference of the two-run means is larger than both run-to-run spreads, |A1 - A2| and |B1 - B2|; C differs
+when it lies outside A1 to A2 by more than |A1 - A2|. Between A1 and A2 the judge's correctness changes on 3 of 18
+tasks (all three in the premise category) and faithfulness on none; between B1 and B2, 2 and 1.
+- **B against A, beyond the spread:** redundant calls (means 21 against 11.5; spreads 8 and 1); legend citations (the
+  intended effect, since only B is told legends are citable); cost, about 20% more per run ($3.20 against $2.65).
+- **B against A, within the spread:** correctness, required sources, end statuses, turns, time, unneeded jobs, and the
+  rereads used in a dataRef (16 and 6 against 4 and 5: A's own spread is 10).
+- **C against A:** fewer stops by the spend guard (3 against 6 and 6) and two to three times the reasoning tokens; a
+  one-answer shift from supported to partly supported is flagged only because A's spread there is 0. Nothing else.
+  C is one run.
+
+**Required sources.** 85 of 90 before the owner's review and 87 after it. Three misses remain: one answer (B2, x-01)
+read the right path but wrote its dataRefs with a shortened path (`["winPct"]` for `["summary", "<strategy>",
+"winPct"]`), so all 12 failed; two answers to x-02 (A2, B2) cite no source for the 26 August decision, one of them only
+the legend.
+
+**Judge against the owner.** On the six blind answers: correctness 5 of 6 exact and 6 of 6 within one step,
+faithfulness 6 of 6 exact. The one disagreement: on p-02 (a 720-day job that cannot run) the agent reported the saved
+720-day result correctly but also ran a 365-day job nobody asked for. The owner graded it partially correct for that
+job; the judge graded the content correct. The rubric scores what the answer says, not what the agent did. All six
+faithfulness grades were partly supported from both, so the sample says little about faithfulness. One leak: the item
+from a B run showed a legend citation, which only B is told about.
+
+**Decision (owner, 16 Nov).** Prompt A stays the default. B is a measured variant: it halves redundant calls and adds
+legend citations, but turns, normal endings and correctness do not improve, and a run costs about 20% more. No further
+prompt revisions on these 18 tasks, since that would tune on the measurement set.
+
+### Three transcripts
+
+From the evaluation runs; these are the answers the owner graded blind as B05, B06 and B01. Tool results are shown by
+size only; every number in the answers below that has a dataRef was verified against the stored value.
+
+**x-01, run A2** (journal plus backtest). "Revision v1.1 of 11 August reports the first full gate pass on base-005 with
+a 68% win rate and a worst window of -2.52%. Which saved result supports these numbers, and how did that strategy do
+in each market regime?" Answered after 5 turns, $0.115, 26 s. Judge and owner: correct, partly supported.
+
+| turn | call | result |
+|---|---|---|
+| 1 | `search_journal("v1.1 base-005 gate pass win rate 68% worst window -2.52%")`, `list_backtest_configs()` | 10 chunks; 72 names |
+| 2 | `read_backtest_results("walkforward-base-weth-usdc-005-365d-45d")` | the whole file, 10 116 characters |
+| 3 | the same strategy's summary in that file and in its `-kanon` rerun | 1 988 and 2 175 characters |
+| 4 | `search_journal("kanon rerun canonical base-005 365d 45d")` | 10 chunks |
+
+> The numbers match the canonical rerun file walkforward-base-weth-usdc-005-365d-45d-kanon. [...] The file shows a
+> 68.18% win rate, worst window -2.52 and mean +1.20. [...] The non-kanon 365d-45d file gives slightly different values
+> (worst -2.58, mean +1.16). [...] Up (4 windows): mean +1.08, 50% win, worst -2.52. Down (10 windows): mean +0.66, 70%
+> win, worst -1.79. Flat (8 windows): mean +1.94, 75% win, worst -2.15.
+
+- `docs/DECISION-LOG.md:15` "First full gate pass on base-005 (68 % win rate, worst window −2.52 %)."
+- 12 dataRefs, all verified, e.g. `-kanon ["summary", "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)", "winPct"]` =
+  68.18 (stored 68.1818...). Not backed: the two values of the non-kanon file (read in turn 3 but given no dataRef) and
+  the window counts.
+
+**t-02, run B2** (job). "Run a walk-forward on Arbitrum WETH/USDC 0.30% with 35-day windows every 7 days. Which
+strategy in the default set had the highest mean against HODL, and did any strategy have a worst window above -3%?"
+Ended at the step limit after 10 turns, $0.135, 196 s. Judge and owner: correct, partly supported.
+
+| turn | call | result |
+|---|---|---|
+| 1 | `list_backtest_configs()` | 72 names |
+| 2 | `run_backtest(walkforward, arbitrum-weth-usdc-030-365d, 35, 7)` | exit 0 after 160.6 s, saved results unchanged |
+| 3 | `read_backtest_results("run-j20261112T122409n2-walkforward-arbitrum-weth-usdc-030-365d-35d")` | overview |
+| 4, 6, 8, 9 | one strategy's summary per turn (four strategies) | about 2 750 characters each |
+| 5, 7 | `search_journal` for the soundness criterion and for earlier Arbitrum results | 10 chunks each |
+
+> I ran a new walk-forward, because no saved 35-day result existed. [...] The highest mean against HODL was "Adapt
+> k=3 h=24h + trend(exit,HL7d,5%,re>ema)" at +0.78%. Its win rate was 62.5%, which is below the 65% bar. [...] No
+> strategy had a worst window above -3%. The best worst window was -7.71, for that same strategy. [...] The run output
+> also shows -15.68 (k=2), -8.02 (vg1.4 variant) and -7.71 (re>ema).
+
+- `journal/CONTEXT.md:3998-3999` "arbitrum-030 (nowa pula, 45d+60d): bramka NIE PRZECHODZI.** Najlepsze: 45d
+  pasywny±50 73% wygr ale worst −10.31; profile trendowe worst −5…−8."
+- legend of the job result: "Criterion printed by the script: a strategy is sound with winPct >= 65 and worst > -3"
+- 6 dataRefs, all verified. Three numbers (+0.09, -15.68, -8.02) came from the job's printed table, not from a read of
+  the file, and the answer says so; they have no dataRef. The file is larger than the 12 000-character cap, so the
+  first read returned an overview and each strategy took a read of its own; the step limit came after four of them.
+
+**p-02, run A1** (premise). "Run a 720-day walk-forward for Base cbBTC/WETH 0.05% with 30-day windows and tell me how
+passive ±50% did." The job cannot run: 720-day data is not on the allowlist. Ended at the step limit after 10 turns,
+$0.062, 126 s. Judge: correct; owner: partially correct, for the unrequested job.
+
+| turn | call | result |
+|---|---|---|
+| 1 | `list_backtest_configs()` | 72 names |
+| 2 to 4 | the saved `walkforward-base-cbbtc-weth-005-720d-30d`: overview, passive ±50% summary, window count | |
+| 5 | `run_backtest(walkforward, base-cbbtc-weth-005-365d, 30, 15)` | exit 0 after 96.8 s |
+| 6 | the job result's passive ±50% summary | |
+| 7 | `winPct` of the saved 720-day file again | reread, already in turn 3 |
+| 8 | the same `run_backtest` again | refused by the loop: repeated call |
+| 9 | the job result's window count | |
+
+> I didn't need a new run for the 720-day request: a saved 720-day result already exists (30-day windows, 15-day step,
+> 47 windows). Passive ±50% against HODL 50/50 per window: mean -0.30%, median +0.20%, beat HODL in 63.8% of windows,
+> worst -7.76%, best +1.30%. [...] I also ran a fresh job. The job tool only offers the 365-day history, not 720 days,
+> so it is a different dataset. Over 23 windows, passive ±50% averaged +0.28%, won 73.9% of windows, and its worst
+> window was -0.53%. Those figures are not the same run as the 720-day ones.
+
+- 16 dataRefs, all verified, no citation. The answer labels the 365-day job as a different dataset, but running it
+  was not asked for: the counter of unneeded jobs records it, the judge's rubric does not.
+
+### The owner's interactive runs
+
+On 12 Nov, from about 10:14 UTC, the owner ran one question three times at the terminal, answering the approval
+prompt himself: "What does the passive ±50% strategy look like on Arbitrum WETH/USDC 0.30% with 25-day walk-forward
+windows and a 10-day step?" No saved result has 25-day windows, so the model asked for the job each time.
+
+1. **Approved, then interrupted.** The owner stopped the CLI with Ctrl+C after the job had written three windows. It
+   left a lock file with a dead process id and a job directory without a result. The next run removed the stale lock
+   by itself. The follow-up check found that a kill sent to the agent process alone (not a terminal's Ctrl+C, which
+   reaches the whole group) could leave the job running; that was fixed with the process group kill above.
+2. **Declined.** The model got "the owner declined job ...; do not ask for it again, answer from the saved results"
+   and did not ask again. It read the saved Arbitrum 0.30% results (30, 45 and 60-day windows), searched the journal,
+   and answered that no saved run matches 25 days and a 10-day step and that the job was declined, then gave the saved
+   45-day and 60-day results as other settings, with 11 verified dataRefs and a verified journal citation. Step limit
+   after 10 turns, $0.17.
+3. **Approved.** The job ran 86.4 s (35 windows) with saved results unchanged; the model read the result and answered
+   with verified dataRefs. In turn 9 it asked for the same job again; the loop refused the repeat. Step limit after 10
+   turns, $0.06.
 
 ## Cost and latency
 
-| item | cost (USD) |
-|---|---|
-| contexts, Sonnet, 957 chunks (incl. regenerating rejected ones) | 8.29 |
-| contexts, Haiku run 1 | 0.51 |
-| contexts, Haiku run 2 | 0.42 |
-| 20-chunk samples for the model choice (both models) | 0.39 |
-| Polish query translation, 34 questions (Sonnet) | 0.05 |
-| answers, k=5 and k=10 plus the injection probe (Sonnet, step 1.8) | 1.65 |
-| answers, second k=5 run plus the probe (Sonnet, step 1.9) | 0.60 |
-| judge, 102 answers (Opus 5.5, step 1.9) | 1.58 |
-| **total, steps 1.7 to 1.9** | **13.49** |
-| judge, 204 local answers (Opus 5.5, step 1.11); local generation itself costs nothing | 3.18 |
-| judge, 204 tuning answers (Opus 5.5, step 1.12) | 3.17 |
+| item | cost (USD) | as first reported |
+|---|---|---|
+| contexts, Sonnet, 957 chunks (incl. regenerating rejected ones) | 6.76 | 8.29 |
+| contexts, Haiku run 1 | 0.51 | |
+| contexts, Haiku run 2 | 0.42 | |
+| 20-chunk samples for the model choice (both models) | 0.38 | 0.39 |
+| Polish query translation, 34 questions (Sonnet) | 0.05 | |
+| answers, k=5 and k=10 plus the injection probe (Sonnet, step 1.8) | 1.65 | |
+| answers, second k=5 run plus the probe (Sonnet, step 1.9) | 0.60 | |
+| judge, 102 answers (Opus 5.5, step 1.9) | 1.58 | |
+| **total, steps 1.7 to 1.9** | **11.94** | 13.49 |
+| judge, 204 local answers (Opus 5.5, step 1.11); local generation itself costs nothing | 3.18 | |
+| judge, 204 tuning answers (Opus 5.5, step 1.12) | 3.17 | |
+| agent, manual questions and injection probe (step 2.2) | 0.60 | 0.68 |
+| agent, manual job run and job probe (step 2.3) | 0.33 | 0.37 |
+| agent, the owner's three interactive job runs | 0.24 | not reported |
+| agent evaluation, five runs of 18 tasks (step 2.4) | 14.34 | 15.75 |
+| judge, 90 agent answers (Opus 5.5, step 2.4) | 1.71 | |
+| **total, all steps** | **35.51** | about 39 |
 
-Real usage from the API's usage fields. In the context runs 89% of input tokens were cache reads. Claude's tokenizer
+Real usage from the API's usage fields. In the context runs 89% of input tokens were cache reads.
+
+**Billing check (16 Nov).** The owner's Console showed $35.74 for November and a 91% cache hit rate, against about $39
+in the step reports. The difference was a price: `ai/context/pricing.ts` charged Sonnet 5.5 cache reads at $0.20 per
+million tokens, and the pricing page lists $0.10 (0.05 times the input price); the Opus and Haiku prices were right.
+Every Sonnet cost with cache reads was overstated: the Sonnet contexts and the agent. The price is fixed in code, and
+the table above is recomputed from the saved token usage; the saved result files keep the cost recorded at the time.
+Recomputed, all saved usage comes to $35.51, $0.23 (0.6%) under the Console. That remainder is not in any saved file;
+known unsaved calls are the live `npm run ask` checks of step 1.10 and development calls. The cache hit rate matches
+the saved usage: cache reads over cache reads plus uncached input, 60.9 / (60.9 + 5.7) million tokens, is 91%. Claude's tokenizer
 counts this text at about 1.4 times the estimate tuned for `bge-m3`, so the hard spend caps use a 2x margin. A full
 context run takes about 8 minutes; embedding the whole corpus about 23 s. Generation at k=10 cost $1.049 for 34
 answers (about $0.03 each), median 4.1 s.
@@ -455,7 +737,7 @@ owner questioned it. A pooled review cannot add evidence that no run retrieved, 
   step 1.7 then attacked.
 - **The stronger model would write better contexts.** Sonnet was run as the main contextual variant. On v1.3 Haiku run
   1 scored 77% recall@10 against Sonnet's 69%; on v1.4 Sonnet scored 81% against 77%. Both gaps are inside the
-  run-to-run spread, so neither model is shown to be better, and the Haiku run cost $0.51 against $8.29.
+  run-to-run spread, so neither model is shown to be better, and the Haiku run cost $0.51 against $6.76.
 - **The date bugs looked like a cause of misses.** Fixed in BM25 and measured: no question's first hit changes.
 - **"A confident but wrong answer" (CC-Mac, step 1.8 report).** The k=10 answer to dated-05 was called wrong before
   judging. The owner, grading blind, rated it partially correct; the judge rated it incorrect. Calling it in advance
@@ -533,6 +815,35 @@ reference answer against the sources found these errors; they are a reason this 
 
 ## Limitations and open points
 
+- **The agent rarely stops by itself.** Only 6 to 8 of 18 tasks per run end with a normal answer; over all 90 answers,
+  34 answered, 9 ended after a repeated call, 21 at the step limit and 26 on the spend guard. The limits do the
+  stopping, and prompt B's stopping sentence did not change that.
+- **The task set does not separate the variants.** Correctness is at the ceiling (16 to 17 of 18 correct, none
+  incorrect, in every run), so a better variant could not show as more correct answers.
+- **The judge scores content, not actions.** The one disagreement with the owner (an unrequested 365-day job in p-02)
+  is outside the 1.9 rubric; only the unneeded-job counter sees it.
+- **Faithfulness does not discriminate.** 87 of 90 answers are partly supported, and all six blind items were partly
+  supported for both the owner and the judge. The owner's rule (supported only when every claim is covered) and the
+  judge agree, but on a scale that barely moves.
+- **The spend guard fires early.** Before each tool turn it keeps room for the next turn and a final turn, each priced
+  at the full 8 000 output tokens, with new text as cache writes and, in job tasks, the whole history as a cache write
+  (as if the cache had expired during the job). 26 of 90 runs stopped on it, while no task cost more than $0.32 as
+  recorded ($0.29 at the corrected price) of the $0.50 cap. Its estimates were also made with the overstated Sonnet
+  cache-read price.
+- **C is a single run**, so the effort comparison has no spread of its own.
+- **The reread hypothesis is open.** Rereads whose path is later used in a dataRef (16 and 6 in A, 4 and 5 in B) are
+  consistent with "the model rereads a field to get a path to cite", but the difference is inside A's spread.
+- **Agent tuning stops here.** No further prompt revisions on these 18 tasks: that would tune on the measurement set.
+- **Future directions, not built:** a stopping rule in the loop code instead of the prompt; a harder task set; a spend
+  guard priced from measured cache rates; the same agent with a local model through Ollama.
+- **Agent jobs (step 2.3).** The input data of every job (swap caches, funding series) exists only on the owner's Mac,
+  in the gitignored `data/` directory; it is not in the repository or in tag `journal-final`, so a reader of the repo
+  cannot run `run_backtest`: only the saved results (`npm run ai:restore-results`) work everywhere. 720-day jobs are out
+  of scope: their swap caches are gone and refetching them needs RPC keys and hours of downloads. The allowlist holds
+  only the five pools whose walk-forward was fast enough when measured (39 to 154 s); the four slowest, among them the
+  main Base and Arbitrum WETH/USDC 0.05% pools, are left out. A job runs today's code: re-running the canonical 45-day
+  Base WETH/USDC 0.30% walk-forward gives the same strategies and win rates as the saved `-kanon` file but slightly
+  different means (passive ±50%: -0.736 against -0.707), because the saved file came from an older engine version.
 - **Local generator tuning (step 1.12).** The variants were tuned and measured on the same 34 questions, with no
   held-out set, so the P prompt's gain may be smaller on new questions; the prompt was written once, before any result,
   to limit that. Thinking was off in every tuning run; all at 250 W; P and L needed a larger `num_ctx` than S.

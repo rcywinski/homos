@@ -1,0 +1,18 @@
+{
+  "procedure": [
+    "Graded by the owner on 16 Nov 2026 without opening the key or the judge file.",
+    "The analysis session (Fable 5.2) did the mechanical part for each item: which reference points the answer contains, and which numbers and claims have an evidence line. The owner chose both grades himself; the analysis session suggested no grades. This differs from 1.9, where the owner compared the numbers himself: he declined to check percentages one by one.",
+    "Faithfulness rule, stated by the owner at B02 and kept for all six: supported only when every claim is covered. At B05 he first leaned to supported, was shown that B01 to B04 used the stricter rule, and chose partly_supported for consistency. All six faithfulness grades are partly_supported, so the sample calibrates correctness more than faithfulness.",
+    "At B01 the owner lowered correctness because the agent ran a 365-day job nobody asked for.",
+    "Leak: B06 shows a legend citation (\"legend of ...\"), and only variant B is told legends are citable. The analysis session's earlier check missed it: it searched for \"legend:\" while the file says \"legend of\"."
+  ],
+  "revisions": [{ "label": "B05", "field": "faithfulness", "from": "supported (leaning, not written)", "to": "partly_supported" }],
+  "gloss": {
+    "B01": "The 365-day job should not have been run: it gives completely different results from the 720 days asked about. Some details (window counts per regime, 0% and 100% winners, the 15-day step, the 65% threshold) have no evidence line.",
+    "B02": "Extra material beyond the question does no harm. Three things are not covered: the variants with immediate rebalancing, maxL as the cautious model in the journal, and the names of the next two strategies. Owner's rule: supported only with 100% coverage.",
+    "B03": "The main claim is covered by quotes. Not covered: the test scope, the 3.8% benchmark, and the 42.5% figure, which the agent did not read from the file.",
+    "B04": "The core is covered by a quote from the decision table. Not covered: ^1.4.0, the hard error, macOS versions up to 1.4.0, the npm registry check and the date.",
+    "B05": "12 numbers confirmed. Not covered: the values from the file without \"kanon\" (-2.58, +1.16), the window counts and the reference to ALGORITHM.md. The owner considered supported (side details) and kept the 100% rule for consistency with B01 to B04.",
+    "B06": "6 numbers and two quotes confirmed. Three numbers (+0.09, -15.68, -8.02) the agent took from the job printout without reading the file."
+  }
+}

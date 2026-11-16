@@ -121,7 +121,9 @@ Since November 2026 the repo has a retrieval layer (`ai/`) that answers English 
 the Polish journal and the English docs. Every answer carries verbatim quotes that are checked against the source
 and printed as `file:lines`. Hybrid search (local `bge-m3` vectors plus BM25 on a Polish rendering of the
 question), a local cross-encoder reranker, short English context per chunk written by Claude Haiku 5.5, answers by
-Claude Sonnet 5.5, quality judged by Claude Opus 5.5.
+Claude Sonnet 5.5, quality judged by Claude Opus 5.5. A second part is a tool-using agent: Sonnet 5.5 searches the
+journal, reads the decision log and the saved backtest results, and may run one allowlisted backtest that the owner
+confirms; every backtest number in its answer carries the path it was read from, checked mechanically.
 
 Measured on a golden set of 34 questions (26 with evidence in the sources, 8 with a false premise or no answer):
 
@@ -136,10 +138,17 @@ Measured on a golden set of 34 questions (26 with evidence in the sources, 8 wit
 | Judge against the owner's blind grades, correctness | 5 of 8 exact, 8 of 8 within one step |
 | Cost and time per answer | about $0.03, median 4.1 s |
 | Local generator instead of Sonnet (`qwen3.8:27b` on the RTX 3090, same chunks), judge correct / partially / incorrect | 13 / 16 / 5 and 12 / 15 / 7 of 34 in two runs, against 20 / 12 / 2; with a prompt written for local models 16 / 13 / 5 and 16 / 11 / 7 (tuned and measured on the same 34 questions) |
+| Agent (Sonnet 5.5 with read-only tools and allowlisted backtest jobs), 18 tasks, five runs: judge correct / partially / incorrect per run | 16 to 17 / 1 to 2 / 0; every backtest number checked against the path it was read from; only 6 to 8 of 18 tasks end without hitting a limit; about $0.16 per task |
 
 ```bash
 # needs ANTHROPIC_API_KEY, INFERENCE_URL and RERANK_URL in .env, and the inference box (inference/README.md)
 npm run ask -- "Why did the live product stay wide?"
+
+# the agent reads saved backtest results: restore the 72 result files from tag journal-final first (not committed)
+npm run ai:restore-results
+npm run agent:ask -- "Did passive ±50% on Base cbBTC/WETH 0.05% pass the soundness criterion on 720 days?"
+# with --jobs it may run one allowlisted backtest, confirmed at the terminal (needs the data/ caches, owner's Mac only)
+npm run agent:ask -- "Run a walk-forward on Optimism WETH/USDC 0.30% with 20-day windows" --jobs
 ```
 
 ![npm run ask answering one question, every citation verified](docs/media/ask.gif)

@@ -1,0 +1,10 @@
+{
+  "note": "Development questions used while building steps 2.2 and 2.3; excluded from the 2.4 evaluation set.",
+  "questions": [
+    "Why did the live product stay wide? (2.2 manual a)",
+    "Volatility timing, passive ±50% over all windows (2.2 manual b)",
+    "Passive ±50% on Base WETH/USDC 0.05%, 45-day walk-forward, two regimes and why the gate (2.2 manual c)",
+    "Passive ±50% on Optimism WETH/USDC 0.30% with 20-day windows (2.3 manual run)",
+    "Passive ±50% on Arbitrum WETH/USDC 0.30% with 25-day windows and a 10-day step (owner interactive runs, 2.3)"
+  ]
+}

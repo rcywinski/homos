@@ -1,6 +1,11 @@
 /**
- * Prices in USD per million tokens, Claude API, as listed on 10 Nov 2026 (claude-api reference, models table).
- * Cache writes (5-minute TTL) cost 1.25x the input price, cache reads 0.1x (Sonnet 5.5: $0.20 as listed).
+ * Prices in USD per million tokens, Claude API. Checked on 16 Nov 2026 against the pricing page
+ * (platform.claude.com/docs/en/about-claude/pricing). Cache writes (5-minute TTL) cost 1.25x the input price. Cache
+ * reads cost 0.05x on Sonnet 5.5 ($0.10) and Opus 5.5 ($0.20), 0.1x on Haiku 5.5 ($0.01).
+ * Correction, 16 Nov 2026: Sonnet 5.5 cache reads were priced at $0.20 until then, twice the real price, so every
+ * Sonnet cost recorded before that date with cache reads (contexts in step 1.7, the agent in steps 2.2 to 2.4) is
+ * overstated by cacheRead tokens x $0.10 per million. Recorded files are kept as they were; the write-up gives the
+ * corrected figures (ai/DECISIONS.md, 16 Nov 2026).
  * The Haiku 5.5 cache multipliers are the general ones, not separately listed: treat the Haiku cost as an estimate.
  * Haiku 5.5 doubles in price above a 100k-token prompt; our prompts stay far below that (checked per request).
  */
@@ -17,8 +22,8 @@ export interface Price {
 
 export const MODELS = {
   haiku: { id: 'claude-haiku-5-5', price: { input: 0.1, output: 0.5, cacheWrite: 0.125, cacheRead: 0.01, maxPromptTokens: 100_000 } },
-  sonnet: { id: 'claude-sonnet-5-5', price: { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.2 } },
-  // Opus 5.5: $4 / $20, cache reads 0.05x ($0.20) as listed; cache writes are not used by the judge.
+  sonnet: { id: 'claude-sonnet-5-5', price: { input: 2, output: 10, cacheWrite: 2.5, cacheRead: 0.1 } },
+  // Opus 5.5: $4 / $20, cache reads 0.05x ($0.20); cache writes are not used by the judge.
   opus: { id: 'claude-opus-5-5', price: { input: 4, output: 20, cacheWrite: 5, cacheRead: 0.2 } },
 } as const satisfies Record<string, { id: string; price: Price }>;
 

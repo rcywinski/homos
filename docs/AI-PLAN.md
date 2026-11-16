@@ -238,15 +238,52 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
 
 ## Phase 2: tool-using agent
 
-- [ ] NEXT **2.1 Tool definitions.** `ai/agent/tools.ts`: `search_journal(query)` (phase 1 retrieval), `read_decision_log()`, `read_backtest_results(name)`
+- [x] 2026-11-12 **2.1 Tool definitions.** `ai/agent/tools.ts`: `search_journal(query)` (phase 1 retrieval), `read_decision_log()`, `read_backtest_results(name)`
   (JSON in `backtest/results/`, restored from `journal-final` for the e8 and walk-forward runs), `list_backtest_configs()`.
   Each tool has a JSON schema, a pure handler and a unit test.
-- [ ] **2.2 Agentic loop.** `ai/agent/run.ts`: Anthropic SDK tool use, max 10 steps, every tool call and result logged to `ai/agent/logs/` (gitignored),
+  Done: four read-only tools, own schema validator (anything outside the schema is rejected), `read_backtest_results`
+  accepts only names listed by `list_backtest_configs` and an optional `path` (array of keys, own properties only).
+  Caps: 12 000 characters for results and the decision log (a larger result comes back as an overview with a marker);
+  `search_journal` 36 000, whole chunks only (measured: longest k=10 result on the golden set 30 918, largest chunk
+  block 3 589, so k=10 is never cut). Errors return as tool results; results are wrapped in `<tool_data>` and are data,
+  never instructions. Result files restored locally, not committed (owner decision): `npm run ai:restore-results`
+  extracts the 72 JSON files from tag `journal-final` into the gitignored `backtest/results/`. Addition (owner): every
+  `read_backtest_results` result starts with a legend of the file family's fields (meaning, unit, defining script, in
+  `ai/agent/legend.ts`); fields not documented in the repository are marked as such. 95 offline tests.
+- [x] 2026-11-12 **2.2 Agentic loop.** `ai/agent/run.ts`: Anthropic SDK tool use, max 10 steps, every tool call and result logged to `ai/agent/logs/` (gitignored),
   final answer with citations reused from 1.8. `npm run agent:ask -- "Would FlatWide have passed the gate with a 3 percent narrowing?"`.
-- [ ] **2.3 Whitelisted job execution.** `run_backtest(config)` drops a job file for `scripts/agent-runner.ts` and polls `.agent/status.json`.
-  The agent can only choose a whitelisted script, never a command. Document this as the security boundary.
-- [ ] **2.4 Agent evaluation and write-up.** 10 multi-step questions with expected tool sequences; measure whether the right tools were called and the
-  answer cites the right evidence. Add a section to `docs/AI-RAG.md`, three transcripts, README update. Merge to `main`.
+  Done: own loop behind an `AgentModel` interface ("a turn with tools" or "a final turn without tools"); everything
+  Anthropic-specific (thinking blocks passed back unchanged, `tool_choice` none for the final turn, strict tool schemas,
+  structured output, cache markers) is inside `AnthropicAgentModel`. Sonnet 5.5, effort medium; at most 10 turns, the
+  last one final; a repeated identical call is not run, the third forces the final turn; $0.50 cap per question,
+  including the query translation inside search_journal. Final answer: phase 1 citations through verifyCitation, plus
+  `dataRefs` for backtest numbers, checked against the calls of the run. CLI is `npm run agent -- "question"`. Injection
+  probe: 2/2 passed (`ai/eval/results/2026-11-12-agent-injection-probe.md`). Manual questions with traces and the phase 1
+  comparison: `ai/eval/results/2026-11-12-agent-manual-questions.md`. Step spend $0.68 of the $3 cap.
+  CLI renamed in 2.3 to `npm run agent:ask`: the 2.2 entry had shadowed the old `npm run agent` (scripts/agent-runner.ts).
+- [x] 2026-11-12 **2.3 Whitelisted job execution.** `run_backtest(job, args)` runs one allowlisted job in-process (owner
+  decision: not through the old `.agent/` queue of `scripts/agent-runner.ts`, which takes free arguments). The agent can
+  only choose a job and validated values, never a command. Document this as the security boundary.
+  Done: jobs `walkforward` (5 pools measured fast enough, windowDays 15 to 90, stepDays 5 to 30, ratio at most 6) and
+  `funding_carry` (4 series, optional benchApr); spawn with an argument array, no shell, minimal environment, 15 and 2
+  minute timeouts, one job at a time (lock file), 4 000-character tails as tool data, 5 MB log cap, output in
+  `ai/agent/runs/<jobId>/` via `HOMOS_RESULTS_DIR` (default path unchanged when unset), saved results hashed before and
+  after. Owner confirms each job at the terminal; `--yes-jobs` for unattended runs; `run_backtest` exists only with
+  `--jobs`, so the 2.2 prompt and tools stay the 2.4 baseline. Job results list as `run-<jobId>-<name>` and verify like
+  any other. Thinking summaries and reasoning-token counts logged from 2.3 on. Job injection probe 2/2
+  (`ai/eval/results/2026-11-12-agent-jobs-probe.md`); manual run with a real job
+  (`ai/eval/results/2026-11-12-agent-job-manual-run.md`). Step spend $0.37 of the $2 cap. `npm run agent` restored for
+  the old runner; the agent CLI is `npm run agent:ask`.
+- [x] 2026-11-16 **2.4 Agent evaluation and write-up.** 10 multi-step questions with expected tool sequences; measure whether the right tools were called and the
+  answer cites the right evidence. Add a section to `docs/AI-RAG.md`, three transcripts, README update
+  (mention `npm run ai:restore-results` in the README AI section, owner decision in 2.1). Merge to `main`.
+  Done: 18 tasks in 6 categories (`ai/eval/agent-tasks.jsonl`); variants A (2.2 prompt, two runs), B (plus five
+  sentences, two runs), C (effort high, one run); 1.9 Opus judge, blind; owner's blind grading of 6 answers
+  (correctness 5/6 exact, 6/6 within one step). Correctness 16 to 17 of 18 in every run; B halves redundant calls and
+  adds legend citations at about 20% more cost; only 6 to 8 of 18 tasks end without a limit. Owner: prompt A stays the
+  default, no further revisions on this set. Report `ai/eval/results/2026-11-16-agent-eval-report.md`; write-up in
+  `docs/AI-RAG.md` ("Agent with tools"). Billing check found Sonnet cache reads priced at twice the real rate; fixed,
+  figures corrected. Step spend $16.05 of the $25 cap (corrected price). Merged to `main` on 16 Nov.
 
 ## Phase 3: optional, only if time allows
 

@@ -1,0 +1,52 @@
+{
+  "date": "2026-11-12T10:46:32.117Z",
+  "note": "Each job run twice through SpawnRunner on the owner's Mac; the first output is the reference.",
+  "runs": [
+    {
+      "task": "t-01",
+      "args": {
+        "job": "walkforward",
+        "pool": "base-cbbtc-weth-005-365d",
+        "windowDays": 40,
+        "stepDays": 10
+      },
+      "output": "walkforward-base-cbbtc-weth-005-365d-40d.json",
+      "seconds": [
+        184.1,
+        178.8
+      ],
+      "identical": true
+    },
+    {
+      "task": "t-02",
+      "args": {
+        "job": "walkforward",
+        "pool": "arbitrum-weth-usdc-030-365d",
+        "windowDays": 35,
+        "stepDays": 7
+      },
+      "output": "walkforward-arbitrum-weth-usdc-030-365d-35d.json",
+      "seconds": [
+        159.7,
+        160.2
+      ],
+      "identical": true
+    },
+    {
+      "task": "t-03",
+      "args": {
+        "job": "funding_carry",
+        "series": "HL-BTC",
+        "windowDays": 60,
+        "stepDays": 15,
+        "benchApr": 3.8
+      },
+      "output": "funding-carry-HL-BTC-60d.json",
+      "seconds": [
+        0.8,
+        0.6
+      ],
+      "identical": true
+    }
+  ]
+}
