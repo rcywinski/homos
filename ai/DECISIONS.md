@@ -468,3 +468,32 @@ stays one visible merge on `main`).
 **Open.** Phase 3 is optional; nothing is marked NEXT in `docs/AI-PLAN.md`.
 
 **Review questions.** None.
+
+---
+
+## 2026-11-16, phase 4 planned: public showcase app with chat (approved by the owner)
+
+**Decision.** A second CC-Mac session (CC-App) plans phase 4 in a separate worktree (`../HOMOS-app`,
+branch `app-chat` off `main`) so that it never touches the main checkout while phase 3 runs there. The plan is in
+`ai/APP-PLAN.md`, not `docs/`, because the corpus loader indexes every `docs/*.md` except two named files. Main
+design choices: the chat backend runs on the box behind an outbound tunnel; guests always get retrieval variant
+`local`, because variant `chosen` translates each question with a live Sonnet call on the owner's key; the backend
+refuses to start with `ANTHROPIC_API_KEY` set; a guest's own key is used only from the guest's browser
+(`dangerouslyAllowBrowser`), with retrieval from our server and verification in the browser; answers are sent whole
+after verification, with only status events streamed; the static comparison and archive work when the box is off.
+
+**Alternatives.** Backend on the Mac (not on 24/7) or on a cloud server (would expose the model ports). A server-side
+pass-through for guest keys (the key would reach our process). Token-by-token streaming (would show unverified text).
+Plan in `docs/` (would change the corpus hash).
+
+**Evidence.** Reconnaissance in `ai/APP-PLAN.md` section 1; Claude API documentation on browser access checked on
+16 Nov 2026 (section 2). The live ledger and paper ledger exist only in the box's `.bot/`.
+
+**Owner decisions on approval.** Backend in `ai/serve/`, front end in `showcase/`; a display-only filter masks LAN and VPN addresses (corpus unchanged); the comparison shows Sonnet k=10 next to the served local configuration (step 3.2) with other variants collapsed and single runs labelled; the served model and prompt are configuration; failed verification is marked, never hidden; out-of-scope refusal and no trading advice; no wallet or signing library in the front end, enforced by a test; visitor IPs hashed with a daily salt; guest-key mode moved after the first LAN run. Recorded in `ai/APP-PLAN.md` section 5.
+
+**Open.** The UI build was not checked
+(no `node_modules` in the worktree). This entry is appended on `app-chat`, while `ai-layer` appends phase 3 entries
+to the same file; the merge will need a manual join at the end of the file.
+
+**Review questions.** Is running a public backend on a machine in the owner's home LAN acceptable with a separate
+user and a tunnel, or should it move off the LAN before stage B?

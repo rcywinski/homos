@@ -1,0 +1,256 @@
+# Phase 4: public showcase app with chat
+
+Plan for reviving the HOMOS app as a showcase: archival data, a mock wallet and a chat window over the project
+history. Written on 16 Nov 2026 by the CC-App session (a second CC-Mac session working in the worktree
+`../HOMOS-app` on branch `app-chat`) while phase 3 runs on the GPU box from the main checkout.
+
+This file lives under `ai/`, not `docs/`, on purpose: `ai/corpus/load.ts` indexes every `docs/*.md` except
+`AI-PLAN.md` and `AI-RAG.md`, so a file in `docs/` would change the corpus hash. Files under `ai/` are never loaded.
+
+Step state uses the same markers as `docs/AI-PLAN.md`: `[ ]`, `[x]`, `NEXT`. Sizes: **S** fits in one sitting,
+**M** two or three, **L** needs a split before it starts. **Fake** means the step can be built and tested with the
+fake models (`ai/embed/fake.ts`, `ai/rerank/fake.ts`, `ai/answer/fake.ts`) while the box is busy.
+
+---
+
+## 1. Reconnaissance (16 Nov 2026)
+
+### 1.1 The app today
+
+- **UI** (`src/`): one screen, `src/App.tsx` wraps `MorningCockpit` in wagmi plus ConnectKit. Panels: positions,
+  paper trading, rankings, closed positions, telemetry. Almost all content comes from the bot API
+  (`src/hooks/useBotApi.ts`, default `http://localhost:8787`, base URL and Bearer token typed into a settings form and
+  kept in localStorage). Without the bot API the shell renders but the cockpit is empty.
+- **The UI signs real transactions** through the user's wallet: rebalance, rotate, GMX hedge, open and close
+  (`src/hooks/useCockpitActions.ts`, `useRebalanceExecution.ts`, `useRotateExecution.ts`, `useHedgeExecution.ts`).
+  None of this may reach a public build.
+- **Build**: not checked in this step (no `node_modules` in the worktree; the main checkout is off limits while
+  phase 3 runs). Commit `021d445` records a working production build. Checked in step 4.2.
+- **Bot API** (`bot/server.ts`, Express, port 8787): read endpoints over `.bot/` files (state, history, ranking,
+  paper, ledger, closed positions, results) plus one write endpoint (`POST /api/proposals/:id/dismiss`). CORS is `*`
+  and auth is off when `BOT_API_TOKEN` is unset. **Not exposed in phase 4**; the showcase reads exported files instead.
+- **Bot** (`bot/observer.ts`): propose-only, reads chain state with `eth_call`, holds no private key. Telegram is
+  optional. Paper trading (`bot/paper.ts`) runs a virtual $10k per pool on live data against a 50/50 HODL benchmark.
+- **Removed for the case study** (`021d445`, `886b0ab`, `f2db0d7`): root working notes (later restored under
+  `journal/` in `570217c`), old docs, `server.js`, the agent queue workflow, morning reports (restored), committed
+  backtest results, a hardcoded watch address, LAN and VPN addresses in docs, the old `WalletConnect.jsx`.
+
+### 1.2 Archival data
+
+| Data | Where | Period | Public? |
+|---|---|---|---|
+| Morning reports, 37 | `journal/reports/` (committed) | 18 Aug to 23 Sep, live capital | Yes, already public |
+| Journal, decisions, tasks | `journal/`, `docs/` (committed) | whole project | Yes, already public |
+| Backtest results, 72 files | tag `journal-final`, local `backtest/results/` | simulated | Yes (owner chose not to commit them, step 2.1) |
+| Saved answers and judge verdicts for the 34 golden questions | `ai/eval/results/` (committed) | Nov 2026 | Yes |
+| Observer snapshots, proposals | local `.bot/` in the main checkout (820 KB) | 10 to 25 Aug, before live capital | Yes, after review |
+| Market data (swaps, prices, funding, vaults) | local `data/` (6.4 GB) | 365 days | Too large; aggregates only |
+| **Live ledger** (`tx-ledger.ndjson`, `ledger-state.json`, `closed-positions.json`, `tx-costs.json`) | `.bot/` on the Windows box only | live period | Yes by owner decision (address, amounts) |
+| **Paper trading** (`paper-state.json`, `paper-events.ndjson`, `paper-history.ndjson`) | `.bot/` on the Windows box only | paper period | Yes |
+
+The structured live ledger and the paper ledger are **not on the Mac**. `deploy/backup.ps1` copies only `*.json`, so
+the `.ndjson` files may exist only in the box's `.bot/`. `.gitignore` mentions `.bot-live-backup/`, but no such
+directory exists in the main checkout. Recovering these files is step 4.1b (CC-Win, after phase 3).
+
+**Sensitive content found**: no keys, mnemonics, tokens or emails in HEAD, the tag or the local folders. The only
+leftover is internal network detail: the LAN address of the box and the VPN subnet appear in `journal/CONTEXT.md`,
+`journal/TASKS-WINDOWS.md`, `inference/README.md`, `docs/AI-PLAN.md`, `.env.example`, `CLAUDE.md` and two `ai/` files.
+They are private ranges and already public in the repo, but the chat can quote them from the journal. Options for
+the owner: accept, or redact at display time only (a display filter, so the corpus hash does not change).
+
+### 1.3 Retrieval facts that shape the design
+
+- The retrieval chosen in phase 1 (`AnswerRetrieval`, variant `chosen`) translates every new question into Polish
+  with a **live Sonnet call** (`ai/answer/retrieval.ts`, `ensureTranslated`). That would spend the owner's key on
+  every guest question, so guests always get variant `local` (step 1.11, variant B): embedding plus BM25 plus
+  rerank, no cloud step. Phase 1 measured it at about the same level as the chosen variant (one better run, not
+  repeated).
+- Both the embedder (`bge-m3` on Ollama, port 11434) and the reranker (port 11435) run on the box. **Without the box
+  there is no dense retrieval**; only BM25 works without the GPU.
+- The generator already returns structured output: `coverage` is an enum (`full`, `partial`, `none`) and every
+  citation is `{ chunkId, quote }`, checked mechanically against the chunk text (`ai/answer/verify.ts`). The agent's
+  `dataRefs` check (step 2.2) does the same for numbers.
+- The indexes (`ai/index/`, 113 MB) are gitignored and exist only in the main checkout. The worktree gets a copy when
+  the server needs them (step 4.8), never a rebuild while phase 3 runs.
+
+## 2. Guest's own Anthropic key: what the documentation says
+
+Checked on 16 Nov 2026 in the Claude API documentation (Authentication, "Browser-based applications", and the
+TypeScript SDK, "Browser usage"):
+
+- Direct calls from a browser are **supported**. The API accepts a cross-origin request only with the header
+  `anthropic-dangerous-direct-browser-access: true`; the TypeScript SDK sends it when `dangerouslyAllowBrowser: true`.
+- The documentation warns against it for the site owner's key, because anyone can read a key embedded in page code.
+  That warning does not apply to a guest typing their own key into their own browser: the key never leaves the
+  guest's machine except to `api.anthropic.com`.
+- Organizations with zero data retention or the Compliance API enabled **cannot** call the API from a browser; the
+  API answers 401 with a message starting `CORS requests are not allowed for this Organization`. The UI must show
+  this case plainly.
+- The documentation recommends short-lived keys: a key can be created with an expiry of 3 hours, 1 day, 7 days or 30
+  days. The UI asks guests to use such a key.
+
+**Design**: the browser asks our server for retrieval only (`POST /api/retrieve`: question in, chunk texts out; the
+corpus is public anyway), then calls Anthropic itself with the guest's key, then runs the same citation verifier in
+the browser (the verifier is pure TypeScript and is bundled). Our server never receives the key. Protections: the key
+is kept in memory (optionally `sessionStorage` on request, never `localStorage`); a Content Security Policy with
+`connect-src 'self' https://api.anthropic.com` and no third-party scripts, so injected script cannot send the key
+anywhere else; a test asserts that no request to our origin carries an `x-api-key` or `Authorization` header.
+
+**Fallback if browser calls ever stop working**: a pass-through on our server that forwards the key per request
+without storing or logging it. Rejected as the default: the key would then reach our process, which is the thing to
+avoid.
+
+## 3. Architecture for stage A
+
+```
+ visitor browser
+   |  static site (always on): comparison, archive, mock wallet, chat UI
+   |  /api/* through the tunnel (only when the box is up)
+   v
+ Cloudflare Tunnel (outbound connection from the box, no open port on the router)
+   v
+ chat backend, Node + Express, on the box, bound to 127.0.0.1, unprivileged Windows user
+   |-- queue (one GPU job at a time) -> Ollama 127.0.0.1:11434 (generator, embedder)
+   |-- reranker 127.0.0.1:11435
+   |-- read-only copies: corpus, ai/index, exported archive JSON
+```
+
+**Where the backend runs.** On the box: it is on 24/7, Ollama and the reranker are local to it, and the tunnel makes
+only outbound connections. Alternatives: on the Mac (rejected: not on 24/7, and it would add a LAN hop for every
+call); on a cloud server (rejected: it would need the box's model ports reachable from the internet). The backend
+runs as its own non-admin Windows user, not `SYSTEM` like the inference tasks.
+
+**Static part separate from the box.** The comparison of the 34 golden questions, the archive and the mock wallet are
+static files built from committed data, so they work when the box is off. Hosting choice (Cloudflare Pages or served
+by the backend) is decided in step 4.9.
+
+**No owner key on the public path.** The backend refuses to start if `ANTHROPIC_API_KEY` is present in its
+environment, and the guest code path has no Anthropic client at all. Engines: `local` (the box) and `guest-key`
+(browser).
+
+**Queue.** One in-process FIFO in front of the GPU, concurrency 1, at most 5 waiting, at most one pending question
+per visitor. Each job has a deadline (start at 180 s, tuned from the phase 3 speed measurements). Retrieval for
+guest-key questions goes through the same queue, since embedding and rerank also use the GPU, but it is short.
+
+**Streaming.** Server-Sent Events with status only: `queued (position n, estimated wait)`, `retrieving`,
+`generating`, `verifying`, then the final verified answer in one event. The answer text is not streamed token by
+token: it is JSON that is verified after it is complete, and showing unverified text first would undo the
+verification marks. A visible progress line covers the wait.
+
+**Rate limits.** Visitor identity: a signed cookie plus the client IP from the tunnel header. Limits to start: 5
+questions per hour and 20 per day per visitor, 200 per day for the whole site, question length at most 500
+characters, single-turn questions (no chat history sent to the model in stage A). A Cloudflare rate rule in front as
+a second layer. All numbers in `.env`, documented in `.env.example`.
+
+**What the visitor sees.**
+
+| State | Shown |
+|---|---|
+| Box up, queue empty | Chat ready, engine "local model" |
+| Box up, queue full | "The local model is busy (5 questions waiting). Try again in a few minutes." Comparison still available |
+| Box off or tunnel down | Static site works, chat shows "The local model is offline", guest-key mode explains that it also needs the box for retrieval |
+| Visitor over limit | Remaining time until the next allowed question |
+| Guest key rejected | The API's message, including the CORS-for-this-organization case |
+
+**Hallucination control.**
+
+- Structured output with enums for every closed set: `coverage`, engine, verdict labels, source kinds.
+- `coverage: none` is rendered by the UI as a fixed "not in the data" text with the searched sources listed; the
+  model's own wording is not shown in that case.
+- Every quote is verified against its chunk; unverified quotes are shown struck through with a mark, never silently
+  dropped (the phase 1 rule).
+- Every number in the answer text is checked: it must appear in a verified quote or in a cited chunk, otherwise it is
+  marked "unverified number". For archive figures (positions, PnL) the model returns a reference
+  (`{ source, id, field }`) and the UI fills the value from the exported data, as `dataRefs` do in step 2.2.
+- Each answer shows its sources as links to the archive view of the chunk.
+
+## 4. Security review of the public surface
+
+**Exposed**: the static site; `GET /api/health` (up, busy, queue length only); `POST /api/ask` (local engine);
+`POST /api/retrieve` (chunks of the public corpus); the SSE status stream.
+
+**Not exposed**: Ollama and the reranker (stay on localhost and the LAN firewall rules); the bot API on 8787 (not
+started); `run_backtest` and every agent tool (stage A has no tools at all); `.env` and any Anthropic key; real wallet
+connection (the showcase bundle does not import wagmi, ConnectKit or any signing hook); the indexes as files; logs.
+
+**Prompt injection.**
+
+- The only untrusted input is the question. The corpus is fixed, written by the owner and already public; the
+  injection probes of step 2.2 passed.
+- No tools, no secrets and no other visitors' data in the model context, so a successful injection can only change
+  the text shown to the person who wrote it.
+- Answers are rendered as plain text through React (no HTML, no Markdown links or images), so model output cannot
+  load anything or run script.
+- No shareable answer links in stage A, so a crafted answer cannot be passed to someone else with the site's look.
+
+**Abuse.** Limits above; request body capped at 2 KB; deadline per job; output tokens capped; a daily global cap that
+closes the chat until the next day; questions logged locally with a hash of the visitor id (retention 30 days,
+stated on the page). The link is shared privately and never written to the repo; optional Cloudflare Access in front
+if the link leaks.
+
+**The box.** It sits on the owner's home LAN. The tunnel maps one local port only; the backend has read access to its
+own folder and write access to its log folder only; it does not run as `SYSTEM`; nothing on the public path can
+start a process. A compromise of the backend still lands on a home machine, which is the main residual risk and the
+reason for the separate user and the kill switch (stopping the tunnel service).
+
+## 5. Owner decisions (16 Nov 2026, plan approved)
+
+- **Layout**: chat backend in `ai/serve/`, showcase front end in `showcase/` at the repo root.
+- **Network addresses**: a display-only filter masks LAN and VPN addresses in quotes and answers. The corpus and its
+  hash do not change. The filter has its own tests.
+- **Comparison view**: two columns by default, Sonnet k=10 and the configuration the chat actually serves (fully
+  local retrieval with the local prompt, measured as step 3.2 on `ai-layer`; taken once committed). Every other
+  measured variant goes into a collapsed "more" section. A configuration with one run is labelled "single run".
+- **Served configuration**: model and prompt of the served engine are a configuration value, not code, because phase
+  3 may still change which local model is best.
+- **Verification marks**: a quote or number that fails verification is shown with a visible "not verified" mark,
+  never dropped and never shown as verified. Invalid structured output gives the visitor a plain failure message.
+- **Scope**: out-of-scope questions get a short refusal that says what the chat covers. No advice on what to buy or
+  how to trade. The page says that the strategy did not reliably beat holding.
+- **No wallet code**: the showcase front end imports no wallet or signing library; a test fails the build if one is
+  imported.
+- **Logs**: visitor IP addresses are never stored in clear; rate limiting uses a hash of the IP with a daily salt.
+- **Order**: guest-key mode moves after the first LAN run.
+
+## 6. Steps, stage A
+
+Order: 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8, 4.6, 4.9.
+
+- [x] **4.0** Reconnaissance and this plan. S.
+- [ ] NEXT **4.1** Showcase data export: a script that builds static JSON from committed results only: the 34 golden
+  questions with the Sonnet answers (k10) and the served local configuration (step 3.2 runs), their citations with
+  the verified flag, the judge verdicts, the other measured variants for the "more" section, run counts; plus the
+  morning report index. Display filter for network addresses with tests. Fake (no models). S.
+- [ ] **4.1b** [CC-Win, after phase 3] Copy the live ledger and paper files from the box's `.bot/` to the owner's
+  Mac (not to the repo), list them, check for anything sensitive, then decide what is exported. S.
+- [ ] **4.2** Showcase front end skeleton in `showcase/`: own webpack entry, comparison view (two columns, "more"
+  section, verdicts, verification marks), archive view, mock wallet panel (read-only), the "did not reliably beat
+  holding" notice, a test that fails on any wallet or signing import. Check that the existing UI still builds. Fake. M.
+- [ ] **4.3** Chat backend core in `ai/serve/`: `POST /api/ask` and `/api/retrieve` through the existing `Embedder`,
+  `Reranker` and `Generator` interfaces, variant `local` retrieval, served model and prompt from configuration,
+  verifier with number checks, response schema with enums, "not in the data", out-of-scope refusal, plain failure on
+  invalid output, display filter, startup refusal when `ANTHROPIC_API_KEY` is set. Tests with fake models. Fake. M.
+- [ ] **4.4** Queue, SSE status stream, rate limits (IP hashed with a daily salt), health and busy states. Tests with
+  a slow fake generator. Fake. M.
+- [ ] **4.5** Answer rendering: quote and number marks, coverage badge, source links, the states table above.
+  Fake. M.
+- [ ] **4.7** Security pass: headers and CSP, input limits, abuse script against a local run, injection probe against
+  the local model. Needs the box. M.
+- [ ] **4.8** First real run on the LAN only (no tunnel): copy indexes, CC-Win sets up the backend service under its
+  own user, owner tests from the Mac and a phone on the LAN. Needs the box. S.
+- [ ] **4.6** Guest-key mode: browser generator with `dangerouslyAllowBrowser`, verifier in the browser, CSP, the
+  no-key-to-our-origin test. Tested with a fake fetch; one real call only with a key the owner creates for it. M.
+- [ ] **4.9** Tunnel and private link, after a separate OK from the owner: Cloudflare Tunnel, static hosting choice,
+  optional Access, kill switch documented in `inference/README.md`. S.
+
+Steps 4.1 to 4.5 can be built while phase 3 holds the box. 4.7, 4.8, 4.6 and 4.9 wait until the owner says phase 3
+is finished.
+
+## 7. Stage B, later (outline only)
+
+- Paper trading on live data with virtual funds: `bot/paper.ts` restarted in a sandbox, read-only chain access,
+  no wallet.
+- Chat with read-only tools over current positions (same tool rules as step 2.1: own schema, size caps, results as
+  data).
+- Live data changes the risk: rate limits on chain reads, and positions shown with their timestamp.
+
