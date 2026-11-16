@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "test": "npm run typecheck && npm run test:math && npm run test:ai && npm run backtest:validate",
     "test:math": "tsx test/v3math.test.ts",
-    "test:ai": "tsx ai/corpus/split.test.ts && tsx ai/embed/embed.test.ts && tsx ai/eval/metrics.test.ts && tsx ai/store/store.test.ts && tsx ai/rerank/rerank.test.ts && tsx ai/context/context.test.ts && tsx ai/answer/answer.test.ts && tsx ai/judge/judge.test.ts && tsx ai/answer/local.test.ts && tsx ai/agent/tools.test.ts && tsx ai/agent/run.test.ts && tsx ai/agent/jobs.test.ts && tsx ai/eval/agent-eval.test.ts && tsx ai/serve/mask.test.ts && tsx ai/serve/export.test.ts",
+    "test:ai": "tsx ai/corpus/split.test.ts && tsx ai/embed/embed.test.ts && tsx ai/eval/metrics.test.ts && tsx ai/store/store.test.ts && tsx ai/rerank/rerank.test.ts && tsx ai/context/context.test.ts && tsx ai/answer/answer.test.ts && tsx ai/judge/judge.test.ts && tsx ai/answer/local.test.ts && tsx ai/agent/tools.test.ts && tsx ai/agent/run.test.ts && tsx ai/agent/jobs.test.ts && tsx ai/eval/agent-eval.test.ts && tsx ai/serve/mask.test.ts && tsx ai/serve/export.test.ts && tsx showcase/guard.test.ts",
     "backtest:validate": "tsx backtest/validate.ts",
     "backtest": "tsx backtest/run.ts",
     "backtest:selection": "tsx backtest/selection.ts",
@@ -62,7 +62,9 @@
     "ai:agent:judge": "tsx ai/eval/agent-judge.ts",
     "ai:agent:score": "tsx ai/eval/agent-score.ts",
     "ai:agent:missing": "tsx ai/eval/agent-missing.ts",
-    "showcase:data": "tsx ai/serve/export-cli.ts"
+    "showcase:data": "tsx ai/serve/export-cli.ts",
+    "showcase:build": "npm run showcase:data && webpack --mode production --config webpack.showcase.config.js",
+    "showcase:start": "npm run showcase:data && webpack serve --mode development --config webpack.showcase.config.js"
   },
   "author": "Rafał Cywiński",
   "license": "MIT",

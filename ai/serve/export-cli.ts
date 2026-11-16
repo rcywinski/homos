@@ -1,5 +1,5 @@
 /**
- * Writes the showcase data (step 4.1) to `showcase/data/` and prints one line per configuration.
+ * Writes the showcase data (step 4.1) to `showcase/public/data/` and prints one line per configuration.
  * Run: npm run showcase:data
  */
 import { mkdirSync, writeFileSync } from 'fs';

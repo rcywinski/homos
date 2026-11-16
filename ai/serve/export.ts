@@ -1,6 +1,6 @@
 /**
  * Showcase data export (phase 4, step 4.1): static JSON for the comparison and archive views, built only from
- * committed files. No model and no network call. Output goes to `showcase/data/` (generated, gitignored).
+ * committed files. No model and no network call. Output goes to `showcase/public/data/` (generated, gitignored).
  *
  * CLI: `ai/serve/export-cli.ts` (npm run showcase:data).
  */
@@ -27,7 +27,7 @@ import type {
 export const GOLDEN_FILE = 'ai/eval/golden.jsonl';
 export const GOLDEN_META = 'ai/eval/golden-meta.json';
 export const REPORTS_DIR = 'journal/reports';
-export const OUT_DIR = 'showcase/data';
+export const OUT_DIR = 'showcase/public/data';
 
 interface AnswersFile {
   label: string;

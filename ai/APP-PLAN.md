@@ -223,10 +223,10 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8, 4.6, 4.9.
   morning report index. Display filter for network addresses with tests. Fake (no models). S.
 - [ ] **4.1b** [CC-Win, after phase 3] Copy the live ledger and paper files from the box's `.bot/` to the owner's
   Mac (not to the repo), list them, check for anything sensitive, then decide what is exported. S.
-- [ ] NEXT **4.2** Showcase front end skeleton in `showcase/`: own webpack entry, comparison view (two columns, "more"
+- [x] **4.2** Showcase front end skeleton in `showcase/`: own webpack entry, comparison view (two columns, "more"
   section, verdicts, verification marks), archive view, mock wallet panel (read-only), the "did not reliably beat
   holding" notice, a test that fails on any wallet or signing import. Check that the existing UI still builds. Fake. M.
-- [ ] **4.3** Chat backend core in `ai/serve/`: `POST /api/ask` and `/api/retrieve` through the existing `Embedder`,
+- [ ] NEXT **4.3** Chat backend core in `ai/serve/`: `POST /api/ask` and `/api/retrieve` through the existing `Embedder`,
   `Reranker` and `Generator` interfaces, variant `local` retrieval, served model and prompt from configuration,
   verifier with number checks, response schema with enums, "not in the data", out-of-scope refusal, plain failure on
   invalid output, display filter, startup refusal when `ANTHROPIC_API_KEY` is set. Tests with fake models. Fake. M.
