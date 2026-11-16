@@ -750,3 +750,13 @@ answers; step 3.2 never exercised that, because it used saved chunk lists.
 
 **Open, for the owner.** How to embed queries without a second model on the GPU in Ollama (options in the CC-Mac
 report of 16 Nov). Nothing runs until then.
+
+**Addendum (CC-Win's reading of serve.log, same day).** The second embed did not evict Qwen: Ollama loaded bge-m3
+next to Qwen at 16384 ("fits alongside existing models", 1.1 GiB needed, 6.6 GiB of VRAM free), and the bge-m3 runner
+crashed at its first compute; the embed got HTTP 500 after 6.86 s. So the order matters: loading Qwen evicts a resident
+bge-m3, but bge-m3 may load next to a resident Qwen, and VRAM was not the limit then. CC-Win's diagnosis, an inference
+since the log does not say "out of memory": Windows host commit memory. Ollama disables mmap on Windows with CUDA, so
+the Qwen runner commits about its whole model in host memory too; commit headroom ("free_swap") fell from 19 to 26 GiB
+before the load to 649 MiB with Qwen resident; the commit limit is 40.3 GB (32 GB RAM plus an auto-managed 8.6 GB
+pagefile). Possible fix: a larger fixed pagefile (32 to 48 GB), a box change that needs the owner's word and may need a
+reboot. Side note: the embed requests send `num_ctx` 32768, which Ollama caps to bge-m3's 8192 with a warning.
