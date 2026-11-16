@@ -451,3 +451,20 @@ result depends on that except where the step 2.4 spend guard stopped a run.
 
 **Review questions.** Should a price table be checked against the provider's page at the start of every step that
 spends money?
+
+## 2026-11-16, phase 2 merged into main (owner)
+
+**Decision.** With the owner's approval, `ai-layer` was merged into `main` with a merge commit (`add30df`, no fast
+forward, no history rewritten, no force push) after step 2.4 was ticked (`2280149`). The merge brings steps 2.1 to 2.4:
+the tools, the loop, allowlisted jobs, the evaluation and the write-up. Before the merge the "In short" summary of
+`docs/AI-RAG.md` gained the step 1.12 result with the prompt written for local models (16 and 16 of 34 correct, tuned
+and measured on the same 34 questions), matching the README.
+
+**Alternatives.** A fast-forward merge (not used: the earlier phases were merged with merge commits, so each phase
+stays one visible merge on `main`).
+
+**Evidence.** `git log --first-parent main`; CI status of the push is reported to the owner in the CC-Mac session.
+
+**Open.** Phase 3 is optional; nothing is marked NEXT in `docs/AI-PLAN.md`.
+
+**Review questions.** None.
