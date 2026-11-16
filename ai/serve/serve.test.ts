@@ -14,12 +14,16 @@ import { FakeEmbedder } from '../embed/fake';
 import { LocalEmbedder } from '../embed/local';
 import { FakeReranker } from '../rerank/fake';
 import { LocalReranker } from '../rerank/local';
-import { createApp } from './app';
+import { createApp, type AppOptions } from './app';
+import { MemoryLog } from './log';
+import { GpuQueue } from './queue';
+import { RateLimiter } from './ratelimit';
 import { ask, type AskDeps, type AskResponse } from './ask';
 import { ConfigError, DEFAULT_PRESET, loadServeConfig, PRESETS } from './config';
 import { MASK } from './mask';
 import { markNumbers } from './numbers';
-import { buildLocalRetrieval, metaView, type ChatRetrieval } from './retrieve';
+import { buildLocalRetrieval, checkIndex, IndexMismatch, metaView, type ChatRetrieval } from './retrieve';
+import { corpusHash, type IndexFile } from '../embed/index-file';
 import { checkScope, isPlainQuestion } from './scope';
 import { FAILED, NOT_IN_DATA, OUT_OF_SCOPE_ADVICE } from './texts';
 
@@ -77,6 +81,34 @@ async function main() {
       index: { ids: view.map((c) => c.id), vectors: view.map(() => []) },
     });
     check(`${p.id}: retrieval equals the measured run`, run.retrieval.startsWith(shape.name + ' ') || run.retrieval === shape.name, `${shape.name}\n  vs ${run.retrieval}`);
+  }
+
+  // --- Start-up index check ----------------------------------------------------------------------------------
+  {
+    const chunks = loadCorpus();
+    const view = metaView(chunks).chunks;
+    const good: IndexFile = { embedder: 'ollama-bge-m3', dims: 1, createdAt: '', wallTimeMs: 0, chunkCount: view.length, corpusHash: corpusHash(view), ids: view.map((c) => c.id), vectors: view.map(() => [0]) };
+    const refuses = (idx: IndexFile, needle: string) => {
+      try {
+        checkIndex(idx, chunks, 'ollama-bge-m3', 'test-index.json');
+        return false;
+      } catch (e) {
+        return e instanceof IndexMismatch && e.message.includes(needle);
+      }
+    };
+    let accepted = true;
+    try {
+      checkIndex(good, chunks, 'ollama-bge-m3', 'test-index.json');
+    } catch {
+      accepted = false;
+    }
+    check('index built from this corpus is accepted', accepted);
+    check('index from another corpus is refused', refuses({ ...good, corpusHash: '0000000000000000' }, 'another corpus'));
+    check('index from another embedder is refused', refuses({ ...good, embedder: 'voyage-4' }, 'voyage-4'));
+    check('index with a missing vector is refused', refuses({ ...good, ids: good.ids.slice(1), vectors: good.vectors.slice(1) }, 'vectors'));
+    check('index with a foreign id is refused', refuses({ ...good, ids: ['journal/NOPE.md:1', ...good.ids.slice(1)] }, 'not in the corpus'));
+    const crlf = loadCorpus().map((c) => c.text).join('').includes('\r');
+    check('the corpus as loaded has no CR characters (Windows checkouts hash the same)', !crlf);
   }
 
   // --- Scope ---------------------------------------------------------------------------------------------------
@@ -188,8 +220,17 @@ async function main() {
 
   // --- HTTP ----------------------------------------------------------------------------------------------------
   const failing: ChatRetrieval = { name: 'x', retrieve: async () => { throw new Error('box unreachable at http://192.168.1.8:11434'); } };
-  const app = createApp(deps(new ScriptedGenerator('good')), { maxQuestionChars: 500 });
-  const broken = createApp({ ...deps(good), retrieval: failing }, { maxQuestionChars: 500 });
+  const opts = (): AppOptions => ({
+    maxQuestionChars: 500,
+    queue: new GpuQueue(5, 60_000),
+    limiter: new RateLimiter({ perHour: 100, perDay: 100, globalPerDay: 1000 }),
+    log: new MemoryLog(),
+    probe: { up: async () => true },
+    trustProxy: 'none',
+    paused: () => false,
+  });
+  const app = createApp(deps(new ScriptedGenerator('good')), opts());
+  const broken = createApp({ ...deps(good), retrieval: failing }, opts());
   const listen = (a: ReturnType<typeof createApp>) =>
     new Promise<{ url: string; close: () => void }>((resolve) => {
       const s = a.listen(0, '127.0.0.1', () => resolve({ url: `http://127.0.0.1:${(s.address() as AddressInfo).port}`, close: () => s.close() }));
@@ -220,7 +261,7 @@ async function main() {
     check('404 on an unknown API route', (await fetch(`${srv.url}/api/retrieve`, { method: 'POST' })).status === 404);
     const err = await post(srvBroken.url, JSON.stringify({ question: 'Why wide ranges?' }));
     const errText = await err.text();
-    check('500 is generic: no internal message, no address', err.status === 500 && !errText.includes('192.168') && !errText.includes('unreachable'), errText);
+    check('box failure is model-unavailable: fixed message, no address', err.status === 503 && errText.includes('model-unavailable') && !errText.includes('192.168') && !errText.includes('unreachable'), errText);
   } finally {
     console.error = origError;
     srv.close();

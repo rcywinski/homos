@@ -38,6 +38,10 @@ ai/agent/runs-eval/
 # Showcase (phase 4): data generated from committed results by npm run showcase:data, and the built bundle.
 showcase/public/data/
 showcase/public/app.js*
+# Public chat request logs (step 4.4): daily visitor hashes and questions, never committed.
+ai/serve/logs/
+# Pause switch of the public chat (CC-Win creates it before using the GPU for other work).
+ai/serve/PAUSED
 # Python (inference/ services): bytecode cache and virtual environments.
 __pycache__/
 .venv/

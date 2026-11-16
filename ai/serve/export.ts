@@ -50,7 +50,8 @@ class Reader {
   readonly hashes = new Map<string, string>();
   constructor(private readonly root: string) {}
   text(file: string): string {
-    const content = readFileSync(path.join(this.root, file), 'utf8');
+    // CRLF normalised first, so a Windows checkout gives the same hashes and the same text as the Mac.
+    const content = readFileSync(path.join(this.root, file), 'utf8').replace(/\r\n/g, '\n');
     this.hashes.set(file, createHash('sha256').update(content).digest('hex').slice(0, 16));
     return content;
   }

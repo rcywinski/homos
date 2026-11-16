@@ -10,7 +10,8 @@
  */
 import { loadCorpus } from '../corpus/load';
 import type { Chunk } from '../corpus/types';
-import { indexPath, readIndex, type IndexFile } from '../embed/index-file';
+import { corpusHash, indexPath, type IndexFile } from '../embed/index-file';
+import { existsSync, readFileSync } from 'fs';
 import { indexView } from '../embed/index-view';
 import { LocalEmbedder } from '../embed/local';
 import type { Embedder } from '../embed/types';
@@ -58,10 +59,52 @@ export function buildLocalRetrieval(p: RetrievalParts): ChatRetrieval {
   };
 }
 
-/** The real thing: reads the corpus and the saved index, talks to the box. Never called in tests. */
+export class IndexMismatch extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'IndexMismatch';
+  }
+}
+
+/** Path of the saved index the served retrieval needs: `ai/index/ollama-bge-m3.meta.json` under `root`. */
+export function servedIndexPath(chunks: Chunk[], embedderName = 'ollama-bge-m3', root = process.cwd()): string {
+  return indexPath(embedderName + metaView(chunks).suffix, root);
+}
+
+/**
+ * Start-up check (owner rule, 16 Nov 2026): the server refuses to run when the index was not built from this exact
+ * corpus. Compares the corpus hash stored in the index with the hash of the meta view of the corpus on disk, and the
+ * index's embedder, size and ids with what the retrieval expects. A Windows checkout gives the same hash: the corpus
+ * loader normalises line endings.
+ */
+export function checkIndex(index: IndexFile, chunks: Chunk[], embedderName: string, file: string): void {
+  const view = metaView(chunks).chunks;
+  const expected = corpusHash(view);
+  if (index.corpusHash !== expected) {
+    throw new IndexMismatch(`${file} was built from another corpus (index ${index.corpusHash}, corpus on disk ${expected}). Copy the index built from this commit, or rebuild it, before starting.`);
+  }
+  if (index.embedder !== embedderName) throw new IndexMismatch(`${file} was built with ${index.embedder}, the served retrieval uses ${embedderName}`);
+  if (index.ids.length !== view.length || index.vectors.length !== view.length) {
+    throw new IndexMismatch(`${file} has ${index.ids.length} vectors, the corpus has ${view.length} chunks`);
+  }
+  const ids = new Set(view.map((c) => c.id));
+  const missing = index.ids.filter((id) => !ids.has(id));
+  if (missing.length > 0) throw new IndexMismatch(`${file} has ${missing.length} ids that are not in the corpus, for example ${missing[0]}`);
+}
+
+/** Reads and checks the saved index; throws IndexMismatch when it is missing or does not match. */
+export function loadCheckedIndex(chunks: Chunk[], embedderName = 'ollama-bge-m3', root = process.cwd()): IndexFile {
+  const file = servedIndexPath(chunks, embedderName, root);
+  if (!existsSync(file)) throw new IndexMismatch(`${file} is missing. Copy it to the box before starting (see ai/APP-PLAN.md, step 4.8).`);
+  const index = JSON.parse(readFileSync(file, 'utf8')) as IndexFile;
+  checkIndex(index, chunks, embedderName, file);
+  return index;
+}
+
+/** The real thing: reads the corpus and the checked index, talks to the box. Never called in tests. */
 export function localRetrieval(inferenceUrl: string, rerankUrl: string, root = process.cwd()): ChatRetrieval {
   const chunks = loadCorpus(root);
   const embedder = new LocalEmbedder({ baseUrl: inferenceUrl });
-  const index = readIndex(indexPath(embedder.name + metaView(chunks).suffix, root), metaView(chunks).chunks);
+  const index = loadCheckedIndex(chunks, embedder.name, root);
   return buildLocalRetrieval({ chunks, embedder, reranker: new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 120_000 }), index });
 }

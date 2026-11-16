@@ -55,13 +55,41 @@ const fixed = (deps: AskDeps, outcome: Outcome, text: string, t0: number, source
 
 const sourceOf = (c: Chunk) => ({ chunkId: c.id, file: c.file, lines: [c.lineStart, c.lineEnd] as [number, number], title: maskNetwork(c.title) });
 
-export async function ask(deps: AskDeps, question: string): Promise<AskResponse> {
-  const t0 = Date.now();
-  if (!checkScope(question).inScope) return fixed(deps, 'out-of-scope', OUT_OF_SCOPE_ADVICE, t0);
+export type Stage = 'retrieving' | 'generating';
 
-  const chunks = await deps.retrieval.retrieve(question, deps.k);
+/**
+ * The model services failed while answering (box unreachable, the GPU busy with other work, the model not fitting in
+ * memory, a prompt over the context): the visitor gets a fixed "model unavailable" message, not a generic error.
+ */
+export class ModelUnavailable extends Error {
+  constructor(readonly stage: Stage, cause: unknown) {
+    super(`${stage}: ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.name = 'ModelUnavailable';
+  }
+}
+
+async function during<T>(stage: Stage, f: () => Promise<T>): Promise<T> {
+  try {
+    return await f();
+  } catch (e) {
+    throw new ModelUnavailable(stage, e);
+  }
+}
+
+/** True when the question is refused before any GPU work: the app answers it without queueing. */
+export function refusedBeforeWork(question: string): boolean {
+  return !checkScope(question).inScope;
+}
+
+export async function ask(deps: AskDeps, question: string, onStage?: (s: Stage) => void): Promise<AskResponse> {
+  const t0 = Date.now();
+  if (refusedBeforeWork(question)) return fixed(deps, 'out-of-scope', OUT_OF_SCOPE_ADVICE, t0);
+
+  onStage?.('retrieving');
+  const chunks = await during('retrieving', () => deps.retrieval.retrieve(question, deps.k));
   const sources = chunks.map(sourceOf);
-  const r = await answerWithChecks(deps.generator, question, chunks, deps.root);
+  onStage?.('generating');
+  const r = await during('generating', () => answerWithChecks(deps.generator, question, chunks, deps.root));
   const out = r.output;
   if (!out || r.error) return fixed(deps, 'failed', FAILED, t0, sources);
   if (out.coverage === 'none') return fixed(deps, 'not-in-data', NOT_IN_DATA, t0, sources);

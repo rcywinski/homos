@@ -104,7 +104,7 @@ avoid.
 
 ```
  visitor browser
-   |  static site (always on): comparison, archive, mock wallet, chat UI
+   |  static site: comparison, archive, mock wallet, chat UI (served by the same server)
    |  /api/* through the tunnel (only when the box is up)
    v
  Cloudflare Tunnel (outbound connection from the box, no open port on the router)
@@ -120,24 +120,33 @@ only outbound connections. Alternatives: on the Mac (rejected: not on 24/7, and 
 call); on a cloud server (rejected: it would need the box's model ports reachable from the internet). The backend
 runs as its own non-admin Windows user, not `SYSTEM` like the inference tasks.
 
-**Static part separate from the box.** The comparison of the 34 golden questions, the archive and the mock wallet are
-static files built from committed data, so they work when the box is off. Hosting choice (Cloudflare Pages or served
-by the backend) is decided in step 4.9.
+**Static part on the box too (owner, 16 Nov 2026).** The comparison of the 34 golden questions, the archive and the
+mock wallet are static files built from committed data (`showcase/public`), served by the same server process on the
+box, with the same security headers. They need no model, so they keep working while the model services are off,
+paused or busy; they are down only when the server process or the tunnel is down. Hosting the static part elsewhere
+(for example Cloudflare Pages) stays an option if the owner wants it available with the box off.
 
 **No owner key on the public path.** The backend refuses to start if `ANTHROPIC_API_KEY` is present in its
 environment, and the guest code path has no Anthropic client at all. Engines: `local` (the box) and `guest-key`
 (browser).
 
 **Queue.** One in-process FIFO in front of the GPU, concurrency 1, at most 5 waiting, at most one pending question
-per visitor. Each job has a deadline (start at 180 s, tuned from the phase 3 speed measurements). Retrieval for
-guest-key questions goes through the same queue, since embedding and rerank also use the GPU, but it is short.
+per visitor. Each job has a deadline (240 s from its start, generator timeout 180 s inside it, to be tuned from the
+phase 3 speed measurements). A job past its deadline is reported as timed out, but the next job starts only when the
+abandoned work really ends, so the GPU never runs two answers. A visitor who leaves while waiting is removed from
+the queue. Retrieval for guest-key questions goes through the same queue, since embedding and rerank also use the
+GPU, but it is short.
 
-**Streaming.** Server-Sent Events with status only: `queued (position n, estimated wait)`, `retrieving`,
-`generating`, `verifying`, then the final verified answer in one event. The answer text is not streamed token by
+**Streaming.** Server-Sent Events with status only: `queued` (position and queue length), `retrieving`,
+`generating`, then the final verified answer in one `result` event (or one `error` event). The answer text is not streamed token by
 token: it is JSON that is verified after it is complete, and showing unverified text first would undo the
 verification marks. A visible progress line covers the wait.
 
-**Rate limits.** Visitor identity: a signed cookie plus the client IP from the tunnel header. Limits to start: 5
+**Rate limits.** Visitor identity: a hash of the client IP with a salt drawn at random for each UTC day and kept only
+in memory (no cookie: the hash is enough, and a cookie would be one more thing that tracks visitors). The IP is never
+stored or logged; hashes from different days cannot be linked. The tunnel header `CF-Connecting-IP` is trusted only
+with `SERVE_TRUST_PROXY=cloudflare`. A question refused by the queue, by the pause switch or because the box is off is
+given back to the visitor's limit. Limits to start: 5
 questions per hour and 20 per day per visitor, 200 per day for the whole site, question length at most 500
 characters, single-turn questions (no chat history sent to the model in stage A). A Cloudflare rate rule in front as
 a second layer. All numbers in `.env`, documented in `.env.example`.
@@ -146,10 +155,17 @@ a second layer. All numbers in `.env`, documented in `.env.example`.
 
 | State | Shown |
 |---|---|
-| Box up, queue empty | Chat ready, engine "local model" |
-| Box up, queue full | "The local model is busy (5 questions waiting). Try again in a few minutes." Comparison still available |
-| Box off or tunnel down | Static site works, chat shows "The local model is offline", guest-key mode explains that it also needs the box for retrieval |
-| Visitor over limit | Remaining time until the next allowed question |
+| Box up, queue empty | Chat ready, engine label of the served preset |
+| Box up, another question running | "Waiting, position n of m", then the status of its own question |
+| Box up, queue full | "The local model is busy with other questions. Please try again in a few minutes." Comparison still available |
+| Chat paused (pause file on the box) | "The chat is paused while the GPU is used for other work." Comparison and archive available |
+| GPU busy with other work, or the model does not fit in memory | Retrieval or generation fails inside the job: "The local model could not answer right now: the GPU may be busy with other work, or the model may not fit in its memory at the moment." Nothing generated is shown |
+| Answer past its deadline | "The answer took too long and was stopped." |
+| Model services down (box on) | Static views work, chat shows "The local model is offline right now", health says `model-offline` |
+| Chat server down, tunnel up | Cloudflare's error page for the whole site; restart on failure in the scheduled task keeps this short |
+| Box off or tunnel down | The site is unreachable (Cloudflare's error page) |
+| Visitor over limit | The limit message and the time until the next allowed question (`Retry-After`) |
+| Site over its daily cap | "The chat has answered all the questions it can today." |
 | Guest key rejected | The API's message, including the CORS-for-this-organization case |
 
 **Hallucination control.**
@@ -159,8 +175,9 @@ a second layer. All numbers in `.env`, documented in `.env.example`.
   model's own wording is not shown in that case.
 - Every quote is verified against its chunk; unverified quotes are shown struck through with a mark, never silently
   dropped (the phase 1 rule).
-- Every number in the answer text is checked: it must appear in a verified quote or in a cited chunk, otherwise it is
-  marked "unverified number". For archive figures (positions, PnL) the model returns a reference
+- Every number in the answer text is checked: it must appear, as a whole number, in a verified quote, otherwise it is
+  marked "not verified" (step 4.3). A preview on the saved step 3.2 answers marks 54 of 134 numbers (pb1) and 55 of
+  130 (pb2), many of them derived (dates rewritten, multiples, values from a chunk that was not quoted): see 4.8. For archive figures (positions, PnL) the model returns a reference
   (`{ source, id, field }`) and the UI fills the value from the exported data, as `dataRefs` do in step 2.2.
 - Each answer shows its sources as links to the archive view of the chunk.
 
@@ -217,9 +234,44 @@ reason for the separate user and the kill switch (stopping the tunnel service).
 - **Logs**: visitor IP addresses are never stored in clear; rate limiting uses a hash of the IP with a daily salt.
 - **Order**: guest-key mode moves after the first LAN run.
 
-## 6. Steps, stage A
+## 6. Hosting on the Windows box (owner reminder, 16 Nov 2026)
 
-Order: 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8, 4.6, 4.9.
+The showcase and the chat server run on the Windows GPU box, operated by CC-Win. CC-Win does not write code; it pulls,
+installs, runs the tests and operates the services.
+
+- **No shell scripts on the serving path.** The server starts with plain node and an env file outside the repo:
+  `node --env-file=C:\HomosServe\serve.env --import tsx ai\serve\server-cli.ts`. Tests are npm scripts that chain
+  `tsx` calls with `&&`, which `cmd.exe` runs as well. Paths go through `path.join`; the corpus loader, the verifier
+  and the export normalise CRLF, so a Windows checkout gives the same corpus hash (tested).
+- **Serving checkout.** A separate clone, for example `C:\HomosServe\homos`, owned by a local non-admin user
+  (`homos-web`), on branch `app-chat` until phase 4 is merged, then `main`. Its `.env` does not exist; the env file
+  `C:\HomosServe\serve.env` holds only `SERVE_*`, `INFERENCE_URL=http://127.0.0.1:11434` and
+  `RERANK_URL=http://127.0.0.1:11435`. No Anthropic key on the box for this user (the server refuses to start with one).
+- **How the index gets onto the box.** The served index is `ai/index/ollama-bge-m3.meta.json` (built on the Mac,
+  corpus hash `cb41ca39fd344c6f`, 957 vectors, checked on 16 Nov 2026 against the `app-chat` corpus) plus the tokenizer
+  folder `ai/index/tokenizers/qwen3.8-27b`. The owner copies both from the Mac to the serving checkout over the LAN
+  share (or a USB stick); CC-Win compares the SHA-256 of the copied files with the Mac's, then starts the dry run,
+  which reports whether the index matches the corpus. The real engine refuses to start on a missing or mismatched
+  index (`IndexMismatch`), so a corpus change without a new index cannot go live. Rebuilding the index on the box is
+  not used: it would not be the index the measured runs used.
+- **How updates are deployed.** CC-Win in the serving checkout: create the pause file, `git pull`, `npm ci`, the serve
+  tests (`npx tsx ai/serve/serve.test.ts`, `npx tsx ai/serve/queue.test.ts`), `npm run showcase:build`, restart the
+  server task, check `/api/health`, delete the pause file. Rollback: `git checkout <previous commit>` and the same steps.
+  CC-Mac never deploys; it pushes and tells CC-Win the commit.
+- **Start after a reboot, non-admin.** Two scheduled tasks, both "run whether the user is logged on or not" as
+  `homos-web` (a standard user, not an administrator, not `SYSTEM`): `HOMOS chat` at startup with a 60 s delay (after
+  the existing Ollama and reranker tasks), running the node command above in the serving checkout, restart on failure;
+  `HOMOS tunnel` (step 4.9) at startup running `cloudflared tunnel run` with a token file readable only by
+  `homos-web`. Until the model services answer, the chat reports `model-offline` and recovers by itself.
+- **GPU busy or the model does not fit.** Before the owner or CC-Win uses the GPU for other work (evaluation runs,
+  pulling or testing models), CC-Win creates `ai\serve\PAUSED` in the serving checkout; the chat then answers
+  "paused" at once and does not touch the GPU, and deletes it afterwards. Without the pause file, a failure inside the
+  job (Ollama evicting or failing to load the model, out of memory, a prompt over the context) gives the visitor the
+  fixed "model could not answer right now" text; the request log records `model-unavailable` and the stage.
+
+## 7. Steps, stage A
+
+Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
 
 - [x] **4.0** Reconnaissance and this plan. S.
 - [x] **4.1** Showcase data export: a script that builds static JSON from committed results only: the 34 golden
@@ -237,10 +289,21 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8, 4.6, 4.9.
   number checks, response with enums, "not in the data", advice refusal, plain failure on invalid output, display
   filter, startup refusal when `ANTHROPIC_API_KEY` is set. `/api/retrieve` moved to 4.6, so retrieval is not exposed
   before guest-key mode needs it. Tests with fake models. M.
-- [ ] NEXT **4.4** Queue, SSE status stream, rate limits (IP hashed with a daily salt), health and busy states. Tests with
-  a slow fake generator. Fake. M.
-- [ ] **4.5** Answer rendering: quote and number marks, coverage badge, source links, the states table above.
-  Fake. M.
+- [x] **4.4** Queue, SSE status stream, rate limits (IP hashed with a daily salt), request log without addresses,
+  health with `up`, `busy`, `paused` and `model-offline`, the "model unavailable" message, pause file, dry-run engine
+  (`SERVE_ENGINE=fake`), start-up refusal on a missing or mismatched index. Tests with a slow fake generator and the
+  dry-run server started as a child process. Fake. M.
+- [ ] NEXT **4.4b** [CC-Win] Windows dry run with fake models, without touching the GPU: CC-Win clones `app-chat` into
+  the serving checkout as `homos-web`, runs `npm ci`, the serve tests and `npm run showcase:build`, writes `serve.env`
+  with `SERVE_ENGINE=fake`, starts the server with the node command of section 6 on 127.0.0.1, calls `/api/health`
+  and asks one question with `curl.exe`, creates and deletes the pause file, and reports the outputs. Does not need
+  the GPU, so it can run while phase 3 holds the box, if the owner allows CC-Win to work on the box. S.
+- [ ] **4.5** Answer rendering in the showcase: chat panel, quote and number marks, coverage badge, source links, the
+  states table above. Plus a Playwright end-to-end suite (owner request, 16 Nov 2026) that starts the static showcase
+  and the chat server with fake models and walks the visitor paths in a real browser: the comparison view, an
+  in-scope question, an out-of-scope question, a request for trading advice, a question with no answer in the data,
+  an unverified quote shown with its mark, the rate limit message, the busy message, masked LAN addresses, and the
+  static views with the chat server down. Screenshot saved on failure; the suite added to CI. Fake. M.
 - [ ] **4.7** Security pass: headers and CSP, input limits, abuse script against a local run, injection probe against
   the local model. Needs the box. M.
 - [ ] **4.8** First real run on the LAN only (no tunnel): copy indexes, CC-Win sets up the backend service under its
@@ -249,15 +312,17 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8, 4.6, 4.9.
   and classify each as unsupported (a correct mark) or derived (a converted date, a sum, a rounded or rescaled value,
   a count the model made from the sources: a false mark). If false marks are more than a few, propose a rule (for
   example a third state "derived, check the source" for values computable from verified quotes) before the tunnel.
+  Then the same Playwright suite against the real server on the LAN, with a screenshot of each path reported to the
+  owner.
 - [ ] **4.6** Guest-key mode: `POST /api/retrieve`, browser generator with `dangerouslyAllowBrowser`, verifier in the browser, CSP, the
   no-key-to-our-origin test. Tested with a fake fetch; one real call only with a key the owner creates for it. M.
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner: Cloudflare Tunnel, static hosting choice,
   optional Access, kill switch documented in `inference/README.md`. S.
 
-Steps 4.1 to 4.5 can be built while phase 3 holds the box. 4.7, 4.8, 4.6 and 4.9 wait until the owner says phase 3
-is finished.
+Steps 4.1 to 4.5 can be built while phase 3 holds the box (4.4b needs CC-Win on the box but not the GPU). 4.7, 4.8,
+4.6 and 4.9 wait until the owner says phase 3 is finished.
 
-## 7. Stage B, later (outline only)
+## 8. Stage B, later (outline only)
 
 - Paper trading on live data with virtual funds: `bot/paper.ts` restarted in a sandbox, read-only chain access,
   no wallet.

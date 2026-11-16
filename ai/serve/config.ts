@@ -8,6 +8,7 @@
  *
  * There is no Anthropic key on this path: `loadServeConfig` refuses to start when `ANTHROPIC_API_KEY` is set.
  */
+import path from 'path';
 import { LOCAL_QUOTE_SYSTEM } from '../answer/prompt-local';
 import type { LocalGenOptions } from '../answer/local';
 
@@ -47,6 +48,8 @@ export const PRESETS: Record<string, ServedPreset> = {
 export const DEFAULT_PRESET = 'qwen-p-local';
 
 export interface ServeConfig {
+  /** 'local' serves the preset on the box; 'fake' is the dry run of step 4.4b (no GPU, no box URLs needed). */
+  engine: 'local' | 'fake';
   preset: ServedPreset;
   inferenceUrl: string;
   rerankUrl: string;
@@ -54,8 +57,19 @@ export interface ServeConfig {
   port: number;
   /** Question length limit in characters, after trimming. */
   maxQuestionChars: number;
-  /** Generator timeout per question; the queue in step 4.4 adds its own deadline. */
+  /** Generator timeout per question (inside the job). */
   generateTimeoutMs: number;
+  /** Deadline of one queued job from its start: retrieval plus generation plus verification. */
+  jobDeadlineMs: number;
+  /** Jobs allowed to wait behind the running one. */
+  queueMax: number;
+  limits: { perHour: number; perDay: number; globalPerDay: number };
+  /** 'cloudflare' only when the tunnel is in front (step 4.9): then CF-Connecting-IP is the client address. */
+  trustProxy: 'none' | 'cloudflare';
+  /** Request log directory (gitignored). */
+  logDir: string;
+  /** While this file exists the chat is paused (CC-Win creates it before using the GPU for other work). */
+  pauseFile: string;
 }
 
 export class ConfigError extends Error {}
@@ -70,6 +84,12 @@ function int(env: Env, name: string, fallback: number, min: number, max: number)
   return n;
 }
 
+function trustProxy(raw: string | undefined): 'none' | 'cloudflare' {
+  if (!raw || raw === 'none') return 'none';
+  if (raw === 'cloudflare') return 'cloudflare';
+  throw new ConfigError('SERVE_TRUST_PROXY must be none or cloudflare');
+}
+
 export function loadServeConfig(env: Env = process.env): ServeConfig {
   if (env.ANTHROPIC_API_KEY) {
     throw new ConfigError('ANTHROPIC_API_KEY is set: the public chat must never run with the owner key in its environment. Start it with an environment that has no key.');
@@ -77,20 +97,33 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
   const presetId = env.SERVE_PRESET || DEFAULT_PRESET;
   const preset = PRESETS[presetId];
   if (!preset) throw new ConfigError(`SERVE_PRESET "${presetId}" is not one of: ${Object.keys(PRESETS).join(', ')}`);
+  const engine = env.SERVE_ENGINE || 'local';
+  if (engine !== 'local' && engine !== 'fake') throw new ConfigError('SERVE_ENGINE must be local or fake');
   const inferenceUrl = env.INFERENCE_URL ?? '';
   const rerankUrl = env.RERANK_URL ?? '';
-  if (!inferenceUrl || !rerankUrl) throw new ConfigError('INFERENCE_URL and RERANK_URL must be set (see .env.example)');
+  if (engine === 'local' && (!inferenceUrl || !rerankUrl)) throw new ConfigError('INFERENCE_URL and RERANK_URL must be set (see .env.example)');
   const host = env.SERVE_HOST || '127.0.0.1';
   if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') {
     throw new ConfigError('SERVE_HOST must be a loopback address: the chat is reached only through the tunnel (step 4.9)');
   }
   return {
+    engine,
     preset,
     inferenceUrl,
     rerankUrl,
     host,
-    port: int(env, 'SERVE_PORT', 8790, 1024, 65535),
+    port: int(env, 'SERVE_PORT', 8790, 0, 65535),
     maxQuestionChars: int(env, 'SERVE_MAX_QUESTION_CHARS', 500, 20, 2000),
     generateTimeoutMs: int(env, 'SERVE_GENERATE_TIMEOUT_MS', 180_000, 10_000, 600_000),
+    jobDeadlineMs: int(env, 'SERVE_JOB_DEADLINE_MS', 240_000, 10_000, 900_000),
+    queueMax: int(env, 'SERVE_QUEUE_MAX', 5, 0, 50),
+    limits: {
+      perHour: int(env, 'SERVE_LIMIT_HOUR', 5, 1, 1000),
+      perDay: int(env, 'SERVE_LIMIT_DAY', 20, 1, 10_000),
+      globalPerDay: int(env, 'SERVE_LIMIT_GLOBAL_DAY', 200, 1, 100_000),
+    },
+    trustProxy: trustProxy(env.SERVE_TRUST_PROXY),
+    logDir: env.SERVE_LOG_DIR || path.join('ai', 'serve', 'logs'),
+    pauseFile: env.SERVE_PAUSE_FILE || path.join('ai', 'serve', 'PAUSED'),
   };
 }
