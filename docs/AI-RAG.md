@@ -24,7 +24,9 @@ owner's chat session: plan changes, explanations and interpretation of results, 
 - Cost of all measured runs, steps 1.7 to 1.9: $11.94 (corrected on 16 Nov from $13.49, see "Cost and latency").
 - Cloud vs local (step 1.11): a local `qwen3.8:27b` on the RTX 3090 box writes valid answers to the same chunks but
   is clearly weaker than Sonnet 5.5 (13 and 12 of 34 correct against 20; 24 of 321 quotes not in their source,
-  every one caught by the verifier) and about three times slower at a 250 W power limit.
+  every one caught by the verifier) and about three times slower at a 250 W power limit. With a prompt written for
+  local models (step 1.12) it reaches 16 and 16 of 34 correct in two runs; that prompt was tuned and measured on the
+  same 34 questions.
 - Agent (phase 2): Sonnet 5.5 with four read-only tools and one allowlisted backtest job, each job confirmed by the
   owner. On 18 tasks over five runs the judge rates 16 to 17 answers correct per run and none incorrect; every number
   taken from a result file carries a path that is checked against what the run read. But only 6 to 8 of 18 tasks end

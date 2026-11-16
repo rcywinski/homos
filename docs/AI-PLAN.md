@@ -274,9 +274,16 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   (`ai/eval/results/2026-11-12-agent-jobs-probe.md`); manual run with a real job
   (`ai/eval/results/2026-11-12-agent-job-manual-run.md`). Step spend $0.37 of the $2 cap. `npm run agent` restored for
   the old runner; the agent CLI is `npm run agent:ask`.
-- [ ] NEXT **2.4 Agent evaluation and write-up.** 10 multi-step questions with expected tool sequences; measure whether the right tools were called and the
+- [x] 2026-11-16 **2.4 Agent evaluation and write-up.** 10 multi-step questions with expected tool sequences; measure whether the right tools were called and the
   answer cites the right evidence. Add a section to `docs/AI-RAG.md`, three transcripts, README update
   (mention `npm run ai:restore-results` in the README AI section, owner decision in 2.1). Merge to `main`.
+  Done: 18 tasks in 6 categories (`ai/eval/agent-tasks.jsonl`); variants A (2.2 prompt, two runs), B (plus five
+  sentences, two runs), C (effort high, one run); 1.9 Opus judge, blind; owner's blind grading of 6 answers
+  (correctness 5/6 exact, 6/6 within one step). Correctness 16 to 17 of 18 in every run; B halves redundant calls and
+  adds legend citations at about 20% more cost; only 6 to 8 of 18 tasks end without a limit. Owner: prompt A stays the
+  default, no further revisions on this set. Report `ai/eval/results/2026-11-16-agent-eval-report.md`; write-up in
+  `docs/AI-RAG.md` ("Agent with tools"). Billing check found Sonnet cache reads priced at twice the real rate; fixed,
+  figures corrected. Step spend $16.05 of the $25 cap (corrected price). Merged to `main` on 16 Nov.
 
 ## Phase 3: optional, only if time allows
 
