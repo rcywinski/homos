@@ -320,11 +320,17 @@ costs nothing). Common rules for every step:
   `none` on 3/3 against 2/3; correct 10 and 12 against 14. The single run has no spread, so neither the correctness
   drop nor the quote gain is shown under the two-run rule (details in the report). Against Qwen P on A (16, 16)
   Gemma P is weaker beyond the spread; it is about 2.6 times faster than Qwen at 420 W (median 3.7 s against 9.7 s). Judge $0.99.
-- [ ] NEXT **3.4 New models.** Check the current Ollama library and propose candidates that fit fully on the card with the
+- [x] 2026-11-16 **3.4 New models.** Check the current Ollama library and propose candidates that fit fully on the card with the
   reranker stopped during generation (variant A needs no reranker, the chunk lists are saved), including Muse Glimmer
   30B and Gemma 4 31B if they fit, with size, licence and source for each. The owner approves the list before any
   pull `[CC-Win pulls]`. One run each with prompt P, a second run for the best one; judged.
-- [ ] **3.5 Local agent.** `AgentModel` for Ollama tool calling, without changing the loop or the tools. Before the
+  Done, on Ollama 0.40.15 (no update needed; Muse Glimmer requires 0.32.8): Gemma 4 31B 7 / 18 / 9 correct /
+  partially / incorrect, 56/66 quotes verified; gpt-oss 20B (think "low") 6 / 14 / 14, 33/75; Muse Glimmer 30B, the
+  best of the three, 10 / 17 / 7 twice, 94/99 and 74/80. Muse is below Qwen P on A (16 and 16) beyond the spread, so
+  the showcase stays Qwen with P on fully local retrieval. Model-specific runtime fixes, recorded in the result files:
+  the harmony template bound for gpt-oss (75 tokens), and for Muse a trailing `<|eot|>` removed before parsing (35 of
+  35 calls) and a server token overcount of up to 4 allowed. Judge $1.96; phase spend $4.03 of $10.
+- [ ] NEXT **3.5 Local agent.** `AgentModel` for Ollama tool calling, without changing the loop or the tools. Before the
   plan: what the Ollama documentation says about tools with structured output and with thinking, and what does not
   map onto the interface. Then the 18 tasks of 2.4 with prompt A, two runs, jobs with `--yes-jobs`, judged; the same
   measures as 2.4 next to Sonnet A1 and A2, plus invalid tool calls and schema failures.

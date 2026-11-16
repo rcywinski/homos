@@ -108,6 +108,38 @@
       "powerLimitW": 420,
       "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
       "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
+    },
+    {
+      "run": "local-muse-p1",
+      "startUtc": "2026-11-16T12:08:14Z",
+      "endUtc": "2026-11-16T12:16:21Z",
+      "samples": 482,
+      "peakPowerW": 421.6,
+      "avgPowerW": 390.5,
+      "avgPowerBusyW": 407.8,
+      "busyNote": "average over the 447 s with GPU utilisation at or above 50%; the highest sustained load of phase 3",
+      "maxTempC": 70.3,
+      "peakVramMiB": 18622,
+      "vramNote": "reranker stopped; serve.log: 53/53 layers on the GPU, loaded once. A first attempt (12:03:36 to 12:04:35 UTC) stopped on the Mac-side checks (trailing <|eot|> in the content, server token overcount); diagnostic calls at about 12:05 to 12:07 UTC, also 53/53.",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
+      "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
+    },
+    {
+      "run": "local-muse-p2",
+      "startUtc": "2026-11-16T12:17:28Z",
+      "endUtc": "2026-11-16T12:24:55Z",
+      "samples": 442,
+      "peakPowerW": 419.4,
+      "avgPowerW": 388.7,
+      "avgPowerBusyW": 408.3,
+      "busyNote": "average over the 412 s with GPU utilisation at or above 50%",
+      "maxTempC": 71.3,
+      "peakVramMiB": 18620,
+      "vramNote": "reranker stopped; serve.log: 53/53 layers on the GPU",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
+      "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
     }
   ],
   "speed": [
@@ -392,6 +424,96 @@
         "maxNetworkRetries": 0,
         "systemName": "LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)",
         "tokenizer": "ai/index/tokenizers/gpt-oss-20b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      }
+    },
+    {
+      "run": "local-muse-p1",
+      "correct": 10,
+      "incorrect": 7,
+      "unverified": 5,
+      "total": 99,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 44.3,
+        "evalTokensMedian": 287,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 12908,
+        "refStats": null
+      },
+      "settings": {
+        "model": "muse-glimmer:30b",
+        "think": false,
+        "overcountTolerance": 16,
+        "stripTrailing": [
+          "<|eot|>"
+        ],
+        "numCtx": 15360,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 64,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)",
+        "tokenizer": "ai/index/tokenizers/muse-glimmer-30b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      }
+    },
+    {
+      "run": "local-muse-p2",
+      "correct": 10,
+      "incorrect": 7,
+      "unverified": 6,
+      "total": 80,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 44.2,
+        "evalTokensMedian": 270,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 12908,
+        "refStats": null
+      },
+      "settings": {
+        "model": "muse-glimmer:30b",
+        "think": false,
+        "overcountTolerance": 16,
+        "stripTrailing": [
+          "<|eot|>"
+        ],
+        "numCtx": 15360,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 64,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)",
+        "tokenizer": "ai/index/tokenizers/muse-glimmer-30b",
         "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
         "stream": false,
         "seed": "not set"

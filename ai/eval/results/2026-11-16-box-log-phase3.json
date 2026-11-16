@@ -107,7 +107,40 @@
       "powerLimitW": 420,
       "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
       "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
+    },
+    {
+      "run": "local-muse-p1",
+      "startUtc": "2026-11-16T12:08:14Z",
+      "endUtc": "2026-11-16T12:16:21Z",
+      "samples": 482,
+      "peakPowerW": 421.6,
+      "avgPowerW": 390.5,
+      "avgPowerBusyW": 407.8,
+      "busyNote": "average over the 447 s with GPU utilisation at or above 50%; the highest sustained load of phase 3",
+      "maxTempC": 70.3,
+      "peakVramMiB": 18622,
+      "vramNote": "reranker stopped; serve.log: 53/53 layers on the GPU, loaded once. A first attempt (12:03:36 to 12:04:35 UTC) stopped on the Mac-side checks (trailing <|eot|> in the content, server token overcount); diagnostic calls at about 12:05 to 12:07 UTC, also 53/53.",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
+      "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
+    },
+    {
+      "run": "local-muse-p2",
+      "startUtc": "2026-11-16T12:17:28Z",
+      "endUtc": "2026-11-16T12:24:55Z",
+      "samples": 442,
+      "peakPowerW": 419.4,
+      "avgPowerW": 388.7,
+      "avgPowerBusyW": 408.3,
+      "busyNote": "average over the 412 s with GPU utilisation at or above 50%",
+      "maxTempC": 71.3,
+      "peakVramMiB": 18620,
+      "vramNote": "reranker stopped; serve.log: 53/53 layers on the GPU",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
+      "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
     }
   ],
-  "batch": "Whole batch, 1821 samples from 11:00:19 UTC to the end of the log: no gap over 3 s, no alert, peak 419.2 W, average 388.4 W while busy, max 72.7 C, peak VRAM 20 555 MiB, limit 420 W throughout, no Kernel-Power 41. Log and watch stopped after 3.3."
+  "batch": "Whole batch, 1821 samples from 11:00:19 UTC to the end of the log: no gap over 3 s, no alert, peak 419.2 W, average 388.4 W while busy, max 72.7 C, peak VRAM 20 555 MiB, limit 420 W throughout, no Kernel-Power 41. Log and watch stopped after 3.3.",
+  "batch34": "Step 3.4 log (C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv, 11:38:21 to about 12:25 UTC): 2836 samples, no gap over 3 s, no alert, peak 421.8 W, busy average 399.8 W over 1400 s, max 71.3 C, peak VRAM 23 559 MiB (Gemma 4 31B), limit 420 W throughout, no Kernel-Power 41. Reranker restarted after the last run (healthy; 3 758 MiB of VRAM with nothing else loaded); all pulled models kept on the box."
 }

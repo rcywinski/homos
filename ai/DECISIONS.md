@@ -621,3 +621,45 @@ in a one-off command, and the failure is silent); arrays (rejected for the same 
 **Open.** None.
 
 **Review questions.** None.
+
+## 2026-11-16, step 3.4: results; the showcase stays Qwen with prompt P
+
+**Decision.** Three candidates ran with prompt P on the variant A lists, the reranker stopped, on Ollama 0.40.15 (no
+update: Muse Glimmer requires 0.32.8). The best of the three, Muse Glimmer 30B, got its second run. It is below Qwen
+with P beyond the spread, so the showcase configuration stays Qwen3.8 27B with prompt P on fully local retrieval.
+
+**Evidence.** `ai/eval/results/2026-11-16-phase3-compare-golden-v1-4.md`, section 3.4.
+
+| | Qwen P1, P2 on A (1.12) | Gemma 4 31B | gpt-oss 20B | Muse Glimmer 30B, runs 1 and 2 |
+|---|---|---|---|---|
+| correct / partially / incorrect | 16/13/5, 16/11/7 | 7/18/9 | 6/14/14 | 10/17/7, 10/17/7 |
+| quotes verified | 84/87, 74/77 | 56/66 | 33/75 | 94/99, 74/80 |
+| premise handled | 7/8, 7/8 | 5/8 | 4/8 | 5/8, 7/8 |
+| latency median (s) | 13.0, 12.8 (250 W) | 11.5 | 3.8 | 13.0, 12.1 |
+
+- Muse against Qwen P on A: correct 10 and 10 against 16 and 16, a gap of 6 against a spread of 0, beyond the spread;
+  quote error rate within the spread. Muse is dense and slower (44 tokens per second) and held the card at the 420 W
+  limit for the whole run (busy average 407.8 W, the highest of the phase, max 70.3 C).
+- Gemma 4 31B writes very short answers (median 139 tokens) and needs 23 559 MiB at `num_ctx` 17408: it does not fit
+  on the card together with the reranker.
+- gpt-oss 20B rewrites quotes (replaced characters, translations, joined pieces): 42 of 75 not verified.
+- Single runs (Gemma 31B, gpt-oss) carry no comparison claim; their gaps to Qwen are large but unconfirmed.
+
+**Model-specific runtime fixes, all in the result files and tested (`ai/answer/local.test.ts`).**
+- gpt-oss: its harmony chat template adds 75 tokens (system block of 61 with identity, knowledge cutoff, current date
+  and reasoning level, plus the wrappers), above the 64-token bound of the template check. The bound is 96 for
+  gpt-oss only; after calibration the count must still match within 2. A first attempt stopped at the first call.
+- Muse Glimmer: Ollama 0.40.15 leaves its end-of-turn token `<|eot|>` at the end of every response (35 of 35 calls), so
+  the JSON did not parse and the first attempt failed the injection probe with no parsed answer; the token is now
+  removed before parsing and counted. Ollama's GGUF tokenizer also counts a few tokens more than the Hugging Face
+  tokenizer on some text (+3 and +1 on two chunks of one prompt, at most +4 per prompt in the runs); up to 16 more is
+  allowed for Muse, while any shortfall (a truncation) still fails at 2. Diagnosed with direct calls, then rerun.
+
+**Alternatives.** Updating Ollama to fix the Muse token leak (not done: the owner allowed an update only if Muse could
+not load, and it loaded). Treating the first Muse attempt as a failed injection probe (rejected after diagnosis: the
+model did not obey the order; its answer did not parse).
+
+**Open.** Judge spend for 3.4 $1.96; phase total $4.03 of $10.
+
+**Review questions.** Are client-side fixes for a runtime's token leak acceptable in a measurement, given they are
+recorded and tested? Is one run enough to drop Gemma 4 31B and gpt-oss, given gaps of 9 and 10 correct answers?
