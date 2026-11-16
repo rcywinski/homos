@@ -74,6 +74,7 @@ export async function startLocalAgent(baseUrl: string, variant: string, numCtx =
   const ps = (await ollamaPs(baseUrl)).find((m) => m.name === LOCAL_AGENT.model);
   if (!ps || ps.size_vram < ps.size) throw new Error(`${LOCAL_AGENT.model} not fully on the GPU after calibration`);
   console.log(`calibrated overhead ${o1} (with jobs) and ${o2} (without); using ${local.overhead}; ${LOCAL_AGENT.model} ${(ps.size_vram / 2 ** 30).toFixed(2)} GiB on GPU; num_ctx ${numCtx}`);
+  console.log(`loaded now: ${(await ollamaPs(baseUrl)).map((m) => `${m.name} ${(m.size_vram / 2 ** 30).toFixed(2)}/${(m.size / 2 ** 30).toFixed(2)} GiB`).join(', ')}`);
   return local;
 }
 

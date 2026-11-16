@@ -725,3 +725,28 @@ variant. The runs wait for the owner's go: CC-Win uses the box first for two sho
 
 **Review questions.** Does restoring a compacted result on a repeat change what "repeat" means in the redundant-call
 measure? (Counted both ways: as a repeat by the 2.4 measure and as a restore here.)
+
+## 2026-11-16, step 3.5 paused before the probes: Ollama keeps only one of Qwen and bge-m3
+
+**What happened.** With the owner's go, the one-second log running and the box reserved:
+- Format check (`ai/eval/results/2026-11-16-agent-format-check-local.json`): with the answer schema as `format` in the
+  same request as the tools, Qwen called no tool in 3 of 3 requests and answered at once in JSON, inventing content
+  ("There are 12 saved backtest result files"); without `format` it called the right tool in 3 of 3. Decision: no
+  `format` in tool turns (the default of the built code).
+- VRAM at the first load: bge-m3 loaded (0.64 GiB), then Qwen at `num_ctx` 24576. Ollama 0.40.15 evicted bge-m3
+  ("llama-server model predicted to exceed available memory, evicting": predicted 20.7 GiB, available 22.1 GiB with
+  the reranker holding 3 870 MiB). Qwen 66/66 layers on the GPU, 23 301 MiB in use, peak 23 315 MiB.
+- The fallback checked before any probe: at `num_ctx` 16384 Ollama evicted bge-m3 as well (predicted 19.0 GiB,
+  available 22.1 GiB), so a smaller context does not keep both resident.
+- A second embed request with Qwen loaded made Ollama swap again; the bge-m3 runner crashed at its first compute
+  ("CUDA error: shared object initialization failed", exit 0xc0000409) after three evictions and loads in 30 s.
+  The box, the driver, the reranker and the Ollama server were fine; no power, temperature or Kernel-Power event. No
+  model was reloaded afterwards (owner's rule).
+
+**Consequence.** The agent's `search_journal` needs a bge-m3 embedding for every search while Qwen generates. With
+Ollama evicting one for the other, each search would swap two models (seconds each, and once already a runner crash).
+The same applies to the planned showcase chat on this box, which embeds every question with bge-m3 before Qwen
+answers; step 3.2 never exercised that, because it used saved chunk lists.
+
+**Open, for the owner.** How to embed queries without a second model on the GPU in Ollama (options in the CC-Mac
+report of 16 Nov). Nothing runs until then.
