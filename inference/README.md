@@ -249,12 +249,12 @@ On 11 Nov 2026 the box lost power 4 times under qwen3.8:27b (Kernel-Power 41, bu
 On 13 Nov 2026 the PSU was replaced with a 1200 W be quiet! unit and the cap was removed:
 - The task is disabled.
 - The launchers no longer call the script.
-- MSI Afterburner applies 100% at logon.
+- MSI Afterburner does not run: its logon task is disabled, fans are on auto.
 - The card runs at its default limit of 420 W.
 
 A watched full-load test passed: qwen3.8:27b at num_ctx 16384 generating 4000 tokens alongside back-to-back reranker calls. It drew up to 421 W (397 W on average) and reached 69 C, with no shutdown.
 
-Rollback: run `Enable-ScheduledTask "HOMOS GPU power limit"`, re-add `& C:\ollama\set-gpu-power-limit.ps1` as the first line of both launchers, and set Afterburner to 59%.
+Rollback: run `Enable-ScheduledTask "HOMOS GPU power limit"`, re-add `& C:\ollama\set-gpu-power-limit.ps1` as the first line of both launchers, and re-enable the Afterburner logon task with the power slider at 59%.
 
 Note for the 1.11/1.12 tok/s figures: they were measured at 250 W. In this test qwen generated at 33.9 tok/s, but that ran alongside the reranker load and with a longer prompt, so it is not directly comparable.
 
