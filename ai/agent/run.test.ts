@@ -221,7 +221,7 @@ async function main() {
     const msgs = bodies[1].messages as Array<{ role: string; content: unknown }>;
     check('history: question, assistant turn unchanged (thinking kept), then results and note', msgs.length === 3 && msgs[0].content === 'Q?' && JSON.stringify(msgs[1].content) === JSON.stringify(responses[0].content) && JSON.stringify(msgs[2].content) === JSON.stringify([{ type: 'tool_result', tool_use_id: 'tu1', content: 'result' }, { type: 'text', text: 'NOTE' }]));
     check('first request is a prefix of the second (append-only)', JSON.stringify(bodies[1].messages.slice(0, 1)) === JSON.stringify(bodies[0].messages));
-    check('cost from usage at Sonnet prices', Math.abs(t1.costUsd - (1000 * 2 + 500 * 2.5 + 2000 * 0.2 + 100 * 10) / 1e6) < 1e-12, String(t1.costUsd));
+    check('cost from usage at Sonnet prices', Math.abs(t1.costUsd - (1000 * 2 + 500 * 2.5 + 2000 * 0.1 + 100 * 10) / 1e6) < 1e-12, String(t1.costUsd));
     check('estimate assumes the history is cached', conv.estimateNextUsd(0) > 0 && conv.estimateNextUsd(10_000) > conv.estimateNextUsd(0));
     check('strictSchema drops numeric ranges and keeps the enum', JSON.stringify(strictSchema({ type: 'integer', minimum: 1, maximum: 9, description: 'd' })) === '{"type":"integer","description":"d"}');
     check('job tool schema sent without ranges', !JSON.stringify(strictSchema(toolDefinitions(true)[4].input_schema)).match(/minimum|maximum|maxLength/) && JSON.stringify(strictSchema(toolDefinitions(true)[4].input_schema)).includes('optimism-weth-usdc-030-365d'));

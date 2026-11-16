@@ -386,3 +386,68 @@ lies outside A1..A2 by more than |A1-A2|. Per-category numbers are shown, not co
 **Open.** With a spread of 0, a difference of one answer counts as exceeding (C on supported, partly_supported).
 
 **Review questions.** Is "larger than both spreads" too lenient when one variant happens to have a small spread?
+
+## 2026-11-16, step 2.4: results accepted; prompt A stays the default (owner)
+
+**Decision.** Prompt A stays the agent's default. Prompt B is documented as a measured variant: it halves redundant
+calls and adds legend citations, but steps, normal endings and correctness do not improve, and a run costs about 20%
+more. No further prompt revisions on these 18 tasks: that would tune on the measurement set.
+
+**Alternatives.** Make B the default for its fewer redundant calls (not chosen: the saving does not show in steps or
+cost, and correctness is at the ceiling). Revise B and rerun (rejected: tuning on the measurement set). Effort high
+(C) as the default (not chosen: one run; it stopped on the spend guard less often, nothing else beyond the spread).
+
+**Evidence.** `ai/eval/results/2026-11-16-agent-eval-report.md`: redundant calls 25 and 17 (A) against 11 and 12 (B),
+legend citations 0 against 8 and 10, cost per run $2.80 and $2.51 against $3.06 and $3.33 at the corrected Sonnet
+price (entry below), correct answers 17 and 16 against 17 and 17.
+
+**Open, stated plainly in the write-up.**
+- Only 6 to 8 of 18 tasks end with a normal answer; the limits do the stopping (over all 90 answers: 34 answered, 9
+  stopped after a repeated call, 21 at the step limit, 26 by the spend guard).
+- Correctness is at the ceiling (16 to 17 of 18), so the set does not separate the variants.
+- The judge rubric scores content only, not actions: the B01 disagreement (an unrequested job) is outside its reach.
+- Faithfulness does not discriminate: 87 of 90 answers are partly supported (17 or 18 of 18 in every run), and all six
+  blind items were partly supported for both the owner and the judge.
+- The per-question spend guard fires early. Before each tool turn it keeps room for the next turn and a final turn,
+  each priced at the full 8 000 output tokens, with new text as cache writes and, in job tasks, the whole history as a
+  cache write (as if the cache had expired during the job). 26 of 90 runs stopped on it, while no task cost more than
+  $0.32 as recorded ($0.29 at the corrected price) of the $0.50 cap.
+- C is a single run.
+- The reread hypothesis (the model rereads a field to get a path for its dataRef) is consistent with the data but
+  unresolved: 16 and 6 such rereads in A, 4 and 5 in B, inside A's spread.
+- Job input data exists only on the owner's Mac.
+
+**Future directions, listed, not built.** A stopping rule in the loop code instead of the prompt; a harder task set;
+a spend guard priced from measured cache rates; the same agent with a local model through Ollama.
+
+**Review questions.** Is "no prompt revision on the measurement set" compatible with keeping A, which was itself
+written in 2.2 before this set existed? Should the next task set be built so that correctness is not at the ceiling?
+
+## 2026-11-16, billing check: Sonnet 5.5 cache reads were priced at twice the real price
+
+**Decision.** `ai/context/pricing.ts` priced Sonnet 5.5 cache reads at $0.20 per million tokens. The pricing page
+(checked 16 Nov 2026) lists $0.10 (0.05x the $2 input price); Opus 5.5 ($0.20) and Haiku 5.5 ($0.01) were right. The
+price is corrected in code. Saved result files keep the cost recorded at the time; the write-up and the step 2.4 report
+give the corrected figures, recomputed from the saved token usage.
+
+**Evidence.** The owner's Console shows $35.74 spent in November and a 91% cache hit rate; the step reports add up to
+about $39. Recomputed from every saved usage record (context runs, answers, judges, agent logs and evaluation runs):
+$38.58 at the old price, $35.51 at the corrected one. The difference, $3.07, is cache-read tokens (60.9 million, of
+which Sonnet 30.7 million) times $0.10 per million on the Sonnet share: contexts in step 1.7 (overstated by $1.54),
+the agent in steps 2.2 and 2.3 including the owner's runs ($0.12), and the step 2.4 runs ($1.41). The cache hit rate
+matches: cache reads over cache reads plus uncached input are 60.9 / (60.9 + 5.7) = 91%. The remaining $0.23 (0.6%) is
+not in any saved file; known unsaved calls are the live `npm run ask` checks of step 1.10 and development calls, not
+itemised.
+
+Corrected figures: steps 1.7 to 1.9 $11.94 (was $13.49); Sonnet contexts $6.76 (was $8.29); step 2.4 runs $14.34 (was
+$15.75), step 2.4 with the judge $16.05 (was $17.45).
+
+**Alternatives.** Rewriting the saved result files with corrected costs (rejected: they record what the code computed
+at the time; the correction is applied where figures are reported). Leaving the overstatement (rejected: the owner
+asked for no rounding in our favour, and an overstated cost is still a wrong figure).
+
+**Open.** The spend caps of every run were computed with the old price, so they were stricter than intended; no
+result depends on that except where the step 2.4 spend guard stopped a run.
+
+**Review questions.** Should a price table be checked against the provider's page at the start of every step that
+spends money?

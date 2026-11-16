@@ -17,6 +17,8 @@ import type { JudgedItem } from '../judge/items';
 import { changes } from '../judge/measures';
 import { CORRECTNESS, FAITHFULNESS } from '../judge/types';
 import type { AgentVerification } from '../agent/verify';
+import { MODELS, usd } from '../context/pricing';
+import type { TokenUsage } from '../context/types';
 import { requiredSources, type AgentTask, type CallRecord } from './agent-measures';
 import { BLIND, BLIND_KEY } from './agent-judge';
 import { EVAL_PREFIX, JUDGED_FILE, loadTasks, RESULTS, RUNS } from './agent-run';
@@ -65,6 +67,7 @@ interface Row {
     reasoningTokens: number;
   };
   calls: Array<{ name: string; args: unknown; isError: boolean }>;
+  usage: TokenUsage;
   costUsd: number;
   modelCostUsd: number;
   toolCostUsd: number;
@@ -78,6 +81,12 @@ const median = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b);
   return s.length ? (s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2) : 0;
 };
+
+/**
+ * Cost of one task at the corrected Sonnet price (cache reads $0.10, see ai/context/pricing.ts) plus the tool costs as
+ * recorded (query translation, no cache reads). The run files keep the cost recorded at the time ($0.20 cache reads).
+ */
+const costOf = (r: Row) => usd(r.usage, MODELS.sonnet.price) + r.toolCostUsd;
 
 /** The numeric measures of a set of rows (a run, or a run within one category). */
 export function summarize(rows: Row[], items: JudgedItem[], tasks: AgentTask[]) {
@@ -115,9 +124,10 @@ export function summarize(rows: Row[], items: JudgedItem[], tasks: AgentTask[]) 
     steps: sum((r) => r.measures.steps),
     toolCalls: sum((r) => r.measures.toolCalls),
     reasoningTokens: sum((r) => r.measures.reasoningTokens),
-    costUsd: r4(sum((r) => r.costUsd)),
+    costUsd: r4(sum(costOf)),
+    recordedCostUsd: r4(sum((r) => r.costUsd)),
     toolCostUsd: r4(sum((r) => r.toolCostUsd)),
-    maxCostUsd: r4(Math.max(0, ...rows.map((r) => r.costUsd))),
+    maxCostUsd: r4(Math.max(0, ...rows.map(costOf))),
     totalS: Math.round(sum((r) => r.ms) / 1000),
     medianS: Number((median(rows.map((r) => r.ms)) / 1000).toFixed(1)),
     noJobMedianS: Number((median(rows.filter((r) => !tasks.find((t) => t.id === r.id)!.jobs).map((r) => r.ms)) / 1000).toFixed(1)),
@@ -203,11 +213,12 @@ function main() {
   const categories = [...new Set(tasks.map((t) => t.category))];
   const perCategory = Object.fromEntries(categories.map((c) => [c, Object.fromEntries(order.map((r) => [r, summarize(rowsOf[r].filter((x) => x.category === c), itemsOf(r), tasks)]))]));
   const runCost = r4(order.reduce((n, r) => n + summaries[r].costUsd, 0));
+  const runCostRecorded = r4(order.reduce((n, r) => n + summaries[r].recordedCostUsd, 0));
 
-  writeFileSync(`${REPORT}.json`, JSON.stringify({ date: '2026-11-16', judge: judged.judge, judgeCostUsd: judged.costUsd, runCostUsd: runCost, acceptedAfterReview: ACCEPTED_AFTER_REVIEW, agreement: agree, grading: record, summaries, comparison: cmp, spread: { A: spreadA, B: spreadB }, perCategory }, null, 2) + '\n');
+  writeFileSync(`${REPORT}.json`, JSON.stringify({ date: '2026-11-16', judge: judged.judge, judgeCostUsd: judged.costUsd, runCostUsd: runCost, runCostRecordedUsd: runCostRecorded, acceptedAfterReview: ACCEPTED_AFTER_REVIEW, agreement: agree, grading: record, summaries, comparison: cmp, spread: { A: spreadA, B: spreadB }, perCategory }, null, 2) + '\n');
 
   const out: string[] = ['# Agent evaluation, step 2.4: report', ''];
-  out.push(`Runs of 12 Nov 2026, 18 tasks each; judge \`${judged.judge}\` ($${judged.costUsd}); runs $${runCost}; step total $${r4(runCost + judged.costUsd)} of $25. A = prompt A, effort medium (two runs); B = prompt B, effort medium (two runs); C = prompt A, effort high (one run).`, '');
+  out.push(`Runs of 12 Nov 2026, 18 tasks each; judge \`${judged.judge}\` ($${judged.costUsd}); runs $${runCost} at the corrected Sonnet price (recorded at the time: $${runCostRecorded}, with cache reads at $0.20 instead of $0.10); step total $${r4(runCost + judged.costUsd)} of $25. Every cost below is at the corrected price. A = prompt A, effort medium (two runs); B = prompt B, effort medium (two runs); C = prompt A, effort high (one run).`, '');
   const pct = (a: number, n: number) => `${a}/${n}`;
   out.push('## 1. Owner blind grading vs the judge', '');
   out.push(`Six items, one per category, rule fixed before the runs. Correctness: exact ${pct(agree.correctness.exact, agree.correctness.n)}, within one step ${pct(agree.correctness.withinOne, agree.correctness.n)}. Faithfulness: exact ${pct(agree.faithfulness.exact, agree.faithfulness.n)}, within one step ${pct(agree.faithfulness.withinOne, agree.faithfulness.n)}.`, '');
