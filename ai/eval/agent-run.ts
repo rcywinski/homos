@@ -59,19 +59,23 @@ export function phase3TotalSpent(): number {
 }
 
 /**
- * A calibrated local agent model: every generator unloaded first, so the calibration call sees no prompt cache (bge-m3
- * stays, search needs it); calibrated on both tool sets (with and without run_backtest), keeping the larger overhead;
- * the model must be fully on the GPU.
+ * A calibrated local agent model. Load order (owner, 16 Nov 2026, after the bge-m3 eviction and runner crash): every
+ * model unloaded first, bge-m3 included; Qwen loads with the cold calibration call (both tool sets, the larger overhead
+ * kept); then one embed loads bge-m3 next to it. Both must then be in /api/ps and Qwen fully on the GPU.
  */
 export async function startLocalAgent(baseUrl: string, variant: string, numCtx = LOCAL_AGENT.numCtx, formatWithTools = false): Promise<OllamaAgentModel> {
   const local = new OllamaAgentModel({ baseUrl, ...LOCAL_AGENT, numCtx, variant, formatWithTools });
-  for (const m of LOCAL_MODELS) await ollamaUnload(baseUrl, m);
-  const left = (await ollamaPs(baseUrl)).filter((m) => m.name !== 'bge-m3:latest');
+  for (const m of [...LOCAL_MODELS, 'bge-m3']) await ollamaUnload(baseUrl, m);
+  const left = await ollamaPs(baseUrl);
   if (left.length) throw new Error(`models still loaded: ${left.map((m) => m.name).join(', ')}`);
   const o1 = await local.calibrate(`${SYSTEM_PROMPTS.A}\n\n${JOBS_ADDENDUM}`, toolDefinitions(true));
   const o2 = await local.calibrate(SYSTEM_PROMPTS.A, toolDefinitions(false));
   local.overhead = Math.max(o1, o2);
-  const ps = (await ollamaPs(baseUrl)).find((m) => m.name === LOCAL_AGENT.model);
+  const emb = await fetch(`${baseUrl.replace(/\/$/, '')}/api/embed`, { method: 'POST', body: JSON.stringify({ model: 'bge-m3', input: ['load bge-m3 after the generator'], truncate: false }) });
+  if (!emb.ok) throw new Error(`bge-m3 did not load next to ${LOCAL_AGENT.model}: HTTP ${emb.status}; not retrying`);
+  const both = await ollamaPs(baseUrl);
+  if (!both.some((m) => m.name === 'bge-m3:latest') || !both.some((m) => m.name === LOCAL_AGENT.model)) throw new Error(`after loading bge-m3 the loaded models are ${both.map((m) => m.name).join(', ')}; both must stay`);
+  const ps = both.find((m) => m.name === LOCAL_AGENT.model);
   if (!ps || ps.size_vram < ps.size) throw new Error(`${LOCAL_AGENT.model} not fully on the GPU after calibration`);
   console.log(`calibrated overhead ${o1} (with jobs) and ${o2} (without); using ${local.overhead}; ${LOCAL_AGENT.model} ${(ps.size_vram / 2 ** 30).toFixed(2)} GiB on GPU; num_ctx ${numCtx}`);
   console.log(`loaded now: ${(await ollamaPs(baseUrl)).map((m) => `${m.name} ${(m.size_vram / 2 ** 30).toFixed(2)}/${(m.size / 2 ** 30).toFixed(2)} GiB`).join(', ')}`);
@@ -131,6 +135,10 @@ async function main() {
     if (!localCfg && spent + DEFAULT_CAP_USD > STEP_CAP_USD - JUDGE_RESERVE_USD) {
       save();
       throw new Error(`stopping before ${task.id}: step spend $${spent.toFixed(4)}, one more question may cost $${DEFAULT_CAP_USD} (cap $${STEP_CAP_USD}, $${JUDGE_RESERVE_USD} kept for the judge)`);
+    }
+    if (local && !(await ollamaPs(baseUrl)).some((m) => m.name === LOCAL_AGENT.model)) {
+      save();
+      throw new Error(`stopping before ${task.id}: ${LOCAL_AGENT.model} is no longer loaded (evicted, crashed or the box restarted); not reloading it (owner rule)`);
     }
     const deps = realDeps(process.cwd(), task.jobs ? { approve: async () => true, runsDir } : undefined, localCfg?.retrieval ?? 'chosen');
     const log = new JsonlLog(`eval-${run}-${task.id}`);
