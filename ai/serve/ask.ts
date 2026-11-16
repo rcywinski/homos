@@ -74,6 +74,8 @@ async function during<T>(stage: Stage, f: () => Promise<T>): Promise<T> {
   try {
     return await f();
   } catch (e) {
+    // A cancelled job (the visitor left, or the deadline passed) is not a model failure: it passes through unchanged.
+    if (e instanceof Error && ['AbortError', 'JobCancelled', 'JobTimeout'].includes(e.name)) throw e;
     throw new ModelUnavailable(stage, e);
   }
 }
@@ -83,16 +85,18 @@ export function refusedBeforeWork(question: string): boolean {
   return !checkScope(question).inScope;
 }
 
-export async function ask(deps: AskDeps, question: string, onStage?: (s: Stage) => void): Promise<AskResponse> {
+export async function ask(deps: AskDeps, question: string, onStage?: (s: Stage) => void, signal?: AbortSignal): Promise<AskResponse> {
   const t0 = Date.now();
   if (refusedBeforeWork(question)) return fixed(deps, 'out-of-scope', OUT_OF_SCOPE_ADVICE, t0);
 
   onStage?.('retrieving');
   if (deps.beforeWork) await during('retrieving', deps.beforeWork);
   const chunks = await during('retrieving', () => deps.retrieval.retrieve(question, deps.k));
+  // A visitor who left during retrieval never reaches the generator.
+  signal?.throwIfAborted();
   const sources = chunks.map(sourceOf);
   onStage?.('generating');
-  const r = await during('generating', () => answerWithChecks(deps.generator, question, chunks, deps.root));
+  const r = await during('generating', () => answerWithChecks(deps.generator, question, chunks, deps.root, signal));
   const out = r.output;
   if (!out || r.error) return fixed(deps, 'failed', FAILED, t0, sources);
   if (out.coverage === 'none') return fixed(deps, 'not-in-data', NOT_IN_DATA, t0, sources);

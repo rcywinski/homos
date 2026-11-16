@@ -145,7 +145,7 @@ verification marks. A visible progress line covers the wait.
 **Rate limits.** Visitor identity: a hash of the client IP with a salt drawn at random for each UTC day and kept only
 in memory (no cookie: the hash is enough, and a cookie would be one more thing that tracks visitors). The IP is never
 stored or logged; hashes from different days cannot be linked. The tunnel header `CF-Connecting-IP` is trusted only
-with `SERVE_TRUST_PROXY=cloudflare`. A question refused by the queue, by the pause switch or because the box is off is
+with `SERVE_MODE=tunnel` (step 4.7). A question refused by the queue, by the pause switch or because the box is off is
 given back to the visitor's limit. Limits to start: 5
 questions per hour and 20 per day per visitor, 200 per day for the whole site, question length at most 500
 characters, single-turn questions (no chat history sent to the model in stage A). A Cloudflare rate rule in front as
@@ -383,8 +383,35 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   `keccak` question answered: in the lockfile since `516f8ea` (19 Mar 2025, the old cockpit), pulled in by `wagmi`
   (Coinbase wallet SDK) and `@uniswap/v3-sdk` (hardhat), unchanged by phase 4; not in the showcase bundle (build guard,
   now listing `keccak` and `hardhat`) and not loaded by the chat server (a test over the modules Node actually loads).
-- [ ] **4.7** Security pass: headers and CSP, input limits, abuse script against a local run, injection probe against
-  the local model. Needs the box. M.
+- [x] **4.7** Security pass, offline (the box was busy with step 3.5). Reviewed request limits, input length and
+  encoding, the wallet path, response headers and the CSP, the request log, error messages and the full queue, by
+  reading the code and probing a dry-run server. Fixed (owner, 16 Nov 2026), tests in `ai/serve/security.test.ts`
+  and `ai/serve/queue.test.ts`:
+  M1 the wallet file is served only if its real path is under `data/` (test fixtures only in the dry run), it ends
+  in `.json`, is under 2 MB, has the export's shape and passes the export audit; it is read once at start and held in
+  memory, and the start-up log says why when it is not served (package.json, a `.env`, a symbolic link out of
+  `data/`, other JSON, a leaky file: all refused, tested);
+  M2 one middleware sets the CSP of `index.html` plus `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy: no-referrer`, `Permissions-Policy`, `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy`
+  `same-origin` and `X-Frame-Options: DENY` on every response; the meta tag stays (the page keeps a policy when served
+  without this server) and a test keeps it equal to the header policy;
+  M3 `SERVE_MODE=local|tunnel` replaces `SERVE_TRUST_PROXY` (refused if still set): tunnel mode takes the visitor from
+  `CF-Connecting-IP` and refuses to start unless `SERVE_HOST` is exactly 127.0.0.1; the log warns once when the
+  traffic does not match the mode;
+  L1 IPv6 visitors are counted by their /64 prefix (IPv4-mapped addresses as IPv4);
+  L2 old log files are deleted on the first write of every UTC day, not only at start;
+  L3 unknown paths get a plain `Not found`, not the framework's page with the echoed path;
+  L5 questions lose bidirectional controls, other format characters (zero-width, BOM) and control characters before
+  they are answered or logged;
+  L7 a visitor who leaves cancels the model call (Ollama stops generating when the client goes away) and frees the
+  slot at once; the job deadline cancels it too (tested with the fake engine: the slot is free in under 1.5 s instead
+  of after the 5 s answer).
+  Left as documented: L4 the source map `app.js.map` stays public, because the repository is public and the map holds
+  no local paths; L6 the one known advisory in the server's modules (`cookie`, low, via express) cannot be reached,
+  because the server sets no cookies, and the other advisories in the repository are in the old cockpit's wallet and
+  contract tooling, which neither the server nor the showcase bundle loads.
+  Box note: the request log folder must be readable only by `homos-web` (Windows ACL on `ai\serve\logs`).
+
 - [ ] **4.8** First real run on the LAN only (no tunnel): copy indexes, CC-Win sets up the backend service under its
   own user, owner tests from the Mac and a phone on the LAN. Needs the box. S. First real start checks the load order on the box: the
   `[serve] resident:` line, `/api/ps` with generator, bge-m3 and the reranker loaded, and one question after a forced
@@ -399,7 +426,10 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
 - [ ] **4.6** Guest-key mode: `POST /api/retrieve`, browser generator with `dangerouslyAllowBrowser`, verifier in the browser, CSP, the
   no-key-to-our-origin test. Tested with a fake fetch; one real call only with a key the owner creates for it. M.
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner: Cloudflare Tunnel, static hosting choice,
-  optional Access, kill switch documented in `inference/README.md`. S.
+  optional Access, kill switch documented in `inference/README.md`. S. Checklist: `SERVE_MODE=tunnel` and
+  `SERVE_HOST=127.0.0.1` in `serve.env` (the server refuses tunnel mode on any other address); the start-up log shows
+  "mode tunnel"; no "CF-Connecting-IP" warning in the log after the first visits; the log folder ACL limited to
+  `homos-web`; the response headers of section 4.7 present on the public URL.
 
 Steps 4.1 to 4.5 can be built while phase 3 holds the box (4.4b needs CC-Win on the box but not the GPU). 4.7, 4.8,
 4.6 and 4.9 wait until the owner says phase 3 is finished.

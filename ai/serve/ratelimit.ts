@@ -9,6 +9,7 @@
  * next day. Counters live in memory and are dropped with the salt at the day boundary.
  */
 import { createHash, randomBytes } from 'crypto';
+import { isIPv6 } from 'net';
 
 export interface Limits {
   perHour: number;
@@ -48,10 +49,14 @@ export class RateLimiter {
     this.globalCount = 0;
   }
 
-  /** Daily-salted hash of the client address; 16 hex characters are enough to tell visitors apart for one day. */
+  /**
+   * Daily-salted hash of the client address; 16 hex characters are enough to tell visitors apart for one day. An IPv6
+   * visitor is counted by its /64 prefix (step 4.7, L1): a home connection gets a whole /64 and can rotate addresses
+   * inside it at will.
+   */
   visitor(ip: string): string {
     this.roll();
-    return createHash('sha256').update(this.salt).update(ip).digest('hex').slice(0, 16);
+    return createHash('sha256').update(this.salt).update(visitorKey(ip)).digest('hex').slice(0, 16);
   }
 
   /** Checks the limits and, when allowed, counts the question. */
@@ -77,6 +82,32 @@ export class RateLimiter {
       this.globalCount = Math.max(0, this.globalCount - 1);
     }
   }
+}
+
+/** Expands an IPv6 address to its eight 16-bit groups, or returns null when it is not one. */
+function ipv6Groups(ip: string): string[] | null {
+  if (!isIPv6(ip)) return null;
+  let addr = ip.split('%')[0].toLowerCase();
+  // An embedded IPv4 tail (::ffff:1.2.3.4) becomes two groups.
+  const v4 = addr.match(/(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+  if (v4) {
+    const [a, b, c, d] = v4.slice(1).map(Number);
+    addr = addr.slice(0, v4.index) + `${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const [head, tail] = addr.split('::');
+  const h = head ? head.split(':') : [];
+  const t = tail !== undefined && tail ? tail.split(':') : [];
+  const fill = tail !== undefined ? Array(8 - h.length - t.length).fill('0') : [];
+  const groups = [...h, ...fill, ...t].map((g) => g.replace(/^0+(?=.)/, '') || '0');
+  return groups.length === 8 ? groups : null;
+}
+
+/** The address a visitor is counted by: IPv4 as is (also when written as ::ffff:a.b.c.d), IPv6 by its /64 prefix. */
+export function visitorKey(ip: string): string {
+  const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  if (mapped) return mapped[1];
+  const groups = ipv6Groups(ip);
+  return groups ? `${groups.slice(0, 4).join(':')}::/64` : ip;
 }
 
 /**

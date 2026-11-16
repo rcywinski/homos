@@ -19,6 +19,7 @@ import type { AskDeps } from './ask';
 import { ConfigError, loadServeConfig } from './config';
 import { DryRunGenerator, FAKE_ENGINE, fakeRetrieval } from './fake-engine';
 import { FileLog } from './log';
+import { loadWalletForServing } from './wallet-export';
 import { GpuQueue } from './queue';
 import { RateLimiter } from './ratelimit';
 import { ensureResident, ResidencyError, warmUp, type ResidencyOptions } from './residency';
@@ -81,6 +82,11 @@ async function main() {
     };
     probe = boxProbe(cfg.inferenceUrl, cfg.rerankUrl);
   }
+  // M1: the wallet file is served only if it is under data/ (or a test fixture in the dry run), is JSON of the right
+  // shape and passes the export audit; otherwise the Wallet tab stays hidden and the log says why.
+  const wallet = loadWalletForServing(cfg.walletFile, { allowFixtures: cfg.engine === 'fake' });
+  console.log(wallet.ok ? `[serve] wallet data served from ${cfg.walletFile}` : `[serve] no wallet data served: ${wallet.reason}`);
+  console.log(`[serve] mode ${cfg.mode}${cfg.mode === 'tunnel' ? ' (visitor = CF-Connecting-IP, listening on 127.0.0.1 only)' : ''}`);
   const app = createApp(deps, {
     maxQuestionChars: cfg.maxQuestionChars,
     queue: new GpuQueue(cfg.queueMax, cfg.jobDeadlineMs),
@@ -89,7 +95,7 @@ async function main() {
     probe,
     trustProxy: cfg.trustProxy,
     paused: () => existsSync(cfg.pauseFile),
-    walletFile: cfg.walletFile,
+    walletJson: wallet.ok ? wallet.json : undefined,
     staticDir: existsSync(path.join('showcase', 'public', 'app.js')) ? path.join('showcase', 'public') : undefined,
   });
   if (!existsSync(path.join('showcase', 'public', 'app.js'))) console.log('[serve] showcase not built (npm run showcase:build): API only');

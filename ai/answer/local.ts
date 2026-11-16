@@ -159,9 +159,14 @@ export class LocalGenerator implements Generator {
     };
   }
 
-  private async chat(user: string): Promise<{ r: OllamaChatResponse; ms: number }> {
+  private async chat(user: string, signal?: AbortSignal): Promise<{ r: OllamaChatResponse; ms: number }> {
+    signal?.throwIfAborted();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.o.timeoutMs ?? 600_000);
+    // The caller's signal (a visitor who left, step 4.7) cancels the request; Ollama stops generating when the
+    // client goes away, so the GPU is free for the next question.
+    const onAbort = () => controller.abort();
+    signal?.addEventListener('abort', onAbort, { once: true });
     const t0 = Date.now();
     try {
       const res = await this.fetchFn(`${this.o.baseUrl.replace(/\/$/, '')}/api/chat`, {
@@ -185,6 +190,7 @@ export class LocalGenerator implements Generator {
       return { r: (await res.json()) as OllamaChatResponse, ms: Date.now() - t0 };
     } finally {
       clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
     }
   }
 
@@ -210,7 +216,7 @@ export class LocalGenerator implements Generator {
     return expected;
   }
 
-  async generate(question: string, chunks: Chunk[]): Promise<GeneratorResult> {
+  async generate(question: string, chunks: Chunk[], signal?: AbortSignal): Promise<GeneratorResult> {
     const { user, bare } = this.promptTokens(question, chunks);
     let invalid = 0;
     let network = 0;
@@ -221,7 +227,7 @@ export class LocalGenerator implements Generator {
       let call: { r: OllamaChatResponse; ms: number } | null = null;
       while (!call) {
         try {
-          call = await this.chat(user);
+          call = await this.chat(user, signal);
         } catch (e) {
           // A transport failure (no response) is repeated at most twice per answer, counted apart from invalid outputs,
           // and only while the model is still loaded on the box. On 11 Nov 2026 the box lost power under load; a retry

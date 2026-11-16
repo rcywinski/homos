@@ -23,7 +23,7 @@ const server = (name: string, port: number, extra: Record<string, string>) => ({
     ANTHROPIC_API_KEY: '',
     SERVE_ENGINE: 'fake',
     SERVE_PORT: String(port),
-    SERVE_TRUST_PROXY: 'cloudflare',
+    SERVE_MODE: 'tunnel',
     SERVE_LOG_DIR: path.join(os.tmpdir(), `homos-e2e-${name}-logs`),
     SERVE_PAUSE_FILE: path.join(os.tmpdir(), `homos-e2e-${name}-PAUSED`),
     ...extra,

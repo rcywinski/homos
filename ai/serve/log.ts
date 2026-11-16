@@ -30,13 +30,21 @@ export class FileLog implements RequestLog {
     this.prune();
   }
 
+  private prunedDay = '';
+
   write(e: LogEntry) {
     const t = new Date(this.now());
+    // L2 (step 4.7): old files go on the first write of every UTC day, not only at start; the service may run for weeks.
+    const today = t.toISOString().slice(0, 10);
+    if (today !== this.prunedDay) {
+      this.prunedDay = today;
+      this.prune();
+    }
     const line = { t: t.toISOString(), ...e, ...(e.question !== undefined ? { question: maskNetwork(e.question) } : {}) };
     appendFileSync(path.join(this.dir, `${t.toISOString().slice(0, 10)}.jsonl`), JSON.stringify(line) + '\n');
   }
 
-  /** Deletes day files older than the retention period. Called at start; the service restarts often enough. */
+  /** Deletes day files older than the retention period. Called at start and on the first write of every UTC day. */
   prune() {
     const cutoff = new Date(this.now() - RETENTION_DAYS * 86_400_000).toISOString().slice(0, 10);
     for (const f of readdirSync(this.dir)) {

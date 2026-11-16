@@ -27,8 +27,24 @@ const words = (t: string) => [...new Set((t.toLowerCase().match(/[\p{L}\p{N}]{4,
 export class DryRunGenerator implements Generator {
   readonly name = 'answer:dry-run';
   constructor(private readonly delayMs = 0) {}
-  async generate(question: string, chunks: Chunk[]): Promise<GeneratorResult> {
-    if (this.delayMs > 0) await new Promise((r) => setTimeout(r, this.delayMs));
+  /** Generations cancelled by a signal, for the step 4.7 test. */
+  aborted = 0;
+  async generate(question: string, chunks: Chunk[], signal?: AbortSignal): Promise<GeneratorResult> {
+    if (this.delayMs > 0) {
+      // Like the real model call: the signal cancels the wait at once.
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, this.delayMs);
+        signal?.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer);
+            this.aborted++;
+            reject(signal.reason instanceof Error ? signal.reason : new DOMException('aborted', 'AbortError'));
+          },
+          { once: true },
+        );
+      });
+    }
     const usage = { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 };
     const done = (output: GeneratedAnswer): GeneratorResult => ({ output, usage, costUsd: 0, ms: this.delayMs });
     const first = chunks[0];

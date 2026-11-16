@@ -28,6 +28,23 @@ export function checkScope(question: string): ScopeResult {
   return ADVICE.some((r) => r.test(question)) ? { inScope: false, reason: 'advice' } : { inScope: true };
 }
 
+/**
+ * Removes characters that change how text displays without being visible (step 4.7, L5): bidirectional controls
+ * (U+202A to U+202E, U+2066 to U+2069, U+200E, U+200F, U+061C), every other format character (Unicode category Cf:
+ * zero-width spaces and joiners, soft hyphen, byte order mark) and control characters other than newline and tab.
+ * Line breaks and tabs become spaces, runs of spaces become one. Applied before a question is answered or logged.
+ */
+export function cleanQuestion(raw: string): string {
+  return raw
+    .normalize('NFC')
+    .replace(/\p{Cf}/gu, '')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/g, '')
+    .replace(/[\t\n\r]+/g, ' ')
+    .replace(/ {2,}/g, ' ')
+    .trim();
+}
+
 /** Plain text only: no control characters other than newline and tab, and some letters. */
 export function isPlainQuestion(question: string): boolean {
   // eslint-disable-next-line no-control-regex

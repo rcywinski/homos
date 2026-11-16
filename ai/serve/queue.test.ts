@@ -225,6 +225,60 @@ async function appTests() {
   }
 }
 
+/** L7 (step 4.7): a visitor who leaves mid-answer cancels the generation and frees the slot at once. */
+async function disconnectTests() {
+  const retrieval = await fakeRetrieval();
+  const generator = new DryRunGenerator(5000);
+  const deps: AskDeps = { retrieval, generator, engine: FAKE_ENGINE, k: 10 };
+  const log = new MemoryLog();
+  const queue = new GpuQueue(0, 60_000);
+  const app = createApp(deps, {
+    maxQuestionChars: 500,
+    queue,
+    limiter: new RateLimiter({ perHour: 100, perDay: 100, globalPerDay: 1000 }),
+    log,
+    probe: { up: async () => true },
+    trustProxy: 'cloudflare',
+    paused: () => false,
+  });
+  const srv = await new Promise<{ url: string; close: () => void }>((resolve) => {
+    const s = app.listen(0, '127.0.0.1', () => resolve({ url: `http://127.0.0.1:${(s.address() as AddressInfo).port}`, close: () => s.close() }));
+  });
+  try {
+    const leaving = new AbortController();
+    const first = fetch(`${srv.url}/api/ask`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'text/event-stream', 'cf-connecting-ip': '203.0.113.50' },
+      body: JSON.stringify({ question: 'Why were the ranges kept wide?' }),
+      signal: leaving.signal,
+    }).catch(() => null);
+    await sleep(300);
+    check('the first question holds the GPU', queue.state().running);
+    const t0 = Date.now();
+    leaving.abort();
+    await first;
+    for (let i = 0; i < 50 && queue.state().running; i++) await sleep(20);
+    check('leaving mid-answer frees the slot at once, not after the 5 s answer', !queue.state().running && Date.now() - t0 < 1500, `${Date.now() - t0} ms`);
+    check('the generation was cancelled', generator.aborted === 1, String(generator.aborted));
+    check('the cancellation is logged as such', log.entries.some((e) => e.outcome === 'cancelled'));
+    // With no waiting places, the next visitor is served at once instead of hearing "busy".
+    const next = await fetch(`${srv.url}/api/ask`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'cf-connecting-ip': '203.0.113.51' },
+      body: JSON.stringify({ question: 'Should I buy ETH now?' }),
+    });
+    check('the next visitor is not told "busy"', next.status === 200, String(next.status));
+    // The deadline cancels the generation too.
+    const short = new GpuQueue(1, 100);
+    const gen2 = new DryRunGenerator(5000);
+    const timedOut = await short.run('v', (signal) => gen2.generate('q', [], signal)).catch((e) => e);
+    await sleep(50);
+    check('a job past its deadline is cancelled, and the slot freed', timedOut instanceof JobTimeout && gen2.aborted === 1 && !short.state().running);
+  } finally {
+    srv.close();
+  }
+}
+
 /** The dry run exactly as CC-Win starts it: plain node with tsx, an env file, port 0, then one question. */
 async function dryRunProcess() {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'homos-serve-dry-'));
@@ -283,6 +337,7 @@ async function main() {
   limiterTests();
   logTests();
   await appTests();
+  await disconnectTests();
   await dryRunProcess();
   console.log(`queue: ${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);

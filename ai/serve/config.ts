@@ -74,7 +74,12 @@ export interface ServeConfig {
   /** Jobs allowed to wait behind the running one. */
   queueMax: number;
   limits: { perHour: number; perDay: number; globalPerDay: number };
-  /** 'cloudflare' only when the tunnel is in front (step 4.9): then CF-Connecting-IP is the client address. */
+  /**
+   * SERVE_MODE (step 4.7, M3): 'local' takes the visitor from the socket; 'tunnel' (behind Cloudflare Tunnel, step 4.9)
+   * takes the visitor from CF-Connecting-IP and requires the server to listen on 127.0.0.1 only, so nobody can reach
+   * it without the tunnel and forge that header. Mapped to the app's trustProxy.
+   */
+  mode: 'local' | 'tunnel';
   trustProxy: 'none' | 'cloudflare';
   /** Request log directory (gitignored). */
   logDir: string;
@@ -112,10 +117,11 @@ function keepAlive(raw: string | undefined): string {
   return v;
 }
 
-function trustProxy(raw: string | undefined): 'none' | 'cloudflare' {
-  if (!raw || raw === 'none') return 'none';
-  if (raw === 'cloudflare') return 'cloudflare';
-  throw new ConfigError('SERVE_TRUST_PROXY must be none or cloudflare');
+function serveMode(env: Env): 'local' | 'tunnel' {
+  if (env.SERVE_TRUST_PROXY) throw new ConfigError('SERVE_TRUST_PROXY was replaced by SERVE_MODE (local or tunnel); remove it');
+  const raw = env.SERVE_MODE || 'local';
+  if (raw !== 'local' && raw !== 'tunnel') throw new ConfigError('SERVE_MODE must be local or tunnel');
+  return raw;
 }
 
 export function loadServeConfig(env: Env = process.env): ServeConfig {
@@ -134,6 +140,10 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
   if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') {
     throw new ConfigError('SERVE_HOST must be a loopback address: the chat is reached only through the tunnel (step 4.9)');
   }
+  const mode = serveMode(env);
+  if (mode === 'tunnel' && host !== '127.0.0.1') {
+    throw new ConfigError('SERVE_MODE=tunnel trusts CF-Connecting-IP, so the server must listen on 127.0.0.1 only (SERVE_HOST=127.0.0.1)');
+  }
   return {
     engine,
     preset,
@@ -150,7 +160,8 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
       perDay: int(env, 'SERVE_LIMIT_DAY', 20, 1, 10_000),
       globalPerDay: int(env, 'SERVE_LIMIT_GLOBAL_DAY', 200, 1, 100_000),
     },
-    trustProxy: trustProxy(env.SERVE_TRUST_PROXY),
+    mode,
+    trustProxy: mode === 'tunnel' ? 'cloudflare' : 'none',
     logDir: env.SERVE_LOG_DIR || path.join('ai', 'serve', 'logs'),
     pauseFile: env.SERVE_PAUSE_FILE || path.join('ai', 'serve', 'PAUSED'),
     fakeDelayMs: int(env, 'SERVE_FAKE_DELAY_MS', 0, 0, 60_000),

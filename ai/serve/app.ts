@@ -11,13 +11,12 @@
  * probe, queue. A question the queue refuses is given back to the visitor's limit.
  */
 import express, { type NextFunction, type Request, type Response } from 'express';
-import { existsSync } from 'fs';
-import path from 'path';
 import { ask, ModelUnavailable, refusedBeforeWork, type AskDeps, type AskResponse, type Stage } from './ask';
 import type { RequestLog } from './log';
 import { GpuQueue, JobCancelled, JobTimeout, QueueRefused } from './queue';
 import { clientIp, RateLimiter } from './ratelimit';
-import { isPlainQuestion } from './scope';
+import { securityHeaders } from './headers';
+import { cleanQuestion, isPlainQuestion } from './scope';
 import { BAD_QUESTION } from './texts';
 
 export interface BoxProbe {
@@ -36,8 +35,11 @@ export interface AppOptions {
   paused: () => boolean;
   /** Built showcase (`showcase/public`), served by the same process on the box; omitted in API-only tests. */
   staticDir?: string;
-  /** Sanitized wallet export (gitignored, outside the page build); served at /data/wallet.json only if it exists. */
-  walletFile?: string;
+  /**
+   * Sanitized wallet export, already checked at start by loadWalletForServing (step 4.7, M1) and held in memory;
+   * served at /data/wallet.json. Undefined: 404, and the page hides the Wallet tab.
+   */
+  walletJson?: string;
 }
 
 /** Fixed messages for every refusal; the UI shows them as they are. */
@@ -91,6 +93,21 @@ class Reply {
 export function createApp(deps: AskDeps, opts: AppOptions) {
   const app = express();
   app.disable('x-powered-by');
+  app.use(securityHeaders);
+
+  // M3: say once in the server log when the mode and the traffic disagree (a tunnel in front of a server in local mode
+  // would count every visitor as one; a tunnel-mode server reached without the tunnel has no CF-Connecting-IP).
+  let warned = false;
+  const warnOnModeMismatch = (hasTunnelHeader: boolean) => {
+    if (warned) return;
+    if (opts.trustProxy === 'none' && hasTunnelHeader) {
+      warned = true;
+      console.warn('[serve] requests carry CF-Connecting-IP but SERVE_MODE is local: every visitor shares one limit. Set SERVE_MODE=tunnel.');
+    } else if (opts.trustProxy === 'cloudflare' && !hasTunnelHeader) {
+      warned = true;
+      console.warn('[serve] SERVE_MODE is tunnel but a request came without CF-Connecting-IP: it was counted by its socket address.');
+    }
+  };
   app.use(express.json({ limit: '2kb', strict: true, type: 'application/json' }));
 
   app.get('/api/health', async (_req, res) => {
@@ -104,7 +121,8 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
     const reply = new Reply(res);
     const body: unknown = req.body;
     const raw = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>).question : undefined;
-    const question = typeof raw === 'string' ? raw.trim() : '';
+    const question = typeof raw === 'string' ? cleanQuestion(raw) : '';
+    warnOnModeMismatch(req.headers['cf-connecting-ip'] !== undefined);
     if (!question || !isPlainQuestion(question)) return reply.error(400, 'bad-request', BAD_QUESTION);
     if (question.length > opts.maxQuestionChars) return reply.error(400, 'too-long', `Please keep the question under ${opts.maxQuestionChars} characters.`);
 
@@ -143,7 +161,7 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
     });
 
     try {
-      const r = await opts.queue.run(visitor, () => ask(deps, question, (s) => reply.event(s)), {
+      const r = await opts.queue.run(visitor, (signal) => ask(deps, question, (s) => reply.event(s), signal), {
         onPosition: (position, waiting) => reply.event('queued', { position, waiting }),
         signal: left.signal,
       });
@@ -155,7 +173,7 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
         log(`refused-${e.reason}`);
         return reply.error(e.reason === 'busy' ? 503 : 429, e.reason, MESSAGES[e.reason]);
       }
-      if (e instanceof JobCancelled) {
+      if (e instanceof JobCancelled || (e instanceof Error && e.name === 'AbortError')) {
         opts.limiter.refund(visitor);
         return log('cancelled');
       }
@@ -179,15 +197,19 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
 
   // The wallet data lives outside the built page. A missing file is a plain 404, and the page then hides the tab.
   app.get('/data/wallet.json', (_req, res) => {
-    const file = opts.walletFile ? path.resolve(opts.walletFile) : '';
-    if (!file || !existsSync(file)) return res.status(404).json({ error: 'not-found' });
-    res.set('cache-control', 'no-store').type('application/json').sendFile(file);
+    if (opts.walletJson === undefined) return res.status(404).json({ error: 'not-found' });
+    res.set('cache-control', 'no-store').type('application/json').send(opts.walletJson);
   });
 
   if (opts.staticDir) {
     // The page carries its own CSP meta tag; data files must not be cached long, the bundle can be.
     app.use(express.static(opts.staticDir, { index: 'index.html', dotfiles: 'deny', fallthrough: true, maxAge: 0 }));
   }
+
+  // L3: anything else is a plain 404, not the framework's default page (which names the framework and echoes the path).
+  app.use((_req, res) => {
+    res.status(404).type('text/plain').send('Not found');
+  });
 
   // Body parser errors (too large, invalid JSON): a fixed message, no details.
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

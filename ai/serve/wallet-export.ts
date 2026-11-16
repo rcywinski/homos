@@ -10,7 +10,7 @@
  * before the project (mainnet #953427 and #953465, opened 24 Mar 2025, closed 25 Aug 2026) are excluded entirely,
  * from every list and every total, and the page says so.
  */
-import { readFileSync } from 'fs';
+import { readFileSync, realpathSync, statSync } from 'fs';
 import path from 'path';
 import { hasPrivateAddress } from './mask';
 import type { WalletData, WalletPaperPool, WalletPosition, WalletTokens, WalletTx } from './showcase-data';
@@ -256,4 +256,56 @@ export function auditWallet(text: string, ownerWallet = ''): string[] {
   for (const id of EXCLUDED_POSITIONS) if (new RegExp(`(?<!\\d)${id.split(':')[1]}(?!\\d)`).test(text)) problems.push(`excluded position ${id} present`);
   for (const m of text.matchAll(/"(?:ts|date|openedAt|closedAt|lastSampleAt)":"(\d{4}-\d{2}-\d{2})/g)) if (m[1] < PROJECT_START) problems.push(`date before the project: ${m[1]}`);
   return [...new Set(problems)];
+}
+
+export const WALLET_MAX_BYTES = 2_000_000;
+
+/**
+ * Decides at server start whether a wallet file may be served (step 4.7, M1). The file is served only when its real
+ * path (symbolic links resolved) is under data/ (or, for the dry run, under the test fixtures folder), it ends in
+ * .json, it is not over 2 MB, it parses as wallet data and it passes the export audit. Otherwise nothing is served and
+ * the reason is returned for the start-up log. The accepted text is kept in memory; the file is not read again.
+ */
+export function loadWalletForServing(
+  file: string,
+  opts: { allowFixtures?: boolean; root?: string } = {},
+): { ok: true; json: string } | { ok: false; reason: string } {
+  const root = opts.root ?? process.cwd();
+  const real = (p: string) => {
+    try {
+      return realpathSync(p);
+    } catch {
+      return null;
+    }
+  };
+  const target = real(path.resolve(root, file));
+  if (!target) return { ok: false, reason: `${file} does not exist` };
+  const roots = [path.join(root, 'data'), ...(opts.allowFixtures ? [path.join(root, 'showcase', 'e2e', 'fixtures')] : [])]
+    .map(real)
+    .filter((r): r is string => r !== null);
+  if (!roots.some((r) => target.startsWith(r + path.sep))) return { ok: false, reason: `${file} is not under data/` };
+  if (!target.endsWith('.json')) return { ok: false, reason: `${file} is not a .json file` };
+  if (statSync(target).size > WALLET_MAX_BYTES) return { ok: false, reason: `${file} is larger than ${WALLET_MAX_BYTES} bytes` };
+  const text = readFileSync(target, 'utf8');
+  let data: unknown;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    return { ok: false, reason: `${file} is not valid JSON` };
+  }
+  const d = data as Partial<WalletData> | null;
+  const shaped =
+    !!d &&
+    typeof d === 'object' &&
+    Array.isArray(d.positions) &&
+    Array.isArray(d.transactions) &&
+    Array.isArray(d.paper) &&
+    typeof d.totals === 'object' &&
+    typeof d.excluded?.note === 'string' &&
+    typeof d.period?.from === 'string';
+  if (!shaped) return { ok: false, reason: `${file} does not have the shape of the wallet export` };
+  const json = JSON.stringify(data);
+  const problems = auditWallet(json);
+  if (problems.length > 0) return { ok: false, reason: `${file} fails the export audit: ${problems.join('; ')}` };
+  return { ok: true, json };
 }

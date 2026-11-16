@@ -7,6 +7,8 @@
  * - Each job has a deadline from the moment it starts. A job past its deadline is reported to its visitor as timed
  *   out, but the slot is released only when the underlying work really settles: the next job never starts while the
  *   GPU is still busy with an abandoned one.
+ * - The work gets an AbortSignal (step 4.7, L7): it fires when the job passes its deadline or when the visitor leaves
+ *   (the hooks' signal), so the model call is cancelled and the GPU and the slot are freed at once.
  * - Waiting jobs are told their position whenever it changes.
  */
 
@@ -21,12 +23,14 @@ export class QueueRefused extends Error {
 export class JobCancelled extends Error {
   constructor() {
     super('cancelled');
+    this.name = 'JobCancelled';
   }
 }
 
 export class JobTimeout extends Error {
   constructor() {
     super('timeout');
+    this.name = 'JobTimeout';
   }
 }
 
@@ -34,7 +38,7 @@ export interface JobHooks {
   /** 1-based position among waiting jobs; called when the job is queued and whenever it moves up. */
   onPosition?: (position: number, waiting: number) => void;
   onStart?: () => void;
-  /** Aborting while the job still waits removes it from the queue (the visitor left); a running job is not stopped. */
+  /** The visitor left: a waiting job is removed from the queue, a running one is aborted through its work's signal. */
   signal?: AbortSignal;
 }
 
@@ -63,7 +67,7 @@ export class GpuQueue {
    * Runs `work` when the GPU is free. Rejects with QueueRefused at once when the queue is full or the visitor already
    * has a job, and with JobTimeout when the job runs past its deadline.
    */
-  run<T>(visitor: string, work: () => Promise<T>, hooks: JobHooks = {}): Promise<T> {
+  run<T>(visitor: string, work: (signal: AbortSignal) => Promise<T>, hooks: JobHooks = {}): Promise<T> {
     if (this.pending.has(visitor)) return Promise.reject(new QueueRefused('visitor-pending'));
     if (this.running !== null && this.waiting.length >= this.maxWaiting) return Promise.reject(new QueueRefused('busy'));
     this.pending.add(visitor);
@@ -72,12 +76,17 @@ export class GpuQueue {
         this.running = visitor;
         hooks.onStart?.();
         let settled = false;
+        const stop = new AbortController();
+        const left = () => stop.abort(new JobCancelled());
+        hooks.signal?.addEventListener('abort', left, { once: true });
         const timer = setTimeout(() => {
+          stop.abort(new JobTimeout());
           if (settled) return;
           settled = true;
           reject(new JobTimeout());
         }, this.deadlineMs);
-        work().then(
+        if (hooks.signal?.aborted) left();
+        work(stop.signal).then(
           (v) => {
             if (!settled) {
               settled = true;
@@ -92,6 +101,7 @@ export class GpuQueue {
           },
         ).finally(() => {
           clearTimeout(timer);
+          hooks.signal?.removeEventListener('abort', left);
           this.pending.delete(visitor);
           this.running = null;
           this.next();
