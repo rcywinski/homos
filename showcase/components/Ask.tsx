@@ -1,0 +1,193 @@
+/**
+ * The chat panel (phase 4, step 4.5). One question at a time, single turn. While the server works it shows what is
+ * happening (place in the queue, searching, writing); the answer appears whole, after verification, with its marks.
+ * Every refusal and failure is a fixed text from the server, shown as it is.
+ */
+import { useEffect, useRef, useState } from 'react';
+import type { AskResponse } from '../../ai/serve/ask';
+import { askQuestion, health, type ChatError, type ChatStatus, type Health } from '../api';
+import { Citations, Legend, MarkedText, NumberSummary, where } from './Marks';
+
+const MAX = 500;
+
+const EXAMPLES = [
+  'Why did the project stay with wide ranges instead of re-centering them?',
+  'When did real capital first go into a position?',
+  'What did the morning report of 21 August say about the hysteresis rule?',
+];
+
+const COVERAGE: Record<'full' | 'partial', string> = {
+  full: 'The sources answer the question.',
+  partial: 'The sources answer part of the question.',
+};
+
+function statusLine(s: ChatStatus | null): string {
+  if (!s) return 'Sending the question.';
+  if (s.kind === 'queued') return s.position === 1 ? 'Waiting: one question is ahead of yours.' : `Waiting: ${s.position} questions are ahead of yours.`;
+  if (s.kind === 'retrieving') return 'Searching the journal and the documentation.';
+  return 'The local model is writing the answer. This can take a minute.';
+}
+
+const HEALTH_TEXT: Record<Exclude<Health['status'], 'up'>, string> = {
+  busy: 'The local model is busy with other questions right now. You can still try; the saved answers are under "Compare".',
+  paused: 'The chat is paused while the GPU is used for other work. The saved answers and the reports still work.',
+  'model-offline': 'The local model is offline right now. The saved answers and the reports still work.',
+  unreachable: 'The chat server cannot be reached right now. The saved answers and the reports still work.',
+};
+
+export function Ask() {
+  const [question, setQuestion] = useState('');
+  const [state, setState] = useState<Health | null>(null);
+  const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState<ChatStatus | null>(null);
+  const [answer, setAnswer] = useState<{ question: string; response: AskResponse } | null>(null);
+  const [error, setError] = useState<ChatError | null>(null);
+  const abort = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    health().then((h) => live && setState(h));
+    return () => {
+      live = false;
+      abort.current?.abort();
+    };
+  }, []);
+
+  const submit = async (q: string) => {
+    const text = q.trim();
+    if (!text || pending) return;
+    setPending(true);
+    setStatus(null);
+    setError(null);
+    abort.current = new AbortController();
+    const r = await askQuestion(text, setStatus, abort.current.signal);
+    setPending(false);
+    if (r.ok) {
+      setAnswer({ question: text, response: r.answer });
+      setError(null);
+    } else setError(r.error);
+  };
+
+  const down = state && state.status !== 'up' ? HEALTH_TEXT[state.status] : null;
+
+  return (
+    <section className="ask" aria-labelledby="ask-title">
+      <h2 id="ask-title" className="section-title">
+        Ask the project archive
+      </h2>
+      <p className="lede">
+        Questions are answered by a local model on the owner&apos;s own GPU, from the journal, the decision log, the documentation and the daily
+        reports. Every quote and every number is checked by code before you see it.
+      </p>
+      {down && (
+        <p className="state-note" role="status" data-testid="chat-health">
+          {down}
+        </p>
+      )}
+      <form
+        className="ask-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit(question);
+        }}
+      >
+        <label htmlFor="question-input" className="field-label">
+          Your question
+        </label>
+        <textarea
+          id="question-input"
+          value={question}
+          maxLength={MAX}
+          rows={3}
+          placeholder="For example: why was narrowing the ranges rejected?"
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void submit(question);
+          }}
+        />
+        <div className="ask-row">
+          <button type="submit" className="primary" disabled={pending || !question.trim()}>
+            {pending ? 'Answering' : 'Ask'}
+          </button>
+          <span className="counter" aria-live="polite">
+            {question.length} of {MAX} characters
+          </span>
+        </div>
+        {!answer && !pending && (
+          <div className="examples">
+            <span className="field-label">Or try</span>
+            <ul>
+              {EXAMPLES.map((ex) => (
+                <li key={ex}>
+                  <button type="button" className="link" onClick={() => setQuestion(ex)}>
+                    {ex}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </form>
+
+      {pending && (
+        <p className="progress" role="status" aria-live="polite" data-testid="chat-progress">
+          {statusLine(status)}
+        </p>
+      )}
+      {error && !pending && (
+        <p className="state-note error" role="alert" data-testid="chat-error" data-error={error.error}>
+          {error.message}
+          {error.retryAfterSec !== undefined && ` You can ask again in about ${Math.max(1, Math.round(error.retryAfterSec / 60))} min.`}
+        </p>
+      )}
+      {answer && !pending && <AnswerBlock question={answer.question} r={answer.response} />}
+
+      <details className="how-to-read">
+        <summary>How to read the marks</summary>
+        <Legend />
+      </details>
+      <p className="fine-print">
+        Questions are logged for 30 days, without your IP address, so the owner can see what people ask. One question at a time; there is a
+        small hourly and daily limit.
+      </p>
+    </section>
+  );
+}
+
+function AnswerBlock({ question, r }: { question: string; r: AskResponse }) {
+  return (
+    <article className={`answer answer-${r.outcome}`} data-testid="chat-answer" data-outcome={r.outcome}>
+      <p className="asked">
+        <span className="field-label">You asked</span> {question}
+      </p>
+      {r.outcome === 'answered' ? (
+        <>
+          {r.coverage && <p className={`coverage coverage-${r.coverage}`}>{COVERAGE[r.coverage]}</p>}
+          <NumberSummary numbers={r.numbers} />
+          <MarkedText text={r.text} numbers={r.numbers} />
+          <h3 className="sub-title">Quotes</h3>
+          <Citations citations={r.citations} />
+        </>
+      ) : (
+        <p className="fixed-text" data-testid="chat-fixed-text">
+          {r.text}
+        </p>
+      )}
+      {r.sources.length > 0 && (
+        <details className="sources">
+          <summary>Sources searched ({r.sources.length})</summary>
+          <ol>
+            {r.sources.map((s) => (
+              <li key={s.chunkId}>
+                <span className="path">{where(s)}</span> {s.title}
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+      <p className="engine">
+        Answered by {r.engine.label} in {(r.ms / 1000).toFixed(1)} s.
+      </p>
+    </article>
+  );
+}

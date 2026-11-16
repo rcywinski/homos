@@ -247,9 +247,14 @@ installs, runs the tests and operates the services.
   (`homos-web`), on branch `app-chat` until phase 4 is merged, then `main`. Its `.env` does not exist; the env file
   `C:\HomosServe\serve.env` holds only `SERVE_*`, `INFERENCE_URL=http://127.0.0.1:11434` and
   `RERANK_URL=http://127.0.0.1:11435`. No Anthropic key on the box for this user (the server refuses to start with one).
-- **How the index gets onto the box.** The served index is `ai/index/ollama-bge-m3.meta.json` (built on the Mac,
-  corpus hash `cb41ca39fd344c6f`, 957 vectors, checked on 16 Nov 2026 against the `app-chat` corpus) plus the tokenizer
-  folder `ai/index/tokenizers/qwen3.8-27b`. The owner copies both from the Mac to the serving checkout over the LAN
+- **How the index gets onto the box.** The served index is `ai/index/ollama-bge-m3.meta.json` (built on the Mac on
+  10 Nov 2026, 957 vectors) plus the tokenizer folder `ai/index/tokenizers/qwen3.8-27b`. Two hashes, one corpus:
+  `8d7f9a3437b43594` is the project-wide corpus hash, over the plain chunks (`corpusHash(loadCorpus())`, the value in
+  `ai/DECISIONS.md` and in the plain index `ollama-bge-m3.json`); `cb41ca39fd344c6f` is the hash of the meta view of
+  the same 957 chunks (each text with its `[file | date | title]` header, which is what the meta index embeds) and is
+  the value stored in `ollama-bge-m3.meta.json`. Both recomputed on `app-chat` on 16 Nov 2026: they match, and no
+  corpus file differs from `main`. The served preset records both; the server refuses to start unless the corpus on
+  disk gives both and the index matches. The owner copies both from the Mac to the serving checkout over the LAN
   share (or a USB stick); CC-Win compares the SHA-256 of the copied files with the Mac's, then starts the dry run,
   which reports whether the index matches the corpus. The real engine refuses to start on a missing or mismatched
   index (`IndexMismatch`), so a corpus change without a new index cannot go live. Rebuilding the index on the box is
@@ -298,12 +303,18 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   with `SERVE_ENGINE=fake`, starts the server with the node command of section 6 on 127.0.0.1, calls `/api/health`
   and asks one question with `curl.exe`, creates and deletes the pause file, and reports the outputs. Does not need
   the GPU, so it can run while phase 3 holds the box, if the owner allows CC-Win to work on the box. S.
-- [ ] **4.5** Answer rendering in the showcase: chat panel, quote and number marks, coverage badge, source links, the
-  states table above. Plus a Playwright end-to-end suite (owner request, 16 Nov 2026) that starts the static showcase
-  and the chat server with fake models and walks the visitor paths in a real browser: the comparison view, an
-  in-scope question, an out-of-scope question, a request for trading advice, a question with no answer in the data,
-  an unverified quote shown with its mark, the rate limit message, the busy message, masked LAN addresses, and the
-  static views with the chat server down. Screenshot saved on failure; the suite added to CI. Fake. M.
+- [x] **4.5** Chat panel, verification marks and design pass, plus the Playwright suite in CI. Numbers have three
+  states (owner, 16 Nov 2026): "Verified" (in a verified quote), "In the cited source" (in a chunk the answer cites
+  with a verified quote, with at least two significant digits, or obtained by one of three code-checked
+  transformations: date written out, project year added, rounding to the printed decimals), "Not verified" (all
+  else, including sums, ratios and multipliers). The states differ in shape (solid, dotted, wavy underline; check,
+  approximately equal, question mark) and in words. Design pass with the frontend-design plugin: neutral title
+  ("DeFi liquidity-provision trading system: research archive and AI assistant"), three-sentence introduction,
+  honesty notice on every view, plain labels with exact settings behind a disclosure, the judge's grade and the
+  quote check explained apart, Polish quotes labelled as originals, reports rendered from Markdown with logs
+  folded, opening on 15 Sep 2026, wallet tab hidden until 4.1b, Recursive font (OFL-1.1) bundled, WCAG AA contrast
+  in both colour schemes (lowest pair 5.22:1). Playwright: 12 visitor paths on desktop and phone width against three
+  local servers with fake models, screenshot on failure, a CI job with the unit tests and the suite. Fake. M.
 - [ ] **4.7** Security pass: headers and CSP, input limits, abuse script against a local run, injection probe against
   the local model. Needs the box. M.
 - [ ] **4.8** First real run on the LAN only (no tunnel): copy indexes, CC-Win sets up the backend service under its
@@ -312,8 +323,9 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   and classify each as unsupported (a correct mark) or derived (a converted date, a sum, a rounded or rescaled value,
   a count the model made from the sources: a false mark). If false marks are more than a few, propose a rule (for
   example a third state "derived, check the source" for values computable from verified quotes) before the tunnel.
-  Then the same Playwright suite against the real server on the LAN, with a screenshot of each path reported to the
-  owner.
+  Then the same Playwright suite against the real server on the LAN (`E2E_BASE_URL=... E2E_SHOTS_DIR=...
+  npx playwright test --grep @real`; the dry-run-only paths are skipped there), with a screenshot of each path
+  reported to the owner.
 - [ ] **4.6** Guest-key mode: `POST /api/retrieve`, browser generator with `dangerouslyAllowBrowser`, verifier in the browser, CSP, the
   no-key-to-our-origin test. Tested with a fake fetch; one real call only with a key the owner creates for it. M.
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner: Cloudflare Tunnel, static hosting choice,

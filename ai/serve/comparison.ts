@@ -1,7 +1,8 @@
 /**
  * Which measured configurations the showcase comparison shows (phase 4, step 4.1; owner decision of 16 Nov 2026).
  *
- * Two default columns: Sonnet at k=10 and the configuration the live chat serves. Everything else that was measured
+ * Labels and descriptions are written for an outside reader (owner, 16 Nov 2026); the exact settings come from the
+ * result files and are shown only behind "Exact settings". Two default columns: Sonnet at k=10 and the configuration the live chat serves. Everything else that was measured
  * and judged on the same 34 golden questions goes into the collapsed "more" section. Changing the served configuration
  * (phase 3 may still find a better local model) means editing this list and `ai/serve/config.ts` together; the export
  * test checks that exactly one configuration is served.
@@ -35,8 +36,8 @@ const run = (name: string, answersFile: string, judgedFile: string): RunSource =
 export const COMPARISON: ConfigSource[] = [
   {
     id: 'sonnet-k10',
-    label: 'Sonnet 5.5, k=10',
-    description: 'Cloud generator on the phase 1 retrieval (question translated to Polish by Sonnet, hybrid search, rerank), 10 chunks.',
+    label: 'Cloud model: Claude Sonnet 5.5',
+    description: 'Answers through the Anthropic API. The question is also translated to Polish to search the journal better. Reads the 10 best-matching passages.',
     group: 'main',
     served: false,
     engine: 'cloud',
@@ -44,9 +45,9 @@ export const COMPARISON: ConfigSource[] = [
   },
   {
     id: 'local-served',
-    label: 'qwen3.8:27b, local prompt, fully local',
+    label: 'Local model: Qwen 3.8, 27B, on one GPU',
     description:
-      'The configuration the chat serves: local generator with the prompt written for local models (variant P) on the fully local retrieval (no cloud step), 10 chunks. Step 3.2.',
+      'What the assistant on this page uses. Runs entirely on the owner\'s own graphics card, with instructions written for local models and no cloud step at all. Reads the 10 best-matching passages.',
     group: 'main',
     served: true,
     engine: 'local',
@@ -57,8 +58,8 @@ export const COMPARISON: ConfigSource[] = [
   },
   {
     id: 'sonnet-k5',
-    label: 'Sonnet 5.5, k=5',
-    description: 'Cloud generator on the phase 1 retrieval, 5 chunks.',
+    label: 'Cloud model, fewer passages',
+    description: 'Claude Sonnet 5.5 reading the 5 best-matching passages instead of 10.',
     group: 'more',
     served: false,
     engine: 'cloud',
@@ -66,8 +67,8 @@ export const COMPARISON: ConfigSource[] = [
   },
   {
     id: 'local-p-a',
-    label: 'qwen3.8:27b, local prompt, phase 1 retrieval',
-    description: 'Prompt written for local models (variant P) on the same chunk lists as Sonnet. Step 1.12.',
+    label: 'Local model, same passages as the cloud model',
+    description: 'Qwen 3.8 with the instructions for local models, given exactly the passages the cloud model read.',
     group: 'more',
     served: false,
     engine: 'local',
@@ -75,8 +76,8 @@ export const COMPARISON: ConfigSource[] = [
   },
   {
     id: 'local-a',
-    label: 'qwen3.8:27b, base prompt, phase 1 retrieval',
-    description: 'The Sonnet prompt on the same chunk lists as Sonnet. Step 1.11, variant A.',
+    label: 'Local model, cloud instructions',
+    description: 'Qwen 3.8 with the instructions written for the cloud model, given the passages the cloud model read.',
     group: 'more',
     served: false,
     engine: 'local',
@@ -84,8 +85,8 @@ export const COMPARISON: ConfigSource[] = [
   },
   {
     id: 'local-b',
-    label: 'qwen3.8:27b, base prompt, fully local',
-    description: 'The Sonnet prompt on the fully local retrieval. Step 1.11, variant B.',
+    label: 'Local model, cloud instructions, local search',
+    description: 'Qwen 3.8 with the instructions written for the cloud model, on the fully local search.',
     group: 'more',
     served: false,
     engine: 'local',
@@ -93,8 +94,8 @@ export const COMPARISON: ConfigSource[] = [
   },
   {
     id: 'local-a-think',
-    label: 'qwen3.8:27b, thinking on, phase 1 retrieval',
-    description: 'Variant A with thinking mode. Step 1.11.',
+    label: 'Local model, thinking mode on',
+    description: 'Qwen 3.8 allowed to reason before answering. Slower, no better in this test.',
     group: 'more',
     served: false,
     engine: 'local',
@@ -102,8 +103,8 @@ export const COMPARISON: ConfigSource[] = [
   },
   {
     id: 'gemma-a',
-    label: 'gemma4:26b, base prompt, phase 1 retrieval',
-    description: 'Second local model, variant A. Step 1.11.',
+    label: 'Second local model: Gemma 4, 26B',
+    description: 'Another open model of similar size, with the instructions written for the cloud model.',
     group: 'more',
     served: false,
     engine: 'local',
@@ -111,8 +112,8 @@ export const COMPARISON: ConfigSource[] = [
   },
   {
     id: 'local-s',
-    label: 'qwen3.8:27b, sampling change, phase 1 retrieval',
-    description: 'Base prompt with changed sampling settings only (variant S). Step 1.12.',
+    label: 'Local model, sampling settings changed',
+    description: 'Qwen 3.8 with only its sampling settings changed. No measurable difference.',
     group: 'more',
     served: false,
     engine: 'local',
@@ -120,8 +121,8 @@ export const COMPARISON: ConfigSource[] = [
   },
   {
     id: 'local-l',
-    label: 'qwen3.8:27b, citation by line reference, phase 1 retrieval',
-    description: 'The model cites line ranges and the quote is cut by code (variant L). Step 1.12.',
+    label: 'Local model citing line numbers',
+    description: 'Qwen 3.8 points at line ranges and code cuts the quote out. No invented quotes, but quotes get long.',
     group: 'more',
     served: false,
     engine: 'local',

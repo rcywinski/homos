@@ -101,9 +101,24 @@ export function loadCheckedIndex(chunks: Chunk[], embedderName = 'ollama-bge-m3'
   return index;
 }
 
+/**
+ * The corpus on disk must be the one the served preset was measured on: the plain corpus hash and the meta-view hash
+ * (the one stored in the index) both have to match the preset. Throws IndexMismatch otherwise.
+ */
+export function checkCorpus(chunks: Chunk[], expected: { corpusHash: string; indexCorpusHash: string }): void {
+  const plain = corpusHash(chunks);
+  const meta = corpusHash(metaView(chunks).chunks);
+  if (plain !== expected.corpusHash || meta !== expected.indexCorpusHash) {
+    throw new IndexMismatch(
+      `the corpus on disk (corpus hash ${plain}, meta view ${meta}) is not the one the served preset was measured on (${expected.corpusHash}, ${expected.indexCorpusHash}). A corpus change needs a new index and new measured runs.`,
+    );
+  }
+}
+
 /** The real thing: reads the corpus and the checked index, talks to the box. Never called in tests. */
-export function localRetrieval(inferenceUrl: string, rerankUrl: string, root = process.cwd()): ChatRetrieval {
+export function localRetrieval(inferenceUrl: string, rerankUrl: string, expected: { corpusHash: string; indexCorpusHash: string }, root = process.cwd()): ChatRetrieval {
   const chunks = loadCorpus(root);
+  checkCorpus(chunks, expected);
   const embedder = new LocalEmbedder({ baseUrl: inferenceUrl });
   const index = loadCheckedIndex(chunks, embedder.name, root);
   return buildLocalRetrieval({ chunks, embedder, reranker: new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 120_000 }), index });

@@ -21,7 +21,7 @@ import { DryRunGenerator, FAKE_ENGINE, fakeRetrieval } from './fake-engine';
 import { FileLog } from './log';
 import { GpuQueue } from './queue';
 import { RateLimiter } from './ratelimit';
-import { IndexMismatch, loadCheckedIndex, localRetrieval, servedIndexPath } from './retrieve';
+import { checkCorpus, IndexMismatch, loadCheckedIndex, localRetrieval, servedIndexPath } from './retrieve';
 
 /** Asks both model services for a sign of life, at most every 30 s; 3 s timeout each. */
 function boxProbe(inferenceUrl: string, rerankUrl: string): BoxProbe {
@@ -47,16 +47,18 @@ async function main() {
   if (cfg.engine === 'fake') {
     // The dry run never needs the index, but it reports on it, so CC-Win can check a copied index before step 4.8.
     const chunks = loadCorpus();
+    checkCorpus(chunks, cfg.preset);
+    console.log(`[serve] dry run: corpus hash ${cfg.preset.corpusHash} (index view ${cfg.preset.indexCorpusHash}) as measured`);
     const file = servedIndexPath(chunks);
     if (existsSync(file)) {
       loadCheckedIndex(chunks);
       console.log(`[serve] dry run: ${file} matches the corpus`);
     } else console.log(`[serve] dry run: ${file} not present; the real engine would refuse to start`);
-    deps = { retrieval: await fakeRetrieval(), generator: new DryRunGenerator(), engine: FAKE_ENGINE, k: cfg.preset.k };
+    deps = { retrieval: await fakeRetrieval(), generator: new DryRunGenerator(cfg.fakeDelayMs), engine: FAKE_ENGINE, k: cfg.preset.k };
     probe = { up: async () => true };
   } else {
     deps = {
-      retrieval: localRetrieval(cfg.inferenceUrl, cfg.rerankUrl),
+      retrieval: localRetrieval(cfg.inferenceUrl, cfg.rerankUrl, cfg.preset),
       generator: new LocalGenerator({ ...cfg.preset.generator, baseUrl: cfg.inferenceUrl, timeoutMs: cfg.generateTimeoutMs }),
       engine: { id: cfg.preset.id, label: cfg.preset.label },
       k: cfg.preset.k,

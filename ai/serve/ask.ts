@@ -105,13 +105,15 @@ export async function ask(deps: AskDeps, question: string, onStage?: (s: Stage) 
   }));
   const text = maskNetwork(out.answer);
   const verifiedQuotes = r.citations.filter((c) => c.status === 'ok').map((c) => c.quote);
+  const given = new Map(chunks.map((c) => [c.id, c]));
+  const citedChunks = [...new Set(r.citations.filter((c) => c.status === 'ok').map((c) => c.chunkId))].map((id) => given.get(id)?.text ?? '');
   return {
     outcome: 'answered',
     engine: deps.engine,
     coverage: out.coverage,
     text,
     citations,
-    numbers: markNumbers(text, verifiedQuotes),
+    numbers: markNumbers(text, verifiedQuotes, citedChunks),
     sources,
     ms: Date.now() - t0,
   };

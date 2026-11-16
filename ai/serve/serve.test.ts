@@ -22,7 +22,7 @@ import { ask, type AskDeps, type AskResponse } from './ask';
 import { ConfigError, DEFAULT_PRESET, loadServeConfig, PRESETS } from './config';
 import { MASK } from './mask';
 import { markNumbers } from './numbers';
-import { buildLocalRetrieval, checkIndex, IndexMismatch, metaView, type ChatRetrieval } from './retrieve';
+import { buildLocalRetrieval, checkCorpus, checkIndex, IndexMismatch, metaView, type ChatRetrieval } from './retrieve';
 import { corpusHash, type IndexFile } from '../embed/index-file';
 import { checkScope, isPlainQuestion } from './scope';
 import { FAILED, NOT_IN_DATA, OUT_OF_SCOPE_ADVICE } from './texts';
@@ -72,6 +72,18 @@ async function main() {
     const theirs = JSON.stringify(sorted(run.generatorSettings));
     check(`${p.id}: every generator setting equals the measured run`, mine === theirs, `\n  served   ${mine}\n  measured ${theirs}`);
     check(`${p.id}: k equals the measured run`, p.k === run.k);
+    {
+      const chunks = loadCorpus();
+      check(`${p.id}: corpus on disk has the project corpus hash`, corpusHash(chunks) === p.corpusHash, corpusHash(chunks));
+      check(`${p.id}: meta view has the index hash`, corpusHash(metaView(chunks).chunks) === p.indexCorpusHash);
+      let threw = false;
+      try {
+        checkCorpus(chunks.slice(1), p);
+      } catch (e) {
+        threw = e instanceof IndexMismatch;
+      }
+      check(`${p.id}: a changed corpus is refused`, threw);
+    }
     const chunks = loadCorpus();
     const view = metaView(chunks).chunks;
     const shape = buildLocalRetrieval({
@@ -147,6 +159,25 @@ async function main() {
   check('typographic minus counts as a minus', markNumbers('ended −32 vs HODL', ['-32 vs HODL'])[0]?.status === 'verified');
   check('typographic minus span keeps the original character', markNumbers('ended −32', [])[0]?.text === '−32');
   check('thousands separator', markNumbers('about 1,234 swaps', ['1234 swapów'])[0]?.status === 'verified');
+
+  // Three states (owner, 16 Nov 2026): verified, in the cited source, not verified.
+  const st = (answer: string, quotes: string[], chunks: string[] = []) => markNumbers(answer, quotes, chunks).map((m) => `${m.text}:${m.status}${m.transformation ? '/' + m.transformation : ''}`).join(' ');
+  check('in a cited chunk, not quoted', st('the 720-day run', ['inny cytat'], ['test na 720 dniach']) === '720:in-source', st('the 720-day run', ['inny cytat'], ['test na 720 dniach']));
+  check('a single digit in a chunk is not enough', st('Phase 4 started', [], ['krok 4 i 8 GB']) === '4:not-verified');
+  check('date written out, day first, with the project year', st('On 27 August 2026 it opened', ['27.08 otwarto pozycję']) === '27:in-source/date-written-out 2026:in-source/year-added');
+  check('date written out, month first', st('on August 3, 2026', ['3.08: zmiana']) === '3:in-source/date-written-out 2026:in-source/year-added');
+  check('abbreviated month and ordinal', st('on 21st Sep', [], ['raport z 21.09']) === '21:in-source/date-written-out');
+  check('a date the source does not have stays not verified', st('On 27 August', ['28.08 otwarto']) === '27:not-verified');
+  check('another year is not added', st('On 27 August 2025', ['27.08 otwarto']) === '27:in-source/date-written-out 2025:not-verified');
+  check('dd.mm.2026 for a source dd.mm', st('opened 27.08.2026', ['27.08 otwarto']) === '27.08.2026:in-source/year-added');
+  check('rounded to the printed decimals', st('lost 51.5%', ['spadek 51.53%']) === '51.5:in-source/rounded');
+  check('rounding needs two significant digits', st('about 2 days', ['1.98 dnia']) === '2:not-verified');
+  check('a value that does not round to the source stays not verified', st('lost 51.6%', ['spadek 51.53%']) === '51.6:not-verified');
+  check('a multiplier is not verified by its digit', st('earned 4x more', ['$2169 vs $541, 4 pule']) === '4:not-verified');
+  check('a multiplier is not in-source by a chunk', st('earned 12x more', [], ['12 pul']) === '12:not-verified');
+  check('a quoted multiplier is verified', st('earned 4x more', ['zarobiło 4x więcej']) === '4:verified');
+  check('a sum computed by the model stays not verified', st('total 132.37', ['-40.98 i -92.39']) === '132.37:not-verified');
+  check('a transformation never gives verified', markNumbers('On 27 August 2026', ['27.08'], []).every((m) => m.status !== 'verified'));
 
   // --- ask(): fakes over the real corpus ------------------------------------------------------------------------
   const chunks = loadCorpus();

@@ -1,0 +1,215 @@
+/**
+ * Visitor paths through the showcase in a real browser (phase 4, step 4.5). Fake models only: the chat server runs
+ * with SERVE_ENGINE=fake (ai/serve/fake-engine.ts). Paths tagged @real also run against the real server on the LAN
+ * in step 4.8 (E2E_BASE_URL); the others depend on the dry run's deterministic answers or on the test servers' limits.
+ */
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { mkdirSync } from 'fs';
+import path from 'path';
+
+const PORTS = { main: 8801, tight: 8802, staticOnly: 8803 };
+const MAIN = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORTS.main}`;
+const TIGHT = `http://127.0.0.1:${PORTS.tight}`;
+const STATIC_ONLY = `http://127.0.0.1:${PORTS.staticOnly}`;
+/** True when the suite runs against the real server on the LAN (step 4.8): the dry-run-only paths are skipped. */
+const againstReal = !!process.env.E2E_BASE_URL;
+
+const TITLE = 'DeFi liquidity-provision trading system: research archive and AI assistant';
+const INTERNAL_LABELS = [/k=10/, /local-pb\d/, /variant P/i, /Step 3\.2/i, /golden set/i];
+
+/** A distinct client address per test, so the per-visitor limits of one test never touch another. */
+let n = 0;
+const visitorIp = (info: TestInfo) => `198.51.${100 + (info.project.name === 'phone' ? 1 : 0)}.${(++n % 250) + 1}`;
+
+async function open(page: Page, url: string, info: TestInfo) {
+  const errors: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.setExtraHTTPHeaders({ 'cf-connecting-ip': visitorIp(info) });
+  await page.goto(url);
+  await expect(page.getByTestId('honesty-notice')).toBeVisible();
+  return errors;
+}
+
+async function shot(page: Page, info: TestInfo, name: string) {
+  const file = info.outputPath(`${name}.png`);
+  await page.screenshot({ path: file, fullPage: true });
+  await info.attach(name, { path: file, contentType: 'image/png' });
+  if (process.env.E2E_SHOTS_DIR) {
+    mkdirSync(process.env.E2E_SHOTS_DIR, { recursive: true });
+    await page.screenshot({ path: path.join(process.env.E2E_SHOTS_DIR, `${info.project.name}-${name}.png`), fullPage: true });
+  }
+}
+
+async function ask(page: Page, question: string) {
+  await page.getByLabel('Your question').fill(question);
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+}
+
+test('page title, introduction and the honesty notice on every view @real', async ({ page }, info) => {
+  const errors = await open(page, MAIN, info);
+  await expect(page).toHaveTitle(TITLE);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITLE);
+  await expect(page.locator('.intro')).toContainText('code checks every quote against its source');
+  // The internal name may appear in source material (quotes, report titles, paths), never in the page's own words.
+  expect(await page.locator('.masthead').innerText()).not.toMatch(/\bHOMOS\b/);
+  for (const tab of ['Cloud and local answers', 'Daily reports', 'Ask the archive']) {
+    await page.getByRole('button', { name: tab }).click();
+    await expect(page.getByTestId('honesty-notice')).toContainText('did not reliably beat simply holding');
+  }
+  await expect(page.getByRole('button', { name: /Wallet/ })).toHaveCount(0);
+  expect(errors, 'console errors (a CSP violation shows up here)').toEqual([]);
+});
+
+test('comparison view: clear default question, two columns, plain labels @real', async ({ page }, info) => {
+  const errors = await open(page, MAIN, info);
+  await page.getByRole('button', { name: 'Cloud and local answers' }).click();
+  await expect(page.locator('#question')).toHaveValue('dated-08');
+  const columns = page.locator('.columns').first().locator('article.column');
+  await expect(columns).toHaveCount(2);
+  await expect(columns.nth(0)).toContainText('Cloud model: Claude Sonnet 5.5');
+  await expect(columns.nth(1)).toContainText('used by the chat');
+  await expect(columns.nth(0)).toContainText("Judge's grade of the whole answer");
+  await expect(page.locator('.verdicts').first()).toContainText('20 correct, 12 partly, 2 wrong');
+  const visible = await page.locator('main').innerText();
+  for (const label of INTERNAL_LABELS) expect(visible, `internal label ${label} in the main view`).not.toMatch(label);
+  await columns.nth(1).getByText('Exact settings').click();
+  await expect(columns.nth(1).locator('.provenance')).toContainText('qwen3.8:27b');
+  await shot(page, info, 'compare');
+  expect(errors).toEqual([]);
+});
+
+test('in-scope question: answer with a verified quote, an unverified quote and number marks', async ({ page }, info) => {
+  test.skip(againstReal, 'dry-run answers only');
+  const errors = await open(page, MAIN, info);
+  await ask(page, 'Why did the project stay with wide ranges instead of re-centering?');
+  const answer = page.getByTestId('chat-answer');
+  await expect(answer).toHaveAttribute('data-outcome', 'answered');
+  await expect(answer.locator('.quote-verified')).toContainText('Verified quote');
+  const unverified = answer.locator('.quote-not-verified');
+  await expect(unverified).toContainText('Not verified');
+  await expect(unverified).toContainText('Not verified because the quote is not in the cited source');
+  const figure = answer.locator('.answer-text .num', { hasText: '4242' });
+  await expect(figure).toHaveAttribute('data-state', 'not-verified');
+  await expect(figure.locator('.num-glyph')).toHaveText('?');
+  await expect(answer.getByTestId('number-summary')).toContainText('not verified');
+  await expect(answer).toContainText('Answered by dry run');
+  await shot(page, info, 'answer');
+  expect(errors).toEqual([]);
+});
+
+test('out-of-scope question: the fixed text says what the assistant covers', async ({ page }, info) => {
+  test.skip(againstReal, 'dry-run answers only');
+  await open(page, MAIN, info);
+  await ask(page, 'Write a poem about cats and dogs');
+  const answer = page.getByTestId('chat-answer');
+  await expect(answer).toHaveAttribute('data-outcome', 'not-in-data');
+  await expect(answer.getByTestId('chat-fixed-text')).toContainText('This assistant answers questions about a DeFi liquidity-provision trading system');
+  await shot(page, info, 'out-of-scope');
+});
+
+test('trading advice is refused without calling a model @real', async ({ page }, info) => {
+  await open(page, MAIN, info);
+  await ask(page, 'Should I buy ETH now?');
+  const answer = page.getByTestId('chat-answer');
+  await expect(answer).toHaveAttribute('data-outcome', 'out-of-scope');
+  await expect(answer).toContainText('does not give advice on what to buy, sell or hold');
+  await expect(answer).toContainText('did not reliably beat simply holding the tokens');
+  await expect(answer.locator('.sources')).toHaveCount(0);
+  await shot(page, info, 'advice');
+});
+
+test('a question with no answer in the data gets the fixed "not in the data" text', async ({ page }, info) => {
+  test.skip(againstReal, 'dry-run answers only');
+  await open(page, MAIN, info);
+  await ask(page, 'What is the recipe for pierogi?');
+  const answer = page.getByTestId('chat-answer');
+  await expect(answer).toHaveAttribute('data-outcome', 'not-in-data');
+  await expect(answer.getByTestId('chat-fixed-text')).toContainText('The project data does not answer this question.');
+  await expect(answer.locator('.sources summary')).toContainText('Sources searched (10)');
+  await shot(page, info, 'not-in-data');
+});
+
+test('private LAN addresses are masked in quotes and answers', async ({ page }, info) => {
+  test.skip(againstReal, 'dry-run answers only');
+  await open(page, MAIN, info);
+  await ask(page, 'IP serwera w LAN port 8787 test z Maca');
+  const answer = page.getByTestId('chat-answer');
+  await expect(answer).toContainText('[private address]');
+  expect(await answer.innerText()).not.toMatch(/192\.168\.|10\.8\.0\./);
+  await expect(answer.locator('.quote-verified').first()).toContainText('Original, in Polish');
+  await shot(page, info, 'masked');
+});
+
+test('the rate limit message', async ({ page }, info) => {
+  test.skip(againstReal, 'needs the test server with a limit of one question an hour');
+  await open(page, TIGHT, info);
+  await ask(page, 'When did real capital first go into a position?');
+  await expect(page.getByTestId('chat-answer')).toBeVisible({ timeout: 20_000 });
+  await ask(page, 'Why were the ranges kept wide?');
+  const error = page.getByTestId('chat-error');
+  await expect(error).toHaveAttribute('data-error', 'hour');
+  await expect(error).toContainText('most questions allowed in an hour');
+  await expect(error).toContainText('You can ask again in about');
+  await shot(page, info, 'rate-limit');
+});
+
+test('the busy message while another question holds the GPU', async ({ browser }, info) => {
+  test.skip(againstReal, 'needs the test server with no waiting places');
+  const first = await browser.newPage();
+  const second = await browser.newPage();
+  await open(first, TIGHT, info);
+  await open(second, TIGHT, info);
+  await ask(first, 'Why were the ranges kept wide?');
+  await expect(first.getByTestId('chat-progress')).toBeVisible();
+  await ask(second, 'When was the capital withdrawn?');
+  const error = second.getByTestId('chat-error');
+  await expect(error).toHaveAttribute('data-error', 'busy');
+  await expect(error).toContainText('The local model is busy with other questions');
+  await shot(second, info, 'busy');
+  await expect(first.getByTestId('chat-answer')).toBeVisible({ timeout: 20_000 });
+  await first.close();
+  await second.close();
+});
+
+test('static views work with the chat server down', async ({ page }, info) => {
+  test.skip(againstReal, 'needs the static-only test server');
+  const errors = await open(page, STATIC_ONLY, info);
+  await expect(page.getByTestId('chat-health')).toContainText('cannot be reached');
+  await page.getByRole('button', { name: 'Cloud and local answers' }).click();
+  await expect(page.locator('.columns').first().locator('article.column')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Daily reports' }).click();
+  await expect(page.getByTestId('report')).toContainText('Tuesday, 15 September 2026');
+  await shot(page, info, 'chat-down');
+  // The failed health call is the only expected console error.
+  expect(errors.filter((e) => !/502|Bad Gateway|Failed to load resource/.test(e))).toEqual([]);
+});
+
+test('daily reports: a live-capital day, Markdown rendered, logs folded @real', async ({ page }, info) => {
+  await open(page, MAIN, info);
+  await page.getByRole('button', { name: 'Daily reports' }).click();
+  const report = page.getByTestId('report');
+  await expect(report).toContainText('Tuesday, 15 September 2026');
+  await expect(report.locator('table').first()).toBeVisible();
+  const folded = report.locator('details.md-code');
+  expect(await folded.count()).toBeGreaterThan(0);
+  for (const d of await folded.all()) expect(await d.getAttribute('open')).toBeNull();
+  expect(await report.innerText()).not.toContain('**');
+  await shot(page, info, 'reports');
+});
+
+test('keyboard: switch sections and ask without a mouse @real', async ({ page }, info) => {
+  await open(page, MAIN, info);
+  await page.getByRole('button', { name: 'Daily reports' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('report')).toBeVisible();
+  await page.getByRole('button', { name: 'Ask the archive' }).focus();
+  await page.keyboard.press('Enter');
+  await page.getByLabel('Your question').focus();
+  await page.keyboard.type('Should I sell my tokens?');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('chat-answer')).toHaveAttribute('data-outcome', 'out-of-scope');
+});

@@ -515,3 +515,30 @@ not found 6, 4, 3, 6, 5; unknown chunk 0, 0, 1, 0, 0. The compare report shows v
 say "24 not found plus 1 unknown chunk" if the owner wants it there.
 
 **Review questions.** None.
+
+## 2026-11-16, step 4.5: three number states, design pass, browser suite
+
+**Decision.** Numbers in answers get three states, approved by the owner: "Verified", "In the cited source", "Not
+verified". The three code-checked transformations are only the ones named (date written out, project year added,
+rounding to the printed decimals); a transformation never gives "Verified". Two guards were added while counting,
+both of them restrictions: a number found only in a long cited chunk needs at least two significant digits (a lone
+"4" or "8" is in almost every chunk; without the guard "Phase 4" and the "4" of "4x" counted as in the source), and a
+multiplier is "Verified" only when a quote holds the same multiplier and is never "In the cited source". The showcase
+was redesigned for an outside reader (owner's list of 16 Nov 2026) and is walked by a Playwright suite in CI.
+
+**Alternatives.** Two states only (rejected by the owner: the strict check marked 54 of 134 numbers in pb1, many of
+them dates written out or values from the cited source). More transformations, such as sums or unit changes
+(rejected by the owner). Counting a number as in the source wherever it appears in a cited chunk (rejected after the
+count: chance matches of single digits).
+
+**Evidence.** `npx tsx ai/serve/tools/number-states.ts`: pb1 134 numbers, before 80 verified and 54 not verified,
+after 80 verified, 30 in the cited source (25 as is, 5 by a transformation), 24 not verified; pb2 130 numbers, before
+75 and 55, after 75, 38 (32 and 6), 17. Every transformation case is listed by the same command. Tests in
+`ai/serve/serve.test.ts`; browser suite `showcase/e2e/showcase.spec.ts`, 24 of 24 passed (12 paths, desktop and
+phone).
+
+**Open.** The manual classification of the remaining "Not verified" numbers on real answers is step 4.8. The
+out-of-scope path and the "not in the data" path show the same fixed text, because the served prompt cannot tell
+them apart (only trading advice is detected before the model).
+
+**Review questions.** Is two significant digits the right floor, or should a chunk match also need the unit (%, $)?

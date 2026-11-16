@@ -8,14 +8,14 @@ export const CORRECTNESS_LABEL: Record<Correctness, string> = {
 };
 
 export const FAITHFULNESS_LABEL: Record<Faithfulness, string> = {
-  supported: 'Supported by its quotes',
-  partly_supported: 'Partly supported by its quotes',
-  unsupported: 'Not supported by its quotes',
+  supported: 'its claims are backed by its quotes',
+  partly_supported: 'some of its claims go beyond its quotes',
+  unsupported: 'its claims are not backed by its quotes',
 };
 
 export const PREMISE_LABEL: Record<Premise, string> = {
-  handled: 'False premise handled',
-  not_handled: 'False premise not handled',
+  handled: 'it caught the false premise in the question',
+  not_handled: 'it missed the false premise in the question',
   'n/a': '',
 };
 
@@ -25,7 +25,18 @@ export const COVERAGE_LABEL: Record<NonNullable<ShowcaseAnswer['coverage']>, str
   none: 'Not in the data',
 };
 
-export const ANSWERABLE_LABEL = { yes: 'answerable', partial: 'partly answerable', no: 'not answerable' } as const;
+export const ANSWERABLE_LABEL = {
+  yes: 'The project data answers it.',
+  partial: 'The project data answers part of it.',
+  no: 'The project data does not answer it: a trap question, the right answer says so.',
+} as const;
+
+export const CATEGORY_LABEL: Record<string, string> = {
+  why: 'A why question',
+  'dated-fact': 'A date or a fact',
+  identifier: 'A name or an identifier',
+  'no-answer': 'A question with no answer in the data',
+};
 
 export const REASON_LABEL: Record<NonNullable<ShowcaseCitation['reason']>, string> = {
   'not-in-chunk': 'the quote is not in the cited source',

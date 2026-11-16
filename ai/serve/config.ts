@@ -22,6 +22,14 @@ export interface ServedPreset {
   generator: Omit<LocalGenOptions, 'baseUrl' | 'fetchFn' | 'countTokens'>;
   /** Chunks given to the generator. */
   k: number;
+  /**
+   * Corpus the measured run used: the project-wide corpus hash, over the plain chunks (`corpusHash(loadCorpus())`).
+   * The served index stores a different value, the hash of the meta view of the same chunks (each chunk text with its
+   * "[file | date | title]" header, which is what the meta index embeds); see `ai/APP-PLAN.md`, section 6.
+   */
+  corpusHash: string;
+  /** Hash stored in the served index: `corpusHash(metaView(loadCorpus()))` of the same corpus. */
+  indexCorpusHash: string;
 }
 
 export const PRESETS: Record<string, ServedPreset> = {
@@ -42,6 +50,8 @@ export const PRESETS: Record<string, ServedPreset> = {
       systemName: 'LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)',
     },
     k: 10,
+    corpusHash: '8d7f9a3437b43594',
+    indexCorpusHash: 'cb41ca39fd344c6f',
   },
 };
 
@@ -70,6 +80,8 @@ export interface ServeConfig {
   logDir: string;
   /** While this file exists the chat is paused (CC-Win creates it before using the GPU for other work). */
   pauseFile: string;
+  /** Dry run only: delay of each fake answer, to show the queue in the browser suite. */
+  fakeDelayMs: number;
 }
 
 export class ConfigError extends Error {}
@@ -125,5 +137,6 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
     trustProxy: trustProxy(env.SERVE_TRUST_PROXY),
     logDir: env.SERVE_LOG_DIR || path.join('ai', 'serve', 'logs'),
     pauseFile: env.SERVE_PAUSE_FILE || path.join('ai', 'serve', 'PAUSED'),
+    fakeDelayMs: int(env, 'SERVE_FAKE_DELAY_MS', 0, 0, 60_000),
   };
 }

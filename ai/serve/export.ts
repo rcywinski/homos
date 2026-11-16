@@ -13,6 +13,9 @@ import type { JudgedItem } from '../judge/items';
 import type { Verdict } from '../judge/types';
 import { COMPARISON, type ConfigSource } from './comparison';
 import { maskNetwork } from './mask';
+import { markNumbers } from './numbers';
+import { loadCorpus } from '../corpus/load';
+import type { Chunk } from '../corpus/types';
 import type {
   ComparisonData,
   ReportsData,
@@ -87,21 +90,25 @@ function verdict(v: Verdict): ShowcaseVerdict {
   };
 }
 
-function answer(rec: AnswerRecord, judged: JudgedItem | undefined): ShowcaseAnswer {
+function answer(rec: AnswerRecord, judged: JudgedItem | undefined, corpus: Map<string, Chunk>): ShowcaseAnswer {
   const coverage = rec.coverage === 'error' ? null : rec.coverage;
   const failed = coverage === null;
+  const text = failed ? '' : maskNetwork(rec.answer);
+  const ok = rec.citations.filter((c) => c.status === 'ok');
+  const cited = [...new Set(ok.map((c) => c.chunkId))].map((id) => corpus.get(id)?.text ?? '');
   return {
     outcome: failed ? 'failed' : 'answered',
     coverage,
-    answer: failed ? '' : maskNetwork(rec.answer),
+    answer: text,
     citations: failed ? [] : rec.citations.map(citation),
+    numbers: failed ? [] : markNumbers(text, ok.map((c) => c.quote), cited),
     verdict: judged?.result?.verdict ? verdict(judged.result.verdict) : null,
     ms: rec.ms,
     costUsd: rec.costUsd,
   };
 }
 
-function buildRun(read: Reader, src: ConfigSource['runs'][number], goldenVersion: string, ids: string[]): ShowcaseRun {
+function buildRun(read: Reader, src: ConfigSource['runs'][number], goldenVersion: string, ids: string[], corpus: Map<string, Chunk>): ShowcaseRun {
   const a = read.json<AnswersFile>(src.answersFile);
   const j = read.json<JudgedFile>(src.judgedFile);
   if (a.goldenVersion !== goldenVersion) throw new Error(`${src.answersFile}: golden ${a.goldenVersion}, expected ${goldenVersion}`);
@@ -116,7 +123,7 @@ function buildRun(read: Reader, src: ConfigSource['runs'][number], goldenVersion
   for (const id of ids) {
     const rec = byId.get(id);
     if (!rec) throw new Error(`${src.answersFile}: no answer for ${id}`);
-    const ans = answer(rec, judged.get(id));
+    const ans = answer(rec, judged.get(id), corpus);
     answers[id] = ans;
     if (ans.outcome === 'failed') summary.failed++;
     summary.quotes += ans.citations.length;
@@ -154,6 +161,7 @@ export function buildComparison(root = process.cwd(), configs: ConfigSource[] = 
     reference: maskNetwork(q.reference),
   }));
   const ids = questions.map((q) => q.id);
+  const corpus = new Map(loadCorpus(root).map((c) => [c.id, c]));
   const out: ShowcaseConfig[] = configs.map((c) => ({
     id: c.id,
     label: c.label,
@@ -162,7 +170,7 @@ export function buildComparison(root = process.cwd(), configs: ConfigSource[] = 
     served: c.served,
     engine: c.engine,
     single: c.runs.length === 1,
-    runs: c.runs.map((r) => buildRun(read, r, goldenVersion, ids)),
+    runs: c.runs.map((r) => buildRun(read, r, goldenVersion, ids, corpus)),
   }));
   return { goldenVersion, questions, configs: out, sources: read.sources() };
 }

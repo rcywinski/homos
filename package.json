@@ -63,15 +63,18 @@
     "ai:agent:score": "tsx ai/eval/agent-score.ts",
     "ai:agent:missing": "tsx ai/eval/agent-missing.ts",
     "showcase:data": "tsx ai/serve/export-cli.ts",
-    "showcase:build": "npm run showcase:data && webpack --mode production --config webpack.showcase.config.js",
+    "showcase:e2e": "playwright test",
+    "showcase:fonts": "tsx showcase/copy-fonts.ts",
+    "showcase:build": "npm run showcase:data && npm run showcase:fonts && webpack --mode production --config webpack.showcase.config.js",
     "serve:chat": "tsx ai/serve/server-cli.ts",
-    "showcase:start": "npm run showcase:data && webpack serve --mode development --config webpack.showcase.config.js"
+    "showcase:start": "npm run showcase:data && npm run showcase:fonts && webpack serve --mode development --config webpack.showcase.config.js"
   },
   "author": "Rafał Cywiński",
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^1.6.0",
     "@envio-dev/hypersync-client": "1.0.0",
+    "@fontsource-variable/recursive": "^5.3.0",
     "@tanstack/react-query": "^5.69.0",
     "@uniswap/sdk-core": "^7.7.2",
     "@uniswap/v3-sdk": "^3.25.2",
@@ -93,6 +96,7 @@
     "@babel/preset-typescript": "^7.24.7",
     "@eslint/js": "^9.39.5",
     "@huggingface/tokenizers": "^0.2.0",
+    "@playwright/test": "^1.65.1",
     "@types/node": "^20.11.28",
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",

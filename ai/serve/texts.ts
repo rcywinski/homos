@@ -3,8 +3,11 @@
  * answer is "not in the data", out of scope or invalid, the visitor sees exactly one of these strings.
  */
 
+/** How the chat names the project when it speaks about itself (owner: a neutral title, not the internal name). */
+export const PROJECT_TITLE = 'DeFi liquidity-provision trading system: research archive and AI assistant';
+
 export const SCOPE =
-  'This chat answers questions about the HOMOS project from its journal, decision log, documentation and daily reports (August to September 2026): what was built, what was decided and why, and what happened on which day.';
+  'This assistant answers questions about a DeFi liquidity-provision trading system, a research project run from August to September 2026, using its journal, decision log, documentation and daily reports: what was built, what was decided and why, and what happened on which day.';
 
 export const NOT_IN_DATA = `The project data does not answer this question. ${SCOPE}`;
 

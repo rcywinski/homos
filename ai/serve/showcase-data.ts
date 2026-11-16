@@ -40,12 +40,23 @@ export interface ShowcaseVerdict {
   premiseReason: string;
 }
 
+export interface ShowcaseNumber {
+  text: string;
+  start: number;
+  end: number;
+  status: 'verified' | 'in-source' | 'not-verified';
+  transformation?: 'date-written-out' | 'year-added' | 'rounded';
+  from?: string;
+}
+
 export interface ShowcaseAnswer {
   /** `failed` when the generator gave no valid structured output; the UI shows a plain failure message. */
   outcome: 'answered' | 'failed';
   coverage: 'full' | 'partial' | 'none' | null;
   answer: string;
   citations: ShowcaseCitation[];
+  /** Every number in `answer`, with its state (ai/serve/numbers.ts), offsets into the masked answer. */
+  numbers: ShowcaseNumber[];
   /** Blind judge verdict (Opus 5.5); null when this run was not judged for this question. */
   verdict: ShowcaseVerdict | null;
   ms: number;
