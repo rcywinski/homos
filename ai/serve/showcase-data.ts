@@ -108,3 +108,62 @@ export interface ReportsData {
   reports: ShowcaseReport[];
   sources: { file: string; sha256: string }[];
 }
+
+/** Sanitized wallet and paper-trading data (step 4.1b, `ai/serve/wallet-export.ts`). Project period only. */
+export interface WalletPosition {
+  chain: string;
+  tokenId: string;
+  pair: string;
+  feeTierPct: number | null;
+  openedAt: string;
+  closedAt: string;
+  /** As recorded by the bot's ledger; null where the ledger did not price the deposit or withdrawal. */
+  depositedUsd: number | null;
+  withdrawnUsd: number | null;
+  /** Last observed value, the value of simply holding the same deposit, and fees earned, before the close. */
+  lastValueUsd: number | null;
+  lastHodlUsd: number | null;
+  lastFeesUsd: number | null;
+  transactions: number;
+  daily: { date: string; valueUsd: number; hodlUsd: number; inRange: boolean }[];
+}
+
+export interface WalletTx {
+  ts: string;
+  chain: string;
+  tokenId: string;
+  kind: string;
+  amount0: number;
+  amount1: number;
+  sym0: string;
+  sym1: string;
+  usd: number | null;
+  /** Public transaction hash, for the block explorer link. */
+  txHash: string;
+  gasEth: number | null;
+}
+
+export interface WalletPaperPool {
+  poolId: string;
+  capitalUsd: number;
+  status: string;
+  lastEquityUsd: number;
+  lastHodlUsd: number;
+  feesUsd: number;
+  costsUsd: number;
+  rebalances: number;
+  lastSampleAt: string;
+  events: { ts: string; kind: string }[];
+  daily: { date: string; equityUsd: number; hodlUsd: number }[];
+}
+
+export interface WalletData {
+  period: { from: string; paperStartedAt: string };
+  /** What was left out and why; the excluded positions themselves leave no trace (not even their numbers). */
+  excluded: { note: string };
+  tokens: { address: string; label: string }[];
+  totals: { positions: number; transactions: number; gasEth: number; paperPools: number };
+  positions: WalletPosition[];
+  transactions: WalletTx[];
+  paper: WalletPaperPool[];
+}

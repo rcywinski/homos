@@ -2,7 +2,7 @@
  * Loads the static showcase data written by `npm run showcase:data` (ai/serve/export.ts). Same origin only.
  */
 import { useEffect, useState } from 'react';
-import type { ComparisonData, ReportsData } from '../ai/serve/showcase-data';
+import type { ComparisonData, ReportsData, WalletData } from '../ai/serve/showcase-data';
 
 export type Loaded<T> = { state: 'loading' } | { state: 'error'; message: string } | { state: 'ready'; data: T };
 
@@ -26,3 +26,5 @@ function useJson<T>(file: string): Loaded<T> {
 
 export const useComparison = () => useJson<ComparisonData>('comparison.json');
 export const useReports = () => useJson<ReportsData>('reports.json');
+/** Absent from builds without the step 4.1b raw files (for example CI): the view says so. */
+export const useWallet = () => useJson<WalletData>('wallet.json');

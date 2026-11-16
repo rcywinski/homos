@@ -5,12 +5,13 @@ import { Ask } from './components/Ask';
 import { Comparison } from './components/Comparison';
 import { About } from './components/About';
 import { Notice } from './components/Notice';
+import { Wallet } from './components/Wallet';
 
-/** The wallet view waits for step 4.1b (recovering the ledger); until then it is not offered. */
 const TABS = [
   { id: 'ask', label: 'Ask the archive' },
   { id: 'compare', label: 'Cloud and local answers' },
   { id: 'reports', label: 'Daily reports' },
+  { id: 'wallet', label: 'Wallet' },
 ] as const;
 type Tab = (typeof TABS)[number]['id'];
 
@@ -42,6 +43,7 @@ export function App() {
         {tab === 'ask' && <Ask />}
         {tab === 'compare' && <Comparison />}
         {tab === 'reports' && <Archive />}
+        {tab === 'wallet' && <Wallet />}
       </main>
       <footer className="foot">
         <p>

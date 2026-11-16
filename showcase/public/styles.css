@@ -272,6 +272,24 @@ select {
 .judge-detail { font-size: 0.92rem; }
 .provenance p { margin: 4px 0; }
 
+/* Wallet. */
+.wallet-address { max-width: var(--measure); }
+.positions { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 10px 0 16px; }
+.position { background: var(--sheet); border: 1.5px solid var(--rule); border-radius: 8px; padding: 12px 14px; }
+.position h4 { margin: 0; font-size: 1rem; font-weight: var(--head-weight); }
+.figures { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin: 10px 0 0; }
+.figures dt { font-size: 0.82rem; color: var(--ink-soft); }
+.figures dd { margin: 0; font-family: var(--font-mono); font-size: 0.9rem; }
+.missing { font-family: var(--font-text); color: var(--ink-soft); font-size: 0.86rem; }
+.neg { color: var(--bad); }
+.pos { color: var(--ok); }
+.paper-table { overflow-x: auto; margin: 8px 0; }
+.paper-table table { border-collapse: collapse; font-size: 0.88rem; }
+.paper-table th, .paper-table td { border-bottom: 1px solid var(--rule); padding: 6px 12px 6px 0; text-align: left; vertical-align: top; }
+.paper-table td { font-family: var(--font-mono); font-size: 0.82rem; white-space: nowrap; }
+.paper-table td:last-child { font-family: var(--font-text); white-space: normal; min-width: 14em; }
+.paper-table th { font-weight: var(--emphasis-weight); }
+
 /* Reports. */
 .days { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px; }
 .report { background: var(--sheet); border: 1.5px solid var(--rule); border-radius: 8px; padding: 16px 18px; max-width: 1120px; }
@@ -301,7 +319,7 @@ select {
   .days { padding-bottom: 6px; }
   .verdict-row { grid-template-columns: 44px 1fr; }
   .verdict-numbers { grid-column: 1 / -1; }
-  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+  .tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; }
   .tab { padding: 8px 4px 6px; text-align: center; line-height: 1.25; }
 }
 @media (prefers-reduced-motion: reduce) {

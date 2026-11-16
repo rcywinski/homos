@@ -290,8 +290,21 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   questions with the Sonnet answers (k10) and the served local configuration (step 3.2 runs), their citations with
   the verified flag, the judge verdicts, the other measured variants for the "more" section, run counts; plus the
   morning report index. Display filter for network addresses with tests. Fake (no models). S.
-- [ ] **4.1b** [CC-Win, after phase 3] Copy the live ledger and paper files from the box's `.bot/` to the owner's
-  Mac (not to the repo), list them, check for anything sensitive, then decide what is exported. S.
+- [x] **4.1b** [CC-Win, after phase 3] Copy the live ledger and paper files from the box's `.bot/` to the owner's
+  Mac (not to the repo), list them, check for anything sensitive, then decide what is exported. S. Done 16 Nov 2026:
+  eight files in `data/showcase-raw/` (gitignored by `data/`, never committed), SHA-256 sums checked against both
+  the `SHA256SUMS` file and the list in CC-Win's message, all 8 OK. CC-Win's scan found no keys, URLs or seed
+  material; the only addresses are five public token contracts, and neither the owner's wallet nor a pool contract
+  appears. `ai/serve/wallet-export.ts` copies field by field only what the Wallet view needs (4 real positions with
+  last value against holding and fees, 16 transactions with public hashes and gas, 6 paper pools with daily series
+  and events), project period only (from 10 Aug 2026). Owner decision: the two manual positions opened in March 2025
+  (#953427, #953465, 6 ledger entries plus their closing entries, 12 in all) are excluded from every list and total
+  and leave no trace in the export, not even their numbers; the Wallet tab says so in one line. An audit runs before
+  the file is written and refuses it on any URL, key parameter, private address, unknown 0x address (allowed: the
+  five token contracts and the owner's wallet), 64-digit hex outside a `txHash` field, excluded position or date
+  before the project; tested on a synthetic folder with traps and on the real files. The export is written to
+  `showcase/public/data/wallet.json` (gitignored); builds without the raw files (CI, the box) show "not part of
+  this build". Open: whether the sanitized export is committed, so the box and CI can show it.
 - [x] **4.2** Showcase front end skeleton in `showcase/`: own webpack entry, comparison view (two columns, "more"
   section, verdicts, verification marks), archive view, mock wallet panel (read-only), the "did not reliably beat
   holding" notice, a test that fails on any wallet or signing import. Check that the existing UI still builds. Fake. M.

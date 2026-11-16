@@ -542,3 +542,28 @@ out-of-scope path and the "not in the data" path show the same fixed text, becau
 them apart (only trading advice is detected before the model).
 
 **Review questions.** Is two significant digits the right floor, or should a chunk match also need the unit (%, $)?
+
+## 2026-11-16, step 4.1b: wallet export, two manual positions excluded (owner)
+
+**Decision.** The showcase Wallet tab reads a sanitized export of the bot's ledger and paper-trading files. The two
+liquidity positions opened manually in March 2025 (mainnet #953427 and #953465, closed on 25 Aug 2026) are excluded
+from every list and total by the owner's decision, and the export holds no trace of them; one line on the tab says
+that two manual positions from before the project are excluded. The raw files stay in `data/showcase-raw/`
+(gitignored); their SHA-256 sums matched CC-Win's list. Typography: the owner chose Source Sans 3 with Source Code
+Pro (variant C of three).
+
+**Alternatives.** Showing only the closing of the two old positions (option b, rejected by the owner). Passing raw
+records through with a deny-list (rejected: the export copies an allow-list of fields, and an audit checks the
+result).
+
+**Evidence.** `ai/serve/wallet-export.ts`, `ai/serve/wallet-export.test.ts` (30 checks: a synthetic folder with an
+excluded position, a pre-project entry, a URL with a key, private addresses, an unknown address and a key-shaped hex
+string in extra fields; the audit on each kind of leak; the real files). The first run of the test caught the
+excluded position numbers in a field of the export itself; that field was removed and the audit now matches the
+numbers anywhere. Browser suite 29 passed, 1 skipped (the laptop-viewport test on the phone project).
+
+**Open.** Whether to commit the sanitized `wallet.json` (needed for the box and for CI to show the tab); the owner's
+wallet address is set at build time through `SHOWCASE_WALLET_ADDRESS` and is not in the export.
+
+**Review questions.** Is the field allow-list complete for stage B, or will paper trading on live data need its own
+export path?

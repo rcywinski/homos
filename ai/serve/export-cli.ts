@@ -4,7 +4,9 @@
  */
 import { mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
+import { existsSync } from 'fs';
 import { buildComparison, buildReports, OUT_DIR } from './export';
+import { auditWallet, buildWallet, RAW_DIR } from './wallet-export';
 
 const comparison = buildComparison();
 const reports = buildReports();
@@ -17,6 +19,13 @@ const write = (name: string, data: unknown) => {
 };
 console.log(`wrote ${write('comparison.json', comparison)}`);
 console.log(`wrote ${write('reports.json', reports)}`);
+// The wallet export needs the raw files from step 4.1b, which exist only on the owner's Mac (gitignored).
+if (existsSync(RAW_DIR)) {
+  const wallet = buildWallet();
+  const problems = auditWallet(JSON.stringify(wallet), process.env.SHOWCASE_WALLET_ADDRESS ?? '');
+  if (problems.length > 0) throw new Error(`wallet export refused: ${problems.join('; ')}`);
+  console.log(`wrote ${write('wallet.json', wallet)}: ${wallet.totals.positions} positions, ${wallet.totals.transactions} transactions, ${wallet.totals.paperPools} paper pools`);
+} else console.log(`no ${RAW_DIR}: wallet.json not written, the Wallet tab says the data is not in this build`);
 console.log(`golden v${comparison.goldenVersion}, ${comparison.questions.length} questions, ${reports.reports.length} reports`);
 console.log('group served config          runs        correct / partially / incorrect, quotes not verified');
 for (const c of comparison.configs) {

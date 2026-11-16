@@ -57,11 +57,10 @@ test('page title, introduction and the honesty notice on every view @real', asyn
   await expect(page.getByTestId('about')).toBeVisible();
   // The internal name may appear in source material (quotes, report titles, paths), never in the page's own words.
   expect(await page.locator('.masthead').innerText()).not.toMatch(/\bHOMOS\b/);
-  for (const tab of ['Cloud and local answers', 'Daily reports', 'Ask the archive']) {
+  for (const tab of ['Cloud and local answers', 'Daily reports', 'Wallet', 'Ask the archive']) {
     await page.getByRole('button', { name: tab }).click();
     await expect(page.getByTestId('honesty-notice')).toContainText('did not reliably beat simply holding');
   }
-  await expect(page.getByRole('button', { name: /Wallet/ })).toHaveCount(0);
   expect(errors, 'console errors (a CSP violation shows up here)').toEqual([]);
 });
 
@@ -230,6 +229,26 @@ test('daily reports: a live-capital day, Markdown rendered, logs folded @real', 
   for (const d of await folded.all()) expect(await d.getAttribute('open')).toBeNull();
   expect(await report.innerText()).not.toContain('**');
   await shot(page, info, 'reports');
+});
+
+test('wallet: project positions only, the exclusion note, nothing that can sign @real', async ({ page }, info) => {
+  const errors = await open(page, MAIN, info);
+  await page.getByRole('button', { name: 'Wallet' }).click();
+  await expect(page.getByRole('heading', { name: 'Wallet and paper trading' })).toBeVisible();
+  await expect(page.locator('.wallet .lede')).toContainText('cannot connect a wallet or sign anything');
+  const hasData = (await page.request.get(new URL('data/wallet.json', MAIN).toString())).ok();
+  if (hasData) {
+    await expect(page.getByTestId('wallet-excluded')).toContainText('Two manual positions opened before the project');
+    await expect(page.getByTestId('wallet-positions').locator('article.position')).toHaveCount(4);
+    await expect(page.getByTestId('paper-summary')).toContainText('worth less than simply holding');
+    const text = await page.locator('.wallet').innerText();
+    expect(text).not.toMatch(/953427|953465/);
+  } else {
+    // Builds without the step 4.1b raw files (CI) say so instead of showing an empty page.
+    await expect(page.getByTestId('wallet-missing')).toContainText('not part of this build');
+  }
+  await shot(page, info, 'wallet');
+  expect(errors.filter((e) => !/404|Failed to load resource/.test(e))).toEqual([]);
 });
 
 test('keyboard: switch sections and ask without a mouse @real', async ({ page }, info) => {

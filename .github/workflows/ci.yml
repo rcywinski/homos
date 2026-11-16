@@ -30,7 +30,7 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Unit tests of the chat server and the showcase
-        run: npx tsx ai/serve/mask.test.ts && npx tsx ai/serve/export.test.ts && npx tsx showcase/guard.test.ts && npx tsx ai/serve/serve.test.ts && npx tsx ai/serve/queue.test.ts
+        run: npx tsx ai/serve/mask.test.ts && npx tsx ai/serve/export.test.ts && npx tsx showcase/guard.test.ts && npx tsx ai/serve/serve.test.ts && npx tsx ai/serve/queue.test.ts && npx tsx ai/serve/wallet-export.test.ts
       - run: npm run showcase:build
       - run: npx playwright install --with-deps chromium
       - name: Browser suite (Playwright, desktop and phone)
