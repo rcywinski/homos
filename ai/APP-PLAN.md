@@ -233,6 +233,13 @@ reason for the separate user and the kill switch (stopping the tunnel service).
   imported.
 - **Logs**: visitor IP addresses are never stored in clear; rate limiting uses a hash of the IP with a daily salt.
 - **Order**: guest-key mode moves after the first LAN run.
+- **Known limitation (accepted 16 Nov 2026)**: an out-of-scope question and a question the data does not answer get
+  the same fixed text, which says what the assistant covers. Only trading advice is detected before the model; the
+  served prompt (measured in step 3.2) cannot tell the other two apart, and it is not changed without a new
+  measurement. The number-rule guards of step 4.5 (two significant digits for a chunk match, multipliers never in the
+  source) are approved, and CI runs on pushes to `app-chat`.
+- **Served preset after step 3.4**: unchanged. No candidate came near Qwen (16 and 16 correct against 10 and 10 for
+  the best newcomer).
 
 ## 6. Hosting on the Windows box (owner reminder, 16 Nov 2026)
 
