@@ -207,6 +207,11 @@ reason for the separate user and the kill switch (stopping the tunnel service).
   never dropped and never shown as verified. Invalid structured output gives the visitor a plain failure message.
 - **Scope**: out-of-scope questions get a short refusal that says what the chat covers. No advice on what to buy or
   how to trade. The page says that the strategy did not reliably beat holding.
+- **Wallet address in the bundle**: the read-only wallet panel shows the address from `SHOWCASE_WALLET_ADDRESS`,
+  inlined at build time, so the built bundle contains it. Approved by the owner on 16 Nov 2026, following the earlier
+  decision that the wallet address and amounts may be public. It stays out of the source code (removed in `021d445`).
+- **Served preset confirmed**: the step 3.2 runs (pb1, pb2). A phase 3 winner comes in as a new preset only if it
+  exceeds the run-to-run spread.
 - **No wallet code**: the showcase front end imports no wallet or signing library; a test fails the build if one is
   imported.
 - **Logs**: visitor IP addresses are never stored in clear; rate limiting uses a hash of the IP with a daily salt.
@@ -239,7 +244,11 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8, 4.6, 4.9.
 - [ ] **4.7** Security pass: headers and CSP, input limits, abuse script against a local run, injection probe against
   the local model. Needs the box. M.
 - [ ] **4.8** First real run on the LAN only (no tunnel): copy indexes, CC-Win sets up the backend service under its
-  own user, owner tests from the Mac and a phone on the LAN. Needs the box. S.
+  own user, owner tests from the Mac and a phone on the LAN. Needs the box. S. Includes a count of false "not
+  verified" marks on numbers: run the 34 golden questions through the chat, list every number marked not verified,
+  and classify each as unsupported (a correct mark) or derived (a converted date, a sum, a rounded or rescaled value,
+  a count the model made from the sources: a false mark). If false marks are more than a few, propose a rule (for
+  example a third state "derived, check the source" for values computable from verified quotes) before the tunnel.
 - [ ] **4.6** Guest-key mode: `POST /api/retrieve`, browser generator with `dangerouslyAllowBrowser`, verifier in the browser, CSP, the
   no-key-to-our-origin test. Tested with a fake fetch; one real call only with a key the owner creates for it. M.
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner: Cloudflare Tunnel, static hosting choice,

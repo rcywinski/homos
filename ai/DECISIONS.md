@@ -497,3 +497,21 @@ to the same file; the merge will need a manual join at the end of the file.
 
 **Review questions.** Is running a public backend on a machine in the owner's home LAN acceptable with a separate
 user and a tunnel, or should it move off the LAN before stage B?
+
+## 2026-11-16, clarification: unverified quotes in step 1.11 (24 and 25 are both right)
+
+**Decision.** The step 1.11 entry gives "Qwen 24 of 321" unverified quotes; the showcase export (step 4.1) counts 25.
+Both are right: in the five Qwen runs of step 1.11, 24 quotes were not found in the cited chunk and 1 (run `local-b`)
+cited a chunk the model was not given, so 25 were unverified in total. The 1.11 entry is not edited on `app-chat`,
+because that part of the file belongs to `ai-layer`; this entry clarifies it.
+
+**Alternatives.** Editing the 1.11 entry on this branch (rejected by the owner: it would conflict with `ai-layer`).
+
+**Evidence.** Citation statuses in `ai/eval/results/2026-11-11-answers-k10-local-{a1,a2,b,b2,a-think}-golden-v1-4.json`:
+not found 6, 4, 3, 6, 5; unknown chunk 0, 0, 1, 0, 0. The compare report shows verified 59/65, 53/57, 58/62, 52/58,
+74/79.
+
+**Open.** At the merge of `app-chat`, tell the CC-Mac session on `ai-layer` about this entry, so the 1.11 entry can
+say "24 not found plus 1 unknown chunk" if the owner wants it there.
+
+**Review questions.** None.
