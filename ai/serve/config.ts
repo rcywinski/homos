@@ -82,6 +82,13 @@ export interface ServeConfig {
   pauseFile: string;
   /** Dry run only: delay of each fake answer, to show the queue in the browser suite. */
   fakeDelayMs: number;
+  /**
+   * keep_alive for the generator and the embedder on the box. Long, so the generator stays resident: reloading it
+   * evicts bge-m3 (step 3.5). It does not shape the output, so the measured preset is unchanged.
+   */
+  keepAlive: string;
+  /** Embedding model loaded after the generator (ai/serve/residency.ts). */
+  embedModel: string;
 }
 
 export class ConfigError extends Error {}
@@ -94,6 +101,13 @@ function int(env: Env, name: string, fallback: number, min: number, max: number)
   const n = Number(raw);
   if (!Number.isInteger(n) || n < min || n > max) throw new ConfigError(`${name} must be an integer from ${min} to ${max}`);
   return n;
+}
+
+/** Ollama duration such as 24h, 90m or -1 (forever); a short value would let the generator unload between questions. */
+function keepAlive(raw: string | undefined): string {
+  const v = raw || '24h';
+  if (!/^(-1|\d+(s|m|h))$/.test(v)) throw new ConfigError('SERVE_KEEP_ALIVE must look like 24h, 90m, 3600s or -1');
+  return v;
 }
 
 function trustProxy(raw: string | undefined): 'none' | 'cloudflare' {
@@ -138,5 +152,7 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
     logDir: env.SERVE_LOG_DIR || path.join('ai', 'serve', 'logs'),
     pauseFile: env.SERVE_PAUSE_FILE || path.join('ai', 'serve', 'PAUSED'),
     fakeDelayMs: int(env, 'SERVE_FAKE_DELAY_MS', 0, 0, 60_000),
+    keepAlive: keepAlive(env.SERVE_KEEP_ALIVE),
+    embedModel: 'bge-m3',
   };
 }

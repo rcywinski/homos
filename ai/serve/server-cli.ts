@@ -21,6 +21,7 @@ import { DryRunGenerator, FAKE_ENGINE, fakeRetrieval } from './fake-engine';
 import { FileLog } from './log';
 import { GpuQueue } from './queue';
 import { RateLimiter } from './ratelimit';
+import { ensureResident, ResidencyError, warmUp, type ResidencyOptions } from './residency';
 import { checkCorpus, IndexMismatch, loadCheckedIndex, localRetrieval, servedIndexPath } from './retrieve';
 
 /** Asks both model services for a sign of life, at most every 30 s; 3 s timeout each. */
@@ -57,11 +58,24 @@ async function main() {
     deps = { retrieval: await fakeRetrieval(), generator: new DryRunGenerator(cfg.fakeDelayMs), engine: FAKE_ENGINE, k: cfg.preset.k };
     probe = { up: async () => true };
   } else {
+    const residency: ResidencyOptions = {
+      baseUrl: cfg.inferenceUrl,
+      generator: cfg.preset.generator.model,
+      numCtx: cfg.preset.generator.numCtx,
+      embedder: cfg.embedModel,
+      keepAlive: cfg.keepAlive,
+    };
+    // Fixed load order before serving (step 3.5 finding): generator first, then bge-m3, then /api/ps must show both.
+    const loaded = await warmUp(residency);
+    console.log(`[serve] resident: ${loaded.map((m) => m.name).join(', ')}`);
     deps = {
-      retrieval: localRetrieval(cfg.inferenceUrl, cfg.rerankUrl, cfg.preset),
-      generator: new LocalGenerator({ ...cfg.preset.generator, baseUrl: cfg.inferenceUrl, timeoutMs: cfg.generateTimeoutMs }),
+      retrieval: localRetrieval(cfg.inferenceUrl, cfg.rerankUrl, cfg.preset, cfg.keepAlive),
+      generator: new LocalGenerator({ ...cfg.preset.generator, keepAlive: cfg.keepAlive, baseUrl: cfg.inferenceUrl, timeoutMs: cfg.generateTimeoutMs }),
       engine: { id: cfg.preset.id, label: cfg.preset.label },
       k: cfg.preset.k,
+      beforeWork: async () => {
+        if ((await ensureResident(residency)) === 'reloaded') console.log(`[serve] ${new Date().toISOString()} models reloaded in order before a question`);
+      },
     };
     probe = boxProbe(cfg.inferenceUrl, cfg.rerankUrl);
   }
@@ -84,6 +98,6 @@ async function main() {
 }
 
 main().catch((e: unknown) => {
-  console.error(e instanceof ConfigError || e instanceof IndexMismatch ? `[serve] refusing to start: ${e.message}` : e);
+  console.error(e instanceof ConfigError || e instanceof IndexMismatch || e instanceof ResidencyError ? `[serve] refusing to start: ${e.message}` : e);
   process.exit(1);
 });

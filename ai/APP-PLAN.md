@@ -275,6 +275,16 @@ installs, runs the tests and operates the services.
   the existing Ollama and reranker tasks), running the node command above in the serving checkout, restart on failure;
   `HOMOS tunnel` (step 4.9) at startup running `cloudflared tunnel run` with a token file readable only by
   `homos-web`. Until the model services answer, the chat reports `model-offline` and recovers by itself.
+- **Model load order (step 3.5 finding, CC-Mac, 16 Nov 2026).** With Ollama 0.40.15 on Windows, loading the
+  generator evicts a resident bge-m3, while bge-m3 loads next to a resident generator; with the owner's 48 GB
+  pagefile all three models stay resident (23 980 of 24 576 MiB VRAM). Details in `inference/README.md` on
+  `ai-layer`, "Pagefile (commit limit)". The real engine therefore starts with a fixed order
+  (`ai/serve/residency.ts`): one short chat with the served num_ctx, then one embed with no num_ctx, both with a long
+  keep_alive (`SERVE_KEEP_ALIVE`, default 24h; it does not shape the output, so the measured preset is unchanged);
+  then `/api/ps` must list both and the generator must be fully in VRAM with the served num_ctx, or the server
+  refuses to start. Before each question, inside the GPU queue, `/api/ps` is checked again and the same order is
+  replayed if the generator was unloaded; if that fails, the visitor gets the "model unavailable" text. Step 3.5 and
+  any other GPU work should still use the pause file, because their models compete for the same 24 GB.
 - **GPU busy or the model does not fit.** Before the owner or CC-Win uses the GPU for other work (evaluation runs,
   pulling or testing models), CC-Win creates `ai\serve\PAUSED` in the serving checkout; the chat then answers
   "paused" at once and does not touch the GPU, and deletes it afterwards. Without the pause file, a failure inside the
@@ -360,7 +370,9 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
 - [ ] **4.7** Security pass: headers and CSP, input limits, abuse script against a local run, injection probe against
   the local model. Needs the box. M.
 - [ ] **4.8** First real run on the LAN only (no tunnel): copy indexes, CC-Win sets up the backend service under its
-  own user, owner tests from the Mac and a phone on the LAN. Needs the box. S. Includes a count of false "not
+  own user, owner tests from the Mac and a phone on the LAN. Needs the box. S. First real start checks the load order on the box: the
+  `[serve] resident:` line, `/api/ps` with generator, bge-m3 and the reranker loaded, and one question after a forced
+  generator unload (the log line "models reloaded in order before a question"). Includes a count of false "not
   verified" marks on numbers: run the 34 golden questions through the chat, list every number marked not verified,
   and classify each as unsupported (a correct mark) or derived (a converted date, a sum, a rounded or rescaled value,
   a count the model made from the sources: a false mark). If false marks are more than a few, propose a rule (for

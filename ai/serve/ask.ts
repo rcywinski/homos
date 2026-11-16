@@ -40,6 +40,8 @@ export interface AskDeps {
   engine: { id: string; label: string };
   k: number;
   root?: string;
+  /** Run inside the GPU queue before any model call, for example the residency check of ai/serve/residency.ts. */
+  beforeWork?: () => Promise<void>;
 }
 
 const fixed = (deps: AskDeps, outcome: Outcome, text: string, t0: number, sources: AskResponse['sources'] = []): AskResponse => ({
@@ -86,6 +88,7 @@ export async function ask(deps: AskDeps, question: string, onStage?: (s: Stage) 
   if (refusedBeforeWork(question)) return fixed(deps, 'out-of-scope', OUT_OF_SCOPE_ADVICE, t0);
 
   onStage?.('retrieving');
+  if (deps.beforeWork) await during('retrieving', deps.beforeWork);
   const chunks = await during('retrieving', () => deps.retrieval.retrieve(question, deps.k));
   const sources = chunks.map(sourceOf);
   onStage?.('generating');

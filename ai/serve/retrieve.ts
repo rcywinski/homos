@@ -116,10 +116,16 @@ export function checkCorpus(chunks: Chunk[], expected: { corpusHash: string; ind
 }
 
 /** The real thing: reads the corpus and the checked index, talks to the box. Never called in tests. */
-export function localRetrieval(inferenceUrl: string, rerankUrl: string, expected: { corpusHash: string; indexCorpusHash: string }, root = process.cwd()): ChatRetrieval {
+export function localRetrieval(
+  inferenceUrl: string,
+  rerankUrl: string,
+  expected: { corpusHash: string; indexCorpusHash: string },
+  keepAlive?: string,
+  root = process.cwd(),
+): ChatRetrieval {
   const chunks = loadCorpus(root);
   checkCorpus(chunks, expected);
-  const embedder = new LocalEmbedder({ baseUrl: inferenceUrl });
+  const embedder = new LocalEmbedder({ baseUrl: inferenceUrl, ...(keepAlive ? { keepAlive } : {}) });
   const index = loadCheckedIndex(chunks, embedder.name, root);
   return buildLocalRetrieval({ chunks, embedder, reranker: new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 120_000 }), index });
 }
