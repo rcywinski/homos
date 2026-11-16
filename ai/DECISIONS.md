@@ -581,3 +581,25 @@ Rejected for the list: older or English-centric 24B to 35B models (Mistral Small
 replaces). Estimated judge cost: four judged runs, about $2.10.
 
 **Open.** The owner's approval of the list and of any Ollama upgrade.
+
+## 2026-11-16, step 3.4 approved; showcase configuration (owner)
+
+**Decision.** The 3.4 list is approved: Muse Glimmer 30B, Gemma 4 31B, gpt-oss 20B. The gpt-oss licence is confirmed
+from its model card before the pull, with the source recorded. Order: Gemma 4 31B and gpt-oss 20B first, on the
+current Ollama; Muse Glimmer last. An Ollama update is allowed only if Muse Glimmer cannot load on the current
+version. If the box is updated: both versions are recorded, and one control run of Qwen with the exact 3.2 settings
+(prompt P, the saved B lists) is compared with the two 3.2 runs, reporting whether it falls inside their spread. The
+showcase chat will run on this box, so the Ollama version in use must be the one its numbers come from. No second Gemma
+26B run with the Sonnet prompt.
+
+**Showcase chat configuration.** Qwen3.8 27B with prompt P on fully local retrieval (variant B: meta-index plus
+rerank, no query translation): 16 and 18 of 34 correct, 1 of 94 and 1 of 92 quotes unverified (step 3.2), unless 3.4
+finds a better model beyond the spread. A second session (CC-App, worktree on branch `app-chat`) builds the phase 4
+showcase and reads the 3.2 result files for its comparison view, so `ai-layer` is pushed now.
+
+**Evidence.** `ai/eval/results/2026-11-16-phase3-compare-golden-v1-4.md`, step 3.2.
+
+**Open.** Step 3.4 results; the 3.5 plan.
+
+**Review questions.** Is "better beyond the spread" on 34 questions with two runs a strong enough bar to change the
+showcase model?
