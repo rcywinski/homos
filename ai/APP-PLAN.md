@@ -217,13 +217,13 @@ reason for the separate user and the kill switch (stopping the tunnel service).
 Order: 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8, 4.6, 4.9.
 
 - [x] **4.0** Reconnaissance and this plan. S.
-- [ ] NEXT **4.1** Showcase data export: a script that builds static JSON from committed results only: the 34 golden
+- [x] **4.1** Showcase data export: a script that builds static JSON from committed results only: the 34 golden
   questions with the Sonnet answers (k10) and the served local configuration (step 3.2 runs), their citations with
   the verified flag, the judge verdicts, the other measured variants for the "more" section, run counts; plus the
   morning report index. Display filter for network addresses with tests. Fake (no models). S.
 - [ ] **4.1b** [CC-Win, after phase 3] Copy the live ledger and paper files from the box's `.bot/` to the owner's
   Mac (not to the repo), list them, check for anything sensitive, then decide what is exported. S.
-- [ ] **4.2** Showcase front end skeleton in `showcase/`: own webpack entry, comparison view (two columns, "more"
+- [ ] NEXT **4.2** Showcase front end skeleton in `showcase/`: own webpack entry, comparison view (two columns, "more"
   section, verdicts, verification marks), archive view, mock wallet panel (read-only), the "did not reliably beat
   holding" notice, a test that fails on any wallet or signing import. Check that the existing UI still builds. Fake. M.
 - [ ] **4.3** Chat backend core in `ai/serve/`: `POST /api/ask` and `/api/retrieve` through the existing `Embedder`,

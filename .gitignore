@@ -35,6 +35,8 @@ ai/agent/logs/
 ai/agent/runs/
 # Job outputs of the step 2.4 evaluation runs, one directory per run.
 ai/agent/runs-eval/
+# Showcase data (phase 4): generated from committed results by npm run showcase:data.
+showcase/data/
 # Python (inference/ services): bytecode cache and virtual environments.
 __pycache__/
 .venv/
