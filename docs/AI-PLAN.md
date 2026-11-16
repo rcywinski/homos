@@ -348,6 +348,10 @@ costs nothing). Common rules for every step:
 
 ## Later, optional (not scheduled)
 
+- [ ] **Agent prompt for Qwen with a stopping rule** (owner, 16 Nov 2026, possible, not planned). A separately named
+  prompt variant for the local agent with an explicit rule for when to stop searching and answer: in step 3.5, 23 of
+  the 33 local step-limit tasks were mostly new calls, not repeats (`ai/eval/results/2026-11-16-agent-step-limit.md`).
+  It would be tuned on the 18 tasks, so it needs either new tasks or a stated limitation.
 - [ ] `/ask` endpoint in `bot/server.ts` and a panel in the cockpit UI.
 - [ ] **Local contexts.** The local generator comparison moved to step 1.11. Remaining here: re-run 1.7 with the local model writing the chunk
   contexts and compare recall against the Claude-written contexts. Write up as "cloud vs local" in `docs/AI-RAG.md`: quality, latency, cost.

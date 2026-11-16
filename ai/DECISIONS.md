@@ -829,3 +829,13 @@ without the replay.
 
 **Review questions.** Is "the class with the most calls" the right task label? Per-task counts are in the report for
 another rule.
+
+## 2026-11-16, phase 3 merged into main (owner); notes for later
+
+**Decision.** With the owner's approval, `ai-layer` was merged into `main` with a merge commit (no fast forward, no
+history rewritten, no force push) after step 3.5 was ticked, once the CI steps passed. The merge brings steps 3.1 to
+3.5. Recorded as a possible future step, not planned: an agent prompt for Qwen with an explicit stopping rule
+(`docs/AI-PLAN.md`, "Later, optional").
+
+**Note for whoever merges `app-chat`.** That branch changes `ai/answer/` (an optional `signal` parameter in
+`Generator.generate` and `answerWithChecks`) and appends to `ai/DECISIONS.md`: check both against `main` at the merge.
