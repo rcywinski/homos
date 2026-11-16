@@ -261,6 +261,21 @@ Note for the 1.11/1.12 tok/s figures: they were measured at 250 W. In this test 
 GPU energy per run (from step 3.5): Wh = sum of `power.draw` x seconds to the next sample of the one-second nvidia-smi log, gaps capped at 2 s; busy = utilization.gpu at or above 20%, idle = the rest of the run window.
 This is GPU board power only, not the whole machine; CPU package power is readable without installs from the Windows "Energy Meter" counters (Intel RAPL), but was not logged in 3.5.
 
+CPU and memory power (owner, 16 Nov 2026: logged in every run after 3.5, nothing installed):
+- Source: the built-in Windows "Energy Meter" counters (Intel RAPL on the i9-9900KF). The OS is Polish, so the set
+  is localized as "Miernik energii" and only the localized paths work (`\Energy Meter(*)\Power` fails with c0000bb8):
+  `\Miernik energii(RAPL_Package0_PKG)\Moc` (whole CPU package, includes the cores),
+  `\Miernik energii(RAPL_Package0_PP0)\Moc` (cores only, a subset of PKG),
+  `\Miernik energii(RAPL_Package0_DRAM)\Moc` (memory, separate from PKG). PP1 (iGPU) and `_Total` read 0 and are
+  skipped; the Energy and Time counters are not used, their units are unconfirmed.
+- Unit: the counters report milliwatts; the log converts to W. Idle, no models loaded: PKG 8.3 to 9.9 W, PP0 1.8 to
+  3.4 W, DRAM 1.4 W.
+- File: next to the GPU log, same name with `-cpu`, e.g. `C:\ollama\logs\phase3-<step>-<date>-cpu.csv`, one sample per
+  second (`Get-Counter -SampleInterval 1`, write-through). Columns: `timestamp` (yyyy/MM/dd HH:mm:ss.fff local, as in
+  the nvidia-smi log), `cpu_pkg_w`, `cpu_cores_w`, `dram_w` (2 decimals).
+- Energy: same method as the GPU (power x seconds to the next sample, gaps capped at 2 s, per run window). Machine
+  total for a run = GPU board + CPU PKG + DRAM. Not wall power: motherboard, disks, fans and PSU losses are left out.
+
 ### Pagefile (commit limit)
 
 Before 16 Nov 2026:
