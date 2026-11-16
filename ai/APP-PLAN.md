@@ -331,14 +331,16 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   folded, opening on 15 Sep 2026, wallet tab hidden until 4.1b, Recursive font (OFL-1.1) bundled, WCAG AA contrast
   in both colour schemes (lowest pair 5.22:1). Playwright: 12 visitor paths on desktop and phone width against three
   local servers with fake models, screenshot on failure, a CI job with the unit tests and the suite. Fake. M.
-- [ ] **4.5b** Layout and typography follow-up (owner, 16 Nov 2026). Done: compact header (title, one line, "More
+- [x] **4.5b** Layout and typography follow-up (owner, 16 Nov 2026). Done: compact header (title, one line, "More
   about this project" disclosure, the honesty notice beside the title on wide screens and on every view), the question
   box on the first screen at 1280 x 800 (tested), "How answers are checked" beside the chat on wide screens, wider
   comparison, example questions submit at once, the result region takes focus, scrolls into view and is an
   `aria-live` region (tested), daily reports with a line on what they hold and the technical sections folded so the
   money sections come first (the source is not changed; each section gets an English gloss next to its Polish
-  heading). Open: the owner chooses one of three typeface pairs (A Inter with JetBrains Mono, B IBM Plex Sans with
-  IBM Plex Mono, C Source Sans 3 with Source Code Pro, all OFL-1.1, bundled); the other two are then removed.
+  heading). Typography: the owner chose variant C of three, Source Sans 3 with Source Code Pro (OFL-1.1, bundled);
+  Inter, JetBrains Mono and IBM Plex were removed with their files. Title and headings at weight 600, the title
+  about 13% smaller and on one line at 1280 px (22.7 px), bold only for short labels; tabs in three equal columns on
+  a phone (one row at 360 and 390 px).
   `keccak` question answered: in the lockfile since `516f8ea` (19 Mar 2025, the old cockpit), pulled in by `wagmi`
   (Coinbase wallet SDK) and `@uniswap/v3-sdk` (hardhat), unchanged by phase 4; not in the showcase bundle (build guard,
   now listing `keccak` and `hardhat`) and not loaded by the chat server (a test over the modules Node actually loads).
