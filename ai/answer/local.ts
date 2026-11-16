@@ -25,12 +25,31 @@ export interface LocalGenOptions {
   model: string;
   /** Tokenizer files (tokenizer.json, tokenizer_config.json) of the same model, from its Hugging Face repo. */
   tokenizerDir: string;
-  think: boolean;
+  /** false or true, or a named level for models that cannot switch thinking off (gpt-oss: low, medium, high). */
+  think: boolean | 'low' | 'medium' | 'high';
   numCtx: number;
   numPredict: number;
   /** Sampling settings from the model card for the chosen mode; sent as Ollama options and recorded. */
   sampling: { temperature: number; top_p: number; top_k: number; min_p: number; presence_penalty: number; repeat_penalty: number };
   keepAlive: string;
+  /**
+   * Largest chat-template overhead accepted at calibration (default 64). gpt-oss needs more: its harmony template adds
+   * a fixed system block (identity, knowledge cutoff, current date, reasoning level: 61 tokens) and the developer, user
+   * and assistant wrappers, 75 tokens in all (measured 16 Nov 2026). After calibration the count must still match.
+   */
+  maxTemplateOverhead?: number;
+  /**
+   * Server tokens allowed ABOVE the expected count after calibration (default: `tolerance`). Muse Glimmer: the GGUF
+   * tokenizer in Ollama counts a few more tokens than the Hugging Face tokenizer on some text (measured 16 Nov 2026: +3
+   * and +1 on two chunks of one prompt). More tokens on the server cannot be a truncation; fewer still fail at
+   * `tolerance`.
+   */
+  overcountTolerance?: number;
+  /**
+   * Special tokens removed when they end the content before parsing. Ollama 0.40.15 leaves Muse Glimmer's end-of-turn
+   * token `<|eot|>` (id 200008) at the end of the content. Each removal is counted in the call stats.
+   */
+  stripTrailing?: string[];
   /** Allowed difference between expected and server prompt tokens after calibration. */
   tolerance?: number;
   timeoutMs?: number;
@@ -134,6 +153,8 @@ export class LocalGenerator implements Generator {
   private readonly count: (text: string) => number;
   /** Chat-template overhead in tokens, measured on the first call. */
   templateOverhead: number | null = null;
+  /** How many responses ended with a token from `stripTrailing` (removed before parsing). */
+  stripped = 0;
 
   private get system(): string {
     return this.o.system ?? ANSWER_SYSTEM;
@@ -201,11 +222,12 @@ export class LocalGenerator implements Generator {
   private checkServerCount(bare: number, server: number): number {
     if (this.templateOverhead === null) {
       const overhead = server - bare;
-      if (overhead < 0 || overhead > 64) throw new Error(`prompt token count: server ${server}, tokenizer ${bare}: overhead ${overhead} is not a chat template`);
+      if (overhead < 0 || overhead > (this.o.maxTemplateOverhead ?? 64)) throw new Error(`prompt token count: server ${server}, tokenizer ${bare}: overhead ${overhead} is not a chat template`);
       this.templateOverhead = overhead;
     }
     const expected = bare + this.templateOverhead;
-    if (Math.abs(server - expected) > (this.o.tolerance ?? 2))
+    const diff = server - expected;
+    if (diff < -(this.o.tolerance ?? 2) || diff > (this.o.overcountTolerance ?? this.o.tolerance ?? 2))
       throw new Error(`prompt token mismatch: server evaluated ${server}, expected ${expected} (tokenizer ${bare} + template ${this.templateOverhead}); truncation or prompt caching`);
     return expected;
   }
@@ -235,6 +257,13 @@ export class LocalGenerator implements Generator {
       }
       const { r, ms: callMs } = call;
       ms += callMs;
+      for (const t of this.o.stripTrailing ?? []) {
+        const c = r.message?.content?.trimEnd();
+        if (c?.endsWith(t)) {
+          r.message!.content = c.slice(0, -t.length);
+          this.stripped++;
+        }
+      }
       last = r;
       expected = this.checkServerCount(bare, r.prompt_eval_count ?? -1);
       if (this.o.citeMode === 'ref') {

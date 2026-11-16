@@ -1,0 +1,450 @@
+{
+  "date": "2026-11-16",
+  "tokenizer": "qwen3.8-27b",
+  "basePromptTokens": 1485,
+  "outputReserve": 4096,
+  "summary": [
+    {
+      "option": "as-is",
+      "median": 37108,
+      "max": 72104,
+      "fit": {
+        "16384": 4,
+        "24576": 13,
+        "32768": 15,
+        "40960": 18
+      }
+    },
+    {
+      "option": "small",
+      "median": 19617,
+      "max": 36975,
+      "fit": {
+        "16384": 10,
+        "24576": 19,
+        "32768": 27,
+        "40960": 35
+      }
+    },
+    {
+      "option": "compact",
+      "median": 14173,
+      "max": 17594,
+      "fit": {
+        "16384": 15,
+        "24576": 36,
+        "32768": 36,
+        "40960": 36
+      }
+    },
+    {
+      "option": "small+compact",
+      "median": 8292,
+      "max": 9895,
+      "fit": {
+        "16384": 36,
+        "24576": 36,
+        "32768": 36,
+        "40960": 36
+      }
+    }
+  ],
+  "rows": [
+    {
+      "run": "A1",
+      "id": "j-01",
+      "turns": 8,
+      "maxPrompt": {
+        "as-is": 58030,
+        "small": 31104,
+        "compact": 16875,
+        "small+compact": 9584
+      }
+    },
+    {
+      "run": "A1",
+      "id": "j-02",
+      "turns": 7,
+      "maxPrompt": {
+        "as-is": 72104,
+        "small": 34306,
+        "compact": 14662,
+        "small+compact": 8647
+      }
+    },
+    {
+      "run": "A1",
+      "id": "j-03",
+      "turns": 2,
+      "maxPrompt": {
+        "as-is": 17390,
+        "small": 9557,
+        "compact": 17390,
+        "small+compact": 9557
+      }
+    },
+    {
+      "run": "A1",
+      "id": "d-01",
+      "turns": 9,
+      "maxPrompt": {
+        "as-is": 59994,
+        "small": 26285,
+        "compact": 11757,
+        "small+compact": 5799
+      }
+    },
+    {
+      "run": "A1",
+      "id": "d-02",
+      "turns": 8,
+      "maxPrompt": {
+        "as-is": 63652,
+        "small": 35503,
+        "compact": 14136,
+        "small+compact": 8292
+      }
+    },
+    {
+      "run": "A1",
+      "id": "d-03",
+      "turns": 8,
+      "maxPrompt": {
+        "as-is": 37108,
+        "small": 15825,
+        "compact": 10307,
+        "small+compact": 5726
+      }
+    },
+    {
+      "run": "A1",
+      "id": "b-01",
+      "turns": 7,
+      "maxPrompt": {
+        "as-is": 9225,
+        "small": 8724,
+        "compact": 6048,
+        "small+compact": 5547
+      }
+    },
+    {
+      "run": "A1",
+      "id": "b-02",
+      "turns": 10,
+      "maxPrompt": {
+        "as-is": 49441,
+        "small": 30879,
+        "compact": 14477,
+        "small+compact": 8904
+      }
+    },
+    {
+      "run": "A1",
+      "id": "b-03",
+      "turns": 8,
+      "maxPrompt": {
+        "as-is": 64166,
+        "small": 36975,
+        "compact": 14961,
+        "small+compact": 9895
+      }
+    },
+    {
+      "run": "A1",
+      "id": "x-01",
+      "turns": 7,
+      "maxPrompt": {
+        "as-is": 42534,
+        "small": 24299,
+        "compact": 14173,
+        "small+compact": 8360
+      }
+    },
+    {
+      "run": "A1",
+      "id": "x-02",
+      "turns": 5,
+      "maxPrompt": {
+        "as-is": 21196,
+        "small": 15225,
+        "compact": 8994,
+        "small+compact": 7787
+      }
+    },
+    {
+      "run": "A1",
+      "id": "x-03",
+      "turns": 10,
+      "maxPrompt": {
+        "as-is": 54438,
+        "small": 31686,
+        "compact": 16516,
+        "small+compact": 9602
+      }
+    },
+    {
+      "run": "A1",
+      "id": "t-01",
+      "turns": 10,
+      "maxPrompt": {
+        "as-is": 18739,
+        "small": 15662,
+        "compact": 10480,
+        "small+compact": 7403
+      }
+    },
+    {
+      "run": "A1",
+      "id": "t-02",
+      "turns": 10,
+      "maxPrompt": {
+        "as-is": 11606,
+        "small": 11606,
+        "compact": 4094,
+        "small+compact": 4094
+      }
+    },
+    {
+      "run": "A1",
+      "id": "t-03",
+      "turns": 9,
+      "maxPrompt": {
+        "as-is": 52156,
+        "small": 27786,
+        "compact": 15641,
+        "small+compact": 9071
+      }
+    },
+    {
+      "run": "A1",
+      "id": "p-01",
+      "turns": 5,
+      "maxPrompt": {
+        "as-is": 14232,
+        "small": 10530,
+        "compact": 8916,
+        "small+compact": 5214
+      }
+    },
+    {
+      "run": "A1",
+      "id": "p-02",
+      "turns": 10,
+      "maxPrompt": {
+        "as-is": 10797,
+        "small": 10797,
+        "compact": 3646,
+        "small+compact": 3646
+      }
+    },
+    {
+      "run": "A1",
+      "id": "p-03",
+      "turns": 4,
+      "maxPrompt": {
+        "as-is": 15910,
+        "small": 10529,
+        "compact": 9277,
+        "small+compact": 5537
+      }
+    },
+    {
+      "run": "A2",
+      "id": "j-01",
+      "turns": 8,
+      "maxPrompt": {
+        "as-is": 59160,
+        "small": 31928,
+        "compact": 16875,
+        "small+compact": 9584
+      }
+    },
+    {
+      "run": "A2",
+      "id": "j-02",
+      "turns": 6,
+      "maxPrompt": {
+        "as-is": 63964,
+        "small": 33799,
+        "compact": 14662,
+        "small+compact": 8795
+      }
+    },
+    {
+      "run": "A2",
+      "id": "j-03",
+      "turns": 7,
+      "maxPrompt": {
+        "as-is": 54844,
+        "small": 27632,
+        "compact": 17594,
+        "small+compact": 9480
+      }
+    },
+    {
+      "run": "A2",
+      "id": "d-01",
+      "turns": 8,
+      "maxPrompt": {
+        "as-is": 58545,
+        "small": 26874,
+        "compact": 13550,
+        "small+compact": 8251
+      }
+    },
+    {
+      "run": "A2",
+      "id": "d-02",
+      "turns": 6,
+      "maxPrompt": {
+        "as-is": 32254,
+        "small": 18349,
+        "compact": 14198,
+        "small+compact": 8267
+      }
+    },
+    {
+      "run": "A2",
+      "id": "d-03",
+      "turns": 5,
+      "maxPrompt": {
+        "as-is": 15040,
+        "small": 8371,
+        "compact": 9870,
+        "small+compact": 5726
+      }
+    },
+    {
+      "run": "A2",
+      "id": "b-01",
+      "turns": 8,
+      "maxPrompt": {
+        "as-is": 9300,
+        "small": 8799,
+        "compact": 6048,
+        "small+compact": 5547
+      }
+    },
+    {
+      "run": "A2",
+      "id": "b-02",
+      "turns": 9,
+      "maxPrompt": {
+        "as-is": 47037,
+        "small": 28733,
+        "compact": 14572,
+        "small+compact": 8998
+      }
+    },
+    {
+      "run": "A2",
+      "id": "b-03",
+      "turns": 5,
+      "maxPrompt": {
+        "as-is": 42289,
+        "small": 25249,
+        "compact": 15418,
+        "small+compact": 9895
+      }
+    },
+    {
+      "run": "A2",
+      "id": "x-01",
+      "turns": 5,
+      "maxPrompt": {
+        "as-is": 30629,
+        "small": 18005,
+        "compact": 13909,
+        "small+compact": 7464
+      }
+    },
+    {
+      "run": "A2",
+      "id": "x-02",
+      "turns": 4,
+      "maxPrompt": {
+        "as-is": 14707,
+        "small": 14707,
+        "compact": 8015,
+        "small+compact": 8015
+      }
+    },
+    {
+      "run": "A2",
+      "id": "x-03",
+      "turns": 3,
+      "maxPrompt": {
+        "as-is": 24085,
+        "small": 13288,
+        "compact": 16516,
+        "small+compact": 9544
+      }
+    },
+    {
+      "run": "A2",
+      "id": "t-01",
+      "turns": 9,
+      "maxPrompt": {
+        "as-is": 12722,
+        "small": 10025,
+        "compact": 8552,
+        "small+compact": 5855
+      }
+    },
+    {
+      "run": "A2",
+      "id": "t-02",
+      "turns": 10,
+      "maxPrompt": {
+        "as-is": 16462,
+        "small": 16462,
+        "compact": 6989,
+        "small+compact": 6989
+      }
+    },
+    {
+      "run": "A2",
+      "id": "t-03",
+      "turns": 8,
+      "maxPrompt": {
+        "as-is": 46678,
+        "small": 25574,
+        "compact": 15241,
+        "small+compact": 8782
+      }
+    },
+    {
+      "run": "A2",
+      "id": "p-01",
+      "turns": 4,
+      "maxPrompt": {
+        "as-is": 18624,
+        "small": 10911,
+        "compact": 9721,
+        "small+compact": 5709
+      }
+    },
+    {
+      "run": "A2",
+      "id": "p-02",
+      "turns": 7,
+      "maxPrompt": {
+        "as-is": 43732,
+        "small": 27538,
+        "compact": 14632,
+        "small+compact": 9120
+      }
+    },
+    {
+      "run": "A2",
+      "id": "p-03",
+      "turns": 5,
+      "maxPrompt": {
+        "as-is": 34136,
+        "small": 19617,
+        "compact": 14678,
+        "small+compact": 8413
+      }
+    }
+  ]
+}

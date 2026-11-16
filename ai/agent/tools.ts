@@ -216,15 +216,17 @@ export async function runTool(deps: ToolDeps, name: string, args: unknown): Prom
 
 /**
  * Real dependencies: phase 1 retrieval (variant chosen, k=10), the restored result files, the decision log. With
- * `jobs`, also run_backtest and the job results (ai/agent/runs/) in the results listing.
+ * `jobs`, also run_backtest and the job results (ai/agent/runs/) in the results listing. `retrieval: 'local'` (step
+ * 3.5, the fully local agent) makes search_journal use variant B: meta-index plus rerank, no query translation, so no
+ * call leaves the box; the tool itself (name, schema, caps, k) is unchanged.
  */
-export function realDeps(root = process.cwd(), jobs?: { approve: JobDeps['approve']; runner?: JobRunner; runsDir?: string }): ToolDeps {
+export function realDeps(root = process.cwd(), jobs?: { approve: JobDeps['approve']; runner?: JobRunner; runsDir?: string }, retrievalVariant: 'chosen' | 'local' = 'chosen'): ToolDeps {
   const saved = new DirResultsStore(path.join(root, RESULTS_DIR));
   let retrieval: AnswerRetrieval | null = null;
   return {
     journal: {
       async search(query, k) {
-        retrieval ??= new AnswerRetrieval(root, 'chosen');
+        retrieval ??= new AnswerRetrieval(root, retrievalVariant);
         let costUsd = 0;
         retrieval.onUsage = (u) => (costUsd += usd(u, MODELS[QUERY_MODEL].price));
         const [chunks] = await retrieval.retrieve([query], k);

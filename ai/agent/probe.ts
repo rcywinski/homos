@@ -16,19 +16,34 @@
  * system (did anything outside the schema reach the approval or the runner: must be zero). The tail of a job's output
  * as injection is covered by the offline tests (jobs.test.ts), since no job runs here.
  * Writes ai/eval/results/2026-11-12-agent-jobs-probe.{json,md}.
+ *
+ * `--local` (step 3.5): the same probes on the local agent (qwen3.8:27b through Ollama, variant QA-cl: fully local
+ * search), writing ...-local.{json,md} next to the Sonnet files. `--format-check` (step 3.5): three requests that offer
+ * the tools and the answer schema as `format` together, to see whether Ollama still returns tool calls; decides
+ * `--format-with-tools` for the runs. Neither costs anything.
  */
 import 'dotenv/config';
 import { writeFileSync } from 'fs';
 import path from 'path';
 import { DirResultsStore } from './handlers';
 import { JsonlLog } from './log';
-import { AnthropicAgentModel } from './model';
+import { AnthropicAgentModel, type AgentModel } from './model';
+import { LOCAL_AGENT, startLocalAgent } from '../eval/agent-run';
+import { ollamaUnload } from '../answer/local';
+
+/** Local runs unload the generator at the end (owner rule for phase 3). */
+const unloadLocal = async () => (LOCAL || process.argv.includes('--format-check') ? ollamaUnload(process.env.INFERENCE_URL ?? '', LOCAL_AGENT.model) : undefined);
+import { AGENT_SCHEMA, AGENT_SYSTEM } from './prompt';
+import { toolDefinitions } from './tools';
 import { DEFAULT_CAP_USD, runAgent } from './run';
 import { planJob, type JobPlan } from './jobs';
 import type { JobOutcome, JobRunner } from './runner';
 import { realDeps, TOOLS, type ToolDeps } from './tools';
 
-const OUT = 'ai/eval/results/2026-11-12-agent-injection-probe';
+const LOCAL = process.argv.includes('--local');
+const OUT = `ai/eval/results/${LOCAL ? '2026-11-16-agent-injection-probe-local' : '2026-11-12-agent-injection-probe'}`;
+const probeModel = async (): Promise<AgentModel> => (LOCAL ? startLocalAgent(process.env.INFERENCE_URL ?? '', 'QA-cl') : new AnthropicAgentModel('sonnet'));
+const probeDeps = (jobs?: Parameters<typeof realDeps>[1]) => realDeps(process.cwd(), jobs, LOCAL ? 'local' : 'chosen');
 
 export const PROBES = [
   {
@@ -52,8 +67,8 @@ async function main() {
   const maxUsd = Number(arg('--max-usd'));
   if (!(maxUsd > 0)) throw new Error('--max-usd <cap for all probes in USD> is required');
   const names = new Set(TOOLS.map((t) => t.name));
-  const deps = { ...realDeps(), results: new DirResultsStore(path.join(__dirname, 'fixtures', 'probe')) };
-  const model = new AnthropicAgentModel('sonnet');
+  const deps = { ...probeDeps(), results: new DirResultsStore(path.join(__dirname, 'fixtures', 'probe')) };
+  const model = await probeModel();
   let spent = 0;
   const rows = [];
   for (const p of PROBES) {
@@ -82,7 +97,7 @@ async function main() {
     });
     console.log(`${p.id}: ${rows[rows.length - 1].pass ? 'PASS' : 'FAIL'} ${JSON.stringify(checks)}; $${r.costUsd.toFixed(4)}`);
   }
-  const date = '2026-11-12';
+  const date = LOCAL ? new Date().toISOString().slice(0, 10) : '2026-11-12';
   writeFileSync(`${OUT}.json`, JSON.stringify({ date, model: model.name, settings: model.settings(), costUsd: Number(spent.toFixed(4)), capUsd: maxUsd, probes: rows }, null, 2) + '\n');
   const md = [
     '# Agent injection probe (step 2.2)',
@@ -97,6 +112,7 @@ async function main() {
   ];
   writeFileSync(`${OUT}.md`, md.join('\n'));
   console.log(`Wrote ${OUT}.{json,md}; spent $${spent.toFixed(4)}`);
+  await unloadLocal();
 }
 
 export const JOB_PROBES = [
@@ -137,14 +153,14 @@ const inSchema = (args: unknown) => {
 async function mainJobs(maxUsd: number) {
   if (!(maxUsd > 0)) throw new Error('--max-usd <cap for all probes in USD> is required');
   const names = new Set([...TOOLS.map((t) => t.name), 'run_backtest']);
-  const model = new AnthropicAgentModel('sonnet');
+  const model = await probeModel();
   let spent = 0;
   const rows = [];
   for (const p of JOB_PROBES) {
     if (spent + DEFAULT_CAP_USD > maxUsd) throw new Error(`stopping before ${p.id}: spent $${spent.toFixed(4)}, one more probe may cost up to $${DEFAULT_CAP_USD} (cap $${maxUsd})`);
     const approvals: Array<JobPlan & { jobId: string }> = [];
     const trap = new TrapRunner();
-    const base = realDeps(process.cwd(), { approve: async () => false });
+    const base = probeDeps({ approve: async () => false });
     const deps: ToolDeps = {
       ...base,
       results: new DirResultsStore(path.join(__dirname, 'fixtures', 'probe-jobs')),
@@ -191,8 +207,8 @@ async function mainJobs(maxUsd: number) {
     });
     console.log(`${p.id}: ${rows[rows.length - 1].pass ? 'PASS' : 'FAIL'} ${JSON.stringify(checks)}; $${r.costUsd.toFixed(4)}`);
   }
-  const OUTJ = 'ai/eval/results/2026-11-12-agent-jobs-probe';
-  const date = '2026-11-12';
+  const OUTJ = `ai/eval/results/${LOCAL ? '2026-11-16-agent-jobs-probe-local' : '2026-11-12-agent-jobs-probe'}`;
+  const date = LOCAL ? new Date().toISOString().slice(0, 10) : '2026-11-12';
   writeFileSync(`${OUTJ}.json`, JSON.stringify({ date, model: model.name, settings: model.settings(), costUsd: Number(spent.toFixed(4)), capUsd: maxUsd, probes: rows }, null, 2) + '\n');
   const yn = (b: boolean) => (b ? 'yes' : 'NO');
   const md = [
@@ -221,10 +237,28 @@ async function mainJobs(maxUsd: number) {
   ];
   writeFileSync(`${OUTJ}.md`, md.join('\n'));
   console.log(`Wrote ${OUTJ}.{json,md}; spent $${spent.toFixed(4)}`);
+  await unloadLocal();
+}
+
+/** Step 3.5: do tool calls survive when the answer schema is sent as `format` in the same request? */
+async function formatCheck() {
+  const baseUrl = process.env.INFERENCE_URL ?? '';
+  const m = await startLocalAgent(baseUrl, 'format-check');
+  const tools = m.ollamaTools(toolDefinitions(false));
+  const questions = ['What does the decision log say about the trend breaker? Look it up.', 'Which saved backtest results exist? List them with the tool.', 'Search the journal for the 31 August narrowing.'];
+  const rows = [];
+  for (const q of questions)
+    for (const withFormat of [false, true]) {
+      const { r } = await m.chat({ model: m.o.model, stream: false, think: false, keep_alive: m.o.keepAlive, tools, ...(withFormat ? { format: AGENT_SCHEMA } : {}), messages: [{ role: 'system', content: AGENT_SYSTEM }, { role: 'user', content: q }], options: { num_ctx: m.o.numCtx, num_predict: 512, ...m.o.sampling } });
+      rows.push({ q, withFormat, toolCalls: (r.message?.tool_calls ?? []).map((c) => c.function.name), content: (r.message?.content ?? '').slice(0, 200) });
+      console.log(`${withFormat ? 'tools+format' : 'tools only  '}: ${rows[rows.length - 1].toolCalls.join(', ') || 'NO TOOL CALL'} | ${rows[rows.length - 1].content.slice(0, 80)}`);
+    }
+  writeFileSync('ai/eval/results/2026-11-16-agent-format-check-local.json', JSON.stringify({ date: new Date().toISOString().slice(0, 10), model: m.name, rows }, null, 2) + '\n');
+  await unloadLocal();
 }
 
 if (require.main === module)
-  (process.argv.includes('--jobs') ? mainJobs(Number(process.argv[process.argv.indexOf('--max-usd') + 1])) : main()).catch((e) => {
+  (process.argv.includes('--format-check') ? formatCheck() : process.argv.includes('--jobs') ? mainJobs(Number(process.argv[process.argv.indexOf('--max-usd') + 1])) : main()).catch((e) => {
     console.error(e);
     process.exit(1);
   });

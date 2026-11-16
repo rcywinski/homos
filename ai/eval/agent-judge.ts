@@ -27,7 +27,8 @@ import { ClaudeJudge } from '../judge/claude';
 import { byHash, type JudgedItem } from '../judge/items';
 import type { JudgeInput } from '../judge/types';
 import type { AgentTask } from './agent-measures';
-import { EVAL_PREFIX, JUDGED_FILE, loadTasks, RESULTS, RUNS, STEP_CAP_USD, stepSpent } from './agent-run';
+import { EVAL_PREFIX, JUDGED_FILE, LOCAL_AGENT_RUNS, LOCAL_EVAL_PREFIX, LOCAL_JUDGED_FILE, loadTasks, phase3TotalSpent, RESULTS, RUNS, STEP_CAP_USD, stepSpent } from './agent-run';
+import { PHASE3_CAP_USD } from './judge';
 
 export const BLIND = 'ai/eval/review/blind-2.4.md';
 export const BLIND_KEY = 'ai/eval/review/blind-2.4-key.json';
@@ -61,11 +62,12 @@ export function agentJudgeInput(task: AgentTask, rec: RunTask): JudgeInput {
   };
 }
 
-export function loadItems(): JudgedItem[] {
+/** Step 2.4 runs (default) or the step 3.5 local agent runs (`local`), judged into separate files. */
+export function loadItems(set: 'step24' | 'local' = 'step24'): JudgedItem[] {
   const tasks = loadTasks();
   const items: JudgedItem[] = [];
-  for (const run of Object.keys(RUNS)) {
-    const f = `${RESULTS}/${EVAL_PREFIX}${run}.json`;
+  for (const run of Object.keys(set === 'local' ? LOCAL_AGENT_RUNS : RUNS)) {
+    const f = `${RESULTS}/${set === 'local' ? LOCAL_EVAL_PREFIX : EVAL_PREFIX}${run}.json`;
     if (!existsSync(f)) continue;
     for (const rec of (JSON.parse(readFileSync(f, 'utf8')) as { tasks: RunTask[] }).tasks) {
       const task = tasks.find((t) => t.id === rec.id)!;
@@ -98,14 +100,15 @@ function makeBlind() {
   console.log(`Wrote ${BLIND} (${key.length} items) and ${BLIND_KEY}`);
 }
 
-async function judgeAll() {
-  const items = byHash(loadItems());
-  const prev = existsSync(JUDGED_FILE) ? (JSON.parse(readFileSync(JUDGED_FILE, 'utf8')) as { items: JudgedItem[] }).items : [];
+async function judgeAll(set: 'step24' | 'local' = 'step24') {
+  const file = set === 'local' ? LOCAL_JUDGED_FILE : JUDGED_FILE;
+  const items = byHash(loadItems(set));
+  const prev = existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as { items: JudgedItem[] }).items : [];
   const done = new Map(prev.map((x) => [`${x.run}|${x.id}`, x]));
   const judge = new ClaudeJudge();
   const out: JudgedItem[] = [];
   let cost = prev.reduce((n, x) => n + (x.result?.costUsd ?? 0), 0);
-  const save = () => writeFileSync(JUDGED_FILE, JSON.stringify({ date: '2026-11-12', judge: judge.name, costUsd: Number(cost.toFixed(4)), items: out }, null, 2) + '\n');
+  const save = () => writeFileSync(file, JSON.stringify({ date: set === 'local' ? new Date().toISOString().slice(0, 10) : '2026-11-12', judge: judge.name, costUsd: Number(cost.toFixed(4)), items: out }, null, 2) + '\n');
   for (const it of items) {
     const old = done.get(`${it.run}|${it.id}`);
     if (old?.result?.verdict) {
@@ -113,9 +116,13 @@ async function judgeAll() {
       continue;
     }
     // Worst case of one judge call is far below a question's cap; reuse it as a conservative bound.
-    if (stepSpent() + DEFAULT_CAP_USD > STEP_CAP_USD) {
+    if (set === 'step24' && stepSpent() + DEFAULT_CAP_USD > STEP_CAP_USD) {
       save();
       throw new Error(`stopping the judge: step spend $${stepSpent().toFixed(4)} (cap $${STEP_CAP_USD})`);
+    }
+    if (set === 'local' && phase3TotalSpent() + DEFAULT_CAP_USD > PHASE3_CAP_USD) {
+      save();
+      throw new Error(`stopping the judge: phase 3 spend $${phase3TotalSpent().toFixed(4)} (cap $${PHASE3_CAP_USD})`);
     }
     const r = await judge.judge(it.input);
     cost += r.costUsd;
@@ -123,12 +130,12 @@ async function judgeAll() {
     save();
   }
   save();
-  console.log(`Judged ${out.length} answers, $${cost.toFixed(4)}; step spend $${stepSpent().toFixed(4)} of $${STEP_CAP_USD}`);
+  console.log(set === 'local' ? `Judged ${out.length} answers, $${cost.toFixed(4)}; phase 3 spend $${phase3TotalSpent().toFixed(4)} of $${PHASE3_CAP_USD}` : `Judged ${out.length} answers, $${cost.toFixed(4)}; step spend $${stepSpent().toFixed(4)} of $${STEP_CAP_USD}`);
 }
 
 if (require.main === module) {
   const cmd = process.argv[2];
-  (cmd === 'blind' ? Promise.resolve(makeBlind()) : cmd === 'judge' ? judgeAll() : Promise.reject(new Error('usage: agent-judge.ts blind|judge'))).catch((e) => {
+  (cmd === 'blind' ? Promise.resolve(makeBlind()) : cmd === 'judge' ? judgeAll(process.argv.includes('--local') ? 'local' : 'step24') : Promise.reject(new Error('usage: agent-judge.ts blind|judge'))).catch((e) => {
     console.error(e);
     process.exit(1);
   });

@@ -249,14 +249,61 @@ On 11 Nov 2026 the box lost power 4 times under qwen3.8:27b (Kernel-Power 41, bu
 On 13 Nov 2026 the PSU was replaced with a 1200 W be quiet! unit and the cap was removed:
 - The task is disabled.
 - The launchers no longer call the script.
-- MSI Afterburner applies 100% at logon.
+- MSI Afterburner does not run: its logon task is disabled, fans are on auto.
 - The card runs at its default limit of 420 W.
 
 A watched full-load test passed: qwen3.8:27b at num_ctx 16384 generating 4000 tokens alongside back-to-back reranker calls. It drew up to 421 W (397 W on average) and reached 69 C, with no shutdown.
 
-Rollback: run `Enable-ScheduledTask "HOMOS GPU power limit"`, re-add `& C:\ollama\set-gpu-power-limit.ps1` as the first line of both launchers, and set Afterburner to 59%.
+Rollback: run `Enable-ScheduledTask "HOMOS GPU power limit"`, re-add `& C:\ollama\set-gpu-power-limit.ps1` as the first line of both launchers, and re-enable the Afterburner logon task with the power slider at 59%.
 
 Note for the 1.11/1.12 tok/s figures: they were measured at 250 W. In this test qwen generated at 33.9 tok/s, but that ran alongside the reranker load and with a longer prompt, so it is not directly comparable.
+
+GPU energy per run (from step 3.5): Wh = sum of `power.draw` x seconds to the next sample of the one-second nvidia-smi log, gaps capped at 2 s; busy = utilization.gpu at or above 20%, idle = the rest of the run window.
+This is GPU board power only, not the whole machine; CPU package power is readable without installs from the Windows "Energy Meter" counters (Intel RAPL), but was not logged in 3.5.
+
+CPU and memory power (owner, 16 Nov 2026: logged in every run after 3.5, nothing installed):
+- Source: the built-in Windows "Energy Meter" counters (Intel RAPL on the i9-9900KF). The OS is Polish, so the set
+  is localized as "Miernik energii" and only the localized paths work (`\Energy Meter(*)\Power` fails with c0000bb8):
+  `\Miernik energii(RAPL_Package0_PKG)\Moc` (whole CPU package, includes the cores),
+  `\Miernik energii(RAPL_Package0_PP0)\Moc` (cores only, a subset of PKG),
+  `\Miernik energii(RAPL_Package0_DRAM)\Moc` (memory, separate from PKG). PP1 (iGPU) and `_Total` read 0 and are
+  skipped; the Energy and Time counters are not used, their units are unconfirmed.
+- Unit: the counters report milliwatts; the log converts to W. Idle, no models loaded: PKG 8.3 to 9.9 W, PP0 1.8 to
+  3.4 W, DRAM 1.4 W.
+- File: next to the GPU log, same name with `-cpu`, e.g. `C:\ollama\logs\phase3-<step>-<date>-cpu.csv`, one sample per
+  second (`Get-Counter -SampleInterval 1`, write-through). Columns: `timestamp` (yyyy/MM/dd HH:mm:ss.fff local, as in
+  the nvidia-smi log), `cpu_pkg_w`, `cpu_cores_w`, `dram_w` (2 decimals).
+- Energy: same method as the GPU (power x seconds to the next sample, gaps capped at 2 s, per run window). Machine
+  total for a run = GPU board + CPU PKG + DRAM. Not wall power: motherboard, disks, fans and PSU losses are left out.
+
+### Pagefile (commit limit)
+
+Before 16 Nov 2026:
+- Windows managed the pagefile automatically. It was 8.6 GB on C:.
+- The commit limit was 40.3 GB (32 GB RAM plus pagefile).
+
+Why it changed:
+- Ollama 0.40.15 disables mmap on Windows with CUDA ("disabling mmap ... reason=windows_cuda"). A loaded generator therefore also commits about its full model size in host memory.
+- With qwen3.8:27b loaded, free commit fell to 649 MiB.
+- Loading bge-m3 next to it then crashed in llama-server: "CUDA error: shared object initialization failed", exit 0xc0000409.
+- The commit diagnosis is an inference from the scheduler's free_swap values. It is not an explicit out-of-memory message.
+
+Change on 16 Nov 2026, approved by the owner:
+- Fixed pagefile C:\pagefile.sys, initial = maximum = 49152 MB (48 GB). C: had 349.5 GB free.
+- AutomaticManagedPagefile = false.
+- Takes effect after a reboot.
+- After the change (reboot 16 Nov 2026 14:16 CET): commit limit 79.9 GB, free commit 62.8 GB with nothing loaded; qwen3.8:27b at num_ctx 24576 commits about 22 GB, leaving about 38 GB free with qwen, bge-m3 and the reranker loaded.
+- Alternating test after the reboot (CC-Win, log C:\ollama\logs\alt-test-2026-11-16.txt): qwen at 24576 first, then bge-m3, then 14 embeds, 3 reranks of 30 chunks and 3 chats in mixed order; both models stayed in `ollama ps` after every step, no eviction, no CUDA error. VRAM with all three loaded 23 980 of 24 576 MiB (about 600 MiB free).
+
+Load order:
+- Load the generator first, then bge-m3.
+- Loading a generator evicts a resident bge-m3. bge-m3 loading next to a resident generator is allowed (it needs about 1.1 GiB of VRAM).
+
+To revert (as Administrator), then reboot:
+```powershell
+$cs = Get-CimInstance Win32_ComputerSystem
+Set-CimInstance -InputObject $cs -Property @{AutomaticManagedPagefile = $true}
+```
 
 Gemma 4 26B-A4B (`gemma4:26b`, pulled 11 Nov for one extra run): Ollama 0.40.15 loads it with a small speculative
 draft model, and `/api/ps` then reports only about 1.27 GiB, which is not the real footprint. Check full GPU placement in

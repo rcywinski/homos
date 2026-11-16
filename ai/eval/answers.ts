@@ -16,7 +16,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import { answerWithChecks, formatCitation } from '../answer/answer';
 import { ClaudeGenerator } from '../answer/claude';
-import { LocalGenerator, ollamaPs, ollamaUnload } from '../answer/local';
+import { LocalGenerator, ollamaPs, ollamaUnload, type LocalGenOptions } from '../answer/local';
 import { citationCounts, citesEvidence, confusion, costAndLatency, localStats, type AnswerRecord } from '../answer/measures';
 import { AnswerRetrieval } from '../answer/retrieval';
 import type { Generator } from '../answer/types';
@@ -142,7 +142,7 @@ async function main() {
       goldenVersion,
       generator: gen.name,
       retrieval: retrievalName,
-      ...(gen instanceof LocalGenerator ? { generatorSettings: gen.settings(), box: BOX, vram, templateOverhead: gen.templateOverhead } : {}),
+      ...(gen instanceof LocalGenerator ? { generatorSettings: gen.settings(), box: BOX, vram, templateOverhead: gen.templateOverhead, strippedTrailingTokens: gen.stripped } : {}),
       k,
       retrievalMsAllQuestions: retrievalMs,
       stoppedByCap: stopped,
@@ -171,8 +171,12 @@ async function main() {
 
 export const LOCAL_MODEL = 'qwen3.8:27b';
 export const GEMMA_MODEL = 'gemma4:26b';
+/** Step 3.4 candidates (owner-approved list, 16 Nov 2026), prompt P only. */
+export const GEMMA31_MODEL = 'gemma4:31b-it-q4_K_M';
+export const GPTOSS_MODEL = 'gpt-oss:20b';
+export const MUSE_MODEL = 'muse-glimmer:30b';
 /** Every generator that may be on the box: all are unloaded before a run, so it starts from a cold load. */
-export const LOCAL_MODELS = [LOCAL_MODEL, GEMMA_MODEL];
+export const LOCAL_MODELS = [LOCAL_MODEL, GEMMA_MODEL, GEMMA31_MODEL, GPTOSS_MODEL, MUSE_MODEL];
 
 /**
  * Generation settings for the local runs. Sampling is the model card's recommendation for each mode (Qwen3.8-27B,
@@ -202,9 +206,31 @@ function tuned(base: ReturnType<typeof qwenOptions>, variant: TuningVariant) {
 
 export function localOptions(baseUrl: string, think: boolean, model = LOCAL_MODEL, variant: TuningVariant = 'base') {
   if (model === LOCAL_MODEL) return tuned(qwenOptions(baseUrl, think), variant);
-  if (variant !== 'base') throw new Error('step 1.12 variants are for qwen3.8:27b only');
-  return otherOptions(baseUrl, think, model);
+  if (CANDIDATES[model]) {
+    if (variant !== 'P' || think) throw new Error(`${model} runs with --variant P only, thinking as set in CANDIDATES (step 3.4)`);
+    return { ...CANDIDATES[model](baseUrl), system: LOCAL_QUOTE_SYSTEM, systemName: 'LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)' };
+  }
+  if (variant !== 'base' && !(variant === 'P' && model === GEMMA_MODEL)) throw new Error('step 1.12 variants are for qwen3.8:27b only; Gemma also takes P (step 3.3)');
+  const o = otherOptions(baseUrl, think, model);
+  // Step 3.3: Gemma with prompt P. Its card sampling already has every repetition penalty off, so P changes only the
+  // system prompt. The longest P prompt is 15084 tokens by Gemma's tokenizer (15057 on the B lists), so 17408 still
+  // holds it plus num_predict 2048.
+  return variant === 'P' ? { ...o, system: LOCAL_QUOTE_SYSTEM, systemName: 'LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)' } : o;
 }
+
+/**
+ * Step 3.4 candidates, each with prompt P on the variant A lists. Sampling from each model card (Gemma 4 31B and Muse
+ * Glimmer 30B: generation_config.json and card, temperature 1.0, top_p 0.95, top_k 64; gpt-oss: temperature 1.0, top_p
+ * 1.0 as recommended in github.com/openai/gpt-oss, top_k off); repetition penalties off as in P. num_ctx is the smallest
+ * 1024-multiple that holds the longest P prompt by the model's own tokenizer plus num_predict (owner's rule from 1.11):
+ * Gemma 31B 15084 + 2048, gpt-oss 13508 + 8192, Muse Glimmer 12880 + 2048. gpt-oss cannot switch reasoning off, so it
+ * runs at its lowest level ("low") with room for the reasoning in num_predict, as the 1.11 thinking run had.
+ */
+const CANDIDATES: Record<string, (baseUrl: string) => LocalGenOptions> = {
+  [GEMMA31_MODEL]: (baseUrl) => ({ baseUrl, model: GEMMA31_MODEL, tokenizerDir: 'ai/index/tokenizers/gemma-4-31b', think: false, numCtx: 17408, numPredict: 2048, sampling: { temperature: 1.0, top_p: 0.95, top_k: 64, min_p: 0, presence_penalty: 0, repeat_penalty: 1.0 }, keepAlive: '2m', maxNetworkRetries: 0 }),
+  [GPTOSS_MODEL]: (baseUrl) => ({ baseUrl, model: GPTOSS_MODEL, tokenizerDir: 'ai/index/tokenizers/gpt-oss-20b', think: 'low', numCtx: 22528, numPredict: 8192, maxTemplateOverhead: 96, sampling: { temperature: 1.0, top_p: 1.0, top_k: 0, min_p: 0, presence_penalty: 0, repeat_penalty: 1.0 }, keepAlive: '2m', maxNetworkRetries: 0 }),
+  [MUSE_MODEL]: (baseUrl) => ({ baseUrl, model: MUSE_MODEL, tokenizerDir: 'ai/index/tokenizers/muse-glimmer-30b', think: false, overcountTolerance: 16, stripTrailing: ['<|eot|>'], numCtx: 15360, numPredict: 2048, sampling: { temperature: 1.0, top_p: 0.95, top_k: 64, min_p: 0, presence_penalty: 0, repeat_penalty: 1.0 }, keepAlive: '2m', maxNetworkRetries: 0 }),
+};
 
 function otherOptions(baseUrl: string, think: boolean, model: string) {
   if (model === GEMMA_MODEL) {
@@ -243,10 +269,12 @@ function qwenOptions(baseUrl: string, think: boolean) {
 }
 
 /**
- * State of the inference box during the local runs, recorded in every local result file. The 250 W GPU power limit
- * (owner's decision, 11 Nov 2026, after four power losses at the default) lowers decode speed; see inference/README.md.
+ * State of the inference box during the local runs, recorded in every local result file. Steps 1.11 and 1.12 ran at a
+ * 250 W GPU power limit (owner's decision, 11 Nov 2026, after four power losses at the default); their result files
+ * record that. On 13 Nov the power supply was replaced and the limit removed (inference/README.md), so phase 3 runs at
+ * the card's default of 420 W, confirmed by CC-Win before the runs.
  */
-export const BOX = { gpu: 'RTX 3090 24 GB', gpuPowerLimitW: 250, defaultPowerLimitW: 420, ollama: '0.40.15', note: 'limit set at boot by the SYSTEM task "HOMOS GPU power limit"; confirmed by CC-Win before the runs' };
+export const BOX = { gpu: 'RTX 3090 24 GB', gpuPowerLimitW: 420, defaultPowerLimitW: 420, ollama: '0.40.15', note: 'no power cap since 13 Nov 2026 (1200 W PSU); power.limit 420 W confirmed by CC-Win on 16 Nov; per-second power and temperature log on the box (C:\\ollama\\logs\\phase3-2026-11-16.csv)' };
 
 export type Rendered = {
   label: string;

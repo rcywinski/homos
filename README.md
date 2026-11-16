@@ -139,6 +139,7 @@ Measured on a golden set of 34 questions (26 with evidence in the sources, 8 wit
 | Cost and time per answer | about $0.03, median 4.1 s |
 | Local generator instead of Sonnet (`qwen3.8:27b` on the RTX 3090, same chunks), judge correct / partially / incorrect | 13 / 16 / 5 and 12 / 15 / 7 of 34 in two runs, against 20 / 12 / 2; with a prompt written for local models 16 / 13 / 5 and 16 / 11 / 7 (tuned and measured on the same 34 questions) |
 | Agent (Sonnet 5.5 with read-only tools and allowlisted backtest jobs), 18 tasks, five runs: judge correct / partially / incorrect per run | 16 to 17 / 1 to 2 / 0; every backtest number checked against the path it was read from; only 6 to 8 of 18 tasks end without hitting a limit; about $0.16 per task |
+| The same agent on the local `qwen3.8:27b` through Ollama, 18 tasks, two variants of two runs | 11 to 15 / 1 to 4 / 1 to 3 per run, below Sonnet beyond the spread; wrong answers Sonnet did not give (x-03 in all four local runs, p-01 in three: it claims to have run a job that cannot run); 4 of 4 safety probes passed; no cloud generation; about 7.4 to 7.9 Wh per task, GPU board only |
 
 ```bash
 # needs ANTHROPIC_API_KEY, INFERENCE_URL and RERANK_URL in .env, and the inference box (inference/README.md)

@@ -468,3 +468,374 @@ stays one visible merge on `main`).
 **Open.** Phase 3 is optional; nothing is marked NEXT in `docs/AI-PLAN.md`.
 
 **Review questions.** None.
+
+## 2026-11-16, phase 3 "local models" planned (owner)
+
+**Decision.** Phase 3 is five steps, written into `docs/AI-PLAN.md` as 3.1 to 3.5: speed at full power (3.1), prompt P
+in the fully local pipeline (3.2), Gemma 4 26B-A4B with prompt P (3.3), new models from the current Ollama library
+(3.4), and the agent on a local model (3.5). Spend cap for the phase: $10. Common rules: variant A uses the saved k=10
+chunk lists; the 1.11 verifier and blind Opus judge; two runs for anything compared, single runs marked; per-second
+power and temperature log on the box with an alert at 85 C or on a missing sample (the 250 W cap is gone since 13
+Nov); no retries on a network error; every model unloaded after every run; nothing deleted from the box without
+asking; prompts P and A not revised in this phase. Each step is reported and waits for the owner's OK; nothing is built
+or pulled before that.
+
+Choices made in planning (CC-Mac), for the owner to confirm:
+- 3.2 uses the saved variant B chunk lists rather than retrieving again: the B lists of 1.11 runs B1 and B2 are
+  identical (checked), so the generator and prompt are the only change against B1 and B2, and the embedder and
+  reranker need not share the GPU with the generator.
+- Estimated spend: judge about $0.016 per answer (step 1.11: $3.18 for 204), so 3.2 and 3.3 about $1.06 each, 3.4
+  about $2.10 for up to three candidates plus a second run, 3.5 about $0.70 for 36 agent answers plus about $0.20 of
+  Sonnet query translation inside `search_journal`; about $5 in all. A phase spend guard, like the step 2.4 one, counts
+  every phase 3 result file before each judged answer.
+
+**Ollama documentation, checked 16 Nov for 3.5** (docs.ollama.com: tool calling, structured outputs, thinking, `/api/chat`):
+- Tools: `tools` in `/api/chat`; the reply has `message.tool_calls` with `function.name` and `function.arguments` (an
+  object); several calls per reply are possible. Results go back as `role: "tool"` messages matched by tool name. There
+  are no tool call ids.
+- Tools with thinking: the examples pass `think: true` together with `tools`, and the streaming example returns the
+  thinking, content and tool calls of a turn in the next request. No rule beyond the examples.
+- Tools with structured output (`format`): not documented anywhere, neither in the tool-calling page, the structured
+  outputs page nor the `/api/chat` reference. Whether `format` is enforced while `tools` are offered has to be tested.
+- No `tool_choice`: a turn cannot forbid or force tools; a final turn can only leave `tools` out.
+- No statement on how `format` is enforced (the examples validate the output afterwards) or on context overflow (the
+  only text is the `num_ctx` definition; step 1.11 found that an over-long prompt is truncated silently).
+
+What does not map onto `AgentModel` as it stands, to be resolved in the 3.5 plan:
+- tool call ids (the loop's replies carry an id): the Ollama implementation must keep the order of calls itself;
+- the final turn's `tool_choice: none`: replaced by a request without `tools` and with `format`;
+- a tool turn that answers instead of calling a tool: with Sonnet the answer schema applies to every turn; with Ollama
+  `format` plus `tools` in one request is untested;
+- prompt caching and the spend estimate: no cache and no cost, so the estimate is 0 and the per-question cap only
+  counts the Sonnet query translation inside `search_journal` (a cloud call inside an unchanged tool, so the "local"
+  agent is not fully local);
+- reasoning token counts: Ollama reports only `eval_count`, thinking included;
+- context length: the largest prompt per task in Sonnet runs A1 and A2 was 48 554 tokens at the median and 97 044 at
+  most (Claude's tokenizer); 29 of 36 tasks would not fit `num_ctx` 24 576 with 8 000 tokens kept for output, the
+  practical ceiling of the box with the reranker loaded (step 1.11). `search_journal` needs the reranker and the
+  embedder on the same GPU during the run. An over-long prompt has to stop the run loudly (token count before each
+  call, as in `ai/answer/local.ts`), never be truncated.
+
+**Alternatives.** Retrieving variant B again in 3.2 (not chosen: identical lists already saved). Starting 3.5 with a
+larger context through KV cache quantization on the box (not decided: a box setting that changes memory for every
+model; to be proposed in the 3.5 plan with measurements, if at all).
+
+**Open.** The candidates of 3.4 (checked at that step, since the library changes); the context-length decision of 3.5.
+
+**Review questions.** Is a local agent whose `search_journal` still calls Sonnet for query translation a fair "local
+agent"? Should 3.5 measure on fewer tasks than 18 if most of them cannot fit the context?
+
+## 2026-11-16, steps 3.1 to 3.3: results (run without stopping, owner's instruction)
+
+**Decision.** The owner approved the phase plan and asked for 3.1, 3.2 and 3.3 in one go, stopping only on a failed
+check, an unresponsive box or a temperature alert. None happened. Code changes for these steps: the result files now
+record the box without a power cap (`BOX` in `ai/eval/answers.ts`); Gemma accepts prompt P (only the system prompt
+changes, since its card sampling already has every repetition penalty off; the longest P prompt is 15 084 tokens by
+Gemma's tokenizer, so `num_ctx` 17408 still holds it); a phase 3 judge set with a spend guard that limits every judge run
+to what is left of the $10 phase cap (`ai/eval/judge.ts`); the report `ai/eval/phase3-compare.ts`. Box figures are
+CC-Win's, copied per run into `ai/eval/results/2026-11-16-box-log-phase3.json`.
+
+**Evidence.** `ai/eval/results/2026-11-16-phase3-compare-golden-v1-4.md`.
+- 3.1 (single run, not judged): with the same settings, chunk lists and prompt token counts as 1.11 A1, decode median
+  79.9 tokens per second against 60.2 and 60.5 at 250 W; latency median 9.9 s against 12.4 and 12.8. Peak 410.8 W, max
+  71.6 C, peak VRAM 20 191 MiB with the reranker.
+- 3.2: prompt P on the B lists gives the fewest bad quotes measured for a local model (1/94, 1/92), beyond the spread
+  against both B (4/62, 6/58) and P on A (3/87, 3/77). Correctness does not move beyond the spread (correct 16 and 18
+  against 17, 17 and 16, 16).
+- 3.3: Gemma with P has 11/87 and 11/88 bad quotes against 18/67 in its 1.11 run, fewer long quotes (2, 0 against 7),
+  all three unanswerable questions labelled `none` (2/3 before), and fewer correct answers (10, 12 against 14).
+- Whole batch on the box: 1821 samples, no gap, no alert, peak 419.2 W, max 72.7 C, peak VRAM 20 555 MiB.
+- Judge spend: $2.07 of the $10 phase cap.
+
+**What the single Gemma run of 1.11 allows.** Nothing about correctness: with no second run, its own spread is
+unknown, and against the spread of Gemma P (correct 10 to 12, 7 per-question changes between its two runs) the 1.11
+run's 14 is 2 above the range, which equals the range's width, and it differs from each P run on 10 and 8 questions,
+near that spread. The quote error rate (26.9% against 12.6% and 12.5%) halves (14.3 and 14.4 points), larger than any change
+between two runs of one setting so far (at most 6.0 points: Qwen S1 4.4% against S2 10.4%), so it is consistent with a real gain from P; but the
+two-run rule cannot confirm it without a second Gemma A run.
+
+**Alternatives.** A second Gemma A run with the Sonnet prompt to give 1.11 a spread (not done: not in the approved plan;
+about $0.53 of judging, proposed to the owner).
+
+**Open.** The comparison runs of 1.11 and 1.12 were at 250 W and 3.2 and 3.3 at 420 W. Power changes speed, not the
+sampling settings, so the quality comparison is assumed unaffected; speed is compared only within the same power.
+One Gemma P answer needed the one structured-output retry the generator allows (not a network retry).
+
+**Review questions.** Is "consistent with a gain" a fair reading for the Gemma quote rate, given one 1.11 run? Should
+P become the default prompt for any local generator, given 3.2?
+
+## 2026-11-16, step 3.4: candidate list proposed, nothing pulled
+
+**Decision (proposal, waiting for the owner).** Candidates from the Ollama library (checked 16 Nov) that fit the 24 GB
+card at Q4 with the reranker stopped during generation, each with prompt P, one run, a second run for the best:
+- **Muse Glimmer 30B** (`muse-glimmer:30b`, Q4_K_M, 18 GB; Meta; Apache 2.0; dense, 28B text decoder plus a 2B vision
+  encoder; source huggingface.co/meta-models/Muse-Glimmer-30B). Risk: its architecture reached llama.cpp on 10 Aug
+  2026, so the box's Ollama 0.40.15 may not load it; an Ollama upgrade would change the runtime under every earlier
+  local result and is for the owner to decide.
+- **Gemma 4 31B** (`gemma4:31b-it-q4_K_M`, 20 GB; Google DeepMind; Apache 2.0; dense). Tight: 20 GB of weights plus the
+  KV cache at `num_ctx` 17408; full GPU placement is checked from the server log before the run, and the run does not
+  start if any layer is on the CPU.
+- **gpt-oss 20B** (`gpt-oss:20b`, 14 GB; OpenAI; Apache 2.0 as released, not shown on the Ollama page and not rechecked today; MoE). A third family, and the
+  one listed with the strongest tool use, which matters for 3.5. Polish ability unknown.
+Rejected for the list: older or English-centric 24B to 35B models (Mistral Small, OLMo, Qwen 3.5 and 3.6, which 3.8
+replaces). Estimated judge cost: four judged runs, about $2.10.
+
+**Open.** The owner's approval of the list and of any Ollama upgrade.
+
+## 2026-11-16, step 3.4 approved; showcase configuration (owner)
+
+**Decision.** The 3.4 list is approved: Muse Glimmer 30B, Gemma 4 31B, gpt-oss 20B. The gpt-oss licence is confirmed
+from its model card before the pull, with the source recorded. Order: Gemma 4 31B and gpt-oss 20B first, on the
+current Ollama; Muse Glimmer last. An Ollama update is allowed only if Muse Glimmer cannot load on the current
+version. If the box is updated: both versions are recorded, and one control run of Qwen with the exact 3.2 settings
+(prompt P, the saved B lists) is compared with the two 3.2 runs, reporting whether it falls inside their spread. The
+showcase chat will run on this box, so the Ollama version in use must be the one its numbers come from. No second Gemma
+26B run with the Sonnet prompt.
+
+**Showcase chat configuration.** Qwen3.8 27B with prompt P on fully local retrieval (variant B: meta-index plus
+rerank, no query translation): 16 and 18 of 34 correct, 1 of 94 and 1 of 92 quotes unverified (step 3.2), unless 3.4
+finds a better model beyond the spread. A second session (CC-App, worktree on branch `app-chat`) builds the phase 4
+showcase and reads the 3.2 result files for its comparison view, so `ai-layer` is pushed now.
+
+**Evidence.** `ai/eval/results/2026-11-16-phase3-compare-golden-v1-4.md`, step 3.2.
+
+**Open.** Step 3.4 results; the 3.5 plan.
+
+**Review questions.** Is "better beyond the spread" on 34 questions with two runs a strong enough bar to change the
+showcase model?
+
+## 2026-11-16, process: lists through shell variables run from bash script files (owner)
+
+**Decision.** New rule in `CLAUDE.md` (code rules): any loop or command that passes a list through a shell variable
+runs from a bash script file, never inline in zsh.
+
+**Why.** zsh does not split an unquoted variable into words, so a list passed through a variable arrives as one
+argument. This hit three times: in step 1.7 six context rows ran silently as the plain vector baseline (the variant
+options passed as one word); in step 1.9; and in step 3.4, where a download loop with `set -- $spec` created three
+wrongly named directories holding 404 pages instead of the tokenizer files (seen at once from the 404 codes, removed,
+and the download repeated in bash).
+
+**Alternatives.** Quoting tricks or zsh options such as `${=var}` or `setopt sh_word_split` (rejected: easy to forget
+in a one-off command, and the failure is silent); arrays (rejected for the same reason inline).
+
+**Open.** None.
+
+**Review questions.** None.
+
+## 2026-11-16, step 3.4: results; the showcase stays Qwen with prompt P
+
+**Decision.** Three candidates ran with prompt P on the variant A lists, the reranker stopped, on Ollama 0.40.15 (no
+update: Muse Glimmer requires 0.32.8). The best of the three, Muse Glimmer 30B, got its second run. It is below Qwen
+with P beyond the spread, so the showcase configuration stays Qwen3.8 27B with prompt P on fully local retrieval.
+
+**Evidence.** `ai/eval/results/2026-11-16-phase3-compare-golden-v1-4.md`, section 3.4.
+
+| | Qwen P1, P2 on A (1.12) | Gemma 4 31B | gpt-oss 20B | Muse Glimmer 30B, runs 1 and 2 |
+|---|---|---|---|---|
+| correct / partially / incorrect | 16/13/5, 16/11/7 | 7/18/9 | 6/14/14 | 10/17/7, 10/17/7 |
+| quotes verified | 84/87, 74/77 | 56/66 | 33/75 | 94/99, 74/80 |
+| premise handled | 7/8, 7/8 | 5/8 | 4/8 | 5/8, 7/8 |
+| latency median (s) | 13.0, 12.8 (250 W) | 11.5 | 3.8 | 13.0, 12.1 |
+
+- Muse against Qwen P on A: correct 10 and 10 against 16 and 16, a gap of 6 against a spread of 0, beyond the spread;
+  quote error rate within the spread. Muse is dense and slower (44 tokens per second) and held the card at the 420 W
+  limit for the whole run (busy average 407.8 W, the highest of the phase, max 70.3 C).
+- Gemma 4 31B writes very short answers (median 139 tokens) and needs 23 559 MiB at `num_ctx` 17408: it does not fit
+  on the card together with the reranker.
+- gpt-oss 20B rewrites quotes (replaced characters, translations, joined pieces): 42 of 75 not verified.
+- Single runs (Gemma 31B, gpt-oss) carry no comparison claim; their gaps to Qwen are large but unconfirmed.
+
+**Model-specific runtime fixes, all in the result files and tested (`ai/answer/local.test.ts`).**
+- gpt-oss: its harmony chat template adds 75 tokens (system block of 61 with identity, knowledge cutoff, current date
+  and reasoning level, plus the wrappers), above the 64-token bound of the template check. The bound is 96 for
+  gpt-oss only; after calibration the count must still match within 2. A first attempt stopped at the first call.
+- Muse Glimmer: Ollama 0.40.15 leaves its end-of-turn token `<|eot|>` at the end of every response (35 of 35 calls), so
+  the JSON did not parse and the first attempt failed the injection probe with no parsed answer; the token is now
+  removed before parsing and counted. Ollama's GGUF tokenizer also counts a few tokens more than the Hugging Face
+  tokenizer on some text (+3 and +1 on two chunks of one prompt, at most +4 per prompt in the runs); up to 16 more is
+  allowed for Muse, while any shortfall (a truncation) still fails at 2. Diagnosed with direct calls, then rerun.
+
+**Alternatives.** Updating Ollama to fix the Muse token leak (not done: the owner allowed an update only if Muse could
+not load, and it loaded). Treating the first Muse attempt as a failed injection probe (rejected after diagnosis: the
+model did not obey the order; its answer did not parse).
+
+**Open.** Judge spend for 3.4 $1.96; phase total $4.03 of $10.
+
+**Review questions.** Are client-side fixes for a runtime's token leak acceptable in a measurement, given they are
+recorded and tested? Is one run enough to drop Gemma 4 31B and gpt-oss, given gaps of 9 and 10 correct answers?
+
+## 2026-11-16, step 3.4 accepted (owner)
+
+**Decision.** The showcase chat keeps Qwen3.8 27B with prompt P on fully local retrieval; no candidate came near it.
+
+**Limitation, to be stated wherever 3.4 is reported.** Prompt P was written from Qwen's failure types (step 1.12), so
+the other models ran with a prompt not tuned for them. The comparison says which model works best in this setup, not
+which model is best in general.
+
+**Review questions.** Would a prompt written from each model's own failure types change the order? (Not measured; a
+separate, later variant if ever.)
+
+## 2026-11-16, step 3.5 plan approved; how a repeat of a compacted result is handled (owner and CC-Mac)
+
+**Decision (owner).** Both variants, QA-cl first (two runs), then QA-c (two runs). Thinking off. Compaction on demand,
+with the number of compacted results reported per task.
+
+**Variants, as named in the result files** (`ai/eval/agent-run.ts`, `LOCAL_AGENT_RUNS`):
+- QA-cl: qwen3.8:27b through Ollama, prompt A unchanged, `num_ctx` 24576, `num_predict` 4096, thinking off, sampling
+  from the card without thinking (temperature 0.7, top_p 0.8, top_k 20) with every repetition penalty off as in prompt
+  P (paths and quotes repeat), compaction on demand with restore; `search_journal` on fully local retrieval (variant B:
+  meta-index plus rerank, no query translation), so nothing leaves the box.
+- QA-c: the same with `search_journal` as for Sonnet (generated contexts plus Sonnet query translation, the only cloud
+  call).
+Separate result files (`2026-11-16-agent-eval-local-<run>.json`) and judge file, so the step 2.4 files, guard and report
+are untouched.
+
+**Repeat after compaction (the owner's question).** The loop refuses an identical call with "its result is above",
+which is false once that result was compacted. Chosen handling, part of both named variants and inside the Ollama
+conversation only (`ai/agent/model-ollama.ts`): when the reply to a call is the loop's repeat refusal and the original
+result was compacted, the conversation sends the full original result instead, marked "shown again: this result had
+been removed from the conversation to save space", compacting older results to make room. If even then it does not
+fit, the refusal is replaced by an honest note: the result cannot be shown again within the context limit, it was read
+and may still be cited, answer from what you have. The stub of a compacted result says the same: it may be cited, and
+calling the tool again with the same arguments shows it again. Counted per task, apart from each other: results
+compacted, restored, restores refused, plain repeats (a repeat of a result never compacted), so a stuck model is not
+mistaken for a weak one. The loop still counts every repeat toward its third-repeat stop; that is unchanged.
+
+**Other mechanics decided in the build.**
+- Context checks: before every call the prompt is counted with Qwen's tokenizer plus a template and tool-definition
+  overhead calibrated on a cold call (both tool sets, the larger kept) and a 5% margin; when even the compacted history
+  does not fit `num_ctx - num_predict`, the task ends as a final turn with no answer and the error "context-limit"
+  (recorded, loop unchanged). After a call, a server count above the estimate stops the run; a lower one is expected
+  with llama.cpp's prompt cache, so the 1.11 equality check cannot be used here.
+- Ollama has no tool call ids and no `tool_choice`: ids are made in the conversation; the final turn is a request
+  without tools and with the answer schema as `format`. Whether `format` can go with `tools` in one request is decided
+  by a check before the runs (`npm run ai:agent:probe -- --format-check`); without it, a tool turn that answers in text
+  is followed at once by a final request, counted.
+- Before the runs, the step 2.2 and 2.3 injection probes run on the local agent (`--local`), writing separate files.
+- New measures next to the 2.4 ones: tool calls the validator rejected, final answers that did not parse, tasks
+  stopped on the context limit, tool turns answered in text, compaction counts per task, largest server prompt.
+
+**Evidence.** Tests `ai/agent/model-ollama.test.ts` (19, offline: request shape, ids, final turn, text instead of a
+tool call, compaction, restore, honest note, context limit, server-count check, one run through the real loop).
+Context-fit measurement `ai/eval/results/2026-11-16-agent-local-fit.md`.
+
+**Open.** VRAM with Qwen at `num_ctx` 24576, the reranker (3 758 MiB) and bge-m3 together is measured at the first
+load; if it does not fit, the fallback is `num_ctx` 16384 with smaller tool results, recorded as a further named
+variant. The runs wait for the owner's go: CC-Win uses the box first for two showcase tasks.
+
+**Review questions.** Does restoring a compacted result on a repeat change what "repeat" means in the redundant-call
+measure? (Counted both ways: as a repeat by the 2.4 measure and as a restore here.)
+
+## 2026-11-16, step 3.5 paused before the probes: Ollama keeps only one of Qwen and bge-m3
+
+**What happened.** With the owner's go, the one-second log running and the box reserved:
+- Format check (`ai/eval/results/2026-11-16-agent-format-check-local.json`): with the answer schema as `format` in the
+  same request as the tools, Qwen called no tool in 3 of 3 requests and answered at once in JSON, inventing content
+  ("There are 12 saved backtest result files"); without `format` it called the right tool in 3 of 3. Decision: no
+  `format` in tool turns (the default of the built code).
+- VRAM at the first load: bge-m3 loaded (0.64 GiB), then Qwen at `num_ctx` 24576. Ollama 0.40.15 evicted bge-m3
+  ("llama-server model predicted to exceed available memory, evicting": predicted 20.7 GiB, available 22.1 GiB with
+  the reranker holding 3 870 MiB). Qwen 66/66 layers on the GPU, 23 301 MiB in use, peak 23 315 MiB.
+- The fallback checked before any probe: at `num_ctx` 16384 Ollama evicted bge-m3 as well (predicted 19.0 GiB,
+  available 22.1 GiB), so a smaller context does not keep both resident.
+- A second embed request with Qwen loaded made Ollama swap again; the bge-m3 runner crashed at its first compute
+  ("CUDA error: shared object initialization failed", exit 0xc0000409) after three evictions and loads in 30 s.
+  The box, the driver, the reranker and the Ollama server were fine; no power, temperature or Kernel-Power event. No
+  model was reloaded afterwards (owner's rule).
+
+**Consequence.** The agent's `search_journal` needs a bge-m3 embedding for every search while Qwen generates. With
+Ollama evicting one for the other, each search would swap two models (seconds each, and once already a runner crash).
+The same applies to the planned showcase chat on this box, which embeds every question with bge-m3 before Qwen
+answers; step 3.2 never exercised that, because it used saved chunk lists.
+
+**Open, for the owner.** How to embed queries without a second model on the GPU in Ollama (options in the CC-Mac
+report of 16 Nov). Nothing runs until then.
+
+**Addendum (CC-Win's reading of serve.log, same day).** The second embed did not evict Qwen: Ollama loaded bge-m3
+next to Qwen at 16384 ("fits alongside existing models", 1.1 GiB needed, 6.6 GiB of VRAM free), and the bge-m3 runner
+crashed at its first compute; the embed got HTTP 500 after 6.86 s. So the order matters: loading Qwen evicts a resident
+bge-m3, but bge-m3 may load next to a resident Qwen, and VRAM was not the limit then. CC-Win's diagnosis, an inference
+since the log does not say "out of memory": Windows host commit memory. Ollama disables mmap on Windows with CUDA, so
+the Qwen runner commits about its whole model in host memory too; commit headroom ("free_swap") fell from 19 to 26 GiB
+before the load to 649 MiB with Qwen resident; the commit limit is 40.3 GB (32 GB RAM plus an auto-managed 8.6 GB
+pagefile). Possible fix: a larger fixed pagefile (32 to 48 GB), a box change that needs the owner's word and may need a
+reboot. Side note: the embed requests send `num_ctx` 32768, which Ollama caps to bge-m3's 8192 with a warning.
+
+## 2026-11-16, step 3.5 results: the agent on Qwen, QA-cl and QA-c, two runs each
+
+**What ran.** After the 48 GB pagefile and the load order fix (Qwen first, then bge-m3), the chain ran without a
+stop: local injection probes, local job probes, then QA-cl1, QA-cl2, QA-c1, QA-c2 (qwen3.8:27b, `num_ctx` 24576,
+prompt A, thinking off, compaction on demand with restore on a repeated call). No fallback to 16384 was needed.
+Report: `ai/eval/results/2026-11-16-agent-local-report.{json,md}`; judged answers:
+`ai/eval/results/2026-11-16-agent-local-judged.json`.
+
+**Decision.** None to take yet; the results are reported to the owner. Facts:
+- Probes: 4 of 4 pass (unknown tool, ignore-question, order-to-run-a-job, out-of-schema arguments).
+- Correct out of 18: QA-cl 11 and 14, QA-c 14 and 15, Sonnet A 17 and 16. Both local variants are below Sonnet by
+  more than both spreads (correct, incorrect, required sources). QA-c against QA-cl is within the spreads on every
+  measure: the retrieval setup does not separate them in two runs.
+- x-03 is wrong in all four local runs (presents the result file's numbers as the journal's own); p-01 is wrong in
+  three and partly right in one (claims to have run the 0.05% job, which cannot run, with 0.30% pool figures).
+  Corrected on 16 Nov: the first version said p-01 was wrong in every run. Premise handling: QA-cl 1/3 in both runs, QA-c 3/3 and 2/3.
+- Runtime: no task hit the context limit, no final answer failed to parse, 3 invalid tool calls in 72 tasks, 2 to 5
+  tool turns per run answered in text. Largest server prompt 19 502 tokens of 24 576. Compaction in 13 to 15 of 18
+  tasks per run (74 to 87 results); every repeat after compaction was restored, none refused.
+- Grounding is weaker than Sonnet: citations verified 31/37 to 40/44 (Sonnet all), dataRefs 76/120 to 99/116
+  (Sonnet 123/125, 123/127); 1 to 2 unsupported answers per run (Sonnet 0).
+- Efficiency: step limit in 7 to 11 tasks per run (Sonnet 5 and 1); redundant calls 37 to 72 (Sonnet 25 and 17);
+  median time without jobs 70 to 87 s (Sonnet 26 to 33 s).
+- Cost: QA-cl $0, QA-c $0.08 and $0.09 (Sonnet query translation), Sonnet A $2.80 and $2.51. Local judge $1.32;
+  phase 3 total $5.53 of $10.
+- Box (CC-Win, 1 s log): no alert, no gap, no eviction or CUDA error; max 72.8 C, 420 W limit, VRAM at most
+  23 964 MiB; Qwen 66/66 and bge-m3 25/25 on the GPU in every window. GPU board energy 134 to 142 Wh per run, about
+  7.4 to 7.9 Wh per task including idle between tasks. CPU package power was not logged.
+
+**Evidence.** The report above; `run35.log` windows sent to CC-Win; CC-Win's figures from
+`C:\ollama\logs\phase3-3.5b-2026-11-16.csv`.
+
+**Open points.** Whether 3.5 is accepted; whether CPU package power is logged from the next run on.
+
+**Review questions.** The local agent hits the step limit far more often than Sonnet; is that the model looping, or
+compaction hiding results so the model searches again? (Restores: 11 to 15 per run; plain repeats 3 to 17.)
+
+## 2026-11-16, step 3.5 accepted; step-limit follow-up from the saved logs
+
+**Decision (owner).** Step 3.5 accepted and ticked. The box is released for CC-App and CC-Win. CPU package power is
+logged in future runs, only through what Windows already exposes (the "Energy Meter" counters), nothing installed.
+
+**Follow-up, the review question of the 3.5 entry.** Is the step limit the model looping, or compaction hiding results?
+Answered from the saved logs only, no model call (`ai/eval/agent-step-limit.ts`, report
+`ai/eval/results/2026-11-16-agent-step-limit.md`). Each tool call of a step-limit task is one of: (a) a repeat or
+near-repeat of a result compacted in the prompt the model saw, (b) of a result still visible, (c) a new call; the task
+takes the class with the most calls.
+- Local, 33 step-limit tasks: 23 (c), 8 (b), 2 (a). Calls 86 (a), 139 (b), 209 (c); 55 tool turns held only (a)
+  calls, 57 only (b).
+- Sonnet A1 and A2, 6 step-limit tasks: 3 (b), 3 (c), no compaction.
+- Examples: QA-c2 b-01 (class a), turns 5 to 9 each reread one path of a result file whose full read had been
+  compacted; QA-cl2 t-02 (class b), 15 rereads of paths in result files still visible. t-02 is class (b) in both
+  Sonnet runs and all four local runs.
+- Reading: mostly the model keeps making new calls; compaction costs turns but decides 2 of 33 tasks.
+
+**How the compaction state was recovered.** The log has no per-turn compaction record, so each local task is replayed
+through OllamaConversation with a fake server (same tokenizer, the run's overhead 324 and margin). The raw tool_calls
+shape Ollama returned was not logged. With the bare shape (name and arguments) two tasks differ from the recorded
+compaction count (7 against 8, 6 against 8); with Ollama's documented shape (a random-looking id plus an index) all 42
+replays match exactly. Between the two shapes one call changes class (QA-c2 b-01, turn 5) and no task does.
+
+**Alternatives.** Rerunning with a per-turn compaction log: rejected, the owner asked for saved logs only.
+
+**Open points.** Logging the raw tool_calls and the compacted set per turn in future local runs would make this exact
+without the replay.
+
+**Review questions.** Is "the class with the most calls" the right task label? Per-task counts are in the report for
+another rule.
+
+## 2026-11-16, phase 3 merged into main (owner); notes for later
+
+**Decision.** With the owner's approval, `ai-layer` was merged into `main` with a merge commit (no fast forward, no
+history rewritten, no force push) after step 3.5 was ticked, once the CI steps passed. The merge brings steps 3.1 to
+3.5. Recorded as a possible future step, not planned: an agent prompt for Qwen with an explicit stopping rule
+(`docs/AI-PLAN.md`, "Later, optional").
+
+**Note for whoever merges `app-chat`.** That branch changes `ai/answer/` (an optional `signal` parameter in
+`Generator.generate` and `answerWithChecks`) and appends to `ai/DECISIONS.md`: check both against `main` at the merge.

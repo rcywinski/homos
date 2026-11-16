@@ -1,0 +1,523 @@
+{
+  "date": "2026-11-16",
+  "goldenVersion": "1.4",
+  "box": [
+    {
+      "run": "local-a-420w",
+      "startUtc": "2026-11-16T11:01:43Z",
+      "endUtc": "2026-11-16T11:09:11Z",
+      "samples": 443,
+      "peakPowerW": 410.8,
+      "avgPowerW": 308.5,
+      "avgPowerBusyW": 392,
+      "busyNote": "average over the 328 s with GPU utilisation at or above 50%",
+      "maxTempC": 71.6,
+      "peakVramMiB": 20191,
+      "vramNote": "including the reranker",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-pb1",
+      "startUtc": "2026-11-16T11:10:01Z",
+      "endUtc": "2026-11-16T11:16:05Z",
+      "samples": 359,
+      "peakPowerW": 417.6,
+      "avgPowerW": 369.7,
+      "avgPowerBusyW": 393,
+      "busyNote": "average over the 319 s with GPU utilisation at or above 50%",
+      "maxTempC": 72.1,
+      "peakVramMiB": 20259,
+      "vramNote": "including the reranker",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-pb2",
+      "startUtc": "2026-11-16T11:16:16Z",
+      "endUtc": "2026-11-16T11:22:20Z",
+      "samples": 360,
+      "peakPowerW": 418.6,
+      "avgPowerW": 369.6,
+      "avgPowerBusyW": 392.2,
+      "busyNote": "average over the 323 s with GPU utilisation at or above 50%",
+      "maxTempC": 72.7,
+      "peakVramMiB": 20259,
+      "vramNote": "including the reranker",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-gemma-p1",
+      "startUtc": "2026-11-16T11:22:33Z",
+      "endUtc": "2026-11-16T11:26:12Z",
+      "samples": 217,
+      "peakPowerW": 419.2,
+      "avgPowerW": 245.3,
+      "avgPowerBusyW": 372,
+      "busyNote": "average over the 120 s with GPU utilisation at or above 50%",
+      "maxTempC": 68.1,
+      "peakVramMiB": 20555,
+      "vramNote": "including the reranker; Ollama /api/ps reported only 1.27 GiB (known misreport with the speculative draft model); serve.log: 31/31 layers offloaded to the GPU, draft model 5/5",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-gemma-p2",
+      "startUtc": "2026-11-16T11:26:23Z",
+      "endUtc": "2026-11-16T11:29:13Z",
+      "samples": 168,
+      "peakPowerW": 417.6,
+      "avgPowerW": 321.5,
+      "avgPowerBusyW": 372.2,
+      "busyNote": "average over the 126 s with GPU utilisation at or above 50%",
+      "maxTempC": 69.3,
+      "peakVramMiB": 20555,
+      "vramNote": "including the reranker; serve.log: 31/31 layers on the GPU (17 332 MiB on CUDA0: 16 268 weights, 740 KV, 324 compute), draft model fully on the GPU",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-gemma31-p1",
+      "startUtc": "2026-11-16T11:46:16Z",
+      "endUtc": "2026-11-16T11:53:31Z",
+      "samples": 430,
+      "peakPowerW": 414.5,
+      "avgPowerW": 356.3,
+      "avgPowerBusyW": 391,
+      "busyNote": "average over the 363 s with GPU utilisation at or above 50%",
+      "maxTempC": 71,
+      "peakVramMiB": 23559,
+      "vramNote": "reranker stopped; loaded at 19 024 MiB, grew about 4.5 GB during the run, about 1 GB free at peak; serve.log: 61/61 layers on the GPU (CUDA0 20 536 MiB: 17 790 model, 2 560 KV, 186 compute; 1 102 MiB host buffer is the embedding table), draft model 5/5, no reload",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
+      "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
+    },
+    {
+      "run": "local-gptoss-p1",
+      "startUtc": "2026-11-16T11:56:09Z",
+      "endUtc": "2026-11-16T11:58:59Z",
+      "samples": 169,
+      "peakPowerW": 421.8,
+      "avgPowerW": 330.3,
+      "avgPowerBusyW": 380.4,
+      "busyNote": "average over the 130 s with GPU utilisation at or above 50%",
+      "maxTempC": 68,
+      "peakVramMiB": 13941,
+      "vramNote": "reranker stopped; serve.log: 25/25 layers on the GPU (CUDA0 12 821 MiB: 12 036 model, 558 KV, 226 compute; 1 104 MiB host buffer is the embedding table). A first attempt (11:53:44 to 11:54:23 UTC) stopped at the first call on the Mac-side template check, before any answer; model unloaded by hand.",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
+      "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
+    },
+    {
+      "run": "local-muse-p1",
+      "startUtc": "2026-11-16T12:08:14Z",
+      "endUtc": "2026-11-16T12:16:21Z",
+      "samples": 482,
+      "peakPowerW": 421.6,
+      "avgPowerW": 390.5,
+      "avgPowerBusyW": 407.8,
+      "busyNote": "average over the 447 s with GPU utilisation at or above 50%; the highest sustained load of phase 3",
+      "maxTempC": 70.3,
+      "peakVramMiB": 18622,
+      "vramNote": "reranker stopped; serve.log: 53/53 layers on the GPU, loaded once. A first attempt (12:03:36 to 12:04:35 UTC) stopped on the Mac-side checks (trailing <|eot|> in the content, server token overcount); diagnostic calls at about 12:05 to 12:07 UTC, also 53/53.",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
+      "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
+    },
+    {
+      "run": "local-muse-p2",
+      "startUtc": "2026-11-16T12:17:28Z",
+      "endUtc": "2026-11-16T12:24:55Z",
+      "samples": 442,
+      "peakPowerW": 419.4,
+      "avgPowerW": 388.7,
+      "avgPowerBusyW": 408.3,
+      "busyNote": "average over the 412 s with GPU utilisation at or above 50%",
+      "maxTempC": 71.3,
+      "peakVramMiB": 18620,
+      "vramNote": "reranker stopped; serve.log: 53/53 layers on the GPU",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
+      "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
+    }
+  ],
+  "speed": [
+    {
+      "run": "local-a1",
+      "tokensPerSecondMedian": 60.2,
+      "msMedian": 12443,
+      "msP95": 16241,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 60.2,
+        "evalTokensMedian": 277,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14119,
+        "refStats": null
+      }
+    },
+    {
+      "run": "local-a2",
+      "tokensPerSecondMedian": 60.5,
+      "msMedian": 12810,
+      "msP95": 17436,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 60.5,
+        "evalTokensMedian": 242,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14119,
+        "refStats": null
+      }
+    },
+    {
+      "run": "local-a-420w",
+      "tokensPerSecondMedian": 79.9,
+      "msMedian": 9886,
+      "msP95": 12536,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 79.9,
+        "evalTokensMedian": 234,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14119,
+        "refStats": null
+      }
+    }
+  ],
+  "step32": {
+    "vsB": {
+      "unverified": {
+        "a": [
+          "4/62",
+          "6/58"
+        ],
+        "b": [
+          "1/94",
+          "1/92"
+        ],
+        "rate": {
+          "gap": 0.05364656381486676,
+          "width": 0.0389321468298109,
+          "exceeds": true
+        }
+      },
+      "correct": {
+        "a": [
+          17,
+          17
+        ],
+        "b": [
+          16,
+          18
+        ],
+        "range": {
+          "gap": 0,
+          "width": 2,
+          "exceeds": false
+        }
+      },
+      "incorrect": {
+        "a": [
+          5,
+          7
+        ],
+        "b": [
+          3,
+          5
+        ],
+        "range": {
+          "gap": 0,
+          "width": 2,
+          "exceeds": false
+        }
+      },
+      "perQuestion": {
+        "spreadA": 7,
+        "spreadB": 10,
+        "cross": [
+          9,
+          5,
+          9,
+          8
+        ],
+        "up": 19,
+        "down": 12
+      }
+    },
+    "vsP": {
+      "unverified": {
+        "a": [
+          "3/87",
+          "3/77"
+        ],
+        "b": [
+          "1/94",
+          "1/92"
+        ],
+        "rate": {
+          "gap": 0.02361319340329835,
+          "width": 0.0044782803403493054,
+          "exceeds": true
+        }
+      },
+      "correct": {
+        "a": [
+          16,
+          16
+        ],
+        "b": [
+          16,
+          18
+        ],
+        "range": {
+          "gap": 0,
+          "width": 2,
+          "exceeds": false
+        }
+      },
+      "incorrect": {
+        "a": [
+          5,
+          7
+        ],
+        "b": [
+          3,
+          5
+        ],
+        "range": {
+          "gap": 0,
+          "width": 2,
+          "exceeds": false
+        }
+      },
+      "perQuestion": {
+        "spreadA": 4,
+        "spreadB": 10,
+        "cross": [
+          8,
+          13,
+          10,
+          11
+        ],
+        "up": 26,
+        "down": 16
+      }
+    }
+  },
+  "step33": {
+    "gemmaA": {
+      "correct": 14,
+      "incorrect": 7,
+      "unverified": 18
+    },
+    "gemmaP": [
+      {
+        "correct": 10,
+        "incorrect": 5,
+        "unverified": 11
+      },
+      {
+        "correct": 12,
+        "incorrect": 5,
+        "unverified": 11
+      }
+    ],
+    "spread": 7,
+    "vsA": [
+      10,
+      8
+    ]
+  },
+  "step34": [
+    {
+      "run": "local-gemma31-p1",
+      "correct": 7,
+      "incorrect": 9,
+      "unverified": 10,
+      "total": 66,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 72.6,
+        "evalTokensMedian": 139,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 15102,
+        "refStats": null
+      },
+      "settings": {
+        "model": "gemma4:31b-it-q4_K_M",
+        "think": false,
+        "numCtx": 17408,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 64,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)",
+        "tokenizer": "ai/index/tokenizers/gemma-4-31b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "correct": 6,
+      "incorrect": 14,
+      "unverified": 42,
+      "total": 75,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 124.6,
+        "evalTokensMedian": 286,
+        "thinkingTokensMedian": 47,
+        "thinkingTokensMax": 190,
+        "promptTokensMax": 13583,
+        "refStats": null
+      },
+      "settings": {
+        "model": "gpt-oss:20b",
+        "think": "low",
+        "numCtx": 22528,
+        "numPredict": 8192,
+        "maxTemplateOverhead": 96,
+        "sampling": {
+          "temperature": 1,
+          "top_p": 1,
+          "top_k": 0,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)",
+        "tokenizer": "ai/index/tokenizers/gpt-oss-20b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      }
+    },
+    {
+      "run": "local-muse-p1",
+      "correct": 10,
+      "incorrect": 7,
+      "unverified": 5,
+      "total": 99,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 44.3,
+        "evalTokensMedian": 287,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 12908,
+        "refStats": null
+      },
+      "settings": {
+        "model": "muse-glimmer:30b",
+        "think": false,
+        "overcountTolerance": 16,
+        "stripTrailing": [
+          "<|eot|>"
+        ],
+        "numCtx": 15360,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 64,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)",
+        "tokenizer": "ai/index/tokenizers/muse-glimmer-30b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      }
+    },
+    {
+      "run": "local-muse-p2",
+      "correct": 10,
+      "incorrect": 7,
+      "unverified": 6,
+      "total": 80,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 44.2,
+        "evalTokensMedian": 270,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 12908,
+        "refStats": null
+      },
+      "settings": {
+        "model": "muse-glimmer:30b",
+        "think": false,
+        "overcountTolerance": 16,
+        "stripTrailing": [
+          "<|eot|>"
+        ],
+        "numCtx": 15360,
+        "numPredict": 2048,
+        "sampling": {
+          "temperature": 1,
+          "top_p": 0.95,
+          "top_k": 64,
+          "min_p": 0,
+          "presence_penalty": 0,
+          "repeat_penalty": 1
+        },
+        "keepAlive": "2m",
+        "maxNetworkRetries": 0,
+        "systemName": "LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)",
+        "tokenizer": "ai/index/tokenizers/muse-glimmer-30b",
+        "format": "ANSWER_SCHEMA (ai/answer/prompt.ts)",
+        "stream": false,
+        "seed": "not set"
+      }
+    }
+  ]
+}

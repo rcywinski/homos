@@ -1,0 +1,3987 @@
+{
+  "date": "2026-11-16",
+  "perRun": {
+    "A1": {
+      "tasks": 5,
+      "classA": 0,
+      "classB": 2,
+      "classC": 3,
+      "callsA": 0,
+      "callsB": 23,
+      "callsC": 26,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 21
+    },
+    "A2": {
+      "tasks": 1,
+      "classA": 0,
+      "classB": 1,
+      "classC": 0,
+      "callsA": 0,
+      "callsB": 8,
+      "callsC": 3,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 6
+    },
+    "QA-cl1": {
+      "tasks": 7,
+      "classA": 0,
+      "classB": 3,
+      "classC": 4,
+      "callsA": 19,
+      "callsB": 35,
+      "callsC": 46,
+      "turnsOnlyA": 9,
+      "turnsOnlyB": 11
+    },
+    "QA-cl2": {
+      "tasks": 8,
+      "classA": 0,
+      "classB": 2,
+      "classC": 6,
+      "callsA": 8,
+      "callsB": 29,
+      "callsC": 46,
+      "turnsOnlyA": 8,
+      "turnsOnlyB": 20
+    },
+    "QA-c1": {
+      "tasks": 7,
+      "classA": 1,
+      "classB": 2,
+      "classC": 4,
+      "callsA": 25,
+      "callsB": 47,
+      "callsC": 42,
+      "turnsOnlyA": 15,
+      "turnsOnlyB": 13
+    },
+    "QA-c2": {
+      "tasks": 11,
+      "classA": 1,
+      "classB": 1,
+      "classC": 9,
+      "callsA": 34,
+      "callsB": 28,
+      "callsC": 75,
+      "turnsOnlyA": 23,
+      "turnsOnlyB": 13
+    }
+  },
+  "tasks": [
+    {
+      "run": "A1",
+      "id": "b-02",
+      "calls": 10,
+      "a": 0,
+      "b": 3,
+      "c": 7,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 3,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "7"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "7",
+              "name"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "8"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "A1",
+      "id": "x-03",
+      "calls": 10,
+      "a": 0,
+      "b": 4,
+      "c": 6,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 4,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-house-GM-BTC-USD-btc50-90d",
+            "path": [
+              "all"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-house-GM-BTC-USD-btc50-90d",
+            "path": [
+              "reg"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-house-GM-BTC-USD-btc50-90d",
+            "path": [
+              "vaultDD"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-house-GM-BTC-USD-btc50-90d",
+            "path": [
+              "benchDD"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "A1",
+      "id": "t-01",
+      "calls": 9,
+      "a": 0,
+      "b": 5,
+      "c": 4,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 5,
+      "cls": "b",
+      "redundant": [
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111024n1-walkforward-base-cbbtc-weth-005-365d-40d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111024n1-walkforward-base-cbbtc-weth-005-365d-40d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "flat",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111024n1-walkforward-base-cbbtc-weth-005-365d-40d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111024n1-walkforward-base-cbbtc-weth-005-365d-40d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111024n1-walkforward-base-cbbtc-weth-005-365d-40d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "A1",
+      "id": "t-02",
+      "calls": 11,
+      "a": 0,
+      "b": 7,
+      "c": 4,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 5,
+      "cls": "b",
+      "redundant": [
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111345n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111345n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111345n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111345n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111345n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=3 h=24h payback≤7d",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111345n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=2 h=24h payback≤7d",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T111345n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "A1",
+      "id": "p-02",
+      "calls": 9,
+      "a": 0,
+      "b": 4,
+      "c": 5,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 4,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "windows"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "run_backtest",
+          "args": {
+            "job": "walkforward",
+            "pool": "base-cbbtc-weth-005-365d",
+            "windowDays": 30,
+            "stepDays": 15
+          },
+          "kind": "repeat",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "A2",
+      "id": "t-02",
+      "calls": 11,
+      "a": 0,
+      "b": 8,
+      "c": 3,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 6,
+      "cls": "b",
+      "redundant": [
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T120900n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T120900n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T120900n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=3 h=24h payback≤7d"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T120900n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T120900n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=2 h=24h payback≤7d"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T120900n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "run_backtest",
+          "args": {
+            "job": "walkforward",
+            "pool": "arbitrum-weth-usdc-030-365d",
+            "windowDays": 35,
+            "stepDays": 7
+          },
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261112T120900n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl1",
+      "id": "j-01",
+      "calls": 11,
+      "a": 4,
+      "b": 1,
+      "c": 6,
+      "turnsOnlyA": 4,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-ETHUSDT-90d",
+            "path": [
+              "byYear",
+              "2026"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_decision_log",
+          "args": {},
+          "kind": "repeat",
+          "cls": "a"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-ETHUSDT-90d",
+            "path": [
+              "all"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-ETHUSDT-90d",
+            "path": [
+              "byYear",
+              "2020"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-ETHUSDT-90d",
+            "path": [
+              "byYear",
+              "2022"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl1",
+      "id": "d-03",
+      "calls": 10,
+      "a": 0,
+      "b": 0,
+      "c": 10,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": []
+    },
+    {
+      "run": "QA-cl1",
+      "id": "b-01",
+      "calls": 9,
+      "a": 1,
+      "b": 0,
+      "c": 8,
+      "turnsOnlyA": 1,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 9,
+          "name": "search_journal",
+          "args": {
+            "query": "E8.1 carry wydruk HL-ETH 90d \"najdłuższa seria ujemna\" dni wartość"
+          },
+          "kind": "no-new-chunks",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl1",
+      "id": "b-02",
+      "calls": 9,
+      "a": 0,
+      "b": 5,
+      "c": 4,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 5,
+      "cls": "b",
+      "redundant": [
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "7"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "search_journal",
+          "args": {
+            "query": "pegged USDC USDT maxL conservative fee model strategy APR"
+          },
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "7"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "8"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "9"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl1",
+      "id": "x-02",
+      "calls": 29,
+      "a": 8,
+      "b": 15,
+      "c": 6,
+      "turnsOnlyA": 1,
+      "turnsOnlyB": 3,
+      "cls": "b",
+      "redundant": [
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "flat",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "flat",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "flat",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl1",
+      "id": "t-02",
+      "calls": 23,
+      "a": 5,
+      "b": 14,
+      "c": 4,
+      "turnsOnlyA": 2,
+      "turnsOnlyB": 3,
+      "cls": "b",
+      "redundant": [
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=2 h=24h payback≤7d",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=2 h=24h payback≤7d",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=3 h=24h payback≤7d",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=3 h=24h payback≤7d",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=2 h=24h payback≤7d",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=3 h=24h payback≤7d",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T140356n2-walkforward-arbitrum-weth-usdc-030-365d-35d"
+          },
+          "kind": "repeat",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl1",
+      "id": "p-03",
+      "calls": 9,
+      "a": 1,
+      "b": 0,
+      "c": 8,
+      "turnsOnlyA": 1,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 7,
+          "name": "list_backtest_configs",
+          "args": {},
+          "kind": "repeat",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl2",
+      "id": "j-03",
+      "calls": 9,
+      "a": 1,
+      "b": 1,
+      "c": 7,
+      "turnsOnlyA": 1,
+      "turnsOnlyB": 1,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 6,
+          "name": "search_journal",
+          "args": {
+            "query": "17.08 .bot w gicie runner reset --hard nadpisał dane backup robocopy untrack f18f50e"
+          },
+          "kind": "no-new-chunks",
+          "cls": "a"
+        },
+        {
+          "step": 7,
+          "name": "search_journal",
+          "args": {
+            "query": "17.08 runner reset --hard nadpisał żywe pliki .bot złapane w porę backup"
+          },
+          "kind": "no-new-chunks",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl2",
+      "id": "d-03",
+      "calls": 11,
+      "a": 0,
+      "b": 2,
+      "c": 9,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 1,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 2,
+          "name": "read_decision_log",
+          "args": {},
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-365d-45d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl2",
+      "id": "b-02",
+      "calls": 10,
+      "a": 1,
+      "b": 4,
+      "c": 5,
+      "turnsOnlyA": 1,
+      "turnsOnlyB": 4,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-endL",
+            "path": [
+              "results",
+              "7"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "7"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL"
+          },
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "8"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "9"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl2",
+      "id": "t-02",
+      "calls": 17,
+      "a": 0,
+      "b": 15,
+      "c": 2,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 7,
+      "cls": "b",
+      "redundant": [
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=2 h=24h payback≤7d",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=3 h=24h payback≤7d",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=2 h=24h payback≤7d",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=3 h=24h payback≤7d",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "med"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143319n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "best"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl2",
+      "id": "t-03",
+      "calls": 9,
+      "a": 2,
+      "b": 0,
+      "c": 7,
+      "turnsOnlyA": 2,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143652n3-funding-carry-HL-BTC-60d"
+          },
+          "kind": "repeat",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143652n3-funding-carry-HL-BTC-60d",
+            "path": [
+              "all"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl2",
+      "id": "p-01",
+      "calls": 9,
+      "a": 0,
+      "b": 6,
+      "c": 3,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 6,
+      "cls": "b",
+      "redundant": [
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143756n4-walkforward-base-weth-usdc-030-365d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143756n4-walkforward-base-weth-usdc-030-365d-30d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=2 h=24h payback≤7d"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143756n4-walkforward-base-weth-usdc-030-365d-30d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=3 h=24h payback≤7d"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143756n4-walkforward-base-weth-usdc-030-365d-30d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143756n4-walkforward-base-weth-usdc-030-365d-30d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T143756n4-walkforward-base-weth-usdc-030-365d-30d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl2",
+      "id": "p-02",
+      "calls": 9,
+      "a": 2,
+      "b": 1,
+      "c": 6,
+      "turnsOnlyA": 2,
+      "turnsOnlyB": 1,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "id"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-cl2",
+      "id": "p-03",
+      "calls": 9,
+      "a": 2,
+      "b": 0,
+      "c": 7,
+      "turnsOnlyA": 2,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-365d-45d-kanon",
+            "path": [
+              "summary"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "search_journal",
+          "args": {
+            "query": "Pasywny ±20% 45d kanon wynik"
+          },
+          "kind": "no-new-chunks",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c1",
+      "id": "j-01",
+      "calls": 13,
+      "a": 6,
+      "b": 0,
+      "c": 7,
+      "turnsOnlyA": 4,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 6,
+          "name": "search_journal",
+          "args": {
+            "query": "E8.1 carry zamknięte decyzja"
+          },
+          "kind": "no-new-chunks",
+          "cls": "a"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-ETHUSDT-30d"
+          },
+          "kind": "repeat",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-ETHUSDT-30d",
+            "path": [
+              "byYear",
+              "2022"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-HL-BTC-30d",
+            "path": [
+              "all"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-ETHUSDT-30d",
+            "path": [
+              "byYear",
+              "2021"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-ETHUSDT-30d",
+            "path": [
+              "byYear",
+              "2025"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c1",
+      "id": "d-03",
+      "calls": 10,
+      "a": 2,
+      "b": 1,
+      "c": 7,
+      "turnsOnlyA": 2,
+      "turnsOnlyB": 1,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 2,
+          "name": "search_journal",
+          "args": {
+            "query": "ALGORITHM v1 frozen 11 August specification details"
+          },
+          "kind": "no-new-chunks",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "search_journal",
+          "args": {
+            "query": "ALGORITHM v1 collect 8x gas portfolio revision cbBTC"
+          },
+          "kind": "repeat",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "search_journal",
+          "args": {
+            "query": "ALGORITHM v1 selection 7d persistence 3d majors range formula k sigma"
+          },
+          "kind": "no-new-chunks",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c1",
+      "id": "b-02",
+      "calls": 10,
+      "a": 5,
+      "b": 1,
+      "c": 4,
+      "turnsOnlyA": 5,
+      "turnsOnlyB": 1,
+      "cls": "a",
+      "redundant": [
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "7"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-endL",
+            "path": [
+              "results",
+              "7"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-endL",
+            "path": [
+              "results",
+              "9"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "9"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "8"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "0"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c1",
+      "id": "x-02",
+      "calls": 39,
+      "a": 0,
+      "b": 32,
+      "c": 7,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 5,
+      "cls": "b",
+      "redundant": [
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "flat",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "flat",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "flat",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "flat",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "winPct"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "winPct"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "winPct"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "up",
+              "winPct"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "flat",
+              "winPct"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "down",
+              "winPct"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "flat",
+              "winPct"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime",
+              "flat",
+              "winPct"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-c1",
+      "id": "t-02",
+      "calls": 24,
+      "a": 10,
+      "b": 12,
+      "c": 2,
+      "turnsOnlyA": 2,
+      "turnsOnlyB": 5,
+      "cls": "b",
+      "redundant": [
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+              "2"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "2"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Pasywny ±50%",
+              "2"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adaptacyjna k=2 h=24h payback≤7d",
+              "2"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adaptacyjna k=3 h=24h payback≤7d",
+              "2"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Pasywny ±50%",
+              "14"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adaptacyjna k=2 h=24h payback≤7d",
+              "14"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adaptacyjna k=3 h=24h payback≤7d",
+              "14"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+              "14"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "14"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=2 h=24h payback≤7d"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=3 h=24h payback≤7d"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Pasywny ±50%",
+              "20"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adaptacyjna k=2 h=24h payback≤7d",
+              "20"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adaptacyjna k=3 h=24h payback≤7d",
+              "20"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+              "20"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T150257n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "perWindow",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "20"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c1",
+      "id": "p-01",
+      "calls": 9,
+      "a": 1,
+      "b": 1,
+      "c": 7,
+      "turnsOnlyA": 1,
+      "turnsOnlyB": 1,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 6,
+          "name": "run_backtest",
+          "args": {
+            "job": "walkforward",
+            "pool": "base-weth-usdc-005-365d",
+            "windowDays": 30,
+            "stepDays": 10
+          },
+          "kind": "repeat",
+          "cls": "a"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-005-365d-60d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-c1",
+      "id": "p-03",
+      "calls": 9,
+      "a": 1,
+      "b": 0,
+      "c": 8,
+      "turnsOnlyA": 1,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-365d-45d-kanon",
+            "path": [
+              "summary"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c2",
+      "id": "j-01",
+      "calls": 13,
+      "a": 5,
+      "b": 2,
+      "c": 6,
+      "turnsOnlyA": 4,
+      "turnsOnlyB": 1,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 5,
+          "name": "read_decision_log",
+          "args": {},
+          "kind": "repeat",
+          "cls": "a"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-ETHUSDT-90d",
+            "path": [
+              "byYear",
+              "2022"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-BTCUSDT-90d",
+            "path": [
+              "byYear",
+              "2022"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-ETHUSDT-90d",
+            "path": [
+              "all"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-BTCUSDT-90d",
+            "path": [
+              "all"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-ETHUSDT-90d",
+            "path": [
+              "recent180"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-BTCUSDT-90d",
+            "path": [
+              "recent180"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c2",
+      "id": "d-01",
+      "calls": 9,
+      "a": 2,
+      "b": 0,
+      "c": 7,
+      "turnsOnlyA": 2,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 6,
+          "name": "search_journal",
+          "args": {
+            "query": "Envio win32 binary 1.0.0 Windows native module"
+          },
+          "kind": "repeat",
+          "cls": "a"
+        },
+        {
+          "step": 7,
+          "name": "read_decision_log",
+          "args": {},
+          "kind": "repeat",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c2",
+      "id": "b-01",
+      "calls": 9,
+      "a": 5,
+      "b": 1,
+      "c": 3,
+      "turnsOnlyA": 5,
+      "turnsOnlyB": 1,
+      "cls": "a",
+      "redundant": [
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-HL-ETH-90d",
+            "path": [
+              "all"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-HL-ETH-90d",
+            "path": [
+              "worstRunDays"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-HL-ETH-90d",
+            "path": [
+              "params"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-HL-ETH-90d",
+            "path": [
+              "W"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-HL-ETH-90d",
+            "path": [
+              "annFunding"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-carry-HL-ETH-90d",
+            "path": [
+              "breakevenPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c2",
+      "id": "b-02",
+      "calls": 12,
+      "a": 2,
+      "b": 4,
+      "c": 6,
+      "turnsOnlyA": 2,
+      "turnsOnlyB": 2,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL"
+          },
+          "kind": "repeat",
+          "cls": "a"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "7"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "7",
+              "aprPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "7",
+              "vsHodlPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "pegged-mainnet-usdc-usdt-001-maxL",
+            "path": [
+              "results",
+              "7",
+              "maxDrawdownPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "search_journal",
+          "args": {
+            "query": "pegged USDC USDT mainnet maxL conservative fee model best strategy"
+          },
+          "kind": "repeat",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-c2",
+      "id": "b-03",
+      "calls": 10,
+      "a": 2,
+      "b": 0,
+      "c": 8,
+      "turnsOnlyA": 2,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "e8-house-HLP-usdc-90d"
+          },
+          "kind": "repeat",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_decision_log",
+          "args": {},
+          "kind": "repeat",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c2",
+      "id": "x-01",
+      "calls": 10,
+      "a": 2,
+      "b": 0,
+      "c": 8,
+      "turnsOnlyA": 2,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-005-365d-45d-kanon",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "byRegime"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-005-365d-45d-kanon",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c2",
+      "id": "x-02",
+      "calls": 29,
+      "a": 12,
+      "b": 4,
+      "c": 13,
+      "turnsOnlyA": 2,
+      "turnsOnlyB": 1,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 3,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "byRegime"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-mainnet-usdc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-arbitrum-weth-usdc-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c2",
+      "id": "t-02",
+      "calls": 18,
+      "a": 0,
+      "b": 14,
+      "c": 4,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 5,
+      "cls": "b",
+      "redundant": [
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=2 h=24h payback≤7d",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=3 h=24h payback≤7d",
+              "mean"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%)",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,vg1.4,t2=10%)",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 5,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=2 h=24h payback≤7d",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adaptacyjna k=3 h=24h payback≤7d",
+              "worst"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "winPct"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153247n2-walkforward-arbitrum-weth-usdc-030-365d-35d",
+            "path": [
+              "summary",
+              "Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)",
+              "winPct"
+            ]
+          },
+          "kind": "repeat",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-c2",
+      "id": "t-03",
+      "calls": 9,
+      "a": 3,
+      "b": 0,
+      "c": 6,
+      "turnsOnlyA": 3,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153640n3-funding-carry-HL-BTC-60d",
+            "path": [
+              "all"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 8,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153640n3-funding-carry-HL-BTC-60d",
+            "path": [
+              "params"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        },
+        {
+          "step": 9,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "run-j20261116T153640n3-funding-carry-HL-BTC-60d",
+            "path": [
+              "periodH"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    },
+    {
+      "run": "QA-c2",
+      "id": "p-02",
+      "calls": 9,
+      "a": 0,
+      "b": 3,
+      "c": 6,
+      "turnsOnlyA": 0,
+      "turnsOnlyB": 3,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 4,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 6,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-cbbtc-weth-005-720d-30d",
+            "path": [
+              "summary",
+              "Pasywny ±50%",
+              "recent90"
+            ]
+          },
+          "kind": "reread",
+          "cls": "b"
+        },
+        {
+          "step": 7,
+          "name": "run_backtest",
+          "args": {
+            "job": "walkforward",
+            "pool": "base-cbbtc-weth-005-365d",
+            "windowDays": 90,
+            "stepDays": 30
+          },
+          "kind": "repeat",
+          "cls": "b"
+        }
+      ]
+    },
+    {
+      "run": "QA-c2",
+      "id": "p-03",
+      "calls": 9,
+      "a": 1,
+      "b": 0,
+      "c": 8,
+      "turnsOnlyA": 1,
+      "turnsOnlyB": 0,
+      "cls": "c",
+      "redundant": [
+        {
+          "step": 7,
+          "name": "read_backtest_results",
+          "args": {
+            "name": "walkforward-base-weth-usdc-030-365d-45d-kanon",
+            "path": [
+              "summary"
+            ]
+          },
+          "kind": "reread",
+          "cls": "a"
+        }
+      ]
+    }
+  ]
+}
