@@ -310,6 +310,13 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   with `SERVE_ENGINE=fake`, starts the server with the node command of section 6 on 127.0.0.1, calls `/api/health`
   and asks one question with `curl.exe`, creates and deletes the pause file, and reports the outputs. Does not need
   the GPU, so it can run while phase 3 holds the box, if the owner allows CC-Win to work on the box. S.
+  Result, 16 Nov 2026 (CC-Win, relayed by CC-Mac): passed on `dc2a85a`, nothing failed because of Windows. Separate
+  clone `C:\Projects\homos-dryrun`, Node 24.19.0, no key anywhere, no user, task, tunnel or firewall rule created,
+  GPU services untouched. Unit tests serve 77/0, queue 57/0, mask 89/0, export 95/0, guard 46/0; showcase build OK;
+  server on 127.0.0.1:8790 reported the missing index as expected; health, static files, one question (JSON and
+  SSE), pause file and request log (hash only, no IP) as designed. Notes: start from PowerShell or cmd, not Git Bash
+  (Git Bash dropped the backslashes of the script path); static responses and `/api/health` carry no security
+  headers yet, which is step 4.7. A short re-check on the step 4.5 commit (new dev packages, font copy) is requested.
 - [x] **4.5** Chat panel, verification marks and design pass, plus the Playwright suite in CI. Numbers have three
   states (owner, 16 Nov 2026): "Verified" (in a verified quote), "In the cited source" (in a chunk the answer cites
   with a verified quote, with at least two significant digits, or obtained by one of three code-checked
