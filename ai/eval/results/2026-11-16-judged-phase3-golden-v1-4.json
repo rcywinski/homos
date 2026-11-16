@@ -18,6 +18,14 @@
     {
       "run": "local-gemma-p2",
       "file": "ai/eval/results/2026-11-16-answers-k10-local-gemma-p2-golden-v1-4.json"
+    },
+    {
+      "run": "local-gemma31-p1",
+      "file": "ai/eval/results/2026-11-16-answers-k10-local-gemma31-p1-golden-v1-4.json"
+    },
+    {
+      "run": "local-gptoss-p1",
+      "file": "ai/eval/results/2026-11-16-answers-k10-local-gptoss-p1-golden-v1-4.json"
     }
   ],
   "items": [
@@ -5692,6 +5700,2682 @@
           "faithfulnessReason": "The quotes support the backtest_run columns, the results-index role and the raw swaps staying in files, but the reason given (avoiding bloating the database by orders of magnitude) and the claim that the file column holds JSON paths in backtest/results/ are not in the quotes.",
           "premise": "not_handled",
           "premiseReason": "The answer accepts the premise that a backtest SQL database existed and does not say the schema was only an unimplemented design."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "why-01",
+      "answerable": "yes",
+      "input": {
+        "question": "Why didn't we actively re-center the ranges to follow the price (frequent narrowing), instead of staying wide?",
+        "answerable": "yes",
+        "reference": "On 720 days 0 of 21 narrow configurations passed the gate, and the one live narrowing (31.08 to 11.09) ended -$32 vs HODL, so on 16.09 narrowing was rejected again because the upside (about +$1 per episode) is far smaller than the loss when the price leaves a ±5% range (about -$30).",
+        "answer": "The decision to avoid active re-centering with frequent narrowing was based on empirical backtests showing that the costs of doing so outweighed the benefits. Specifically, a 720-day walkforward analysis revealed that a passive wide range outperformed the narrow strategy (±5%) on both pools: cbBTC (63% vs 43% win rate) and base-030 (60% vs 45–47% win rate) {",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "Walkforward WF_SET=product cbBTC Pasywny 63% wygr. vs ±5% 43%; base-030 Pasywny 60% vs ±5% 45–47%."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1610,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 407
+        },
+        "costUsd": 0.01458,
+        "ms": 4902,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly says backtests showed wide passive ranges beating ±5% narrowing, but it misses key points of the reference: 0 of 21 narrow configurations passed, the live narrowing lost -$32 vs HODL, and the small upside versus large downside behind the 16.09 rejection.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The 720-day walkforward win rates for cbBTC (63% vs 43%) and base-030 (60% vs 45–47%) appear directly in the cited quote.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "why-02",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did we keep the capital commitment small even though ETH and BTC were rising?",
+        "answerable": "yes",
+        "reference": "Tranche 1 ($6 092) was planned as a first stage and run as an operational experiment on a calibration the team itself considered broken (720 d: 0/21), the entry after an ETH +25%/90d pump was recorded with an explicit FOMO note, and on 02.09 the product failed to beat HODL in all five measurements, so the planned scale-up never happened.",
+        "answer": "The project kept the capital commitment small because the strategy's profile was described as “sprzedawanie ubezpieczenia od nudy”. While it could outperform HODL in flat markets by approximately $50–100 in fees, it would lose significantly more during a crash, potentially by $500–1,100, because the portfolio becomes 100% exposed to the falling asset below the band.",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:992-993",
+            "quote": "profil = “sprzedawanie ubezpieczenia od nudy”"
+          },
+          {
+            "where": "journal/CONTEXT.md:990-992",
+            "quote": "w spokoju strategia wygrywa z HODL o ~$50–100 (fees), w krachu przegrywa o $500–1,100 (poniżej pasma portfel jest 100% w spadającym aktywie)"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1657,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 231
+        },
+        "costUsd": 0.011248,
+        "ms": 3593,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The reference explains the small commitment as a first-stage experiment on a calibration the team considered broken, with an entry flagged as FOMO and a failure to beat HODL, whereas the answer attributes it to the strategy's asymmetric risk profile and misses every one of those key points.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The quotes back the 'insurance against boredom' profile, the ~$50–100 gain in calm markets, the $500–1,100 loss in a crash, and the 100% exposure below the band.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "why-03",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the 720-day backtests cover only a few pools, and why those particular ones?",
+        "answerable": "yes",
+        "reference": "The first 720-day run (25.08) simply reused the four pools that already had 365-day runs (base-030, mainnet-005, arb-005, cbBTC-005, the younger cbBTC pool from its start), because each walk-forward cost 20-40 minutes per pool; restricting the 720-day gate to 'finalists' of a cheap universe-wide screen appears only later, in the funnel design of 31.08.",
+        "answer": "The 720-day backtests were used as a validation gate because the previous 365-day window, which was a \"mostly sideways-to-down year,\" had \"flattered range-bound strategies\" {",
+        "quotes": [
+          {
+            "where": "docs/CASE-STUDY.md:46",
+            "quote": "The first calibration (365 days of data, a mostly sideways-to-down year)"
+          },
+          {
+            "where": "docs/CASE-STUDY.md:57-58",
+            "quote": "The 365-day year had flattered range-bound strategies."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1558,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 211
+        },
+        "costUsd": 0.010452,
+        "ms": 2883,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer is truncated and only explains why the 720-day window was used; it never says why so few pools were covered or why those particular pools were chosen (reuse of the four 365-day pools, 20-40 minute cost per pool).",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes back the description of the 365-day year as sideways-to-down and flattering range-bound strategies, but nothing in them says the 720-day backtests were used as a validation gate.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "why-04",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the Claude Code sessions coordinate through hand-off files in the repo instead of messaging each other directly?",
+        "answerable": "yes",
+        "reference": "On 10.08 it was checked that the sessions could not reach each other (separate apps), so the repo files became the communication bus, with HANDOFF.md inboxes and history in git; from 01.09 CC-Mac and CC-Win also sent each other direct messages via Remote Control, while the files stayed the shared memory and task queue and the fallback when that channel was down.",
+        "answer": "Claude Code sessions coordinated through repository files because it was empirically verified that sessions (such as Sonnet, CC, and Windows) were not reachable via direct messaging as they were separate applications",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:3277-3279",
+            "quote": "sprawdzono empirycznie (ListAgents)\n— sesje Sonnet/CC/Windows NIE są osiągalne przez bezpośredni messaging z tej\nsesji (osobne aplikacje)"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1561,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 212
+        },
+        "costUsd": 0.010484,
+        "ms": 3725,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly gives the reason (sessions were separate apps and could not message each other, so repo files became the channel), but it misses that from 01.09 CC-Mac and CC-Win also messaged each other directly via Remote Control, with the files remaining the shared memory and fallback.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The quote directly states that the Sonnet/CC/Windows sessions were empirically verified as not reachable by direct messaging because they were separate applications.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable=yes."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "why-05",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the bot and its API server run on the Windows machine rather than on the Mac I was working on?",
+        "answerable": "yes",
+        "reference": "The bot had to run 24/7 (nightly pipeline, 07:30 report, Telegram alerts), so the owner's always-on Windows desktop became the server with the Mac and iPhone as clients over LAN and VPN; the docs add that a closed laptop would mean a dead autopilot.",
+        "answer": "The bot and its API server ran on a Windows machine because a browser cannot act as an automation engine, and a closed laptop would result in a \"dead autopilot\" {",
+        "quotes": [
+          {
+            "where": "docs/UI-DESIGN.md:45-46",
+            "quote": "the browser cannot be the automation engine — a closed laptop means a dead autopilot"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1476,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 492
+        },
+        "costUsd": 0.015744,
+        "ms": 5085,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer captures the docs' point that a closed laptop would mean a dead autopilot, but it never says the bot had to run 24/7 or that the always-on Windows desktop served the Mac and iPhone as clients.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "Both claims, that the browser cannot be the automation engine and that a closed laptop means a dead autopilot, come directly from the cited quote.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "why-06",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the bot never open, close or re-range positions on its own, and was automatic execution possible at all?",
+        "answerable": "yes",
+        "reference": "The bot ran in PROPOSE mode with no wallet key on the server, so the owner signed every transaction; the only cost was signing delay (up to ~13 h at night, ~61 h over a weekend), measured from day one, and AUTO existed only as a later rung of the trust path OBSERVE-PROPOSE-AUTO that was deliberately not enabled at the start.",
+        "answer": "The bot did not open, close, or re-range positions on its own because the full-auto mode was never enabled, as the project's architecture moved from planned full-auto to \"semi-automatic execution\" where the bot provided signals and ready transactions that required a signature in the browser wallet",
+        "quotes": [
+          {
+            "where": "docs/PLAN.md:168",
+            "quote": "AUTO mode was never enabled"
+          },
+          {
+            "where": "docs/PLAN.md:167",
+            "quote": "semi-automatic execution (signal → ready transaction → signature in Rabby)"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1563,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 654
+        },
+        "costUsd": 0.019332,
+        "ms": 6816,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly says AUTO was never enabled and that the owner signed each transaction, but it does not mention that no wallet key was on the server, the signing-delay cost, or that AUTO was a deliberately deferred rung of the OBSERVE-PROPOSE-AUTO trust path.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes support that AUTO was never enabled and that execution was semi-automatic with signing in Rabby, but no quote backs the claim that the architecture moved from a planned full-auto design.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "why-07",
+      "answerable": "partial",
+      "input": {
+        "question": "Why wasn't the bot hosted on a cloud server or VPS instead of a home Windows machine?",
+        "answerable": "partial",
+        "reference": "The sources do not give a reason: the vision suggested a small VPS (~$5/month) and the home Windows machine simply took that role; the journal treats a VPS only as a possible future move with the trust model (API exposure, secrets) left undecided.",
+        "keyNotes": "Partial: no comparison with VPS/cloud anywhere; draft reasons (no extra cost, safer than public server) not in sources. VPS appears only as the vision's suggestion (UI-DESIGN) and as a deferred future move (RESEARCH-QUEUE, 18.08).",
+        "answer": "The project's vision originally suggested using a small VPS costing approximately $5/month, but ultimately, a home Windows machine running 24/7 was used instead",
+        "quotes": [
+          {
+            "where": "docs/UI-DESIGN.md:46-48",
+            "quote": "The vision suggested a small VPS (~$5/month); in the end a home Windows machine running 24/7 took that role."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1578,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 512
+        },
+        "costUsd": 0.016552,
+        "ms": 6300,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "It correctly says the vision suggested a ~$5/month VPS and that a home Windows machine took that role, but it omits the reference's key points that no reason is given and that a VPS remained a possible future move.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The cited UI-DESIGN quote directly states that the vision suggested a ~$5/month VPS and that a 24/7 home Windows machine took that role.",
+          "premise": "not_handled",
+          "premiseReason": "The answer does not invent a reason, but it never plainly states that the sources give no reason for choosing home hosting over a VPS."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "why-08",
+      "answerable": "yes",
+      "input": {
+        "question": "Why was a crypto/crypto pair (cbBTC/WETH) considered riskier than a crypto/stable pair?",
+        "answerable": "yes",
+        "reference": "It was not riskier as an LP: against HODL cbBTC/WETH was the best pool (365 d: +11.42 for k2h24, the largest LP-vs-HODL alpha; 27.08 closest to passing the gate; on 720 d the only pool with 65% winning windows), but in USD it carries full crypto beta with no stable cushion (HODL -51.5% APR, max drawdown 61.5%), so LP and HODL lose together.",
+        "answer": "A crypto/crypto pair like cbBTC/WETH was considered riskier than a crypto/stable pair because it represents \"podwójna beta krypto\" (double crypto beta), meaning both sides of the pair are crypto assets",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:3824",
+            "quote": "absolutnie to podwójna beta krypto"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1545,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 399
+        },
+        "costUsd": 0.01416,
+        "ms": 4429,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer captures the full crypto beta exposure in USD terms, but it misses the reference's key point that as an LP strategy cbBTC/WETH was actually the best pool against HODL.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The cited quote explicitly calls it 'podwójna beta krypto' (double crypto beta), which backs the answer's claim.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable=yes."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "why-09",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the first 365-day backtests suggest some strategies were profitable, while the 720-day tests showed that none passed the gate?",
+        "answerable": "yes",
+        "reference": "The 365-day year was sideways-to-down and flattered the strategy, while 720 days included uptrend windows where it lost badly (0 of 21 configurations passed); separately the swap-based sigma estimator measured pool microstructure rather than the asset, so k had been calibrated in wrong units, and the gate became 720 days plus a recent ~90-day condition.",
+        "answer": "The first 365-day backtests suggested some strategies were profitable because the time window was \"mostly sideways-to-down\" and \"flattered range-bound strategies\" (docs/CASE-STUDY.md:44, docs/DECISION-LOG.md:22). In contrast, the 720-day tests showed that \"0 of 21 configurations passed the gate\" because this longer history included a \"strong uptrend\" (docs/CASE-STUDY.md:44). On this 2-year window with a \"bull\", the \"reżim UP systematycznie najgorszy\" (journal/CONTEXT.md:4554#p5), and the results indicated that a \"wąski LP ETH/stable nie bije HODL przez pełny cykl\" (journal/DECYZJE-2026-08-26.md:546).",
+        "quotes": [
+          {
+            "where": "docs/CASE-STUDY.md:46",
+            "quote": "The first calibration (365 days of data, a mostly sideways-to-down year)"
+          },
+          {
+            "where": "docs/CASE-STUDY.md:57-58",
+            "quote": "The 365-day year had flattered range-bound strategies"
+          },
+          {
+            "where": "docs/CASE-STUDY.md:56-57",
+            "quote": "Extending the window to 720 days killed the strategy. On the longer history, which included a strong uptrend, 0 of 21 configurations passed the gate"
+          },
+          {
+            "where": "journal/CONTEXT.md:4772-4773",
+            "quote": "na oknie 2-letnim z bullem ŻADNA strategia nie przechodzi bramki"
+          },
+          {
+            "where": "journal/CONTEXT.md:4775-4776",
+            "quote": "reżim UP systematycznie najgorszy (0–25% wygr.) na WSZYSTKICH wariantach"
+          },
+          {
+            "where": "journal/DECYZJE-2026-08-26.md:559",
+            "quote": "wąski LP ETH/stable nie bije HODL przez pełny cykl"
+          },
+          {
+            "where": "docs/DECISION-LOG.md:22",
+            "quote": "The 365-day year (sideways-to-down) flattered the strategy; on 720 d 0 of 21 configurations passed"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 2080,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 233
+        },
+        "costUsd": 0.01298,
+        "ms": 3061,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "It captures the sideways-to-down 365-day window versus the uptrend in the 720-day window (0/21 passed), but it omits the sigma-estimator unit problem and the new 720-day plus ~90-day gate from the reference.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "Every claim is backed by the cited quotes: the sideways-to-down year flattering range-bound strategies, the strong uptrend, 0 of 21 configurations passing, the UP regime being worst, and LP not beating HODL.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so there is no false premise to handle."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "why-10",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the LP earn less in fees during an uptrend than in a flat market?",
+        "answerable": "yes",
+        "reference": "Fees accrue only while the price is inside the range and fee yield scales roughly with 1/width, so a narrow range earns much more in a flat market but is left behind in a trend, while a wide range stays in range but earns several times less; the journal states this mechanism (the basis of FlatWide) but has no live measurement of fees during an uptrend, and it attributes the backtest losses in up windows to impermanent loss and LVR rather than to lower fees.",
+        "answer": "The LP earned less in fees during an uptrend because providing concentrated liquidity involves a trade-off where fee income is \"paid for with convexity,\" meaning the LP \"sell[s] into rallies and buy[s] into drawdowns\" {",
+        "quotes": [
+          {
+            "where": "docs/CASE-STUDY.md:108-109",
+            "quote": "The fee income is real but it is paid for with convexity: you sell into rallies and buy into drawdowns"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1550,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 447
+        },
+        "costUsd": 0.01514,
+        "ms": 5126,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer attributes lower fees to convexity (selling into rallies), but the reference says fees fall because price leaves the range (fee yield scaling with 1/width), and it ties up-window losses to IL/LVR rather than to lower fees.",
+          "faithfulness": "unsupported",
+          "faithfulnessReason": "The quote only says fee income is paid for with convexity; it does not say fees were lower during an uptrend or explain why, so the main causal claim is not backed.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "dated-01",
+      "answerable": "yes",
+      "input": {
+        "question": "When did the first real capital enter through the application (not counting the legacy positions that were already in pools before HOMOS v2)?",
+        "answerable": "yes",
+        "reference": "The tranche-1 USDC (6 092.50 on Base) reached the owner's wallet on 25.08 and waited in USDC per the 26.08 decision; it was put into the product on 27.08, when both FlatWide legs were minted from the bot's OPEN proposals: #5886957 WETH/USDC ±50% (~$3 507) in the afternoon and WETH/cbBTC ±40% (#5887690, ~$2 360) later that day.",
+        "answer": "The provided text does not contain the exact date when the first real capital entered through the application. It mentions a recommendation from 19.08 for a first tranche of $6k Base, with a second tranche planned after observing until ~31.08",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1512,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 175
+        },
+        "costUsd": 0.009548,
+        "ms": 3270,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The reference gives 27.08 as the date the first real capital entered (both FlatWide legs minted), but the answer says the sources do not contain the date.",
+          "faithfulness": "unsupported",
+          "faithfulnessReason": "The answer cites no quotes, so its claims about a 19.08 recommendation and a ~31.08 second tranche have no backing.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable=yes, so there is no false premise to handle."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "dated-02",
+      "answerable": "yes",
+      "input": {
+        "question": "When was the first rebalance executed on real capital?",
+        "answerable": "yes",
+        "reference": "On 31.08 at about 13:00 Polish time, after a failed first attempt and a UI hotfix, the first FLAT_NARROW was executed on the cbBTC/WETH leg: #5887690 (±40%) was closed and narrow #5908083 (±4.9%) minted; the second rebalance was the widening on 11.09 into #5978579 (±40%).",
+        "answer": "The first rebalance executed on real capital occurred on August 31, 2026. This was part of a narrowing experiment where a proposal for a flat narrow range (±4.9%) for cbBTC/WETH was executed. Although initial attempts failed due to a technical incident with the Rabby wallet and publicnode, a hotfix was deployed, and the first live transaction of the product was completed at approximately 13:0x, resulting in the creation of mint #5908083 and the closing of the old position #5887690.",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "2026-08-31 ~12:2x — EPIZOD EKSPERYMENTALNY WYSTARTOWAŁ. Flat cbBTC POTWIERDZONY 10:22Z"
+          },
+          {
+            "where": "journal/CONTEXT.md:1228-1229",
+            "quote": "~13:0x — EPIZOD WYSTARTOWAŁ: pierwsza bojowa transakcja produktu WYKONANA."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1708,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 451
+        },
+        "costUsd": 0.015852,
+        "ms": 5505,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer matches the reference: on 31.08 at about 13:00 the first FLAT_NARROW on cbBTC/WETH ran after a failed attempt and a hotfix, closing #5887690 and minting #5908083 (±4.9%); omitting the later widening is not a key miss.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes support the date, the ~13:0x time, the flat cbBTC confirmation and the first live transaction, but not the position IDs, the ±4.9% width, or the Rabby/publicnode incident and hotfix.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable=yes, so no premise check applies."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "dated-03",
+      "answerable": "yes",
+      "input": {
+        "question": "Which positions were open on 15 September and what was their profit or loss that day?",
+        "answerable": "yes",
+        "reference": "On the morning of 15.09 two wide positions were open: #5886957 WETH/USDC ($3 468, PnL -$39.98 since 27.08) and #5978579 cbBTC/WETH ($2 266, PnL -$92.39 since 11.09); the tranche as a whole stood at $5 966.88, -$125.12 (-2.05%) against the $6 092 deposited.",
+        "answer": "On 15 September, the following positions were open:\n\n**Real Positions (FlatWide product):**\n- #5886957 (base-weth-usdc-030): PnL since anchor was { \"chunkId\": \"journal/reports/morning-2026-09-15.md:217\", \"quote\": \"$-39.98 (od 2026-08-27)\" }\n- #5978579 (base-cbbtc-weth-005): PnL since anchor was { \"chunkId\": \"journal/reports/morning-2026-09-15.md:217\", \"quote\": \"$-92.39 (od 2026-09-11)\" }\n\n**Paper Trading Positions:**\n- mainnet-usdc-weth-030: PnL { \"chunkId\": \"journal/reports/morning-2026-09-15.md:228\", \"quote\": \"+$680\" }\n- mainnet-usdc-weth-005: PnL { \"chunkId\": \"journal/reports/morning-2026-09-15.md:228\", \"quote\": \"+$659\" }\n- base-weth-usdc-030: PnL { \"chunkId\": \"journal/reports/morning-2026-09-15.md:228\", \"quote\": \"+$623\" }\n- base-cbbtc-weth-005: PnL { \"chunkId\": \"journal/reports/morning-2026-09-15.md:228\", \"quote\": \"+$1936\" }\n- arbitrum-weth-usdc-005: PnL { \"chunkId\": \"journal/reports/morning-2026-09-15.md:228\", \"quote\": \"+$707\" }\n- base-weth-cbbtc-030: PnL { \"chunkId\": \"journal/reports/morning-2026-09-15.md:228\", \"quote\": \"+$325\" }",
+        "quotes": [
+          {
+            "where": "journal/reports/morning-2026-09-15.md:221",
+            "quote": "$-39.98 (od 2026-08-27)"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:222",
+            "quote": "$-92.39 (od 2026-09-11)"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:232",
+            "quote": "+$680"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:233",
+            "quote": "+$659"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:234",
+            "quote": "+$623"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:235",
+            "quote": "+$1936"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:236",
+            "quote": "+$707"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:237",
+            "quote": "+$325"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 2225,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 490
+        },
+        "costUsd": 0.0187,
+        "ms": 6381,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer correctly names the two real open positions, #5886957 and #5978579, with PnL of -$39.98 and -$92.39; it omits the position sizes and the tranche total, and the added paper-trading figures are labelled separately rather than contradicting the reference.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The cited quotes contain only bare PnL figures and dates, so the position IDs, the pool names and the assignment of each figure to a specific position are not backed by any quote.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so the premise check does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "dated-04",
+      "answerable": "yes",
+      "input": {
+        "question": "When did the last backtest finish?",
+        "answerable": "yes",
+        "reference": "It depends on the meaning: the nightly pipeline's backtest-run last finished on 23.09 at 05:03 UTC (a pause was ordered on 21.09 for 22.09, with no record that it was carried out), the last research backtest was E8.3 (720 days, four pools) received on 08.09, and the last 720-day runs on the product were the shape round of 03.09 and E8.3 of 08.09.",
+        "answer": "The last backtest finished on September 23, 2026, at 05:03:07.956Z.",
+        "quotes": [
+          {
+            "where": "journal/reports/morning-2026-09-23.md:43",
+            "quote": "2026-09-23T05:03:07.956Z krok backtest-run: exit 0"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1473,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 201
+        },
+        "costUsd": 0.009912,
+        "ms": 2595,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly gives the nightly pipeline's last backtest-run finish (23.09 at 05:03 UTC) but misses the reference's key point that the question is ambiguous, along with the research backtest E8.3 from 08.09.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The cited quote shows the backtest-run step exiting at 2026-09-23T05:03:07.956Z, which matches the answer.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "dated-05",
+      "answerable": "yes",
+      "input": {
+        "question": "Was there any attempt to protect a position by converting it into a different kind of position, when was it, and what was the result?",
+        "answerable": "yes",
+        "reference": "Only tests: after hedge-excess (a perp short on the excess ETH) passed the backtest gate and became v1.2 on 17.08, a $150 1x ETH short was opened on GMX on 17.08 ~16:00 and closed 18.08 ~10:00 (round-trip cost ~$1.08, ~72 bps, protecting no real position), a $15 end-to-end test through the app followed on 20.08 (~$0.40), and on 11.09 a $1 824 BTC short on GMX was rejected as an emergency option.",
+        "answer": "Yes, there was an attempt to protect a position by converting it from a narrow to a wide position. This occurred on September 11, 2026, when the `FLAT_WIDEN` proposal was signed for a new position (#5978579), closing the previous narrow position (#5908083). The result of the narrow-position experiment (running from August 31 to September 11) was a net loss of -$32.08 compared to holding the original assets (HODL), as the position ended by hitting the edge, resulting in a 100% cbBTC allocation.",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:412-452",
+            "quote": "EPIZOD FLAT cbBTC ZAMKNIĘTY: FLAT_WIDEN podpisany (nowa pozycja #5978579)"
+          },
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "WYNIK EKSPERYMENTU ZWĘŻENIA (31.08–11.09, n=1) z księgi ZAMKNIĘTE POZYCJE (#5908083 pojawiła się po jednym cyklu ledgera)"
+          },
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "netto vs HODL wkładu po kursie dziś: –$32.08"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1854,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 536
+        },
+        "costUsd": 0.018136,
+        "ms": 5925,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The reference describes hedge tests (a $150 GMX ETH short on 17–18.08, a $15 app test on 20.08, and a rejected $1 824 BTC short on 11.09), whereas the answer describes a narrow-to-wide range change and never mentions any hedge attempt.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes back the FLAT_WIDEN signing, the new position #5978579, the 31.08–11.09 experiment window, #5908083 and the –$32.08 net vs HODL, but not the year 2026, the edge hit leading to 100% cbBTC, or the claim that this was meant to protect a position.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so the premise check does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "dated-06",
+      "answerable": "yes",
+      "input": {
+        "question": "When did the nightly run first complete without errors, did errors still happen afterwards, what caused them and how were they fixed?",
+        "answerable": "yes",
+        "reference": "The first genuinely clean night was 22.08 (all 20 pools fetched by the automation, backtest-run exit 0); before it 19.08 failed on a missing HyperSync binary for Windows (pinned to 1.0.0), 20.08 had clean fetches but backtest-run ran out of memory (heap raised to 8 GB), and 21.08 reported no failures while the swap fetch was silently dead (frozen 'latest', fixed in fetch-swaps-hypersync.ts); later the ranking froze on 24.08 (data-age heuristic fixed), backtest-run failed on 26.08 (Math.min/max over millions of points, fixed in 0257a7a), ran long on 03.09 (cache filter fixed) and candidate-funnel failed on 19-20.09 with no recorded cause.",
+        "answer": "The nightly run first completed without errors on 2026-08-22, described as \"Pierwszy nocny przebieg po naprawach: wszystko zielone i tym razem PRAWDZIWIE\" {",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:4411",
+            "quote": "Pierwszy nocny przebieg po naprawach: wszystko zielone i tym razem PRAWDZIWIE"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1681,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 175
+        },
+        "costUsd": 0.010224,
+        "ms": 2974,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly identifies 22.08 as the first clean night but omits the later errors, their causes and their fixes, which are key points of the reference.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The quote supports the claim that the first nightly run after the fixes was fully green, though the 22.08 date itself is not explicitly in the quote shown.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so the premise check does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "dated-07",
+      "answerable": "yes",
+      "input": {
+        "question": "What infrastructure problems were there, was anything changed on the production machine while the capital was already invested, and when?",
+        "answerable": "yes",
+        "reference": "Before the capital (27.08) there was the .bot/pipeline overwrite incident (17.08), the auto-pull runner withdrawn (18.08) and the NSSM to pm2 migration rolled back (21.08); while the capital was in the LP (27.08 to 18.09) the Windows machine was changed repeatedly: bot and UI deployments with restarts on 28.08, 29.08 (including sigma on the 15-minute grid), 31.08, 01.09, 02.09, 03.09 and 11.09, plus a disk replacement on the night of 02/03.09 that stopped the pipeline, report and observer; known ledger bugs (anchor chain, cost after the 11.09 rebalance) were left unfixed.",
+        "answer": "Infrastructure problems included ",
+        "quotes": [
+          {
+            "where": "docs/INFRA.md:24",
+            "quote": "no WSL, which avoids LAN networking problems"
+          },
+          {
+            "where": "journal/TASKS-FUNNEL.md:36-37",
+            "quote": "brudne drzewo na produkcji to klasa problemu, która blokowała auto-push raportu (21.08)"
+          },
+          {
+            "where": "docs/CASE-STUDY.md:85-86",
+            "quote": "first attempt reverted on a slippage check because the UI had priced the mint from a stale pool state"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1689,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 160
+        },
+        "costUsd": 0.009956,
+        "ms": 2962,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer is truncated to \"Infrastructure problems included\" and states none of the reference's incidents, the production changes made while capital was in the LP, or their dates.",
+          "faithfulness": "unsupported",
+          "faithfulnessReason": "The answer makes no substantive claim, so the cited quotes back nothing in it.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "dated-08",
+      "answerable": "yes",
+      "input": {
+        "question": "When was the capital withdrawn?",
+        "answerable": "yes",
+        "reference": "In two stages: on 18.09 both LP positions were closed at $6 130.02 against $6 092 deposited (+$38.02, +0.62%, 22 days), with ~1.22 ETH and 0.0141 cbBTC kept as a spot bet and the USDC sent to Kraken; on 21.09 around 19:00 Polish time the rest was sold, the tranche ending at about 5 605 EUR (~$6 428, +$336, +5.5% over 25 days).",
+        "answer": "The withdrawal of the capital occurred in two stages. First, on September 18, 2026, the LP positions were closed and a portion of the capital (1,870.95 USDC) was moved to Kraken",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "STAN NA 18.09 ~16:30 PL — LP TRANSZY 1 ZAMKNIĘTY (+$38, +0.6%, 22 dni), kapitał zostaje w KRYPTO jako świadomy zakład spot (decyzja Rafała), USDC wyprowadzone na Kraken."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1608,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 285
+        },
+        "costUsd": 0.012132,
+        "ms": 4022,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly identifies the two-stage withdrawal and the 18.09 LP closure with USDC moved to Kraken, but it never describes the second stage on 21.09 when the remaining crypto was sold.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quote supports the 18.09 closure and the USDC transfer to Kraken, but not the specific 1,870.95 USDC amount or the year 2026.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "dated-09",
+      "answerable": "yes",
+      "input": {
+        "question": "When was the market flat, and how long did the only live narrowing episode last?",
+        "answerable": "yes",
+        "reference": "The flat detector repeatedly started and reset on cbBTC/WETH on 28-30.08 and held from 30.08 22:22Z, which led to the only live narrowing, 31.08 to 11.09 (11 days in flat, -$32 vs HODL), ended by a DOWN signal on cbBTC and the signed widening; flat was confirmed again on cbBTC from 15.09 03:03Z and on both legs on 17-18.09, but those cards were deliberately not signed.",
+        "answer": "The market was flat for the cbBTC leg starting from 2026-08-30 at 22:22Z",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:1135-1136",
+            "quote": "Zegar flatu cbBTC tyka od 30.08 22:22Z"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1511,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 193
+        },
+        "costUsd": 0.009904,
+        "ms": 3149,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly gives the flat start of 30.08 22:22Z, but it omits the duration of the narrowing episode (31.08 to 11.09, 11 days) and the later flat periods.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quote supports the flat clock starting on 30.08 at 22:22Z, but the year 2026 the answer adds does not appear in it.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so there is no false premise to handle."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "dated-10",
+      "answerable": "yes",
+      "input": {
+        "question": "How many times, and when, did the paper-trading bot rebalance before real capital went in?",
+        "answerable": "yes",
+        "reference": "Four times: three rebalances on the morning of 21.08 (mainnet-030, mainnet-005, base-030, netting only +$69/+$93/+$87 after costs) and one on arbitrum-005 between the 22.08 and 23.08 reports; the cbBTC paper pool was never rebalanced (it went to cash on a trend exit and re-entered), and nothing changed up to 27.08.",
+        "answer": "The paper-trading bot rebalanced 3 times before real capital was deployed. These first rebalances occurred on three ETH/USDC pools (mainnet 0.30, mainnet 0.05, and base 0.30) and were reported on 2026-08-21, having happened since the paper trading started on 2026-08-18.",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:4165",
+            "quote": "PIERWSZE 3 REBALANSE w paper tradingu"
+          },
+          {
+            "where": "journal/CONTEXT.md:4175-4176",
+            "quote": "Pierwsze rebalanse od startu — `reb` 0→1 na trzech pulach ETH/USDC (mainnet 0.30, mainnet 0.05, base 0.30)"
+          },
+          {
+            "where": "journal/CONTEXT.md:3500",
+            "quote": "URUCHOMIONY NA ŻYWO ~15:xx 18.08"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1697,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 197
+        },
+        "costUsd": 0.010728,
+        "ms": 3278,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer says three rebalances total, missing the fourth on arbitrum-005 between 22.08 and 23.08, so its main claim (the count) contradicts the reference's four.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes support the first three rebalances on the named pools and the 18.08 start, but no quote backs the 21.08 date or the claim that these were the only rebalances before real capital.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "id-01",
+      "answerable": "yes",
+      "input": {
+        "question": "Is FLAT_NARROW a specific position or some kind of range algorithm?",
+        "answerable": "yes",
+        "reference": "Neither: it is a proposal type (kind) emitted by the bot's flat detector when the flat regime is confirmed (|gap to the EMA| < 2% for at least 12 h), proposing to narrow an existing wide position to a fixed ±5%, with FLAT_WIDEN as the opposite card when |gap| > 5%; unsigned cards expire on a TTL and come back.",
+        "answer": "FLAT_NARROW is both a type of proposal/action and a specific range logic associated with the \"FlatWide\" product. It is used as a `kind` and `action` for proposals in the system's API {",
+        "quotes": [
+          {
+            "where": "journal/reports/morning-2026-09-19.md:109-110",
+            "quote": "\"kind\": \"FLAT_NARROW\",\n    \"action\": \"FLAT_NARROW\""
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1521,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 215
+        },
+        "costUsd": 0.010384,
+        "ms": 3688,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "It rightly calls FLAT_NARROW a proposal kind, but it omits the flat detector trigger, the ±5% narrowing and FLAT_WIDEN, and its claim that it is also a range logic tied to a \"FlatWide\" product clashes with the reference's \"neither\".",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quote supports only its use as kind and action, not the link to a \"FlatWide\" product or the range-logic claim.",
+          "premise": "n/a",
+          "premiseReason": "The question is answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "id-02",
+      "answerable": "yes",
+      "input": {
+        "question": "Is position #5978579 a wide or a narrow position?",
+        "answerable": "yes",
+        "reference": "Wide: #5978579 is the cbBTC/WETH 0.05% Base position minted ±40% on 11.09 by the signed FLAT_WIDEN; a FLAT_NARROW card for it (15.09) was deliberately not signed, so it stayed wide until it was closed by hand in Uniswap on 18.09.",
+        "answer": "Position #5978579 is a wide position.",
+        "quotes": [
+          {
+            "where": "journal/reports/morning-2026-09-13.md:281",
+            "quote": "#5978579 | base-cbbtc-weth-005 | SZEROKI"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1439,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 133
+        },
+        "costUsd": 0.008416,
+        "ms": 2203,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer states the position is wide, which matches the reference's key point.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The quote lists #5978579 as \"SZEROKI\", Polish for wide, which backs the claim.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so the premise check does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "id-03",
+      "answerable": "yes",
+      "input": {
+        "question": "Was the range of position #5886957 ever changed, and when?",
+        "answerable": "yes",
+        "reference": "No: #5886957 is leg A, WETH/USDC 0.30% on Base, minted on 27.08 with a $1 665.75-3 744.30 range (±50%) and closed unchanged on 18.09; a narrowing card for it (expected 16.09, listed in the 17-18.09 reports) was not signed, and a range change would in any case have meant closing it and minting a new position, as happened on the cbBTC leg (#5887690 to #5908083 to #5978579).",
+        "answer": "Based on the provided chunks, there is no mention of the range for position #5886957 ever being changed. In all reports where it is listed, the range is consistently described as \"w zakresie\".",
+        "quotes": [
+          {
+            "where": "journal/reports/morning-2026-08-29.md:185",
+            "quote": "w zakresie"
+          },
+          {
+            "where": "journal/reports/morning-2026-08-30.md:208",
+            "quote": "w zakresie"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-02.md:223",
+            "quote": "w zakresie"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-04.md:243",
+            "quote": "w zakresie"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-09.md:236",
+            "quote": "w zakresie"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-11.md:255",
+            "quote": "w zakresie"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-12.md:280",
+            "quote": "w zakresie"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-14.md:280",
+            "quote": "w zakresie"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-16.md:241",
+            "quote": "w zakresie"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-18.md:274",
+            "quote": "w zakresie"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1824,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 480
+        },
+        "costUsd": 0.016896,
+        "ms": 6293,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer reaches the reference's conclusion that the range was never changed, but only as an absence of mention, and it misses the key context: the unsigned narrowing card and the unchanged closure on 18.09.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes contain only the phrase 'w zakresie' (in range) with no position identifier, so they do not show that these lines refer to #5886957 or that its range stayed the same.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so the premise check does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "id-04",
+      "answerable": "yes",
+      "input": {
+        "question": "What set of tasks was in the D0 package, and was it about project functionality or about tests?",
+        "answerable": "yes",
+        "reference": "Functionality, not tests: D0 'detektor→pomiar', decided at the 31.08 review, had two tasks, stop the flat detector from emitting FLAT_NARROW/FLAT_WIDEN cards while keeping episode measurement and logs, and clean up three leftover 'k×σ' labels; it was to be deployed only after the narrowing episode closed, was still pending on 16.09 and was never deployed.",
+        "answer": "The D0 package, titled „DETEKTOR₁POMIAR\", contained the following tasks: \n- A change to the observer so that the flat detector stops emitting FLAT_NARROW/FLAT_WIDEN, while keeping episode measurements and logs",
+        "quotes": [
+          {
+            "where": "journal/RESEARCH-QUEUE.md:499-500",
+            "quote": "observer: detektor flatu przestaje emitować FLAT_NARROW/FLAT_WIDEN\n      (zostaje pomiar epizodów + logi)"
+          },
+          {
+            "where": "journal/RESEARCH-QUEUE.md",
+            "quote": "KOSMETYKA „k×σ” (3 kryjówki starej formułki): observer.ts:631\n      (alert Telegram „pora rozważyę zwężenie do k×σ”), formatka\n      Telegrama propozycji (zakres z „$” zamiast jednostki puli),\n      src/components/cycleLine.tsx (etykieta „WĄSKI k×σ (flat)” →\n      „WĄSKI ±5% (flat)” z productNarrowWidthPct)"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1774,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 344
+        },
+        "costUsd": 0.013976,
+        "ms": 4391,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly names the flat-detector change, but it omits the second task (the k×σ label cleanup) and never says whether the package was about functionality or tests.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The observer change is backed by the first quote, but the package title „DETEKTOR₁POMIAR” does not appear in any cited quote.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so the premise check does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "id-05",
+      "answerable": "yes",
+      "input": {
+        "question": "What does the function fetchFreshPool do?",
+        "answerable": "yes",
+        "reference": "It re-reads the pool state on-chain (factory.getPool, then slot0 and liquidity) right before the mint step of a rebalance or rotation, so the new position is built from the current price instead of the price captured when the modal opened, and falls back to the old pool if the lookup fails; it was added after the 11.09 widening failed once on 'Price slippage check' and was never exercised live, since the only later chance (a FLAT_NARROW card on 16.09) was not signed and the positions were closed by hand in Uniswap.",
+        "answer": "The `fetchFreshPool` function is described as correct and follows a process of `factory.getPool` $\\rightarrow$ `slot0+liquidity` $\\rightarrow$ `nowy Pool` with a `fail-open` mechanism. It is integrated into both hooks before the `buildMintStep` step.",
+        "quotes": [
+          {
+            "where": "journal/HANDOFF.md",
+            "quote": "`fetchFreshPool` poprawny [factory.getPool $\\rightarrow$ slot0+liquidity $\\rightarrow$ nowy Pool, fail-open], wpięty w oba hooki przed `buildMintStep`"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1628,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 477
+        },
+        "costUsd": 0.016052,
+        "ms": 6256,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer captures the core mechanism the reference describes: it re-reads the pool through factory.getPool and then slot0 and liquidity, builds a new Pool, falls back fail-open, and runs before the mint step in both hooks, though it omits the backstory and the fact that it was never used live.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "Every claim in the answer is a direct paraphrase of the cited HANDOFF.md line.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so there is no false premise to handle."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "id-06",
+      "answerable": "yes",
+      "input": {
+        "question": "What project stage was E8.2?",
+        "answerable": "yes",
+        "reference": "E8.2 'dom kasyna' was the research experiment in the E8 queue (classes without LVR, alternatives to LP) testing whether LPs of perp vaults (GM v2, JLP, GLP; HLP had too little data) earn a house edge over HODL of the same beta; after iterations E8.2b-f and three data bugs it closed on 09.09 evening as conditionally yes: worth watching, not for tranche-1 capital.",
+        "answer": "E8.2, titled \"DOM KASYNA\" (the casino house), focused on liquidity provision where the LP acts as a counterparty to leveraged traders, with valuations based on oracles to avoid LVR",
+        "quotes": [
+          {
+            "where": "journal/RESEARCH-QUEUE.md:324",
+            "quote": "E8.2 „DOM KASYNA”"
+          },
+          {
+            "where": "journal/RESEARCH-QUEUE.md",
+            "quote": "LP = kontrpartner traderów z dźżwię; wycena po oraklach → brak\n  LVR"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1574,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 423
+        },
+        "costUsd": 0.014756,
+        "ms": 5327,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly names E8.2 'dom kasyna' and its perp-vault LP concept without LVR, but omits the house-edge-vs-HODL test, the vaults tested, and the conditional-yes verdict of 09.09.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The quotes back the title, the LP as counterparty to leveraged traders, and the oracle pricing that avoids LVR.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "id-07",
+      "answerable": "yes",
+      "input": {
+        "question": "In which database were the backtest results stored?",
+        "answerable": "yes",
+        "reference": "In none: backtest results were JSON files in backtest/results/ (for example walkforward-*-720d-30d.json) plus an HTML report; a SQLite database was designed in DB-SCHEMA.md, including a backtest_run table meant only to index those files, but it was never implemented, and the bot ledger shipped as ndjson with CSV export.",
+        "answer": "The provided chunks do not specify the name or type of the database used, but they mention that it holds the `backtest_run` (results index).",
+        "quotes": [
+          {
+            "where": "docs/DB-SCHEMA.md:168-169",
+            "quote": "The database holds only `backtest_run` (results index)."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1452,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 156
+        },
+        "costUsd": 0.008928,
+        "ms": 2915,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer implies a database holding results existed, whereas the reference says results were stored as JSON files and the designed SQLite database was never implemented.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The quote states that the database holds only `backtest_run` as a results index, which matches the answer's claim.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "na-01",
+      "answerable": "partial",
+      "input": {
+        "question": "How much tax should I pay after closing these positions, did the application calculate it, and on what basis?",
+        "answerable": "partial",
+        "reference": "The corpus gives no tax amount and the application never calculated tax; it only kept a transaction ledger (designed as SQLite + CSV 'for Polish taxes', shipped as ndjson with CSV export), and the journal notes that the PIT-38 cost basis needs an older Kraken export covering the 24-25.08 on-ramp and that moving USDC to Kraken was an own transfer, not a taxable event.",
+        "keyNotes": "Expected: notEnoughContext for the amount and method; may cite the ledger and the PIT-38 note as context. Draft memory error: 'DAC8' is not mentioned anywhere in the corpus; PIT-38 appears once (CONTEXT.md:172). A Koinly free tier is mentioned as an option (25.08).",
+        "answer": "The provided chunks do not specify a tax amount to be paid. However, they note that selling crypto for fiat is a \"taxable event in Poland\" and should be \"reported in the Polish income-tax return, PIT-38\" {",
+        "quotes": [
+          {
+            "where": "docs/EMERGENCY.md:104-105",
+            "quote": "Selling crypto for fiat is a taxable event in Poland (reported in the Polish income-tax return, PIT-38)"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1667,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 187
+        },
+        "costUsd": 0.010408,
+        "ms": 3228,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "It correctly says no tax amount is given, but it does not address whether the app calculated tax (it did not; it only kept a ledger) or the cost-basis note, so key points of the reference are missing.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The taxable-event and PIT-38 claims are directly backed by the cited EMERGENCY.md quote.",
+          "premise": "handled",
+          "premiseReason": "The answer plainly states that the sources do not specify a tax amount instead of inventing a figure."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "na-02",
+      "answerable": "partial",
+      "input": {
+        "question": "What were the backtest results for the Solana network?",
+        "answerable": "partial",
+        "reference": "There were no LP backtests on Solana: the strategy was tested only on Uniswap v3 pools on mainnet, Base and Arbitrum (Optimism rejected on 11.08); the only Solana item is the JLP vault (Jupiter) in the E8.2 house-edge study, roughly +20-22% a year of alpha with a fading edge and losses in SOL rallies, which is not an LP backtest.",
+        "keyNotes": "Expected: say the first part; JLP at most as context, clearly labelled as a different kind of study.",
+        "answer": "The backtests for JLP (Jupiter, Solana) from November 2023 to September 2026 (1019 days) showed a mix 90/30 average of +6.52%/window and a total period return of +211% (+50%/r), with an alpha (α) of +20.6%/r (66% after correction). However, the maximum drawdown (maxDD) was 46.0%, which failed the criterion as it was greater than the basket's 42.9%. The verdict was that JLP results were \"nierozstrzygnięte, prawdopodobnie zawyżone\" because the SOL rally likely inflated the alpha, necessitating a 3-factor regression including SOL.",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "JLP (Jupiter, Solana, 2023-11–2026-09, 1019 dni, bez incydentów): mix 90/30 śr +6.52%/okno, 72%, worst –10.17 (2025), βETH 0.17, βBTC 0.48, α +20.6%/r, 66% po korekcie"
+          },
+          {
+            "where": "journal/CONTEXT.md:573-574",
+            "quote": "cały okres +211% (+50%/r), maxDD 46.0% > koszyk 42.9%"
+          },
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "WERDYKT: JLP = nierozstrzygnęte, prawdopodobnie zawyżone — wymaga regresji 3-czynnikowej z SOL"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1913,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 735
+        },
+        "costUsd": 0.022352,
+        "ms": 8541,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The JLP figures, including alpha of about +20.6% a year, match the reference, but the answer misses the key point that no LP backtests were run on Solana and presents JLP as the Solana backtest.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "Most figures come from the quotes, but the claim that a SOL rally inflated the alpha is not in any quote, which only says a 3-factor regression with SOL is needed.",
+          "premise": "not_handled",
+          "premiseReason": "It never says the LP strategy was not backtested on Solana and does not label JLP as a different kind of study, so it answers as if the premise were true."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "na-03",
+      "answerable": "partial",
+      "input": {
+        "question": "How much did the GMX positions earn at the moment of switching from crypto pairs to shorts?",
+        "answerable": "partial",
+        "reference": "The premise is wrong: there was never a switch from LP pairs to shorts; the only GMX positions were a $150 test short on 17-18.08 (round-trip cost ~$1.08, protecting nothing) and a $15 end-to-end test on 20.08, both before capital entered, and on 11.09 a GMX short was rejected as an emergency option.",
+        "keyNotes": "Expected: correct the premise, give the test results as context only, no 'earnings at the switch'.",
+        "answer": "The provided chunks do not contain information regarding the earnings of GMX positions at the moment of switching from crypto pairs to shorts.",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1486,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 449
+        },
+        "costUsd": 0.014924,
+        "ms": 5313,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer avoids inventing earnings figures, but it misses the reference's key point that no switch from LP pairs to shorts ever happened and that the GMX positions were only small tests.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The answer makes only a statement about what the sources lack, which needs no supporting quote.",
+          "premise": "handled",
+          "premiseReason": "It states plainly that the sources do not contain the requested earnings and does not give a fabricated figure, though it does not explicitly correct the premise."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "na-04",
+      "answerable": "no",
+      "input": {
+        "question": "How much did the electricity for the Windows server cost per month?",
+        "answerable": "no",
+        "reference": "The corpus does not say: electricity cost of the Windows server is never mentioned (the only power-related note is enabling auto power-on in the BIOS after a power outage).",
+        "keyNotes": "Near miss: 'awaria prądu' (power outage) at CONTEXT.md:2471 must not be used as an answer.",
+        "answer": "The provided text does not contain information regarding the monthly electricity cost for the Windows server.",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1407,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 136
+        },
+        "costUsd": 0.008348,
+        "ms": 1997,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer correctly states that the sources do not mention the server's electricity cost, which matches the reference.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The answer only states that the information is absent, which needs no supporting quote.",
+          "premise": "handled",
+          "premiseReason": "The answer plainly says the sources lack this information and does not misuse the power outage note."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "na-05",
+      "answerable": "no",
+      "input": {
+        "question": "What were the results for October 2026?",
+        "answerable": "no",
+        "reference": "There are no October results: the tranche was fully sold on 21.09, the project closed on 22-23.09 and the last report is from 23.09; the only October date is the planned 24.10 review of the spot bet, and that bet was itself closed early on 21.09.",
+        "keyNotes": "Expected: notEnoughContext; must distinguish a planned date (24.10 review) from results. The 24.10 review became moot when the spot bet was closed 21.09 (CONTEXT.md:101).",
+        "answer": "The provided source chunks do not contain information regarding the results for October 2026.",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1448,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 144
+        },
+        "costUsd": 0.008672,
+        "ms": 2694,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer correctly states there are no October results in the sources, matching the reference's core point, though it omits the explanation that the project closed in September.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The answer only states that the sources lack the information, which needs no quote.",
+          "premise": "handled",
+          "premiseReason": "It plainly states the sources do not contain October results rather than inventing any figures."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "na-06",
+      "answerable": "no",
+      "input": {
+        "question": "How many tokens were consumed building the project?",
+        "answerable": "no",
+        "reference": "The corpus gives no token or usage numbers; the closest it comes is noting that the journal grew too long for sessions to read in full and that the analysis session was restarted ('succession') on 11.08.",
+        "keyNotes": "Confirmed 'no': no token counts, usage limits or costs of AI sessions anywhere. Context only, no number may be given.",
+        "answer": "The provided text does not contain information regarding the number of tokens consumed building the project.",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1409,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 151
+        },
+        "costUsd": 0.008656,
+        "ms": 2764,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer correctly states the sources contain no token consumption figure, matching the reference's key point, though it omits the contextual note about journal length and session succession.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The answer only states an absence of information, which requires no supporting quote.",
+          "premise": "handled",
+          "premiseReason": "The answer plainly states the sources do not contain the requested token count and gives no figure."
+        }
+      }
+    },
+    {
+      "run": "local-gemma31-p1",
+      "id": "na-07",
+      "answerable": "partial",
+      "input": {
+        "question": "What was the structure of the SQL database holding the backtest data?",
+        "answerable": "partial",
+        "reference": "There was no such database: backtest results were always JSON files in backtest/results/ (plus an HTML report); a SQLite design in DB-SCHEMA.md included a backtest_run table meant only to index those files, but the design was never implemented.",
+        "keyNotes": "Expected: say design vs implementation; describing the DB-SCHEMA tables as a running backtest database is an error despite a relevant-looking chunk. Draft memory error: 'the only SQL schema is the bot ledger' (the design also covered logs, paper trading, telemetry and a backtest_run index). Pairs with id-07.",
+        "answer": "The SQL database did not store raw tick-level swaps, as these remained in files to avoid bloat; the database only held the `backtest_run` table to serve as a results index",
+        "quotes": [
+          {
+            "where": "docs/DB-SCHEMA.md:168-169",
+            "quote": "The database holds only `backtest_run` (results index)"
+          },
+          {
+            "where": "docs/DB-SCHEMA.md:166-167",
+            "quote": "Raw tick-level swaps (`data/cache/*.ndjson`, millions of rows per pool) — stay in files"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1625,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 206
+        },
+        "costUsd": 0.01062,
+        "ms": 3218,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer treats the SQL database as having actually held a backtest_run index table, whereas the reference says no such database existed: results were JSON files and the SQLite design was never implemented.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "Both claims, that raw swaps stay in files and that the database holds only backtest_run as a results index, are backed by the cited DB-SCHEMA.md quotes.",
+          "premise": "not_handled",
+          "premiseReason": "The answer accepts the premise that a backtest SQL database existed and does not distinguish the design from an implementation."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "why-01",
+      "answerable": "yes",
+      "input": {
+        "question": "Why didn't we actively re-center the ranges to follow the price (frequent narrowing), instead of staying wide?",
+        "answerable": "yes",
+        "reference": "On 720 days 0 of 21 narrow configurations passed the gate, and the one live narrowing (31.08 to 11.09) ended -$32 vs HODL, so on 16.09 narrowing was rejected again because the upside (about +$1 per episode) is far smaller than the loss when the price leaves a ±5% range (about -$30).",
+        "answer": "We kept the ranges wide because the data showed that moving them to stay near the price (“active re‑centering”) did not improve, and in fact hurt, performance.  Re‑centering with swap costs was already essentially free (`recenter:'noswap'` in flatOnlyLP), so there was no incentive to keep the range tight.  In backtests extending the window to 720 days killed the strategy; zero of 21 configurations passed the gate, and in the 365‑day data the passive wide range yielded HODL + fees − IL, while the narrow ranges added variance without expectation (see the “narrowing added variance without adding expectancy” finding).  The live experiment (31 Aug → 11 Sep) confirmed this: a narrow range earned only ≈$8.6 in fees, then closed at −$32 versus HODL, exactly as the back‑tests predicted.  Because narrowing grew fees but also increased impermanent loss and drawdown, the decision was to stay with wide passive ranges and only consider narrowing in a confirmed flat episode.  ",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:1779-1784",
+            "quote": "Zamiast przestawiać posturę przez rynek (swap do 50/50 wokół ceny), przesuwamy ZAKRES tak, żeby żądane proporcje pokrywały się z tym, co mamy w portfelu — do zakresu jednostronnego włącznie (po wyprzedaniu ETH stawiamy pasmo z samych USDC poniżej ceny; rynek odkupi ETH i jeszcze zapłaci fee). Zaimplementowane jako recenter:'noswap' w flatOnlyLP"
+          },
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "„narrowing added variance without adding expectancy” finding.  The n­a‑wide range yielded HODL + fees − IL, while the narrow ranges added variance without expectation."
+          },
+          {
+            "where": "docs/CASE-STUDY.md",
+            "quote": "The narrowing experiment (31 Aug → 11 Sep).  The flat detector fired on the cbBTC leg.  I signed the narrowing as an explicit n = 1 operational experiment… It sat in range for 11 days and earned ≈ $8.6 in fees, then the trend breaker closed it at $-32 versus HODL."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 2160,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 669
+        },
+        "costUsd": 0.02202,
+        "ms": 7545,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly cites 0 of 21 configurations passing on 720 days and the −$32 live result, but it omits the key asymmetry rationale (about +$1 upside per episode vs about −$30 loss) behind the 16.09 rejection and adds a muddled claim that re-centering was 'essentially free'.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The −$32, ≈$8.6 fees and variance-without-expectancy claims are in the quotes, but the 720-day '0 of 21' figure, the 'essentially free' claim and the 'only consider narrowing in a confirmed flat episode' decision are not.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable 'yes', so there is no premise to assess."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "why-02",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did we keep the capital commitment small even though ETH and BTC were rising?",
+        "answerable": "yes",
+        "reference": "Tranche 1 ($6 092) was planned as a first stage and run as an operational experiment on a calibration the team itself considered broken (720 d: 0/21), the entry after an ETH +25%/90d pump was recorded with an explicit FOMO note, and on 02.09 the product failed to beat HODL in all five measurements, so the planned scale-up never happened.",
+        "answer": "Even though ETH and BTC were climbing, the team deliberately kept the LP tranche small because the back‑tests and Monte‑Carlo analysis showed that the strategy underperformed HODL in up‑trending markets, so a limited exposure was preferable. In the 2026‑09‑01 analysis it was noted that “w up market… a pool selling… fewer than HODL” and that “Alfa po korekcie bety ≈ +9–11 %/r… spadającą” and that the strategy “wygrywa z HODL o ~$50–100 (fees), w krachu przegrywa o $500–1 100” – implying a lower edge when prices rise. Consequently, on 2026‑09‑18 the team decided to “ETH/cbBTC NIE sprzedajemy – „zostawić w krypto, bo może jeszcze urośnie",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "w up market… a pool selling… fewer than HODL"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1707,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 262
+        },
+        "costUsd": 0.012068,
+        "ms": 4006,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer attributes the small tranche to backtests showing underperformance in uptrends, missing the reference's points that it was a planned first stage, an experiment on a calibration judged broken (720 d: 0/21), an entry flagged with a FOMO note after the ETH pump, and the 02.09 failure to beat HODL in all five measurements.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "Only the claim that the pool underperforms HODL in an up market is backed by the single cited quote; the alpha figures, the dollar win/loss amounts, the dates and the 18.09 decision are not in any quote.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so the premise check does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "why-03",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the 720-day backtests cover only a few pools, and why those particular ones?",
+        "answerable": "yes",
+        "reference": "The first 720-day run (25.08) simply reused the four pools that already had 365-day runs (base-030, mainnet-005, arb-005, cbBTC-005, the younger cbBTC pool from its start), because each walk-forward cost 20-40 minutes per pool; restricting the 720-day gate to 'finalists' of a cheap universe-wide screen appears only later, in the funnel design of 31.08.",
+        "answer": "Only those pools that matched the 720‑day validation window and the additional recent‑90‑day filter were run. The 720‑day gate was very strict – on the long history, 0 of 21 configurations passed, so most pools were automatically rejected. The few that remained were the only ones that had adequate historical data and satisfied the recent‑90‑day condition, particularly the BTC‑pegged pool that survived the gate. In the wide‑backtest run on 31 Aug, only the 13 pools that met these requirements were collected and evaluated; the rest were excluded because they did not meet the 720‑day and recent‑90‑day criteria.\n",
+        "quotes": [
+          {
+            "where": "docs/CASE-STUDY.md:56-57",
+            "quote": "On the longer history, which included a strong uptrend, 0 of 21 configurations passed the gate"
+          },
+          {
+            "where": "docs/CASE-STUDY.md:56",
+            "quote": "Extending the window to 720 days killed the strategy."
+          },
+          {
+            "where": "docs/DECISION-LOG.md:22",
+            "quote": "Validation gate = 720-day window + a recent ~90-day condition"
+          },
+          {
+            "where": "journal/HANDOFF.md:1349",
+            "quote": "SKAN WIDE ZROBIONY 31.08 — WSZYSTKIE 13 pul"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1821,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 238
+        },
+        "costUsd": 0.012044,
+        "ms": 4340,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The reference says the first 720-day run reused the four pools that already had 365-day runs because each walk-forward cost 20-40 minutes per pool, whereas the answer invents a filtering explanation based on the gate and the recent-90-day criteria.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes support the 0/21 result, the gate definition and the 13-pool wide scan, but not the claim that pools were selected because they met the 720-day and recent-90-day criteria, nor the BTC-pegged pool surviving.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "why-04",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the Claude Code sessions coordinate through hand-off files in the repo instead of messaging each other directly?",
+        "answerable": "yes",
+        "reference": "On 10.08 it was checked that the sessions could not reach each other (separate apps), so the repo files became the communication bus, with HANDOFF.md inboxes and history in git; from 01.09 CC-Mac and CC-Win also sent each other direct messages via Remote Control, while the files stayed the shared memory and task queue and the fallback when that channel was down.",
+        "answer": "The teams chose file‑based coordination because the separate Claude Code sessions ran in isolated environments that could not reach each other by direct network messaging. The repo acted as a shared, version‑controlled channel: every session first read the living journal (`CONTEXT.md`) and then appended hand‑offs to `HANDOFF.md` before acting. This ensured a consistent, auditable record of what was observed, what decisions were made, and what work was handed off, and allowed the sessions to run continuously without needing a persistent network link.\n\nCoverage: full\n\nCitations:\n- {\"chunkId\":\"docs/AI-WORKFLOW.md:25\",\"quote\":\"Sessions cannot see each other. They coordinated through the repository:\"}\n- {\"chunkId\":\"journal/HANDOFF.md:3\",\"quote\":\"@Fable | sesja analityczna (Cowork cloud) | analizy, algorytmy, kod core/bot, koordynacja\"}\n- {\"chunkId\":\"journal/HANDOFF.md:3\",\"quote\":\"@CC-Mac | Claude Code w iTerm na Macu | git commit/push, odpalanie skryptów\"}\n- {\"chunkId\":\"journal/HANDOFF.md:3\",\"quote\":\"@CC-Win | Claude Code od botów windowsowych | usługi NSSM, wdrożenia serwerowe, .env\"}\n- {\"chunkId\":\"journal/HANDOFF.md:3\",\"quote\":\"@Sonnet | sesja UI (Claude Desktop, Cowork) | warstwa wizualna src/components+hooks+styles\"}\n- {\"chunkId\":\"journal/HANDOFF.md:3\",\"quote\":\"ZASADY: (1) KRÓTKIE przekazania ... (2) Sesja NA STARCIE czyta swoją sekcję i USUWA odebrane wpisy.\"}\n- {\"chunkId\":\"journal/CONTEXT.md:3276\",\"quote\":\"Sesje Sonnet/CC/Windows NIE są osiągalne przez bezpośredni messaging z tej sesji (osobne aplikacje).\"}\n- {\"chunkId\":\"journal/CONTEXT.md:3276\",\"quote\":\"Decyzja: zostajemy przy plikach repo jako szynie komunikacji (dziś: 4 sesje równolegle, zero kolizji)\"}\n- {\"chunkId\":\"docs/CASE-STUDY.md:105\",\"quote\":\"Four Claude sessions with distinct roles, coordinated through a living journal and hand-off inboxes in the repo, let one person run analysis, coding, a Windows server and a UI in parallel.\"}\n- {\"chunkId\":\"docs/AI-WORKFLOW.md:25\",\"quote\":\"Rule that turned out to matter: 1. Read before acting, write after.\\n2. Short hand‑offs, long journal.\"}\n- {\"chunkId\":\"docs/AI-WORKFLOW.md:25\",\"quote\":\"Inbox entries were instructions; reasoning went in the journal.\"}\n- {\"chunkId\":\"docs/AI-WORKFLOW.md:25\",\"quote\":\"This kept the inboxes readable from a phone.\"}\n- {\"chunkId\":\"docs/AI-WORKFLOW.md:25\",\"quote\":\"The cheaper session executes literally.\\nCC-Mac and CC-Win were told: do exactly what the entry says; if anything is ambiguous, write the problem to Fable's inbox and move on.\"}\n- {\"chunkId\":\"docs/AI-WORKFLOW.md:25\",\"quote\":\"Code reaches the server only by a manual git pull.\\nAn auto‑pull runner with reset --hard was built, used once, and withdrawn after an incident. The only automated git action was the morning report committing itself.\"}\n- {\"chunkId\":\"journal/CONTEXT.md:3316\",\"quote\":\"Konsekwencje: – Git push/pull z tej sesji NIEMOŻLIWY – sandbox bez poświadczeń GitHub\"}\n- {\"chunkId\":\"journal/CONTEXT.md:3316\",\"quote\":\"Decyzja Rafała (AskUserQuestion): push zostaje przy CC-Mac; Fable pisze pliki na dysk Maca bezpośrednio.\"}\n- {\"chunkId\":\"docs/PLAN.md:151\",\"quote\":\"Agents. The plan assigned one agent per package, each with its own notes file, and a shared journal as the single source of truth. In practice this became four Claude sessions with distinct roles, coordinated through the working journal and hand‑off inboxes (see AI-WORKFLOW.md).\"}",
+        "quotes": [
+          {
+            "where": "docs/AI-WORKFLOW.md:27",
+            "quote": "Sessions cannot see each other. They coordinated through the repository:"
+          },
+          {
+            "where": "journal/HANDOFF.md",
+            "quote": "@Fable | sesja analityczna (Cowork cloud) | analizy, algorytmy, kod core/bot, koordynacja"
+          },
+          {
+            "where": "journal/HANDOFF.md",
+            "quote": "@CC-Mac | Claude Code w iTerm na Macu | git commit/push, odpalanie skryptów"
+          },
+          {
+            "where": "journal/HANDOFF.md",
+            "quote": "@CC-Win | Claude Code od botów windowsowych | usługi NSSM, wdrożenia serwerowe, .env"
+          },
+          {
+            "where": "journal/HANDOFF.md",
+            "quote": "@Sonnet | sesja UI (Claude Desktop, Cowork) | warstwa wizualna src/components+hooks+styles"
+          },
+          {
+            "where": "journal/HANDOFF.md",
+            "quote": "ZASADY: (1) KRÓTKIE przekazania ... (2) Sesja NA STARCIE czyta swoją sekcję i USUWA odebrane wpisy."
+          },
+          {
+            "where": "journal/HANDOFF.md",
+            "quote": "@Fable | sesja analityczna (Cowork cloud) | …"
+          },
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "Sesje Sonnet/CC/Windows NIE są osiągalne przez bezpośredni messaging z tej sesji (osobne aplikacje)."
+          },
+          {
+            "where": "journal/CONTEXT.md:3279-3280",
+            "quote": "Decyzja: zostajemy przy plikach repo jako szynie komunikacji (dziś: 4 sesje równolegle, zero kolizji)"
+          },
+          {
+            "where": "docs/CASE-STUDY.md:126-128",
+            "quote": "Four Claude sessions with distinct roles, coordinated through a living journal and hand-off inboxes in the repo, let one person run analysis, coding, a Windows server and a UI in parallel."
+          },
+          {
+            "where": "docs/AI-WORKFLOW.md",
+            "quote": "Rule that turned out to matter: 1. Read before acting, write after."
+          },
+          {
+            "where": "docs/AI-WORKFLOW.md:42-43",
+            "quote": "Inbox entries were instructions; reasoning went in the journal."
+          },
+          {
+            "where": "docs/AI-WORKFLOW.md:43",
+            "quote": "This kept the inboxes readable from a phone."
+          },
+          {
+            "where": "docs/AI-WORKFLOW.md",
+            "quote": "The cheaper session executes literally.\\nCC-Mac and CC-Win were told: do exactly what the entry says; if anything is ambiguous, write the problem to Fable's inbox and move on."
+          },
+          {
+            "where": "docs/AI-WORKFLOW.md",
+            "quote": "Code reaches the server only by a manual git pull.\\nAn auto‑pull runner with reset --hard was built, used once, and withdrawn after an incident. The only automated git action was the morning report committing itself."
+          },
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "Konsekwencje: – Git push/pull z tej sesji NIEMOŻLIWY – sandbox bez poświadczeń GitHub"
+          },
+          {
+            "where": "journal/CONTEXT.md:3320-3321",
+            "quote": "Decyzja Rafała (AskUserQuestion): push zostaje przy CC-Mac; Fable pisze pliki na dysk Maca bezpośrednio."
+          },
+          {
+            "where": "docs/PLAN.md",
+            "quote": "Agents. The plan assigned one agent per package, each with its own notes file, and a shared journal as the single source of truth. In practice this became four Claude sessions with distinct roles, coordinated through the working journal and hand‑off inboxes (see AI-WORKFLOW.md)."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 4202,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 557
+        },
+        "costUsd": 0.027948,
+        "ms": 6088,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "It correctly says the sessions were separate apps that could not reach each other, so the repo files became the communication bus, but it misses that from 01.09 CC-Mac and CC-Win also messaged each other directly via Remote Control, with the files kept as shared memory and fallback.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The unreachability and repo-as-bus claims are backed by the quotes, but the claim that sessions appended hand-offs before acting and the claims about an auditable record and not needing a persistent network link are not in any quote.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so the premise check does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "why-05",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the bot and its API server run on the Windows machine rather than on the Mac I was working on?",
+        "answerable": "yes",
+        "reference": "The bot had to run 24/7 (nightly pipeline, 07:30 report, Telegram alerts), so the owner's always-on Windows desktop became the server with the Mac and iPhone as clients over LAN and VPN; the docs add that a closed laptop would mean a dead autopilot.",
+        "answer": "The bot daemon and API were hosted on a Windows machine because the Mac was used only for development.  The architecture intentionally separates writing state (the 24/7 Node bot on a server) from reading it (the React UI on the Mac).  The Windows host runs the bot and API as NSSM services so they stay running continuously, while the Mac runs the UI locally and pushes code to GitHub for the Windows server to pull.\n\nCoverage: full",
+        "quotes": [
+          {
+            "where": "docs/INFRA.md",
+            "quote": "## 3. Code flow: Mac (development) → Windows (server) – Git is the deployment channel: the Mac pushes to GitHub, the server pulls."
+          },
+          {
+            "where": "docs/UI-DESIGN.md:45-48",
+            "quote": "**Key point (missing from the original requirements):** the browser cannot be the automation engine — a closed laptop means a dead autopilot. The bot is a separate process. The vision suggested a small VPS (~$5/month); in the end a home Windows machine running 24/7 took that role."
+          },
+          {
+            "where": "docs/CASE-STUDY.md",
+            "quote": "An observer bot running 24/7 on a Windows machine: prices, position tracking, … – The bot never held a key."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1762,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 601
+        },
+        "costUsd": 0.019068,
+        "ms": 6631,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "It mentions the bot running 24/7 on a server, but frames the reason as the Mac being for development and misses the key rationale that the always-on Windows desktop was needed because a closed laptop would mean a dead autopilot.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The Mac-to-Windows Git flow and 24/7 Windows hosting are quoted, but NSSM services, the React UI running on the Mac, and the write/read state separation appear in no quote.",
+          "premise": "n/a",
+          "premiseReason": "The question is answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "why-06",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the bot never open, close or re-range positions on its own, and was automatic execution possible at all?",
+        "answerable": "yes",
+        "reference": "The bot ran in PROPOSE mode with no wallet key on the server, so the owner signed every transaction; the only cost was signing delay (up to ~13 h at night, ~61 h over a weekend), measured from day one, and AUTO existed only as a later rung of the trust path OBSERVE-PROPOSE-AUTO that was deliberately not enabled at the start.",
+        "answer": "The project never enabled fully‑automatic execution. In the architecture plan the **AUTO mode was never enabled**; the bot only generated proposals and the user had to sign the transactions in the browser wallet. The UI and code never switched the bot into “auto” state, so no open/close/re‑range actions were sent automatically. Automatic execution was considered but remained unimplemented – the bot could only propose transactions.",
+        "quotes": [
+          {
+            "where": "docs/PLAN.md",
+            "quote": "4 — full-auto + delta-neutral hedge\nNot built as planned. AUTO mode was never enabled; the hedge exists only as a propose-only short on GMX v2, signed in the cockpit (ETH/USD only)."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1624,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 560
+        },
+        "costUsd": 0.017696,
+        "ms": 6038,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly says AUTO was never enabled and the owner signed proposals, but it omits the main reasons (no wallet key on the server, AUTO deliberately held back as a later rung of OBSERVE-PROPOSE-AUTO, signing delay as the measured cost) and wrongly calls AUTO unimplemented.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quote backs \"AUTO mode was never enabled\" and cockpit signing for the hedge, but not the claims about browser-wallet signing of all transactions, the UI/code never switching state, or AUTO remaining unimplemented.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so the premise check does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "why-07",
+      "answerable": "partial",
+      "input": {
+        "question": "Why wasn't the bot hosted on a cloud server or VPS instead of a home Windows machine?",
+        "answerable": "partial",
+        "reference": "The sources do not give a reason: the vision suggested a small VPS (~$5/month) and the home Windows machine simply took that role; the journal treats a VPS only as a possible future move with the trust model (API exposure, secrets) left undecided.",
+        "keyNotes": "Partial: no comparison with VPS/cloud anywhere; draft reasons (no extra cost, safer than public server) not in sources. VPS appears only as the vision's suggestion (UI-DESIGN) and as a deferred future move (RESEARCH-QUEUE, 18.08).",
+        "answer": "The project designers originally envisaged a small VPS for the bot, but ultimately opted for a home Windows desktop because it could run the Node/TypeScript daemon continuously, was already available, and avoided the recurring cost of a cloud server. The infrastructure docs state that the server is the owner's Windows PC running 24/7, accessed from Mac/iPhone over LAN or VPN. This setup was implemented with pm2 or NSSM services to keep the processes hidden and restarted automatically.\n",
+        "quotes": [
+          {
+            "where": "docs/UI-DESIGN.md",
+            "quote": "the vision suggested a small VPS (~$5/month); in the end a home Windows machine running 24/7 took that role."
+          },
+          {
+            "where": "docs/INFRA.md:3",
+            "quote": "Decided 10 Aug 2026: the server is the owner's Windows desktop running 24/7;"
+          },
+          {
+            "where": "journal/CONTEXT.md:3081",
+            "quote": "serwer 24/7 uruchomiony (tryb OBSERWUJ)"
+          },
+          {
+            "where": "journal/TASKS-WINDOWS.md",
+            "quote": "pm2 jako usługa (zainstalowane globalnie pm2 + pm2-windows-startup)"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1855,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 224
+        },
+        "costUsd": 0.0119,
+        "ms": 3173,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer invents reasons (already available, avoids recurring cost) that the reference says the sources do not give, and it omits that a VPS stayed a deferred option.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The VPS vision, the Windows 24/7 server and pm2 are quoted, but the stated reasons (cost avoidance, already available), Mac/iPhone access over LAN/VPN, NSSM and hidden processes are not in any quote.",
+          "premise": "not_handled",
+          "premiseReason": "It presents unsupported reasons for the choice instead of stating that the sources give no rationale."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "why-08",
+      "answerable": "yes",
+      "input": {
+        "question": "Why was a crypto/crypto pair (cbBTC/WETH) considered riskier than a crypto/stable pair?",
+        "answerable": "yes",
+        "reference": "It was not riskier as an LP: against HODL cbBTC/WETH was the best pool (365 d: +11.42 for k2h24, the largest LP-vs-HODL alpha; 27.08 closest to passing the gate; on 720 d the only pool with 65% winning windows), but in USD it carries full crypto beta with no stable cushion (HODL -51.5% APR, max drawdown 61.5%), so LP and HODL lose together.",
+        "answer": "Crypto/crypto pairs (e.g., cbBTC/WETH) are riskier because both legs are subject to the same market volatility, so the pool has no stable‑asset cushion. The position stays in range only if the two assets move together; otherwise, large price swings of either token can trigger impermanent loss or slippage, increasing the risk profile. In contrast, a crypto/stable pair uses a stable‑asset leg that acts as a buffer, providing diversification and protecting the pool from the full‑market beta of the crypto side.\n",
+        "quotes": [
+          {
+            "where": "unknown source",
+            "quote": "when BTC and ETH move together, the relative BTC/ETH price stays put → the position stays in range and collects fees without realising IL."
+          },
+          {
+            "where": "unknown source",
+            "quote": "This is a structurally different risk from ETH/stable — real diversification, not a copy of the same exposure."
+          },
+          {
+            "where": "unknown source",
+            "quote": "cbBTC/WETH 0.05% Base — active k=2. Note: the pair is 100% crypto beta (HODL −51%/yr in 2025/26), so the sleeve size is a decision about exposure, not about LP quality"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1801,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 559
+        },
+        "costUsd": 0.018384,
+        "ms": 6427,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer captures the full crypto beta and the lack of a stable cushion, but it misses the reference's key point that cbBTC/WETH was the best LP pool against HODL, and it wrongly frames the pair as riskier because of impermanent loss and slippage.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes support the 100% crypto beta and the point about staying in range when BTC and ETH move together, but slippage is not in any quote, and the claim that a stable leg provides diversification inverts quote 2, which calls cbBTC/WETH real diversification relative to ETH/stable.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable yes."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "why-09",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the first 365-day backtests suggest some strategies were profitable, while the 720-day tests showed that none passed the gate?",
+        "answerable": "yes",
+        "reference": "The 365-day year was sideways-to-down and flattered the strategy, while 720 days included uptrend windows where it lost badly (0 of 21 configurations passed); separately the swap-based sigma estimator measured pool microstructure rather than the asset, so k had been calibrated in wrong units, and the gate became 720 days plus a recent ~90-day condition.",
+        "answer": "The 365‑day backtests were run on a single, largely sideways‑to‑down year. The volatility estimator was calibrated on that short window, so the σ values were very low and the narrow ranges were optimal for that regime. When the window was extended to 720 days, the data set included a strong up‑trend and a wider range of volatility patterns. The same σ‑based calibration now produced ranges that were too narrow for the longer, more volatile history, leading to many losses in the “up” regimes and causing every configuration to fail the multi‑regime gate. In short, the short window over‑fitted to a quiet period; the longer window exposed the true risk profile and eliminated the apparent profitability.\n",
+        "quotes": [
+          {
+            "where": "docs/CASE-STUDY.md",
+            "quote": "The first calibration (365 days of data, a mostly sideways-to-down year) produced a frozen ALGORITHM.md v1: narrow ranges… It passed the gate on one pool."
+          },
+          {
+            "where": "docs/CASE-STUDY.md",
+            "quote": "Then two things happened… 2. **Extending the window to 720 days killed the strategy.** On the longer history, which included a strong uptrend, 0 of 21 configurations passed the gate"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1792,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 421
+        },
+        "costUsd": 0.015588,
+        "ms": 5349,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly attributes the result to the sideways-to-down 365-day year versus the 720-day window with an uptrend in which all configurations failed, but it misses that the swap-based sigma estimator measured pool microstructure (k in wrong units) and that the gate changed to 720 days plus a recent ~90-day condition.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes back the sideways-to-down year, the narrow ranges, the strong uptrend and 0 of 21 passing, but not the claims about σ values being very low or the σ-based calibration producing ranges too narrow for the longer history.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "why-10",
+      "answerable": "yes",
+      "input": {
+        "question": "Why did the LP earn less in fees during an uptrend than in a flat market?",
+        "answerable": "yes",
+        "reference": "Fees accrue only while the price is inside the range and fee yield scales roughly with 1/width, so a narrow range earns much more in a flat market but is left behind in a trend, while a wide range stays in range but earns several times less; the journal states this mechanism (the basis of FlatWide) but has no live measurement of fees during an uptrend, and it attributes the backtest losses in up windows to impermanent loss and LVR rather than to lower fees.",
+        "answer": "During up‑trends the LP’s concentrated ranges frequently evaporated from the market, forcing the bot to rebalance and sell into rising prices.  Re‑balancing consumes swap and gas costs and the short‑gamma position sells into the rally, so fee collection drops dramatically.  In a flat market the ranges stay in‑range for almost the whole period, producing high fee‑to‑cost ratios: for ±5 % the fee income was 4× higher than for the wide passive range and the re‑centering cost was negligible.  The back‑tests show that in up‑trends the LP earned only a fraction of the flat‑market fees, because the active re‑balancing required swaps (swaps+gas ≈ $1.9 k for cbBTC, $2.9 k for base‑030) that surpassed the fee revenue.  In contrast, flat episodes kept the LP in‑range and the high fee income was not offset by swap costs.",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:1675-1677",
+            "quote": "Fee przy ±5%: $643 (cbBTC) i $1259 (base-030) na $2500 — 4× więcej niż pasywny szeroki, przy 30/47 rebalansach i kosztach $15/$94."
+          },
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "wygramy w każdym wariancie 100% USDC wygrywa (+$1287 i +$685 vs najlepsza strategia LP)."
+          },
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "Coś już to potwierdza: w up­wietru strategia „LP narrow” (sb ZEB) przegrywa i koszt re‑centering zjada ~$1.9k (cbBTC) i ~$2.9k (base‑030) ponad to, co dołożyły fee."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 2006,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 815
+        },
+        "costUsd": 0.024324,
+        "ms": 8807,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer partly captures the reference's in-range mechanism (narrow ranges earn more in flat markets but drop out of range in trends), but it claims the backtests measured much lower uptrend fees and blames swap/rebalancing costs, whereas the reference says there is no such measurement and attributes up-window losses to impermanent loss and LVR.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes support the ±5% fee being 4× the wide range, the small rebalancing costs, and the ~$1.9k/$2.9k re-centering costs exceeding fees in uptrends, but not the claims that uptrend fees were only a fraction of flat-market fees or that a short-gamma position sells into the rally.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "dated-01",
+      "answerable": "yes",
+      "input": {
+        "question": "When did the first real capital enter through the application (not counting the legacy positions that were already in pools before HOMOS v2)?",
+        "answerable": "yes",
+        "reference": "The tranche-1 USDC (6 092.50 on Base) reached the owner's wallet on 25.08 and waited in USDC per the 26.08 decision; it was put into the product on 27.08, when both FlatWide legs were minted from the bot's OPEN proposals: #5886957 WETH/USDC ±50% (~$3 507) in the afternoon and WETH/cbBTC ±40% (#5887690, ~$2 360) later that day.",
+        "answer": "The first real capital entered the system on 26 August 2026, when the first tranche of $6k was deployed.",
+        "quotes": [
+          {
+            "where": "journal/DECYZJE-2026-08-26.md:155",
+            "quote": "Rekomendacja Fable z 19.08 w KAPITAL-REKOMENDACJA.md: transza 1 $6k"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1539,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 175
+        },
+        "costUsd": 0.009656,
+        "ms": 3027,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer says capital was deployed on 26.08, but the reference says the USDC waited on 26.08 and was put into the product on 27.08 through the two FlatWide mints.",
+          "faithfulness": "unsupported",
+          "faithfulnessReason": "The quote mentions only a 19.08 recommendation of a $6k tranche 1, not any deployment on 26 August.",
+          "premise": "n/a",
+          "premiseReason": "The question is answerable, so there is no false premise to handle."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "dated-02",
+      "answerable": "yes",
+      "input": {
+        "question": "When was the first rebalance executed on real capital?",
+        "answerable": "yes",
+        "reference": "On 31.08 at about 13:00 Polish time, after a failed first attempt and a UI hotfix, the first FLAT_NARROW was executed on the cbBTC/WETH leg: #5887690 (±40%) was closed and narrow #5908083 (±4.9%) minted; the second rebalance was the widening on 11.09 into #5978579 (±40%).",
+        "answer": "The source material does not specify that a real‑capital rebalance was ever executed.  It describes the start of live‑capital operation on 27 Aug 2026 but does not mention a rebalance event during that period, and the earlier “paper‑trading” runs are purely simulated and contain no real‑capital transactions.",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1490,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 173
+        },
+        "costUsd": 0.00942,
+        "ms": 2885,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer claims the sources do not record a real-capital rebalance, while the reference gives the first one on 31.08 (closing #5887690 and minting #5908083).",
+          "faithfulness": "unsupported",
+          "faithfulnessReason": "No quotes are cited, yet the answer states specific facts such as live-capital operation starting on 27 Aug 2026.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "dated-03",
+      "answerable": "yes",
+      "input": {
+        "question": "Which positions were open on 15 September and what was their profit or loss that day?",
+        "answerable": "yes",
+        "reference": "On the morning of 15.09 two wide positions were open: #5886957 WETH/USDC ($3 468, PnL -$39.98 since 27.08) and #5978579 cbBTC/WETH ($2 266, PnL -$92.39 since 11.09); the tranche as a whole stood at $5 966.88, -$125.12 (-2.05%) against the $6 092 deposited.",
+        "answer": "On 15 September all six paper‑trading pools remained open. Their profit or loss for the day were: 1. mainnet‑usdc‑weth‑030 – +$680【journal/reports/morning-2026-09-15.md:228-L233】 2. mainnet‑usdc‑weth‑005 – +$659【journal/reports/morning-2026-09-15.md:228-L233】 3. base‑weth‑usdc‑030 – +$623【journal/reports/morning-2026-09-15.md:228-L233】 4. base‑cbbtc‑weth‑005 – +$1936【journal/reports/morning-2026-09-15.md:228-L233】 5. arbitrum‑weth‑usdc‑005 – +$707【journal/reports/morning-2026-09-15.md:228-L233】 6. base‑weth‑cbbtc‑030 – +$325【journal/reports/morning-2026-09-15.md:228-L233】",
+        "quotes": [
+          {
+            "where": "journal/reports/morning-2026-09-15.md:232",
+            "quote": "| mainnet-usdc-weth-030 | open | $10680 | +$680 | $-868 | $108.14 | 1 |"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:233",
+            "quote": "| mainnet-usdc-weth-005 | open | $10659 | +$659 | $-896 | $64.93 | 1 |"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:234",
+            "quote": "| base-weth-usdc-030 | open | $10623 | +$623 | $-925 | $120.08 | 1 |"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:235",
+            "quote": "| base-cbbtc-weth-005 | open | $11936 | +$1936 | $-646 | $9.40 | 0 |"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:236",
+            "quote": "| arbitrum-weth-usdc-005 | open | $10707 | +$707 | $-839 | $48.81 | 1 |"
+          },
+          {
+            "where": "journal/reports/morning-2026-09-15.md:237",
+            "quote": "| base-weth-cbbtc-030 | open | $10325 | +$325 | +$379 | $5.57 | 0 |"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 2146,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 466
+        },
+        "costUsd": 0.017904,
+        "ms": 6294,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The reference names two real positions (#5886957 WETH/USDC at -$39.98 and #5978579 cbBTC/WETH at -$92.39, tranche -$125.12), whereas the answer lists six paper-trading pools with large profits, so it misses and contradicts the reference.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The pool names, 'open' status and dollar figures match the quoted table rows, but the quotes carry no column headers and nothing in them shows these are paper-trading pools or that the figures are profit or loss for that day.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "dated-04",
+      "answerable": "yes",
+      "input": {
+        "question": "When did the last backtest finish?",
+        "answerable": "yes",
+        "reference": "It depends on the meaning: the nightly pipeline's backtest-run last finished on 23.09 at 05:03 UTC (a pause was ordered on 21.09 for 22.09, with no record that it was carried out), the last research backtest was E8.3 (720 days, four pools) received on 08.09, and the last 720-day runs on the product were the shape round of 03.09 and E8.3 of 08.09.",
+        "answer": "The final backtest completed on **2026‑09‑23** at 05:03:07.956 UTC.",
+        "quotes": [
+          {
+            "where": "journal/reports/morning-2026-09-23.md",
+            "quote": "2026‑09‑23T05:03:07.956Z krok backtest‑run: exit 0 (log: data\\pipeline-logs\\backtest-run-1790135075646.log)"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1506,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 314
+        },
+        "costUsd": 0.012304,
+        "ms": 4402,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly gives the nightly pipeline backtest-run finishing on 23.09 at 05:03 UTC, but it misses the reference's point that the answer depends on the meaning, omitting the last research backtest E8.3 received on 08.09.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The cited morning report shows the backtest-run step exiting 0 at 2026-09-23T05:03:07.956Z, matching the stated date and time.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so no premise handling applies."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "dated-05",
+      "answerable": "yes",
+      "input": {
+        "question": "Was there any attempt to protect a position by converting it into a different kind of position, when was it, and what was the result?",
+        "answerable": "yes",
+        "reference": "Only tests: after hedge-excess (a perp short on the excess ETH) passed the backtest gate and became v1.2 on 17.08, a $150 1x ETH short was opened on GMX on 17.08 ~16:00 and closed 18.08 ~10:00 (round-trip cost ~$1.08, ~72 bps, protecting no real position), a $15 end-to-end test through the app followed on 20.08 (~$0.40), and on 11.09 a $1 824 BTC short on GMX was rejected as an emergency option.",
+        "answer": "Yes – in the September‑11 episode the team closed an existing flat position (cbBTC #5908083) and immediately opened a new interval position #5978579 via the “FLAT_WIDEN” proposal. The conversion was intended to protect the exposure by moving it from a flat to an interval pool. The experiment did not yield a net gain versus holding: the net result was –$32.08 relative to HODL at the time of conversion, and the gross PnL on the new position was +$40 (beta BTC).  The operation incurred a rebalancing cost of about $0.6–$0.7, and the overall account balance rose by $0.9 % (from $6 144.30 to $6 148.70).  Thus the protection attempt ended up with a small positive equity change but still a loss relative to simply holding the base tokens.",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "EPIZOD FLAT cbBTC ZAMKNIĘTY: FLAT_WIDEN podpisany (nowa pozycja #5978579) … net… –$32.08 (fee +$12.6 < IL ≈ −$45 …) PnL w USD +$40 (beta BTC)"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1838,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 218
+        },
+        "costUsd": 0.011712,
+        "ms": 3005,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The reference describes perp-short hedge tests (the 17–18.08 GMX ETH short, the 20.08 app test, and the BTC short rejected on 11.09), whereas the answer describes an LP range-widening episode and misses all of these.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quote backs the FLAT_WIDEN, position #5978579, the −$32.08 and the +$40, but not the closed position ID #5908083, the rebalancing cost, or the account balance figures.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "dated-06",
+      "answerable": "yes",
+      "input": {
+        "question": "When did the nightly run first complete without errors, did errors still happen afterwards, what caused them and how were they fixed?",
+        "answerable": "yes",
+        "reference": "The first genuinely clean night was 22.08 (all 20 pools fetched by the automation, backtest-run exit 0); before it 19.08 failed on a missing HyperSync binary for Windows (pinned to 1.0.0), 20.08 had clean fetches but backtest-run ran out of memory (heap raised to 8 GB), and 21.08 reported no failures while the swap fetch was silently dead (frozen 'latest', fixed in fetch-swaps-hypersync.ts); later the ranking froze on 24.08 (data-age heuristic fixed), backtest-run failed on 26.08 (Math.min/max over millions of points, fixed in 0257a7a), ran long on 03.09 (cache filter fixed) and candidate-funnel failed on 19-20.09 with no recorded cause.",
+        "answer": "The first nightly run that finished without any failures was the 24 Aug pipeline which produced no “porażki” and a clean exit (back‑test‑run exited 0). After that, the subsequent nightly run on 26 Aug (reported in CONTEXT #p4) was the first that failed again – the back‑test‑run exited with error code 1 twice (04:23 Z and 05:00 Z). The cause was identified as a stream‑overflow bug in the spread‑min/max calculation when processing millions of points for the svgChart (see the note “spread Math.min/max na milionach punktów …”). The fix was a rewrite of that loop to use a proper reduce, after which the nightly runs on 27 Aug, 1 Sep, 5 Sep, 6 Sep, 17 Sep all finished with exit 0 and no failures.",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "...JEDYNA USTERKA: **backtest‑run 2× exit 1** (04:23 i 05:00Z, po ~35 min) — pierwsza porażka PO podniesieniu heapu…"
+          },
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "…spread Math.min/max na milionach punktów w svgChart — LEKCJA:…"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1964,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 262
+        },
+        "costUsd": 0.013096,
+        "ms": 3851,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer names 24 Aug as the first clean night, but the reference gives 22.08 and says the ranking froze on 24.08; it also omits the 19.08–21.08 failures, the 03.09 long run and the 19-20.09 candidate-funnel failures, and wrongly claims all later runs were clean.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes back the 26 Aug double exit 1 at 04:23/05:00 and the Math.min/max cause, but nothing in them supports the 24 Aug clean run, the reduce rewrite, or the list of later clean nights.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so there is no false premise to handle."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "dated-07",
+      "answerable": "yes",
+      "input": {
+        "question": "What infrastructure problems were there, was anything changed on the production machine while the capital was already invested, and when?",
+        "answerable": "yes",
+        "reference": "Before the capital (27.08) there was the .bot/pipeline overwrite incident (17.08), the auto-pull runner withdrawn (18.08) and the NSSM to pm2 migration rolled back (21.08); while the capital was in the LP (27.08 to 18.09) the Windows machine was changed repeatedly: bot and UI deployments with restarts on 28.08, 29.08 (including sigma on the 15-minute grid), 31.08, 01.09, 02.09, 03.09 and 11.09, plus a disk replacement on the night of 02/03.09 that stopped the pipeline, report and observer; known ledger bugs (anchor chain, cost after the 11.09 rebalance) were left unfixed.",
+        "answer": "The only real infra‑related issue that affected live capital was the missing `SIGMA_MODE` environment variable. On 29 Aug the bot was using the `swap` estimator even though the backtests had calibrated `grid15`, so the live σ was wrong. On the evening of 29 Aug the team forced the change to `grid15`, restarted the homos‑bot at 10:15:53 Z, and verified the new σ in the cockpit and logs. That update occurred while the initial USDC tranche was already in the system. No other production‑side changes (e.g., new binaries, service restarts outside the scheduled nightly pipeline) were made during the period the capital was invested.",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:1528-1530",
+            "quote": "...SIGMA_MODE='swap', a rekalibracja i wyniki E1/E4 liczone są `grid15` — jeśli usługa nie ma tej zmiennej w env, pierwsze zwężenie pójdzie inną σ niż backtest..."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1847,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 227
+        },
+        "costUsd": 0.011928,
+        "ms": 3263,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer says the only change was the sigma fix on 29.08 and that nothing else was changed, which contradicts the reference's many deployments and restarts (28.08–11.09), the disk replacement on 02/03.09 and the pre-capital incidents.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quote supports only the SIGMA_MODE swap-versus-grid15 mismatch; the restart time, the cockpit verification, the date and the claim that nothing else changed are not in it.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so there is no false premise to handle."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "dated-08",
+      "answerable": "yes",
+      "input": {
+        "question": "When was the capital withdrawn?",
+        "answerable": "yes",
+        "reference": "In two stages: on 18.09 both LP positions were closed at $6 130.02 against $6 092 deposited (+$38.02, +0.62%, 22 days), with ~1.22 ETH and 0.0141 cbBTC kept as a spot bet and the USDC sent to Kraken; on 21.09 around 19:00 Polish time the rest was sold, the tranche ending at about 5 605 EUR (~$6 428, +$336, +5.5% over 25 days).",
+        "answer": "The capital was withdrawn on 18 September 2026.",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "18‑21.09 ≈ +$300…USDC → Kraken"
+          },
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "2026‑09‑18 ~09:xx–16:30 PL — BRIEF + WYJŚCIE Z LP TRANSZY 1 (+$38)"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1552,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 163
+        },
+        "costUsd": 0.009468,
+        "ms": 3399,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer gives 18.09 for closing the LP positions but misses the second stage on 21.09, when the remaining ETH/cbBTC was sold.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The second quote dates the exit from the LP tranche to 2026-09-18, which backs the stated date.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "dated-09",
+      "answerable": "yes",
+      "input": {
+        "question": "When was the market flat, and how long did the only live narrowing episode last?",
+        "answerable": "yes",
+        "reference": "The flat detector repeatedly started and reset on cbBTC/WETH on 28-30.08 and held from 30.08 22:22Z, which led to the only live narrowing, 31.08 to 11.09 (11 days in flat, -$32 vs HODL), ended by a DOWN signal on cbBTC and the signed widening; flat was confirmed again on cbBTC from 15.09 03:03Z and on both legs on 17-18.09, but those cards were deliberately not signed.",
+        "answer": "The market was flat from 31 Aug 2026 to 11 Sep 2026, a span of 11 days. The only live narrowing episode lasted those 11 days, earning about $8.6 in fees before ending at −$32 versus HODL.",
+        "quotes": [
+          {
+            "where": "docs/CASE-STUDY.md:81",
+            "quote": "The narrowing experiment (31 Aug → 11 Sep)."
+          },
+          {
+            "where": "docs/CASE-STUDY.md:83",
+            "quote": "It sat in range for 11 days"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1587,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 416
+        },
+        "costUsd": 0.014668,
+        "ms": 4671,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer gets the narrowing episode right (31.08–11.09, 11 days, −$32 vs HODL) but wrongly equates the flat market with that window, missing the flat detection from 30.08 and the later flat periods on 15.09 and 17–18.09.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes back the 31 Aug–11 Sep dates and the 11 days, but not the ~$8.6 in fees, the −$32 vs HODL or the year 2026.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so there is no false premise to handle."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "dated-10",
+      "answerable": "yes",
+      "input": {
+        "question": "How many times, and when, did the paper-trading bot rebalance before real capital went in?",
+        "answerable": "yes",
+        "reference": "Four times: three rebalances on the morning of 21.08 (mainnet-030, mainnet-005, base-030, netting only +$69/+$93/+$87 after costs) and one on arbitrum-005 between the 22.08 and 23.08 reports; the cbBTC paper pool was never rebalanced (it went to cash on a trend exit and re-entered), and nothing changed up to 27.08.",
+        "answer": "In the paper‑trading simulation, the bot executed **three rebalances** (from 0 → 1) before any real capital was allocated.  The first three rebalances are recorded in the 21 August morning report and involve the three ETH/USDC pools that left the 24‑hour hysteresis window: the mainnet 0.30 pool, the mainnet 0.05 pool, and the base‑chain 0.30 pool【journal/CONTEXT.md:4165】.  These events are the earliest rebalancing actions observed in the paper‑trading data; no rebalancing occurs later, as no further rebalances are logged before the real capital was deployed on 26 August.”",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:4175-4176",
+            "quote": "Pierwsze rebalanse od startu — `reb` 0→1 na trzech pulach ETH/USDC (mainnet 0.30, mainnet 0.05, base 0.30)"
+          },
+          {
+            "where": "journal/CONTEXT.md",
+            "quote": "PAPER TRADING (start 18.08): equity $52456 → $52724 (+$268/+0.5%). Pierwsze rebalanse…"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1779,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 216
+        },
+        "costUsd": 0.011436,
+        "ms": 2627,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer says three rebalances and denies any later ones, but the reference gives four, including an arbitrum-005 rebalance between the 22.08 and 23.08 reports.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quotes back the three rebalances on mainnet 0.30, mainnet 0.05 and base 0.30, but not the claim that no later rebalances were logged, the 26 August deployment date, or the 24-hour hysteresis detail.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so the premise check does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "id-01",
+      "answerable": "yes",
+      "input": {
+        "question": "Is FLAT_NARROW a specific position or some kind of range algorithm?",
+        "answerable": "yes",
+        "reference": "Neither: it is a proposal type (kind) emitted by the bot's flat detector when the flat regime is confirmed (|gap to the EMA| < 2% for at least 12 h), proposing to narrow an existing wide position to a fixed ±5%, with FLAT_WIDEN as the opposite card when |gap| > 5%; unsigned cards expire on a TTL and come back.",
+        "answer": "FLAT_NARROW is a **proposal kind** – a specific type of suggestion used for the FlatWide product.  In the proposal JSON it is listed as `kind: \"FLAT_NARROW\"` and the note describes it as a “zwężenie” (narrowing) of the product, not a particular on‑chain position.\n",
+        "quotes": [
+          {
+            "where": "journal/reports/morning-2026-09-19.md:109",
+            "quote": "\"kind\": \"FLAT_NARROW\""
+          },
+          {
+            "where": "journal/reports/morning-2026-09-19.md:120",
+            "quote": "\"note\": \"Produkt FlatWide: flat POTWIERDZONY (|gap|<2% ≥12h) — zwężenie z ±40% do ±5%: stała szerokość produktu ±5% (1.0× próg wyjścia).\""
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1659,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 217
+        },
+        "costUsd": 0.010976,
+        "ms": 3552,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "It correctly identifies FLAT_NARROW as a proposal kind for narrowing rather than a position, but it omits key points of the reference: the flat-detector trigger (|gap|<2% for ≥12h), the fixed ±5% target, and the FLAT_WIDEN counterpart.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The quotes show kind \"FLAT_NARROW\" and a FlatWide product note describing a narrowing, which backs the answer's claims.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable=yes."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "id-02",
+      "answerable": "yes",
+      "input": {
+        "question": "Is position #5978579 a wide or a narrow position?",
+        "answerable": "yes",
+        "reference": "Wide: #5978579 is the cbBTC/WETH 0.05% Base position minted ±40% on 11.09 by the signed FLAT_WIDEN; a FLAT_NARROW card for it (15.09) was deliberately not signed, so it stayed wide until it was closed by hand in Uniswap on 18.09.",
+        "answer": "Position #5978579 is listed as SZEROKI (wide).",
+        "quotes": [
+          {
+            "where": "journal/reports/morning-2026-09-16.md:242",
+            "quote": "#5978579 | base-cbbtc-weth-005 | SZEROKI | $2202"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1451,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 162
+        },
+        "costUsd": 0.009044,
+        "ms": 3028,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer correctly identifies the position as wide, which is the reference's key point, though it omits the context about the FLAT_WIDEN mint and the unsigned narrowing.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The cited quote lists #5978579 as SZEROKI, which means wide in Polish.",
+          "premise": "n/a",
+          "premiseReason": "The question is labelled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "id-03",
+      "answerable": "yes",
+      "input": {
+        "question": "Was the range of position #5886957 ever changed, and when?",
+        "answerable": "yes",
+        "reference": "No: #5886957 is leg A, WETH/USDC 0.30% on Base, minted on 27.08 with a $1 665.75-3 744.30 range (±50%) and closed unchanged on 18.09; a narrowing card for it (expected 16.09, listed in the 17-18.09 reports) was not signed, and a range change would in any case have meant closing it and minting a new position, as happened on the cbBTC leg (#5887690 to #5908083 to #5978579).",
+        "answer": "The provided records do not indicate that the range of position #5886957 was ever altered. Each daily report lists the position as “w zakresie” (in range) with no note of a change.",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1483,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 181
+        },
+        "costUsd": 0.009552,
+        "ms": 2388,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer's core claim that the range was never changed matches the reference, but it misses the key details: the original ±50% range, the close on 18.09 without a change, and the narrowing card that was never signed.",
+          "faithfulness": "unsupported",
+          "faithfulnessReason": "No quotes are cited, so the specific claim that each daily report lists the position as 'w zakresie' has no backing.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "id-04",
+      "answerable": "yes",
+      "input": {
+        "question": "What set of tasks was in the D0 package, and was it about project functionality or about tests?",
+        "answerable": "yes",
+        "reference": "Functionality, not tests: D0 'detektor→pomiar', decided at the 31.08 review, had two tasks, stop the flat detector from emitting FLAT_NARROW/FLAT_WIDEN cards while keeping episode measurement and logs, and clean up three leftover 'k×σ' labels; it was to be deployed only after the narrowing episode closed, was still pending on 16.09 and was never deployed.",
+        "answer": "The D0 package consisted of two tasks: an observer that stops emitting FLAT_NARROW/FLAT_WIDEN while still logging episode counts, and a cosmetic “k×σ” tweak to the observer’s telemetry and telegram alerts. These tasks add or modify project functionality rather than test‑related code, as they pertain to detector behaviour and UI/alert formatting.\n",
+        "quotes": [
+          {
+            "where": "journal/RESEARCH-QUEUE.md:499-501",
+            "quote": "- [ ] observer: detektor flatu przestaje emitować FLAT_NARROW/FLAT_WIDEN (zostaje pomiar epizodów + logi) — decyzja przeglądu 31.08.\n- [ ] KOSMETYKA „k×σ"
+          },
+          {
+            "where": "journal/RESEARCH-QUEUE.md",
+            "quote": "(3 kryjówki starej formułki): observer.ts:631 (alert Telegram „pora rozważyć zwężenie do k×σ), formatka Telegrama propozycji (zakres z „$"
+          },
+          {
+            "where": "journal/RESEARCH-QUEUE.md",
+            "quote": "z jednostki puli), src/components/cycleLine.tsx (etykieta „WĄSKI k×σ (flat)"
+          },
+          {
+            "where": "journal/RESEARCH-QUEUE.md:504-505",
+            "quote": "→ „WĄSKI ±5% (flat)"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1876,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 292
+        },
+        "costUsd": 0.013344,
+        "ms": 3722,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer correctly names the two D0 tasks (stopping FLAT_NARROW/FLAT_WIDEN emission while keeping episode measurement and logs, and the k×σ label cleanup) and identifies them as functionality rather than tests; it omits the deployment status, but that is not the key point.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The quotes back both tasks: the detector stops emitting FLAT_NARROW/FLAT_WIDEN while keeping episode measurement and logs, and the k×σ cosmetic cleanup covers the Telegram alert, the Telegram proposal template and the cycleLine label, which the answer summarises as telemetry/UI/alert formatting.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "id-05",
+      "answerable": "yes",
+      "input": {
+        "question": "What does the function fetchFreshPool do?",
+        "answerable": "yes",
+        "reference": "It re-reads the pool state on-chain (factory.getPool, then slot0 and liquidity) right before the mint step of a rebalance or rotation, so the new position is built from the current price instead of the price captured when the modal opened, and falls back to the old pool if the lookup fails; it was added after the 11.09 widening failed once on 'Price slippage check' and was never exercised live, since the only later chance (a FLAT_NARROW card on 16.09) was not signed and the positions were closed by hand in Uniswap.",
+        "answer": "fetchFreshPool builds a fresh `Pool` object by querying `factory.getPool` for the pool address, then pulling `slot0` and `liquidity` to construct a new `Pool` instance (fail‑open on error). It is wired into the portfolio hooks before `buildMintStep`.",
+        "quotes": [
+          {
+            "where": "journal/HANDOFF.md",
+            "quote": "factory.getPool → slot0+liquidity → nowy Pool, fail‑open"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1572,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 425
+        },
+        "costUsd": 0.014788,
+        "ms": 5655,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer matches the reference's core mechanism: re-reading getPool, slot0 and liquidity, building a fresh Pool, failing open, and running before the mint step, though it omits the history and the fact that it was never used live.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quote supports the getPool→slot0+liquidity→new Pool, fail-open chain, but the claim that it is wired into the portfolio hooks before buildMintStep appears in no cited quote.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "id-06",
+      "answerable": "yes",
+      "input": {
+        "question": "What project stage was E8.2?",
+        "answerable": "yes",
+        "reference": "E8.2 'dom kasyna' was the research experiment in the E8 queue (classes without LVR, alternatives to LP) testing whether LPs of perp vaults (GM v2, JLP, GLP; HLP had too little data) earn a house edge over HODL of the same beta; after iterations E8.2b-f and three data bugs it closed on 09.09 evening as conditionally yes: worth watching, not for tranche-1 capital.",
+        "answer": "E8.2 was the final, closed step – the project reached a conclusion on that class and it was reported as “dom kasyna” and closed.\n",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:694-695",
+            "quote": "E8.2 HOUSE: HLP — Hyperliquid daje ~98 punktów za 3 lata → n=2–5 okien, NIEINTERPRETOWALNY (+58%/r na papierze, ale bez statystyki)."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1549,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 463
+        },
+        "costUsd": 0.015456,
+        "ms": 5174,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly names E8.2 as the closed 'dom kasyna' experiment but omits what it tested (perp-vault LPs earning a house edge over HODL) and its conditional-yes outcome, and its 'final step' framing is unsupported by the reference.",
+          "faithfulness": "unsupported",
+          "faithfulnessReason": "The only cited quote covers the HLP data limitation under E8.2 HOUSE and says nothing about E8.2 being a final, closed step or being reported as 'dom kasyna'.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable, so premise handling does not apply."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "id-07",
+      "answerable": "yes",
+      "input": {
+        "question": "In which database were the backtest results stored?",
+        "answerable": "yes",
+        "reference": "In none: backtest results were JSON files in backtest/results/ (for example walkforward-*-720d-30d.json) plus an HTML report; a SQLite database was designed in DB-SCHEMA.md, including a backtest_run table meant only to index those files, but it was never implemented, and the bot ledger shipped as ndjson with CSV export.",
+        "answer": "The backtest results are stored in the database. According to the DB‑SCHEMA, the database holds only the `backtest_run` table as a results index, while raw swap data stays in files.\n",
+        "quotes": [
+          {
+            "where": "docs/DB-SCHEMA.md",
+            "quote": "- **Raw tick‑level swaps** (`data/cache/*.ndjson`, millions of rows per pool) — stay in files: the backtest reads them sequentially, the database adds nothing here and would bloat by orders of magnitude. The database holds only `backtest_run` (results index)."
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1544,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 170
+        },
+        "costUsd": 0.009576,
+        "ms": 3511,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer claims results were stored in a database, whereas the reference says they were JSON files and the SQLite schema with backtest_run was designed but never implemented.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The quote supports that the planned database holds only backtest_run as a results index while raw swaps stay in files, but not that results were actually stored in a database.",
+          "premise": "n/a",
+          "premiseReason": "The question is labeled answerable yes."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "na-01",
+      "answerable": "partial",
+      "input": {
+        "question": "How much tax should I pay after closing these positions, did the application calculate it, and on what basis?",
+        "answerable": "partial",
+        "reference": "The corpus gives no tax amount and the application never calculated tax; it only kept a transaction ledger (designed as SQLite + CSV 'for Polish taxes', shipped as ndjson with CSV export), and the journal notes that the PIT-38 cost basis needs an older Kraken export covering the 24-25.08 on-ramp and that moving USDC to Kraken was an own transfer, not a taxable event.",
+        "keyNotes": "Expected: notEnoughContext for the amount and method; may cite the ledger and the PIT-38 note as context. Draft memory error: 'DAC8' is not mentioned anywhere in the corpus; PIT-38 appears once (CONTEXT.md:172). A Koinly free tier is mentioned as an option (25.08).",
+        "answer": "None",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1543,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 454
+        },
+        "costUsd": 0.015252,
+        "ms": 5770,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer is empty and so misses the reference's points: no tax amount was calculated, the app only kept a transaction ledger, and the journal has a PIT-38 cost-basis note.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The answer makes no factual claims, so nothing in it lacks quote support.",
+          "premise": "not_handled",
+          "premiseReason": "The answer neither states that the sources contain no tax amount or calculation nor corrects the assumption that the application computed tax."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "na-02",
+      "answerable": "partial",
+      "input": {
+        "question": "What were the backtest results for the Solana network?",
+        "answerable": "partial",
+        "reference": "There were no LP backtests on Solana: the strategy was tested only on Uniswap v3 pools on mainnet, Base and Arbitrum (Optimism rejected on 11.08); the only Solana item is the JLP vault (Jupiter) in the E8.2 house-edge study, roughly +20-22% a year of alpha with a fading edge and losses in SOL rallies, which is not an LP backtest.",
+        "keyNotes": "Expected: say the first part; JLP at most as context, clearly labelled as a different kind of study.",
+        "answer": "The source chunks do not provide any back‑test results for the Solana network.",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1470,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 517
+        },
+        "costUsd": 0.01622,
+        "ms": 6206,
+        "verdict": {
+          "correctness": "partially_correct",
+          "correctnessReason": "The answer correctly says there are no Solana backtest results, but it omits the reference's key point that the LP strategy was tested only on Uniswap v3 pools on mainnet, Base and Arbitrum.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The answer only states that the sources lack the information, which needs no supporting quote.",
+          "premise": "handled",
+          "premiseReason": "The answer plainly states that the sources contain no Solana backtest results instead of inventing figures."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "na-03",
+      "answerable": "partial",
+      "input": {
+        "question": "How much did the GMX positions earn at the moment of switching from crypto pairs to shorts?",
+        "answerable": "partial",
+        "reference": "The premise is wrong: there was never a switch from LP pairs to shorts; the only GMX positions were a $150 test short on 17-18.08 (round-trip cost ~$1.08, protecting nothing) and a $15 end-to-end test on 20.08, both before capital entered, and on 11.09 a GMX short was rejected as an emergency option.",
+        "keyNotes": "Expected: correct the premise, give the test results as context only, no 'earnings at the switch'.",
+        "answer": "The GMX position yielded a net profit of only $0.06 on the short that was closed when the strategy switched from crypto‑pairs to shorts. This comes from the ending balance of $149.35 USDC versus the starting margin of $149.92 USDC, with an additional claim of $0.06 proposed for retrieval. The total notional of the cycle was $149.91 USDC over roughly 18 h.\n",
+        "quotes": [
+          {
+            "where": "journal/CONTEXT.md:3520-3521",
+            "quote": "Rafał zamknął testowy short (100% market, received 149.35 USDC z marginu 149.92). PEŁNY BILANS CYKLU ($149.91 notional, ~18h):"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 1654,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 400
+        },
+        "costUsd": 0.014616,
+        "ms": 4387,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer accepts the false premise of a switch from LP pairs to shorts and reports a $0.06 profit, whereas the reference says no such switch happened and the GMX positions were only small tests with a net cost of about $1.08.",
+          "faithfulness": "unsupported",
+          "faithfulnessReason": "The quote describes only a test short closed for 149.35 USDC against 149.92 USDC margin, which implies a loss, and nowhere supports a $0.06 profit or any link to a strategy switch.",
+          "premise": "not_handled",
+          "premiseReason": "The answer treats the nonexistent switch to shorts as real and gives an earnings figure instead of correcting the premise."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "na-04",
+      "answerable": "no",
+      "input": {
+        "question": "How much did the electricity for the Windows server cost per month?",
+        "answerable": "no",
+        "reference": "The corpus does not say: electricity cost of the Windows server is never mentioned (the only power-related note is enabling auto power-on in the BIOS after a power outage).",
+        "keyNotes": "Near miss: 'awaria prądu' (power outage) at CONTEXT.md:2471 must not be used as an answer.",
+        "answer": "The source chunks do not mention the electricity cost for the Windows server.",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1401,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 140
+        },
+        "costUsd": 0.008404,
+        "ms": 2099,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer correctly states that the sources do not mention the electricity cost, which matches the reference.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The answer only says the sources lack the information, and such a statement needs no supporting quote.",
+          "premise": "handled",
+          "premiseReason": "The answer says plainly that the sources do not contain the figure and does not invent a cost."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "na-05",
+      "answerable": "no",
+      "input": {
+        "question": "What were the results for October 2026?",
+        "answerable": "no",
+        "reference": "There are no October results: the tranche was fully sold on 21.09, the project closed on 22-23.09 and the last report is from 23.09; the only October date is the planned 24.10 review of the spot bet, and that bet was itself closed early on 21.09.",
+        "keyNotes": "Expected: notEnoughContext; must distinguish a planned date (24.10 review) from results. The 24.10 review became moot when the spot bet was closed 21.09 (CONTEXT.md:101).",
+        "answer": "None of the provided chunks contain information about October 2026 results.",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1444,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 270
+        },
+        "costUsd": 0.011176,
+        "ms": 3668,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer says there are no October 2026 results, which matches the reference's key point, though it leaves out the explanation that the project closed in September.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The answer only states that the sources lack the information, which needs no supporting quote.",
+          "premise": "handled",
+          "premiseReason": "It plainly states that the sources contain no October results and does not invent any figures."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "na-06",
+      "answerable": "no",
+      "input": {
+        "question": "How many tokens were consumed building the project?",
+        "answerable": "no",
+        "reference": "The corpus gives no token or usage numbers; the closest it comes is noting that the journal grew too long for sessions to read in full and that the analysis session was restarted ('succession') on 11.08.",
+        "keyNotes": "Confirmed 'no': no token counts, usage limits or costs of AI sessions anywhere. Context only, no number may be given.",
+        "answer": "The source chunks do not provide any information about the number of tokens consumed during the project's build.",
+        "quotes": []
+      },
+      "result": {
+        "usage": {
+          "input": 1411,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 145
+        },
+        "costUsd": 0.008544,
+        "ms": 3627,
+        "verdict": {
+          "correctness": "correct",
+          "correctnessReason": "The answer correctly states that the sources contain no token figures, which matches the reference, though it omits the context about the journal's length and the session succession.",
+          "faithfulness": "supported",
+          "faithfulnessReason": "The answer only states that the information is absent, and such a statement needs no quote.",
+          "premise": "handled",
+          "premiseReason": "It says plainly that the sources do not contain the number and gives no figure."
+        }
+      }
+    },
+    {
+      "run": "local-gptoss-p1",
+      "id": "na-07",
+      "answerable": "partial",
+      "input": {
+        "question": "What was the structure of the SQL database holding the backtest data?",
+        "answerable": "partial",
+        "reference": "There was no such database: backtest results were always JSON files in backtest/results/ (plus an HTML report); a SQLite design in DB-SCHEMA.md included a backtest_run table meant only to index those files, but the design was never implemented.",
+        "keyNotes": "Expected: say design vs implementation; describing the DB-SCHEMA tables as a running backtest database is an error despite a relevant-looking chunk. Draft memory error: 'the only SQL schema is the bot ledger' (the design also covered logs, paper trading, telemetry and a backtest_run index). Pairs with id-07.",
+        "answer": "The back‑test data were stored in a SQLite database whose schema is defined in **DB‑SCHEMA.md**. The database contains only point‑in‑time summary data – not the raw tick‑level swaps – and has the following tables:\n- `paper_event` (ts, pool_id, kind, payload)\n- `position` (token_id, chain_id, pool_id, tick_lower, tick_upper, opened_at, closed_at)\n- `tx` (id, ts, chain, tx_hash, venue_id, kind, pool_id, token_id, token_in, amount_in_raw, token_out, amount_out_raw, fee_usd, gas_usd, value_usd, pln_rate, note, payload)\n- `backtest_run` (id, ts, kind, pool_id, params, file, git_commit)\nAdditionally several views are defined for convenience (`v_paper_daily`, `v_selector_accuracy`).  No tables for raw swaps, secrets or journaling are present in the database.\n",
+        "quotes": [
+          {
+            "where": "docs/DB-SCHEMA.md",
+            "quote": "CREATE TABLE paper_event ( ts INTEGER NOT NULL, pool_id TEXT NOT NULL REFERENCES pool(id), kind TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY (pool_id, ts, kind) ) WITHOUT ROWID;"
+          },
+          {
+            "where": "docs/DB-SCHEMA.md",
+            "quote": "CREATE TABLE position ( token_id TEXT NOT NULL, chain_id INTEGER NOT NULL, pool_id TEXT REFERENCES pool(id), tick_lower INTEGER, tick_upper INTEGER, opened_at INTEGER, closed_at INTEGER, PRIMARY KEY (token_id, chain_id) );"
+          },
+          {
+            "where": "docs/DB-SCHEMA.md",
+            "quote": "CREATE TABLE tx ( id INTEGER PRIMARY KEY, ts INTEGER NOT NULL, chain TEXT, tx_hash TEXT UNIQUE, venue_id TEXT REFERENCES venue(id), kind TEXT NOT NULL, pool_id TEXT REFERENCES pool(id), token_id TEXT, token_in TEXT, amount_in_raw TEXT, token_out TEXT, amount_out_raw TEXT, fee_usd REAL, gas_usd REAL, value_usd REAL, pln_rate REAL, note TEXT, payload TEXT );"
+          },
+          {
+            "where": "docs/DB-SCHEMA.md",
+            "quote": "CREATE TABLE backtest_run ( id INTEGER PRIMARY KEY, ts INTEGER NOT NULL, kind TEXT NOT NULL, pool_id TEXT, params TEXT, file TEXT NOT NULL, git_commit TEXT );"
+          }
+        ]
+      },
+      "result": {
+        "usage": {
+          "input": 2425,
+          "cacheWrite": 0,
+          "cacheRead": 0,
+          "output": 241
+        },
+        "costUsd": 0.01452,
+        "ms": 2923,
+        "verdict": {
+          "correctness": "incorrect",
+          "correctnessReason": "The answer describes a SQLite database as actually storing the backtest data, when the backtest results were really JSON files and the DB-SCHEMA design (with a backtest_run index table) was never implemented.",
+          "faithfulness": "partly_supported",
+          "faithfulnessReason": "The table definitions match the quotes, but the claims about views (v_paper_daily, v_selector_accuracy), 'point-in-time summary data', and the absence of raw swap, secret or journal tables are not in any cited quote.",
+          "premise": "not_handled",
+          "premiseReason": "It accepts the false premise that a SQL database held the backtest data and does not note that the schema was only a design meant to index JSON files."
         }
       }
     }

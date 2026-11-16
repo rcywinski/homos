@@ -75,6 +75,38 @@
       "vramNote": "including the reranker; serve.log: 31/31 layers on the GPU (17 332 MiB on CUDA0: 16 268 weights, 740 KV, 324 compute), draft model fully on the GPU",
       "powerLimitW": 420,
       "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-gemma31-p1",
+      "startUtc": "2026-11-16T11:46:16Z",
+      "endUtc": "2026-11-16T11:53:31Z",
+      "samples": 430,
+      "peakPowerW": 414.5,
+      "avgPowerW": 356.3,
+      "avgPowerBusyW": 391.0,
+      "busyNote": "average over the 363 s with GPU utilisation at or above 50%",
+      "maxTempC": 71.0,
+      "peakVramMiB": 23559,
+      "vramNote": "reranker stopped; loaded at 19 024 MiB, grew about 4.5 GB during the run, about 1 GB free at peak; serve.log: 61/61 layers on the GPU (CUDA0 20 536 MiB: 17 790 model, 2 560 KV, 186 compute; 1 102 MiB host buffer is the embedding table), draft model 5/5, no reload",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
+      "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
+    },
+    {
+      "run": "local-gptoss-p1",
+      "startUtc": "2026-11-16T11:56:09Z",
+      "endUtc": "2026-11-16T11:58:59Z",
+      "samples": 169,
+      "peakPowerW": 421.8,
+      "avgPowerW": 330.3,
+      "avgPowerBusyW": 380.4,
+      "busyNote": "average over the 130 s with GPU utilisation at or above 50%",
+      "maxTempC": 68.0,
+      "peakVramMiB": 13941,
+      "vramNote": "reranker stopped; serve.log: 25/25 layers on the GPU (CUDA0 12 821 MiB: 12 036 model, 558 KV, 226 compute; 1 104 MiB host buffer is the embedding table). A first attempt (11:53:44 to 11:54:23 UTC) stopped at the first call on the Mac-side template check, before any answer; model unloaded by hand.",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)",
+      "log": "C:\\ollama\\logs\\phase3-3.4-2026-11-16.csv"
     }
   ],
   "batch": "Whole batch, 1821 samples from 11:00:19 UTC to the end of the log: no gap over 3 s, no alert, peak 419.2 W, average 388.4 W while busy, max 72.7 C, peak VRAM 20 555 MiB, limit 420 W throughout, no Kernel-Power 41. Log and watch stopped after 3.3."

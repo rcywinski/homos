@@ -228,7 +228,7 @@ export function localOptions(baseUrl: string, think: boolean, model = LOCAL_MODE
  */
 const CANDIDATES: Record<string, (baseUrl: string) => LocalGenOptions> = {
   [GEMMA31_MODEL]: (baseUrl) => ({ baseUrl, model: GEMMA31_MODEL, tokenizerDir: 'ai/index/tokenizers/gemma-4-31b', think: false, numCtx: 17408, numPredict: 2048, sampling: { temperature: 1.0, top_p: 0.95, top_k: 64, min_p: 0, presence_penalty: 0, repeat_penalty: 1.0 }, keepAlive: '2m', maxNetworkRetries: 0 }),
-  [GPTOSS_MODEL]: (baseUrl) => ({ baseUrl, model: GPTOSS_MODEL, tokenizerDir: 'ai/index/tokenizers/gpt-oss-20b', think: 'low', numCtx: 22528, numPredict: 8192, sampling: { temperature: 1.0, top_p: 1.0, top_k: 0, min_p: 0, presence_penalty: 0, repeat_penalty: 1.0 }, keepAlive: '2m', maxNetworkRetries: 0 }),
+  [GPTOSS_MODEL]: (baseUrl) => ({ baseUrl, model: GPTOSS_MODEL, tokenizerDir: 'ai/index/tokenizers/gpt-oss-20b', think: 'low', numCtx: 22528, numPredict: 8192, maxTemplateOverhead: 96, sampling: { temperature: 1.0, top_p: 1.0, top_k: 0, min_p: 0, presence_penalty: 0, repeat_penalty: 1.0 }, keepAlive: '2m', maxNetworkRetries: 0 }),
   [MUSE_MODEL]: (baseUrl) => ({ baseUrl, model: MUSE_MODEL, tokenizerDir: 'ai/index/tokenizers/muse-glimmer-30b', think: false, numCtx: 15360, numPredict: 2048, sampling: { temperature: 1.0, top_p: 0.95, top_k: 64, min_p: 0, presence_penalty: 0, repeat_penalty: 1.0 }, keepAlive: '2m', maxNetworkRetries: 0 }),
 };
 

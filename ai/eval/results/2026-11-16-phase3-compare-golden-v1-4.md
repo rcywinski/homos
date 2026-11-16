@@ -98,7 +98,39 @@ Generator per column:
 - Unverified quotes: Gemma A 18/67; Gemma P 11/87 and 11/88.
 - Per question: Gemma P run-to-run spread 7; Gemma A against each P run 10 and 8 changes.
 
+## 3.4 New models with prompt P
+
+Variant A chunk lists, prompt P, reranker stopped during generation. Qwen P1 and P2 (1.12, same lists and prompt, 250 W) are the reference; a candidate counts as better only with two runs and a gap beyond the spread.
+
+| measure | Qwen P1 on A (1.12) | Qwen P2 on A (1.12) | Gemma 4 31B P, run 1 (3.4) | gpt-oss 20B P, run 1 (3.4) |
+|---|---|---|---|---|
+| valid structured outputs | 34/34 | 34/34 | 34/34 | 34/34 |
+| answers that needed the retry | 0 | 0 | 0 | 0 |
+| citations verified | 84/87 | 74/77 | 56/66 | 33/75 |
+| quotes over 40 words | 0 | 0 | 0 | 5 |
+| unanswerable labelled `none` | 3/3 | 3/3 | 3/3 | 3/3 |
+| judge: correct / partially / incorrect | 16 / 13 / 5 | 16 / 11 / 7 | 7 / 18 / 9 | 6 / 14 / 14 |
+| judge: supported / partly / unsupported | 1 / 32 / 1 | 6 / 25 / 3 | 19 / 12 / 3 | 10 / 19 / 5 |
+| judge: premise handled (partial + no) | 7/8 | 7/8 | 5/8 | 4/8 |
+| latency median / p95 (s) | 13.0 / 17.6 | 12.8 / 17.6 | 11.5 / 16.5 | 3.8 / 7.1 |
+| decode tokens per second, median | 62.9 | 61.5 | 72.6 | 124.6 |
+| generated tokens per answer, median | 276 | 252 | 139 | 286 |
+| num_ctx | 17408 | 17408 | 17408 | 22528 |
+| system prompt | LOCAL_QUOTE_SYSTEM | LOCAL_QUOTE_SYSTEM | LOCAL_QUOTE_SYSTEM | LOCAL_QUOTE_SYSTEM |
+
+Generator per column:
+
+- Qwen P1 on A (1.12): `answer:ollama:qwen3.8:27b(think=false,num_ctx=17408,num_predict=2048,temperature=0.7,presence_penalty=0,prompt=LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts),cite=quote)`
+- Qwen P2 on A (1.12): `answer:ollama:qwen3.8:27b(think=false,num_ctx=17408,num_predict=2048,temperature=0.7,presence_penalty=0,prompt=LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts),cite=quote)`
+- Gemma 4 31B P, run 1 (3.4): `answer:ollama:gemma4:31b-it-q4_K_M(think=false,num_ctx=17408,num_predict=2048,temperature=1,presence_penalty=0,prompt=LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts),cite=quote)`
+- gpt-oss 20B P, run 1 (3.4): `answer:ollama:gpt-oss:20b(think=low,num_ctx=22528,num_predict=8192,temperature=1,presence_penalty=0,prompt=LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts),cite=quote)`
+
+- Gemma 4 31B P, run 1 (3.4): single run, correct 7, incorrect 9, unverified 10/66; no comparison claim.
+- gpt-oss 20B P, run 1 (3.4): single run, correct 6, incorrect 14, unverified 42/75; no comparison claim.
+
 Box during local-pb1 (2026-11-16T11:10:01Z to 2026-11-16T11:16:05Z UTC): peak 417.6 W, average 369.7 W, max 72.1 C, peak VRAM 20259 MiB; alerts: none (no gap over 3 s, no Kernel-Power 41 event).
 Box during local-pb2 (2026-11-16T11:16:16Z to 2026-11-16T11:22:20Z UTC): peak 418.6 W, average 369.6 W, max 72.7 C, peak VRAM 20259 MiB; alerts: none (no gap over 3 s, no Kernel-Power 41 event).
 Box during local-gemma-p1 (2026-11-16T11:22:33Z to 2026-11-16T11:26:12Z UTC): peak 419.2 W, average 245.3 W, max 68.1 C, peak VRAM 20555 MiB; alerts: none (no gap over 3 s, no Kernel-Power 41 event).
 Box during local-gemma-p2 (2026-11-16T11:26:23Z to 2026-11-16T11:29:13Z UTC): peak 417.6 W, average 321.5 W, max 69.3 C, peak VRAM 20555 MiB; alerts: none (no gap over 3 s, no Kernel-Power 41 event).
+Box during local-gemma31-p1 (2026-11-16T11:46:16Z to 2026-11-16T11:53:31Z UTC): peak 414.5 W, average 356.3 W, max 71 C, peak VRAM 23559 MiB; alerts: none (no gap over 3 s, no Kernel-Power 41 event).
+Box during local-gptoss-p1 (2026-11-16T11:56:09Z to 2026-11-16T11:58:59Z UTC): peak 421.8 W, average 330.3 W, max 68 C, peak VRAM 13941 MiB; alerts: none (no gap over 3 s, no Kernel-Power 41 event).
