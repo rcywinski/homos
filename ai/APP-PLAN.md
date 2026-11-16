@@ -423,8 +423,10 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   Then the same Playwright suite against the real server on the LAN (`E2E_BASE_URL=... E2E_SHOTS_DIR=...
   npx playwright test --grep @real`; the dry-run-only paths are skipped there), with a screenshot of each path
   reported to the owner.
-- [ ] **4.6** Guest-key mode: `POST /api/retrieve`, browser generator with `dangerouslyAllowBrowser`, verifier in the browser, CSP, the
-  no-key-to-our-origin test. Tested with a fake fetch; one real call only with a key the owner creates for it. M.
+- [ ] **4.6** Guest-key mode. Plan written 16 Nov 2026 (no code yet); details in section 9. M, in five parts:
+  4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
+  call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;
+  4.6e one measurement of the cloud generator on the fully local retrieval (owner's key, owner's OK first).
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner: Cloudflare Tunnel, static hosting choice,
   optional Access, kill switch documented in `inference/README.md`. S. Checklist: `SERVE_MODE=tunnel` and
   `SERVE_HOST=127.0.0.1` in `serve.env` (the server refuses tunnel mode on any other address); the start-up log shows
@@ -441,4 +443,104 @@ Steps 4.1 to 4.5 can be built while phase 3 holds the box (4.4b needs CC-Win on 
 - Chat with read-only tools over current positions (same tool rules as step 2.1: own schema, size caps, results as
   data).
 - Live data changes the risk: rate limits on chain reads, and positions shown with their timestamp.
+
+## 9. Step 4.6 plan: guest-key mode (written 16 Nov 2026, not built)
+
+**Goal.** A visitor who has an Anthropic API key can have a question answered by the cloud model instead of the local
+one. Retrieval stays on our server with the local models; only generation moves, and it runs in the visitor's
+browser with the visitor's key. The owner's key is never involved.
+
+**Flow.**
+
+1. The visitor pastes a key into a password field on the Ask tab and picks "Answer with my own key". The key goes
+   into a variable of the page script and nowhere else (see "The key" below).
+2. The browser sends the question, without the key, to `POST /api/guest/retrieve`. The server cleans the question,
+   counts it against the visitor's limits, runs the same local retrieval as the chat (embedder and reranker on the
+   box, through the GPU queue) and returns:
+   - the ready request body for the Anthropic Messages API: model `claude-sonnet-5-5`, effort medium, the measured
+     answer prompt (`ANSWER_SYSTEM`) and the user prompt with the 10 chunks, the JSON schema of the answer, and a
+     `max_tokens` cap; built by the same function the cloud generator uses, so the browser cannot drift from the
+     measured prompt;
+   - the 10 sources (chunk id, file, lines, title) for the "Sources searched" list;
+   - a ticket: an HMAC over the question, the chunk ids and an expiry of 10 minutes, signed with a secret drawn at
+     server start and kept in memory.
+3. The browser sends that body to `https://api.anthropic.com/v1/messages` with the key in `x-api-key`, the API
+   version header, and `anthropic-dangerous-direct-browser-access: true` (plain `fetch`, no SDK in the bundle).
+4. The browser posts the model's JSON answer and the ticket, without the key, to `POST /api/guest/verify`. The server
+   checks the ticket, rebuilds the 10 chunks from the corpus by id, and runs the same verification as for the local
+   engine: every quote against its chunk, every number with the three states, the fixed texts for "not in the data"
+   and invalid output, masking. It returns the same response shape as `/api/ask`, so the page renders it with the same
+   marks. The UI never shows the raw model answer, only what verification returns.
+
+**What leaves our server for the browser in this mode.** The question as cleaned, the answer prompt (already public in
+the repository), and the text of the 10 retrieved chunks with their ids, files, lines and titles, private network
+addresses masked. That is the same text the local engine reads; the corpus is public in the repository already. The
+chunks are masked before they are sent, and verification runs against the masked text the model actually saw, so a
+quote of a masked line still verifies.
+
+**What reaches our server.** The question (twice: retrieve and verify) and the model's answer JSON. Never the key, and
+not the Anthropic response headers. The request log stores what it stores today (daily visitor hash, outcome, masked
+question), plus the engine `guest-key`; the answer text is not logged.
+
+**Does verification still run on our side?** Yes: `/api/guest/verify` is the only way the page turns a model answer
+into a displayed answer. A visitor can of course forge the JSON they post, but they only change what they themselves
+see; nothing is stored or shown to anyone else. The ticket stops `/verify` being used on chunks the server did not
+hand out, and expires.
+
+**The key.**
+
+- Held in one module-level variable of the page script (not React state that dev tools persist, not a context
+  provider), set from the password field, which is cleared at once.
+- Never in localStorage, sessionStorage, IndexedDB, cookies, the URL or the history state; gone on reload, and a
+  "Forget my key" button clears it at once.
+- Sent only in the `x-api-key` header of the request to `api.anthropic.com`. Requests to our server are built by a
+  separate function that has no access to the variable.
+- The server refuses (400, nothing logged beyond the outcome) any request whose body or headers contain `sk-ant-`, so a
+  pasted key in the question box is not logged either.
+- The field has `autocomplete="off"`, `spellcheck="false"` and is not inside a form that a browser would offer to save.
+
+**Content security policy.** `connect-src 'self' https://api.anthropic.com`: exactly one extra target, in both the
+header and the meta tag (the sync test stays). Nothing else changes: no third-party script, style, font, image or
+frame source.
+
+**What the page says** (next to the key field, before the first use):
+
+- "Your key is used from your browser to call Anthropic directly. It is never sent to this site's server, never
+  stored, and forgotten when you reload the page."
+- "Each question costs roughly 3 US cents on your account (Claude Sonnet 5.5 reading about 13,000 tokens of sources;
+  measured on 34 test questions: 1.5 to 4.3 cents)."
+- "Use a key you create for this, with a low spend limit on its workspace and a short expiry (Anthropic offers 3
+  hours or 1 day), and delete it afterwards."
+- Organisations with zero data retention or the Compliance API cannot call the API from a browser; the API answers 401
+  and the page shows that message.
+
+**Cost bound.** One API call per question; `max_tokens` capped at 2,048 (measured answers average 404 output tokens;
+the cap is checked against the largest measured answer before it is fixed), which bounds a question at about 5 cents
+at current prices. The guest path has the same per-visitor and global limits as the local chat.
+
+**Measured or not.** The comparison measured Sonnet on the phase 1 retrieval (with the Sonnet query translation). The
+guest mode uses Sonnet on the fully local retrieval, which was not measured. Step 4.6e runs the 34 golden questions
+through exactly this path once (owner's key, about $1 for the answers plus the judge, owner's OK first) and the page
+labels the guest engine with that result, or as "not measured" until then.
+
+**Risks and what limits them.**
+
+| Risk | Limit |
+|---|---|
+| A compromised bundle (a dependency or a tampered build) reads the key | The build guard already refuses wallet and signing packages; 4.6c turns it into an allow-list (react, react-dom, scheduler and our own code), so any new package in the showcase bundle fails the build. The CSP allows network calls only to our origin and `api.anthropic.com`, and no other image, frame, font or form target. |
+| The same script sends the key to our own origin | Our server refuses and does not log requests containing `sk-ant-`; it keeps no request bodies. |
+| The script navigates away with the key in the URL (`location`, `window.open`), which `connect-src` does not cover | Not stopped by CSP; the allow-list guard and the no-inline-script policy are what prevent such code from running. Stated as residual risk. |
+| Cross-site scripting in our page | No `innerHTML` anywhere (Markdown renderer builds React elements), React escaping, CSP without inline scripts or eval. |
+| Another site frames the page to capture the key | `frame-ancestors 'none'` and `X-Frame-Options: DENY`. |
+| Browser extensions read the page | Outside our control; the page recommends a dedicated, short-lived, low-limit key. |
+| Spending the visitor's key beyond one call | One call per click, no retries on our side, `max_tokens` cap, limits per visitor. |
+| Prompt injection from a source chunk | No tools in the call; the answer is verified and shown as plain text. |
+| `/api/guest/verify` abused as a free verifier | Ticket with HMAC and 10 minute expiry; per-visitor limits; no GPU work in verify. |
+
+**Tests (4.6d).** Playwright with `api.anthropic.com` mocked by `page.route`: a full guest question renders with marks;
+no request to our origin contains the test key (all requests recorded); localStorage, sessionStorage, cookies and
+IndexedDB hold nothing after a question; the key is gone after reload and after "Forget my key"; the 401 CORS message
+is shown; the CSP header and meta allow exactly `'self' https://api.anthropic.com` in `connect-src`. Server unit tests:
+tickets (forged, expired, other chunk ids), `sk-ant-` refusal without logging, verify returns the same shape as
+`/api/ask`.
 
