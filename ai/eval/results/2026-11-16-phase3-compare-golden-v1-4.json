@@ -1,0 +1,80 @@
+{
+  "date": "2026-11-16",
+  "goldenVersion": "1.4",
+  "box": [
+    {
+      "run": "local-a-420w",
+      "startUtc": "2026-11-16T11:01:43Z",
+      "endUtc": "2026-11-16T11:09:11Z",
+      "samples": 443,
+      "peakPowerW": 410.8,
+      "avgPowerW": 308.5,
+      "avgPowerBusyW": 392,
+      "busyNote": "average over the 328 s with GPU utilisation at or above 50%",
+      "maxTempC": 71.6,
+      "peakVramMiB": 20191,
+      "vramNote": "including the reranker",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    }
+  ],
+  "speed": [
+    {
+      "run": "local-a1",
+      "tokensPerSecondMedian": 60.2,
+      "msMedian": 12443,
+      "msP95": 16241,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 60.2,
+        "evalTokensMedian": 277,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14119,
+        "refStats": null
+      }
+    },
+    {
+      "run": "local-a2",
+      "tokensPerSecondMedian": 60.5,
+      "msMedian": 12810,
+      "msP95": 17436,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 60.5,
+        "evalTokensMedian": 242,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14119,
+        "refStats": null
+      }
+    },
+    {
+      "run": "local-a-420w",
+      "tokensPerSecondMedian": 79.9,
+      "msMedian": 9886,
+      "msP95": 12536,
+      "local": {
+        "validOutputs": 34,
+        "answers": 34,
+        "invalidOutputs": 0,
+        "answersRetried": 0,
+        "networkRetries": 0,
+        "tokensPerSecondMedian": 79.9,
+        "evalTokensMedian": 234,
+        "thinkingTokensMedian": 0,
+        "thinkingTokensMax": 0,
+        "promptTokensMax": 14119,
+        "refStats": null
+      }
+    }
+  ]
+}

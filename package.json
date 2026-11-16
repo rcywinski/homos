@@ -53,6 +53,7 @@
     "ai:chunk-lists": "tsx ai/eval/chunk-lists.ts",
     "ai:local-compare": "tsx ai/eval/local-compare.ts",
     "ai:tuning-compare": "tsx ai/eval/tuning-compare.ts",
+    "ai:phase3-compare": "tsx ai/eval/phase3-compare.ts",
     "ai:restore-results": "tsx ai/agent/restore-results.ts",
     "agent:ask": "tsx ai/agent/cli.ts",
     "ai:agent:probe": "tsx ai/agent/probe.ts",

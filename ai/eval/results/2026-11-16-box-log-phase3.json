@@ -1,0 +1,20 @@
+{
+  "source": "CC-Win, per-second write-through log on the box (C:\\ollama\\logs\\phase3-2026-11-16.csv: timestamp, power.draw, power.limit, temperature.gpu, clocks.sm, utilization.gpu, memory.used, pstate); alert at 85 C, a gap over 3 s, a log that stops growing for 4 s, or power.limit moving from 420 W. Figures per run as reported by CC-Win; box clock is CET (UTC+1).",
+  "runs": [
+    {
+      "run": "local-a-420w",
+      "startUtc": "2026-11-16T11:01:43Z",
+      "endUtc": "2026-11-16T11:09:11Z",
+      "samples": 443,
+      "peakPowerW": 410.8,
+      "avgPowerW": 308.5,
+      "avgPowerBusyW": 392.0,
+      "busyNote": "average over the 328 s with GPU utilisation at or above 50%",
+      "maxTempC": 71.6,
+      "peakVramMiB": 20191,
+      "vramNote": "including the reranker",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    }
+  ]
+}

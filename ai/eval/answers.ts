@@ -202,8 +202,12 @@ function tuned(base: ReturnType<typeof qwenOptions>, variant: TuningVariant) {
 
 export function localOptions(baseUrl: string, think: boolean, model = LOCAL_MODEL, variant: TuningVariant = 'base') {
   if (model === LOCAL_MODEL) return tuned(qwenOptions(baseUrl, think), variant);
-  if (variant !== 'base') throw new Error('step 1.12 variants are for qwen3.8:27b only');
-  return otherOptions(baseUrl, think, model);
+  if (variant !== 'base' && !(variant === 'P' && model === GEMMA_MODEL)) throw new Error('step 1.12 variants are for qwen3.8:27b only; Gemma also takes P (step 3.3)');
+  const o = otherOptions(baseUrl, think, model);
+  // Step 3.3: Gemma with prompt P. Its card sampling already has every repetition penalty off, so P changes only the
+  // system prompt. The longest P prompt is 15084 tokens by Gemma's tokenizer (15057 on the B lists), so 17408 still
+  // holds it plus num_predict 2048.
+  return variant === 'P' ? { ...o, system: LOCAL_QUOTE_SYSTEM, systemName: 'LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts)' } : o;
 }
 
 function otherOptions(baseUrl: string, think: boolean, model: string) {
@@ -243,10 +247,12 @@ function qwenOptions(baseUrl: string, think: boolean) {
 }
 
 /**
- * State of the inference box during the local runs, recorded in every local result file. The 250 W GPU power limit
- * (owner's decision, 11 Nov 2026, after four power losses at the default) lowers decode speed; see inference/README.md.
+ * State of the inference box during the local runs, recorded in every local result file. Steps 1.11 and 1.12 ran at a
+ * 250 W GPU power limit (owner's decision, 11 Nov 2026, after four power losses at the default); their result files
+ * record that. On 13 Nov the power supply was replaced and the limit removed (inference/README.md), so phase 3 runs at
+ * the card's default of 420 W, confirmed by CC-Win before the runs.
  */
-export const BOX = { gpu: 'RTX 3090 24 GB', gpuPowerLimitW: 250, defaultPowerLimitW: 420, ollama: '0.40.15', note: 'limit set at boot by the SYSTEM task "HOMOS GPU power limit"; confirmed by CC-Win before the runs' };
+export const BOX = { gpu: 'RTX 3090 24 GB', gpuPowerLimitW: 420, defaultPowerLimitW: 420, ollama: '0.40.15', note: 'no power cap since 13 Nov 2026 (1200 W PSU); power.limit 420 W confirmed by CC-Win on 16 Nov; per-second power and temperature log on the box (C:\\ollama\\logs\\phase3-2026-11-16.csv)' };
 
 export type Rendered = {
   label: string;

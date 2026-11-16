@@ -38,10 +38,28 @@ export const LOCAL_RUNS = [
 /** Step 1.12: Qwen tuning variants S (sampling), P (quoting prompt), L (citation by reference), two runs each. */
 export const TUNING_RUNS = ['s1', 's2', 'p1', 'p2', 'l1', 'l2'].map((t) => ({ run: `local-${t}`, file: `${RESULTS}/2026-11-11-answers-k10-local-${t}-golden-v1-4.json` }));
 
+/**
+ * Phase 3 (local models, owner 16 Nov 2026): 3.2 Qwen with prompt P on the saved variant B lists, 3.3 Gemma with
+ * prompt P on variant A, two runs each. 3.1 (speed at full power) is not judged.
+ */
+export const PHASE3_RUNS = ['pb1', 'pb2', 'gemma-p1', 'gemma-p2'].map((t) => ({ run: `local-${t}`, file: `${RESULTS}/2026-11-16-answers-k10-local-${t}-golden-v1-4.json` }));
+/** Spend cap for the whole of phase 3 (owner): every judge call of the phase counts against it. */
+export const PHASE3_CAP_USD = 10;
+export const PHASE3_JUDGMENTS = `${RESULTS}/2026-11-16-judgments-phase3-golden-v1-4.jsonl`;
+
+/** Everything phase 3 has spent so far: every judgment line of the phase (later steps add their files here). */
+export function phase3Spent(files: string[] = [PHASE3_JUDGMENTS]): number {
+  let s = 0;
+  for (const f of files.filter((x) => existsSync(x)))
+    for (const l of readFileSync(f, 'utf8').split('\n').filter((x) => x.trim())) s += (JSON.parse(l) as { result: { costUsd: number } }).result.costUsd;
+  return s;
+}
+
 export const SETS = {
   '1.9': { runs: RUNS, judgments: JUDGMENTS, judged: JUDGED, date: '2026-11-10' },
   local: { runs: LOCAL_RUNS, judgments: `${RESULTS}/2026-11-11-judgments-local-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-11-judged-local-golden-v1-4.json`, date: '2026-11-11' },
   tuning: { runs: TUNING_RUNS, judgments: `${RESULTS}/2026-11-11-judgments-tuning-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-11-judged-tuning-golden-v1-4.json`, date: '2026-11-11' },
+  phase3: { runs: PHASE3_RUNS, judgments: PHASE3_JUDGMENTS, judged: `${RESULTS}/2026-11-16-judged-phase3-golden-v1-4.json`, date: '2026-11-16' },
 };
 export type SetName = keyof typeof SETS;
 
@@ -75,8 +93,11 @@ export function loadItems(set: SetName = '1.9'): JudgedItem[] {
 }
 
 async function main() {
-  const maxUsd = Number(arg('--max-usd'));
-  if (!(maxUsd > 0)) throw new Error('--max-usd <cap in USD> is required');
+  const askedUsd = Number(arg('--max-usd'));
+  if (!(askedUsd > 0)) throw new Error('--max-usd <cap in USD> is required');
+  const set0 = (arg('--set') ?? '1.9') as SetName;
+  // Phase 3: this run may spend at most what is left of the phase cap.
+  const maxUsd = set0 === 'phase3' ? Math.min(askedUsd, PHASE3_CAP_USD - phase3Spent()) : askedUsd;
   const concurrency = Number(arg('--concurrency') ?? 4);
   const set = (arg('--set') ?? '1.9') as SetName;
   if (!SETS[set]) throw new Error(`--set must be one of ${Object.keys(SETS).join(', ')}`);
