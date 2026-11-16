@@ -124,17 +124,39 @@ export interface WalletPosition {
   lastValueUsd: number | null;
   lastHodlUsd: number | null;
   lastFeesUsd: number | null;
+  /**
+   * Against holding the same tokens, from recorded values only: lastValueUsd - lastHodlUsd (before fees) and
+   * lastValueUsd + lastFeesUsd - lastHodlUsd (with fees). The bot's value excludes uncollected fees.
+   */
+  againstHoldingBeforeFeesUsd: number | null;
+  againstHoldingWithFeesUsd: number | null;
+  /** Token amounts from the ledger: deposited (INCREASE), received at the close (COLLECT, principal plus fees). */
+  depositedTokens: WalletTokens | null;
+  withdrawnTokens: WalletTokens | null;
   transactions: number;
   daily: { date: string; valueUsd: number; hodlUsd: number; inRange: boolean }[];
 }
 
+export interface WalletTokens {
+  a0: number;
+  a1: number;
+  sym0: string;
+  sym1: string;
+}
+
+/** One row per on-chain transaction: MINT + INCREASE in one transaction is an opening, DECREASE + COLLECT a withdrawal. */
 export interface WalletTx {
   ts: string;
   chain: string;
   tokenId: string;
-  kind: string;
+  /** "opened" (mint and deposit), "withdrawn" (principal plus fees collected), or a single ledger kind. */
+  action: 'opened' | 'withdrawn' | 'deposit' | 'collected' | 'other';
+  /** Tokens moved: deposited for "opened", received in total for "withdrawn". */
   amount0: number;
   amount1: number;
+  /** For "withdrawn": the part that was fees (COLLECT minus DECREASE), per token. */
+  fees0: number | null;
+  fees1: number | null;
   sym0: string;
   sym1: string;
   usd: number | null;
@@ -164,7 +186,16 @@ export interface WalletData {
   /** What was left out and why; the excluded positions themselves leave no trace (not even their numbers). */
   excluded: { note: string };
   tokens: { address: string; label: string }[];
-  totals: { positions: number; transactions: number; gasEth: number; paperPools: number };
+  totals: {
+    positions: number;
+    transactions: number;
+    gasEth: number;
+    paperPools: number;
+    /** Sums over the real positions, recorded values only (null when any position lacks the value). */
+    feesUsd: number | null;
+    againstHoldingBeforeFeesUsd: number | null;
+    againstHoldingWithFeesUsd: number | null;
+  };
   positions: WalletPosition[];
   transactions: WalletTx[];
   paper: WalletPaperPool[];

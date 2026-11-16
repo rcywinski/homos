@@ -321,7 +321,16 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   is copied to the box apart from git. Without it the Wallet tab is hidden, never empty or failing. CI and the
   browser suite use `showcase/e2e/fixtures/wallet.fixture.json`: made-up positions, marked as test data on the page,
   checked by the same audit. The wallet address comes from `SHOWCASE_WALLET_ADDRESS` in the worktree `.env` (added by
-  the owner), read only at page build time.
+  the owner), read only at page build time. Wallet review (owner, 16 Nov 2026): against holding is shown before and with fees (the bot's
+  value excludes uncollected fees; the definition is stated once under the cards), totals over the four positions
+  (fees $42.02, before fees -$40.11, with fees +$1.91), token amounts where the ledger has no dollar value, one row
+  per transaction (mint plus deposit, decrease plus collect), repeated paper events counted. Paper figures checked
+  against `paper-history.ndjson` (all six pools match to the cent); paper "holding instead" is a 50/50 dollar split
+  frozen at the first open on 18 Aug, the real one is the position's own tokens at its first observation, which
+  explains the different results for the same pool. Found while merging rows: gas was counted twice for the four
+  withdrawals (decrease and collect share a transaction); the total is now 0.000047 ETH, not 0.000094 ETH. The
+  excluded positions' opening entries are lines 1 and 3 of `tx-ledger.ndjson` (24 Mar 2025, mainnet blocks
+  22117148 and 22117631).
 - [x] **4.2** Showcase front end skeleton in `showcase/`: own webpack entry, comparison view (two columns, "more"
   section, verdicts, verification marks), archive view, mock wallet panel (read-only), the "did not reliably beat
   holding" notice, a test that fails on any wallet or signing import. Check that the existing UI still builds. Fake. M.

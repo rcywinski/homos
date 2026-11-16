@@ -13,7 +13,7 @@
 import { readFileSync } from 'fs';
 import path from 'path';
 import { hasPrivateAddress } from './mask';
-import type { WalletData, WalletPaperPool, WalletPosition, WalletTx } from './showcase-data';
+import type { WalletData, WalletPaperPool, WalletPosition, WalletTokens, WalletTx } from './showcase-data';
 
 export const RAW_DIR = path.join('data', 'showcase-raw');
 /**
@@ -127,6 +127,15 @@ export function buildWallet(dir = RAW_DIR): WalletData {
       const meta = ledger.tokens[`${p.chain}:${p.tokenId}`];
       const series = daily(history.filter((h) => h.tokenId === p.tokenId));
       const last = series[series.length - 1];
+      const own = txs.filter((t) => t.chain === p.chain && t.tokenId === p.tokenId);
+      const sum = (kind: string): WalletTokens | null => {
+        const rows = own.filter((t) => t.kind === kind);
+        if (rows.length === 0) return null;
+        return { a0: round(rows.reduce((s, t) => s + t.a0h, 0), 8) ?? 0, a1: round(rows.reduce((s, t) => s + t.a1h, 0), 8) ?? 0, sym0: p.sym0, sym1: p.sym1 };
+      };
+      const value = round(last?.valueUsd);
+      const hodl = round(last?.hodlUsd);
+      const fees = round(last?.feesUsd);
       return {
         chain: p.chain,
         tokenId: p.tokenId,
@@ -138,27 +147,44 @@ export function buildWallet(dir = RAW_DIR): WalletData {
         withdrawnUsd: round(p.outUsd),
         lastValueUsd: round(last?.valueUsd),
         lastHodlUsd: round(last?.hodlUsd),
-        lastFeesUsd: round(last?.feesUsd),
-        transactions: txs.filter((t) => t.chain === p.chain && t.tokenId === p.tokenId).length,
+        lastFeesUsd: fees,
+        againstHoldingBeforeFeesUsd: value !== null && hodl !== null ? round(value - hodl) : null,
+        againstHoldingWithFeesUsd: value !== null && hodl !== null && fees !== null ? round(value + fees - hodl) : null,
+        depositedTokens: sum('INCREASE'),
+        withdrawnTokens: sum('COLLECT'),
+        transactions: new Set(own.map((t) => t.txHash)).size,
         daily: series.map((h) => ({ date: day(h.ts), valueUsd: round(h.valueUsd) ?? 0, hodlUsd: round(h.hodlUsd) ?? 0, inRange: h.inRange })),
       };
     });
 
-  const transactions: WalletTx[] = txs
-    .sort((a, b) => a.ts.localeCompare(b.ts))
-    .map((t) => ({
-      ts: t.ts,
-      chain: t.chain,
-      tokenId: t.tokenId,
-      kind: t.kind,
-      amount0: round(t.a0h, 8) ?? 0,
-      amount1: round(t.a1h, 8) ?? 0,
-      sym0: t.sym0,
-      sym1: t.sym1,
-      usd: round(t.usd),
-      txHash: t.txHash,
-      gasEth: round(costs[t.txHash]?.gasEth, 8),
-    }));
+  // One row per transaction: the ledger records a mint and its deposit, or a withdrawal and its collect, as two
+  // entries of the same transaction; shown apart they read as two payouts.
+  const byHash = new Map<string, RawTx[]>();
+  for (const t of [...txs].sort((a, b) => a.ts.localeCompare(b.ts))) byHash.set(t.txHash, [...(byHash.get(t.txHash) ?? []), t]);
+  const transactions: WalletTx[] = [...byHash.values()].map((group) => {
+    const of = (k: string) => group.find((t) => t.kind === k);
+    const mint = of('MINT');
+    const inc = of('INCREASE');
+    const dec = of('DECREASE');
+    const col = of('COLLECT');
+    const first = group[0];
+    const base = { ts: first.ts, chain: first.chain, tokenId: first.tokenId, sym0: first.sym0, sym1: first.sym1, txHash: first.txHash, gasEth: round(costs[first.txHash]?.gasEth, 8) };
+    if (mint && inc) return { ...base, action: 'opened', amount0: round(inc.a0h, 8) ?? 0, amount1: round(inc.a1h, 8) ?? 0, fees0: null, fees1: null, usd: round(inc.usd) };
+    if (dec && col) {
+      return {
+        ...base,
+        action: 'withdrawn',
+        amount0: round(col.a0h, 8) ?? 0,
+        amount1: round(col.a1h, 8) ?? 0,
+        fees0: round(Math.max(0, col.a0h - dec.a0h), 8),
+        fees1: round(Math.max(0, col.a1h - dec.a1h), 8),
+        usd: round(col.usd),
+      };
+    }
+    const one = inc ?? col ?? first;
+    const action = one.kind === 'INCREASE' ? 'deposit' : one.kind === 'COLLECT' ? 'collected' : 'other';
+    return { ...base, action, amount0: round(one.a0h, 8) ?? 0, amount1: round(one.a1h, 8) ?? 0, fees0: null, fees1: null, usd: round(one.usd) };
+  });
 
   const paperState = JSON.parse(readFileSync(file('paper-state.json'), 'utf8')) as RawPaperState;
   const paperHistory = ndjson<RawPaperHistory>(file('paper-history.ndjson')).filter((h) => h.ts >= PROJECT_START);
@@ -183,6 +209,7 @@ export function buildWallet(dir = RAW_DIR): WalletData {
   });
 
   const gas = transactions.reduce((s, t) => s + (t.gasEth ?? 0), 0);
+  const total = (f: (p: WalletPosition) => number | null) => (positions.some((p) => f(p) === null) ? null : round(positions.reduce((s, p) => s + (f(p) ?? 0), 0)));
   return {
     period: { from: PROJECT_START, paperStartedAt: paperState.startedAt },
     excluded: { note: 'Two manual positions opened before the project (March 2025) are excluded from every list and total.' },
@@ -192,6 +219,9 @@ export function buildWallet(dir = RAW_DIR): WalletData {
       transactions: transactions.length,
       gasEth: round(gas, 6) ?? 0,
       paperPools: paper.length,
+      feesUsd: total((p) => p.lastFeesUsd),
+      againstHoldingBeforeFeesUsd: total((p) => p.againstHoldingBeforeFeesUsd),
+      againstHoldingWithFeesUsd: total((p) => p.againstHoldingWithFeesUsd),
     },
     positions,
     transactions,

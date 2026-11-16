@@ -281,6 +281,12 @@ select {
 .figures dt { font-size: 0.82rem; color: var(--ink-soft); }
 .figures dd { margin: 0; font-family: var(--font-mono); font-size: 0.9rem; }
 .missing { font-family: var(--font-text); color: var(--ink-soft); font-size: 0.86rem; }
+.figures .wide { grid-column: 1 / -1; }
+.totals { border-collapse: collapse; margin: 4px 0 8px; font-size: 0.92rem; }
+.totals caption { text-align: left; font-weight: var(--emphasis-weight); padding-bottom: 4px; }
+.totals th { text-align: left; font-weight: 400; color: var(--ink-soft); padding: 3px 16px 3px 0; }
+.totals td { font-family: var(--font-mono); padding: 3px 0; }
+.tx-fees { color: var(--ink-soft); }
 .neg { color: var(--bad); }
 .pos { color: var(--ok); }
 .paper-table { overflow-x: auto; margin: 8px 0; }

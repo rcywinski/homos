@@ -53,12 +53,15 @@ try {
     [
       { ts: '2025-03-24T13:45:23.000Z', chain: 'mainnet', tokenId: '953427', kind: 'MINT', a0h: 0, a1h: 0, sym0: 'USDC', sym1: 'WETH', usd: null, txHash: TX(1) },
       { ts: '2026-08-25T07:54:23.000Z', chain: 'mainnet', tokenId: '953427', kind: 'COLLECT', a0h: 1, a1h: 0, sym0: 'USDC', sym1: 'WETH', usd: 1, txHash: TX(2) },
+      { ts: '2026-08-27T09:43:00.000Z', chain: 'base', tokenId: '100', kind: 'MINT', a0h: 0, a1h: 0, sym0: 'WETH', sym1: 'USDC', usd: null, txHash: TX(3) },
       { ts: '2026-08-27T09:43:00.000Z', chain: 'base', tokenId: '100', kind: 'INCREASE', a0h: 0.66, a1h: 1826.99, sym0: 'WETH', sym1: 'USDC', usd: 3504.56, txHash: TX(3), privateKey: KEYLIKE, from: '0x9999999999999999999999999999999999999999' },
+      { ts: '2026-09-18T14:07:00.000Z', chain: 'base', tokenId: '100', kind: 'DECREASE', a0h: 0.64, a1h: 1857.07, sym0: 'WETH', sym1: 'USDC', usd: 3517.87, txHash: TX(4) },
+      { ts: '2026-09-18T14:07:00.000Z', chain: 'base', tokenId: '100', kind: 'COLLECT', a0h: 0.65, a1h: 1870.45, sym0: 'WETH', sym1: 'USDC', usd: 3545.04, txHash: TX(4) },
     ]
       .map((x) => JSON.stringify(x))
       .join('\n'),
   );
-  w('tx-costs.json', JSON.stringify({ [TX(3)]: { chain: 'base', gasEth: 0.000001, block: 1 } }));
+  w('tx-costs.json', JSON.stringify({ [TX(3)]: { chain: 'base', gasEth: 0.000001, block: 1 }, [TX(4)]: { chain: 'base', gasEth: 0.000002, block: 2 } }));
   w(
     'positions-history.ndjson',
     [
@@ -84,14 +87,20 @@ try {
   const data = buildWallet(dir);
   const text = JSON.stringify(data);
   check('the excluded position is not in the export', !text.includes('953427'));
-  check('excluded transactions are not counted', data.totals.transactions === 1 && data.transactions.length === 1, JSON.stringify(data.totals));
+  check('excluded transactions are not counted; same-hash entries make one row', data.totals.transactions === 2 && data.transactions.length === 2, JSON.stringify(data.totals));
+  check('mint and deposit in one transaction: one "opened" row', data.transactions[0].action === 'opened' && data.transactions[0].amount1 === 1826.99);
+  check('decrease and collect in one transaction: one "withdrawn" row with the fee part', data.transactions[1].action === 'withdrawn' && data.transactions[1].amount1 === 1870.45 && data.transactions[1].fees1 === 13.38, JSON.stringify(data.transactions[1]));
+  check('gas counted once per transaction', data.totals.gasEth === 0.000003, String(data.totals.gasEth));
+  check('position counts transactions, not ledger entries', data.positions[0].transactions === 2);
+  check('against holding before fees from recorded values', data.positions[0].againstHoldingBeforeFeesUsd === 5 && data.positions[0].againstHoldingWithFeesUsd === 7, JSON.stringify(data.positions[0]));
+  check('deposited and withdrawn tokens from the ledger', data.positions[0].depositedTokens?.a1 === 1826.99 && data.positions[0].withdrawnTokens?.a1 === 1870.45);
   check('one real position kept', data.positions.length === 1 && data.positions[0].tokenId === '100');
   check('extra raw fields are dropped (URL, private address, key parameter)', !/https?:|192\.168|10\.8\.0|key=|apikey/i.test(text), text.slice(0, 200));
   check('an unknown address in an extra field is dropped', !text.includes('0x9999'));
   check('a private-key-shaped field is dropped', !text.includes(KEYLIKE));
   check('other extra fields are dropped', !text.includes('sk-ant') && !text.includes('tickLower') && !text.includes('"lo"'));
   check('the daily series keeps the last sample of each day', data.positions[0].daily.length === 1 && data.positions[0].daily[0].valueUsd === 3510);
-  check('gas joined by transaction hash', data.transactions[0].gasEth === 0.000001);
+  check('gas joined by transaction hash', data.transactions[0].gasEth === 0.000001 && data.transactions[1].gasEth === 0.000002);
   check('the synthetic export passes the audit', auditWallet(text, OWNER).length === 0, auditWallet(text, OWNER).join('; '));
   check('the page note names the exclusion without the position numbers', data.excluded.note.includes('Two manual positions'));
 } finally {
@@ -131,7 +140,11 @@ if (existsSync(RAW_DIR)) {
   check('real export passes the audit', problems.length === 0, problems.join('; '));
   check('real export: four project positions', real.positions.length === 4, String(real.positions.length));
   check('real export: no trace of #953427 or #953465', !text.includes('953427') && !text.includes('953465'));
-  check('real export: sixteen project transactions', real.transactions.length === 16, String(real.transactions.length));
+  check('real export: eight project transactions, one row each', real.transactions.length === 8 && new Set(real.transactions.map((t) => t.txHash)).size === 8, String(real.transactions.length));
+  check('real export: every transaction is an opening or a withdrawal', real.transactions.every((t) => t.action === 'opened' || t.action === 'withdrawn'));
+  check('real export: against holding with fees = before fees + fees, per position', real.positions.every((p) => p.againstHoldingWithFeesUsd === null || Math.abs((p.againstHoldingBeforeFeesUsd ?? 0) + (p.lastFeesUsd ?? 0) - p.againstHoldingWithFeesUsd) < 0.011));
+  check('real export: totals are the sums of the positions', Math.abs((real.totals.feesUsd ?? 0) - real.positions.reduce((s, p) => s + (p.lastFeesUsd ?? 0), 0)) < 0.011);
+  check('real export: token amounts present where dollars are missing', real.positions.every((p) => p.depositedUsd !== null || p.depositedTokens !== null));
   check('real export: six paper pools', real.paper.length === 6);
   check('real export: every date in the project period', real.transactions.every((t) => t.ts >= PROJECT_START) && real.positions.every((p) => p.openedAt >= PROJECT_START));
   console.log(`wallet: real raw files checked (${(text.length / 1024).toFixed(0)} KB export)`);

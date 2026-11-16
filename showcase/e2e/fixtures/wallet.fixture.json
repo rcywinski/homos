@@ -19,9 +19,12 @@
  ],
  "totals": {
   "positions": 2,
-  "transactions": 6,
-  "gasEth": 0.000006,
-  "paperPools": 2
+  "transactions": 3,
+  "gasEth": 0.000003,
+  "paperPools": 2,
+  "feesUsd": 9.3,
+  "againstHoldingBeforeFeesUsd": -6.7,
+  "againstHoldingWithFeesUsd": 2.6
  },
  "positions": [
   {
@@ -36,7 +39,7 @@
    "lastValueUsd": 1011.2,
    "lastHodlUsd": 1020.4,
    "lastFeesUsd": 8.1,
-   "transactions": 4,
+   "transactions": 2,
    "daily": [
     {
      "date": "2026-08-27",
@@ -128,7 +131,21 @@
      "hodlUsd": 1021,
      "inRange": true
     }
-   ]
+   ],
+   "depositedTokens": {
+    "a0": 0.2,
+    "a1": 500,
+    "sym0": "WETH",
+    "sym1": "USDC"
+   },
+   "withdrawnTokens": {
+    "a0": 0.212,
+    "a1": 508,
+    "sym0": "WETH",
+    "sym1": "USDC"
+   },
+   "againstHoldingBeforeFeesUsd": -9.2,
+   "againstHoldingWithFeesUsd": -1.1
   },
   {
    "chain": "base",
@@ -142,7 +159,7 @@
    "lastValueUsd": 500.5,
    "lastHodlUsd": 498,
    "lastFeesUsd": 1.2,
-   "transactions": 2,
+   "transactions": 1,
    "daily": [
     {
      "date": "2026-08-28",
@@ -198,7 +215,16 @@
      "hodlUsd": 498.2,
      "inRange": true
     }
-   ]
+   ],
+   "depositedTokens": {
+    "a0": 0.1,
+    "a1": 0.002,
+    "sym0": "WETH",
+    "sym1": "cbBTC"
+   },
+   "withdrawnTokens": null,
+   "againstHoldingBeforeFeesUsd": 2.5,
+   "againstHoldingWithFeesUsd": 3.7
   }
  ],
  "transactions": [
@@ -206,35 +232,26 @@
    "ts": "2026-08-27T09:00:00.000Z",
    "chain": "base",
    "tokenId": "9000001",
-   "kind": "MINT",
-   "amount0": 0,
-   "amount1": 0,
-   "sym0": "WETH",
-   "sym1": "USDC",
-   "usd": null,
-   "txHash": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-   "gasEth": 0.000001
-  },
-  {
-   "ts": "2026-08-27T09:00:00.000Z",
-   "chain": "base",
-   "tokenId": "9000001",
-   "kind": "INCREASE",
+   "action": "opened",
    "amount0": 0.2,
    "amount1": 500,
+   "fees0": null,
+   "fees1": null,
    "sym0": "WETH",
    "sym1": "USDC",
    "usd": 1000,
-   "txHash": "0xa2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+   "txHash": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
    "gasEth": 0.000001
   },
   {
    "ts": "2026-08-28T09:00:00.000Z",
    "chain": "base",
    "tokenId": "9000002",
-   "kind": "MINT",
-   "amount0": 0,
-   "amount1": 0,
+   "action": "opened",
+   "amount0": 0.1,
+   "amount1": 0.002,
+   "fees0": null,
+   "fees1": null,
    "sym0": "WETH",
    "sym1": "cbBTC",
    "usd": null,
@@ -242,42 +259,18 @@
    "gasEth": 0.000001
   },
   {
-   "ts": "2026-08-28T09:00:00.000Z",
-   "chain": "base",
-   "tokenId": "9000002",
-   "kind": "INCREASE",
-   "amount0": 0.1,
-   "amount1": 0.002,
-   "sym0": "WETH",
-   "sym1": "cbBTC",
-   "usd": null,
-   "txHash": "0xa4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
-   "gasEth": 0.000001
-  },
-  {
    "ts": "2026-09-10T12:00:00.000Z",
    "chain": "base",
    "tokenId": "9000001",
-   "kind": "DECREASE",
-   "amount0": 0.21,
-   "amount1": 505,
-   "sym0": "WETH",
-   "sym1": "USDC",
-   "usd": 1004.4,
-   "txHash": "0xa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
-   "gasEth": 0.000001
-  },
-  {
-   "ts": "2026-09-10T12:00:00.000Z",
-   "chain": "base",
-   "tokenId": "9000001",
-   "kind": "COLLECT",
+   "action": "withdrawn",
    "amount0": 0.212,
    "amount1": 508,
+   "fees0": 0.002,
+   "fees1": 3,
    "sym0": "WETH",
    "sym1": "USDC",
    "usd": 1012.5,
-   "txHash": "0xa6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6",
+   "txHash": "0xa5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
    "gasEth": 0.000001
   }
  ],
@@ -344,6 +337,30 @@
     {
      "ts": "2026-08-18T10:00:00.000Z",
      "kind": "OPEN"
+    },
+    {
+     "ts": "2026-08-19T10:00:00.000Z",
+     "kind": "EXIT_TREND"
+    },
+    {
+     "ts": "2026-08-20T10:00:00.000Z",
+     "kind": "REENTRY"
+    },
+    {
+     "ts": "2026-08-21T10:00:00.000Z",
+     "kind": "EXIT_TREND"
+    },
+    {
+     "ts": "2026-08-22T10:00:00.000Z",
+     "kind": "REENTRY"
+    },
+    {
+     "ts": "2026-08-23T10:00:00.000Z",
+     "kind": "EXIT_TREND"
+    },
+    {
+     "ts": "2026-08-24T10:00:00.000Z",
+     "kind": "REENTRY"
     }
    ],
    "daily": [

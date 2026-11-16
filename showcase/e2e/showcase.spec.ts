@@ -65,8 +65,8 @@ test('page title, introduction and the honesty notice on every view @real', asyn
   expect(errors, 'console errors (a CSP violation shows up here)').toEqual([]);
 });
 
-test('the question box is on the first screen of a 1280 x 800 laptop @real', async ({ page }, info) => {
-  test.skip(info.project.name === 'phone', 'desktop viewport check');
+test('desktop only: the question box is on the first screen of a 1280 x 800 laptop @real', async ({ page }, info) => {
+  test.skip(info.project.name === 'phone', 'desktop only: a laptop viewport check, not a phone one');
   await page.setViewportSize({ width: 1280, height: 800 });
   await open(page, MAIN, info);
   await expect(page.getByLabel('Your question')).toBeInViewport({ ratio: 1 });
@@ -246,6 +246,17 @@ test('wallet tab: the exclusion note, nothing that can sign, fixture data marked
     // The test server serves the made-up fixture, and the page says so.
     await expect(page.getByTestId('wallet-fixture')).toContainText('made-up positions');
     await expect(page.getByTestId('wallet-positions').locator('article.position')).toHaveCount(2);
+    // Fee-aware comparison, defined once, and totals.
+    const card = page.getByTestId('wallet-positions').locator('article.position').first();
+    await expect(card).toContainText('Against holding, before fees');
+    await expect(card).toContainText('Against holding, with fees');
+    await expect(page.getByTestId('wallet-totals')).toContainText('+$2.60');
+    await expect(page.getByTestId('wallet-definitions')).toContainText('did not record dollar values for the WETH/cbBTC deposits');
+    await expect(page.getByTestId('paper-definitions')).toContainText('50/50 split');
+    // Repeated paper events read as one phrase with a count; one transaction is one row.
+    await expect(page.locator('.paper-table').last()).toContainText('left on a down trend and came back, 3 times');
+    await page.getByText('All 3 transactions').click();
+    await expect(page.locator('td', { hasText: 'Withdrawn, fees included' })).toHaveCount(1);
   } else await expect(page.getByTestId('wallet-fixture')).toHaveCount(0);
   await shot(page, info, 'wallet');
   expect(errors).toEqual([]);
