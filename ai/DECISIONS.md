@@ -760,3 +760,39 @@ the Qwen runner commits about its whole model in host memory too; commit headroo
 before the load to 649 MiB with Qwen resident; the commit limit is 40.3 GB (32 GB RAM plus an auto-managed 8.6 GB
 pagefile). Possible fix: a larger fixed pagefile (32 to 48 GB), a box change that needs the owner's word and may need a
 reboot. Side note: the embed requests send `num_ctx` 32768, which Ollama caps to bge-m3's 8192 with a warning.
+
+## 2026-11-16, step 3.5 results: the agent on Qwen, QA-cl and QA-c, two runs each
+
+**What ran.** After the 48 GB pagefile and the load order fix (Qwen first, then bge-m3), the chain ran without a
+stop: local injection probes, local job probes, then QA-cl1, QA-cl2, QA-c1, QA-c2 (qwen3.8:27b, `num_ctx` 24576,
+prompt A, thinking off, compaction on demand with restore on a repeated call). No fallback to 16384 was needed.
+Report: `ai/eval/results/2026-11-16-agent-local-report.{json,md}`; judged answers:
+`ai/eval/results/2026-11-16-agent-local-judged.json`.
+
+**Decision.** None to take yet; the results are reported to the owner. Facts:
+- Probes: 4 of 4 pass (unknown tool, ignore-question, order-to-run-a-job, out-of-schema arguments).
+- Correct out of 18: QA-cl 11 and 14, QA-c 14 and 15, Sonnet A 17 and 16. Both local variants are below Sonnet by
+  more than both spreads (correct, incorrect, required sources). QA-c against QA-cl is within the spreads on every
+  measure: the retrieval setup does not separate them in two runs.
+- Always wrong in every local run: x-03 (presents the result file's numbers as the journal's own) and p-01 (runs the
+  0.30% pool instead of saying the 0.05% job cannot run). Premise handling: QA-cl 1/3 in both runs, QA-c 3/3 and 2/3.
+- Runtime: no task hit the context limit, no final answer failed to parse, 3 invalid tool calls in 72 tasks, 2 to 5
+  tool turns per run answered in text. Largest server prompt 19 502 tokens of 24 576. Compaction in 13 to 15 of 18
+  tasks per run (74 to 87 results); every repeat after compaction was restored, none refused.
+- Grounding is weaker than Sonnet: citations verified 31/37 to 40/44 (Sonnet all), dataRefs 76/120 to 99/116
+  (Sonnet 123/125, 123/127); 1 to 2 unsupported answers per run (Sonnet 0).
+- Efficiency: step limit in 7 to 11 tasks per run (Sonnet 5 and 1); redundant calls 37 to 72 (Sonnet 25 and 17);
+  median time without jobs 70 to 87 s (Sonnet 26 to 33 s).
+- Cost: QA-cl $0, QA-c $0.08 and $0.09 (Sonnet query translation), Sonnet A $2.80 and $2.51. Local judge $1.32;
+  phase 3 total $5.53 of $10.
+- Box (CC-Win, 1 s log): no alert, no gap, no eviction or CUDA error; max 72.8 C, 420 W limit, VRAM at most
+  23 964 MiB; Qwen 66/66 and bge-m3 25/25 on the GPU in every window. GPU board energy 134 to 142 Wh per run, about
+  7.4 to 7.9 Wh per task including idle between tasks. CPU package power was not logged.
+
+**Evidence.** The report above; `run35.log` windows sent to CC-Win; CC-Win's figures from
+`C:\ollama\logs\phase3-3.5b-2026-11-16.csv`.
+
+**Open points.** Whether 3.5 is accepted; whether CPU package power is logged from the next run on.
+
+**Review questions.** The local agent hits the step limit far more often than Sonnet; is that the model looping, or
+compaction hiding results so the model searches again? (Restores: 11 to 15 per run; plain repeats 3 to 17.)

@@ -1,0 +1,706 @@
+{
+  "date": "2026-11-16",
+  "localJudgeCostUsd": 1.3237,
+  "summaries": {
+    "A1": {
+      "n": 18,
+      "correctness": {
+        "correct": 17,
+        "partially_correct": 1,
+        "incorrect": 0,
+        "none": 0
+      },
+      "faithfulness": {
+        "supported": 1,
+        "partly_supported": 17,
+        "unsupported": 0,
+        "none": 0
+      },
+      "premiseHandled": 3,
+      "premiseN": 3,
+      "requiredOkBefore": 18,
+      "requiredOkAfter": 18,
+      "requiredMissingAfter": [],
+      "status": {
+        "answered": 6,
+        "repeated": 1,
+        "step-limit": 5,
+        "spend-cap": 6,
+        "error": 0,
+        "none": 0
+      },
+      "redundant": 25,
+      "redundantByKind": {
+        "repeat": 4,
+        "reread": 17,
+        "no-new-chunks": 4,
+        "second-read": 0
+      },
+      "rereadsUsedInDataRef": 16,
+      "unneededJobs": 2,
+      "legendCitations": 0,
+      "legendCitationsOk": 0,
+      "answersWithLegendCitation": 0,
+      "citationsOk": 41,
+      "citations": 41,
+      "dataRefsOk": 123,
+      "dataRefs": 125,
+      "unbackedNumbers": 156,
+      "steps": 137,
+      "toolCalls": 135,
+      "reasoningTokens": 1937,
+      "costUsd": 2.7974,
+      "recordedCostUsd": 3.092,
+      "toolCostUsd": 0.0919,
+      "maxCostUsd": 0.2869,
+      "totalS": 1138,
+      "medianS": 35.5,
+      "noJobMedianS": 32.5
+    },
+    "A2": {
+      "n": 18,
+      "correctness": {
+        "correct": 16,
+        "partially_correct": 2,
+        "incorrect": 0,
+        "none": 0
+      },
+      "faithfulness": {
+        "supported": 1,
+        "partly_supported": 17,
+        "unsupported": 0,
+        "none": 0
+      },
+      "premiseHandled": 3,
+      "premiseN": 3,
+      "requiredOkBefore": 17,
+      "requiredOkAfter": 17,
+      "requiredMissingAfter": [
+        {
+          "id": "x-02",
+          "missing": [
+            "citation of one of docs/DECISION-LOG.md, docs/DECISION-LOG.md:22, journal/CONTEXT.md:96, journal/CONTEXT.md:2178#p3"
+          ]
+        }
+      ],
+      "status": {
+        "answered": 7,
+        "repeated": 4,
+        "step-limit": 1,
+        "spend-cap": 6,
+        "error": 0,
+        "none": 0
+      },
+      "redundant": 17,
+      "redundantByKind": {
+        "repeat": 10,
+        "reread": 6,
+        "no-new-chunks": 1,
+        "second-read": 0
+      },
+      "rereadsUsedInDataRef": 6,
+      "unneededJobs": 0,
+      "legendCitations": 0,
+      "legendCitationsOk": 0,
+      "answersWithLegendCitation": 0,
+      "citationsOk": 44,
+      "citations": 44,
+      "dataRefsOk": 123,
+      "dataRefs": 127,
+      "unbackedNumbers": 151,
+      "steps": 117,
+      "toolCalls": 117,
+      "reasoningTokens": 1549,
+      "costUsd": 2.5092,
+      "recordedCostUsd": 2.7208,
+      "toolCostUsd": 0.0828,
+      "maxCostUsd": 0.2513,
+      "totalS": 902,
+      "medianS": 26,
+      "noJobMedianS": 25.5
+    },
+    "QA-cl1": {
+      "n": 18,
+      "correctness": {
+        "correct": 11,
+        "partially_correct": 4,
+        "incorrect": 3,
+        "none": 0
+      },
+      "faithfulness": {
+        "supported": 0,
+        "partly_supported": 17,
+        "unsupported": 1,
+        "none": 0
+      },
+      "premiseHandled": 1,
+      "premiseN": 3,
+      "requiredOkBefore": 13,
+      "requiredOkAfter": 13,
+      "requiredMissingAfter": [
+        {
+          "id": "b-01",
+          "missing": [
+            "dataRef e8-carry-HL-ETH-90d [\"all\",\"mean\"]",
+            "dataRef e8-carry-HL-ETH-90d [\"all\",\"winPct\"]",
+            "dataRef e8-carry-HL-ETH-90d [\"worstRunDays\"]"
+          ]
+        },
+        {
+          "id": "x-02",
+          "missing": [
+            "citation of one of docs/DECISION-LOG.md, docs/DECISION-LOG.md:22, journal/CONTEXT.md:96, journal/CONTEXT.md:2178#p3",
+            "dataRef walkforward-arbitrum-weth-usdc-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"winPct\"]",
+            "dataRef walkforward-arbitrum-weth-usdc-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"worst\"]"
+          ]
+        },
+        {
+          "id": "x-03",
+          "missing": [
+            "citation of one of journal/CONTEXT.md:684",
+            "dataRef e8-house-GM-BTC-USD-btc50-90d [\"all\",\"mean\"]",
+            "dataRef e8-house-GM-BTC-USD-btc50-90d [\"all\",\"winPct\"]",
+            "dataRef e8-house-GM-BTC-USD-btc50-90d [\"all\",\"worst\"]"
+          ]
+        },
+        {
+          "id": "t-02",
+          "missing": [
+            "dataRef walkforward-arbitrum-weth-usdc-030-365d-35d [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"mean\"]",
+            "dataRef walkforward-arbitrum-weth-usdc-030-365d-35d [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"worst\"]"
+          ]
+        },
+        {
+          "id": "p-02",
+          "missing": [
+            "dataRef walkforward-base-cbbtc-weth-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"winPct\"]"
+          ]
+        }
+      ],
+      "status": {
+        "answered": 6,
+        "repeated": 5,
+        "step-limit": 7,
+        "spend-cap": 0,
+        "error": 0,
+        "none": 0
+      },
+      "redundant": 44,
+      "redundantByKind": {
+        "repeat": 15,
+        "reread": 27,
+        "no-new-chunks": 2,
+        "second-read": 0
+      },
+      "rereadsUsedInDataRef": 15,
+      "unneededJobs": 1,
+      "legendCitations": 0,
+      "legendCitationsOk": 0,
+      "answersWithLegendCitation": 0,
+      "citationsOk": 31,
+      "citations": 37,
+      "dataRefsOk": 85,
+      "dataRefs": 103,
+      "unbackedNumbers": 211,
+      "steps": 137,
+      "toolCalls": 163,
+      "reasoningTokens": 0,
+      "costUsd": 0,
+      "recordedCostUsd": 0,
+      "toolCostUsd": 0,
+      "maxCostUsd": 0,
+      "totalS": 1738,
+      "medianS": 75.4,
+      "noJobMedianS": 70.1
+    },
+    "QA-cl2": {
+      "n": 18,
+      "correctness": {
+        "correct": 14,
+        "partially_correct": 2,
+        "incorrect": 2,
+        "none": 0
+      },
+      "faithfulness": {
+        "supported": 0,
+        "partly_supported": 16,
+        "unsupported": 2,
+        "none": 0
+      },
+      "premiseHandled": 1,
+      "premiseN": 3,
+      "requiredOkBefore": 14,
+      "requiredOkAfter": 14,
+      "requiredMissingAfter": [
+        {
+          "id": "b-03",
+          "missing": [
+            "dataRef e8-house-HLP-usdc-90d [\"all\",\"mean\"]",
+            "dataRef e8-house-HLP-usdc-90d [\"all\",\"windows\"]"
+          ]
+        },
+        {
+          "id": "x-01",
+          "missing": [
+            "dataRef walkforward-base-weth-usdc-005-365d-45d-kanon [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"winPct\"]",
+            "dataRef walkforward-base-weth-usdc-005-365d-45d-kanon [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"worst\"]"
+          ]
+        },
+        {
+          "id": "x-02",
+          "missing": [
+            "citation of one of docs/DECISION-LOG.md, docs/DECISION-LOG.md:22, journal/CONTEXT.md:96, journal/CONTEXT.md:2178#p3",
+            "dataRef walkforward-base-weth-usdc-030-720d-30d [\"summary\",\"Pasywny ±50%\",\"winPct\"]",
+            "dataRef walkforward-base-weth-usdc-030-720d-30d [\"summary\",\"Pasywny ±50%\",\"worst\"]",
+            "dataRef walkforward-base-cbbtc-weth-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"winPct\"]",
+            "dataRef walkforward-base-cbbtc-weth-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"worst\"]",
+            "dataRef walkforward-mainnet-usdc-weth-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"winPct\"]",
+            "dataRef walkforward-mainnet-usdc-weth-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"worst\"]",
+            "dataRef walkforward-arbitrum-weth-usdc-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"winPct\"]",
+            "dataRef walkforward-arbitrum-weth-usdc-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"worst\"]"
+          ]
+        },
+        {
+          "id": "x-03",
+          "missing": [
+            "citation of one of journal/CONTEXT.md:684",
+            "dataRef e8-house-GM-BTC-USD-btc50-90d [\"all\",\"mean\"]",
+            "dataRef e8-house-GM-BTC-USD-btc50-90d [\"all\",\"winPct\"]",
+            "dataRef e8-house-GM-BTC-USD-btc50-90d [\"all\",\"worst\"]"
+          ]
+        }
+      ],
+      "status": {
+        "answered": 4,
+        "repeated": 5,
+        "step-limit": 8,
+        "spend-cap": 0,
+        "error": 0,
+        "none": 0
+      },
+      "redundant": 37,
+      "redundantByKind": {
+        "repeat": 15,
+        "reread": 16,
+        "no-new-chunks": 6,
+        "second-read": 0
+      },
+      "rereadsUsedInDataRef": 7,
+      "unneededJobs": 1,
+      "legendCitations": 0,
+      "legendCitationsOk": 0,
+      "answersWithLegendCitation": 0,
+      "citationsOk": 31,
+      "citations": 36,
+      "dataRefsOk": 82,
+      "dataRefs": 104,
+      "unbackedNumbers": 203,
+      "steps": 153,
+      "toolCalls": 165,
+      "reasoningTokens": 0,
+      "costUsd": 0,
+      "recordedCostUsd": 0,
+      "toolCostUsd": 0,
+      "maxCostUsd": 0,
+      "totalS": 1733,
+      "medianS": 80.1,
+      "noJobMedianS": 79.9
+    },
+    "QA-c1": {
+      "n": 18,
+      "correctness": {
+        "correct": 14,
+        "partially_correct": 3,
+        "incorrect": 1,
+        "none": 0
+      },
+      "faithfulness": {
+        "supported": 0,
+        "partly_supported": 17,
+        "unsupported": 1,
+        "none": 0
+      },
+      "premiseHandled": 3,
+      "premiseN": 3,
+      "requiredOkBefore": 11,
+      "requiredOkAfter": 11,
+      "requiredMissingAfter": [
+        {
+          "id": "d-03",
+          "missing": [
+            "citation of one of docs/DECISION-LOG.md, docs/DECISION-LOG.md:14, journal/CONTEXT.md:88"
+          ]
+        },
+        {
+          "id": "b-01",
+          "missing": [
+            "dataRef e8-carry-HL-ETH-90d [\"all\",\"mean\"]",
+            "dataRef e8-carry-HL-ETH-90d [\"all\",\"winPct\"]",
+            "dataRef e8-carry-HL-ETH-90d [\"worstRunDays\"]"
+          ]
+        },
+        {
+          "id": "b-02",
+          "missing": [
+            "dataRef pegged-mainnet-usdc-usdt-001-maxL [\"results\",\"7\",\"aprPct\"]",
+            "dataRef pegged-mainnet-usdc-usdt-001-maxL [\"results\",\"7\",\"vsHodlPct\"]",
+            "dataRef pegged-mainnet-usdc-usdt-001-maxL [\"results\",\"7\",\"maxDrawdownPct\"]"
+          ]
+        },
+        {
+          "id": "x-01",
+          "missing": [
+            "dataRef walkforward-base-weth-usdc-005-365d-45d-kanon [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"winPct\"]",
+            "dataRef walkforward-base-weth-usdc-005-365d-45d-kanon [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"worst\"]"
+          ]
+        },
+        {
+          "id": "x-02",
+          "missing": [
+            "dataRef walkforward-arbitrum-weth-usdc-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"worst\"]"
+          ]
+        },
+        {
+          "id": "x-03",
+          "missing": [
+            "citation of one of journal/CONTEXT.md:684",
+            "dataRef e8-house-GM-BTC-USD-btc50-90d [\"all\",\"mean\"]"
+          ]
+        },
+        {
+          "id": "t-02",
+          "missing": [
+            "dataRef walkforward-arbitrum-weth-usdc-030-365d-35d [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"mean\"]",
+            "dataRef walkforward-arbitrum-weth-usdc-030-365d-35d [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"worst\"]"
+          ]
+        }
+      ],
+      "status": {
+        "answered": 3,
+        "repeated": 8,
+        "step-limit": 7,
+        "spend-cap": 0,
+        "error": 0,
+        "none": 0
+      },
+      "redundant": 72,
+      "redundantByKind": {
+        "repeat": 32,
+        "reread": 36,
+        "no-new-chunks": 4,
+        "second-read": 0
+      },
+      "rereadsUsedInDataRef": 29,
+      "unneededJobs": 0,
+      "legendCitations": 0,
+      "legendCitationsOk": 0,
+      "answersWithLegendCitation": 0,
+      "citationsOk": 40,
+      "citations": 44,
+      "dataRefsOk": 76,
+      "dataRefs": 120,
+      "unbackedNumbers": 193,
+      "steps": 143,
+      "toolCalls": 183,
+      "reasoningTokens": 0,
+      "costUsd": 0.0825,
+      "recordedCostUsd": 0.0825,
+      "toolCostUsd": 0.0825,
+      "maxCostUsd": 0.0126,
+      "totalS": 1626,
+      "medianS": 76.8,
+      "noJobMedianS": 74.1
+    },
+    "QA-c2": {
+      "n": 18,
+      "correctness": {
+        "correct": 15,
+        "partially_correct": 1,
+        "incorrect": 2,
+        "none": 0
+      },
+      "faithfulness": {
+        "supported": 0,
+        "partly_supported": 16,
+        "unsupported": 2,
+        "none": 0
+      },
+      "premiseHandled": 2,
+      "premiseN": 3,
+      "requiredOkBefore": 14,
+      "requiredOkAfter": 14,
+      "requiredMissingAfter": [
+        {
+          "id": "b-01",
+          "missing": [
+            "dataRef e8-carry-HL-ETH-90d [\"all\",\"mean\"]",
+            "dataRef e8-carry-HL-ETH-90d [\"all\",\"winPct\"]"
+          ]
+        },
+        {
+          "id": "x-02",
+          "missing": [
+            "citation of one of docs/DECISION-LOG.md, docs/DECISION-LOG.md:22, journal/CONTEXT.md:96, journal/CONTEXT.md:2178#p3"
+          ]
+        },
+        {
+          "id": "x-03",
+          "missing": [
+            "citation of one of journal/CONTEXT.md:684",
+            "dataRef e8-house-GM-BTC-USD-btc50-90d [\"all\",\"mean\"]"
+          ]
+        },
+        {
+          "id": "p-02",
+          "missing": [
+            "dataRef walkforward-base-cbbtc-weth-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"mean\"]",
+            "dataRef walkforward-base-cbbtc-weth-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"winPct\"]",
+            "dataRef walkforward-base-cbbtc-weth-005-720d-30d [\"summary\",\"Pasywny ±50%\",\"worst\"]"
+          ]
+        }
+      ],
+      "status": {
+        "answered": 3,
+        "repeated": 4,
+        "step-limit": 11,
+        "spend-cap": 0,
+        "error": 0,
+        "none": 0
+      },
+      "redundant": 48,
+      "redundantByKind": {
+        "repeat": 19,
+        "reread": 29,
+        "no-new-chunks": 0,
+        "second-read": 0
+      },
+      "rereadsUsedInDataRef": 21,
+      "unneededJobs": 2,
+      "legendCitations": 0,
+      "legendCitationsOk": 0,
+      "answersWithLegendCitation": 0,
+      "citationsOk": 36,
+      "citations": 43,
+      "dataRefsOk": 99,
+      "dataRefs": 116,
+      "unbackedNumbers": 172,
+      "steps": 153,
+      "toolCalls": 178,
+      "reasoningTokens": 0,
+      "costUsd": 0.0911,
+      "recordedCostUsd": 0.0911,
+      "toolCostUsd": 0.0911,
+      "maxCostUsd": 0.0129,
+      "totalS": 1983,
+      "medianS": 94.5,
+      "noJobMedianS": 86.7
+    }
+  },
+  "local": {
+    "A1": null,
+    "A2": null,
+    "QA-cl1": {
+      "invalidToolCalls": 0,
+      "schemaFailures": 0,
+      "contextLimit": 0,
+      "compacted": 87,
+      "tasksWithCompaction": 14,
+      "restored": 12,
+      "restoreRefused": 0,
+      "plainRepeats": 3,
+      "textInsteadOfTools": 5,
+      "maxPromptServer": 19455
+    },
+    "QA-cl2": {
+      "invalidToolCalls": 0,
+      "schemaFailures": 0,
+      "contextLimit": 0,
+      "compacted": 74,
+      "tasksWithCompaction": 13,
+      "restored": 11,
+      "restoreRefused": 0,
+      "plainRepeats": 4,
+      "textInsteadOfTools": 3,
+      "maxPromptServer": 19399
+    },
+    "QA-c1": {
+      "invalidToolCalls": 2,
+      "schemaFailures": 0,
+      "contextLimit": 0,
+      "compacted": 82,
+      "tasksWithCompaction": 15,
+      "restored": 15,
+      "restoreRefused": 0,
+      "plainRepeats": 17,
+      "textInsteadOfTools": 2,
+      "maxPromptServer": 19502
+    },
+    "QA-c2": {
+      "invalidToolCalls": 1,
+      "schemaFailures": 0,
+      "contextLimit": 0,
+      "compacted": 82,
+      "tasksWithCompaction": 15,
+      "restored": 11,
+      "restoreRefused": 0,
+      "plainRepeats": 8,
+      "textInsteadOfTools": 3,
+      "maxPromptServer": 19361
+    }
+  },
+  "comparisons": {
+    "QA-cl against Sonnet A": [
+      {
+        "m": "correct",
+        "spreadA": 1,
+        "spreadB": 3,
+        "diff": -4,
+        "exceeds": true
+      },
+      {
+        "m": "incorrect",
+        "spreadA": 0,
+        "spreadB": 1,
+        "diff": 2.5,
+        "exceeds": true
+      },
+      {
+        "m": "required ok",
+        "spreadA": 1,
+        "spreadB": 1,
+        "diff": -4,
+        "exceeds": true
+      },
+      {
+        "m": "answered",
+        "spreadA": 1,
+        "spreadB": 2,
+        "diff": -1.5,
+        "exceeds": false
+      },
+      {
+        "m": "redundant calls",
+        "spreadA": 8,
+        "spreadB": 7,
+        "diff": 19.5,
+        "exceeds": true
+      },
+      {
+        "m": "turns",
+        "spreadA": 20,
+        "spreadB": 16,
+        "diff": 18,
+        "exceeds": false
+      },
+      {
+        "m": "median s without jobs",
+        "spreadA": 7,
+        "spreadB": 9.8,
+        "diff": 46,
+        "exceeds": true
+      }
+    ],
+    "QA-c against Sonnet A": [
+      {
+        "m": "correct",
+        "spreadA": 1,
+        "spreadB": 1,
+        "diff": -2,
+        "exceeds": true
+      },
+      {
+        "m": "incorrect",
+        "spreadA": 0,
+        "spreadB": 1,
+        "diff": 1.5,
+        "exceeds": true
+      },
+      {
+        "m": "required ok",
+        "spreadA": 1,
+        "spreadB": 3,
+        "diff": -5,
+        "exceeds": true
+      },
+      {
+        "m": "answered",
+        "spreadA": 1,
+        "spreadB": 0,
+        "diff": -3.5,
+        "exceeds": true
+      },
+      {
+        "m": "redundant calls",
+        "spreadA": 8,
+        "spreadB": 24,
+        "diff": 39,
+        "exceeds": true
+      },
+      {
+        "m": "turns",
+        "spreadA": 20,
+        "spreadB": 10,
+        "diff": 21,
+        "exceeds": true
+      },
+      {
+        "m": "median s without jobs",
+        "spreadA": 7,
+        "spreadB": 12.6,
+        "diff": 51.4,
+        "exceeds": true
+      }
+    ],
+    "QA-c against QA-cl (retrieval only)": [
+      {
+        "m": "correct",
+        "spreadA": 3,
+        "spreadB": 1,
+        "diff": 2,
+        "exceeds": false
+      },
+      {
+        "m": "incorrect",
+        "spreadA": 1,
+        "spreadB": 1,
+        "diff": -1,
+        "exceeds": false
+      },
+      {
+        "m": "required ok",
+        "spreadA": 1,
+        "spreadB": 3,
+        "diff": -1,
+        "exceeds": false
+      },
+      {
+        "m": "answered",
+        "spreadA": 2,
+        "spreadB": 0,
+        "diff": -2,
+        "exceeds": false
+      },
+      {
+        "m": "redundant calls",
+        "spreadA": 7,
+        "spreadB": 24,
+        "diff": 19.5,
+        "exceeds": false
+      },
+      {
+        "m": "turns",
+        "spreadA": 16,
+        "spreadB": 10,
+        "diff": 3,
+        "exceeds": false
+      },
+      {
+        "m": "median s without jobs",
+        "spreadA": 9.8,
+        "spreadB": 12.6,
+        "diff": 5.4,
+        "exceeds": false
+      }
+    ]
+  }
+}
