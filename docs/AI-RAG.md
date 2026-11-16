@@ -31,6 +31,10 @@ owner's chat session: plan changes, explanations and interpretation of results, 
   owner. On 18 tasks over five runs the judge rates 16 to 17 answers correct per run and none incorrect; every number
   taken from a result file carries a path that is checked against what the run read. But only 6 to 8 of 18 tasks end
   with a normal answer: the step limit and the spend guard do most of the stopping. About $0.16 per task.
+- Local agent (step 3.5): the same agent, loop and tools on `qwen3.8:27b` through Ollama on the RTX 3090 box. Lower
+  correctness than Sonnet (11 to 15 of 18 correct per run against 16 and 17), and 1 to 3 incorrect answers per run
+  where Sonnet had none; x-03 is wrong in all four local runs and p-01 in three of four. Every answer stayed inside the tools' rules (4 of 4
+  safety probes passed), no cloud generation; GPU board energy about 7.4 to 7.9 Wh per task, not the whole machine.
 
 ## What the problem is
 
@@ -667,6 +671,54 @@ windows and a 10-day step?" No saved result has 25-day windows, so the model ask
    with verified dataRefs. In turn 9 it asked for the same job again; the loop refused the repeat. Step limit after 10
    turns, $0.06.
 
+### Local agent (step 3.5)
+
+The same loop, tools, prompt A and 18 tasks, with `qwen3.8:27b` through Ollama on the RTX 3090 box (420 W limit) in
+place of Sonnet 5.5. Thinking off, `num_ctx` 24576. Ollama's tool calling maps onto the model interface with two
+changes: the answer schema is sent as `format` only in the final turn (with tools and `format` in the same request
+Qwen called no tool in 3 of 3 checks), and the history is compacted on demand: when the prompt would not fit, the
+oldest tool results are replaced by a one-line stub, and a repeated call of a compacted result restores it. Two
+variants, two runs each: QA-cl searches with fully local retrieval (no cloud call at all), QA-c with the Sonnet setup
+(contexts plus Sonnet query translation). Report `ai/eval/results/2026-11-16-agent-local-report.md`.
+
+| measure | Sonnet A1 / A2 | QA-cl1 / QA-cl2 | QA-c1 / QA-c2 |
+|---|---|---|---|
+| judge: correct / partially / incorrect | 17 / 1 / 0, 16 / 2 / 0 | 11 / 4 / 3, 14 / 2 / 2 | 14 / 3 / 1, 15 / 1 / 2 |
+| judge: unsupported answers | 0, 0 | 1, 2 | 1, 2 |
+| premise handled (p-01 to p-03) | 3/3, 3/3 | 1/3, 1/3 | 3/3, 2/3 |
+| required sources present (after the 2.4 review) | 18, 17 | 13, 14 | 11, 14 |
+| citations verified | 41/41, 44/44 | 31/37, 31/36 | 40/44, 36/43 |
+| dataRefs verified | 123/125, 123/127 | 85/103, 82/104 | 76/120, 99/116 |
+| tasks ending on the step limit | 5, 1 | 7, 8 | 7, 11 |
+| median time per task without a job (s) | 32.5, 25.5 | 70.1, 79.9 | 74.1, 86.7 |
+| cloud cost per run (USD) | 2.80, 2.51 | 0, 0 | 0.08, 0.09 |
+
+- **Lower correctness, beyond the spread.** Both local variants are below Sonnet A on correct, incorrect and required
+  sources by more than either run-to-run spread. QA-c against QA-cl is within the spread on every measure, so two runs
+  do not show that the cloud search setup helps the local model.
+- **Wrong answers Sonnet did not give.** x-03 is wrong in all four local runs: the model presents the numbers of a
+  result file as the journal's own and says they match exactly, while the journal reports different figures (91% win
+  rate, worst window -1.65%). p-01 is wrong in three of four local runs and partly right in the fourth: asked for a
+  job on the 0.05% pool, which is not on the allowlist, the model claims to have run it and reports figures from the
+  0.30% pool as the requested result. Sonnet answered x-03 correctly in both runs and p-01 correctly once and partly
+  correctly once, with no incorrect answer.
+- **Weaker grounding.** Fewer citations and dataRefs pass the verifier than with Sonnet, and 1 to 2 answers per run are
+  unsupported. The verifier still flags every one; nothing unverified is shown as checked.
+- **The mechanics held.** 4 of 4 safety probes passed (unknown tool, an instruction inside a result, an order to run a
+  job, out-of-schema arguments). No task stopped on the context limit, no final answer failed to parse, 3 invalid tool
+  calls in 72 tasks. Compaction ran in 13 to 15 of 18 tasks per run; every repeat of a compacted result was restored.
+- **Why the step limit.** From the saved logs only (`ai/eval/results/2026-11-16-agent-step-limit.md`), each call of a
+  step-limit task was put in one class: (a) a repeat or near-repeat of a result that had been compacted, (b) of a
+  result still visible, (c) a new call. 23 of the 33 local step-limit tasks are mostly new calls (c), 8 mostly
+  repeats of visible results (b), 2 mostly repeats of compacted results (a). Compaction does cost turns (55 tool turns
+  over four runs consisted only of (a) calls), but it decides few tasks. Sonnet's 6 step-limit tasks split 3 (b) and
+  3 (c); t-02 rereads visible results in both Sonnet runs and all four local runs, so that one is the task, not the
+  model.
+- **Energy, GPU only.** GPU board power from the box's one-second log: 134 to 142 Wh per run of 18 tasks, about 7.4 to
+  7.9 Wh per task including idle time between tasks. CPU, memory and the rest of the machine are not included; CPU
+  package power is logged from the next run on.
+- **Prompt A was written for Sonnet** and not revised for Qwen; the local result is for that prompt.
+
 ## Cost and latency
 
 | item | cost (USD) | as first reported |
@@ -835,7 +887,11 @@ reference answer against the sources found these errors; they are a reason this 
   consistent with "the model rereads a field to get a path to cite", but the difference is inside A's spread.
 - **Agent tuning stops here.** No further prompt revisions on these 18 tasks: that would tune on the measurement set.
 - **Future directions, not built:** a stopping rule in the loop code instead of the prompt; a harder task set; a spend
-  guard priced from measured cache rates; the same agent with a local model through Ollama.
+  guard priced from measured cache rates. The same agent with a local model was built and measured in step 3.5.
+- **Local agent (step 3.5).** Lower correctness than Sonnet beyond the spread, and wrong answers Sonnet did not give
+  (x-03 in all four local runs, p-01 in three of four). It needs more than twice Sonnet's time per
+  task and hits the step limit in 7 to 11 of 18 tasks. The energy figure is the GPU board only. Prompt A was not
+  adapted to Qwen.
 - **Agent jobs (step 2.3).** The input data of every job (swap caches, funding series) exists only on the owner's Mac,
   in the gitignored `data/` directory; it is not in the repository or in tag `journal-final`, so a reader of the repo
   cannot run `run_backtest`: only the saved results (`npm run ai:restore-results`) work everywhere. 720-day jobs are out

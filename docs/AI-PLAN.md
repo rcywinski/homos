@@ -330,15 +330,21 @@ costs nothing). Common rules for every step:
   the showcase stays Qwen with P on fully local retrieval. Model-specific runtime fixes, recorded in the result files:
   the harmony template bound for gpt-oss (75 tokens), and for Muse a trailing `<|eot|>` removed before parsing (35 of
   35 calls) and a server token overcount of up to 4 allowed. Judge $1.96; phase spend $4.03 of $10.
-- [ ] NEXT **3.5 Local agent.** `AgentModel` for Ollama tool calling, without changing the loop or the tools. Before the
+- [x] 2026-11-16 **3.5 Local agent.** `AgentModel` for Ollama tool calling, without changing the loop or the tools. Before the
   plan: what the Ollama documentation says about tools with structured output and with thinking, and what does not
   map onto the interface. Then the 18 tasks of 2.4 with prompt A, two runs, jobs with `--yes-jobs`, judged; the same
   measures as 2.4 next to Sonnet A1 and A2, plus invalid tool calls and schema failures.
   Approved plan (owner, 16 Nov): variants QA-cl (fully local search) and QA-c (search as for Sonnet), two runs each,
   QA-cl first; thinking off; `num_ctx` 24576; compaction on demand with restore on a repeated call, counted per task.
   Built: `ai/agent/model-ollama.ts` (19 offline tests), local runs in `ai/eval/agent-run.ts`, `--local` probes and
-  `--format-check` in `ai/agent/probe.ts`, judge `--local`, report `ai/eval/agent-local-score.ts`. Runs wait for the
-  owner's go.
+  `--format-check` in `ai/agent/probe.ts`, judge `--local`, report `ai/eval/agent-local-score.ts`.
+  Done, after a fixed 48 GB pagefile on the box and the load order Qwen then bge-m3: 4 of 4 local probes passed;
+  correct 11 and 14 (QA-cl), 14 and 15 (QA-c) against 17 and 16 (Sonnet A), below Sonnet beyond the spread, QA-c and
+  QA-cl within the spread of each other; x-03 wrong in all four local runs, p-01 in three. No context-limit stop, no
+  schema failure, 3 invalid tool calls in 72 tasks. Step-limit follow-up from the saved logs: 23 of 33 step-limit tasks
+  are mostly new calls, 8 mostly repeats of visible results, 2 mostly repeats of compacted results. GPU board energy
+  about 7.4 to 7.9 Wh per task. Judge $1.32; phase spend $5.53 of $10. Reports
+  `ai/eval/results/2026-11-16-agent-local-report.md` and `2026-11-16-agent-step-limit.md`.
 
 ## Later, optional (not scheduled)
 

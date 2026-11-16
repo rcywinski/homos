@@ -774,8 +774,9 @@ Report: `ai/eval/results/2026-11-16-agent-local-report.{json,md}`; judged answer
 - Correct out of 18: QA-cl 11 and 14, QA-c 14 and 15, Sonnet A 17 and 16. Both local variants are below Sonnet by
   more than both spreads (correct, incorrect, required sources). QA-c against QA-cl is within the spreads on every
   measure: the retrieval setup does not separate them in two runs.
-- Always wrong in every local run: x-03 (presents the result file's numbers as the journal's own) and p-01 (runs the
-  0.30% pool instead of saying the 0.05% job cannot run). Premise handling: QA-cl 1/3 in both runs, QA-c 3/3 and 2/3.
+- x-03 is wrong in all four local runs (presents the result file's numbers as the journal's own); p-01 is wrong in
+  three and partly right in one (claims to have run the 0.05% job, which cannot run, with 0.30% pool figures).
+  Corrected on 16 Nov: the first version said p-01 was wrong in every run. Premise handling: QA-cl 1/3 in both runs, QA-c 3/3 and 2/3.
 - Runtime: no task hit the context limit, no final answer failed to parse, 3 invalid tool calls in 72 tasks, 2 to 5
   tool turns per run answered in text. Largest server prompt 19 502 tokens of 24 576. Compaction in 13 to 15 of 18
   tasks per run (74 to 87 results); every repeat after compaction was restored, none refused.
@@ -796,3 +797,35 @@ Report: `ai/eval/results/2026-11-16-agent-local-report.{json,md}`; judged answer
 
 **Review questions.** The local agent hits the step limit far more often than Sonnet; is that the model looping, or
 compaction hiding results so the model searches again? (Restores: 11 to 15 per run; plain repeats 3 to 17.)
+
+## 2026-11-16, step 3.5 accepted; step-limit follow-up from the saved logs
+
+**Decision (owner).** Step 3.5 accepted and ticked. The box is released for CC-App and CC-Win. CPU package power is
+logged in future runs, only through what Windows already exposes (the "Energy Meter" counters), nothing installed.
+
+**Follow-up, the review question of the 3.5 entry.** Is the step limit the model looping, or compaction hiding results?
+Answered from the saved logs only, no model call (`ai/eval/agent-step-limit.ts`, report
+`ai/eval/results/2026-11-16-agent-step-limit.md`). Each tool call of a step-limit task is one of: (a) a repeat or
+near-repeat of a result compacted in the prompt the model saw, (b) of a result still visible, (c) a new call; the task
+takes the class with the most calls.
+- Local, 33 step-limit tasks: 23 (c), 8 (b), 2 (a). Calls 86 (a), 139 (b), 209 (c); 55 tool turns held only (a)
+  calls, 57 only (b).
+- Sonnet A1 and A2, 6 step-limit tasks: 3 (b), 3 (c), no compaction.
+- Examples: QA-c2 b-01 (class a), turns 5 to 9 each reread one path of a result file whose full read had been
+  compacted; QA-cl2 t-02 (class b), 15 rereads of paths in result files still visible. t-02 is class (b) in both
+  Sonnet runs and all four local runs.
+- Reading: mostly the model keeps making new calls; compaction costs turns but decides 2 of 33 tasks.
+
+**How the compaction state was recovered.** The log has no per-turn compaction record, so each local task is replayed
+through OllamaConversation with a fake server (same tokenizer, the run's overhead 324 and margin). The raw tool_calls
+shape Ollama returned was not logged. With the bare shape (name and arguments) two tasks differ from the recorded
+compaction count (7 against 8, 6 against 8); with Ollama's documented shape (a random-looking id plus an index) all 42
+replays match exactly. Between the two shapes one call changes class (QA-c2 b-01, turn 5) and no task does.
+
+**Alternatives.** Rerunning with a per-turn compaction log: rejected, the owner asked for saved logs only.
+
+**Open points.** Logging the raw tool_calls and the compacted set per turn in future local runs would make this exact
+without the replay.
+
+**Review questions.** Is "the class with the most calls" the right task label? Per-task counts are in the report for
+another rule.
