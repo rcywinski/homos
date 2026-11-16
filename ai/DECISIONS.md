@@ -323,3 +323,66 @@ cuts the last run short, that is reported).
 
 **Review questions.** Was changing the guard mid-evaluation acceptable, given that it cannot change any answer, only
 where the runs stop?
+
+## 2026-11-16, step 2.4: owner blind grading, how it was done
+
+**Decision.** The owner graded the six blind items in `ai/eval/review/blind-2.4.md` on 16 Nov without opening the key
+or the judge file. The analysis session (Fable 5.2) did the mechanical part for each item: which reference points the
+answer contains, and which numbers and claims have an evidence line. The owner chose both grades himself; the analysis
+session suggested no grades. Faithfulness rule, stated by the owner at B02 and kept for all six: supported only when
+every claim is covered. At B05 he first leaned to supported, was shown that B01 to B04 used the stricter rule, and chose
+partly_supported for consistency. At B01 he lowered correctness because the agent ran a 365-day job nobody asked for.
+The procedure and English glosses of his Polish notes are in `ai/eval/review/blind-2.4-record.json`.
+
+**Alternatives.** As in 1.9, the owner compares every number himself (declined: he did not want to check percentages
+one by one). The analysis session proposes grades and the owner confirms them (not done: that would grade the judge
+against a second model, not against the owner).
+
+**Evidence.** Agreement with the judge: correctness exact 5/6, within one step 6/6; faithfulness exact 6/6. The one
+disagreement is B01 (p-02, run A1): owner partially_correct, judge correct. Report:
+`ai/eval/results/2026-11-16-agent-eval-report.md`.
+
+**Open.**
+- All six faithfulness grades are partly_supported, from both the owner and the judge, so the sample calibrates
+  correctness more than faithfulness. Faithfulness agreement of 6/6 says little about the judge's line between supported
+  and partly_supported.
+- Leak: B06 (t-02, run B2) shows a legend citation ("legend of ..."), and only variant B is told legends are citable,
+  so that item was not fully blind to the variant. The analysis session's earlier check missed it: it searched for
+  "legend:" while the file says "legend of". The blind file builder does not hide legend citations.
+
+**Review questions.**
+- The analysis session marked which claims have evidence lines and the owner graded from that. How much of the
+  faithfulness agreement is the analysis session's reading rather than the owner's?
+- The judge did not lower correctness for the unrequested job in B01; the rubric does not mention unrequested actions.
+  Should the rubric for agent answers grade actions, or should that stay with the unneeded-job counter only?
+
+## 2026-11-16, step 2.4: pooled review of missing required sources (owner)
+
+**Decision.** Both chunks are accepted, for all variants at once: `docs/ALGORITHM.md:43` for x-01 and
+`journal/CONTEXT.md:2178#p3` for x-02. They are added to the task's chunk group in the scoring only
+(`ACCEPTED_AFTER_REVIEW` in `ai/eval/agent-score.ts`); `ai/eval/agent-tasks.jsonl` stays as it was when the runs were
+made, so the "before" measure can be recomputed. M01 stays a miss: it lacks the required dataRefs, not a chunk.
+
+**Evidence.** Required sources met, before and after: A1 18 and 18, A2 17 and 17, B1 16 and 18, B2 16 and 16, C 18
+and 18 (85 and 87 of 90). After the review three cases remain, not one: M01 (B2 x-01, dataRefs: the answer read the
+right path but cited it as `["winPct"]` instead of `["summary", "<strategy>", "winPct"]`, so all 12 of its dataRefs on
+that file fail with no-call), M03 (A2 x-02, no citation at all, only dataRefs) and M05 (B2 x-02, only a legend
+citation). Neither accepted chunk appears in M03 or M05. A recomputation of the stored "before" measure from the stored
+calls and verification matches all 90 rows (checked in the scoring script).
+
+**Open.** The owner's message expected only M01 to stay; M03 and M05 also stay because they cite neither accepted chunk.
+
+**Review questions.** M05 cites the legend for the soundness criterion, which the x-02 decision excluded from the
+required source. Should a legend citation count for the criterion part of x-02 in a later evaluation?
+
+## 2026-11-16, step 2.4: rule for "exceeds the spread"
+
+**Decision.** Written in `ai/eval/agent-score.ts` before the comparison table was read: B vs A exceeds when the
+difference of the two-run means is larger than both run-to-run spreads |A1-A2| and |B1-B2|; C (one run) exceeds when it
+lies outside A1..A2 by more than |A1-A2|. Per-category numbers are shown, not compared.
+
+**Alternatives.** A statistical test per measure (rejected: two runs of 18 tasks give no usable variance estimate).
+
+**Open.** With a spread of 0, a difference of one answer counts as exceeding (C on supported, partly_supported).
+
+**Review questions.** Is "larger than both spreads" too lenient when one variant happens to have a small spread?

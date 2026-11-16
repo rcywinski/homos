@@ -40,9 +40,9 @@ Each item is a different question. Evidence lines starting with "result" are num
 - `result run-j20261112T112052n5-walkforward-base-cbbtc-weth-005-365d-30d, path ["summary","Pasywny ±50%","worst"]` "value in the result read: -0.5296348054175559"
 - `result run-j20261112T112052n5-walkforward-base-cbbtc-weth-005-365d-30d, path ["windows"]` "value in the result read: 23"
 
-Correctness (correct / partially_correct / incorrect):
-Faithfulness (supported / partly_supported / unsupported):
-Note (optional):
+Correctness (correct / partially_correct / incorrect): partially_correct
+Faithfulness (supported / partly_supported / unsupported): partly_supported
+Note (optional): zadanie 365 dni nie powinno być odpalane, bo daje zupełnie inne rezultaty niż 720 dni, o które pytano; część szczegółów (liczby okien w reżimach, 0% i 100% wygranych, krok 15 dni, próg 65%) nie ma linii w dowodach.
 
 ## B02
 
@@ -69,9 +69,9 @@ Note (optional):
 - `result pegged-mainnet-usdc-usdt-001-maxL, path ["results","9","aprPct"]` "value in the result read: 1.1471080779789977"
 - `result pegged-mainnet-usdc-usdt-001-endL, path ["results","9","aprPct"]` "value in the result read: 14.050249586722963"
 
-Correctness (correct / partially_correct / incorrect):
-Faithfulness (supported / partly_supported / unsupported):
-Note (optional):
+Correctness (correct / partially_correct / incorrect): correct
+Faithfulness (supported / partly_supported / unsupported): partly_supported
+Note (optional): dodatkowe rzeczy spoza pytania nie przeszkadzają; trzy rzeczy bez pokrycia (warianty z natychmiastowym rebalansem, maxL jako model ostrożny w dzienniku, nazwy dwóch kolejnych strategii). Zasada właściciela: supported tylko przy 100% pokrycia.
 
 ## B03
 
@@ -92,9 +92,9 @@ Note (optional):
 - `result e8-carry-ETHUSDT-90d, path ["byYear","2022","winPct"]` "value in the result read: 0"
 - `result e8-carry-ETHUSDT-90d, path ["byYear","2022","mean"]` "value in the result read: -1.0083916347032347"
 
-Correctness (correct / partially_correct / incorrect):
-Faithfulness (supported / partly_supported / unsupported):
-Note (optional):
+Correctness (correct / partially_correct / incorrect): correct
+Faithfulness (supported / partly_supported / unsupported): partly_supported
+Note (optional): główna teza pokryta cytatami; bez pokrycia zakres testu, benchmark 3.8% i liczba 42.5%, której agent nie odczytał z pliku.
 
 ## B04
 
@@ -112,9 +112,9 @@ Note (optional):
 - `journal/CONTEXT.md:94` "Wspólny lockfile > nieużywane helpery 1.x"
 - `journal/CONTEXT.md:2541-2542` "Po lokalnym `--no-save` 1.0.0 na Windows: pełny `--only fetch` **18/18 pul exit 0**"
 
-Correctness (correct / partially_correct / incorrect):
-Faithfulness (supported / partly_supported / unsupported):
-Note (optional):
+Correctness (correct / partially_correct / incorrect): correct
+Faithfulness (supported / partly_supported / unsupported): partly_supported
+Note (optional): rdzeń pokryty cytatem z tabeli decyzji; bez pokrycia ^1.4.0, twardy błąd, wersje macOS do 1.4.0, weryfikacja w rejestrze npm i data.
 
 ## B05
 
@@ -149,9 +149,9 @@ Note (optional):
 - `result walkforward-base-weth-usdc-005-365d-45d-kanon, path ["summary","Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)","byRegime","flat","winPct"]` "value in the result read: 75"
 - `result walkforward-base-weth-usdc-005-365d-45d-kanon, path ["summary","Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)","byRegime","flat","worst"]` "value in the result read: -2.1519864902774577"
 
-Correctness (correct / partially_correct / incorrect):
-Faithfulness (supported / partly_supported / unsupported):
-Note (optional):
+Correctness (correct / partially_correct / incorrect): correct
+Faithfulness (supported / partly_supported / unsupported): partly_supported
+Note (optional): 12 liczb potwierdzonych; bez pokrycia wartości z pliku bez "kanon" (-2.58, +1.16), liczby okien i odwołanie do ALGORITHM.md. Właściciel rozważał supported (szczegóły poboczne), został przy zasadzie 100% dla spójności z B01 do B04.
 
 ## B06
 
@@ -176,7 +176,7 @@ Note (optional):
 - `result run-j20261112T122409n2-walkforward-arbitrum-weth-usdc-030-365d-35d, path ["summary","Adaptacyjna k=3 h=24h payback≤7d","worst"]` "value in the result read: -13.447119103734783"
 - `result run-j20261112T122409n2-walkforward-arbitrum-weth-usdc-030-365d-35d, path ["summary","Adapt k=3 h=24h + trend(exit,HL7d,5%)","worst"]` "value in the result read: -8.080139643798578"
 
-Correctness (correct / partially_correct / incorrect):
-Faithfulness (supported / partly_supported / unsupported):
-Note (optional):
+Correctness (correct / partially_correct / incorrect): correct
+Faithfulness (supported / partly_supported / unsupported): partly_supported
+Note (optional): 6 liczb i dwa cytaty potwierdzone; trzy liczby (+0.09, -15.68, -8.02) agent wziął z wydruku zadania, bez odczytu pliku.
 

@@ -1,10 +1,11 @@
 /**
  * Tests for the step 2.4 evaluation code, offline: redundant-call rules, required sources, unneeded jobs, the judge
- * input (blind to run and variant) and the blind sample rule. Run: npx tsx ai/eval/agent-eval.test.ts
+ * input (blind to run and variant), the blind sample rule, the owner's accepted chunks and the spread rule. Run: npx tsx ai/eval/agent-eval.test.ts
  */
 import { agentJudgeInput, blindKey, BLIND_RUNS, CATEGORY_ORDER } from './agent-judge';
 import { redundantCalls, requiredSources, unneededJob, type AgentTask, type CallRecord } from './agent-measures';
 import { loadTasks } from './agent-run';
+import { ACCEPTED_AFTER_REVIEW, compare, withAccepted } from './agent-score';
 import type { AgentAnswer } from '../agent/model';
 import type { AgentVerification } from '../agent/verify';
 
@@ -98,6 +99,25 @@ const ans = (refs: Array<{ name: string; path: string[] }> = []): AgentAnswer =>
   check('six items, one per category, deterministic', k1.length === 6 && JSON.stringify(k1) === JSON.stringify(k2) && new Set(k1.map((k) => tasks.find((t) => t.id === k.id)!.category)).size === 6);
   check('runs follow the rotation by category', CATEGORY_ORDER.every((c, i) => k1.find((k) => tasks.find((t) => t.id === k.id)!.category === c)!.run === BLIND_RUNS[i]));
   check('labels B01..B06', k1.map((k) => k.label).join() === 'B01,B02,B03,B04,B05,B06');
+}
+
+// 5. The owner's accepted chunks and the spread rule.
+{
+  const tasks = loadTasks();
+  const x02 = withAccepted(tasks.find((t) => t.id === 'x-02')!);
+  check('accepted chunk added to the first group, other tasks unchanged', x02.sources.chunkGroups![0].includes('journal/CONTEXT.md:2178#p3') && withAccepted(tasks.find((t) => t.id === 'd-01')!) === tasks.find((t) => t.id === 'd-01'));
+  check('two accepted chunks, x-01 and x-02', Object.keys(ACCEPTED_AFTER_REVIEW).join() === 'x-01,x-02');
+  const v = { citations: [{ chunkId: 'journal/CONTEXT.md:2178#p3', quote: 'q', status: 'ok' as const, words: 1, tooLong: false }], dataRefs: [], unbackedNumbers: [] };
+  const t = tasks.find((x) => x.id === 'x-02')!;
+  const chunkOnly = { ...t, sources: { chunkGroups: t.sources.chunkGroups } };
+  check('the accepted chunk satisfies the group only after the review', !requiredSources(chunkOnly, [], v).ok && requiredSources(withAccepted(chunkOnly), [], v).ok);
+  const s = (n: number) => ({ n });
+  const one: Array<[string, (x: { n: number }) => number]> = [['n', (x) => x.n]];
+  const steady = compare({ A1: s(10), A2: s(12), B1: s(15), B2: s(15), C: s(13) }, one)[0];
+  check('B exceeds when the mean difference is larger than both spreads', steady.bExceeds && steady.bVsA === 4);
+  check('C one step outside A1..A2 does not exceed a spread of 2', steady.cOutsideA === 1 && !steady.cExceeds);
+  const noisy = compare({ A1: s(10), A2: s(16), B1: s(15), B2: s(15), C: s(13) }, one)[0];
+  check('B within the A spread does not exceed', !noisy.bExceeds);
 }
 
 console.log(`${passed} passed, ${failed} failed`);

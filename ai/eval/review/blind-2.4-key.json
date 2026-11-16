@@ -1,0 +1,41 @@
+{
+  "rule": "ai/eval/agent-judge.ts (blindKey)",
+  "key": [
+    {
+      "label": "B01",
+      "run": "A1",
+      "id": "p-02",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B02",
+      "run": "C",
+      "id": "b-02",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B03",
+      "run": "A1",
+      "id": "j-01",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B04",
+      "run": "B1",
+      "id": "d-01",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B05",
+      "run": "A2",
+      "id": "x-01",
+      "inAgreementSample": true
+    },
+    {
+      "label": "B06",
+      "run": "B2",
+      "id": "t-02",
+      "inAgreementSample": true
+    }
+  ]
+}

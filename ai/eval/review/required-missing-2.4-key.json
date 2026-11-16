@@ -1,0 +1,30 @@
+{
+  "rule": "ai/eval/agent-missing.ts",
+  "key": [
+    {
+      "label": "M01",
+      "run": "B2",
+      "id": "x-01"
+    },
+    {
+      "label": "M02",
+      "run": "B1",
+      "id": "x-01"
+    },
+    {
+      "label": "M03",
+      "run": "A2",
+      "id": "x-02"
+    },
+    {
+      "label": "M04",
+      "run": "B1",
+      "id": "x-02"
+    },
+    {
+      "label": "M05",
+      "run": "B2",
+      "id": "x-02"
+    }
+  ]
+}

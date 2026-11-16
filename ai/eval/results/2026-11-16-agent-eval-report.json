@@ -1,0 +1,2481 @@
+{
+  "date": "2026-11-16",
+  "judge": "judge:claude-opus-5-5(effort=medium)",
+  "judgeCostUsd": 1.7062,
+  "runCostUsd": 15.7481,
+  "acceptedAfterReview": {
+    "x-01": [
+      "docs/ALGORITHM.md:43"
+    ],
+    "x-02": [
+      "journal/CONTEXT.md:2178#p3"
+    ]
+  },
+  "agreement": {
+    "correctness": {
+      "n": 6,
+      "exact": 5,
+      "withinOne": 6
+    },
+    "faithfulness": {
+      "n": 6,
+      "exact": 6,
+      "withinOne": 6
+    },
+    "ungraded": [],
+    "rows": [
+      {
+        "label": "B01",
+        "run": "A1",
+        "id": "p-02",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "partially_correct",
+          "faithfulness": "partly_supported",
+          "note": "zadanie 365 dni nie powinno być odpalane, bo daje zupełnie inne rezultaty niż 720 dni, o które pytano; część szczegółów (liczby okien w reżimach, 0% i 100% wygranych, krok 15 dni, próg 65%) nie ma linii w dowodach."
+        },
+        "judge": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "The answer matches the reference: it reports the saved 720-day result with the right figures (mean -0.30%, 63.8% wins, worst -7.76%, and the regime splits), says a 720-day run is not available, and labels the fresh 365-day run as a different dataset.",
+          "faithfulnessReason": "Several specifics are not in any cited quote: the 15-day step, the per-regime window counts (30/5/12/4), the 0% win rate in up windows, the 100% recent-90 win rate and the 65% win bar."
+        }
+      },
+      {
+        "label": "B02",
+        "run": "C",
+        "id": "b-02",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "note": "dodatkowe rzeczy spoza pytania nie przeszkadzają; trzy rzeczy bez pokrycia (warianty z natychmiastowym rebalansem, maxL jako model ostrożny w dzienniku, nazwy dwóch kolejnych strategii). Zasada właściciela: supported tylko przy 100% pokrycia."
+        },
+        "judge": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "The answer names the same strategy (±0.10% h=6h) with the same APR (1.39%), result against HODL (+1.45%) and maximum drawdown (2.70%) as the reference.",
+          "faithfulnessReason": "The numbers for result 7 and the journal's ±0.10% h6 line are quoted, but several claims are not: the strategy labels for results 8 and 9, the statement that instant-rebalance variants lost heavily, the 11 Aug date, and the claim that ±0.20% h=24h was the best endL strategy."
+        }
+      },
+      {
+        "label": "B03",
+        "run": "A1",
+        "id": "j-01",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "note": "główna teza pokryta cytatami; bez pokrycia zakres testu, benchmark 3.8% i liczba 42.5%, której agent nie odczytał z pliku."
+        },
+        "judge": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "The answer matches the reference on the 8/8 failures, the test series, the funding versus break-even figures, the win rates, the negative recent 180 days, the 2020–21-only success, the 0% in 2022 and the closure with its signal-only exception.",
+          "faithfulnessReason": "Several specifics are not in any cited quote: the test series (Binance ETH/BTC 2019–2026, Hyperliquid 900 days, 30/90-day windows), the 3.8%/yr USDC benchmark, and the 42.5% win rate, which the cited result explicitly says was not found."
+        }
+      },
+      {
+        "label": "B04",
+        "run": "B1",
+        "id": "d-01",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "note": "rdzeń pokryty cytatem z tabeli decyzji; bez pokrycia ^1.4.0, twardy błąd, wersje macOS do 1.4.0, weryfikacja w rejestrze npm i data."
+        },
+        "judge": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "It gives the reference's reasons: no win32 binary after 1.0.0, the caret range resolving to a wrapper without the native module on Windows while working on macOS, and an identical API in 1.0.0.",
+          "faithfulnessReason": "The core reason, the lockfile note and the 18/18 result are quoted, but the `^1.4.0` range, macOS builds up to 1.4.0, the hard error, Fable's registry check and the 2026-08-19 date appear in no cited quote."
+        }
+      },
+      {
+        "label": "B05",
+        "run": "A2",
+        "id": "x-01",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "note": "12 liczb potwierdzonych; bez pokrycia wartości z pliku bez \"kanon\" (-2.58, +1.16), liczby okien i odwołanie do ALGORITHM.md. Właściciel rozważał supported (szczegóły poboczne), został przy zasadzie 100% dla spójności z B01 do B04."
+        },
+        "judge": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "It names the same kanon walk-forward file, strategy, 68.2% win rate, -2.52% worst and +1.20 mean, and gives per-regime means and win rates that match the reference (up +1.08/50%, down +0.66/70%, flat +1.94/75%).",
+          "faithfulnessReason": "The headline and regime figures are backed by the quotes, but several specifics are not in any quote: the 22 windows stepped every 15 days, the per-regime window counts (4/10/8), the ALGORITHM.md reference, and the non-kanon file's -2.58/+1.16 values."
+        }
+      },
+      {
+        "label": "B06",
+        "run": "B2",
+        "id": "t-02",
+        "inAgreementSample": true,
+        "owner": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "note": "6 liczb i dwa cytaty potwierdzone; trzy liczby (+0.09, -15.68, -8.02) agent wziął z wydruku zadania, bez odczytu pliku."
+        },
+        "judge": {
+          "correctness": "correct",
+          "faithfulness": "partly_supported",
+          "correctnessReason": "The answer matches the reference on the top strategy (+0.78%, 62.5% win rate, worst -7.71%) and on no strategy having a worst window above -3%.",
+          "faithfulnessReason": "Most figures are backed by the quotes, but the 48-window count, the +0.09 vg1.4 mean, and the -15.68 (k=2) and -8.02 worst values come from printed run output that no quote contains."
+        }
+      }
+    ]
+  },
+  "grading": {
+    "procedure": [
+      "Graded by the owner on 16 Nov 2026 without opening the key or the judge file.",
+      "The analysis session (Fable 5.2) did the mechanical part for each item: which reference points the answer contains, and which numbers and claims have an evidence line. The owner chose both grades himself; the analysis session suggested no grades. This differs from 1.9, where the owner compared the numbers himself: he declined to check percentages one by one.",
+      "Faithfulness rule, stated by the owner at B02 and kept for all six: supported only when every claim is covered. At B05 he first leaned to supported, was shown that B01 to B04 used the stricter rule, and chose partly_supported for consistency. All six faithfulness grades are partly_supported, so the sample calibrates correctness more than faithfulness.",
+      "At B01 the owner lowered correctness because the agent ran a 365-day job nobody asked for.",
+      "Leak: B06 shows a legend citation (\"legend of ...\"), and only variant B is told legends are citable. The analysis session's earlier check missed it: it searched for \"legend:\" while the file says \"legend of\"."
+    ],
+    "revisions": [
+      {
+        "label": "B05",
+        "field": "faithfulness",
+        "from": "supported (leaning, not written)",
+        "to": "partly_supported"
+      }
+    ],
+    "gloss": {
+      "B01": "The 365-day job should not have been run: it gives completely different results from the 720 days asked about. Some details (window counts per regime, 0% and 100% winners, the 15-day step, the 65% threshold) have no evidence line.",
+      "B02": "Extra material beyond the question does no harm. Three things are not covered: the variants with immediate rebalancing, maxL as the cautious model in the journal, and the names of the next two strategies. Owner's rule: supported only with 100% coverage.",
+      "B03": "The main claim is covered by quotes. Not covered: the test scope, the 3.8% benchmark, and the 42.5% figure, which the agent did not read from the file.",
+      "B04": "The core is covered by a quote from the decision table. Not covered: ^1.4.0, the hard error, macOS versions up to 1.4.0, the npm registry check and the date.",
+      "B05": "12 numbers confirmed. Not covered: the values from the file without \"kanon\" (-2.58, +1.16), the window counts and the reference to ALGORITHM.md. The owner considered supported (side details) and kept the 100% rule for consistency with B01 to B04.",
+      "B06": "6 numbers and two quotes confirmed. Three numbers (+0.09, -15.68, -8.02) the agent took from the job printout without reading the file."
+    }
+  },
+  "summaries": {
+    "A1": {
+      "n": 18,
+      "correctness": {
+        "correct": 17,
+        "partially_correct": 1,
+        "incorrect": 0,
+        "none": 0
+      },
+      "faithfulness": {
+        "supported": 1,
+        "partly_supported": 17,
+        "unsupported": 0,
+        "none": 0
+      },
+      "premiseHandled": 3,
+      "premiseN": 3,
+      "requiredOkBefore": 18,
+      "requiredOkAfter": 18,
+      "requiredMissingAfter": [],
+      "status": {
+        "answered": 6,
+        "repeated": 1,
+        "step-limit": 5,
+        "spend-cap": 6,
+        "error": 0,
+        "none": 0
+      },
+      "redundant": 25,
+      "redundantByKind": {
+        "repeat": 4,
+        "reread": 17,
+        "no-new-chunks": 4,
+        "second-read": 0
+      },
+      "rereadsUsedInDataRef": 16,
+      "unneededJobs": 2,
+      "legendCitations": 0,
+      "legendCitationsOk": 0,
+      "answersWithLegendCitation": 0,
+      "citationsOk": 41,
+      "citations": 41,
+      "dataRefsOk": 123,
+      "dataRefs": 125,
+      "unbackedNumbers": 156,
+      "steps": 137,
+      "toolCalls": 135,
+      "reasoningTokens": 1937,
+      "costUsd": 3.092,
+      "toolCostUsd": 0.0919,
+      "maxCostUsd": 0.3121,
+      "totalS": 1138,
+      "medianS": 35.5,
+      "noJobMedianS": 32.5
+    },
+    "A2": {
+      "n": 18,
+      "correctness": {
+        "correct": 16,
+        "partially_correct": 2,
+        "incorrect": 0,
+        "none": 0
+      },
+      "faithfulness": {
+        "supported": 1,
+        "partly_supported": 17,
+        "unsupported": 0,
+        "none": 0
+      },
+      "premiseHandled": 3,
+      "premiseN": 3,
+      "requiredOkBefore": 17,
+      "requiredOkAfter": 17,
+      "requiredMissingAfter": [
+        {
+          "id": "x-02",
+          "missing": [
+            "citation of one of docs/DECISION-LOG.md, docs/DECISION-LOG.md:22, journal/CONTEXT.md:96, journal/CONTEXT.md:2178#p3"
+          ]
+        }
+      ],
+      "status": {
+        "answered": 7,
+        "repeated": 4,
+        "step-limit": 1,
+        "spend-cap": 6,
+        "error": 0,
+        "none": 0
+      },
+      "redundant": 17,
+      "redundantByKind": {
+        "repeat": 10,
+        "reread": 6,
+        "no-new-chunks": 1,
+        "second-read": 0
+      },
+      "rereadsUsedInDataRef": 6,
+      "unneededJobs": 0,
+      "legendCitations": 0,
+      "legendCitationsOk": 0,
+      "answersWithLegendCitation": 0,
+      "citationsOk": 44,
+      "citations": 44,
+      "dataRefsOk": 123,
+      "dataRefs": 127,
+      "unbackedNumbers": 151,
+      "steps": 117,
+      "toolCalls": 117,
+      "reasoningTokens": 1549,
+      "costUsd": 2.7208,
+      "toolCostUsd": 0.0828,
+      "maxCostUsd": 0.2736,
+      "totalS": 902,
+      "medianS": 26,
+      "noJobMedianS": 25.5
+    },
+    "B1": {
+      "n": 18,
+      "correctness": {
+        "correct": 17,
+        "partially_correct": 1,
+        "incorrect": 0,
+        "none": 0
+      },
+      "faithfulness": {
+        "supported": 0,
+        "partly_supported": 18,
+        "unsupported": 0,
+        "none": 0
+      },
+      "premiseHandled": 3,
+      "premiseN": 3,
+      "requiredOkBefore": 16,
+      "requiredOkAfter": 18,
+      "requiredMissingAfter": [],
+      "status": {
+        "answered": 7,
+        "repeated": 1,
+        "step-limit": 4,
+        "spend-cap": 6,
+        "error": 0,
+        "none": 0
+      },
+      "redundant": 11,
+      "redundantByKind": {
+        "repeat": 6,
+        "reread": 4,
+        "no-new-chunks": 1,
+        "second-read": 0
+      },
+      "rereadsUsedInDataRef": 4,
+      "unneededJobs": 1,
+      "legendCitations": 8,
+      "legendCitationsOk": 8,
+      "answersWithLegendCitation": 8,
+      "citationsOk": 48,
+      "citations": 49,
+      "dataRefsOk": 118,
+      "dataRefs": 121,
+      "unbackedNumbers": 131,
+      "steps": 132,
+      "toolCalls": 128,
+      "reasoningTokens": 2276,
+      "costUsd": 3.3483,
+      "toolCostUsd": 0.1046,
+      "maxCostUsd": 0.2934,
+      "totalS": 1040,
+      "medianS": 31.4,
+      "noJobMedianS": 31.4
+    },
+    "B2": {
+      "n": 18,
+      "correctness": {
+        "correct": 17,
+        "partially_correct": 1,
+        "incorrect": 0,
+        "none": 0
+      },
+      "faithfulness": {
+        "supported": 1,
+        "partly_supported": 17,
+        "unsupported": 0,
+        "none": 0
+      },
+      "premiseHandled": 3,
+      "premiseN": 3,
+      "requiredOkBefore": 16,
+      "requiredOkAfter": 16,
+      "requiredMissingAfter": [
+        {
+          "id": "x-01",
+          "missing": [
+            "dataRef walkforward-base-weth-usdc-005-365d-45d-kanon [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"winPct\"]",
+            "dataRef walkforward-base-weth-usdc-005-365d-45d-kanon [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"worst\"]"
+          ]
+        },
+        {
+          "id": "x-02",
+          "missing": [
+            "citation of one of docs/DECISION-LOG.md, docs/DECISION-LOG.md:22, journal/CONTEXT.md:96, journal/CONTEXT.md:2178#p3"
+          ]
+        }
+      ],
+      "status": {
+        "answered": 6,
+        "repeated": 1,
+        "step-limit": 6,
+        "spend-cap": 5,
+        "error": 0,
+        "none": 0
+      },
+      "redundant": 12,
+      "redundantByKind": {
+        "repeat": 7,
+        "reread": 5,
+        "no-new-chunks": 0,
+        "second-read": 0
+      },
+      "rereadsUsedInDataRef": 5,
+      "unneededJobs": 2,
+      "legendCitations": 10,
+      "legendCitationsOk": 10,
+      "answersWithLegendCitation": 10,
+      "citationsOk": 54,
+      "citations": 55,
+      "dataRefsOk": 111,
+      "dataRefs": 128,
+      "unbackedNumbers": 153,
+      "steps": 141,
+      "toolCalls": 136,
+      "reasoningTokens": 2569,
+      "costUsd": 3.6912,
+      "toolCostUsd": 0.1395,
+      "maxCostUsd": 0.3151,
+      "totalS": 1196,
+      "medianS": 38,
+      "noJobMedianS": 32.9
+    },
+    "C": {
+      "n": 18,
+      "correctness": {
+        "correct": 17,
+        "partially_correct": 1,
+        "incorrect": 0,
+        "none": 0
+      },
+      "faithfulness": {
+        "supported": 0,
+        "partly_supported": 18,
+        "unsupported": 0,
+        "none": 0
+      },
+      "premiseHandled": 3,
+      "premiseN": 3,
+      "requiredOkBefore": 18,
+      "requiredOkAfter": 18,
+      "requiredMissingAfter": [],
+      "status": {
+        "answered": 8,
+        "repeated": 2,
+        "step-limit": 5,
+        "spend-cap": 3,
+        "error": 0,
+        "none": 0
+      },
+      "redundant": 18,
+      "redundantByKind": {
+        "repeat": 6,
+        "reread": 9,
+        "no-new-chunks": 3,
+        "second-read": 0
+      },
+      "rereadsUsedInDataRef": 9,
+      "unneededJobs": 1,
+      "legendCitations": 0,
+      "legendCitationsOk": 0,
+      "answersWithLegendCitation": 0,
+      "citationsOk": 49,
+      "citations": 50,
+      "dataRefsOk": 147,
+      "dataRefs": 151,
+      "unbackedNumbers": 152,
+      "steps": 125,
+      "toolCalls": 127,
+      "reasoningTokens": 4252,
+      "costUsd": 2.8958,
+      "toolCostUsd": 0.0927,
+      "maxCostUsd": 0.3014,
+      "totalS": 1114,
+      "medianS": 31.5,
+      "noJobMedianS": 30
+    }
+  },
+  "comparison": [
+    {
+      "name": "correct",
+      "a1": 17,
+      "a2": 16,
+      "b1": 17,
+      "b2": 17,
+      "c": 17,
+      "spreadA": 1,
+      "spreadB": 0,
+      "bVsA": 0.5,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "partially correct",
+      "a1": 1,
+      "a2": 2,
+      "b1": 1,
+      "b2": 1,
+      "c": 1,
+      "spreadA": 1,
+      "spreadB": 0,
+      "bVsA": -0.5,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "incorrect",
+      "a1": 0,
+      "a2": 0,
+      "b1": 0,
+      "b2": 0,
+      "c": 0,
+      "spreadA": 0,
+      "spreadB": 0,
+      "bVsA": 0,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "supported",
+      "a1": 1,
+      "a2": 1,
+      "b1": 0,
+      "b2": 1,
+      "c": 0,
+      "spreadA": 0,
+      "spreadB": 1,
+      "bVsA": -0.5,
+      "bExceeds": false,
+      "cOutsideA": -1,
+      "cExceeds": true
+    },
+    {
+      "name": "partly supported",
+      "a1": 17,
+      "a2": 17,
+      "b1": 18,
+      "b2": 17,
+      "c": 18,
+      "spreadA": 0,
+      "spreadB": 1,
+      "bVsA": 0.5,
+      "bExceeds": false,
+      "cOutsideA": 1,
+      "cExceeds": true
+    },
+    {
+      "name": "unsupported",
+      "a1": 0,
+      "a2": 0,
+      "b1": 0,
+      "b2": 0,
+      "c": 0,
+      "spreadA": 0,
+      "spreadB": 0,
+      "bVsA": 0,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "premise handled",
+      "a1": 3,
+      "a2": 3,
+      "b1": 3,
+      "b2": 3,
+      "c": 3,
+      "spreadA": 0,
+      "spreadB": 0,
+      "bVsA": 0,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "required ok (after review)",
+      "a1": 18,
+      "a2": 17,
+      "b1": 18,
+      "b2": 16,
+      "c": 18,
+      "spreadA": 1,
+      "spreadB": 2,
+      "bVsA": -0.5,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "answered",
+      "a1": 6,
+      "a2": 7,
+      "b1": 7,
+      "b2": 6,
+      "c": 8,
+      "spreadA": 1,
+      "spreadB": 1,
+      "bVsA": 0,
+      "bExceeds": false,
+      "cOutsideA": 1,
+      "cExceeds": false
+    },
+    {
+      "name": "repeated",
+      "a1": 1,
+      "a2": 4,
+      "b1": 1,
+      "b2": 1,
+      "c": 2,
+      "spreadA": 3,
+      "spreadB": 0,
+      "bVsA": -1.5,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "step-limit",
+      "a1": 5,
+      "a2": 1,
+      "b1": 4,
+      "b2": 6,
+      "c": 5,
+      "spreadA": 4,
+      "spreadB": 2,
+      "bVsA": 2,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "spend-cap",
+      "a1": 6,
+      "a2": 6,
+      "b1": 6,
+      "b2": 5,
+      "c": 3,
+      "spreadA": 0,
+      "spreadB": 1,
+      "bVsA": -0.5,
+      "bExceeds": false,
+      "cOutsideA": -3,
+      "cExceeds": true
+    },
+    {
+      "name": "redundant calls",
+      "a1": 25,
+      "a2": 17,
+      "b1": 11,
+      "b2": 12,
+      "c": 18,
+      "spreadA": 8,
+      "spreadB": 1,
+      "bVsA": -9.5,
+      "bExceeds": true,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "rereads used in a dataRef",
+      "a1": 16,
+      "a2": 6,
+      "b1": 4,
+      "b2": 5,
+      "c": 9,
+      "spreadA": 10,
+      "spreadB": 1,
+      "bVsA": -6.5,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "unneeded jobs",
+      "a1": 2,
+      "a2": 0,
+      "b1": 1,
+      "b2": 2,
+      "c": 1,
+      "spreadA": 2,
+      "spreadB": 1,
+      "bVsA": 0.5,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "legend citations",
+      "a1": 0,
+      "a2": 0,
+      "b1": 8,
+      "b2": 10,
+      "c": 0,
+      "spreadA": 0,
+      "spreadB": 2,
+      "bVsA": 9,
+      "bExceeds": true,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "unbacked numbers",
+      "a1": 156,
+      "a2": 151,
+      "b1": 131,
+      "b2": 153,
+      "c": 152,
+      "spreadA": 5,
+      "spreadB": 22,
+      "bVsA": -11.5,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "steps",
+      "a1": 137,
+      "a2": 117,
+      "b1": 132,
+      "b2": 141,
+      "c": 125,
+      "spreadA": 20,
+      "spreadB": 9,
+      "bVsA": 9.5,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "tool calls",
+      "a1": 135,
+      "a2": 117,
+      "b1": 128,
+      "b2": 136,
+      "c": 127,
+      "spreadA": 18,
+      "spreadB": 8,
+      "bVsA": 6,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "cost $",
+      "a1": 3.092,
+      "a2": 2.7208,
+      "b1": 3.3483,
+      "b2": 3.6912,
+      "c": 2.8958,
+      "spreadA": 0.3712,
+      "spreadB": 0.3429,
+      "bVsA": 0.6134,
+      "bExceeds": true,
+      "cOutsideA": 0,
+      "cExceeds": false
+    },
+    {
+      "name": "median s (no-job tasks)",
+      "a1": 32.5,
+      "a2": 25.5,
+      "b1": 31.4,
+      "b2": 32.9,
+      "c": 30,
+      "spreadA": 7,
+      "spreadB": 1.5,
+      "bVsA": 3.15,
+      "bExceeds": false,
+      "cOutsideA": 0,
+      "cExceeds": false
+    }
+  ],
+  "spread": {
+    "A": {
+      "n": 18,
+      "correctness": [
+        {
+          "id": "p-02",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "p-01",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "p-03",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        }
+      ],
+      "faithfulness": []
+    },
+    "B": {
+      "n": 18,
+      "correctness": [
+        {
+          "id": "x-03",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          }
+        },
+        {
+          "id": "p-02",
+          "a": {
+            "correctness": "partially_correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          }
+        }
+      ],
+      "faithfulness": [
+        {
+          "id": "x-02",
+          "a": {
+            "correctness": "correct",
+            "faithfulness": "partly_supported"
+          },
+          "b": {
+            "correctness": "correct",
+            "faithfulness": "supported"
+          }
+        }
+      ]
+    }
+  },
+  "perCategory": {
+    "journal": {
+      "A1": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 1,
+          "repeated": 0,
+          "step-limit": 0,
+          "spend-cap": 2,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 2,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 0,
+          "no-new-chunks": 2,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 14,
+        "citations": 14,
+        "dataRefsOk": 2,
+        "dataRefs": 3,
+        "unbackedNumbers": 15,
+        "steps": 17,
+        "toolCalls": 17,
+        "reasoningTokens": 34,
+        "costUsd": 0.6571,
+        "toolCostUsd": 0.0272,
+        "maxCostUsd": 0.3121,
+        "totalS": 95,
+        "medianS": 35,
+        "noJobMedianS": 35
+      },
+      "A2": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 0,
+          "repeated": 0,
+          "step-limit": 0,
+          "spend-cap": 3,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 1,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 0,
+          "no-new-chunks": 1,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 16,
+        "citations": 16,
+        "dataRefsOk": 1,
+        "dataRefs": 4,
+        "unbackedNumbers": 14,
+        "steps": 21,
+        "toolCalls": 21,
+        "reasoningTokens": 57,
+        "costUsd": 0.8113,
+        "toolCostUsd": 0.0363,
+        "maxCostUsd": 0.2736,
+        "totalS": 164,
+        "medianS": 42.8,
+        "noJobMedianS": 42.8
+      },
+      "B1": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 2,
+          "repeated": 0,
+          "step-limit": 0,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 0,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 0,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 15,
+        "citations": 15,
+        "dataRefsOk": 0,
+        "dataRefs": 2,
+        "unbackedNumbers": 14,
+        "steps": 13,
+        "toolCalls": 13,
+        "reasoningTokens": 34,
+        "costUsd": 0.4964,
+        "toolCostUsd": 0.0175,
+        "maxCostUsd": 0.2724,
+        "totalS": 70,
+        "medianS": 26,
+        "noJobMedianS": 26
+      },
+      "B2": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 0,
+          "repeated": 0,
+          "step-limit": 0,
+          "spend-cap": 3,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 1,
+        "redundantByKind": {
+          "repeat": 1,
+          "reread": 0,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 14,
+        "citations": 14,
+        "dataRefsOk": 2,
+        "dataRefs": 6,
+        "unbackedNumbers": 12,
+        "steps": 22,
+        "toolCalls": 22,
+        "reasoningTokens": 29,
+        "costUsd": 0.8564,
+        "toolCostUsd": 0.0314,
+        "maxCostUsd": 0.295,
+        "totalS": 100,
+        "medianS": 32.9,
+        "noJobMedianS": 32.9
+      },
+      "C": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 1,
+          "repeated": 1,
+          "step-limit": 0,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 5,
+        "redundantByKind": {
+          "repeat": 3,
+          "reread": 0,
+          "no-new-chunks": 2,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 18,
+        "citations": 18,
+        "dataRefsOk": 1,
+        "dataRefs": 4,
+        "unbackedNumbers": 12,
+        "steps": 20,
+        "toolCalls": 20,
+        "reasoningTokens": 255,
+        "costUsd": 0.6592,
+        "toolCostUsd": 0.0199,
+        "maxCostUsd": 0.3014,
+        "totalS": 84,
+        "medianS": 30.3,
+        "noJobMedianS": 30.3
+      }
+    },
+    "decision-log": {
+      "A1": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 0,
+          "repeated": 1,
+          "step-limit": 0,
+          "spend-cap": 2,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 4,
+        "redundantByKind": {
+          "repeat": 2,
+          "reread": 0,
+          "no-new-chunks": 2,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 19,
+        "citations": 19,
+        "dataRefsOk": 0,
+        "dataRefs": 0,
+        "unbackedNumbers": 9,
+        "steps": 25,
+        "toolCalls": 24,
+        "reasoningTokens": 0,
+        "costUsd": 0.7736,
+        "toolCostUsd": 0.0274,
+        "maxCostUsd": 0.2929,
+        "totalS": 106,
+        "medianS": 34.4,
+        "noJobMedianS": 34.4
+      },
+      "A2": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 0,
+          "repeated": 2,
+          "step-limit": 0,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 4,
+        "redundantByKind": {
+          "repeat": 4,
+          "reread": 0,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 16,
+        "citations": 16,
+        "dataRefsOk": 0,
+        "dataRefs": 0,
+        "unbackedNumbers": 7,
+        "steps": 19,
+        "toolCalls": 18,
+        "reasoningTokens": 0,
+        "costUsd": 0.4972,
+        "toolCostUsd": 0.0143,
+        "maxCostUsd": 0.2712,
+        "totalS": 109,
+        "medianS": 25.5,
+        "noJobMedianS": 25.5
+      },
+      "B1": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 0,
+          "repeated": 1,
+          "step-limit": 0,
+          "spend-cap": 2,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 3,
+        "redundantByKind": {
+          "repeat": 2,
+          "reread": 0,
+          "no-new-chunks": 1,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 14,
+        "citations": 14,
+        "dataRefsOk": 0,
+        "dataRefs": 0,
+        "unbackedNumbers": 10,
+        "steps": 24,
+        "toolCalls": 23,
+        "reasoningTokens": 0,
+        "costUsd": 0.7991,
+        "toolCostUsd": 0.0277,
+        "maxCostUsd": 0.2902,
+        "totalS": 109,
+        "medianS": 37.9,
+        "noJobMedianS": 37.9
+      },
+      "B2": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 0,
+          "repeated": 0,
+          "step-limit": 1,
+          "spend-cap": 2,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 2,
+        "redundantByKind": {
+          "repeat": 2,
+          "reread": 0,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 19,
+        "citations": 19,
+        "dataRefsOk": 0,
+        "dataRefs": 0,
+        "unbackedNumbers": 10,
+        "steps": 27,
+        "toolCalls": 26,
+        "reasoningTokens": 0,
+        "costUsd": 0.9055,
+        "toolCostUsd": 0.0466,
+        "maxCostUsd": 0.3151,
+        "totalS": 137,
+        "medianS": 45.4,
+        "noJobMedianS": 45.4
+      },
+      "C": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 2,
+          "repeated": 0,
+          "step-limit": 0,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 2,
+        "redundantByKind": {
+          "repeat": 1,
+          "reread": 0,
+          "no-new-chunks": 1,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 17,
+        "citations": 17,
+        "dataRefsOk": 0,
+        "dataRefs": 0,
+        "unbackedNumbers": 4,
+        "steps": 13,
+        "toolCalls": 14,
+        "reasoningTokens": 85,
+        "costUsd": 0.4277,
+        "toolCostUsd": 0.025,
+        "maxCostUsd": 0.2722,
+        "totalS": 77,
+        "medianS": 22.1,
+        "noJobMedianS": 22.1
+      }
+    },
+    "backtest": {
+      "A1": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 1,
+          "repeated": 0,
+          "step-limit": 1,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 7,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 7,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 6,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 2,
+        "citations": 2,
+        "dataRefsOk": 18,
+        "dataRefs": 18,
+        "unbackedNumbers": 20,
+        "steps": 25,
+        "toolCalls": 24,
+        "reasoningTokens": 125,
+        "costUsd": 0.5528,
+        "toolCostUsd": 0.0136,
+        "maxCostUsd": 0.2885,
+        "totalS": 78,
+        "medianS": 27,
+        "noJobMedianS": 27
+      },
+      "A2": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 2,
+          "repeated": 1,
+          "step-limit": 0,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 7,
+        "redundantByKind": {
+          "repeat": 3,
+          "reread": 4,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 4,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 2,
+        "citations": 2,
+        "dataRefsOk": 19,
+        "dataRefs": 20,
+        "unbackedNumbers": 16,
+        "steps": 22,
+        "toolCalls": 21,
+        "reasoningTokens": 211,
+        "costUsd": 0.4148,
+        "toolCostUsd": 0.0115,
+        "maxCostUsd": 0.2051,
+        "totalS": 64,
+        "medianS": 24.3,
+        "noJobMedianS": 24.3
+      },
+      "B1": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 2,
+          "repeated": 0,
+          "step-limit": 0,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 2,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 2,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 2,
+        "unneededJobs": 0,
+        "legendCitations": 2,
+        "legendCitationsOk": 2,
+        "answersWithLegendCitation": 2,
+        "citationsOk": 5,
+        "citations": 5,
+        "dataRefsOk": 20,
+        "dataRefs": 20,
+        "unbackedNumbers": 16,
+        "steps": 20,
+        "toolCalls": 19,
+        "reasoningTokens": 122,
+        "costUsd": 0.5249,
+        "toolCostUsd": 0.0192,
+        "maxCostUsd": 0.2782,
+        "totalS": 76,
+        "medianS": 21.9,
+        "noJobMedianS": 21.9
+      },
+      "B2": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 1,
+          "repeated": 1,
+          "step-limit": 1,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 5,
+        "redundantByKind": {
+          "repeat": 2,
+          "reread": 3,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 3,
+        "unneededJobs": 0,
+        "legendCitations": 3,
+        "legendCitationsOk": 3,
+        "answersWithLegendCitation": 3,
+        "citationsOk": 5,
+        "citations": 5,
+        "dataRefsOk": 17,
+        "dataRefs": 17,
+        "unbackedNumbers": 16,
+        "steps": 21,
+        "toolCalls": 20,
+        "reasoningTokens": 166,
+        "costUsd": 0.5217,
+        "toolCostUsd": 0.0194,
+        "maxCostUsd": 0.2526,
+        "totalS": 75,
+        "medianS": 32.9,
+        "noJobMedianS": 32.9
+      },
+      "C": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 1,
+          "repeated": 0,
+          "step-limit": 2,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 8,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 8,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 8,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 3,
+        "citations": 3,
+        "dataRefsOk": 22,
+        "dataRefs": 22,
+        "unbackedNumbers": 18,
+        "steps": 24,
+        "toolCalls": 24,
+        "reasoningTokens": 263,
+        "costUsd": 0.456,
+        "toolCostUsd": 0.0148,
+        "maxCostUsd": 0.2017,
+        "totalS": 72,
+        "medianS": 29.7,
+        "noJobMedianS": 29.7
+      }
+    },
+    "journal+backtest": {
+      "A1": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 1,
+          "partly_supported": 2,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 2,
+          "repeated": 0,
+          "step-limit": 1,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 4,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 4,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 4,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 5,
+        "citations": 5,
+        "dataRefsOk": 45,
+        "dataRefs": 45,
+        "unbackedNumbers": 18,
+        "steps": 22,
+        "toolCalls": 26,
+        "reasoningTokens": 935,
+        "costUsd": 0.5425,
+        "toolCostUsd": 0.0162,
+        "maxCostUsd": 0.2667,
+        "totalS": 102,
+        "medianS": 32.5,
+        "noJobMedianS": 32.5
+      },
+      "A2": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 1,
+          "partly_supported": 2,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 2,
+        "requiredOkAfter": 2,
+        "requiredMissingAfter": [
+          {
+            "id": "x-02",
+            "missing": [
+              "citation of one of docs/DECISION-LOG.md, docs/DECISION-LOG.md:22, journal/CONTEXT.md:96, journal/CONTEXT.md:2178#p3"
+            ]
+          }
+        ],
+        "status": {
+          "answered": 3,
+          "repeated": 0,
+          "step-limit": 0,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 0,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 0,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 3,
+        "citations": 3,
+        "dataRefsOk": 46,
+        "dataRefs": 46,
+        "unbackedNumbers": 26,
+        "steps": 12,
+        "toolCalls": 18,
+        "reasoningTokens": 557,
+        "costUsd": 0.2816,
+        "toolCostUsd": 0.0079,
+        "maxCostUsd": 0.121,
+        "totalS": 66,
+        "medianS": 21.6,
+        "noJobMedianS": 21.6
+      },
+      "B1": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 1,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 2,
+          "repeated": 0,
+          "step-limit": 1,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 2,
+        "redundantByKind": {
+          "repeat": 1,
+          "reread": 1,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 1,
+        "unneededJobs": 0,
+        "legendCitations": 2,
+        "legendCitationsOk": 2,
+        "answersWithLegendCitation": 2,
+        "citationsOk": 6,
+        "citations": 7,
+        "dataRefsOk": 36,
+        "dataRefs": 37,
+        "unbackedNumbers": 28,
+        "steps": 21,
+        "toolCalls": 24,
+        "reasoningTokens": 872,
+        "costUsd": 0.4797,
+        "toolCostUsd": 0.0119,
+        "maxCostUsd": 0.208,
+        "totalS": 89,
+        "medianS": 31.4,
+        "noJobMedianS": 31.4
+      },
+      "B2": {
+        "n": 3,
+        "correctness": {
+          "correct": 2,
+          "partially_correct": 1,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 1,
+          "partly_supported": 2,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 1,
+        "requiredOkAfter": 1,
+        "requiredMissingAfter": [
+          {
+            "id": "x-01",
+            "missing": [
+              "dataRef walkforward-base-weth-usdc-005-365d-45d-kanon [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"winPct\"]",
+              "dataRef walkforward-base-weth-usdc-005-365d-45d-kanon [\"summary\",\"Adapt k=3 h=24h + trend(exit,HL7d,5%,re>ema)\",\"worst\"]"
+            ]
+          },
+          {
+            "id": "x-02",
+            "missing": [
+              "citation of one of docs/DECISION-LOG.md, docs/DECISION-LOG.md:22, journal/CONTEXT.md:96, journal/CONTEXT.md:2178#p3"
+            ]
+          }
+        ],
+        "status": {
+          "answered": 3,
+          "repeated": 0,
+          "step-limit": 0,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 0,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 0,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 2,
+        "legendCitationsOk": 2,
+        "answersWithLegendCitation": 2,
+        "citationsOk": 6,
+        "citations": 7,
+        "dataRefsOk": 34,
+        "dataRefs": 46,
+        "unbackedNumbers": 34,
+        "steps": 16,
+        "toolCalls": 19,
+        "reasoningTokens": 803,
+        "costUsd": 0.4487,
+        "toolCostUsd": 0.0154,
+        "maxCostUsd": 0.24,
+        "totalS": 81,
+        "medianS": 20.4,
+        "noJobMedianS": 20.4
+      },
+      "C": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 2,
+          "repeated": 1,
+          "step-limit": 0,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 2,
+        "redundantByKind": {
+          "repeat": 2,
+          "reread": 0,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 7,
+        "citations": 8,
+        "dataRefsOk": 45,
+        "dataRefs": 45,
+        "unbackedNumbers": 29,
+        "steps": 17,
+        "toolCalls": 24,
+        "reasoningTokens": 1520,
+        "costUsd": 0.4428,
+        "toolCostUsd": 0.0126,
+        "maxCostUsd": 0.1741,
+        "totalS": 93,
+        "medianS": 34.4,
+        "noJobMedianS": 34.4
+      }
+    },
+    "job": {
+      "A1": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 0,
+          "repeated": 0,
+          "step-limit": 2,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 6,
+        "redundantByKind": {
+          "repeat": 1,
+          "reread": 5,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 5,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 1,
+        "citations": 1,
+        "dataRefsOk": 28,
+        "dataRefs": 28,
+        "unbackedNumbers": 42,
+        "steps": 29,
+        "toolCalls": 28,
+        "reasoningTokens": 219,
+        "costUsd": 0.3938,
+        "toolCostUsd": 0.0076,
+        "maxCostUsd": 0.2096,
+        "totalS": 426,
+        "medianS": 190.1,
+        "noJobMedianS": 0
+      },
+      "A2": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 0,
+          "repeated": 1,
+          "step-limit": 1,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 5,
+        "redundantByKind": {
+          "repeat": 3,
+          "reread": 2,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 2,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 2,
+        "citations": 2,
+        "dataRefsOk": 35,
+        "dataRefs": 35,
+        "unbackedNumbers": 49,
+        "steps": 27,
+        "toolCalls": 26,
+        "reasoningTokens": 244,
+        "costUsd": 0.3435,
+        "toolCostUsd": 0.0037,
+        "maxCostUsd": 0.1817,
+        "totalS": 428,
+        "medianS": 193,
+        "noJobMedianS": 0
+      },
+      "B1": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 0,
+          "repeated": 0,
+          "step-limit": 2,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 3,
+        "redundantByKind": {
+          "repeat": 2,
+          "reread": 1,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 1,
+        "unneededJobs": 0,
+        "legendCitations": 2,
+        "legendCitationsOk": 2,
+        "answersWithLegendCitation": 2,
+        "citationsOk": 3,
+        "citations": 3,
+        "dataRefsOk": 32,
+        "dataRefs": 32,
+        "unbackedNumbers": 34,
+        "steps": 29,
+        "toolCalls": 27,
+        "reasoningTokens": 523,
+        "costUsd": 0.4773,
+        "toolCostUsd": 0.0069,
+        "maxCostUsd": 0.1861,
+        "totalS": 426,
+        "medianS": 189.5,
+        "noJobMedianS": 0
+      },
+      "B2": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 0,
+          "repeated": 0,
+          "step-limit": 3,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 3,
+        "redundantByKind": {
+          "repeat": 1,
+          "reread": 2,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 2,
+        "unneededJobs": 0,
+        "legendCitations": 3,
+        "legendCitationsOk": 3,
+        "answersWithLegendCitation": 3,
+        "citationsOk": 6,
+        "citations": 6,
+        "dataRefsOk": 30,
+        "dataRefs": 30,
+        "unbackedNumbers": 31,
+        "steps": 30,
+        "toolCalls": 27,
+        "reasoningTokens": 732,
+        "costUsd": 0.4923,
+        "toolCostUsd": 0.0159,
+        "maxCostUsd": 0.1874,
+        "totalS": 439,
+        "medianS": 196,
+        "noJobMedianS": 0
+      },
+      "C": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 0,
+        "premiseN": 0,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 1,
+          "repeated": 0,
+          "step-limit": 1,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 0,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 0,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 2,
+        "citations": 2,
+        "dataRefsOk": 35,
+        "dataRefs": 35,
+        "unbackedNumbers": 51,
+        "steps": 26,
+        "toolCalls": 23,
+        "reasoningTokens": 872,
+        "costUsd": 0.4444,
+        "toolCostUsd": 0.0078,
+        "maxCostUsd": 0.2159,
+        "totalS": 486,
+        "medianS": 193.2,
+        "noJobMedianS": 0
+      }
+    },
+    "premise": {
+      "A1": {
+        "n": 3,
+        "correctness": {
+          "correct": 2,
+          "partially_correct": 1,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 3,
+        "premiseN": 3,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 2,
+          "repeated": 0,
+          "step-limit": 1,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 2,
+        "redundantByKind": {
+          "repeat": 1,
+          "reread": 1,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 1,
+        "unneededJobs": 2,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 0,
+        "citations": 0,
+        "dataRefsOk": 30,
+        "dataRefs": 31,
+        "unbackedNumbers": 52,
+        "steps": 19,
+        "toolCalls": 16,
+        "reasoningTokens": 624,
+        "costUsd": 0.1721,
+        "toolCostUsd": 0,
+        "maxCostUsd": 0.0707,
+        "totalS": 331,
+        "medianS": 125.5,
+        "noJobMedianS": 10.4
+      },
+      "A2": {
+        "n": 3,
+        "correctness": {
+          "correct": 1,
+          "partially_correct": 2,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 3,
+        "premiseN": 3,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 2,
+          "repeated": 0,
+          "step-limit": 0,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 0,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 0,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 0,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 5,
+        "citations": 5,
+        "dataRefsOk": 22,
+        "dataRefs": 22,
+        "unbackedNumbers": 39,
+        "steps": 16,
+        "toolCalls": 13,
+        "reasoningTokens": 480,
+        "costUsd": 0.3723,
+        "toolCostUsd": 0.0091,
+        "maxCostUsd": 0.181,
+        "totalS": 73,
+        "medianS": 20,
+        "noJobMedianS": 20
+      },
+      "B1": {
+        "n": 3,
+        "correctness": {
+          "correct": 2,
+          "partially_correct": 1,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 3,
+        "premiseN": 3,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 1,
+          "repeated": 0,
+          "step-limit": 1,
+          "spend-cap": 1,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 1,
+        "redundantByKind": {
+          "repeat": 1,
+          "reread": 0,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 1,
+        "legendCitations": 2,
+        "legendCitationsOk": 2,
+        "answersWithLegendCitation": 2,
+        "citationsOk": 5,
+        "citations": 5,
+        "dataRefsOk": 30,
+        "dataRefs": 30,
+        "unbackedNumbers": 29,
+        "steps": 25,
+        "toolCalls": 22,
+        "reasoningTokens": 725,
+        "costUsd": 0.5709,
+        "toolCostUsd": 0.0215,
+        "maxCostUsd": 0.2934,
+        "totalS": 271,
+        "medianS": 32.9,
+        "noJobMedianS": 32.9
+      },
+      "B2": {
+        "n": 3,
+        "correctness": {
+          "correct": 3,
+          "partially_correct": 0,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 3,
+        "premiseN": 3,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 2,
+          "repeated": 0,
+          "step-limit": 1,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 1,
+        "redundantByKind": {
+          "repeat": 1,
+          "reread": 0,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 0,
+        "unneededJobs": 2,
+        "legendCitations": 2,
+        "legendCitationsOk": 2,
+        "answersWithLegendCitation": 2,
+        "citationsOk": 4,
+        "citations": 4,
+        "dataRefsOk": 28,
+        "dataRefs": 29,
+        "unbackedNumbers": 50,
+        "steps": 25,
+        "toolCalls": 22,
+        "reasoningTokens": 839,
+        "costUsd": 0.4665,
+        "toolCostUsd": 0.0108,
+        "maxCostUsd": 0.1622,
+        "totalS": 363,
+        "medianS": 132.8,
+        "noJobMedianS": 22.1
+      },
+      "C": {
+        "n": 3,
+        "correctness": {
+          "correct": 2,
+          "partially_correct": 1,
+          "incorrect": 0,
+          "none": 0
+        },
+        "faithfulness": {
+          "supported": 0,
+          "partly_supported": 3,
+          "unsupported": 0,
+          "none": 0
+        },
+        "premiseHandled": 3,
+        "premiseN": 3,
+        "requiredOkBefore": 3,
+        "requiredOkAfter": 3,
+        "requiredMissingAfter": [],
+        "status": {
+          "answered": 1,
+          "repeated": 0,
+          "step-limit": 2,
+          "spend-cap": 0,
+          "error": 0,
+          "none": 0
+        },
+        "redundant": 1,
+        "redundantByKind": {
+          "repeat": 0,
+          "reread": 1,
+          "no-new-chunks": 0,
+          "second-read": 0
+        },
+        "rereadsUsedInDataRef": 1,
+        "unneededJobs": 1,
+        "legendCitations": 0,
+        "legendCitationsOk": 0,
+        "answersWithLegendCitation": 0,
+        "citationsOk": 2,
+        "citations": 2,
+        "dataRefsOk": 44,
+        "dataRefs": 45,
+        "unbackedNumbers": 38,
+        "steps": 25,
+        "toolCalls": 22,
+        "reasoningTokens": 1257,
+        "costUsd": 0.4656,
+        "toolCostUsd": 0.0126,
+        "maxCostUsd": 0.2715,
+        "totalS": 302,
+        "medianS": 48.3,
+        "noJobMedianS": 48.3
+      }
+    }
+  }
+}
