@@ -550,7 +550,7 @@ CC-Win's, copied per run into `ai/eval/results/2026-11-16-box-log-phase3.json`.
 **What the single Gemma run of 1.11 allows.** Nothing about correctness: with no second run, its own spread is
 unknown, and against the spread of Gemma P (correct 10 to 12, 7 per-question changes between its two runs) the 1.11
 run's 14 is 2 above the range, which equals the range's width, and it differs from each P run on 10 and 8 questions,
-near that spread. The quote error rate (27% against 12.6% and 12.5%) halves (14.4 points), larger than any change
+near that spread. The quote error rate (26.9% against 12.6% and 12.5%) halves (14.3 and 14.4 points), larger than any change
 between two runs of one setting so far (at most 6.0 points: Qwen S1 4.4% against S2 10.4%), so it is consistent with a real gain from P; but the
 two-run rule cannot confirm it without a second Gemma A run.
 
