@@ -15,6 +15,36 @@
       "vramNote": "including the reranker",
       "powerLimitW": 420,
       "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-pb1",
+      "startUtc": "2026-11-16T11:10:01Z",
+      "endUtc": "2026-11-16T11:16:05Z",
+      "samples": 359,
+      "peakPowerW": 417.6,
+      "avgPowerW": 369.7,
+      "avgPowerBusyW": 393.0,
+      "busyNote": "average over the 319 s with GPU utilisation at or above 50%",
+      "maxTempC": 72.1,
+      "peakVramMiB": 20259,
+      "vramNote": "including the reranker",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-pb2",
+      "startUtc": "2026-11-16T11:16:16Z",
+      "endUtc": "2026-11-16T11:22:20Z",
+      "samples": 360,
+      "peakPowerW": 418.6,
+      "avgPowerW": 369.6,
+      "avgPowerBusyW": 392.2,
+      "busyNote": "average over the 323 s with GPU utilisation at or above 50%",
+      "maxTempC": 72.7,
+      "peakVramMiB": 20259,
+      "vramNote": "including the reranker",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
     }
   ]
 }

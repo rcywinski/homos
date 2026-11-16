@@ -16,6 +16,36 @@
       "vramNote": "including the reranker",
       "powerLimitW": 420,
       "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-pb1",
+      "startUtc": "2026-11-16T11:10:01Z",
+      "endUtc": "2026-11-16T11:16:05Z",
+      "samples": 359,
+      "peakPowerW": 417.6,
+      "avgPowerW": 369.7,
+      "avgPowerBusyW": 393,
+      "busyNote": "average over the 319 s with GPU utilisation at or above 50%",
+      "maxTempC": 72.1,
+      "peakVramMiB": 20259,
+      "vramNote": "including the reranker",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-pb2",
+      "startUtc": "2026-11-16T11:16:16Z",
+      "endUtc": "2026-11-16T11:22:20Z",
+      "samples": 360,
+      "peakPowerW": 418.6,
+      "avgPowerW": 369.6,
+      "avgPowerBusyW": 392.2,
+      "busyNote": "average over the 323 s with GPU utilisation at or above 50%",
+      "maxTempC": 72.7,
+      "peakVramMiB": 20259,
+      "vramNote": "including the reranker",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
     }
   ],
   "speed": [
@@ -76,5 +106,125 @@
         "refStats": null
       }
     }
-  ]
+  ],
+  "step32": {
+    "vsB": {
+      "unverified": {
+        "a": [
+          "4/62",
+          "6/58"
+        ],
+        "b": [
+          "1/94",
+          "1/92"
+        ],
+        "rate": {
+          "gap": 0.05364656381486676,
+          "width": 0.0389321468298109,
+          "exceeds": true
+        }
+      },
+      "correct": {
+        "a": [
+          17,
+          17
+        ],
+        "b": [
+          16,
+          18
+        ],
+        "range": {
+          "gap": 0,
+          "width": 2,
+          "exceeds": false
+        }
+      },
+      "incorrect": {
+        "a": [
+          5,
+          7
+        ],
+        "b": [
+          3,
+          5
+        ],
+        "range": {
+          "gap": 0,
+          "width": 2,
+          "exceeds": false
+        }
+      },
+      "perQuestion": {
+        "spreadA": 7,
+        "spreadB": 10,
+        "cross": [
+          9,
+          5,
+          9,
+          8
+        ],
+        "up": 19,
+        "down": 12
+      }
+    },
+    "vsP": {
+      "unverified": {
+        "a": [
+          "3/87",
+          "3/77"
+        ],
+        "b": [
+          "1/94",
+          "1/92"
+        ],
+        "rate": {
+          "gap": 0.02361319340329835,
+          "width": 0.0044782803403493054,
+          "exceeds": true
+        }
+      },
+      "correct": {
+        "a": [
+          16,
+          16
+        ],
+        "b": [
+          16,
+          18
+        ],
+        "range": {
+          "gap": 0,
+          "width": 2,
+          "exceeds": false
+        }
+      },
+      "incorrect": {
+        "a": [
+          5,
+          7
+        ],
+        "b": [
+          3,
+          5
+        ],
+        "range": {
+          "gap": 0,
+          "width": 2,
+          "exceeds": false
+        }
+      },
+      "perQuestion": {
+        "spreadA": 4,
+        "spreadB": 10,
+        "cross": [
+          8,
+          13,
+          10,
+          11
+        ],
+        "up": 26,
+        "down": 16
+      }
+    }
+  }
 }

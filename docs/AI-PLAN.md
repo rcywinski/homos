@@ -300,11 +300,15 @@ costs nothing). Common rules for every step:
   separate, later variant.
 - Report after each step and wait for the owner's OK.
 
-- [ ] NEXT **3.1 Speed at full power.** `qwen3.8:27b` with the exact settings of 1.11 run A (thinking off, `num_ctx`
+- [x] 2026-11-16 **3.1 Speed at full power.** `qwen3.8:27b` with the exact settings of 1.11 run A (thinking off, `num_ctx`
   16384, `num_predict` 2048, model-card sampling with presence penalty 1.5), saved variant A chunk lists, one full run
   of 34 questions, no judge. Report tokens per second and latency next to the 250 W figures of 1.11 A1 and A2, plus
   peak power and temperature from the box log. Single run.
-- [ ] **3.2 Local prompt in the fully local pipeline.** Qwen, variant B retrieval (meta-index plus rerank, no cloud
+  Done: same settings, lists and prompt token counts as A1. Decode median 79.9 tokens/s against 60.2 and 60.5 at 250 W
+  (+32%); latency median / p95 9.9 / 12.5 s against 12.4 / 16.2 and 12.8 / 17.4. Box (CC-Win log): peak 410.8 W,
+  average 392.0 W while busy, max 71.6 C, peak VRAM 20 191 MiB with the reranker, no alert. 34/34 valid, probe passed.
+  Report `ai/eval/results/2026-11-16-phase3-compare-golden-v1-4.md`.
+- [ ] NEXT **3.2 Local prompt in the fully local pipeline.** Qwen, variant B retrieval (meta-index plus rerank, no cloud
   step; the saved B lists, identical in 1.11 B1 and B2) with prompt P from 1.12, two runs, judged. Compare with B1 and
   B2 (1.11, Sonnet prompt on B) and with P1 and P2 (1.12, prompt P on A).
 - [ ] **3.3 Gemma 4 26B-A4B with prompt P**, variant A, two runs, judged. Compare with its single 1.11 run and state
