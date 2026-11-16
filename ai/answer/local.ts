@@ -25,7 +25,8 @@ export interface LocalGenOptions {
   model: string;
   /** Tokenizer files (tokenizer.json, tokenizer_config.json) of the same model, from its Hugging Face repo. */
   tokenizerDir: string;
-  think: boolean;
+  /** false or true, or a named level for models that cannot switch thinking off (gpt-oss: low, medium, high). */
+  think: boolean | 'low' | 'medium' | 'high';
   numCtx: number;
   numPredict: number;
   /** Sampling settings from the model card for the chosen mode; sent as Ollama options and recorded. */

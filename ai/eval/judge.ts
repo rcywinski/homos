@@ -42,7 +42,8 @@ export const TUNING_RUNS = ['s1', 's2', 'p1', 'p2', 'l1', 'l2'].map((t) => ({ ru
  * Phase 3 (local models, owner 16 Nov 2026): 3.2 Qwen with prompt P on the saved variant B lists, 3.3 Gemma with
  * prompt P on variant A, two runs each. 3.1 (speed at full power) is not judged.
  */
-export const PHASE3_RUNS = ['pb1', 'pb2', 'gemma-p1', 'gemma-p2'].map((t) => ({ run: `local-${t}`, file: `${RESULTS}/2026-11-16-answers-k10-local-${t}-golden-v1-4.json` }));
+// 3.4 candidates (one run each, a second for the best) and, only if Ollama is updated, the Qwen control run of 3.2.
+export const PHASE3_RUNS = ['pb1', 'pb2', 'gemma-p1', 'gemma-p2', 'gemma31-p1', 'gemma31-p2', 'gptoss-p1', 'gptoss-p2', 'muse-p1', 'muse-p2', 'pb-control'].map((t) => ({ run: `local-${t}`, file: `${RESULTS}/2026-11-16-answers-k10-local-${t}-golden-v1-4.json` }));
 /** Spend cap for the whole of phase 3 (owner): every judge call of the phase counts against it. */
 export const PHASE3_CAP_USD = 10;
 export const PHASE3_JUDGMENTS = `${RESULTS}/2026-11-16-judgments-phase3-golden-v1-4.jsonl`;

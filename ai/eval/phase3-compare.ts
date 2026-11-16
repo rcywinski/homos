@@ -164,6 +164,25 @@ function main() {
     json.step33 = { gemmaA: { correct: correct(ga), incorrect: incorrect(ga), unverified: unverified(ga) }, gemmaP: runs.map((r) => ({ correct: correct(r), incorrect: incorrect(r), unverified: unverified(r) })), spread, vsA };
   }
 
+  // 3.4
+  const cand = [
+    ['gemma31', 'Gemma 4 31B'],
+    ['gptoss', 'gpt-oss 20B'],
+    ['muse', 'Muse Glimmer 30B'],
+  ].flatMap(([t, name]) => [1, 2].map((i) => col(`local-${t}-p${i}`, `${name} P, run ${i} (3.4)`, jP3))).filter((c): c is Col => !!c && c.judged?.length === c.answers.perQuestion.length);
+  if (cand.length) {
+    const p = [col('local-p1', 'Qwen P1 on A (1.12)', jTune)!, col('local-p2', 'Qwen P2 on A (1.12)', jTune)!];
+    out.push('## 3.4 New models with prompt P', '', 'Variant A chunk lists, prompt P, reranker stopped during generation. Qwen P1 and P2 (1.12, same lists and prompt, 250 W) are the reference; a candidate counts as better only with two runs and a gap beyond the spread.', '');
+    table(out, [...p, ...cand]);
+    const pairs = [...new Set(cand.map((c) => c.run.replace(/-p\d$/, '')))].map((r) => cand.filter((c) => c.run.startsWith(r)));
+    for (const runs of pairs) {
+      if (runs.length === 2) pairLines(out, `${runs[0].label.replace(/, run 1.*/, '')} against Qwen P on A`, pairCompare(p, runs));
+      else out.push(`- ${runs[0].label}: single run, correct ${correct(runs[0])}, incorrect ${incorrect(runs[0])}, unverified ${unverified(runs[0])}/${citationCounts(runs[0].answers.perQuestion).total}; no comparison claim.`);
+    }
+    out.push('');
+    json.step34 = cand.map((c) => ({ run: c.run, correct: correct(c), incorrect: incorrect(c), unverified: unverified(c), total: citationCounts(c.answers.perQuestion).total, local: localStats(c.answers.perQuestion), settings: c.answers.generatorSettings }));
+  }
+
   for (const b of box) if (b.run !== 'local-a-420w') out.push(`Box during ${b.run} (${b.startUtc} to ${b.endUtc} UTC): peak ${b.peakPowerW} W, average ${b.avgPowerW} W, max ${b.maxTempC} C, peak VRAM ${b.peakVramMiB} MiB; alerts: ${b.alerts}.`);
   writeFileSync(`${OUT}.json`, JSON.stringify(json, null, 2) + '\n');
   writeFileSync(`${OUT}.md`, out.join('\n') + '\n');
