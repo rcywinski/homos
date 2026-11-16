@@ -43,7 +43,7 @@ export function withAccepted(task: AgentTask): AgentTask {
   return { ...task, sources: { ...task.sources, chunkGroups: [[...groups[0], ...add], ...groups.slice(1)] } };
 }
 
-interface Row {
+export interface Row {
   id: string;
   category: AgentTask['category'];
   status: string;
@@ -89,7 +89,7 @@ const median = (xs: number[]) => {
 const costOf = (r: Row) => usd(r.usage, MODELS.sonnet.price) + r.toolCostUsd;
 
 /** The numeric measures of a set of rows (a run, or a run within one category). */
-export function summarize(rows: Row[], items: JudgedItem[], tasks: AgentTask[]) {
+export function summarize(rows: Row[], items: JudgedItem[], tasks: AgentTask[], cost: (r: Row) => number = costOf) {
   const verdict = (id: string) => items.find((x) => x.id === id)?.result?.verdict;
   const count = <T extends string>(keys: readonly T[], get: (r: Row) => T | undefined) =>
     Object.fromEntries([...keys, 'none'].map((k) => [k, rows.filter((r) => (get(r) ?? 'none') === k).length])) as Record<T | 'none', number>;
@@ -124,16 +124,16 @@ export function summarize(rows: Row[], items: JudgedItem[], tasks: AgentTask[]) 
     steps: sum((r) => r.measures.steps),
     toolCalls: sum((r) => r.measures.toolCalls),
     reasoningTokens: sum((r) => r.measures.reasoningTokens),
-    costUsd: r4(sum(costOf)),
+    costUsd: r4(sum(cost)),
     recordedCostUsd: r4(sum((r) => r.costUsd)),
     toolCostUsd: r4(sum((r) => r.toolCostUsd)),
-    maxCostUsd: r4(Math.max(0, ...rows.map(costOf))),
+    maxCostUsd: r4(Math.max(0, ...rows.map(cost))),
     totalS: Math.round(sum((r) => r.ms) / 1000),
     medianS: Number((median(rows.map((r) => r.ms)) / 1000).toFixed(1)),
     noJobMedianS: Number((median(rows.filter((r) => !tasks.find((t) => t.id === r.id)!.jobs).map((r) => r.ms)) / 1000).toFixed(1)),
   };
 }
-type Summary = ReturnType<typeof summarize>;
+export type Summary = ReturnType<typeof summarize>;
 
 /** The scalar measures compared against the run-to-run spread. */
 const SCALARS: Array<[string, (s: Summary) => number]> = [

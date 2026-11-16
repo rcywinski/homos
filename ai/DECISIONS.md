@@ -663,3 +663,65 @@ model did not obey the order; its answer did not parse).
 
 **Review questions.** Are client-side fixes for a runtime's token leak acceptable in a measurement, given they are
 recorded and tested? Is one run enough to drop Gemma 4 31B and gpt-oss, given gaps of 9 and 10 correct answers?
+
+## 2026-11-16, step 3.4 accepted (owner)
+
+**Decision.** The showcase chat keeps Qwen3.8 27B with prompt P on fully local retrieval; no candidate came near it.
+
+**Limitation, to be stated wherever 3.4 is reported.** Prompt P was written from Qwen's failure types (step 1.12), so
+the other models ran with a prompt not tuned for them. The comparison says which model works best in this setup, not
+which model is best in general.
+
+**Review questions.** Would a prompt written from each model's own failure types change the order? (Not measured; a
+separate, later variant if ever.)
+
+## 2026-11-16, step 3.5 plan approved; how a repeat of a compacted result is handled (owner and CC-Mac)
+
+**Decision (owner).** Both variants, QA-cl first (two runs), then QA-c (two runs). Thinking off. Compaction on demand,
+with the number of compacted results reported per task.
+
+**Variants, as named in the result files** (`ai/eval/agent-run.ts`, `LOCAL_AGENT_RUNS`):
+- QA-cl: qwen3.8:27b through Ollama, prompt A unchanged, `num_ctx` 24576, `num_predict` 4096, thinking off, sampling
+  from the card without thinking (temperature 0.7, top_p 0.8, top_k 20) with every repetition penalty off as in prompt
+  P (paths and quotes repeat), compaction on demand with restore; `search_journal` on fully local retrieval (variant B:
+  meta-index plus rerank, no query translation), so nothing leaves the box.
+- QA-c: the same with `search_journal` as for Sonnet (generated contexts plus Sonnet query translation, the only cloud
+  call).
+Separate result files (`2026-11-16-agent-eval-local-<run>.json`) and judge file, so the step 2.4 files, guard and report
+are untouched.
+
+**Repeat after compaction (the owner's question).** The loop refuses an identical call with "its result is above",
+which is false once that result was compacted. Chosen handling, part of both named variants and inside the Ollama
+conversation only (`ai/agent/model-ollama.ts`): when the reply to a call is the loop's repeat refusal and the original
+result was compacted, the conversation sends the full original result instead, marked "shown again: this result had
+been removed from the conversation to save space", compacting older results to make room. If even then it does not
+fit, the refusal is replaced by an honest note: the result cannot be shown again within the context limit, it was read
+and may still be cited, answer from what you have. The stub of a compacted result says the same: it may be cited, and
+calling the tool again with the same arguments shows it again. Counted per task, apart from each other: results
+compacted, restored, restores refused, plain repeats (a repeat of a result never compacted), so a stuck model is not
+mistaken for a weak one. The loop still counts every repeat toward its third-repeat stop; that is unchanged.
+
+**Other mechanics decided in the build.**
+- Context checks: before every call the prompt is counted with Qwen's tokenizer plus a template and tool-definition
+  overhead calibrated on a cold call (both tool sets, the larger kept) and a 5% margin; when even the compacted history
+  does not fit `num_ctx - num_predict`, the task ends as a final turn with no answer and the error "context-limit"
+  (recorded, loop unchanged). After a call, a server count above the estimate stops the run; a lower one is expected
+  with llama.cpp's prompt cache, so the 1.11 equality check cannot be used here.
+- Ollama has no tool call ids and no `tool_choice`: ids are made in the conversation; the final turn is a request
+  without tools and with the answer schema as `format`. Whether `format` can go with `tools` in one request is decided
+  by a check before the runs (`npm run ai:agent:probe -- --format-check`); without it, a tool turn that answers in text
+  is followed at once by a final request, counted.
+- Before the runs, the step 2.2 and 2.3 injection probes run on the local agent (`--local`), writing separate files.
+- New measures next to the 2.4 ones: tool calls the validator rejected, final answers that did not parse, tasks
+  stopped on the context limit, tool turns answered in text, compaction counts per task, largest server prompt.
+
+**Evidence.** Tests `ai/agent/model-ollama.test.ts` (19, offline: request shape, ids, final turn, text instead of a
+tool call, compaction, restore, honest note, context limit, server-count check, one run through the real loop).
+Context-fit measurement `ai/eval/results/2026-11-16-agent-local-fit.md`.
+
+**Open.** VRAM with Qwen at `num_ctx` 24576, the reranker (3 758 MiB) and bge-m3 together is measured at the first
+load; if it does not fit, the fallback is `num_ctx` 16384 with smaller tool results, recorded as a further named
+variant. The runs wait for the owner's go: CC-Win uses the box first for two showcase tasks.
+
+**Review questions.** Does restoring a compacted result on a repeat change what "repeat" means in the redundant-call
+measure? (Counted both ways: as a repeat by the 2.4 measure and as a restore here.)

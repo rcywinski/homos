@@ -1,5 +1,5 @@
 /**
- * npm run ai:agent:eval -- --run A1|B1|C|A2|B2
+ * npm run ai:agent:eval -- --run A1|B1|C|A2|B2|QA-cl1|QA-cl2|QA-c1|QA-c2 [--format-with-tools] [--num-ctx 24576]
  * One evaluation run of step 2.4 over the 18 tasks of ai/eval/agent-tasks.jsonl.
  *   A: prompt A (the 2.2 prompt), effort medium.  B: prompt B (A plus five sentences), effort medium.
  *   C: prompt A, effort high.
@@ -13,7 +13,13 @@ import 'dotenv/config';
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import { JsonlLog } from '../agent/log';
-import { AnthropicAgentModel, type AgentEffort } from '../agent/model';
+import { AnthropicAgentModel, type AgentEffort, type AgentModel } from '../agent/model';
+import { OllamaAgentModel } from '../agent/model-ollama';
+import { ollamaPs, ollamaUnload } from '../answer/local';
+import { SYSTEM_PROMPTS, JOBS_ADDENDUM } from '../agent/prompt';
+import { toolDefinitions } from '../agent/tools';
+import { LOCAL_MODELS } from './answers';
+import { PHASE3_CAP_USD, phase3Spent, PHASE3_JUDGMENTS } from './judge';
 import type { PromptVariant } from '../agent/prompt';
 import { DEFAULT_CAP_USD, runAgent } from '../agent/run';
 import { realDeps } from '../agent/tools';
@@ -26,6 +32,51 @@ export const RUNS: Record<string, { prompt: PromptVariant; effort: AgentEffort }
   A2: { prompt: 'A', effort: 'medium' },
   B2: { prompt: 'B', effort: 'medium' },
 };
+/**
+ * Step 3.5 (owner, 16 Nov 2026): the agent on qwen3.8:27b through Ollama, prompt A, thinking off, compaction on demand
+ * with restore on a repeated call (ai/agent/model-ollama.ts). QA-cl: search_journal on fully local retrieval (variant
+ * B, nothing leaves the box). QA-c: search_journal as for Sonnet (contexts plus Sonnet query translation, the only
+ * cloud call). Two runs each, QA-cl first. Separate result files, so the step 2.4 files and guard are untouched.
+ */
+export const LOCAL_AGENT_RUNS: Record<string, { variant: 'QA-cl' | 'QA-c'; retrieval: 'local' | 'chosen' }> = {
+  'QA-cl1': { variant: 'QA-cl', retrieval: 'local' },
+  'QA-cl2': { variant: 'QA-cl', retrieval: 'local' },
+  'QA-c1': { variant: 'QA-c', retrieval: 'chosen' },
+  'QA-c2': { variant: 'QA-c', retrieval: 'chosen' },
+};
+export const LOCAL_EVAL_PREFIX = '2026-11-16-agent-eval-local-';
+export const LOCAL_JUDGED_FILE = `ai/eval/results/2026-11-16-agent-local-judged.json`;
+/** Qwen settings for the agent: card sampling without thinking, repetition penalties off as in P (paths and quotes repeat). */
+export const LOCAL_AGENT = { model: 'qwen3.8:27b', tokenizerDir: 'ai/index/tokenizers/qwen3.8-27b', numCtx: 24576, numPredict: 4096, sampling: { temperature: 0.7, top_p: 0.8, top_k: 20, min_p: 0, presence_penalty: 0, repeat_penalty: 1.0 }, keepAlive: '10m' };
+
+/** Everything phase 3 has spent: the answer judgments, the local agent judge file and the tool costs of local runs. */
+export function phase3TotalSpent(): number {
+  let s = phase3Spent([PHASE3_JUDGMENTS]);
+  if (existsSync(LOCAL_JUDGED_FILE)) s += (JSON.parse(readFileSync(LOCAL_JUDGED_FILE, 'utf8')) as { costUsd: number }).costUsd;
+  for (const f of readdirSync(RESULTS).filter((x) => x.startsWith(LOCAL_EVAL_PREFIX) && x.endsWith('.json')))
+    s += (JSON.parse(readFileSync(path.join(RESULTS, f), 'utf8')) as { tasks: Array<{ costUsd: number }> }).tasks.reduce((n, t) => n + t.costUsd, 0);
+  return s;
+}
+
+/**
+ * A calibrated local agent model: every generator unloaded first, so the calibration call sees no prompt cache (bge-m3
+ * stays, search needs it); calibrated on both tool sets (with and without run_backtest), keeping the larger overhead;
+ * the model must be fully on the GPU.
+ */
+export async function startLocalAgent(baseUrl: string, variant: string, numCtx = LOCAL_AGENT.numCtx, formatWithTools = false): Promise<OllamaAgentModel> {
+  const local = new OllamaAgentModel({ baseUrl, ...LOCAL_AGENT, numCtx, variant, formatWithTools });
+  for (const m of LOCAL_MODELS) await ollamaUnload(baseUrl, m);
+  const left = (await ollamaPs(baseUrl)).filter((m) => m.name !== 'bge-m3:latest');
+  if (left.length) throw new Error(`models still loaded: ${left.map((m) => m.name).join(', ')}`);
+  const o1 = await local.calibrate(`${SYSTEM_PROMPTS.A}\n\n${JOBS_ADDENDUM}`, toolDefinitions(true));
+  const o2 = await local.calibrate(SYSTEM_PROMPTS.A, toolDefinitions(false));
+  local.overhead = Math.max(o1, o2);
+  const ps = (await ollamaPs(baseUrl)).find((m) => m.name === LOCAL_AGENT.model);
+  if (!ps || ps.size_vram < ps.size) throw new Error(`${LOCAL_AGENT.model} not fully on the GPU after calibration`);
+  console.log(`calibrated overhead ${o1} (with jobs) and ${o2} (without); using ${local.overhead}; ${LOCAL_AGENT.model} ${(ps.size_vram / 2 ** 30).toFixed(2)} GiB on GPU; num_ctx ${numCtx}`);
+  return local;
+}
+
 export const STEP_CAP_USD = 25;
 /**
  * Kept free for the judge while the runs go (added 12 Nov during run A1, when the first tasks cost about $0.25 each):
@@ -50,25 +101,37 @@ export function stepSpent(): number {
 
 async function main() {
   const run = process.argv[process.argv.indexOf('--run') + 1];
-  const cfg = RUNS[run];
-  if (!cfg) throw new Error(`--run must be one of ${Object.keys(RUNS).join(', ')}`);
-  const out = `${RESULTS}/${EVAL_PREFIX}${run}.json`;
+  const localCfg = LOCAL_AGENT_RUNS[run];
+  const cfg = RUNS[run] ?? (localCfg ? { prompt: 'A' as const, effort: 'medium' as const } : undefined);
+  if (!cfg) throw new Error(`--run must be one of ${[...Object.keys(RUNS), ...Object.keys(LOCAL_AGENT_RUNS)].join(', ')}`);
+  const out = `${RESULTS}/${localCfg ? LOCAL_EVAL_PREFIX : EVAL_PREFIX}${run}.json`;
   if (existsSync(out)) throw new Error(`${out} exists; an evaluation run is not repeated over itself`);
   const runsDir = path.join(process.cwd(), 'ai/agent/runs-eval', run);
   if (existsSync(runsDir) && readdirSync(runsDir).length) throw new Error(`${runsDir} is not empty`);
   mkdirSync(runsDir, { recursive: true });
 
   const tasks = loadTasks();
-  const model = new AnthropicAgentModel('sonnet', undefined, cfg.effort);
+  let model: AgentModel;
+  let local: OllamaAgentModel | null = null;
+  const baseUrl = process.env.INFERENCE_URL ?? '';
+  if (localCfg) {
+    const numCtx = process.argv.includes('--num-ctx') ? Number(process.argv[process.argv.indexOf('--num-ctx') + 1]) : LOCAL_AGENT.numCtx;
+    local = await startLocalAgent(baseUrl, localCfg.variant, numCtx, process.argv.includes('--format-with-tools'));
+    model = local;
+  } else model = new AnthropicAgentModel('sonnet', undefined, cfg.effort);
   const rows: unknown[] = [];
-  const save = () => writeFileSync(out, JSON.stringify({ date: '2026-11-12', run, prompt: cfg.prompt, effort: cfg.effort, model: model.name, settings: model.settings(), capPerQuestionUsd: DEFAULT_CAP_USD, tasks: rows }, null, 2) + '\n');
+  const save = () => writeFileSync(out, JSON.stringify({ date: localCfg ? new Date().toISOString().slice(0, 10) : '2026-11-12', run, prompt: cfg.prompt, effort: localCfg ? null : cfg.effort, model: model.name, settings: model.settings(), capPerQuestionUsd: DEFAULT_CAP_USD, ...(localCfg ? { variant: localCfg.variant, retrieval: localCfg.retrieval } : {}), tasks: rows }, null, 2) + '\n');
   for (const task of tasks) {
-    const spent = stepSpent() + rows.reduce((n: number, r) => n + (r as { costUsd: number }).costUsd, 0);
-    if (spent + DEFAULT_CAP_USD > STEP_CAP_USD - JUDGE_RESERVE_USD) {
+    const spent = (localCfg ? phase3TotalSpent() : stepSpent()) + rows.reduce((n: number, r) => n + (r as { costUsd: number }).costUsd, 0);
+    if (localCfg && spent + DEFAULT_CAP_USD > PHASE3_CAP_USD) {
+      save();
+      throw new Error(`stopping before ${task.id}: phase 3 spend $${spent.toFixed(4)} (cap $${PHASE3_CAP_USD})`);
+    }
+    if (!localCfg && spent + DEFAULT_CAP_USD > STEP_CAP_USD - JUDGE_RESERVE_USD) {
       save();
       throw new Error(`stopping before ${task.id}: step spend $${spent.toFixed(4)}, one more question may cost $${DEFAULT_CAP_USD} (cap $${STEP_CAP_USD}, $${JUDGE_RESERVE_USD} kept for the judge)`);
     }
-    const deps = realDeps(process.cwd(), task.jobs ? { approve: async () => true, runsDir } : undefined);
+    const deps = realDeps(process.cwd(), task.jobs ? { approve: async () => true, runsDir } : undefined, localCfg?.retrieval ?? 'chosen');
     const log = new JsonlLog(`eval-${run}-${task.id}`);
     const t0 = Date.now();
     const r = await runAgent(model, deps, task.question, { log, prompt: cfg.prompt });
@@ -100,7 +163,10 @@ async function main() {
         steps: r.turns.length,
         toolCalls: r.calls.length,
         reasoningTokens: r.turns.reduce((n, t) => n + (t.reasoningTokens ?? 0), 0),
+        // Step 3.5: tool calls the validator rejected (unknown tool or arguments outside the schema).
+        invalidToolCalls: r.calls.filter((c) => c.isError && /^(unknown tool|invalid arguments)/.test(c.content)).length,
       },
+      ...(local ? { local: { ...local.lastStats } } : {}),
       turns: r.turns.map((t) => ({ step: t.step, mode: t.mode, kind: t.kind, stopReason: t.stopReason, usage: t.usage, reasoningTokens: t.reasoningTokens, costUsd: t.costUsd, ms: t.ms, reasoning: t.reasoning })),
       calls: r.calls.map((c, i) => ({ step: c.step, name: c.name, args: c.args, isError: c.isError, chars: c.chars, ms: c.ms, costUsd: c.costUsd, chunkIds: c.chunks?.map((x) => x.id), repeatOf: c.repeatOf, redundant: redundant.find((x) => x.index === i)?.kind ?? null, error: c.isError ? c.content.slice(0, 300) : undefined })),
       usage: r.usage,
@@ -114,7 +180,10 @@ async function main() {
     console.log(`${run} ${task.id}: ${r.status}, ${r.turns.length} turns, ${r.calls.length} calls, required ${required.ok ? 'ok' : 'MISSING'}, $${r.costUsd.toFixed(4)}, ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   }
   save();
-  console.log(`Wrote ${out}; step spend so far $${stepSpent().toFixed(4)} of $${STEP_CAP_USD}`);
+  if (local) {
+    await ollamaUnload(baseUrl, LOCAL_AGENT.model);
+    console.log(`Wrote ${out}; unloaded ${LOCAL_AGENT.model}; phase 3 spend so far $${phase3TotalSpent().toFixed(4)} of $${PHASE3_CAP_USD}`);
+  } else console.log(`Wrote ${out}; step spend so far $${stepSpent().toFixed(4)} of $${STEP_CAP_USD}`);
 }
 
 if (require.main === module)

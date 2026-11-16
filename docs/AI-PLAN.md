@@ -334,6 +334,11 @@ costs nothing). Common rules for every step:
   plan: what the Ollama documentation says about tools with structured output and with thinking, and what does not
   map onto the interface. Then the 18 tasks of 2.4 with prompt A, two runs, jobs with `--yes-jobs`, judged; the same
   measures as 2.4 next to Sonnet A1 and A2, plus invalid tool calls and schema failures.
+  Approved plan (owner, 16 Nov): variants QA-cl (fully local search) and QA-c (search as for Sonnet), two runs each,
+  QA-cl first; thinking off; `num_ctx` 24576; compaction on demand with restore on a repeated call, counted per task.
+  Built: `ai/agent/model-ollama.ts` (19 offline tests), local runs in `ai/eval/agent-run.ts`, `--local` probes and
+  `--format-check` in `ai/agent/probe.ts`, judge `--local`, report `ai/eval/agent-local-score.ts`. Runs wait for the
+  owner's go.
 
 ## Later, optional (not scheduled)
 
