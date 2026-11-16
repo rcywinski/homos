@@ -226,11 +226,13 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8, 4.6, 4.9.
 - [x] **4.2** Showcase front end skeleton in `showcase/`: own webpack entry, comparison view (two columns, "more"
   section, verdicts, verification marks), archive view, mock wallet panel (read-only), the "did not reliably beat
   holding" notice, a test that fails on any wallet or signing import. Check that the existing UI still builds. Fake. M.
-- [ ] NEXT **4.3** Chat backend core in `ai/serve/`: `POST /api/ask` and `/api/retrieve` through the existing `Embedder`,
-  `Reranker` and `Generator` interfaces, variant `local` retrieval, served model and prompt from configuration,
-  verifier with number checks, response schema with enums, "not in the data", out-of-scope refusal, plain failure on
-  invalid output, display filter, startup refusal when `ANTHROPIC_API_KEY` is set. Tests with fake models. Fake. M.
-- [ ] **4.4** Queue, SSE status stream, rate limits (IP hashed with a daily salt), health and busy states. Tests with
+- [x] **4.3** Chat backend core in `ai/serve/`: `POST /api/ask` and `GET /api/health` through the existing
+  `Embedder`, `Reranker` and `Generator` interfaces, variant `local` retrieval built without the module that holds the
+  Sonnet translation, served preset from configuration (tested equal to the measured run's settings), verifier with
+  number checks, response with enums, "not in the data", advice refusal, plain failure on invalid output, display
+  filter, startup refusal when `ANTHROPIC_API_KEY` is set. `/api/retrieve` moved to 4.6, so retrieval is not exposed
+  before guest-key mode needs it. Tests with fake models. M.
+- [ ] NEXT **4.4** Queue, SSE status stream, rate limits (IP hashed with a daily salt), health and busy states. Tests with
   a slow fake generator. Fake. M.
 - [ ] **4.5** Answer rendering: quote and number marks, coverage badge, source links, the states table above.
   Fake. M.
@@ -238,7 +240,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.5, 4.7, 4.8, 4.6, 4.9.
   the local model. Needs the box. M.
 - [ ] **4.8** First real run on the LAN only (no tunnel): copy indexes, CC-Win sets up the backend service under its
   own user, owner tests from the Mac and a phone on the LAN. Needs the box. S.
-- [ ] **4.6** Guest-key mode: browser generator with `dangerouslyAllowBrowser`, verifier in the browser, CSP, the
+- [ ] **4.6** Guest-key mode: `POST /api/retrieve`, browser generator with `dangerouslyAllowBrowser`, verifier in the browser, CSP, the
   no-key-to-our-origin test. Tested with a fake fetch; one real call only with a key the owner creates for it. M.
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner: Cloudflare Tunnel, static hosting choice,
   optional Access, kill switch documented in `inference/README.md`. S.
