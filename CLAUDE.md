@@ -46,6 +46,9 @@ history lives in commits, decisions and results live in `docs/AI-RAG.md`.
 - Text written for the repo (docs, README, comments) is English. The journal in `journal/` stays in Polish on purpose, see `journal/README.md`.
 - Do not use em dashes or en dashes in any new text. Use a comma, a colon, a period or a plain hyphen.
 - Commits: one step = one commit, conventional prefix (`feat(ai): ...`, `docs(ai): ...`), no co-author trailers.
+- Shell: the interactive shell is zsh, which does not split an unquoted variable into words. Any loop or command that
+  passes a list through a shell variable (`for x in $list`, `set -- $spec`, `cmd $opts`) runs from a bash script file
+  (`bash script.sh`), never inline in zsh. This trap hit three times (steps 1.7, 1.9 and 3.4).
 
 ## Git rules
 

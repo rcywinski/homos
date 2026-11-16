@@ -603,3 +603,21 @@ showcase and reads the 3.2 result files for its comparison view, so `ai-layer` i
 
 **Review questions.** Is "better beyond the spread" on 34 questions with two runs a strong enough bar to change the
 showcase model?
+
+## 2026-11-16, process: lists through shell variables run from bash script files (owner)
+
+**Decision.** New rule in `CLAUDE.md` (code rules): any loop or command that passes a list through a shell variable
+runs from a bash script file, never inline in zsh.
+
+**Why.** zsh does not split an unquoted variable into words, so a list passed through a variable arrives as one
+argument. This hit three times: in step 1.7 six context rows ran silently as the plain vector baseline (the variant
+options passed as one word); in step 1.9; and in step 3.4, where a download loop with `set -- $spec` created three
+wrongly named directories holding 404 pages instead of the tokenizer files (seen at once from the 404 codes, removed,
+and the download repeated in bash).
+
+**Alternatives.** Quoting tricks or zsh options such as `${=var}` or `setopt sh_word_split` (rejected: easy to forget
+in a one-off command, and the failure is silent); arrays (rejected for the same reason inline).
+
+**Open.** None.
+
+**Review questions.** None.
