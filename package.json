@@ -64,6 +64,7 @@
     "ai:agent:score": "tsx ai/eval/agent-score.ts",
     "ai:agent:local-fit": "tsx ai/eval/agent-local-fit.ts",
     "ai:agent:local-score": "tsx ai/eval/agent-local-score.ts",
+    "ai:agent:step-limit": "tsx ai/eval/agent-step-limit.ts",
     "ai:agent:missing": "tsx ai/eval/agent-missing.ts"
   },
   "author": "Rafał Cywiński",
