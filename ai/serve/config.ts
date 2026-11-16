@@ -89,6 +89,8 @@ export interface ServeConfig {
   keepAlive: string;
   /** Embedding model loaded after the generator (ai/serve/residency.ts). */
   embedModel: string;
+  /** Sanitized wallet export served at /data/wallet.json when it exists (step 4.1b); missing means no Wallet tab. */
+  walletFile: string;
 }
 
 export class ConfigError extends Error {}
@@ -154,5 +156,6 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
     fakeDelayMs: int(env, 'SERVE_FAKE_DELAY_MS', 0, 0, 60_000),
     keepAlive: keepAlive(env.SERVE_KEEP_ALIVE),
     embedModel: 'bge-m3',
+    walletFile: env.SERVE_WALLET_FILE || path.join('data', 'showcase', 'wallet.json'),
   };
 }

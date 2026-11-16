@@ -6,7 +6,7 @@
  *   3. The real raw files, when present on this machine (they are gitignored and absent in CI).
  * Run: npx tsx ai/serve/wallet-export.test.ts
  */
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import os from 'os';
 import path from 'path';
 import { auditWallet, buildWallet, EXCLUDED_POSITIONS, KNOWN_TOKENS, PROJECT_START, RAW_DIR } from './wallet-export';
@@ -113,6 +113,15 @@ check('audit: excluded position inside a longer string', catches('{"note":"mainn
 check('audit: a longer number that contains the digits is fine', !catches('{"block":"19534271"}', 'excluded position'));
 check('audit: date before the project', catches('{"ts":"2025-03-24T13:45:23.000Z"}', 'before the project'));
 check('audit: project start constant', PROJECT_START === '2026-08-10' && EXCLUDED_POSITIONS.length === 2);
+
+// --- 2b. The browser-test fixture is made up, marked as such, and passes the same audit ------------------------
+{
+  const fixture = JSON.parse(readFileSync(path.join('showcase', 'e2e', 'fixtures', 'wallet.fixture.json'), 'utf8')) as { fixture?: string; positions: { tokenId: string }[] };
+  const text = JSON.stringify(fixture);
+  check('fixture is marked as made up', typeof fixture.fixture === 'string' && fixture.fixture.includes('made-up'));
+  check('fixture passes the audit', auditWallet(text).length === 0, auditWallet(text).join('; '));
+  check('fixture uses made-up position numbers', fixture.positions.every((p) => p.tokenId.startsWith('9000')));
+}
 
 // --- 3. The real raw files, when present ----------------------------------------------------------------------
 if (existsSync(RAW_DIR)) {

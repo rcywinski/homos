@@ -4,7 +4,6 @@
  * manual positions opened before the project are left out of every list and total (owner decision, 16 Nov 2026).
  */
 import type { WalletData, WalletPaperPool, WalletPosition, WalletTx } from '../../ai/serve/showcase-data';
-import { useWallet } from '../data';
 
 const ADDRESS = __SHOWCASE_WALLET_ADDRESS__;
 
@@ -44,8 +43,7 @@ function poolName(id: string): string {
   return `${sym(a)}/${sym(b)} ${(Number(fee) / 100).toFixed(2)}% on ${CHAIN[chain] ?? chain}`;
 }
 
-export function Wallet() {
-  const loaded = useWallet();
+export function Wallet({ data }: { data: WalletData }) {
   return (
     <section className="wallet" aria-labelledby="wallet-title">
       <h2 id="wallet-title" className="section-title">
@@ -70,13 +68,12 @@ export function Wallet() {
           .
         </p>
       )}
-      {loaded.state === 'loading' && <p className="state-note">Loading the ledger.</p>}
-      {loaded.state === 'error' && (
-        <p className="state-note" data-testid="wallet-missing">
-          The ledger data is not part of this build. The daily reports hold the same figures for the live period.
+      {data.fixture && (
+        <p className="state-note error" data-testid="wallet-fixture">
+          Test data: {data.fixture}
         </p>
       )}
-      {loaded.state === 'ready' && <WalletView data={loaded.data} />}
+      <WalletView data={data} />
     </section>
   );
 }

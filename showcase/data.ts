@@ -26,5 +26,8 @@ function useJson<T>(file: string): Loaded<T> {
 
 export const useComparison = () => useJson<ComparisonData>('comparison.json');
 export const useReports = () => useJson<ReportsData>('reports.json');
-/** Absent from builds without the step 4.1b raw files (for example CI): the view says so. */
+/**
+ * Served by the chat server from the gitignored data/ directory, not part of the page build. When it is missing (no
+ * export on this machine, or the static page without the server) the Wallet tab is not shown.
+ */
 export const useWallet = () => useJson<WalletData>('wallet.json');

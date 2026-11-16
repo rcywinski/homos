@@ -8,6 +8,8 @@
  *   2. then bge-m3: one embed, with the same long keep_alive and no num_ctx;
  *   3. /api/ps must list both, and the generator must be fully in VRAM (size_vram equal to size), or the server
  *      refuses to start.
+ * The reranker (its own service on port 11435, step 1.6) is checked the same way: `GET /health` must answer with the
+ * served model on CUDA, at start and before each question (owner, 16 Nov 2026).
  * Before each question the server checks /api/ps again; if the generator was unloaded (keep_alive expiry, a restart
  * of Ollama, someone else's model) the same order is replayed, because loading the generator alone would evict
  * bge-m3. If the check still fails, the question gets the "model unavailable" text.
@@ -19,6 +21,10 @@ export interface ResidencyOptions {
   numCtx: number;
   embedder: string;
   keepAlive: string;
+  /** Base URL of the reranker service (RERANK_URL). */
+  rerankUrl: string;
+  /** Model the reranker must report in /health. */
+  reranker: string;
   fetchFn?: typeof fetch;
   timeoutMs?: number;
 }
@@ -64,6 +70,34 @@ async function call(o: ResidencyOptions, path: string, body?: unknown): Promise<
   return res.json();
 }
 
+export interface RerankHealth {
+  model?: string;
+  device?: string;
+  gpu?: string;
+}
+
+/** What is wrong with the reranker's /health answer, or null when it serves the expected model on CUDA. */
+export function rerankProblem(h: RerankHealth | null, o: Pick<ResidencyOptions, 'reranker'>): string | null {
+  if (!h) return 'the reranker does not answer';
+  if (!h.model || !h.model.endsWith(o.reranker)) return `the reranker serves ${h.model ?? 'an unknown model'}, not ${o.reranker}`;
+  if (h.device !== 'cuda') return `the reranker runs on ${h.device ?? 'an unknown device'}, not on the GPU`;
+  return null;
+}
+
+export async function rerankHealth(o: ResidencyOptions): Promise<RerankHealth | null> {
+  try {
+    const res = await (o.fetchFn ?? fetch)(`${o.rerankUrl.replace(/\/$/, '')}/health`, { signal: AbortSignal.timeout(10_000) });
+    return res.ok ? ((await res.json()) as RerankHealth) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function requireReranker(o: ResidencyOptions): Promise<void> {
+  const problem = rerankProblem(await rerankHealth(o), o);
+  if (problem) throw new ResidencyError(problem);
+}
+
 export async function loadedModels(o: ResidencyOptions): Promise<PsModel[]> {
   const j = (await call(o, '/api/ps')) as { models?: PsModel[] };
   return j.models ?? [];
@@ -84,6 +118,7 @@ export async function warmUp(o: ResidencyOptions): Promise<PsModel[]> {
   const models = await loadedModels(o);
   const problem = residencyProblem(models, o);
   if (problem) throw new ResidencyError(`after loading in order: ${problem}`);
+  await requireReranker(o);
   return models;
 }
 
@@ -93,7 +128,10 @@ export async function warmUp(o: ResidencyOptions): Promise<PsModel[]> {
  */
 export async function ensureResident(o: ResidencyOptions): Promise<'resident' | 'reloaded'> {
   const problem = residencyProblem(await loadedModels(o), o);
-  if (!problem) return 'resident';
+  if (!problem) {
+    await requireReranker(o);
+    return 'resident';
+  }
   await warmUp(o);
   return 'reloaded';
 }

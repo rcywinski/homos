@@ -11,6 +11,8 @@
  * probe, queue. A question the queue refuses is given back to the visitor's limit.
  */
 import express, { type NextFunction, type Request, type Response } from 'express';
+import { existsSync } from 'fs';
+import path from 'path';
 import { ask, ModelUnavailable, refusedBeforeWork, type AskDeps, type AskResponse, type Stage } from './ask';
 import type { RequestLog } from './log';
 import { GpuQueue, JobCancelled, JobTimeout, QueueRefused } from './queue';
@@ -34,6 +36,8 @@ export interface AppOptions {
   paused: () => boolean;
   /** Built showcase (`showcase/public`), served by the same process on the box; omitted in API-only tests. */
   staticDir?: string;
+  /** Sanitized wallet export (gitignored, outside the page build); served at /data/wallet.json only if it exists. */
+  walletFile?: string;
 }
 
 /** Fixed messages for every refusal; the UI shows them as they are. */
@@ -171,6 +175,13 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'not-found' });
+  });
+
+  // The wallet data lives outside the built page. A missing file is a plain 404, and the page then hides the tab.
+  app.get('/data/wallet.json', (_req, res) => {
+    const file = opts.walletFile ? path.resolve(opts.walletFile) : '';
+    if (!file || !existsSync(file)) return res.status(404).json({ error: 'not-found' });
+    res.set('cache-control', 'no-store').type('application/json').sendFile(file);
   });
 
   if (opts.staticDir) {

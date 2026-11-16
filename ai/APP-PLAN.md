@@ -284,7 +284,10 @@ installs, runs the tests and operates the services.
   then `/api/ps` must list both and the generator must be fully in VRAM with the served num_ctx, or the server
   refuses to start. Before each question, inside the GPU queue, `/api/ps` is checked again and the same order is
   replayed if the generator was unloaded; if that fails, the visitor gets the "model unavailable" text. Step 3.5 and
-  any other GPU work should still use the pause file, because their models compete for the same 24 GB.
+  any other GPU work should still use the pause file, because their models compete for the same 24 GB. The reranker
+  (port 11435) is part of the same check (owner, 16 Nov 2026): `GET /health` must report `bge-reranker-v2-m3` on
+  `cuda`, or the server refuses to start; before each question a reranker that stopped answering gives the visitor
+  the "model unavailable" text.
 - **GPU busy or the model does not fit.** Before the owner or CC-Win uses the GPU for other work (evaluation runs,
   pulling or testing models), CC-Win creates `ai\serve\PAUSED` in the serving checkout; the chat then answers
   "paused" at once and does not touch the GPU, and deletes it afterwards. Without the pause file, a failure inside the
@@ -312,9 +315,13 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   and leave no trace in the export, not even their numbers; the Wallet tab says so in one line. An audit runs before
   the file is written and refuses it on any URL, key parameter, private address, unknown 0x address (allowed: the
   five token contracts and the owner's wallet), 64-digit hex outside a `txHash` field, excluded position or date
-  before the project; tested on a synthetic folder with traps and on the real files. The export is written to
-  `showcase/public/data/wallet.json` (gitignored); builds without the raw files (CI, the box) show "not part of
-  this build". Open: whether the sanitized export is committed, so the box and CI can show it.
+  before the project; tested on a synthetic folder with traps and on the real files. Owner decision (16 Nov 2026):
+  the sanitized export is not committed. It is written to `data/showcase/wallet.json` (gitignored, outside the page
+  build), the chat server serves it at `/data/wallet.json` only when the file exists (`SERVE_WALLET_FILE`), and it
+  is copied to the box apart from git. Without it the Wallet tab is hidden, never empty or failing. CI and the
+  browser suite use `showcase/e2e/fixtures/wallet.fixture.json`: made-up positions, marked as test data on the page,
+  checked by the same audit. The wallet address comes from `SHOWCASE_WALLET_ADDRESS` in the worktree `.env` (added by
+  the owner), read only at page build time.
 - [x] **4.2** Showcase front end skeleton in `showcase/`: own webpack entry, comparison view (two columns, "more"
   section, verdicts, verification marks), archive view, mock wallet panel (read-only), the "did not reliably beat
   holding" notice, a test that fails on any wallet or signing import. Check that the existing UI still builds. Fake. M.

@@ -48,8 +48,20 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : [
-        server('main', PORTS.main, { SERVE_LIMIT_HOUR: '1000', SERVE_LIMIT_DAY: '1000', SERVE_LIMIT_GLOBAL_DAY: '100000' }),
-        server('tight', PORTS.tight, { SERVE_LIMIT_HOUR: '1', SERVE_QUEUE_MAX: '0', SERVE_FAKE_DELAY_MS: '3000' }),
+        // The main test server gets the made-up wallet fixture, never the real export; the tight one gets no wallet file,
+        // so the suite also covers the page without a Wallet tab.
+        server('main', PORTS.main, {
+          SERVE_LIMIT_HOUR: '1000',
+          SERVE_LIMIT_DAY: '1000',
+          SERVE_LIMIT_GLOBAL_DAY: '100000',
+          SERVE_WALLET_FILE: path.join('showcase', 'e2e', 'fixtures', 'wallet.fixture.json'),
+        }),
+        server('tight', PORTS.tight, {
+          SERVE_LIMIT_HOUR: '1',
+          SERVE_QUEUE_MAX: '0',
+          SERVE_FAKE_DELAY_MS: '3000',
+          SERVE_WALLET_FILE: path.join(os.tmpdir(), 'homos-e2e-no-wallet.json'),
+        }),
         {
           command: `node --import tsx ${path.join('showcase', 'e2e', 'static-only.ts')} ${PORTS.staticOnly}`,
           url: `http://127.0.0.1:${PORTS.staticOnly}/`,

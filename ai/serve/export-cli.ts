@@ -2,11 +2,10 @@
  * Writes the showcase data (step 4.1) to `showcase/public/data/` and prints one line per configuration.
  * Run: npm run showcase:data
  */
-import { mkdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
-import { existsSync } from 'fs';
 import { buildComparison, buildReports, OUT_DIR } from './export';
-import { auditWallet, buildWallet, RAW_DIR } from './wallet-export';
+import { auditWallet, buildWallet, RAW_DIR, WALLET_FILE } from './wallet-export';
 
 const comparison = buildComparison();
 const reports = buildReports();
@@ -24,8 +23,11 @@ if (existsSync(RAW_DIR)) {
   const wallet = buildWallet();
   const problems = auditWallet(JSON.stringify(wallet), process.env.SHOWCASE_WALLET_ADDRESS ?? '');
   if (problems.length > 0) throw new Error(`wallet export refused: ${problems.join('; ')}`);
-  console.log(`wrote ${write('wallet.json', wallet)}: ${wallet.totals.positions} positions, ${wallet.totals.transactions} transactions, ${wallet.totals.paperPools} paper pools`);
-} else console.log(`no ${RAW_DIR}: wallet.json not written, the Wallet tab says the data is not in this build`);
+  mkdirSync(path.dirname(WALLET_FILE), { recursive: true });
+  const body = JSON.stringify(wallet);
+  writeFileSync(WALLET_FILE, body);
+  console.log(`wrote ${WALLET_FILE} (${(Buffer.byteLength(body) / 1024).toFixed(0)} KB, gitignored, not part of the page build): ${wallet.totals.positions} positions, ${wallet.totals.transactions} transactions, ${wallet.totals.paperPools} paper pools`);
+} else console.log(`no ${RAW_DIR}: ${WALLET_FILE} not written; the Wallet tab stays hidden unless the server is given a wallet file`);
 console.log(`golden v${comparison.goldenVersion}, ${comparison.questions.length} questions, ${reports.reports.length} reports`);
 console.log('group served config          runs        correct / partially / incorrect, quotes not verified');
 for (const c of comparison.configs) {

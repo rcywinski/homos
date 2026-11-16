@@ -64,10 +64,12 @@ async function main() {
       numCtx: cfg.preset.generator.numCtx,
       embedder: cfg.embedModel,
       keepAlive: cfg.keepAlive,
+      rerankUrl: cfg.rerankUrl,
+      reranker: 'bge-reranker-v2-m3',
     };
     // Fixed load order before serving (step 3.5 finding): generator first, then bge-m3, then /api/ps must show both.
     const loaded = await warmUp(residency);
-    console.log(`[serve] resident: ${loaded.map((m) => m.name).join(', ')}`);
+    console.log(`[serve] resident: ${loaded.map((m) => m.name).join(', ')}, reranker bge-reranker-v2-m3 on cuda`);
     deps = {
       retrieval: localRetrieval(cfg.inferenceUrl, cfg.rerankUrl, cfg.preset, cfg.keepAlive),
       generator: new LocalGenerator({ ...cfg.preset.generator, keepAlive: cfg.keepAlive, baseUrl: cfg.inferenceUrl, timeoutMs: cfg.generateTimeoutMs }),
@@ -87,6 +89,7 @@ async function main() {
     probe,
     trustProxy: cfg.trustProxy,
     paused: () => existsSync(cfg.pauseFile),
+    walletFile: cfg.walletFile,
     staticDir: existsSync(path.join('showcase', 'public', 'app.js')) ? path.join('showcase', 'public') : undefined,
   });
   if (!existsSync(path.join('showcase', 'public', 'app.js'))) console.log('[serve] showcase not built (npm run showcase:build): API only');

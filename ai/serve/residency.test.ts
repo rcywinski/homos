@@ -33,12 +33,18 @@ class FakeOllama {
   calls: { path: string; body: Record<string, unknown> | null }[] = [];
   /** When set, the generator only partly fits on the GPU. */
   partial = false;
+  /** The reranker service on port 11435: up and on CUDA unless a test changes it. */
+  rerank: 'up' | 'down' | 'cpu' | 'other-model' = 'up';
   fetch = (async (url: string | URL | Request, init?: RequestInit) => {
     const path = new URL(String(url)).pathname;
     const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : null;
     this.calls.push({ path, body });
     const json = (x: unknown) => new Response(JSON.stringify(x), { status: 200, headers: { 'content-type': 'application/json' } });
     if (path === '/api/ps') return json({ models: [...this.loaded.values()] });
+    if (path === '/health') {
+      if (this.rerank === 'down') throw new TypeError('fetch failed');
+      return json({ model: this.rerank === 'other-model' ? 'BAAI/bge-reranker-base' : 'BAAI/bge-reranker-v2-m3', device: this.rerank === 'cpu' ? 'cpu' : 'cuda', gpu: 'NVIDIA GeForce RTX 3090' });
+    }
     if (path === '/api/chat') {
       const options = (body?.options ?? {}) as { num_ctx?: number };
       this.loaded.delete(`${EMB}:latest`);
@@ -53,7 +59,25 @@ class FakeOllama {
   }) as typeof fetch;
 }
 
-const opts = (o: FakeOllama): ResidencyOptions => ({ baseUrl: 'http://box.invalid:11434', generator: GEN, numCtx: 17408, embedder: EMB, keepAlive: '24h', fetchFn: o.fetch });
+const opts = (o: FakeOllama): ResidencyOptions => ({
+  baseUrl: 'http://box.invalid:11434',
+  generator: GEN,
+  numCtx: 17408,
+  embedder: EMB,
+  keepAlive: '24h',
+  rerankUrl: 'http://box.invalid:11435',
+  reranker: 'bge-reranker-v2-m3',
+  fetchFn: o.fetch,
+});
+
+async function refusal(f: () => Promise<unknown>): Promise<string> {
+  try {
+    await f();
+    return '';
+  } catch (e) {
+    return e instanceof ResidencyError ? e.message : `other error: ${String(e)}`;
+  }
+}
 
 async function main() {
   // The order and the requests.
@@ -86,15 +110,32 @@ async function main() {
   }
   check('warm-up refuses to start when the generator does not fit', refused.includes('partly on the GPU'), refused);
 
+  // The reranker: refused at start when it is down, on the CPU or serving another model.
+  for (const [state, needle] of [
+    ['down', 'does not answer'],
+    ['cpu', 'not on the GPU'],
+    ['other-model', 'not bge-reranker-v2-m3'],
+  ] as const) {
+    const b = new FakeOllama();
+    b.rerank = state;
+    const why = await refusal(() => warmUp(opts(b)));
+    check(`start refused when the reranker is ${state}`, why.includes(needle), why);
+  }
+  check('the reranker is asked at its own URL', box.calls.some((c) => c.path === '/health'));
+
   // Before a question: nothing to do when resident; replay the order after the generator was unloaded.
   box.calls = [];
-  check('resident set: no reload', (await ensureResident(opts(box))) === 'resident' && box.calls.every((c) => c.path === '/api/ps'));
+  check('resident set: no reload, only the two checks', (await ensureResident(opts(box))) === 'resident' && box.calls.every((c) => !c.body) && box.calls.map((c) => c.path).join() === '/api/ps,/health', box.calls.map((c) => c.path).join());
   box.loaded.delete(GEN);
   box.calls = [];
   check('generator gone: reload', (await ensureResident(opts(box))) === 'reloaded');
   check('the reload replays the order', box.calls.filter((c) => c.body).map((c) => c.path).join() === '/api/chat,/api/embed');
   // Loading the generator alone would have evicted the embedder; the replay brings both back.
   check('both resident after the reload', residencyProblem(await (async () => [...box.loaded.values()])(), opts(box)) === null);
+  box.rerank = 'down';
+  const perQuestion = await refusal(() => ensureResident(opts(box)));
+  check('before a question: a reranker that stopped answering is refused', perQuestion.includes('does not answer'), perQuestion);
+  box.rerank = 'up';
 
   // In the app: a failing residency check gives the visitor the "model unavailable" text, inside the queue.
   const deps: AskDeps = {

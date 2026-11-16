@@ -58,6 +58,7 @@ test('page title, introduction and the honesty notice on every view @real', asyn
   // The internal name may appear in source material (quotes, report titles, paths), never in the page's own words.
   expect(await page.locator('.masthead').innerText()).not.toMatch(/\bHOMOS\b/);
   for (const tab of ['Cloud and local answers', 'Daily reports', 'Wallet', 'Ask the archive']) {
+    if (tab === 'Wallet' && (await page.getByRole('button', { name: 'Wallet' }).count()) === 0) continue;
     await page.getByRole('button', { name: tab }).click();
     await expect(page.getByTestId('honesty-notice')).toContainText('did not reliably beat simply holding');
   }
@@ -231,24 +232,33 @@ test('daily reports: a live-capital day, Markdown rendered, logs folded @real', 
   await shot(page, info, 'reports');
 });
 
-test('wallet: project positions only, the exclusion note, nothing that can sign @real', async ({ page }, info) => {
+test('wallet tab: the exclusion note, nothing that can sign, fixture data marked as such @real', async ({ page }, info) => {
   const errors = await open(page, MAIN, info);
-  await page.getByRole('button', { name: 'Wallet' }).click();
+  const tab = page.getByRole('button', { name: 'Wallet' });
+  test.skip(againstReal && (await tab.count()) === 0, 'no wallet file on this server');
+  await tab.click();
   await expect(page.getByRole('heading', { name: 'Wallet and paper trading' })).toBeVisible();
   await expect(page.locator('.wallet .lede')).toContainText('cannot connect a wallet or sign anything');
-  const hasData = (await page.request.get(new URL('data/wallet.json', MAIN).toString())).ok();
-  if (hasData) {
-    await expect(page.getByTestId('wallet-excluded')).toContainText('Two manual positions opened before the project');
-    await expect(page.getByTestId('wallet-positions').locator('article.position')).toHaveCount(4);
-    await expect(page.getByTestId('paper-summary')).toContainText('worth less than simply holding');
-    const text = await page.locator('.wallet').innerText();
-    expect(text).not.toMatch(/953427|953465/);
-  } else {
-    // Builds without the step 4.1b raw files (CI) say so instead of showing an empty page.
-    await expect(page.getByTestId('wallet-missing')).toContainText('not part of this build');
-  }
+  await expect(page.getByTestId('wallet-excluded')).toContainText('Two manual positions opened before the project');
+  await expect(page.getByTestId('paper-summary')).toContainText('worth less than simply holding');
+  expect(await page.locator('.wallet').innerText()).not.toMatch(/953427|953465/);
+  if (!againstReal) {
+    // The test server serves the made-up fixture, and the page says so.
+    await expect(page.getByTestId('wallet-fixture')).toContainText('made-up positions');
+    await expect(page.getByTestId('wallet-positions').locator('article.position')).toHaveCount(2);
+  } else await expect(page.getByTestId('wallet-fixture')).toHaveCount(0);
   await shot(page, info, 'wallet');
-  expect(errors.filter((e) => !/404|Failed to load resource/.test(e))).toEqual([]);
+  expect(errors).toEqual([]);
+});
+
+test('no wallet file: the Wallet tab is hidden, the page works', async ({ page }, info) => {
+  test.skip(againstReal, 'needs the test servers');
+  for (const url of [TIGHT, STATIC_ONLY]) {
+    await open(page, url, info);
+    await expect(page.getByRole('button', { name: 'Daily reports' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Wallet' })).toHaveCount(0);
+    expect((await page.request.get(new URL('data/wallet.json', url).toString())).status()).toBe(404);
+  }
 });
 
 test('keyboard: switch sections and ask without a mouse @real', async ({ page }, info) => {

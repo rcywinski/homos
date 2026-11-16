@@ -16,6 +16,12 @@ import { hasPrivateAddress } from './mask';
 import type { WalletData, WalletPaperPool, WalletPosition, WalletTx } from './showcase-data';
 
 export const RAW_DIR = path.join('data', 'showcase-raw');
+/**
+ * Where the sanitized export goes: under the gitignored data/ directory, never into the repo or the built page (owner,
+ * 16 Nov 2026). The chat server serves it at /data/wallet.json when the file exists; it is copied to the box apart from
+ * git. CI and the browser suite use the made-up fixture showcase/e2e/fixtures/wallet.fixture.json instead.
+ */
+export const WALLET_FILE = path.join('data', 'showcase', 'wallet.json');
 
 /** Manual positions opened before the project; excluded by the owner's decision. */
 export const EXCLUDED_POSITIONS = ['mainnet:953427', 'mainnet:953465'];

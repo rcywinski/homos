@@ -158,6 +158,8 @@ export interface WalletPaperPool {
 }
 
 export interface WalletData {
+  /** Present only in test fixtures: the page shows it as a banner, so made-up figures can never pass as real. */
+  fixture?: string;
   period: { from: string; paperStartedAt: string };
   /** What was left out and why; the excluded positions themselves leave no trace (not even their numbers). */
   excluded: { note: string };
