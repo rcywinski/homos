@@ -285,7 +285,40 @@ docs/AI-RAG.md        design decisions, evaluation table, costs, example transcr
   `docs/AI-RAG.md` ("Agent with tools"). Billing check found Sonnet cache reads priced at twice the real rate; fixed,
   figures corrected. Step spend $16.05 of the $25 cap (corrected price). Merged to `main` on 16 Nov.
 
-## Phase 3: optional, only if time allows
+## Phase 3: local models
+
+Owner, 16 Nov 2026. Spend cap for the whole phase: $10 (judge calls and any cloud call inside tools; local generation
+costs nothing). Common rules for every step:
+- Variant A uses the saved k=10 chunk lists (`ai/eval/results/2026-11-11-chunk-lists-k10-golden-v1-4.json`); the same
+  verifier and the same blind Opus 5.5 judge as 1.11 and 1.12.
+- Two runs for anything that is compared; a single run is marked as such and is not used for a comparison claim.
+- The 250 W cap is gone since 13 Nov. `[CC-Win]` logs power and temperature every second during every run and alerts
+  at 85 C or on a missing sample; the run stops on an alert.
+- No retries on a network error. Every model is unloaded after every run. Nothing is deleted from the box without
+  asking the owner.
+- Prompt P (1.12) and prompt A (2.2) are not revised in this phase; a model that needs another prompt gets it as a
+  separate, later variant.
+- Report after each step and wait for the owner's OK.
+
+- [ ] NEXT **3.1 Speed at full power.** `qwen3.8:27b` with the exact settings of 1.11 run A (thinking off, `num_ctx`
+  16384, `num_predict` 2048, model-card sampling with presence penalty 1.5), saved variant A chunk lists, one full run
+  of 34 questions, no judge. Report tokens per second and latency next to the 250 W figures of 1.11 A1 and A2, plus
+  peak power and temperature from the box log. Single run.
+- [ ] **3.2 Local prompt in the fully local pipeline.** Qwen, variant B retrieval (meta-index plus rerank, no cloud
+  step; the saved B lists, identical in 1.11 B1 and B2) with prompt P from 1.12, two runs, judged. Compare with B1 and
+  B2 (1.11, Sonnet prompt on B) and with P1 and P2 (1.12, prompt P on A).
+- [ ] **3.3 Gemma 4 26B-A4B with prompt P**, variant A, two runs, judged. Compare with its single 1.11 run and state
+  what that single run allows us to conclude.
+- [ ] **3.4 New models.** Check the current Ollama library and propose candidates that fit fully on the card with the
+  reranker stopped during generation (variant A needs no reranker, the chunk lists are saved), including Muse Glimmer
+  30B and Gemma 4 31B if they fit, with size, licence and source for each. The owner approves the list before any
+  pull `[CC-Win pulls]`. One run each with prompt P, a second run for the best one; judged.
+- [ ] **3.5 Local agent.** `AgentModel` for Ollama tool calling, without changing the loop or the tools. Before the
+  plan: what the Ollama documentation says about tools with structured output and with thinking, and what does not
+  map onto the interface. Then the 18 tasks of 2.4 with prompt A, two runs, jobs with `--yes-jobs`, judged; the same
+  measures as 2.4 next to Sonnet A1 and A2, plus invalid tool calls and schema failures.
+
+## Later, optional (not scheduled)
 
 - [ ] `/ask` endpoint in `bot/server.ts` and a panel in the cockpit UI.
 - [ ] **Local contexts.** The local generator comparison moved to step 1.11. Remaining here: re-run 1.7 with the local model writing the chunk

@@ -468,3 +468,59 @@ stays one visible merge on `main`).
 **Open.** Phase 3 is optional; nothing is marked NEXT in `docs/AI-PLAN.md`.
 
 **Review questions.** None.
+
+## 2026-11-16, phase 3 "local models" planned (owner)
+
+**Decision.** Phase 3 is five steps, written into `docs/AI-PLAN.md` as 3.1 to 3.5: speed at full power (3.1), prompt P
+in the fully local pipeline (3.2), Gemma 4 26B-A4B with prompt P (3.3), new models from the current Ollama library
+(3.4), and the agent on a local model (3.5). Spend cap for the phase: $10. Common rules: variant A uses the saved k=10
+chunk lists; the 1.11 verifier and blind Opus judge; two runs for anything compared, single runs marked; per-second
+power and temperature log on the box with an alert at 85 C or on a missing sample (the 250 W cap is gone since 13
+Nov); no retries on a network error; every model unloaded after every run; nothing deleted from the box without
+asking; prompts P and A not revised in this phase. Each step is reported and waits for the owner's OK; nothing is built
+or pulled before that.
+
+Choices made in planning (CC-Mac), for the owner to confirm:
+- 3.2 uses the saved variant B chunk lists rather than retrieving again: the B lists of 1.11 runs B1 and B2 are
+  identical (checked), so the generator and prompt are the only change against B1 and B2, and the embedder and
+  reranker need not share the GPU with the generator.
+- Estimated spend: judge about $0.016 per answer (step 1.11: $3.18 for 204), so 3.2 and 3.3 about $1.06 each, 3.4
+  about $2.10 for up to three candidates plus a second run, 3.5 about $0.70 for 36 agent answers plus about $0.20 of
+  Sonnet query translation inside `search_journal`; about $5 in all. A phase spend guard, like the step 2.4 one, counts
+  every phase 3 result file before each judged answer.
+
+**Ollama documentation, checked 16 Nov for 3.5** (docs.ollama.com: tool calling, structured outputs, thinking, `/api/chat`):
+- Tools: `tools` in `/api/chat`; the reply has `message.tool_calls` with `function.name` and `function.arguments` (an
+  object); several calls per reply are possible. Results go back as `role: "tool"` messages matched by tool name. There
+  are no tool call ids.
+- Tools with thinking: the examples pass `think: true` together with `tools`, and the streaming example returns the
+  thinking, content and tool calls of a turn in the next request. No rule beyond the examples.
+- Tools with structured output (`format`): not documented anywhere, neither in the tool-calling page, the structured
+  outputs page nor the `/api/chat` reference. Whether `format` is enforced while `tools` are offered has to be tested.
+- No `tool_choice`: a turn cannot forbid or force tools; a final turn can only leave `tools` out.
+- No statement on how `format` is enforced (the examples validate the output afterwards) or on context overflow (the
+  only text is the `num_ctx` definition; step 1.11 found that an over-long prompt is truncated silently).
+
+What does not map onto `AgentModel` as it stands, to be resolved in the 3.5 plan:
+- tool call ids (the loop's replies carry an id): the Ollama implementation must keep the order of calls itself;
+- the final turn's `tool_choice: none`: replaced by a request without `tools` and with `format`;
+- a tool turn that answers instead of calling a tool: with Sonnet the answer schema applies to every turn; with Ollama
+  `format` plus `tools` in one request is untested;
+- prompt caching and the spend estimate: no cache and no cost, so the estimate is 0 and the per-question cap only
+  counts the Sonnet query translation inside `search_journal` (a cloud call inside an unchanged tool, so the "local"
+  agent is not fully local);
+- reasoning token counts: Ollama reports only `eval_count`, thinking included;
+- context length: the largest prompt per task in Sonnet runs A1 and A2 was 48 554 tokens at the median and 97 044 at
+  most (Claude's tokenizer); 29 of 36 tasks would not fit `num_ctx` 24 576 with 8 000 tokens kept for output, the
+  practical ceiling of the box with the reranker loaded (step 1.11). `search_journal` needs the reranker and the
+  embedder on the same GPU during the run. An over-long prompt has to stop the run loudly (token count before each
+  call, as in `ai/answer/local.ts`), never be truncated.
+
+**Alternatives.** Retrieving variant B again in 3.2 (not chosen: identical lists already saved). Starting 3.5 with a
+larger context through KV cache quantization on the box (not decided: a box setting that changes memory for every
+model; to be proposed in the 3.5 plan with measurements, if at all).
+
+**Open.** The candidates of 3.4 (checked at that step, since the library changes); the context-length decision of 3.5.
+
+**Review questions.** Is a local agent whose `search_journal` still calls Sonnet for query translation a fair "local
+agent"? Should 3.5 measure on fewer tasks than 18 if most of them cannot fit the context?
