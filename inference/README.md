@@ -258,6 +258,9 @@ Rollback: run `Enable-ScheduledTask "HOMOS GPU power limit"`, re-add `& C:\ollam
 
 Note for the 1.11/1.12 tok/s figures: they were measured at 250 W. In this test qwen generated at 33.9 tok/s, but that ran alongside the reranker load and with a longer prompt, so it is not directly comparable.
 
+GPU energy per run (from step 3.5): Wh = sum of `power.draw` x seconds to the next sample of the one-second nvidia-smi log, gaps capped at 2 s; busy = utilization.gpu at or above 20%, idle = the rest of the run window.
+This is GPU board power only, not the whole machine; CPU package power is readable without installs from the Windows "Energy Meter" counters (Intel RAPL), but was not logged in 3.5.
+
 Gemma 4 26B-A4B (`gemma4:26b`, pulled 11 Nov for one extra run): Ollama 0.40.15 loads it with a small speculative
 draft model, and `/api/ps` then reports only about 1.27 GiB, which is not the real footprint. Check full GPU placement in
 the server log ("offloaded 31/31 layers to GPU") or by total VRAM (about 19.5 GiB above the reranker), not by `/api/ps`.
