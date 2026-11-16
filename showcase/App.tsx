@@ -3,6 +3,7 @@ import { PROJECT_TITLE } from '../ai/serve/texts';
 import { Archive } from './components/Archive';
 import { Ask } from './components/Ask';
 import { Comparison } from './components/Comparison';
+import { About } from './components/About';
 import { Notice } from './components/Notice';
 
 /** The wallet view waits for step 4.1b (recovering the ledger); until then it is not offered. */
@@ -18,19 +19,15 @@ export function App() {
   return (
     <div className="page">
       <header className="masthead">
-        <h1>{PROJECT_TITLE}</h1>
-        <div className="intro">
-          <p>
-            From August to September 2026 a small automated system provided liquidity on Uniswap v3, first on paper and then with real money,
-            and kept a detailed journal of every decision. The assistant on this page answers questions about that project from its journal,
-            decision log, documentation and daily reports, using a model that runs on the owner&apos;s own graphics card. Language models can
-            invent quotes and figures, so code checks every quote against its source before you see it and marks every number by how well the
-            sources back it.
+        <div className="masthead-text">
+          <h1>{PROJECT_TITLE}</h1>
+          <p className="tagline">
+            A closed research project from 2026, with an assistant that answers from its records and checks its own quotes.
           </p>
-          <p className="how">
-            Reading the marks: <span className="num num-verified">✓ verified in a quote</span>,{' '}
-            <span className="num num-in-source">≈ found in the cited source</span>, <span className="num num-not-verified">? not verified</span>.
-          </p>
+          <details className="about-more">
+            <summary>More about this project</summary>
+            <About />
+          </details>
         </div>
         <Notice />
       </header>

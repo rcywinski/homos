@@ -4,6 +4,7 @@
  * Run: npx tsx ai/serve/serve.test.ts
  */
 import { readFileSync, existsSync } from 'fs';
+import { createRequire } from 'module';
 import type { AddressInfo } from 'net';
 import path from 'path';
 import { LocalGenerator } from '../answer/local';
@@ -321,6 +322,17 @@ async function main() {
   check('the server imports no Anthropic client', ![...external].some((e) => e.startsWith('@anthropic-ai')), [...external].join(', '));
   check('the server does not load .env', ![...external].some((e) => e.startsWith('dotenv')), [...external].join(', '));
   check('the import walk saw the pipeline', seen.size > 15, String(seen.size));
+
+  // What Node actually loaded for the server modules this test imports (express and its dependencies are CommonJS and
+  // land in require.cache): no wallet, signing or contract-tooling package, transitive ones included.
+  const { FORBIDDEN_PACKAGES } = createRequire(import.meta.url)('../../showcase/guard.js') as { FORBIDDEN_PACKAGES: string[] };
+  const loaded = new Set(
+    Object.keys(createRequire(import.meta.url).cache)
+      .flatMap((f) => [...f.replace(/\\/g, '/').matchAll(/node_modules\/((?:@[^/]+\/)?[^/]+)/g)].map((m) => m[1])),
+  );
+  const walletPackages = [...loaded].filter((p) => FORBIDDEN_PACKAGES.includes(p) || FORBIDDEN_PACKAGES.includes(p.split('/')[0]));
+  check('the server loads no wallet, signing or contract-tooling package', walletPackages.length === 0, walletPackages.join(', '));
+  check('the loaded-module check saw express', loaded.has('express'), [...loaded].slice(0, 5).join(', '));
 
   console.log(`serve: ${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);

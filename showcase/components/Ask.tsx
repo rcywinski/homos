@@ -23,7 +23,10 @@ const COVERAGE: Record<'full' | 'partial', string> = {
 
 function statusLine(s: ChatStatus | null): string {
   if (!s) return 'Sending the question.';
-  if (s.kind === 'queued') return s.position === 1 ? 'Waiting: one question is ahead of yours.' : `Waiting: ${s.position} questions are ahead of yours.`;
+  if (s.kind === 'queued')
+    return s.position === 1
+      ? 'Waiting: one question is ahead of yours.'
+      : `Waiting: ${s.position} questions are ahead of yours.`;
   if (s.kind === 'retrieving') return 'Searching the journal and the documentation.';
   return 'The local model is writing the answer. This can take a minute.';
 }
@@ -43,6 +46,16 @@ export function Ask() {
   const [answer, setAnswer] = useState<{ question: string; response: AskResponse } | null>(null);
   const [error, setError] = useState<ChatError | null>(null);
   const abort = useRef<AbortController | null>(null);
+  /** The live region that shows progress, then the answer or the error; it takes focus after every submit. */
+  const result = useRef<HTMLDivElement | null>(null);
+  const bringIntoView = () =>
+    requestAnimationFrame(() => {
+      result.current?.scrollIntoView({
+        block: 'start',
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      });
+      result.current?.focus({ preventScroll: true });
+    });
 
   useEffect(() => {
     let live = true;
@@ -56,9 +69,11 @@ export function Ask() {
   const submit = async (q: string) => {
     const text = q.trim();
     if (!text || pending) return;
+    setQuestion(text);
     setPending(true);
     setStatus(null);
     setError(null);
+    bringIntoView();
     abort.current = new AbortController();
     const r = await askQuestion(text, setStatus, abort.current.signal);
     setPending(false);
@@ -66,90 +81,105 @@ export function Ask() {
       setAnswer({ question: text, response: r.answer });
       setError(null);
     } else setError(r.error);
+    bringIntoView();
   };
 
   const down = state && state.status !== 'up' ? HEALTH_TEXT[state.status] : null;
 
   return (
     <section className="ask" aria-labelledby="ask-title">
-      <h2 id="ask-title" className="section-title">
-        Ask the project archive
-      </h2>
-      <p className="lede">
-        Questions are answered by a local model on the owner&apos;s own GPU, from the journal, the decision log, the documentation and the daily
-        reports. Every quote and every number is checked by code before you see it.
-      </p>
-      {down && (
-        <p className="state-note" role="status" data-testid="chat-health">
-          {down}
-        </p>
-      )}
-      <form
-        className="ask-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void submit(question);
-        }}
-      >
-        <label htmlFor="question-input" className="field-label">
-          Your question
-        </label>
-        <textarea
-          id="question-input"
-          value={question}
-          maxLength={MAX}
-          rows={3}
-          placeholder="For example: why was narrowing the ranges rejected?"
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void submit(question);
-          }}
-        />
-        <div className="ask-row">
-          <button type="submit" className="primary" disabled={pending || !question.trim()}>
-            {pending ? 'Answering' : 'Ask'}
-          </button>
-          <span className="counter" aria-live="polite">
-            {question.length} of {MAX} characters
-          </span>
-        </div>
-        {!answer && !pending && (
-          <div className="examples">
-            <span className="field-label">Or try</span>
-            <ul>
-              {EXAMPLES.map((ex) => (
-                <li key={ex}>
-                  <button type="button" className="link" onClick={() => setQuestion(ex)}>
-                    {ex}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+      <div className="ask-main">
+        <h2 id="ask-title" className="section-title">
+          Ask the project archive
+        </h2>
+        {down && (
+          <p className="state-note" role="status" data-testid="chat-health">
+            {down}
+          </p>
         )}
-      </form>
+        <form
+          className="ask-form"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit(question);
+          }}
+        >
+          <label htmlFor="question-input" className="field-label">
+            Your question
+          </label>
+          <textarea
+            id="question-input"
+            value={question}
+            maxLength={MAX}
+            rows={3}
+            placeholder="For example: why was narrowing the ranges rejected?"
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void submit(question);
+            }}
+          />
+          <div className="ask-row">
+            <button type="submit" className="primary" disabled={pending || !question.trim()}>
+              {pending ? 'Answering' : 'Ask'}
+            </button>
+            <span className="counter" aria-live="polite">
+              {question.length} of {MAX} characters
+            </span>
+          </div>
+          {!answer && !pending && (
+            <div className="examples">
+              <span className="field-label">Or ask one of these</span>
+              <ul>
+                {EXAMPLES.map((ex) => (
+                  <li key={ex}>
+                    <button type="button" className="example" onClick={() => void submit(ex)}>
+                      {ex}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </form>
 
-      {pending && (
-        <p className="progress" role="status" aria-live="polite" data-testid="chat-progress">
-          {statusLine(status)}
-        </p>
-      )}
-      {error && !pending && (
-        <p className="state-note error" role="alert" data-testid="chat-error" data-error={error.error}>
-          {error.message}
-          {error.retryAfterSec !== undefined && ` You can ask again in about ${Math.max(1, Math.round(error.retryAfterSec / 60))} min.`}
-        </p>
-      )}
-      {answer && !pending && <AnswerBlock question={answer.question} r={answer.response} />}
+        <div
+          className="result"
+          ref={result}
+          tabIndex={-1}
+          aria-live="polite"
+          aria-busy={pending}
+          data-testid="chat-result"
+          aria-label="Answer"
+        >
+          {pending && (
+            <p className="progress" role="status" data-testid="chat-progress">
+              {statusLine(status)}
+            </p>
+          )}
+          {error && !pending && (
+            <p className="state-note error" role="alert" data-testid="chat-error" data-error={error.error}>
+              {error.message}
+              {error.retryAfterSec !== undefined &&
+                ` You can ask again in about ${Math.max(1, Math.round(error.retryAfterSec / 60))} min.`}
+            </p>
+          )}
+          {answer && !pending && <AnswerBlock question={answer.question} r={answer.response} />}
+        </div>
+      </div>
 
-      <details className="how-to-read">
-        <summary>How to read the marks</summary>
+      <aside className="ask-aside" aria-label="How answers are checked">
+        <h3 className="aside-title">How answers are checked</h3>
+        <p>
+          A local model on the owner&apos;s own graphics card reads the passages that best match your question and
+          answers from them. Code then checks that every quote exists word for word in its source, and marks every
+          number by how well the sources back it.
+        </p>
         <Legend />
-      </details>
-      <p className="fine-print">
-        Questions are logged for 30 days, without your IP address, so the owner can see what people ask. One question at a time; there is a
-        small hourly and daily limit.
-      </p>
+        <p className="fine-print">
+          Questions are logged for 30 days, without your IP address, so the owner can see what people ask. One question
+          at a time; there is a small hourly and daily limit.
+        </p>
+      </aside>
     </section>
   );
 }

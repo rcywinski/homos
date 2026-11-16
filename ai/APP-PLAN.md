@@ -316,7 +316,9 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   server on 127.0.0.1:8790 reported the missing index as expected; health, static files, one question (JSON and
   SSE), pause file and request log (hash only, no IP) as designed. Notes: start from PowerShell or cmd, not Git Bash
   (Git Bash dropped the backslashes of the script path); static responses and `/api/health` carry no security
-  headers yet, which is step 4.7. A short re-check on the step 4.5 commit (new dev packages, font copy) is requested.
+  headers yet, which is step 4.7. Re-check on `544e6da` (step 4.5 build with the font copy step): passed; unit tests
+  mask 89, export 95, guard 80, serve 96, queue 57, all passing; fonts and licence served with correct types; corpus
+  hash as measured. npm skipped the install scripts of `utf-8-validate` and `keccak` (both fall back to JavaScript).
 - [x] **4.5** Chat panel, verification marks and design pass, plus the Playwright suite in CI. Numbers have three
   states (owner, 16 Nov 2026): "Verified" (in a verified quote), "In the cited source" (in a chunk the answer cites
   with a verified quote, with at least two significant digits, or obtained by one of three code-checked
@@ -329,6 +331,17 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   folded, opening on 15 Sep 2026, wallet tab hidden until 4.1b, Recursive font (OFL-1.1) bundled, WCAG AA contrast
   in both colour schemes (lowest pair 5.22:1). Playwright: 12 visitor paths on desktop and phone width against three
   local servers with fake models, screenshot on failure, a CI job with the unit tests and the suite. Fake. M.
+- [ ] **4.5b** Layout and typography follow-up (owner, 16 Nov 2026). Done: compact header (title, one line, "More
+  about this project" disclosure, the honesty notice beside the title on wide screens and on every view), the question
+  box on the first screen at 1280 x 800 (tested), "How answers are checked" beside the chat on wide screens, wider
+  comparison, example questions submit at once, the result region takes focus, scrolls into view and is an
+  `aria-live` region (tested), daily reports with a line on what they hold and the technical sections folded so the
+  money sections come first (the source is not changed; each section gets an English gloss next to its Polish
+  heading). Open: the owner chooses one of three typeface pairs (A Inter with JetBrains Mono, B IBM Plex Sans with
+  IBM Plex Mono, C Source Sans 3 with Source Code Pro, all OFL-1.1, bundled); the other two are then removed.
+  `keccak` question answered: in the lockfile since `516f8ea` (19 Mar 2025, the old cockpit), pulled in by `wagmi`
+  (Coinbase wallet SDK) and `@uniswap/v3-sdk` (hardhat), unchanged by phase 4; not in the showcase bundle (build guard,
+  now listing `keccak` and `hardhat`) and not loaded by the chat server (a test over the modules Node actually loads).
 - [ ] **4.7** Security pass: headers and CSP, input limits, abuse script against a local run, injection probe against
   the local model. Needs the box. M.
 - [ ] **4.8** First real run on the LAN only (no tunnel): copy indexes, CC-Win sets up the backend service under its

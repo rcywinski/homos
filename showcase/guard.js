@@ -24,6 +24,10 @@ const FORBIDDEN_PACKAGES = [
   '@trezor',
   '@uniswap',
   '@envio-dev',
+  // Pulled in by the old cockpit's wallet stack (wagmi via the Coinbase wallet SDK, @uniswap/v3-sdk via hardhat):
+  // key hashing and contract tooling, never needed by the showcase or the chat server.
+  'keccak',
+  'hardhat',
 ];
 
 /**

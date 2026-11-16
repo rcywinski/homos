@@ -52,7 +52,9 @@ test('page title, introduction and the honesty notice on every view @real', asyn
   const errors = await open(page, MAIN, info);
   await expect(page).toHaveTitle(TITLE);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(TITLE);
-  await expect(page.locator('.intro')).toContainText('code checks every quote against its source');
+  await expect(page.getByTestId('about')).toContainText('code checks every quote against its source');
+  await page.getByText('More about this project').click();
+  await expect(page.getByTestId('about')).toBeVisible();
   // The internal name may appear in source material (quotes, report titles, paths), never in the page's own words.
   expect(await page.locator('.masthead').innerText()).not.toMatch(/\bHOMOS\b/);
   for (const tab of ['Cloud and local answers', 'Daily reports', 'Ask the archive']) {
@@ -61,6 +63,31 @@ test('page title, introduction and the honesty notice on every view @real', asyn
   }
   await expect(page.getByRole('button', { name: /Wallet/ })).toHaveCount(0);
   expect(errors, 'console errors (a CSP violation shows up here)').toEqual([]);
+});
+
+test('the question box is on the first screen of a 1280 x 800 laptop @real', async ({ page }, info) => {
+  test.skip(info.project.name === 'phone', 'desktop viewport check');
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await open(page, MAIN, info);
+  await expect(page.getByLabel('Your question')).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole('button', { name: 'Ask', exact: true })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByTestId('honesty-notice')).toBeInViewport();
+  await shot(page, info, 'first-screen-1280x800');
+});
+
+test('after a submit the result region is in view, focused and announced', async ({ page }, info) => {
+  test.skip(againstReal, 'dry-run answers only');
+  await page.setViewportSize(info.project.name === 'phone' ? { width: 412, height: 839 } : { width: 1280, height: 800 });
+  await open(page, MAIN, info);
+  const result = page.getByTestId('chat-result');
+  await expect(result).toHaveAttribute('aria-live', 'polite');
+  // An example question submits at once.
+  await page.locator('.examples .example').first().click();
+  await expect(page.getByTestId('chat-answer')).toBeVisible();
+  await expect(result).toBeFocused();
+  await expect(page.getByTestId('chat-answer')).toBeInViewport();
+  await expect(page.getByLabel('Your question')).not.toHaveValue('');
+  await shot(page, info, 'after-submit');
 });
 
 test('comparison view: clear default question, two columns, plain labels @real', async ({ page }, info) => {
@@ -192,7 +219,12 @@ test('daily reports: a live-capital day, Markdown rendered, logs folded @real', 
   await page.getByRole('button', { name: 'Daily reports' }).click();
   const report = page.getByTestId('report');
   await expect(report).toContainText('Tuesday, 15 September 2026');
-  await expect(report.locator('table').first()).toBeVisible();
+  await expect(report.locator('.report-contents')).toContainText('What a report holds');
+  // The money sections are open, the technical ones folded; the first open section is about money, not data freshness.
+  const opened = report.locator('details.report-section[open]');
+  await expect(opened.first().locator('.section-gloss')).toHaveText('Tranche balance: deposited, current value, result');
+  await expect(report.locator('details.report-section', { hasText: 'Data freshness' })).not.toHaveAttribute('open', '');
+  await expect(opened.locator('table').first()).toBeVisible();
   const folded = report.locator('details.md-code');
   expect(await folded.count()).toBeGreaterThan(0);
   for (const d of await folded.all()) expect(await d.getAttribute('open')).toBeNull();
