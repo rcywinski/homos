@@ -68,5 +68,37 @@ Generator per column:
 - Correct 16 and 18 against 16 and 16: gap 0 vs spread 2, within the spread. Incorrect 3 and 5 against 5 and 7: gap 0 vs spread 2, within the spread.
 - Per question: spreads 4 and 10; changes between the pairs 8, 13, 10, 11 (26 up, 16 down over the four pairs).
 
+## 3.3 Gemma 4 26B-A4B with prompt P
+
+Variant A chunk lists. Gemma A (1.11) used the Sonnet prompt at 250 W and is a single run, so it has no spread of its own.
+
+| measure | Gemma A, single run (1.11) | Gemma P, run 1 (3.3) | Gemma P, run 2 (3.3) |
+|---|---|---|---|
+| valid structured outputs | 34/34 | 34/34 | 34/34 |
+| answers that needed the retry | 0 | 0 | 1 |
+| citations verified | 49/67 | 76/87 | 77/88 |
+| quotes over 40 words | 7 | 2 | 0 |
+| unanswerable labelled `none` | 2/3 | 3/3 | 3/3 |
+| judge: correct / partially / incorrect | 14 / 13 / 7 | 10 / 19 / 5 | 12 / 17 / 5 |
+| judge: supported / partly / unsupported | 6 / 24 / 4 | 13 / 19 / 2 | 12 / 22 / 0 |
+| judge: premise handled (partial + no) | 6/8 | 6/8 | 6/8 |
+| latency median / p95 (s) | 4.7 / 6.9 | 3.7 / 6.4 | 3.7 / 7.7 |
+| decode tokens per second, median | 163 | 183.4 | 178.7 |
+| generated tokens per answer, median | 348 | 292 | 228 |
+| num_ctx | 17408 | 17408 | 17408 |
+| system prompt | ANSWER_SYSTEM | LOCAL_QUOTE_SYSTEM | LOCAL_QUOTE_SYSTEM |
+
+Generator per column:
+
+- Gemma A, single run (1.11): `answer:ollama:gemma4:26b(think=false,num_ctx=17408,num_predict=2048,temperature=1)`
+- Gemma P, run 1 (3.3): `answer:ollama:gemma4:26b(think=false,num_ctx=17408,num_predict=2048,temperature=1,presence_penalty=0,prompt=LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts),cite=quote)`
+- Gemma P, run 2 (3.3): `answer:ollama:gemma4:26b(think=false,num_ctx=17408,num_predict=2048,temperature=1,presence_penalty=0,prompt=LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts),cite=quote)`
+
+- Correct: Gemma A 14; Gemma P 10 and 12 (P's own range 10 to 12; Gemma A outside it).
+- Unverified quotes: Gemma A 18/67; Gemma P 11/87 and 11/88.
+- Per question: Gemma P run-to-run spread 7; Gemma A against each P run 10 and 8 changes.
+
 Box during local-pb1 (2026-11-16T11:10:01Z to 2026-11-16T11:16:05Z UTC): peak 417.6 W, average 369.7 W, max 72.1 C, peak VRAM 20259 MiB; alerts: none (no gap over 3 s, no Kernel-Power 41 event).
 Box during local-pb2 (2026-11-16T11:16:16Z to 2026-11-16T11:22:20Z UTC): peak 418.6 W, average 369.6 W, max 72.7 C, peak VRAM 20259 MiB; alerts: none (no gap over 3 s, no Kernel-Power 41 event).
+Box during local-gemma-p1 (2026-11-16T11:22:33Z to 2026-11-16T11:26:12Z UTC): peak 419.2 W, average 245.3 W, max 68.1 C, peak VRAM 20555 MiB; alerts: none (no gap over 3 s, no Kernel-Power 41 event).
+Box during local-gemma-p2 (2026-11-16T11:26:23Z to 2026-11-16T11:29:13Z UTC): peak 417.6 W, average 321.5 W, max 69.3 C, peak VRAM 20555 MiB; alerts: none (no gap over 3 s, no Kernel-Power 41 event).

@@ -524,3 +524,60 @@ model; to be proposed in the 3.5 plan with measurements, if at all).
 
 **Review questions.** Is a local agent whose `search_journal` still calls Sonnet for query translation a fair "local
 agent"? Should 3.5 measure on fewer tasks than 18 if most of them cannot fit the context?
+
+## 2026-11-16, steps 3.1 to 3.3: results (run without stopping, owner's instruction)
+
+**Decision.** The owner approved the phase plan and asked for 3.1, 3.2 and 3.3 in one go, stopping only on a failed
+check, an unresponsive box or a temperature alert. None happened. Code changes for these steps: the result files now
+record the box without a power cap (`BOX` in `ai/eval/answers.ts`); Gemma accepts prompt P (only the system prompt
+changes, since its card sampling already has every repetition penalty off; the longest P prompt is 15 084 tokens by
+Gemma's tokenizer, so `num_ctx` 17408 still holds it); a phase 3 judge set with a spend guard that limits every judge run
+to what is left of the $10 phase cap (`ai/eval/judge.ts`); the report `ai/eval/phase3-compare.ts`. Box figures are
+CC-Win's, copied per run into `ai/eval/results/2026-11-16-box-log-phase3.json`.
+
+**Evidence.** `ai/eval/results/2026-11-16-phase3-compare-golden-v1-4.md`.
+- 3.1 (single run, not judged): with the same settings, chunk lists and prompt token counts as 1.11 A1, decode median
+  79.9 tokens per second against 60.2 and 60.5 at 250 W; latency median 9.9 s against 12.4 and 12.8. Peak 410.8 W, max
+  71.6 C, peak VRAM 20 191 MiB with the reranker.
+- 3.2: prompt P on the B lists gives the fewest bad quotes measured for a local model (1/94, 1/92), beyond the spread
+  against both B (4/62, 6/58) and P on A (3/87, 3/77). Correctness does not move beyond the spread (correct 16 and 18
+  against 17, 17 and 16, 16).
+- 3.3: Gemma with P has 11/87 and 11/88 bad quotes against 18/67 in its 1.11 run, fewer long quotes (2, 0 against 7),
+  all three unanswerable questions labelled `none` (2/3 before), and fewer correct answers (10, 12 against 14).
+- Whole batch on the box: 1821 samples, no gap, no alert, peak 419.2 W, max 72.7 C, peak VRAM 20 555 MiB.
+- Judge spend: $2.07 of the $10 phase cap.
+
+**What the single Gemma run of 1.11 allows.** Nothing about correctness: with no second run, its own spread is
+unknown, and against the spread of Gemma P (correct 10 to 12, 7 per-question changes between its two runs) the 1.11
+run's 14 is 2 above the range, which equals the range's width, and it differs from each P run on 10 and 8 questions,
+near that spread. The quote error rate (27% against 12.6% and 12.5%) halves (14.4 points), larger than any change
+between two runs of one setting so far (at most 6.0 points: Qwen S1 4.4% against S2 10.4%), so it is consistent with a real gain from P; but the
+two-run rule cannot confirm it without a second Gemma A run.
+
+**Alternatives.** A second Gemma A run with the Sonnet prompt to give 1.11 a spread (not done: not in the approved plan;
+about $0.53 of judging, proposed to the owner).
+
+**Open.** The comparison runs of 1.11 and 1.12 were at 250 W and 3.2 and 3.3 at 420 W. Power changes speed, not the
+sampling settings, so the quality comparison is assumed unaffected; speed is compared only within the same power.
+One Gemma P answer needed the one structured-output retry the generator allows (not a network retry).
+
+**Review questions.** Is "consistent with a gain" a fair reading for the Gemma quote rate, given one 1.11 run? Should
+P become the default prompt for any local generator, given 3.2?
+
+## 2026-11-16, step 3.4: candidate list proposed, nothing pulled
+
+**Decision (proposal, waiting for the owner).** Candidates from the Ollama library (checked 16 Nov) that fit the 24 GB
+card at Q4 with the reranker stopped during generation, each with prompt P, one run, a second run for the best:
+- **Muse Glimmer 30B** (`muse-glimmer:30b`, Q4_K_M, 18 GB; Meta; Apache 2.0; dense, 28B text decoder plus a 2B vision
+  encoder; source huggingface.co/meta-models/Muse-Glimmer-30B). Risk: its architecture reached llama.cpp on 10 Aug
+  2026, so the box's Ollama 0.40.15 may not load it; an Ollama upgrade would change the runtime under every earlier
+  local result and is for the owner to decide.
+- **Gemma 4 31B** (`gemma4:31b-it-q4_K_M`, 20 GB; Google DeepMind; Apache 2.0; dense). Tight: 20 GB of weights plus the
+  KV cache at `num_ctx` 17408; full GPU placement is checked from the server log before the run, and the run does not
+  start if any layer is on the CPU.
+- **gpt-oss 20B** (`gpt-oss:20b`, 14 GB; OpenAI; Apache 2.0 as released, not shown on the Ollama page and not rechecked today; MoE). A third family, and the
+  one listed with the strongest tool use, which matters for 3.5. Polish ability unknown.
+Rejected for the list: older or English-centric 24B to 35B models (Mistral Small, OLMo, Qwen 3.5 and 3.6, which 3.8
+replaces). Estimated judge cost: four judged runs, about $2.10.
+
+**Open.** The owner's approval of the list and of any Ollama upgrade.

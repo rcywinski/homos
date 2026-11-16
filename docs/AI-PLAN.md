@@ -308,12 +308,19 @@ costs nothing). Common rules for every step:
   (+32%); latency median / p95 9.9 / 12.5 s against 12.4 / 16.2 and 12.8 / 17.4. Box (CC-Win log): peak 410.8 W,
   average 392.0 W while busy, max 71.6 C, peak VRAM 20 191 MiB with the reranker, no alert. 34/34 valid, probe passed.
   Report `ai/eval/results/2026-11-16-phase3-compare-golden-v1-4.md`.
-- [ ] NEXT **3.2 Local prompt in the fully local pipeline.** Qwen, variant B retrieval (meta-index plus rerank, no cloud
+- [x] 2026-11-16 **3.2 Local prompt in the fully local pipeline.** Qwen, variant B retrieval (meta-index plus rerank, no cloud
   step; the saved B lists, identical in 1.11 B1 and B2) with prompt P from 1.12, two runs, judged. Compare with B1 and
   B2 (1.11, Sonnet prompt on B) and with P1 and P2 (1.12, prompt P on A).
-- [ ] **3.3 Gemma 4 26B-A4B with prompt P**, variant A, two runs, judged. Compare with its single 1.11 run and state
+  Done: unverified quotes 1/94 and 1/92, fewer than B (4/62, 6/58) and than P on A (3/87, 3/77), beyond the spread both
+  times; correct 16 and 18 against 17 and 17 (B) and 16 and 16 (P on A), within the spread; incorrect 3 and 5. Both
+  remaining bad quotes are real (a phrase dropped from inside a quote; a paraphrase). Judge $1.08.
+- [x] 2026-11-16 **3.3 Gemma 4 26B-A4B with prompt P**, variant A, two runs, judged. Compare with its single 1.11 run and state
   what that single run allows us to conclude.
-- [ ] **3.4 New models.** Check the current Ollama library and propose candidates that fit fully on the card with the
+  Done: unverified quotes 11/87 and 11/88 against 18/67 in the single 1.11 run; quotes over 40 words 2 and 0 against 7;
+  `none` on 3/3 against 2/3; correct 10 and 12 against 14. The single run has no spread, so neither the correctness
+  drop nor the quote gain is shown under the two-run rule (details in the report). Against Qwen P on A (16, 16)
+  Gemma P is weaker beyond the spread; it is about 2.6 times faster than Qwen at 420 W (median 3.7 s against 9.7 s). Judge $0.99.
+- [ ] NEXT **3.4 New models.** Check the current Ollama library and propose candidates that fit fully on the card with the
   reranker stopped during generation (variant A needs no reranker, the chunk lists are saved), including Muse Glimmer
   30B and Gemma 4 31B if they fit, with size, licence and source for each. The owner approves the list before any
   pull `[CC-Win pulls]`. One run each with prompt P, a second run for the best one; judged.

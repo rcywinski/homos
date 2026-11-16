@@ -46,6 +46,36 @@
       "vramNote": "including the reranker",
       "powerLimitW": 420,
       "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-gemma-p1",
+      "startUtc": "2026-11-16T11:22:33Z",
+      "endUtc": "2026-11-16T11:26:12Z",
+      "samples": 217,
+      "peakPowerW": 419.2,
+      "avgPowerW": 245.3,
+      "avgPowerBusyW": 372,
+      "busyNote": "average over the 120 s with GPU utilisation at or above 50%",
+      "maxTempC": 68.1,
+      "peakVramMiB": 20555,
+      "vramNote": "including the reranker; Ollama /api/ps reported only 1.27 GiB (known misreport with the speculative draft model); serve.log: 31/31 layers offloaded to the GPU, draft model 5/5",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
+    },
+    {
+      "run": "local-gemma-p2",
+      "startUtc": "2026-11-16T11:26:23Z",
+      "endUtc": "2026-11-16T11:29:13Z",
+      "samples": 168,
+      "peakPowerW": 417.6,
+      "avgPowerW": 321.5,
+      "avgPowerBusyW": 372.2,
+      "busyNote": "average over the 126 s with GPU utilisation at or above 50%",
+      "maxTempC": 69.3,
+      "peakVramMiB": 20555,
+      "vramNote": "including the reranker; serve.log: 31/31 layers on the GPU (17 332 MiB on CUDA0: 16 268 weights, 740 KV, 324 compute), draft model fully on the GPU",
+      "powerLimitW": 420,
+      "alerts": "none (no gap over 3 s, no Kernel-Power 41 event)"
     }
   ],
   "speed": [
@@ -226,5 +256,29 @@
         "down": 16
       }
     }
+  },
+  "step33": {
+    "gemmaA": {
+      "correct": 14,
+      "incorrect": 7,
+      "unverified": 18
+    },
+    "gemmaP": [
+      {
+        "correct": 10,
+        "incorrect": 5,
+        "unverified": 11
+      },
+      {
+        "correct": 12,
+        "incorrect": 5,
+        "unverified": 11
+      }
+    ],
+    "spread": 7,
+    "vsA": [
+      10,
+      8
+    ]
   }
 }
