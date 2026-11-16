@@ -94,6 +94,18 @@ async function main() {
     check('server count below the expected one fails loudly (truncation or caching)', /prompt token mismatch/.test(msg), msg);
   }
   {
+    // Muse Glimmer options (step 3.4): overcount allowed up to its bound, undercount still fails; trailing <|eot|> removed.
+    const f = fakeOllama([{ content: `${good}<|eot|>` }, { content: good, promptDelta: 4 }, { content: good, promptDelta: 20 }, { content: good, promptDelta: -4 }]);
+    const gen = new LocalGenerator(opts(f.fetchFn, { overcountTolerance: 16, stripTrailing: ['<|eot|>'] }));
+    const r = await gen.generate('q', [chunk]);
+    check('trailing <|eot|> removed before parsing and counted', r.output?.coverage === 'full' && gen.stripped === 1);
+    const r2 = await gen.generate('q', [chunk]);
+    check('server overcount within the bound passes', r2.output !== null);
+    const msgs: string[] = [];
+    for (let i = 0; i < 2; i++) await gen.generate('q', [chunk]).catch((e: Error) => msgs.push(e.message));
+    check('overcount above the bound and any undercount still fail', msgs.length === 2 && msgs.every((m) => /prompt token mismatch/.test(m)), JSON.stringify(msgs));
+  }
+  {
     const f = fakeOllama([{ content: good }], 500);
     let msg = '';
     await new LocalGenerator(opts(f.fetchFn)).generate('q', [chunk]).catch((e: Error) => (msg = e.message));

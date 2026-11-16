@@ -38,6 +38,18 @@ export interface LocalGenOptions {
    * and assistant wrappers, 75 tokens in all (measured 16 Nov 2026). After calibration the count must still match.
    */
   maxTemplateOverhead?: number;
+  /**
+   * Server tokens allowed ABOVE the expected count after calibration (default: `tolerance`). Muse Glimmer: the GGUF
+   * tokenizer in Ollama counts a few more tokens than the Hugging Face tokenizer on some text (measured 16 Nov 2026: +3
+   * and +1 on two chunks of one prompt). More tokens on the server cannot be a truncation; fewer still fail at
+   * `tolerance`.
+   */
+  overcountTolerance?: number;
+  /**
+   * Special tokens removed when they end the content before parsing. Ollama 0.40.15 leaves Muse Glimmer's end-of-turn
+   * token `<|eot|>` (id 200008) at the end of the content. Each removal is counted in the call stats.
+   */
+  stripTrailing?: string[];
   /** Allowed difference between expected and server prompt tokens after calibration. */
   tolerance?: number;
   timeoutMs?: number;
@@ -141,6 +153,8 @@ export class LocalGenerator implements Generator {
   private readonly count: (text: string) => number;
   /** Chat-template overhead in tokens, measured on the first call. */
   templateOverhead: number | null = null;
+  /** How many responses ended with a token from `stripTrailing` (removed before parsing). */
+  stripped = 0;
 
   private get system(): string {
     return this.o.system ?? ANSWER_SYSTEM;
@@ -212,7 +226,8 @@ export class LocalGenerator implements Generator {
       this.templateOverhead = overhead;
     }
     const expected = bare + this.templateOverhead;
-    if (Math.abs(server - expected) > (this.o.tolerance ?? 2))
+    const diff = server - expected;
+    if (diff < -(this.o.tolerance ?? 2) || diff > (this.o.overcountTolerance ?? this.o.tolerance ?? 2))
       throw new Error(`prompt token mismatch: server evaluated ${server}, expected ${expected} (tokenizer ${bare} + template ${this.templateOverhead}); truncation or prompt caching`);
     return expected;
   }
@@ -242,6 +257,13 @@ export class LocalGenerator implements Generator {
       }
       const { r, ms: callMs } = call;
       ms += callMs;
+      for (const t of this.o.stripTrailing ?? []) {
+        const c = r.message?.content?.trimEnd();
+        if (c?.endsWith(t)) {
+          r.message!.content = c.slice(0, -t.length);
+          this.stripped++;
+        }
+      }
       last = r;
       expected = this.checkServerCount(bare, r.prompt_eval_count ?? -1);
       if (this.o.citeMode === 'ref') {
