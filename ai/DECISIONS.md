@@ -833,7 +833,8 @@ another rule.
 ## 2026-11-16, phase 3 merged into main (owner); notes for later
 
 **Decision.** With the owner's approval, `ai-layer` was merged into `main` with a merge commit (no fast forward, no
-history rewritten, no force push) after step 3.5 was ticked, once the CI steps passed. The merge brings steps 3.1 to
+history rewritten, no force push) as `ff16a0b` after step 3.5 was ticked; the CI steps passed locally first, and CI
+on the pushed merge passed (run 43926626532, 2 min 42 s). The merge brings steps 3.1 to
 3.5. Recorded as a possible future step, not planned: an agent prompt for Qwen with an explicit stopping rule
 (`docs/AI-PLAN.md`, "Later, optional").
 
