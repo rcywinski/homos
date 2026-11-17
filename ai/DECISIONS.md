@@ -567,3 +567,20 @@ wallet address is set at build time through `SHOWCASE_WALLET_ADDRESS` and is not
 
 **Review questions.** Is the field allow-list complete for stage B, or will paper trading on live data need its own
 export path?
+
+## 2026-11-17, step 4.8j result and the API spending ledger (CC-App)
+
+**Result.** Blind judge on the chat-server golden run: 12 correct, 14 partly, 8 incorrect (pb1 16/15/3, pb2 18/11/5);
+3 of the 8 are the fixed "not in the data" text on id-03, na-02 and na-03. Details:
+`ai/eval/results/2026-11-17-judged-lan48-4.8j.md`.
+
+**Standing rule (owner, 17 Nov 2026).** CC-Mac and CC-App coordinate directly within: code, tests, analysis, docs and
+commits on their own branch; API spending up to 2 USD per run and 5 USD in total across both sessions from the rule
+on. Box, GPU, spending above the limits, merges to main, tunnel, firewall, accounts, scheduled tasks and manual steps
+still need the owner's answer in the session that asks.
+
+**Spending ledger** (running total against the 5 USD limit, both sessions; update with every paid run):
+
+| Date | Session | Run | USD | Total since the rule |
+|---|---|---|---|---|
+| 2026-11-17 | CC-Mac | step 4.8j judge, set lan48 (before the rule, owner-approved) | 0.54 | 0.00 |
