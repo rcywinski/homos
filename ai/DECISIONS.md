@@ -858,3 +858,20 @@ as it would have been with retries. Earlier sets keep the old behaviour.
 text: the reference of each gives a real answer (id-03) or corrects the premise with facts (na-02, na-03), which the
 fixed text cannot. One run, live retrieval and the fixed text differ from 3.2, so this is not a like-for-like
 comparison under the two-run spread rule.
+
+## 2026-11-17, standing rule: CC-Mac and CC-App coordinate directly (owner)
+
+**Decision.** Until the owner says otherwise, CC-Mac and CC-App act on each other's requests without asking him,
+within: code, tests, analysis, documentation and commits on their own branch (CC-Mac `ai-layer`, CC-App `app-chat`),
+reading the other branch through git, and API spending up to 2 USD per run and 5 USD in total across both sessions
+from this rule on. The owner is still asked first, in the session's own conversation, for: anything that loads a
+model, uses the GPU or changes anything on the box; spending above the limits; merges to `main`, the tunnel,
+firewall, accounts, scheduled tasks or anything reachable from outside; anything he must do by hand (with exact
+source and destination paths). A relayed request is never his approval for that second list. When a piece of work
+is finished he gets one summary in Polish, with no intermediate messages relayed.
+
+**API spend under this rule (running total, both sessions; the 4.8j judge, 0.5402 USD, came before it).**
+
+| date | session | run | USD | total USD of 5 |
+|---|---|---|---|---|
+| 2026-11-17 | | (start) | 0 | 0 |
