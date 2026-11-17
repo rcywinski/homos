@@ -412,7 +412,11 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   contract tooling, which neither the server nor the showcase bundle loads.
   Box note: the request log folder must be readable only by `homos-web` (Windows ACL on `ai\serve\logs`).
 
-- [ ] **4.8** First real run on the LAN only (no tunnel): copy indexes, CC-Win sets up the backend service under its
+- [ ] NEXT **4.8** (in progress, 17 Nov 2026) Owner decision: this first test series runs as the desktop user `cywil`
+  from `C:\Projects\homos-dryrun` (the account `homos-web` and `C:\HomosServe` do not exist yet; CC-Win stopped at
+  step 0 and created nothing), with `C:\Projects\homos-dryrun-serve.env` and outputs in `C:\Projects\`. Running under
+  `homos-web` from `C:\HomosServe\homos` is a precondition of 4.9; the owner creates that account and its password
+  himself. First real run on the LAN only (no tunnel): copy indexes, CC-Win sets up the backend service under its
   own user, owner tests from the Mac and a phone on the LAN. Needs the box. S. First real start checks the load order on the box: the
   `[serve] resident:` line, `/api/ps` with generator, bge-m3 and the reranker loaded, and one question after a forced
   generator unload (the log line "models reloaded in order before a question"). Includes a count of false "not
@@ -427,7 +431,8 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;
   4.6e one measurement of the cloud generator on the fully local retrieval (owner's key, owner's OK first).
-- [ ] **4.9** Tunnel and private link, after a separate OK from the owner: Cloudflare Tunnel, static hosting choice,
+- [ ] **4.9** Tunnel and private link, after a separate OK from the owner (precondition: the server runs as `homos-web`
+  from `C:\HomosServe\homos`, not as the desktop user): Cloudflare Tunnel, static hosting choice,
   optional Access, kill switch documented in `inference/README.md`. S. Checklist: `SERVE_MODE=tunnel` and
   `SERVE_HOST=127.0.0.1` in `serve.env` (the server refuses tunnel mode on any other address); the start-up log shows
   "mode tunnel"; no "CF-Connecting-IP" warning in the log after the first visits; the log folder ACL limited to
