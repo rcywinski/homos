@@ -429,6 +429,13 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   Then the same Playwright suite against the real server on the LAN (`E2E_BASE_URL=... E2E_SHOTS_DIR=...
   npx playwright test --grep @real`; the dry-run-only paths are skipped there), with a screenshot of each path
   reported to the owner.
+  Result 17 Nov 2026 (review: `ai/eval/results/2026-11-17-lan-run-4.8-review.md`): no failure; 37 questions, median
+  9.9 s per question (retrieval 0.44 s, generation and verification 9.5 s); quotes not verified 3 of 82; all 20
+  "not verified" number marks were false alarms (rule changes proposed in the review); the disconnect test cancelled
+  the generation on the real GPU; browser suite 13 passed, 1 skipped. VRAM 24 010 of 24 576 MiB after warm-up, commit
+  memory 45.0 GB rising to 53.2 GB over the series: both are measured again under the design of section 10, which
+  replaces the 24-hour residency.
+- [ ] **4.10** On-demand models with an owner switch (section 10). Replaces the 24-hour keep_alive. Design first.
 - [ ] **4.6** Guest-key mode. Plan written 16 Nov 2026 (no code yet); details in section 9. M, in five parts:
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;
@@ -550,4 +557,97 @@ IndexedDB hold nothing after a question; the key is gone after reload and after 
 is shown; the CSP header and meta allow exactly `'self' https://api.anthropic.com` in `connect-src`. Server unit tests:
 tickets (forged, expired, other chunk ids), `sk-ant-` refusal without logging, verify returns the same shape as
 `/api/ask`.
+
+## 10. Step 4.10 design: models on demand, owner switch (written 17 Nov 2026, not built)
+
+**Why.** The models must not stay loaded for 24 hours. In 4.8 they held 24 010 of 24 576 MiB of VRAM and the
+machine's commit memory rose from 45.0 to 53.2 GB over one series. The GPU is the owner's, and it is idle most of
+the day.
+
+**States.** One state machine in the server, shown to visitors and to the owner:
+
+| State | Meaning | Visitor sees | GPU |
+|---|---|---|---|
+| `off` | owner switch off (or the pause file present) | "The assistant is offline"; saved answers, reports, wallet | nothing loaded; no visitor action touches it |
+| `idle` | switch on, models not loaded | a "Load the local model" button and the typical load time | nothing loaded |
+| `loading` | a load is running | staged progress: generator, embeddings, check, each with its elapsed time and its typical time | loading |
+| `ready` | residency check passed | the question box, unlocked; "unloads after 15 minutes without questions" | generator, bge-m3, reranker |
+| `unloading` | idle timeout or switch turned off | as `idle` (or `off`) once done | releasing |
+
+**Loading.** Any visitor can start it from `idle`, once: concurrent clicks join the same load (single flight) and
+follow its progress over one Server-Sent Events stream. The load is a job in the GPU queue, so it never overlaps a
+question. Order as today (section 6): generator first with the served num_ctx, then bge-m3, then the residency check
+(`/api/ps` lists both, the generator fully in VRAM with the served num_ctx, the reranker on CUDA). Typical stage
+times are measured on the box in 4.10d and shipped as configuration; the page shows them, not a percentage. A failed
+check unloads what was loaded and returns to `idle` with the reason in the server log; no automatic retry.
+
+**Unloading.** No public unload control. The server unloads after **15 minutes without a question** (a visitor who
+reads an answer and asks a follow-up stays within it; a reload costs the next visitor one load), and at once when the
+owner turns the switch off. Unloading is explicit (`keep_alive: 0` for both models, generator first, then a check that
+`/api/ps` is empty), not left to Ollama's timers, because the two models must not drift apart: a generator reloaded
+on its own evicts bge-m3. The loads carry `keep_alive: 60m` as a safety ceiling, so that if the server dies the models
+still unload within an hour. The reranker is a separate Python service that keeps its model on the GPU; it stays
+resident in this design (its VRAM is measured in 4.10d); unloading it too needs load and unload endpoints in
+`inference/`, which is CC-Mac's area, and is a later option.
+
+**Queue, limits, start-up.**
+
+- Questions are accepted only in `ready`; in any other state `/api/ask` answers at once with the state (503, no GPU
+  work, the question given back to the visitor's limit).
+- The per-question residency check stays; if it fails (Ollama restarted, a model evicted), the state drops to `idle`
+  and the visitor sees the load button again. It no longer replays the load on its own: loading is always a visible
+  action.
+- Loads have their own limits: 2 per visitor per hour and 30 per day for the site, configurable; a load does not
+  count against the question limits.
+- The start-up check no longer requires loaded models: the server starts in `off` (or in `idle` if the switch file
+  says on) and checks only what does not need the GPU: configuration, the corpus and index hashes, the wallet file,
+  the reranker's `/health` and Ollama's `/api/version` and `/api/tags` (both models present on disk). The residency
+  check moves to the end of `loading`.
+- The switch state is a small file outside the repo (`SERVE_SWITCH_FILE`), default `off` when missing, so a restart
+  never loads anything by itself. The pause file of section 6 stays as the box-side override and wins over the switch.
+
+**Owner switch: two designs.** In both, the admin page can only turn the switch on or off and show the state (the
+state machine, the queue length, what `/api/ps` reports for the two models and the reranker's `/health`); it runs no
+shell command and has no other function. Every switch is appended to an admin log outside the repo (time, from, to,
+who: the Access identity or "password").
+
+*(a) Cloudflare Access in front of `/admin`.* An Access application on the public hostname, path `/admin*`, policy:
+the owner's identity only (one-time PIN to the owner's e-mail or a Google login, set in the Cloudflare dashboard, not
+in the repo). The server also verifies the `Cf-Access-Jwt-Assertion` header on every `/admin` request: RS256
+signature against the team's published keys, audience tag and expiry, so a request that reaches the server without
+going through Access is refused. Pros: no password or session code of ours; brute force and MFA handled at the edge;
+nothing secret on the box except the audience tag. Cons: needs the tunnel (4.9), so it does not exist on the LAN
+before that; the JWT check is security code we must get right and test.
+
+*(b) Our own password login.* A long random password set by the owner on the box; only its scrypt hash (Node's
+built-in `crypto.scrypt`, salt and cost in the file) in a file outside the repo readable by `homos-web` only. Login at
+`POST /admin/login`: constant-time comparison; 5 attempts per 15 minutes per address and a lockout after 20 failures
+in a day that only removing a file on the box lifts. Session: a random token in memory on the server, sent as a
+cookie with `HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/admin` and no expiry date (it dies with the browser
+session), valid 30 minutes; every state-changing request also needs a matching token in the request body and a
+same-origin `Origin` header, against cross-site requests. Pros: works on the LAN and before the tunnel; no outside
+dependency. Cons: we own all of it (hashing, lockout, session, CSRF), more code to review, and a password the owner
+must keep.
+
+**Recommendation: (a)**, because it keeps authentication out of our code, adds MFA and handles brute force before a
+request reaches the box, and the admin page is only needed once the site is public. Until the tunnel exists, the
+switch is the switch file on the box, operated by CC-Win on the owner's word. If the owner wants the page on the LAN
+before 4.9, (b) can be built as well, with the defaults above.
+
+**Commit memory.** 4.10d measures it at fixed points: before any load, after a load, after 20 questions, after the
+idle unload, and after an hour idle with the server running; the unload ends the llama-server processes, so their
+commit should return. The 8 GB rise of 4.8 is attributed to a process with these numbers.
+
+**Steps.** 4.10a state machine, load and model endpoints, the visitor UI with staged progress, all with the fake
+engine (fake stages with delays) and Playwright; 4.10b explicit unload, the idle timer, the 60-minute ceiling, start-up
+without loaded models, tests with a fake Ollama; 4.10c the admin page with the chosen design; 4.10d on the box:
+typical load times, VRAM per process (`nvidia-smi --query-compute-apps`), commit memory at the points above.
+
+## 11. Later (owner's direction, 17 Nov 2026; no design, no code)
+
+The owner's goal beyond this phase: the original application as the main page, with a mock wallet and no signing; a
+shared live paper-trading simulation on live prices (virtual 10 000 USD positions, wide and narrow ranges,
+rebalances, fees, conversion losses); the chat as a linked subpage; later a chat that reads the live simulation state;
+later a per-visitor virtual wallet kept in the browser. First step when this is picked up: reconnaissance of how deeply
+the wallet libraries (wagmi, ConnectKit, viem and the signing hooks) are tied into the old UI in `src/`.
 
