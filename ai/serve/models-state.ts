@@ -76,6 +76,8 @@ export interface ModelBackend {
 export type TypicalMs = Record<StageName, number>;
 
 export class LoadFailed extends Error {
+  /** True when the load was stopped on purpose (switch off), not failed by the box. */
+  aborted = false;
   constructor(readonly stage: StageName, detail: string) {
     super(`${stage}: ${detail}`);
     this.name = 'LoadFailed';
@@ -227,6 +229,7 @@ export class Models {
     this.current = 'loading';
     const promise = run((queueSignal) => this.runStages(target, stages, started, AbortSignal.any([queueSignal, abort.signal]))).catch(async (e: unknown) => {
       const failure = e instanceof LoadFailed ? e : new LoadFailed(stages.find((x) => x.status === 'running')?.name ?? 'check', e instanceof Error ? e.message : String(e));
+      failure.aborted = abort.signal.aborted;
       // Nothing is retried. A switch-off abort is not a failure of the box, so it starts no cool-down.
       if (!abort.signal.aborted) this.cooldownUntil = this.now() + (this.o.cooldownMs ?? 120_000);
       this.log(`model load ${abort.signal.aborted ? 'aborted' : 'failed'}: ${failure.message}`);

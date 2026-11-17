@@ -193,12 +193,13 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
       perDay: int(env, 'SERVE_LOAD_LIMIT_DAY', 6, 1, 1000),
       globalPerDay: int(env, 'SERVE_LOAD_LIMIT_GLOBAL_DAY', 30, 1, 10_000),
     },
-    // Step 4.8j2 on the box: generator 20.9 s, bge-m3 2.6 s; the check and the release are short. 4.10d measures them.
+    // Measured on the box (4.8j to 4.10d): generator 15.6 to 21.7 s (median 21.0 of five loads), bge-m3 2.6 s,
+    // check 0.0 to 0.1 s. The release of bge-m3 alone is not measured yet (no public search load).
     typicalLoadMs: {
       'release-embedder': int(env, 'SERVE_TYPICAL_RELEASE_MS', 1000, 0, 600_000),
       generator: int(env, 'SERVE_TYPICAL_GENERATOR_MS', 21_000, 0, 600_000),
-      embedder: int(env, 'SERVE_TYPICAL_EMBEDDER_MS', 3000, 0, 600_000),
-      check: int(env, 'SERVE_TYPICAL_CHECK_MS', 1000, 0, 600_000),
+      embedder: int(env, 'SERVE_TYPICAL_EMBEDDER_MS', 2600, 0, 600_000),
+      check: int(env, 'SERVE_TYPICAL_CHECK_MS', 200, 0, 600_000),
     },
     loadCooldownMs: int(env, 'SERVE_LOAD_COOLDOWN_MS', 120_000, 0, 3_600_000),
     fakeLoadMs: int(env, 'SERVE_FAKE_LOAD_MS', 300, 0, 60_000),

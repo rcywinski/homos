@@ -125,7 +125,7 @@ async function releases() {
   check('switch off while loading: still "loading" until aborted', m.state() === 'loading');
   const ticking = m.tick();
   const e = await loading;
-  check('the running load is aborted', e instanceof LoadFailed && e.stage === 'generator', String(e));
+  check('the running load is aborted', e instanceof LoadFailed && e.stage === 'generator' && e.aborted, String(e));
   await ticking;
   check('then both models are released and the state is off', (await settled(m)) === 'off' && slow.calls.includes('release-all') && !slow.calls.includes('embedder'), slow.calls.join());
   on = true;
@@ -358,7 +358,33 @@ async function failedLoadLimits() {
   }
 }
 
+/** Step 4.10d: a load stopped by the switch tells the visitor the switch is off, and costs no load. */
+async function abortedLoadMessage() {
+  const deps: AskDeps = { retrieval: await fakeRetrieval(), generator: new DryRunGenerator(0), engine: FAKE_ENGINE, k: 10 };
+  let on = true;
+  const models = new Models({ backend: new FakeModelBackend(300), typicalMs: TYPICAL, switchOn: () => on, lateLoadWatchMs: 0 });
+  const loadLimiter = new RateLimiter({ perHour: 1, perDay: 6, globalPerDay: 30 });
+  const app = createApp(deps, { maxQuestionChars: 500, queue: new GpuQueue(5, 60_000), limiter: new RateLimiter({ perHour: 9, perDay: 9, globalPerDay: 9 }), log: new MemoryLog(), probe: { up: async () => true }, trustProxy: 'none', paused: () => false, models, loadLimiter });
+  const srv = await new Promise<{ url: string; close: () => void }>((resolve) => {
+    const s = app.listen(0, '127.0.0.1', () => resolve({ url: `http://127.0.0.1:${(s.address() as AddressInfo).port}`, close: () => s.close() }));
+  });
+  try {
+    const pending = fetch(`${srv.url}/api/models/load`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+    await sleep(60);
+    on = false;
+    await models.tick();
+    const r = await pending;
+    check('a load stopped by the switch answers switch-off, not load-failed', r.status === 503 && ((await r.json()) as { error: string }).error === 'switch-off');
+    await settled(models);
+    on = true;
+    check('and is given back to the visitor (limit 1 an hour still free)', loadLimiter.take(loadLimiter.visitor('127.0.0.1')).ok);
+  } finally {
+    srv.close();
+  }
+}
+
 async function main() {
+  await abortedLoadMessage();
   await machine();
   await releases();
   await ollama();

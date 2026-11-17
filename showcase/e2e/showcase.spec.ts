@@ -314,7 +314,7 @@ test('models on demand: load button, staged progress with typical times, then th
   await open(page, url, info, { load: false });
   const panel = page.getByTestId('models-panel');
   await expect(panel).toHaveAttribute('data-state', 'idle');
-  await expect(panel).toContainText('Loading usually takes about 25 s');
+  await expect(panel).toContainText('Loading usually takes about 24 s');
   await expect(panel).toContainText('released again after 15 minutes without questions');
   await page.getByLabel('Your question').fill('Why were the ranges kept wide?');
   await expect(page.getByRole('button', { name: 'Ask', exact: true })).toBeDisabled();

@@ -213,6 +213,12 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
         log(e.code);
         return reply.error(503, e.code, MESSAGES[e.code], e.retryAfterSec);
       }
+      // Step 4.10d: a load stopped by the owner switch is not a failure of the box; say what happened, give it back.
+      if (e instanceof LoadFailed && e.aborted) {
+        if (!joining) loadLimiter.refund(visitor);
+        log('aborted', e.stage);
+        return reply.error(503, 'switch-off', MESSAGES['switch-off']);
+      }
       // Owner, 17 Nov 2026: a failed load counts against the visitor, not against the site's daily total.
       if (!joining) loadLimiter.refundGlobal();
       log('failed', e instanceof LoadFailed ? e.stage : e instanceof Error ? e.message : 'unknown');
