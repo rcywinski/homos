@@ -877,6 +877,7 @@ is finished he gets one summary in Polish, with no intermediate messages relayed
 | 2026-11-17 | | (start) | 0 | 0 |
 | 2026-11-17 | CC-Mac | judge, set lan48b (4.8j2, refusal explained) | 0.5161 | 0.5161 |
 | 2026-11-17 | CC-Mac | judge, set lan48bf (4.8j2, fixed refusal text) | 0.5023 | 1.0184 |
+| 2026-11-17 | CC-Mac | judge, set lan48c (4.8j3, refusal explained) | 0.5320 | 1.5504 |
 
 ## 2026-11-17, closing reports to the analysis session (owner)
 
@@ -900,3 +901,15 @@ explanation). On the 29 identical answers the judge gave 2 different verdicts (w
 between the variants is within the judge's own spread; the explanation's measured effect is na-03.
 Against 4.8j (12 / 14 / 8): id-03 is answered again (correct), dated-07 is no longer incorrect, na-07 is now incorrect.
 One box run, so the two-run spread rule still does not apply.
+
+## 2026-11-17, step 4.8j3 judged (standing rule)
+
+**Decision.** At CC-App's request (assigned by the analysis session), the 4.8j3 box run, a second run of the lan48b
+setup (refusal explained), was judged as set `lan48c` from `origin/app-chat` 61ccb4e (sum checked after the copy),
+same judge and prompt as step 3.2, `--no-retry`. Spent 0.5320 USD, 0 failed calls; ledger total 1.5504 of 5.
+
+**Result.** correct 16, partially 14, incorrect 4; supported 3, partly 30, unsupported 1. With lan48b (18 / 11 / 5)
+this is the first two-run pair of the chat server: mean 17 / 12.5 / 4.5, against step 3.2 pb1 and pb2 at 17 / 13 /
+4; the gaps are within both spreads, so the chat server is not distinguishable from step 3.2 on these counts. 7 of 34
+questions changed class between the two runs. dated-04, dated-05, dated-06 and id-07 are incorrect in all three box
+runs (4.8j, 4.8j2, 4.8j3).

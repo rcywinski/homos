@@ -69,6 +69,8 @@ export const SETS = {
   // only the refusals differ (lan48b: fixed heading plus the model's explanation, lan48bf: fixed heading alone).
   lan48b: { runs: [{ run: 'local-lan48b', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48b-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48b-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48b-golden-v1-4.json`, date: '2026-11-17' },
   lan48bf: { runs: [{ run: 'local-lan48bf', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48bf-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48bf-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48bf-golden-v1-4.json`, date: '2026-11-17' },
+  // Step 4.8j3 (CC-App, standing rule): a second box run of the lan48b setup, refusal explained.
+  lan48c: { runs: [{ run: 'local-lan48c', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48c-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48c-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48c-golden-v1-4.json`, date: '2026-11-17' },
 };
 export type SetName = keyof typeof SETS;
 
