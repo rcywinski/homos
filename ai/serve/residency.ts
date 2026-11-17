@@ -120,7 +120,7 @@ export interface WarmUpResult {
 
 /** One line for the log: the load order with times, then what /api/ps reports. */
 export function describeWarmUp(r: WarmUpResult): string {
-  const steps = r.steps.map((s, i) => `${i + 1}. ${s.model} via ${s.request} at ${s.startedAt.slice(11, 23)} (${(s.ms / 1000).toFixed(1)} s)`).join(', ');
+  const steps = r.steps.map((s, i) => `${i + 1}. ${s.model} via ${s.request} at ${s.startedAt.slice(11, 23)} UTC (${(s.ms / 1000).toFixed(1)} s)`).join(', ');
   return `load order: ${steps}; resident per /api/ps (not load order): ${r.resident.map((m) => m.name).join(', ')}`;
 }
 

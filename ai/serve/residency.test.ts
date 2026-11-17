@@ -95,7 +95,7 @@ async function main() {
   check('load steps in request order', models.steps.map((x) => `${x.model} ${x.request}`).join() === 'qwen3.8:27b /api/chat,bge-m3 /api/embed');
   check('each step has a start time and a duration', models.steps.every((x) => /^\d{4}-\d{2}-\d{2}T/.test(x.startedAt) && x.ms >= 0));
   const reversed = describeWarmUp({ steps: models.steps, resident: [...models.resident].reverse() });
-  check('the log line names the load order explicitly', /^load order: 1\. qwen3\.8:27b via \/api\/chat at [\d:.]+ \([\d.]+ s\), 2\. bge-m3 via \/api\/embed/.test(reversed), reversed);
+  check('the log line names the load order explicitly', /^load order: 1\. qwen3\.8:27b via \/api\/chat at [\d:.]+ UTC \([\d.]+ s\), 2\. bge-m3 via \/api\/embed/.test(reversed), reversed);
   check('the log line marks the /api/ps list as not the load order', reversed.includes('resident per /api/ps (not load order): bge-m3:latest, qwen3.8:27b'), reversed);
 
   // What the check refuses.
