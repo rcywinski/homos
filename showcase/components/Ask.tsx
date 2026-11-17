@@ -72,14 +72,16 @@ export function Ask() {
     };
   }, []);
 
-  // Someone else's load: follow it by polling until it ends; our own load follows the event stream instead.
+  // Someone else's load, a release in progress or the wait after a failed load: follow it by polling until it ends;
+  // our own load follows the event stream instead.
+  const transient = models?.state === 'loading' || models?.state === 'unloading' || models?.retryAfterSec !== undefined;
   useEffect(() => {
-    if (models?.state !== 'loading' || loadingOwn) return;
+    if (!transient || loadingOwn) return;
     const t = setInterval(() => {
       void getModels().then((v) => v && setModels(v));
     }, 1000);
     return () => clearInterval(t);
-  }, [models?.state, loadingOwn]);
+  }, [transient, loadingOwn]);
 
   const load = async () => {
     if (loadingOwn) return;
@@ -114,7 +116,7 @@ export function Ask() {
     } else {
       setError(r.error);
       // The models were released or lost meanwhile: show the load button again.
-      if (['not-loaded', 'loading', 'switch-off'].includes(r.error.error)) {
+      if (['not-loaded', 'loading', 'unloading', 'switch-off', 'model-unavailable'].includes(r.error.error)) {
         const v = await getModels();
         if (v) setModels(v);
       }

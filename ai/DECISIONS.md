@@ -611,3 +611,17 @@ is released, then the generator and bge-m3 load in the fixed order.
 
 **Scope.** Dry run and Playwright only. The real engine keeps loading at start until 4.10b (explicit unload, idle
 timer, start-up without loaded models); typical stage times default to the 4.8j2 measurement until 4.10d.
+
+## 2026-11-17, step 4.10b: releases, failed loads, a late model after an abort (owner)
+
+**Decision.** The owner accepted 4.10b and the rule for failed loads: a failed load counts against the visitor's
+load limit but not against the site's daily total, and no new load starts for 2 minutes after it. Releases target
+both models, are confirmed by `/api/ps`, and an unconfirmed release keeps the state "unloading".
+
+**Why.** 30 failed loads on a failing box would otherwise lock the site for the UTC day, while a per-visitor count
+and a short pause still stop hammering. Aborting a request does not stop Ollama from finishing a load: the unit test
+with a fake Ollama showed a release confirmed on an empty `/api/ps` before the model appeared. The release after an
+aborted or failed load therefore watches `/api/ps` for 30 s and releases anything that appears.
+
+**Open.** Real Ollama behaviour of the release (keep_alive 0 on `/api/generate` for bge-m3, as `ollama stop` does) and
+of a late model is checked on the box in 4.10d.

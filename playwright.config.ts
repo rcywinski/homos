@@ -33,7 +33,9 @@ const server = (name: string, port: number, extra: Record<string, string>) => ({
   },
 });
 
-export const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807 };
+export const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807, switching: 8808 };
+/** The switch file of the "switching" server, written by the test that turns the switch off (step 4.10b). */
+export const SWITCH_FILE = path.join(os.tmpdir(), 'homos-e2e-switching-SWITCH');
 
 export default defineConfig({
   testDir: path.join('showcase', 'e2e'),
@@ -70,7 +72,8 @@ export default defineConfig({
         server('off', PORTS.off, { SERVE_SWITCH_FILE: path.join(os.tmpdir(), 'homos-e2e-no-switch-file') }),
         server('load-desktop', PORTS.loadDesktop, { SERVE_FAKE_LOAD_MS: '900' }),
         server('load-phone', PORTS.loadPhone, { SERVE_FAKE_LOAD_MS: '900' }),
-        server('load-fail', PORTS.loadFail, { SERVE_FAKE_LOAD_FAIL: 'generator', SERVE_LOAD_LIMIT_HOUR: '100', SERVE_LOAD_LIMIT_DAY: '100', SERVE_LOAD_LIMIT_GLOBAL_DAY: '1000' }),
+        server('load-fail', PORTS.loadFail, { SERVE_FAKE_LOAD_FAIL: 'generator', SERVE_LOAD_COOLDOWN_MS: '3000', SERVE_LOAD_LIMIT_HOUR: '100', SERVE_LOAD_LIMIT_DAY: '100', SERVE_LOAD_LIMIT_GLOBAL_DAY: '1000' }),
+        server('switching', PORTS.switching, { SERVE_SWITCH_FILE: SWITCH_FILE }),
         {
           command: `node --import tsx ${path.join('showcase', 'e2e', 'static-only.ts')} ${PORTS.staticOnly}`,
           url: `http://127.0.0.1:${PORTS.staticOnly}/`,

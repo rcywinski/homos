@@ -18,7 +18,7 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { ask, ModelUnavailable, refusedBeforeWork, type AskDeps, type AskResponse, type Stage } from './ask';
 import type { RequestLog } from './log';
-import { LoadFailed, Models, type ModelBackend, type ModelsView } from './models-state';
+import { LoadFailed, LoadRefused, Models, type ModelBackend, type ModelsView } from './models-state';
 import { GpuQueue, JobCancelled, JobTimeout, QueueRefused } from './queue';
 import { clientIp, RateLimiter } from './ratelimit';
 import { securityHeaders } from './headers';
@@ -60,7 +60,10 @@ const NO_BACKEND: ModelBackend = {
   loadEmbedder: async () => undefined,
   releaseEmbedder: async () => undefined,
   check: async () => null,
+  releaseAll: async () => null,
 };
+
+const BAD_LOAD = 'This request is not understood. The page loads the model with its own button.';
 
 /** Fixed messages for every refusal; the UI shows them as they are. */
 export const MESSAGES = {
@@ -82,14 +85,17 @@ export const MESSAGES = {
   'load-day': 'You have started the most model loads allowed today. Please come back tomorrow.',
   'load-global': 'The model has been loaded as many times as allowed today. Please come back tomorrow. The saved answers are still available.',
   'load-failed': 'The local model could not be loaded right now. Please try again later. The saved answers are still available.',
+  unloading: 'The local model is being released. You can load it again in a moment.',
+  cooldown: 'The last attempt to load the local model failed. A new attempt is possible in a moment.',
 } as const;
 
 type ErrorCode = keyof typeof MESSAGES | 'bad-request' | 'too-long' | 'too-large' | 'not-found';
 
 /** The message for a question that arrives while the models cannot answer it. */
-function notServing(view: ModelsView): 'not-loaded' | 'loading' | 'switch-off' {
+function notServing(view: ModelsView): 'not-loaded' | 'loading' | 'unloading' | 'switch-off' {
   if (view.state === 'off') return 'switch-off';
-  if (view.state === 'loading' || view.state === 'unloading') return 'loading';
+  if (view.state === 'unloading') return 'unloading';
+  if (view.state === 'loading') return 'loading';
   return 'not-loaded';
 }
 
@@ -162,7 +168,7 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
     const body: unknown = req.body;
     const raw = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>).target : undefined;
     // Only the full load has a visitor control so far; "search" (retrieval only) opens with guest-key mode (4.6).
-    if (raw !== undefined && raw !== 'ready') return reply.error(400, 'bad-request', BAD_QUESTION);
+    if (raw !== undefined && raw !== 'ready') return reply.error(400, 'bad-request', BAD_LOAD);
     const visitor = opts.limiter.visitor(clientIp(req.headers, req.socket.remoteAddress, opts.trustProxy));
     const t0 = Date.now();
     const log = (outcome: string, detail?: string) => opts.log.write({ visitor, outcome: `load-${outcome}`, ms: Date.now() - t0, ...(detail ? { detail } : {}) });
@@ -170,6 +176,15 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
     if (opts.paused() || models.state() === 'off') {
       log('switch-off');
       return reply.error(503, 'switch-off', MESSAGES['switch-off']);
+    }
+    if (models.state() === 'unloading') {
+      log('unloading');
+      return reply.error(503, 'unloading', MESSAGES.unloading);
+    }
+    const cooldown = models.view().retryAfterSec;
+    if (cooldown !== undefined) {
+      log('cooldown');
+      return reply.error(503, 'cooldown', MESSAGES.cooldown, cooldown);
     }
     if (models.serves('ready')) return reply.result({ models: models.view() });
     const joining = models.joins('ready');
@@ -193,8 +208,14 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
         log(`refused-${e.reason}`);
         return reply.error(503, 'busy', MESSAGES.busy);
       }
+      if (e instanceof LoadRefused) {
+        if (!joining) loadLimiter.refund(visitor);
+        log(e.code);
+        return reply.error(503, e.code, MESSAGES[e.code], e.retryAfterSec);
+      }
+      // Owner, 17 Nov 2026: a failed load counts against the visitor, not against the site's daily total.
+      if (!joining) loadLimiter.refundGlobal();
       log('failed', e instanceof LoadFailed ? e.stage : e instanceof Error ? e.message : 'unknown');
-      if (e instanceof Error && e.message === 'switch-off') return reply.error(503, 'switch-off', MESSAGES['switch-off']);
       reply.error(503, 'load-failed', MESSAGES['load-failed']);
     } finally {
       off();
@@ -252,7 +273,7 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
     });
 
     try {
-      const r = await opts.queue.run(visitor, (signal) => ask(deps, question, (s) => reply.event(s), signal), {
+      const r = await opts.queue.run(visitor, (signal) => (models.touch(), ask(deps, question, (s) => reply.event(s), signal).finally(() => models.touch())), {
         onPosition: (position, waiting) => reply.event('queued', { position, waiting }),
         signal: left.signal,
       });

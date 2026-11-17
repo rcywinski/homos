@@ -463,7 +463,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   Cloudflare Access and a 15-minute idle period; until the tunnel exists the switch is the file on the box. Starts
   after 4.8n. Follow-up: the master switch should eventually release the reranker too, so the whole GPU is free when
   the chat is off; this needs load and unload endpoints in `inference/`, coordinated with CC-Mac when we get there.
-  **4.10a built (17 Nov 2026), awaiting the owner's OK:** `ai/serve/models-state.ts` (states off, idle, loading,
+  **4.10a done (17 Nov 2026, owner's OK):** `ai/serve/models-state.ts` (states off, idle, loading,
   search, ready, unloading; the retrieval-only state "search" and the per-model plan the owner accepted on 17 Nov:
   full load generator, bge-m3, check; search to full releases bge-m3 first), `GET /api/models`,
   `POST /api/models/load` (single flight, own limits 2 per visitor per hour, 6 per day, 30 for the site, joining is
@@ -471,6 +471,17 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   (`SERVE_SWITCH_FILE`, missing = off, the pause file wins), the load panel with staged progress and typical times.
   The dry run uses it; the real engine keeps loading at start until 4.10b. Guest loads ("search") get their visitor
   control with 4.6, counted against the same load limits.
+  **4.10b built (17 Nov 2026), awaiting the owner's OK:** releases through Ollama the way `ollama stop` does
+  (keep_alive 0, generator first, tagged names), confirmed by `/api/ps`; the switch turned off aborts a running load
+  and releases both models, and the state says "unloading" until the release is confirmed; after an aborted or failed
+  load the release watches `/api/ps` for 30 s and releases a model that appears late (Ollama may finish a load whose
+  request was aborted); an unconfirmed release keeps "unloading", is logged and checked again every 30 s, and no load
+  is accepted meanwhile; the idle release after 15 minutes without a question (not while one runs or waits);
+  keep_alive 60m as the ceiling; start-up checks only Ollama, both models on disk and the reranker, and loads
+  nothing; the per-question check releases what is left and drops to idle instead of reloading. Failed loads (owner,
+  17 Nov 2026): counted per visitor, not against the site total, and 2 minutes before the next load
+  (`SERVE_LOAD_COOLDOWN_MS`). On the box this needs `SERVE_SWITCH_FILE` in `serve.env`, pointing outside the clone
+  (for example `C:\HomosServe\SWITCH`), or the models stay off.
 - [ ] **4.6** Guest-key mode. Plan written 16 Nov 2026 (no code yet); details in section 9. M, in five parts:
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;
@@ -695,6 +706,15 @@ must keep.
 request reaches the box, and the admin page is only needed once the site is public. Until the tunnel exists, the
 switch is the switch file on the box, operated by CC-Win on the owner's word. If the owner wants the page on the LAN
 before 4.9, (b) can be built as well, with the defaults above.
+
+**A release that cannot be confirmed** (4.10b, review of 17 Nov 2026). When Ollama does not answer, or `/api/ps` still
+lists a model after the release and a bounded wait, the state stays "unloading": "off" or "idle" would be a false
+statement about the GPU. Visitors see "The local model is being released" and cannot start a load. The admin page
+(4.10c) shows, in this state: "Release not confirmed", the reason it started (switch off, idle, failed or aborted
+load, lost model), the last problem (for example "still listed by /api/ps after 15 s: qwen3.8:27b" or "Ollama did not
+answer /api/ps"), the time of the last check and the seconds to the next one (`Models.releaseStatus()`), and what
+`/api/ps` lists now. It offers no other action: if it persists, the owner (or CC-Win on his word) runs `ollama stop`
+on the box or restarts Ollama.
 
 **Commit memory.** 4.10d measures it at fixed points: before any load, after a load, after 20 questions, after the
 idle unload, and after an hour idle with the server running; the unload ends the llama-server processes, so their

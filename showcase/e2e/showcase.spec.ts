@@ -4,10 +4,12 @@
  * in step 4.8 (E2E_BASE_URL); the others depend on the dry run's deterministic answers or on the test servers' limits.
  */
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
-import { mkdirSync } from 'fs';
+import { mkdirSync, writeFileSync } from 'fs';
+import os from 'os';
 import path from 'path';
 
-const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807 };
+const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807, switching: 8808 };
+const SWITCH_FILE = path.join(os.tmpdir(), 'homos-e2e-switching-SWITCH');
 const MAIN = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORTS.main}`;
 const TIGHT = `http://127.0.0.1:${PORTS.tight}`;
 const STATIC_ONLY = `http://127.0.0.1:${PORTS.staticOnly}`;
@@ -356,15 +358,37 @@ test('models on demand: the owner switch off shows the offline text and no load 
   await shot(page, info, 'models-switch-off');
 });
 
-test('models on demand: a failed load shows the fixed text, no retry, and the button again', async ({ page }, info) => {
+test('models on demand: a failed load shows the fixed text, no retry, a short wait, then the button again', async ({ page }, info) => {
   test.skip(againstReal, 'dry-run failure only');
   await open(page, `http://127.0.0.1:${PORTS.loadFail}`, info, { load: false });
-  await page.getByRole('button', { name: 'Load the local model' }).click();
+  const button = page.getByRole('button', { name: 'Load the local model' });
+  await expect(button).toBeEnabled({ timeout: 10_000 });
+  await button.click();
   const error = page.getByTestId('chat-error');
   await expect(error).toHaveAttribute('data-error', 'load-failed', { timeout: 10_000 });
   await expect(error).toContainText('could not be loaded right now');
   await expect(error).not.toContainText('purpose');
-  await expect(page.getByTestId('models-panel')).toHaveAttribute('data-state', 'idle');
-  await expect(page.getByRole('button', { name: 'Load the local model' })).toBeEnabled();
+  // Owner, 17 Nov 2026: after a failed load nobody starts another one for a while (3 s on this test server).
+  await expect(page.getByTestId('models-cooldown')).toContainText('A new attempt is possible in about');
+  await expect(button).toBeDisabled();
   await shot(page, info, 'models-load-failed');
+  await expect(page.getByTestId('models-panel')).toHaveAttribute('data-state', 'idle');
+  await expect(button).toBeEnabled({ timeout: 10_000 });
+  await expect(page.getByTestId('models-cooldown')).toHaveCount(0);
+});
+
+test('models on demand: the owner switch turned off releases loaded models, then the page says offline', async ({ page }, info) => {
+  test.skip(againstReal, 'dry-run switch only');
+  writeFileSync(SWITCH_FILE, 'on\n');
+  await open(page, `http://127.0.0.1:${PORTS.switching}`, info);
+  const panel = page.getByTestId('models-panel');
+  await expect(panel).toHaveAttribute('data-state', 'ready');
+  writeFileSync(SWITCH_FILE, 'off\n');
+  await page.getByLabel('Your question').fill('Why were the ranges kept wide?');
+  // The page learns the state from the next refusal or poll; a question sent now is refused, not answered.
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(page.getByTestId('chat-error')).toHaveAttribute('data-error', /unloading|switch-off/, { timeout: 10_000 });
+  await expect(page.getByTestId('chat-health')).toContainText('the owner has switched the local model off', { timeout: 15_000 });
+  await expect(page.getByRole('button', { name: 'Load the local model' })).toHaveCount(0);
+  await shot(page, info, 'models-switched-off');
 });

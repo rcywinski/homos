@@ -180,7 +180,7 @@ async function main() {
   }
 
   // Configuration: keep_alive is long by default and validated.
-  check('default keep_alive is long', loadConfigForTest({}).keepAlive === '24h');
+  check('default keep_alive is the 60m ceiling (4.10b: the server releases the models itself)', loadConfigForTest({}).keepAlive === '60m');
   check('keep_alive -1 accepted', loadConfigForTest({ SERVE_KEEP_ALIVE: '-1' }).keepAlive === '-1');
   let bad = false;
   try {

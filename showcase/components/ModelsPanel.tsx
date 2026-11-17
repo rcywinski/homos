@@ -53,9 +53,14 @@ export function ModelsPanel({ view, busy, onLoad }: { view: ModelsView; busy: bo
   return (
     <div className="models-panel" data-testid="models-panel" data-state={view.state}>
       <p className="models-title">The local model is not loaded right now, to keep the owner&apos;s graphics card free.</p>
-      <button type="button" className="primary" onClick={onLoad} disabled={busy}>
+      <button type="button" className="primary" onClick={onLoad} disabled={busy || view.retryAfterSec !== undefined}>
         Load the local model
       </button>
+      {view.retryAfterSec !== undefined && (
+        <p className="state-note" role="status" data-testid="models-cooldown">
+          The last load did not finish. A new attempt is possible in about {view.retryAfterSec} s.
+        </p>
+      )}
       <p className="fine-print">
         Loading usually takes about {seconds(view.typicalLoadMs)} s. The model is released again after{' '}
         {view.idleUnloadMinutes} minutes without questions.

@@ -74,6 +74,15 @@ export class RateLimiter {
     return { ok: true, remainingToday: this.limits.perDay - list.length };
   }
 
+  /**
+   * Gives back only the site-wide count (owner, 17 Nov 2026: a failed model load counts against the visitor, not the
+   * site, so a failing box cannot lock the site for the day).
+   */
+  refundGlobal() {
+    this.roll();
+    this.globalCount = Math.max(0, this.globalCount - 1);
+  }
+
   /** Gives a question back (refused by the queue before it ran), so a busy queue does not cost the visitor a turn. */
   refund(visitor: string) {
     const list = this.times.get(visitor);

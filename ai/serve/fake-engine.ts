@@ -115,6 +115,12 @@ export class FakeModelBackend implements ModelBackend {
   releaseEmbedder(signal: AbortSignal) {
     return this.wait('release-embedder', signal);
   }
+  async releaseAll(_watchMs?: number): Promise<string | null> {
+    this.calls.push('release-all');
+    await new Promise((r) => setTimeout(r, Math.min(this.stageMs, 200)));
+    return null;
+  }
+
   /** The dry run's residency check: a problem string when failAt is "check", as the real check reports one. */
   async check(target: LoadTarget): Promise<string | null> {
     this.calls.push('check');

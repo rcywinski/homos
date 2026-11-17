@@ -23,7 +23,7 @@ import { FileLog } from './log';
 import { loadWalletForServing } from './wallet-export';
 import { GpuQueue } from './queue';
 import { RateLimiter } from './ratelimit';
-import { describeWarmUp, ensureResident, ResidencyError, warmUp, type ResidencyOptions } from './residency';
+import { loadedModels, OllamaModelBackend, rerankHealth, rerankProblem, residencyProblem, ResidencyError, startupProblem, type ResidencyOptions } from './residency';
 import { checkCorpus, IndexMismatch, loadCheckedIndex, localRetrieval, servedIndexPath } from './retrieve';
 
 /** Asks both model services for a sign of life, at most every 30 s; 3 s timeout each. */
@@ -56,7 +56,17 @@ async function main() {
   const cfg = loadServeConfig();
   let deps: AskDeps;
   let probe: BoxProbe;
-  let models: Models | undefined;
+  const queue = new GpuQueue(cfg.queueMax, cfg.jobDeadlineMs);
+  const log = (m: string) => console.log(`[serve] ${new Date().toISOString()} ${m}`);
+  // Step 4.10: the models start unloaded; a visitor loads them, if the owner switch is on (the pause file wins).
+  const modelsOptions = {
+    typicalMs: cfg.typicalLoadMs,
+    switchOn: () => switchSaysOn(cfg.switchFile) && !existsSync(cfg.pauseFile),
+    busy: () => queue.state().running || queue.state().waiting > 0,
+    cooldownMs: cfg.loadCooldownMs,
+    log,
+  };
+  let models: Models;
   if (cfg.engine === 'fake') {
     // The dry run never needs the index, but it reports on it, so CC-Win can check a copied index before step 4.8.
     const chunks = loadCorpus();
@@ -69,14 +79,7 @@ async function main() {
     } else console.log(`[serve] dry run: ${file} not present; the real engine would refuse to start`);
     deps = { retrieval: await fakeRetrieval(), generator: new DryRunGenerator(cfg.fakeDelayMs), engine: FAKE_ENGINE, k: cfg.preset.k };
     probe = { up: async () => true };
-    // Step 4.10a: the dry run starts with nothing loaded; a visitor loads the fake models, if the owner switch is on.
-    models = new Models({
-      backend: new FakeModelBackend(cfg.fakeLoadMs, cfg.fakeLoadFail),
-      typicalMs: cfg.typicalLoadMs,
-      switchOn: () => switchSaysOn(cfg.switchFile) && !existsSync(cfg.pauseFile),
-      logFailure: (m) => console.log(`[serve] ${new Date().toISOString()} model load failed: ${m}`),
-    });
-    console.log(`[serve] dry run: models start unloaded; owner switch ${switchSaysOn(cfg.switchFile) ? 'on' : 'off'} (${cfg.switchFile})`);
+    models = new Models({ ...modelsOptions, backend: new FakeModelBackend(cfg.fakeLoadMs, cfg.fakeLoadFail) });
   } else {
     const residency: ResidencyOptions = {
       baseUrl: cfg.inferenceUrl,
@@ -87,17 +90,26 @@ async function main() {
       rerankUrl: cfg.rerankUrl,
       reranker: 'bge-reranker-v2-m3',
     };
-    // Fixed load order before serving (step 3.5 finding): generator first, then bge-m3, then /api/ps must show both.
-    const loaded = await warmUp(residency);
-    console.log(`[serve] ${describeWarmUp(loaded)}; reranker bge-reranker-v2-m3 on cuda`);
+    // Start-up checks only what does not need the GPU (4.10b): Ollama answers, both models on disk, the reranker on
+    // CUDA. Nothing is loaded here; the fixed load order runs when a visitor presses "Load" (ai/serve/models-state.ts).
+    const problem = await startupProblem(residency);
+    if (problem) throw new ResidencyError(problem);
+    console.log(`[serve] start-up check: Ollama answers, ${residency.generator} and ${residency.embedder} on disk, reranker ${residency.reranker} on cuda; nothing loaded`);
+    models = new Models({ ...modelsOptions, backend: new OllamaModelBackend(residency) });
+    const m = models;
     deps = {
       retrieval: localRetrieval(cfg.inferenceUrl, cfg.rerankUrl, cfg.preset, cfg.keepAlive),
       generator: new LocalGenerator({ ...cfg.preset.generator, keepAlive: cfg.keepAlive, baseUrl: cfg.inferenceUrl, timeoutMs: cfg.generateTimeoutMs }),
       engine: { id: cfg.preset.id, label: cfg.preset.label },
       k: cfg.preset.k,
+      // Before each question: the resident set is still as loaded. If not (Ollama restarted, a model evicted), nothing
+      // reloads by itself: the rest is released, the state drops to idle and the visitor sees the load button again.
       beforeWork: async () => {
-        const r = await ensureResident(residency);
-        if (r.state === 'reloaded') console.log(`[serve] ${new Date().toISOString()} models reloaded before a question, ${describeWarmUp(r.warmUp)}`);
+        const problem = residencyProblem(await loadedModels(residency), residency) ?? rerankProblem(await rerankHealth(residency), residency);
+        if (problem) {
+          void m.lost(problem);
+          throw new ResidencyError(problem);
+        }
       },
     };
     probe = boxProbe(cfg.inferenceUrl, cfg.rerankUrl);
@@ -109,7 +121,7 @@ async function main() {
   console.log(`[serve] mode ${cfg.mode}${cfg.mode === 'tunnel' ? ' (visitor = CF-Connecting-IP, listening on 127.0.0.1 only)' : ''}`);
   const app = createApp(deps, {
     maxQuestionChars: cfg.maxQuestionChars,
-    queue: new GpuQueue(cfg.queueMax, cfg.jobDeadlineMs),
+    queue,
     limiter: new RateLimiter(cfg.limits),
     log: new FileLog(cfg.logDir),
     probe,
@@ -121,6 +133,8 @@ async function main() {
     staticDir: existsSync(path.join('showcase', 'public', 'app.js')) ? path.join('showcase', 'public') : undefined,
   });
   if (!existsSync(path.join('showcase', 'public', 'app.js'))) console.log('[serve] showcase not built (npm run showcase:build): API only');
+  models.startTimer();
+  console.log(`[serve] models start unloaded; owner switch ${switchSaysOn(cfg.switchFile) ? 'on' : 'off'} (${cfg.switchFile}); released after 15 min without questions`);
   const server = app.listen(cfg.port, cfg.host, () => {
     const a = server.address();
     const port = a && typeof a === 'object' ? a.port : cfg.port;

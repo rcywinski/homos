@@ -98,6 +98,8 @@ export interface ServeConfig {
   /** Typical stage times in milliseconds, shown to the visitor while loading (measured on the box, 4.10d). */
   typicalLoadMs: { 'release-embedder': number; generator: number; embedder: number; check: number };
   /** Dry run only: duration of each fake load stage, and a stage that fails (for the browser suite). */
+  /** After a failed load, no new load for this long (owner, 17 Nov 2026: 2 minutes). */
+  loadCooldownMs: number;
   fakeLoadMs: number;
   fakeLoadFail: '' | 'generator' | 'embedder' | 'check';
   /**
@@ -125,7 +127,8 @@ function int(env: Env, name: string, fallback: number, min: number, max: number)
 
 /** Ollama duration such as 24h, 90m or -1 (forever); a short value would let the generator unload between questions. */
 function keepAlive(raw: string | undefined): string {
-  const v = raw || '24h';
+  // Step 4.10b: the server releases the models itself; keep_alive is only the ceiling if the server dies.
+  const v = raw || '60m';
   if (!/^(-1|\d+(s|m|h))$/.test(v)) throw new ConfigError('SERVE_KEEP_ALIVE must look like 24h, 90m, 3600s or -1');
   return v;
 }
@@ -197,6 +200,7 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
       embedder: int(env, 'SERVE_TYPICAL_EMBEDDER_MS', 3000, 0, 600_000),
       check: int(env, 'SERVE_TYPICAL_CHECK_MS', 1000, 0, 600_000),
     },
+    loadCooldownMs: int(env, 'SERVE_LOAD_COOLDOWN_MS', 120_000, 0, 3_600_000),
     fakeLoadMs: int(env, 'SERVE_FAKE_LOAD_MS', 300, 0, 60_000),
     fakeLoadFail: fakeLoadFail(env.SERVE_FAKE_LOAD_FAIL),
     keepAlive: keepAlive(env.SERVE_KEEP_ALIVE),

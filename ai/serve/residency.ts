@@ -15,6 +15,8 @@
  * bge-m3. If the check still fails, the question gets the "model unavailable" text.
  */
 
+import type { LoadTarget, ModelBackend } from './models-state';
+
 export interface ResidencyOptions {
   baseUrl: string;
   generator: string;
@@ -58,13 +60,14 @@ export function residencyProblem(models: PsModel[], o: Pick<ResidencyOptions, 'g
   return null;
 }
 
-async function call(o: ResidencyOptions, path: string, body?: unknown): Promise<unknown> {
+async function call(o: ResidencyOptions, path: string, body?: unknown, signal?: AbortSignal): Promise<unknown> {
   const fetchFn = o.fetchFn ?? fetch;
+  const timeout = AbortSignal.timeout(o.timeoutMs ?? 300_000);
   const res = await fetchFn(`${o.baseUrl.replace(/\/$/, '')}${path}`, {
     method: body === undefined ? 'GET' : 'POST',
     headers: body === undefined ? undefined : { 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
-    signal: AbortSignal.timeout(o.timeoutMs ?? 300_000),
+    signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
   });
   if (!res.ok) throw new ResidencyError(`${path} answered ${res.status}`);
   return res.json();
@@ -162,4 +165,113 @@ export async function ensureResident(o: ResidencyOptions): Promise<{ state: 'res
     return { state: 'resident' };
   }
   return { state: 'reloaded', warmUp: await warmUp(o) };
+}
+
+// --- Step 4.10b: models on demand on the box ---
+
+const listed = (models: PsModel[], m: string) => models.some((x) => x.name === tagged(m) || x.model === tagged(m));
+
+/**
+ * What the server checks at start when the models load on demand: everything that does not need the GPU. Ollama
+ * answers, both models are on disk, the reranker serves its model on CUDA. Null when all is well.
+ */
+export async function startupProblem(o: ResidencyOptions): Promise<string | null> {
+  try {
+    await call(o, '/api/version');
+  } catch (e) {
+    return `Ollama does not answer at ${o.baseUrl}: ${e instanceof Error ? e.message : String(e)}`;
+  }
+  const tags = ((await call(o, '/api/tags')) as { models?: { name: string; model?: string }[] }).models ?? [];
+  for (const m of [o.generator, o.embedder]) {
+    if (!tags.some((x) => x.name === tagged(m) || x.model === tagged(m))) return `${m} is not on disk (ollama pull ${m})`;
+  }
+  return rerankProblem(await rerankHealth(o), o);
+}
+
+export interface OllamaBackendOptions extends ResidencyOptions {
+  /** How long a release waits for /api/ps to drop the models before it reports a problem. */
+  releaseWaitMs?: number;
+  pollMs?: number;
+  sleep?: (ms: number) => Promise<void>;
+}
+
+/**
+ * The real model services for the state machine (ai/serve/models-state.ts). Loads in the fixed order with the
+ * served num_ctx and the keep_alive ceiling; releases the way `ollama stop` does (keep_alive 0 on /api/generate,
+ * which also works for an embedding model), generator first, and confirms with /api/ps. A model that appears after
+ * the release was sent (Ollama finishing a load whose request was aborted) is released again while waiting.
+ */
+export class OllamaModelBackend implements ModelBackend {
+  constructor(private readonly o: OllamaBackendOptions) {}
+
+  private sleep(ms: number) {
+    return (this.o.sleep ?? ((x: number) => new Promise<void>((r) => setTimeout(r, x))))(ms);
+  }
+
+  async loadGenerator(signal: AbortSignal) {
+    await call(
+      this.o,
+      '/api/chat',
+      {
+        model: this.o.generator,
+        messages: [{ role: 'user', content: 'Reply with one word: ready.' }],
+        stream: false,
+        think: false,
+        keep_alive: this.o.keepAlive,
+        options: { num_ctx: this.o.numCtx, num_predict: 1 },
+      },
+      signal,
+    );
+  }
+
+  async loadEmbedder(signal: AbortSignal) {
+    // No options for the embedder: changing num_ctx would restart its runner, and bge-m3 caps it at 8192.
+    await call(this.o, '/api/embed', { model: this.o.embedder, input: ['warm up'], keep_alive: this.o.keepAlive }, signal);
+  }
+
+  private stop(model: string, signal?: AbortSignal) {
+    // The tagged name, as /api/ps lists it (bge-m3 is bge-m3:latest).
+    return call(this.o, '/api/generate', { model: tagged(model), keep_alive: 0 }, signal);
+  }
+
+  async releaseEmbedder(signal: AbortSignal) {
+    await this.stop(this.o.embedder, signal);
+    const problem = await this.waitGone([this.o.embedder]);
+    if (problem) throw new Error(problem);
+  }
+
+  async check(target: LoadTarget): Promise<string | null> {
+    const models = await loadedModels(this.o);
+    const problem = target === 'ready' ? residencyProblem(models, this.o) : listed(models, this.o.embedder) ? null : `${this.o.embedder} is not loaded`;
+    return problem ?? rerankProblem(await rerankHealth(this.o), this.o);
+  }
+
+  async releaseAll(watchMs = 0): Promise<string | null> {
+    const models = [this.o.generator, this.o.embedder];
+    // Generator first, then bge-m3. An error here (model not loaded, Ollama down) is not final: /api/ps decides.
+    for (const m of models) await this.stop(m).catch(() => undefined);
+    return this.waitGone(models, watchMs);
+  }
+
+  /**
+   * Polls /api/ps until none of the models is listed, sending the release again for any that (re)appears. With
+   * `minMs`, an empty list counts only after that long (a model may still appear after an aborted load).
+   */
+  private async waitGone(models: string[], minMs = 0): Promise<string | null> {
+    const start = Date.now();
+    const deadline = start + minMs + (this.o.releaseWaitMs ?? 15_000);
+    for (;;) {
+      let resident: PsModel[];
+      try {
+        resident = await loadedModels(this.o);
+      } catch (e) {
+        return `Ollama did not answer /api/ps: ${e instanceof Error ? e.message : String(e)}`;
+      }
+      const left = models.filter((m) => listed(resident, m));
+      if (!left.length && Date.now() - start >= minMs) return null;
+      if (Date.now() >= deadline) return `still listed by /api/ps after ${Math.round((this.o.releaseWaitMs ?? 15_000) / 1000)} s: ${left.join(', ')}`;
+      for (const m of left) await this.stop(m).catch(() => undefined);
+      await this.sleep(this.o.pollMs ?? 500);
+    }
+  }
 }
