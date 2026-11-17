@@ -579,8 +579,6 @@ commits on their own branch; API spending up to 2 USD per run and 5 USD in total
 on. Box, GPU, spending above the limits, merges to main, tunnel, firewall, accounts, scheduled tasks and manual steps
 still need the owner's answer in the session that asks.
 
-**Spending ledger** (running total against the 5 USD limit, both sessions; update with every paid run):
-
-| Date | Session | Run | USD | Total since the rule |
-|---|---|---|---|---|
-| 2026-11-17 | CC-Mac | step 4.8j judge, set lan48 (before the rule, owner-approved) | 0.54 | 0.00 |
+**Spending ledger.** One shared ledger, kept by CC-Mac in `ai/DECISIONS.md` on `ai-layer` (commit fbb2c58, section
+"standing rule"), so there is a single total. CC-App sends each paid run (date, run, USD) to CC-Mac. The 4.8j judge
+(0.54 USD) came before the rule; the total since the rule starts at 0 USD.
