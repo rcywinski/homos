@@ -22,7 +22,7 @@ import { FileLog } from './log';
 import { loadWalletForServing } from './wallet-export';
 import { GpuQueue } from './queue';
 import { RateLimiter } from './ratelimit';
-import { ensureResident, ResidencyError, warmUp, type ResidencyOptions } from './residency';
+import { describeWarmUp, ensureResident, ResidencyError, warmUp, type ResidencyOptions } from './residency';
 import { checkCorpus, IndexMismatch, loadCheckedIndex, localRetrieval, servedIndexPath } from './retrieve';
 
 /** Asks both model services for a sign of life, at most every 30 s; 3 s timeout each. */
@@ -70,14 +70,15 @@ async function main() {
     };
     // Fixed load order before serving (step 3.5 finding): generator first, then bge-m3, then /api/ps must show both.
     const loaded = await warmUp(residency);
-    console.log(`[serve] resident: ${loaded.map((m) => m.name).join(', ')}, reranker bge-reranker-v2-m3 on cuda`);
+    console.log(`[serve] ${describeWarmUp(loaded)}; reranker bge-reranker-v2-m3 on cuda`);
     deps = {
       retrieval: localRetrieval(cfg.inferenceUrl, cfg.rerankUrl, cfg.preset, cfg.keepAlive),
       generator: new LocalGenerator({ ...cfg.preset.generator, keepAlive: cfg.keepAlive, baseUrl: cfg.inferenceUrl, timeoutMs: cfg.generateTimeoutMs }),
       engine: { id: cfg.preset.id, label: cfg.preset.label },
       k: cfg.preset.k,
       beforeWork: async () => {
-        if ((await ensureResident(residency)) === 'reloaded') console.log(`[serve] ${new Date().toISOString()} models reloaded in order before a question`);
+        const r = await ensureResident(residency);
+        if (r.state === 'reloaded') console.log(`[serve] ${new Date().toISOString()} models reloaded before a question, ${describeWarmUp(r.warmUp)}`);
       },
     };
     probe = boxProbe(cfg.inferenceUrl, cfg.rerankUrl);

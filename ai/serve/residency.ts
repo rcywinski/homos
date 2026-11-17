@@ -103,35 +103,63 @@ export async function loadedModels(o: ResidencyOptions): Promise<PsModel[]> {
   return j.models ?? [];
 }
 
-/** Loads in the fixed order and checks the result; throws ResidencyError when the check fails. */
-export async function warmUp(o: ResidencyOptions): Promise<PsModel[]> {
-  await call(o, '/api/chat', {
+/** One load request as it happened: the model, the endpoint, when it was sent and how long it took. */
+export interface LoadStep {
+  model: string;
+  request: '/api/chat' | '/api/embed';
+  startedAt: string;
+  ms: number;
+}
+
+export interface WarmUpResult {
+  /** In the order the requests were made (the order that matters for eviction). */
+  steps: LoadStep[];
+  /** As /api/ps lists them; Ollama does not list them in load order, so this is not the order of loading. */
+  resident: PsModel[];
+}
+
+/** One line for the log: the load order with times, then what /api/ps reports. */
+export function describeWarmUp(r: WarmUpResult): string {
+  const steps = r.steps.map((s, i) => `${i + 1}. ${s.model} via ${s.request} at ${s.startedAt.slice(11, 23)} (${(s.ms / 1000).toFixed(1)} s)`).join(', ');
+  return `load order: ${steps}; resident per /api/ps (not load order): ${r.resident.map((m) => m.name).join(', ')}`;
+}
+
+async function timed(o: ResidencyOptions, model: string, request: LoadStep['request'], body: unknown, steps: LoadStep[]) {
+  const startedAt = new Date().toISOString();
+  const t0 = Date.now();
+  await call(o, request, body);
+  steps.push({ model, request, startedAt, ms: Date.now() - t0 });
+}
+
+/** Loads in the fixed order (each request finishes before the next is sent) and checks the result. */
+export async function warmUp(o: ResidencyOptions): Promise<WarmUpResult> {
+  const steps: LoadStep[] = [];
+  await timed(o, o.generator, '/api/chat', {
     model: o.generator,
     messages: [{ role: 'user', content: 'Reply with one word: ready.' }],
     stream: false,
     think: false,
     keep_alive: o.keepAlive,
     options: { num_ctx: o.numCtx, num_predict: 1 },
-  });
+  }, steps);
   // No options at all for the embedder: changing num_ctx would restart its runner, and bge-m3 caps it at 8192.
-  await call(o, '/api/embed', { model: o.embedder, input: ['warm up'], keep_alive: o.keepAlive });
-  const models = await loadedModels(o);
-  const problem = residencyProblem(models, o);
+  await timed(o, o.embedder, '/api/embed', { model: o.embedder, input: ['warm up'], keep_alive: o.keepAlive }, steps);
+  const resident = await loadedModels(o);
+  const problem = residencyProblem(resident, o);
   if (problem) throw new ResidencyError(`after loading in order: ${problem}`);
   await requireReranker(o);
-  return models;
+  return { steps, resident };
 }
 
 /**
  * Before a question: cheap /api/ps check; when the set is not as required, replay the load order once. Callers run
  * this inside the GPU queue, so two questions never warm up at the same time.
  */
-export async function ensureResident(o: ResidencyOptions): Promise<'resident' | 'reloaded'> {
+export async function ensureResident(o: ResidencyOptions): Promise<{ state: 'resident' } | { state: 'reloaded'; warmUp: WarmUpResult }> {
   const problem = residencyProblem(await loadedModels(o), o);
   if (!problem) {
     await requireReranker(o);
-    return 'resident';
+    return { state: 'resident' };
   }
-  await warmUp(o);
-  return 'reloaded';
+  return { state: 'reloaded', warmUp: await warmUp(o) };
 }

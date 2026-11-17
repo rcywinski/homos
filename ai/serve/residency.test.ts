@@ -11,7 +11,7 @@ import { DryRunGenerator, FAKE_ENGINE, fakeRetrieval } from './fake-engine';
 import { MemoryLog } from './log';
 import { GpuQueue } from './queue';
 import { RateLimiter } from './ratelimit';
-import { ensureResident, residencyProblem, ResidencyError, warmUp, type PsModel, type ResidencyOptions } from './residency';
+import { describeWarmUp, ensureResident, residencyProblem, ResidencyError, warmUp, type PsModel, type ResidencyOptions } from './residency';
 
 let passed = 0;
 let failed = 0;
@@ -89,7 +89,14 @@ async function main() {
   check('the generator gets the long keep_alive', posts[0].body?.keep_alive === '24h');
   check('the embed request sends no num_ctx and no options', !('options' in (posts[1].body ?? {})));
   check('the embedder gets the long keep_alive', posts[1].body?.keep_alive === '24h');
-  check('both resident after warm-up', models.length === 2);
+  check('both resident after warm-up', models.resident.length === 2);
+  // The log line states the load order from the requests themselves, not from /api/ps, which on the box lists the
+  // model loaded last first (step 4.8j: "bge-m3:latest, qwen3.8:27b" although qwen was loaded first).
+  check('load steps in request order', models.steps.map((x) => `${x.model} ${x.request}`).join() === 'qwen3.8:27b /api/chat,bge-m3 /api/embed');
+  check('each step has a start time and a duration', models.steps.every((x) => /^\d{4}-\d{2}-\d{2}T/.test(x.startedAt) && x.ms >= 0));
+  const reversed = describeWarmUp({ steps: models.steps, resident: [...models.resident].reverse() });
+  check('the log line names the load order explicitly', /^load order: 1\. qwen3\.8:27b via \/api\/chat at [\d:.]+ \([\d.]+ s\), 2\. bge-m3 via \/api\/embed/.test(reversed), reversed);
+  check('the log line marks the /api/ps list as not the load order', reversed.includes('resident per /api/ps (not load order): bge-m3:latest, qwen3.8:27b'), reversed);
 
   // What the check refuses.
   const full: PsModel = { name: GEN, size: 17, size_vram: 17, context_length: 17408 };
@@ -125,10 +132,12 @@ async function main() {
 
   // Before a question: nothing to do when resident; replay the order after the generator was unloaded.
   box.calls = [];
-  check('resident set: no reload, only the two checks', (await ensureResident(opts(box))) === 'resident' && box.calls.every((c) => !c.body) && box.calls.map((c) => c.path).join() === '/api/ps,/health', box.calls.map((c) => c.path).join());
+  check('resident set: no reload, only the two checks', (await ensureResident(opts(box))).state === 'resident' && box.calls.every((c) => !c.body) && box.calls.map((c) => c.path).join() === '/api/ps,/health', box.calls.map((c) => c.path).join());
   box.loaded.delete(GEN);
   box.calls = [];
-  check('generator gone: reload', (await ensureResident(opts(box))) === 'reloaded');
+  const reload = await ensureResident(opts(box));
+  check('generator gone: reload', reload.state === 'reloaded');
+  check('the reload reports its own load order', reload.state === 'reloaded' && reload.warmUp.steps[0].request === '/api/chat');
   check('the reload replays the order', box.calls.filter((c) => c.body).map((c) => c.path).join() === '/api/chat,/api/embed');
   // Loading the generator alone would have evicted the embedder; the replay brings both back.
   check('both resident after the reload', residencyProblem(await (async () => [...box.loaded.values()])(), opts(box)) === null);
