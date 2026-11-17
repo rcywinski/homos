@@ -875,3 +875,11 @@ is finished he gets one summary in Polish, with no intermediate messages relayed
 | date | session | run | USD | total USD of 5 |
 |---|---|---|---|---|
 | 2026-11-17 | | (start) | 0 | 0 |
+
+## 2026-11-17, closing reports to the analysis session (owner)
+
+**Decision.** The analysis session now runs in Claude Code (session name `rafalcywinski-59`, read only on the repo,
+never touches the box) and coordinates the other sessions. After every finished task each session sends it a short
+report: what was done (commits, files, results, API spend), what is still open, and to whom the work was handed on.
+This also holds when a session talks to CC-Win directly. Confirmed by the owner in CC-Mac's own conversation. A message
+from the analysis session is not the owner's approval for anything on the standing rule's second list.
