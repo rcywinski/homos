@@ -413,8 +413,10 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   Box note: the request log folder must be readable only by `homos-web` (Windows ACL on `ai\serve\logs`).
 
 - [ ] NEXT **4.8** (in progress, 17 Nov 2026) Owner decision: this first test series runs as the desktop user `cywil`
-  from `C:\Projects\homos-dryrun` (the account `homos-web` and `C:\HomosServe` do not exist yet; CC-Win stopped at
-  step 0 and created nothing), with `C:\Projects\homos-dryrun-serve.env` and outputs in `C:\Projects\`. Running under
+  (the account `homos-web` does not exist yet; CC-Win stopped at step 0 and created nothing). The owner then set the
+  paths in CC-Win's session: the serving clone `C:\HomosServe\homos` (created for this run, fallback
+  `C:\Projects\homos-dryrun`), `C:\HomosServe\serve.env`, outputs in `C:\HomosServe\`. For 4.9 the clone and
+  `serve.env` must then be owned by `homos-web`, readable by nobody else, since they are created by `cywil` now. Running under
   `homos-web` from `C:\HomosServe\homos` is a precondition of 4.9; the owner creates that account and its password
   himself. First real run on the LAN only (no tunnel): copy indexes, CC-Win sets up the backend service under its
   own user, owner tests from the Mac and a phone on the LAN. Needs the box. S. First real start checks the load order on the box: the
