@@ -47,6 +47,8 @@ export interface ShowcaseNumber {
   status: 'verified' | 'in-source' | 'not-verified';
   transformation?: 'date-written-out' | 'year-added' | 'rounded';
   from?: string;
+  /** For "not-verified": the number is in a searched source the answer did not cite. */
+  reason?: 'uncited-source';
 }
 
 export interface ShowcaseAnswer {

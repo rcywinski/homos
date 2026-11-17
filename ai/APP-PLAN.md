@@ -444,14 +444,19 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   process in 4.10d. The 4.8 batch file kept quote status and file but not the quote text, chunk id or the searched
   chunk ids, so number marks cannot be recomputed on those answers offline; the batch tool now keeps the full
   response. Blind judge on the 34 answers: see step 4.8j.
-- [ ] NEXT **4.8n** Number marks (owner, 17 Nov 2026), before 4.10: mechanical fixes (ISO dates and times as one
+- [x] **4.8n** Number marks (owner, 17 Nov 2026), before 4.10: mechanical fixes (ISO dates and times as one
   token, list numbering ignored, pool fee tier in both notations); a seeded-error test set of at least 20 truly
   unsupported numbers; proposals for single digits, rounding to one significant digit and numbers found only in an
   uncited source, decided by the owner; the page states that a number mark means the number appears in a source, not
   that it answers the question. Offline, no GPU. Built: the mechanical fixes and the page wording; seeded errors 32, caught 32 (29 by the rule
   before); "not verified" marks on the 57 real answers of 3.2 down from 41 to 28; four proposals measured and waiting
-  for the owner (`ai/eval/results/2026-11-17-number-marks-4.8n.md`).
-- [ ] **4.8j** Blind judge (same judge and prompt as step 3.2) on the 34 answers of 4.8, about $1.5, owner approved.
+  for the owner (`ai/eval/results/2026-11-17-number-marks-4.8n.md`). Owner's decisions applied: proposals 1 and 3 on,
+  2 rejected, identifiers checked as one token; final: 18 "not verified" (6 with the uncited reason) on the 57 real
+  answers, 34 of 34 seeded errors caught, including two invented identifiers the old rule did not mark at all.
+- [ ] NEXT **4.8j** Blind judge (same judge and prompt as step 3.2), about $1.5, owner approved. Variant (b) chosen by
+  the owner: the 4.8 file lacks the quote texts the judge reads, so CC-Win reruns the 34 golden questions on the box
+  with the fixed batch tool, CC-App converts the output to the step 3.2 answers format, and CC-Mac runs the judge from
+  the main checkout (the key stays out of this worktree).
 - [ ] **4.10** On-demand models with an owner switch (section 10), design accepted 17 Nov 2026 with variant (a)
   Cloudflare Access and a 15-minute idle period; until the tunnel exists the switch is the file on the box. Starts
   after 4.8n. Follow-up: the master switch should eventually release the reranker too, so the whole GPU is free when

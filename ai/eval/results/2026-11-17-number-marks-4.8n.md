@@ -63,3 +63,24 @@ proposal 3; the three written-out dates of why-02 and dated-09 are now checked a
 The page now says, in the legend and next to the chat, that a number mark shows where a number appears, not that it
 answers the question; a date that is in a source but belongs to another event still gets a check mark (dated-04,
 dated-06 in 4.8).
+
+## Final rule, after the owner's decisions (17 Nov 2026)
+
+Proposal 1 yes, proposal 2 no (removed), proposal 3 yes, proposal 4 replaced: an identifier
+(`arbitrum-usdc-usdt-001`, `k2h24`, `bge-m3`) is one token, checked against the quotes, the cited chunks and the
+searched chunks like a number, so an invented identifier is flagged. Two seeded invented identifiers were added
+(`arbitrum-usdc-usdt-001` to `-007`, `base-weth-usdc-030` to `-050`; `k2h24` does not occur in the pb1 and pb2 answers).
+
+| Rule | Numbers | Verified | In the cited source | Not verified (with the uncited reason) | Seeds caught |
+|---|---|---|---|---|---|
+| Before (the 4.5 rule) | 264 | 155 | 68 | 41 | 29 of 34 |
+| Final (4.8n) | 237 | 129 | 90 | 18 (6) | 34 of 34 |
+
+The rule before missed the three wrong dates of the first table and both invented identifiers, which it did not mark
+at all (a number glued to letters was never a token). No identifier in the real answers is missing from the sources,
+so identifiers add no false alarm here. The 18 left: 6 found only in an uncited searched source (shown with that
+reason, among them "15 September", whose date is in a searched report the answer did not cite), 6 only outside the
+searched sources (four id-03 dates from report titles, $5,830.92, and -$128, a difference the model computed), 1 sum
+computed by the model (-$132.37), and 5 borderline single digits ("4x", which the multiplier rule keeps flagged;
+"Phase 4" and "Phase 3"; the "5" of "±5%" in id-02, present in a searched source but too short for the uncited
+reason; "Tranche 1", where the Polish source writes "Transza 1"). The page shows the uncited reason next to a mark.

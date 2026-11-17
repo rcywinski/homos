@@ -13,7 +13,7 @@ import { readFileSync } from 'fs';
 import type { AnswerRecord } from '../../answer/measures';
 import { loadCorpus } from '../../corpus/load';
 import { maskNetwork } from '../mask';
-import { markNumbers, type MarkOptions, type NumberMark } from '../numbers';
+import { markNumbers, type NumberMark } from '../numbers';
 import { markNumbers as markBefore } from './numbers-before-4.8n';
 
 const FILES = ['ai/eval/results/2026-11-16-answers-k10-local-pb1-golden-v1-4.json', 'ai/eval/results/2026-11-16-answers-k10-local-pb2-golden-v1-4.json'];
@@ -46,19 +46,14 @@ for (const file of FILES) {
 }
 
 type RuleSet = { name: string; mark: (c: Case, answer: string) => NumberMark[] };
-const withOpts = (o: MarkOptions) => (c: Case, answer: string) => markNumbers(answer, c.quotes, c.cited, { searchedChunks: c.searched, ...o });
 const RULES: RuleSet[] = [
   { name: 'before (4.5 rule)', mark: (c, answer) => markBefore(answer, c.quotes, c.cited) as NumberMark[] },
-  { name: 'mechanical fixes', mark: withOpts({}) },
-  { name: '+ single digit with unit', mark: withOpts({ singleDigitWithUnit: true }) },
-  { name: '+ rounding to 1 sig. digit with unit', mark: withOpts({ roundOneSignificant: true }) },
-  { name: '+ uncited-source reason', mark: withOpts({ uncitedReason: true }) },
-  { name: '+ identifier parts unmarked', mark: withOpts({ identifierParts: true }) },
-  { name: 'all four proposals', mark: withOpts({ singleDigitWithUnit: true, roundOneSignificant: true, uncitedReason: true, identifierParts: true }) },
+  // Final: mechanical fixes plus the owner's decisions of 17 Nov 2026 (proposals 1 and 3, identifiers as tokens).
+  { name: 'final (4.8n)', mark: (c, answer) => markNumbers(answer, c.quotes, c.cited, { searchedChunks: c.searched }) },
 ];
 
 // --- Seeds ---------------------------------------------------------------------------------------------------
-type Kind = 'amount' | 'date' | 'percentage' | 'count';
+type Kind = 'amount' | 'date' | 'percentage' | 'count' | 'identifier';
 interface Seed {
   caseId: string;
   kind: Kind;
@@ -104,7 +99,7 @@ function mutate(kind: Kind, text: string): string | null {
 }
 
 const seeds: Seed[] = [];
-const perKind: Record<Kind, number> = { amount: 0, date: 0, percentage: 0, count: 0 };
+const perKind: Record<Kind, number> = { amount: 0, date: 0, percentage: 0, count: 0, identifier: 0 };
 for (const c of cases) {
   const backed = RULES[1].mark(c, c.answer).filter((m) => m.status !== 'not-verified');
   const seenKinds = new Set<Kind>();
@@ -140,6 +135,9 @@ const TARGETED: { caseId: string; from: string; to: string; kind: Kind }[] = [
   { caseId: 'pb1:dated-06', from: '8GB', to: '6GB', kind: 'count' },
   { caseId: 'pb2:dated-10', from: '≤7 days', to: '≤4 days', kind: 'count' },
   { caseId: 'pb2:dated-08', from: '+0.6%', to: '+0.9%', kind: 'percentage' },
+  // Invented identifiers (owner, 17 Nov 2026): a pool id that exists nowhere in the sources must be flagged.
+  { caseId: 'pb1:dated-06', from: 'arbitrum-usdc-usdt-001', to: 'arbitrum-usdc-usdt-007', kind: 'identifier' },
+  { caseId: 'pb2:dated-03', from: 'base-weth-usdc-030', to: 'base-weth-usdc-050', kind: 'identifier' },
 ];
 for (const t of TARGETED) {
   const c = cases.find((x) => x.id === t.caseId);
@@ -149,19 +147,23 @@ for (const t of TARGETED) {
     continue;
   }
   const all = [...c.quotes, ...c.cited, ...c.searched].join('\n');
-  const digit = t.to.match(/\d+(?:\.\d+)?/)![0];
-  const unit = t.to.replace(/^[^\d]*\d+(?:\.\d+)?/, '').trim().slice(0, 2);
-  if (new RegExp(`(?<![\\d.])${digit.replace('.', '\\.')}\\s?${unit.replace(/[%$]/g, (x) => '\\' + x)}`, 'i').test(all)) {
+  if (t.kind === 'identifier' && all.toLowerCase().includes(t.to.toLowerCase())) {
     console.log(`targeted seed skipped, the source has it: ${t.caseId} "${t.to}"`);
     continue;
   }
-  const numAt = at + t.from.search(/\d/);
+  const digit = t.to.match(/\d+(?:\.\d+)?/)![0];
+  const unit = t.to.replace(/^[^\d]*\d+(?:\.\d+)?/, '').trim().slice(0, 2);
+  if (t.kind !== 'identifier' && new RegExp(`(?<![\\d.])${digit.replace('.', '\\.')}\\s?${unit.replace(/[%$]/g, (x) => '\\' + x)}`, 'i').test(all)) {
+    console.log(`targeted seed skipped, the source has it: ${t.caseId} "${t.to}"`);
+    continue;
+  }
+  const numAt = t.kind === 'identifier' ? at : at + t.from.search(/\d/);
   seeds.push({ caseId: c.id, kind: t.kind, from: t.from, to: t.to, start: numAt, answer: c.answer.slice(0, at) + t.to + c.answer.slice(at + t.from.length) });
 }
 
 // --- Report ----------------------------------------------------------------------------------------------------
 const byId = new Map(cases.map((c) => [c.id, c]));
-console.log(`real answers: ${cases.length} (pb1 and pb2, served configuration); seeds: ${seeds.length} (${Object.entries(perKind).map(([k, n]) => `${k} ${n}`).join(', ')}, plus ${seeds.length - Object.values(perKind).reduce((a, b) => a + b, 0)} targeted at proposal 1)\n`);
+console.log(`real answers: ${cases.length} (pb1 and pb2, served configuration); seeds: ${seeds.length} (${Object.entries(perKind).map(([k, n]) => `${k} ${n}`).join(', ')}, plus ${seeds.length - Object.values(perKind).reduce((a, b) => a + b, 0)} targeted: 3 at proposal 1, 2 invented identifiers)\n`);
 console.log('rule set                               numbers  verified  in-source  not-verified (of which uncited)  seeds caught');
 for (const r of RULES) {
   let total = 0;
@@ -188,7 +190,7 @@ for (const r of RULES) {
 if (list) {
   console.log('\nseeds:');
   for (const s of seeds) console.log(`  ${s.caseId.padEnd(14)} ${s.kind.padEnd(10)} ${s.from} -> ${s.to}   …${s.answer.slice(Math.max(0, s.start - 40), s.start + 30).replace(/\s+/g, ' ')}…`);
-  for (const name of ['before (4.5 rule)', 'mechanical fixes', 'all four proposals']) {
+  for (const name of ['before (4.5 rule)', 'final (4.8n)']) {
     const r = RULES.find((x) => x.name === name)!;
     console.log(`\nnot-verified marks under "${name}":`);
     for (const c of cases) for (const m of r.mark(c, c.answer)) if (m.status === 'not-verified') console.log(`  ${c.id.padEnd(14)} [${m.text}]${m.reason ? ' (' + m.reason + ')' : ''}  …${c.answer.slice(Math.max(0, m.start - 35), m.end + 20).replace(/\s+/g, ' ')}…`);

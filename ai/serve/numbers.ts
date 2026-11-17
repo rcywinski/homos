@@ -24,22 +24,18 @@ export type NumberStatus = 'verified' | 'in-source' | 'not-verified';
 export type Transformation = 'date-written-out' | 'year-added' | 'rounded';
 
 /**
- * Proposals of step 4.8n, off until the owner decides (each measured on real answers and seeded errors first):
- *   singleDigitWithUnit  a number with fewer than two significant digits (5, 8, 0.6) found only in a cited chunk
- *                        counts as "in-source" when it appears there with the same unit or neighbouring word (±5%,
- *                        8GB and 8 GB, exit 0, +0.6%);
- *   roundOneSignificant  rounding to one significant digit is allowed when the number carries a unit (% or $) and a
- *                        source value with the same unit rounds to it (+0.6% from +0.62%);
- *   uncitedReason        a number found only in a searched chunk the answer did not cite stays "not-verified", with
- *                        the reason "found in a searched source the answer did not cite" (needs searchedChunks).
+ * Owner decisions of step 4.8n (17 Nov 2026), always on:
+ *   - a number with fewer than two significant digits (5, 8, 0.6) found only in a cited chunk counts as "in-source"
+ *     when it appears there with the same unit or neighbouring word (±5%, 8GB and 8 GB, exit 0, +0.6%);
+ *   - a number found only in a searched chunk the answer did not cite stays "not-verified", with the reason
+ *     "found in a searched source the answer did not cite" (needs searchedChunks);
+ *   - an identifier (arbitrum-usdc-usdt-001, k2h24, bge-m3) is one token, checked like a number, so an invented
+ *     identifier is flagged.
+ * Rejected: rounding to one significant digit.
  */
 export interface MarkOptions {
+  /** Texts of all chunks given to the model, cited or not. */
   searchedChunks?: string[];
-  singleDigitWithUnit?: boolean;
-  roundOneSignificant?: boolean;
-  uncitedReason?: boolean;
-  /** Proposal identifierParts: a number that is part of an identifier (`arbitrum-usdc-usdt-001`, `k2h24`) gets no mark. */
-  identifierParts?: boolean;
 }
 
 export interface NumberMark {
@@ -51,7 +47,7 @@ export interface NumberMark {
   transformation?: Transformation;
   /** The source value a transformation started from, for the review list (e.g. "27.08", "-51.53"). */
   from?: string;
-  /** For "not-verified" (proposal uncitedReason): the number is in a searched source the answer did not cite. */
+  /** For "not-verified": the number is in a searched source the answer did not cite (owner's decision, 4.8n). */
   reason?: 'uncited-source';
 }
 
@@ -183,26 +179,12 @@ function digitWithUnit(value: string, words: string[], source: string): boolean 
   return false;
 }
 
-/** The unit of a number: "%" or "$" right next to it, else null. */
-function unitOf(text: string, start: number, end: number): '%' | '$' | null {
-  if (/^\s?%/.test(text.slice(end, end + 2))) return '%';
-  if (/\$\s?[+-]?$/.test(text.slice(Math.max(0, start - 3), start))) return '$';
-  return null;
-}
-
-/** Proposal roundOneSignificant: a source number with the same unit that rounds to x at x's printed decimals. */
-function roundedWithUnit(x: string, unit: '%' | '$', source: string): string | null {
-  const xs = x.replace(',', '.');
-  if (!/^\d+(?:\.\d+)?$/.test(xs) || significant(xs) !== 1) return null;
-  const d = decimals(xs);
-  const re = unit === '%' ? /(?<![\d.])[+-]?(\d+(?:[.,]\d+)?)\s?%/g : /\$\s?[+-]?(\d+(?:[.,]\d+)?)/g;
-  for (const m of source.matchAll(re)) {
-    const ys = m[1].replace(',', '.');
-    if (decimals(ys) <= d) continue;
-    if (Number(Number(ys).toFixed(d)) === Number(xs)) return m[0].trim();
-  }
-  return null;
-}
+/**
+ * Identifiers: a token that starts with a letter, contains a digit and either joins parts with "-" or "_"
+ * (arbitrum-usdc-usdt-001, bge-m3) or has letters after its digits (k2h24). Checked as a whole (4.8n).
+ */
+const IDENT = /(?<![\p{L}\d_.-])\p{L}[\p{L}\d]*(?:[-_][\p{L}\d]+)+(?![\p{L}\d_-])|(?<![\p{L}\d_.-])\p{L}+\d+\p{L}[\p{L}\d]*(?![\p{L}\d_-])/gu;
+const hasIdent = (text: string, id: string) => new RegExp(`(?<![\\p{L}\\d_-])${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}\\d_-])`, 'iu').test(text);
 
 export function markNumbers(answer: string, verifiedQuotes: string[], citedChunks: string[] = [], opts: MarkOptions = {}): NumberMark[] {
   const quoteText = plainMinus(verifiedQuotes.join('\n'));
@@ -228,7 +210,7 @@ export function markNumbers(answer: string, verifiedQuotes: string[], citedChunk
     let mark: NumberMark;
     if (exactInQuote) mark = { text, start, end, status: 'verified' };
     else if (inQ.has(key) || inC.has(key)) mark = { text, start, end, status: 'in-source', transformation: 'date-written-out', from: key };
-    else if (opts.uncitedReason && (kind === 'date' ? datesIn(searchedText) : clocksIn(searchedText)).has(key)) mark = { text, start, end, status: 'not-verified', reason: 'uncited-source' };
+    else if ((kind === 'date' ? datesIn(searchedText) : clocksIn(searchedText)).has(key)) mark = { text, start, end, status: 'not-verified', reason: 'uncited-source' };
     else mark = { text, start, end, status: 'not-verified' };
     marks.push(mark);
     cover(start, end);
@@ -238,6 +220,17 @@ export function markNumbers(answer: string, verifiedQuotes: string[], citedChunk
     const at = m.index ?? 0;
     if (isCovered(at) || Number(m[1]) > 23 || Number(m[2]) > 59) continue;
     placeDate(at, at + m[0].length, `${Number(m[1])}:${m[2]}`, 'clock');
+  }
+  for (const m of plain.matchAll(IDENT)) {
+    const at = m.index ?? 0;
+    const id = m[0];
+    if (!/\d/.test(id) || isCovered(at)) continue;
+    let mark: NumberMark;
+    if (hasIdent(quoteText, id)) mark = { text: answer.slice(at, at + id.length), start: at, end: at + id.length, status: 'verified' };
+    else if (hasIdent(chunkText, id)) mark = { text: answer.slice(at, at + id.length), start: at, end: at + id.length, status: 'in-source' };
+    else mark = { text: answer.slice(at, at + id.length), start: at, end: at + id.length, status: 'not-verified', ...(hasIdent(searchedText, id) ? { reason: 'uncited-source' as const } : {}) };
+    marks.push(mark);
+    cover(at, at + id.length);
   }
   for (const m of plain.matchAll(LIST_NUMBER)) {
     const digits = m[1] ?? m[2];
@@ -267,7 +260,7 @@ export function markNumbers(answer: string, verifiedQuotes: string[], citedChunk
         let state: Omit<NumberMark, 'text' | 'start' | 'end'>;
         if (quoteText.includes(written)) state = { status: 'verified' };
         else if (quoteDates.has(key) || chunkDates.has(key)) state = { status: 'in-source', transformation: 'date-written-out', from: sourceHasDate(source, Number(dayStr), month) ?? key };
-        else state = { status: 'not-verified', ...(opts.uncitedReason && searchedDates.has(key) ? { reason: 'uncited-source' as const } : {}) };
+        else state = { status: 'not-verified', ...(searchedDates.has(key) ? { reason: 'uncited-source' as const } : {}) };
         byDate.set(dayAt, state);
         if (year && Number(year) === PROJECT_YEAR && state.status !== 'not-verified') byDate.set(base + m[0].lastIndexOf(year), { status: 'in-source', transformation: 'year-added', from: key });
       }
@@ -305,8 +298,7 @@ export function markNumbers(answer: string, verifiedQuotes: string[], citedChunk
       marks.push({ text, start, end, status: 'in-source' });
       continue;
     }
-    if (opts.identifierParts && /[\p{L}][-_]$/u.test(plain.slice(Math.max(0, start - 2), start))) continue;
-    if (opts.singleDigitWithUnit && significant(c) < 2 && digitWithUnit(c, neighbours(plain, start, end), chunkText + '\n' + quoteText)) {
+    if (significant(c) < 2 && digitWithUnit(c, neighbours(plain, start, end), chunkText + '\n' + quoteText)) {
       marks.push({ text, start, end, status: 'in-source' });
       continue;
     }
@@ -323,15 +315,7 @@ export function markNumbers(answer: string, verifiedQuotes: string[], citedChunk
       marks.push({ text, start, end, status: 'in-source', transformation: 'rounded', from: rounded });
       continue;
     }
-    if (opts.roundOneSignificant) {
-      const unit = unitOf(plain, start, end);
-      const from = unit ? roundedWithUnit(c, unit, source) : null;
-      if (from) {
-        marks.push({ text, start, end, status: 'in-source', transformation: 'rounded', from });
-        continue;
-      }
-    }
-    const uncited = opts.uncitedReason && inSearched.has(c) && significant(c) >= 2;
+    const uncited = inSearched.has(c) && significant(c) >= 2;
     marks.push({ text, start, end, status: 'not-verified', ...(uncited ? { reason: 'uncited-source' as const } : {}) });
   }
   return marks.sort((a, b) => a.start - b.start);

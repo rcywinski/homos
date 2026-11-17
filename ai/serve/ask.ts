@@ -120,7 +120,7 @@ export async function ask(deps: AskDeps, question: string, onStage?: (s: Stage) 
     coverage: out.coverage,
     text,
     citations,
-    numbers: markNumbers(text, verifiedQuotes, citedChunks),
+    numbers: markNumbers(text, verifiedQuotes, citedChunks, { searchedChunks: chunks.map((c) => c.text) }),
     sources,
     ms: Date.now() - t0,
   };

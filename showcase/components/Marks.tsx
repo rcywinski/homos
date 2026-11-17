@@ -20,6 +20,7 @@ const TRANSFORMATION_TEXT: Record<NonNullable<ShowcaseNumber['transformation']>,
 };
 
 function numberTitle(n: ShowcaseNumber): string {
+  if (n.reason === 'uncited-source') return 'Not verified: found in a searched source the answer did not cite';
   const base = NUMBER_TEXT[n.status];
   return n.transformation && n.from ? `${base} (${TRANSFORMATION_TEXT[n.transformation]} ${n.from})` : base;
 }

@@ -101,7 +101,7 @@ function answer(rec: AnswerRecord, judged: JudgedItem | undefined, corpus: Map<s
     coverage,
     answer: text,
     citations: failed ? [] : rec.citations.map(citation),
-    numbers: failed ? [] : markNumbers(text, ok.map((c) => c.quote), cited),
+    numbers: failed ? [] : markNumbers(text, ok.map((c) => c.quote), cited, { searchedChunks: (rec.chunkIds ?? []).map((id) => corpus.get(id)?.text ?? '') }),
     verdict: judged?.result?.verdict ? verdict(judged.result.verdict) : null,
     ms: rec.ms,
     costUsd: rec.costUsd,

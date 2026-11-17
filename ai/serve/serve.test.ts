@@ -191,6 +191,18 @@ async function main() {
   check('a written-out date is checked as a date, not as a bare day number', one('on 4 Aug 2026 it ran', ['ran 22.08, 4 pools']) === '4:not-verified 2026:not-verified');
   check('a written-out date found as dd.mm is in-source', one('on 22 Aug 2026 it ran', ['ran 22.08']) === '22:in-source 2026:in-source');
   check('a written-out date in a Polish quote is in-source', one('on 21 August', ['21 sierpnia raport']) === '21:in-source');
+  // Owner decisions of 4.8n: under two significant digits with a unit, the uncited reason, identifiers as tokens.
+  const full = (answer: string, quotes: string[], chunks: string[], searched: string[] = []) =>
+    markNumbers(answer, quotes, chunks, { searchedChunks: searched }).map((m) => `${m.text}:${m.status}${m.reason ? '/' + m.reason : ''}`).join(' ');
+  check('a single digit with the same unit in a cited chunk is in-source', full('narrowed to ±5% wide', [], ['zawężenie do ±5%']) === '5:in-source');
+  check('a single digit with another unit stays not verified', full('heap of 6GB', [], ['heap 8 GB, 6 pul']) === '6:not-verified');
+  check('0.6 with its unit is in-source', full('closed at +0.6%', [], ['zamknięte +0.6 %']) === '+0.6:in-source');
+  check('a number only in an uncited searched chunk says so', full('balance $5,966.88', ['inny cytat'], ['inny chunk'], ['bilans $5966.88']) === '5,966.88:not-verified/uncited-source');
+  check('a number nowhere has no reason', full('total $132.37', ['x'], ['y'], ['z']) === '132.37:not-verified');
+  check('an identifier found in a quote is verified as one token', full('the arbitrum-usdc-usdt-001 pool', ['pula arbitrum-usdc-usdt-001'], []) === 'arbitrum-usdc-usdt-001:verified');
+  check('an invented identifier is flagged', full('the arbitrum-usdc-usdt-007 pool', ['pula arbitrum-usdc-usdt-001'], ['arbitrum-usdc-usdt-001']) === 'arbitrum-usdc-usdt-007:not-verified');
+  check('an identifier with letters after digits', full('config k2h24 won', [], ['konfiguracja k2h24']) === 'k2h24:in-source');
+  check('an invented k-config is flagged', full('config k3h24 won', [], ['konfiguracja k2h24']) === 'k3h24:not-verified');
   check('a transformation never gives verified', markNumbers('On 27 August 2026', ['27.08'], []).every((m) => m.status !== 'verified'));
 
   // --- ask(): fakes over the real corpus ------------------------------------------------------------------------
