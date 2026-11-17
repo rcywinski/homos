@@ -32,12 +32,16 @@ pool fee tier written as a decimal next to "%" or pool words matches the pool id
 (500, 3000); and the day of a written-out date ("4 Aug", "21 August", also Polish month names in the sources) is
 checked as a date, never as a bare number.
 
-**The 28 "not verified" marks left after the mechanical fixes**, by where the value actually is: 14 in a cited
-chunk but as a single digit, 0.6, a multiplier or part of an identifier (false alarms or borderline: proposals 1 and 4
-remove 8 and 2 of them; "4x" stays, multipliers are never "in the source" by the owner's rule); 6 in a searched chunk
-the answer did not cite (proposal 3 keeps them flagged and says so); 6 nowhere in the searched chunks (the id-03
-dates from report titles, $5,830.92, a -$128 difference: correct marks under the rule); 2 computed by the model (the
-sum -$132.37 and the difference -$128 counted once above as a computed value): correct marks.
+**The 28 "not verified" marks left after the mechanical fixes**, by where the value actually is (checked with a
+script against the cited chunks, the searched chunks and the whole corpus):
+
+- 15 in a cited chunk, but as a single digit, 0.6, a multiplier, a date from the source's title or part of an
+  identifier: false alarms or borderline. Proposal 1 removes 8, proposal 4 removes 2; "4x" stays, because a
+  multiplier is never "in the source" by the owner's rule.
+- 6 in a searched chunk the answer did not cite: the owner's default keeps them flagged, proposal 3 says why.
+- 6 only elsewhere in the corpus, not in the searched chunks: four id-03 dates taken from report titles, $5,830.92
+  (the next day's balance) and -$128 (a difference the model computed). Correct marks under the rule.
+- 1 nowhere in the corpus: -$132.37, a sum the model computed. Correct mark.
 
 **The 20 marks of 4.8**, expected effect (not recomputable, see above): list numbers in id-04 (2) disappear; the ISO
 dates of id-03 (4 marks) become 2 date tokens, still "not verified" if, as in pb1 and pb2, the dates come from report
