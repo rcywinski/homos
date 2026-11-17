@@ -55,7 +55,11 @@ export function NumberSummary({ numbers }: { numbers: ShowcaseNumber[] }) {
   const parts = (['verified', 'in-source', 'not-verified'] as const)
     .map((state) => ({ state, n: numbers.filter((x) => x.status === state).length }))
     .filter((p) => p.n > 0);
-  const words: Record<ShowcaseNumber['status'], string> = { verified: 'verified', 'in-source': 'in the cited source', 'not-verified': 'not verified' };
+  const words: Record<ShowcaseNumber['status'], string> = {
+    verified: 'verified',
+    'in-source': 'in the cited source',
+    'not-verified': 'not verified',
+  };
   return (
     <p className="number-summary" data-testid="number-summary">
       Numbers in this answer:{' '}
@@ -80,7 +84,8 @@ const REASON: Record<NonNullable<ShowcaseCitation['reason']>, string> = {
   'unknown-chunk': 'the cited source was not among those given to the model',
 };
 
-const QUOTE_OK = 'Code check: these exact words exist in the cited source. It says nothing about whether the answer is right.';
+const QUOTE_OK =
+  'Code check: these exact words exist in the cited source. It says nothing about whether the answer is right.';
 const QUOTE_BAD = 'Code check failed: these words are not in the cited source.';
 /** The journal and the reports are in Polish; the documentation is in English. */
 const polish = (file: string) => file.startsWith('journal/');
@@ -118,7 +123,10 @@ export function Legend() {
       <div>
         <dt>
           <span className="num num-verified">
-            2169<span className="num-glyph" aria-hidden="true">✓</span>
+            2169
+            <span className="num-glyph" aria-hidden="true">
+              ✓
+            </span>
           </span>
         </dt>
         <dd>Verified: in a quote that code found word for word in the source.</dd>
@@ -126,31 +134,48 @@ export function Legend() {
       <div>
         <dt>
           <span className="num num-in-source">
-            720<span className="num-glyph" aria-hidden="true">≈</span>
+            720
+            <span className="num-glyph" aria-hidden="true">
+              ≈
+            </span>
           </span>
         </dt>
-        <dd>In the cited source: not in the quote, but in the source it cites, or a date or rounding of a number there.</dd>
+        <dd>
+          In the cited source: not in the quote, but in the source it cites, or a date or rounding of a number there.
+        </dd>
       </div>
       <div>
         <dt>
           <span className="num num-not-verified">
-            4x<span className="num-glyph" aria-hidden="true">?</span>
+            4x
+            <span className="num-glyph" aria-hidden="true">
+              ?
+            </span>
           </span>
         </dt>
         <dd>Not verified: no source backs it. Sums, ratios and multiples the model worked out stay here.</dd>
       </div>
       <div className="legend-wide">
+        <dt>What a number mark does not say</dt>
+        <dd>
+          A mark only says where the number appears: in a checked quote, in a source the answer cites, or nowhere the
+          answer points to. It does not say the number answers the question. A date that is in the source but belongs to
+          a different event still gets a check mark.
+        </dd>
+      </div>
+      <div className="legend-wide">
         <dt>Verified quote ✓</dt>
         <dd>
-          A mechanical check: the quoted words exist in the source. It does not say the answer is right; a verified quote can still be used to
-          support a wrong claim.
+          A mechanical check: the quoted words exist in the source. It does not say the answer is right; a verified
+          quote can still be used to support a wrong claim.
         </dd>
       </div>
       <div className="legend-wide">
         <dt>The judge&apos;s grade</dt>
         <dd>
-          Only on the saved answers: a separate model compared the whole answer with a reference written by hand. &quot;Some of its claims go
-          beyond its quotes&quot; can sit next to verified quotes, because the quotes are real but the answer says more than they do.
+          Only on the saved answers: a separate model compared the whole answer with a reference written by hand.
+          &quot;Some of its claims go beyond its quotes&quot; can sit next to verified quotes, because the quotes are
+          real but the answer says more than they do.
         </dd>
       </div>
     </dl>

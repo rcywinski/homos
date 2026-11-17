@@ -39,9 +39,10 @@ interface Row {
   outcome: string;
   coverage: string | null;
   text: string;
-  quotes: { status: string; reason?: string; file: string }[];
+  /** The full citations and the searched chunk ids, so number marks can be recomputed offline (lesson of 4.8). */
+  quotes: { status: string; reason?: string; file: string; chunkId: string; quote: string; lines: [number, number] | null }[];
   numbers: { text: string; status: string; transformation?: string; from?: string; context: string }[];
-  sources: number;
+  sources: string[];
   timing: Timing;
   serverMs: number | null;
   error?: string;
@@ -108,9 +109,16 @@ function toRow(id: string, question: string, r: Awaited<ReturnType<typeof askTim
     outcome: String(out.outcome ?? out.error ?? 'none'),
     coverage: (out.coverage as string | null) ?? null,
     text,
-    quotes: ((out.citations ?? []) as { status: string; reason?: string; file: string }[]).map((c) => ({ status: c.status, ...(c.reason ? { reason: c.reason } : {}), file: c.file })),
+    quotes: ((out.citations ?? []) as { status: string; reason?: string; file: string; chunkId: string; quote: string; lines: [number, number] | null }[]).map((c) => ({
+      status: c.status,
+      ...(c.reason ? { reason: c.reason } : {}),
+      file: c.file,
+      chunkId: c.chunkId,
+      quote: c.quote,
+      lines: c.lines,
+    })),
     numbers,
-    sources: ((out.sources ?? []) as unknown[]).length,
+    sources: ((out.sources ?? []) as { chunkId: string }[]).map((x) => x.chunkId),
     timing: {
       queuedMs: e.queued ?? null,
       retrievalMs: e.retrieving !== undefined && e.generating !== undefined ? e.generating - e.retrieving : null,

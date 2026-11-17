@@ -344,7 +344,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   health with `up`, `busy`, `paused` and `model-offline`, the "model unavailable" message, pause file, dry-run engine
   (`SERVE_ENGINE=fake`), start-up refusal on a missing or mismatched index. Tests with a slow fake generator and the
   dry-run server started as a child process. Fake. M.
-- [ ] **4.4b** [CC-Win] Windows dry run with fake models, without touching the GPU: CC-Win clones `app-chat` into
+- [x] **4.4b** [CC-Win] Windows dry run with fake models, without touching the GPU: CC-Win clones `app-chat` into
   the serving checkout as `homos-web`, runs `npm ci`, the serve tests and `npm run showcase:build`, writes `serve.env`
   with `SERVE_ENGINE=fake`, starts the server with the node command of section 6 on 127.0.0.1, calls `/api/health`
   and asks one question with `curl.exe`, creates and deletes the pause file, and reports the outputs. Does not need
@@ -412,7 +412,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   contract tooling, which neither the server nor the showcase bundle loads.
   Box note: the request log folder must be readable only by `homos-web` (Windows ACL on `ai\serve\logs`).
 
-- [ ] NEXT **4.8** (in progress, 17 Nov 2026) Owner decision: this first test series runs as the desktop user `cywil`
+- [x] **4.8** (done 17 Nov 2026, accepted by the owner) Owner decision: this first test series runs as the desktop user `cywil`
   (the account `homos-web` does not exist yet; CC-Win stopped at step 0 and created nothing). The owner then set the
   paths in CC-Win's session: the serving clone `C:\HomosServe\homos` (created for this run, fallback
   `C:\Projects\homos-dryrun`), `C:\HomosServe\serve.env`, outputs in `C:\HomosServe\`. For 4.9 the clone and
@@ -434,8 +434,28 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   "not verified" number marks were false alarms (rule changes proposed in the review); the disconnect test cancelled
   the generation on the real GPU; browser suite 13 passed, 1 skipped. VRAM 24 010 of 24 576 MiB after warm-up, commit
   memory 45.0 GB rising to 53.2 GB over the series: both are measured again under the design of section 10, which
-  replaces the 24-hour residency.
-- [ ] **4.10** On-demand models with an owner switch (section 10). Replaces the 24-hour keep_alive. Design first.
+  replaces the 24-hour residency. Findings: by-eye grades about 17 correct, 11 partly, 6 incorrect (dated-01, dated-04,
+  dated-05, dated-07, id-07, why-03; dated-04, dated-05 and id-07 were judged incorrect in both 3.2 runs too); the
+  eighth unanswerable question is why-07 (answerable "partial"), answered correctly with "the sources give no reason";
+  na-03 and na-07 got the fixed text instead of a correction of their false premise; coverage differs from 3.2 on 9
+  questions, within the run-to-run spread; quotes not verified 3.7% against 1.1% in 3.2, outside the 3.2 range by the
+  spread rule but on counts of 3 against 1; about 4.2 GB of VRAM was in use before the models loaded (reranker and the
+  desktop or RDP session), so the margin with the three models alone is larger than 520 MiB, to be measured per
+  process in 4.10d. The 4.8 batch file kept quote status and file but not the quote text, chunk id or the searched
+  chunk ids, so number marks cannot be recomputed on those answers offline; the batch tool now keeps the full
+  response. Blind judge on the 34 answers: see step 4.8j.
+- [ ] NEXT **4.8n** Number marks (owner, 17 Nov 2026), before 4.10: mechanical fixes (ISO dates and times as one
+  token, list numbering ignored, pool fee tier in both notations); a seeded-error test set of at least 20 truly
+  unsupported numbers; proposals for single digits, rounding to one significant digit and numbers found only in an
+  uncited source, decided by the owner; the page states that a number mark means the number appears in a source, not
+  that it answers the question. Offline, no GPU. Built: the mechanical fixes and the page wording; seeded errors 32, caught 32 (29 by the rule
+  before); "not verified" marks on the 57 real answers of 3.2 down from 41 to 28; four proposals measured and waiting
+  for the owner (`ai/eval/results/2026-11-17-number-marks-4.8n.md`).
+- [ ] **4.8j** Blind judge (same judge and prompt as step 3.2) on the 34 answers of 4.8, about $1.5, owner approved.
+- [ ] **4.10** On-demand models with an owner switch (section 10), design accepted 17 Nov 2026 with variant (a)
+  Cloudflare Access and a 15-minute idle period; until the tunnel exists the switch is the file on the box. Starts
+  after 4.8n. Follow-up: the master switch should eventually release the reranker too, so the whole GPU is free when
+  the chat is off; this needs load and unload endpoints in `inference/`, coordinated with CC-Mac when we get there.
 - [ ] **4.6** Guest-key mode. Plan written 16 Nov 2026 (no code yet); details in section 9. M, in five parts:
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;

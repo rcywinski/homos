@@ -11,7 +11,6 @@ import { Citations, Legend, MarkedText, NumberSummary, where } from './Marks';
 
 const MAX = 500;
 
-
 const COVERAGE: Record<'full' | 'partial', string> = {
   full: 'The sources answer the question.',
   partial: 'The sources answer part of the question.',
@@ -168,7 +167,8 @@ export function Ask() {
         <p>
           A local model on the owner&apos;s own graphics card reads the passages that best match your question and
           answers from them. Code then checks that every quote exists word for word in its source, and marks every
-          number by how well the sources back it.
+          number by where it appears in the sources. A mark shows where a number comes from, not that it answers the
+          question.
         </p>
         <Legend />
         <p className="fine-print">

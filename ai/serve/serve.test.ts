@@ -178,6 +178,19 @@ async function main() {
   check('a multiplier is not in-source by a chunk', st('earned 12x more', [], ['12 pul']) === '12:not-verified');
   check('a quoted multiplier is verified', st('earned 4x more', ['zarobiło 4x więcej']) === '4:verified');
   check('a sum computed by the model stays not verified', st('total 132.37', ['-40.98 i -92.39']) === '132.37:not-verified');
+  // Step 4.8n mechanical fixes.
+  const one = (answer: string, quotes: string[], chunks: string[] = []) => markNumbers(answer, quotes, chunks).map((m) => `${m.text}:${m.status}`).join(' ');
+  check('an ISO date is one token, verified when the quote has it', one('on 2026-09-09 it ran', ['2026-09-09 04:53 exit 0']) === '2026-09-09:verified');
+  check('an ISO date in another notation in the quote is in-source', one('on 2026-08-29 it opened', ['29.08 otwarcie']) === '2026-08-29:in-source');
+  check('a wrong ISO date is not verified even when its parts appear', one('on 2026-09-18 it ran', ['2026-09-09 at 18:00, 09 and 18']) === '2026-09-18:not-verified', one('on 2026-09-18 it ran', ['2026-09-09 at 18:00, 09 and 18']));
+  check('a clock time is one token', one('at 08:45 the report', ['raport 08:45']) === '08:45:verified');
+  check('a wrong clock time is not verified', one('at 09:45 the report', ['raport 08:45, 09 i 45']) === '09:45:not-verified');
+  check('list numbering gets no mark', one('two tasks: (1) the observer and (2) the labels', []) === '');
+  check('a fee tier written as a decimal matches the pool id', one('the 0.05% pool on Base', ['base-weth-usdc-005']) === '0.05:verified');
+  check('a decimal without pool context is not a fee tier', one('it cost 0.05 ETH', ['base-weth-usdc-005']) === '0.05:not-verified');
+  check('a written-out date is checked as a date, not as a bare day number', one('on 4 Aug 2026 it ran', ['ran 22.08, 4 pools']) === '4:not-verified 2026:not-verified');
+  check('a written-out date found as dd.mm is in-source', one('on 22 Aug 2026 it ran', ['ran 22.08']) === '22:in-source 2026:in-source');
+  check('a written-out date in a Polish quote is in-source', one('on 21 August', ['21 sierpnia raport']) === '21:in-source');
   check('a transformation never gives verified', markNumbers('On 27 August 2026', ['27.08'], []).every((m) => m.status !== 'verified'));
 
   // --- ask(): fakes over the real corpus ------------------------------------------------------------------------
