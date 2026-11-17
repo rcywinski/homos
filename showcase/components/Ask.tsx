@@ -5,16 +5,12 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { AskResponse } from '../../ai/serve/ask';
+import { EXAMPLES } from '../examples';
 import { askQuestion, health, type ChatError, type ChatStatus, type Health } from '../api';
 import { Citations, Legend, MarkedText, NumberSummary, where } from './Marks';
 
 const MAX = 500;
 
-const EXAMPLES = [
-  'Why did the project stay with wide ranges instead of re-centering them?',
-  'When did real capital first go into a position?',
-  'What did the morning report of 21 August say about the hysteresis rule?',
-];
 
 const COVERAGE: Record<'full' | 'partial', string> = {
   full: 'The sources answer the question.',
