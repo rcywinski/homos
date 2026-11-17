@@ -479,7 +479,9 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   optional Access, kill switch documented in `inference/README.md`. S. Checklist: `SERVE_MODE=tunnel` and
   `SERVE_HOST=127.0.0.1` in `serve.env` (the server refuses tunnel mode on any other address); the start-up log shows
   "mode tunnel"; no "CF-Connecting-IP" warning in the log after the first visits; the log folder ACL limited to
-  `homos-web`; the response headers of section 4.7 present on the public URL.
+  `homos-web`; the response headers of section 4.7 present on the public URL. Rocket Loader, automatic Web Analytics
+  and email obfuscation off for the hostname, and the HTML served through the tunnel byte for byte equal to the built
+  `showcase/public/index.html` (review of 17 Nov 2026; required before guest-key mode goes public).
 
 Steps 4.1 to 4.5 can be built while phase 3 holds the box (4.4b needs CC-Win on the box but not the GPU). 4.7, 4.8,
 4.6 and 4.9 wait until the owner says phase 3 is finished.
@@ -545,7 +547,9 @@ hand out, and expires.
   separate function that has no access to the variable.
 - The server refuses (400, nothing logged beyond the outcome) any request whose body or headers contain `sk-ant-`, so a
   pasted key in the question box is not logged either.
-- The field has `autocomplete="off"`, `spellcheck="false"` and is not inside a form that a browser would offer to save.
+- The field is `type="password"` with `autocomplete="new-password"`, `spellcheck="false"`, `data-1p-ignore` and
+  `data-lpignore="true"`, and is not inside a `<form>` element (review of 17 Nov 2026: `autocomplete="off"` is often
+  ignored on password fields). Some password managers may still offer to save it; listed under residual risks.
 
 **Content security policy.** `connect-src 'self' https://api.anthropic.com`: exactly one extra target, in both the
 header and the meta tag (the sync test stays). Nothing else changes: no third-party script, style, font, image or
@@ -559,8 +563,15 @@ frame source.
   measured on 34 test questions: 1.5 to 4.3 cents)."
 - "Use a key you create for this, with a low spend limit on its workspace and a short expiry (Anthropic offers 3
   hours or 1 day), and delete it afterwards."
-- Organisations with zero data retention or the Compliance API cannot call the API from a browser; the API answers 401
-  and the page shows that message.
+- Organisations with zero data retention or the Compliance API cannot call the API from a browser. Two cases are
+  handled: when the 401 response is readable (CORS headers present), the page shows the API's own message; when the
+  call fails without a readable response (fetch throws a TypeError, as it does when the API omits CORS headers on the
+  error), the page shows a fixed text listing the likely causes (organisation policy, an invalid or expired key, a
+  browser extension blocking the call). Which case the API produces is checked once with a deliberately invalid key in
+  4.6b, without spending anything.
+- How to check it yourself: "Open your browser's developer tools, Network tab, and ask a question: the request
+  carrying your key goes only to api.anthropic.com; the requests to this site carry the question and the answer, not
+  the key."
 
 **Cost bound.** One API call per question; `max_tokens` capped at 2,048 (measured answers average 404 output tokens;
 the cap is checked against the largest measured answer before it is fixed), which bounds a question at about 5 cents
@@ -584,13 +595,29 @@ labels the guest engine with that result, or as "not measured" until then.
 | Spending the visitor's key beyond one call | One call per click, no retries on our side, `max_tokens` cap, limits per visitor. |
 | Prompt injection from a source chunk | No tools in the call; the answer is verified and shown as plain text. |
 | `/api/guest/verify` abused as a free verifier | Ticket with HMAC and 10 minute expiry; per-visitor limits; no GPU work in verify. |
+| `/api/guest/verify` run against chunks of a rebuilt index | The ticket carries the corpus hash; verify refuses a ticket whose hash differs from the served one. |
+| A password manager offers to save the key | `new-password`, no form element and the managers' ignore attributes reduce it; not fully preventable. Residual risk, and one more reason for a short-lived key. |
+| The tunnel injects scripts into the HTML (Rocket Loader, automatic Web Analytics, email obfuscation) | All three off for the hostname; 4.9 checks that the HTML served through the tunnel is byte for byte the built file, so an injection also fails the CSP check. |
 
 **Tests (4.6d).** Playwright with `api.anthropic.com` mocked by `page.route`: a full guest question renders with marks;
 no request to our origin contains the test key (all requests recorded); localStorage, sessionStorage, cookies and
 IndexedDB hold nothing after a question; the key is gone after reload and after "Forget my key"; the 401 CORS message
-is shown; the CSP header and meta allow exactly `'self' https://api.anthropic.com` in `connect-src`. Server unit tests:
-tickets (forged, expired, other chunk ids), `sk-ant-` refusal without logging, verify returns the same shape as
-`/api/ask`.
+is shown when readable, and the fixed causes text when the mocked call fails without a readable response; the CSP
+header and meta allow exactly `'self' https://api.anthropic.com` in `connect-src`. Server unit tests:
+tickets (forged, expired, other chunk ids, another corpus hash), `sk-ant-` refusal without logging, verify returns
+the same shape as `/api/ask`.
+
+**Guest mode and models on demand** (review of 17 Nov 2026, decided with 4.10a). Guest retrieval needs bge-m3 and the
+reranker, not the generator. Per state of section 10: `off`, refused like the chat; `idle`, the guest presses "Load
+search", an explicit action counted against the same load limits, which loads bge-m3 only; `search`, served;
+`loading` or `unloading`, the guest waits; `ready`, served. The idle unload applies to the search state too.
+
+**Step 4.6e, who runs it and where the key is** (review of 17 Nov 2026). The owner's key stays in the `.env` of the
+main checkout only: never in this worktree, on the box or in the chat server's environment. CC-Mac runs a script from
+the main checkout that calls `/api/guest/retrieve` and `/api/guest/verify` on the box server and Anthropic directly,
+the same path as the browser. The per-visitor limit is raised for that run in the box's `serve.env` (as for the 4.8
+batch) and restored afterwards. It loads bge-m3 on the box, so it needs the owner's word in the session that acts,
+and the spend goes into the shared ledger.
 
 ## 10. Step 4.10 design: models on demand, owner switch (written 17 Nov 2026, not built)
 
