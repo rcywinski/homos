@@ -7,7 +7,7 @@ import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { mkdirSync } from 'fs';
 import path from 'path';
 
-const PORTS = { main: 8801, tight: 8802, staticOnly: 8803 };
+const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807 };
 const MAIN = process.env.E2E_BASE_URL ?? `http://127.0.0.1:${PORTS.main}`;
 const TIGHT = `http://127.0.0.1:${PORTS.tight}`;
 const STATIC_ONLY = `http://127.0.0.1:${PORTS.staticOnly}`;
@@ -21,7 +21,19 @@ const INTERNAL_LABELS = [/k=10/, /local-pb\d/, /variant P/i, /Step 3\.2/i, /gold
 let n = 0;
 const visitorIp = (info: TestInfo) => `198.51.${100 + (info.project.name === 'phone' ? 1 : 0)}.${(++n % 250) + 1}`;
 
-async function open(page: Page, url: string, info: TestInfo) {
+/**
+ * Step 4.10a: the dry-run servers start with the models unloaded. Load them through the page, as a visitor would,
+ * unless the test is about the loading itself. Against a server already "ready" this does nothing.
+ */
+async function ensureLoaded(page: Page) {
+  const panel = page.getByTestId('models-panel');
+  await expect(panel).toBeVisible();
+  if ((await panel.getAttribute('data-state')) === 'ready') return;
+  await page.getByRole('button', { name: 'Load the local model' }).click();
+  await expect(panel).toHaveAttribute('data-state', 'ready', { timeout: 20_000 });
+}
+
+async function open(page: Page, url: string, info: TestInfo, opts: { load?: boolean } = {}) {
   const errors: string[] = [];
   page.on('console', (m) => {
     if (m.type() === 'error') errors.push(m.text());
@@ -30,6 +42,7 @@ async function open(page: Page, url: string, info: TestInfo) {
   await page.setExtraHTTPHeaders({ 'cf-connecting-ip': visitorIp(info) });
   await page.goto(url);
   await expect(page.getByTestId('honesty-notice')).toBeVisible();
+  if (opts.load !== false && url !== STATIC_ONLY) await ensureLoaded(page);
   return errors;
 }
 
@@ -289,4 +302,69 @@ test('keyboard: switch sections and ask without a mouse @real', async ({ page },
   await page.keyboard.press('Tab');
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('chat-answer')).toHaveAttribute('data-outcome', 'out-of-scope');
+});
+
+// --- Step 4.10a: models on demand ---
+
+test('models on demand: load button, staged progress with typical times, then the question box unlocks', async ({ page }, info) => {
+  test.skip(againstReal, 'dry-run load only');
+  const url = `http://127.0.0.1:${info.project.name === 'phone' ? PORTS.loadPhone : PORTS.loadDesktop}`;
+  await open(page, url, info, { load: false });
+  const panel = page.getByTestId('models-panel');
+  await expect(panel).toHaveAttribute('data-state', 'idle');
+  await expect(panel).toContainText('Loading usually takes about 25 s');
+  await expect(panel).toContainText('released again after 15 minutes without questions');
+  await page.getByLabel('Your question').fill('Why were the ranges kept wide?');
+  await expect(page.getByRole('button', { name: 'Ask', exact: true })).toBeDisabled();
+  await expect(page.locator('.examples .example').first()).toBeDisabled();
+  await shot(page, info, 'models-idle');
+
+  await page.getByRole('button', { name: 'Load the local model' }).click();
+  await expect(panel).toHaveAttribute('data-state', 'loading');
+  const stages = panel.locator('.stage');
+  await expect(stages).toHaveCount(3);
+  await expect(stages.nth(0)).toContainText('Language model');
+  await expect(stages.nth(1)).toContainText('Search model');
+  await expect(stages.nth(2)).toContainText('Checking both are ready');
+  await expect(stages.nth(0)).toContainText('usually about 21 s');
+  // Order: the language model first; the search model waits until it is done (step 3.5).
+  await expect(stages.nth(0)).toHaveAttribute('data-status', 'running');
+  await expect(stages.nth(1)).toHaveAttribute('data-status', 'pending');
+  await shot(page, info, 'models-loading');
+  await expect(stages.nth(0)).toHaveAttribute('data-status', 'done', { timeout: 5_000 });
+  await expect(stages.nth(1)).toHaveAttribute('data-status', 'running');
+
+  await expect(panel).toHaveAttribute('data-state', 'ready', { timeout: 10_000 });
+  await expect(panel).toContainText('It is released after 15 minutes without questions.');
+  await expect(page.getByRole('button', { name: 'Ask', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Ask', exact: true }).click();
+  await expect(page.getByTestId('chat-answer')).toHaveAttribute('data-outcome', 'answered');
+  await shot(page, info, 'models-ready-answer');
+});
+
+test('models on demand: the owner switch off shows the offline text and no load button', async ({ page }, info) => {
+  test.skip(againstReal, 'dry-run switch only');
+  const errors = await open(page, `http://127.0.0.1:${PORTS.off}`, info, { load: false });
+  await expect(page.getByTestId('chat-health')).toContainText('the owner has switched the local model off');
+  await expect(page.getByTestId('models-panel')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Load the local model' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Ask', exact: true })).toBeDisabled();
+  // The saved views still work.
+  await page.getByRole('button', { name: 'Daily reports' }).click();
+  await expect(page.getByTestId('report')).toBeVisible();
+  expect(errors).toEqual([]);
+  await shot(page, info, 'models-switch-off');
+});
+
+test('models on demand: a failed load shows the fixed text, no retry, and the button again', async ({ page }, info) => {
+  test.skip(againstReal, 'dry-run failure only');
+  await open(page, `http://127.0.0.1:${PORTS.loadFail}`, info, { load: false });
+  await page.getByRole('button', { name: 'Load the local model' }).click();
+  const error = page.getByTestId('chat-error');
+  await expect(error).toHaveAttribute('data-error', 'load-failed', { timeout: 10_000 });
+  await expect(error).toContainText('could not be loaded right now');
+  await expect(error).not.toContainText('purpose');
+  await expect(page.getByTestId('models-panel')).toHaveAttribute('data-state', 'idle');
+  await expect(page.getByRole('button', { name: 'Load the local model' })).toBeEnabled();
+  await shot(page, info, 'models-load-failed');
 });

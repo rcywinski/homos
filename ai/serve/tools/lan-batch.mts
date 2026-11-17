@@ -184,7 +184,30 @@ async function disconnect() {
   console.log('Compare with the generation start of an ordinary question in the golden batch; a long wait here means A kept running.');
 }
 
+/**
+ * Step 4.10: a server that starts unloaded needs one load before the series. One load only: if it fails, stop (no
+ * retry); if the owner switch is off, stop and say so. A server already "ready" (the real engine before 4.10b) is
+ * left as it is.
+ */
+async function ensureLoaded() {
+  const view = (await fetch(`${BASE}/api/models`).then((r) => (r.ok ? r.json() : null)).catch(() => null)) as { state: string } | null;
+  if (!view || view.state === 'ready') return;
+  if (view.state === 'off') {
+    console.error('the owner switch is off: the models cannot be loaded; stopping');
+    process.exit(1);
+  }
+  const t0 = Date.now();
+  const r = await fetch(`${BASE}/api/models/load`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+  const body = (await r.json()) as { models?: { state: string }; error?: string };
+  if (body.models?.state !== 'ready') {
+    console.error(`model load did not reach ready (${body.error ?? JSON.stringify(body)}); stopping, no retry`);
+    process.exit(1);
+  }
+  console.log(`models loaded through /api/models/load in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+}
+
 const today = new Date().toISOString().slice(0, 10);
+await ensureLoaded();
 if (mode === 'examples') await batch(EXAMPLES.map((q, i) => ({ id: `example-${i + 1}`, question: q })), opt('--out', `lan-run-examples-${today}.json`));
 else if (mode === 'golden') {
   const golden = readFileSync('ai/eval/golden.jsonl', 'utf8')

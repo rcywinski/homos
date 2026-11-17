@@ -462,6 +462,14 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   Cloudflare Access and a 15-minute idle period; until the tunnel exists the switch is the file on the box. Starts
   after 4.8n. Follow-up: the master switch should eventually release the reranker too, so the whole GPU is free when
   the chat is off; this needs load and unload endpoints in `inference/`, coordinated with CC-Mac when we get there.
+  **4.10a built (17 Nov 2026), awaiting the owner's OK:** `ai/serve/models-state.ts` (states off, idle, loading,
+  search, ready, unloading; the retrieval-only state "search" and the per-model plan the owner accepted on 17 Nov:
+  full load generator, bge-m3, check; search to full releases bge-m3 first), `GET /api/models`,
+  `POST /api/models/load` (single flight, own limits 2 per visitor per hour, 6 per day, 30 for the site, joining is
+  free, no retry), questions refused with the state until "ready" and given back to the limit, the switch file
+  (`SERVE_SWITCH_FILE`, missing = off, the pause file wins), the load panel with staged progress and typical times.
+  The dry run uses it; the real engine keeps loading at start until 4.10b. Guest loads ("search") get their visitor
+  control with 4.6, counted against the same load limits.
 - [ ] **4.6** Guest-key mode. Plan written 16 Nov 2026 (no code yet); details in section 9. M, in five parts:
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;

@@ -88,6 +88,19 @@ export interface ServeConfig {
   /** Dry run only: delay of each fake answer, to show the queue in the browser suite. */
   fakeDelayMs: number;
   /**
+   * Owner switch (step 4.10): the file says "on" or the models stay off; a missing file is "off", so a restart never
+   * loads anything by itself. The pause file wins over it. Read by the dry run from 4.10a; the real engine reads it from
+   * 4.10b (until then it loads at start, as in 4.8).
+   */
+  switchFile: string;
+  /** Model loads, separately from questions: per visitor per hour and per UTC day, and for the site per UTC day. */
+  loadLimits: { perHour: number; perDay: number; globalPerDay: number };
+  /** Typical stage times in milliseconds, shown to the visitor while loading (measured on the box, 4.10d). */
+  typicalLoadMs: { 'release-embedder': number; generator: number; embedder: number; check: number };
+  /** Dry run only: duration of each fake load stage, and a stage that fails (for the browser suite). */
+  fakeLoadMs: number;
+  fakeLoadFail: '' | 'generator' | 'embedder' | 'check';
+  /**
    * keep_alive for the generator and the embedder on the box. Long, so the generator stays resident: reloading it
    * evicts bge-m3 (step 3.5). It does not shape the output, so the measured preset is unchanged.
    */
@@ -114,6 +127,12 @@ function int(env: Env, name: string, fallback: number, min: number, max: number)
 function keepAlive(raw: string | undefined): string {
   const v = raw || '24h';
   if (!/^(-1|\d+(s|m|h))$/.test(v)) throw new ConfigError('SERVE_KEEP_ALIVE must look like 24h, 90m, 3600s or -1');
+  return v;
+}
+
+function fakeLoadFail(raw: string | undefined): ServeConfig['fakeLoadFail'] {
+  const v = raw ?? '';
+  if (v !== '' && v !== 'generator' && v !== 'embedder' && v !== 'check') throw new ConfigError('SERVE_FAKE_LOAD_FAIL must be empty, generator, embedder or check');
   return v;
 }
 
@@ -165,6 +184,21 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
     logDir: env.SERVE_LOG_DIR || path.join('ai', 'serve', 'logs'),
     pauseFile: env.SERVE_PAUSE_FILE || path.join('ai', 'serve', 'PAUSED'),
     fakeDelayMs: int(env, 'SERVE_FAKE_DELAY_MS', 0, 0, 60_000),
+    switchFile: env.SERVE_SWITCH_FILE || path.join('ai', 'serve', 'SWITCH'),
+    loadLimits: {
+      perHour: int(env, 'SERVE_LOAD_LIMIT_HOUR', 2, 1, 100),
+      perDay: int(env, 'SERVE_LOAD_LIMIT_DAY', 6, 1, 1000),
+      globalPerDay: int(env, 'SERVE_LOAD_LIMIT_GLOBAL_DAY', 30, 1, 10_000),
+    },
+    // Step 4.8j2 on the box: generator 20.9 s, bge-m3 2.6 s; the check and the release are short. 4.10d measures them.
+    typicalLoadMs: {
+      'release-embedder': int(env, 'SERVE_TYPICAL_RELEASE_MS', 1000, 0, 600_000),
+      generator: int(env, 'SERVE_TYPICAL_GENERATOR_MS', 21_000, 0, 600_000),
+      embedder: int(env, 'SERVE_TYPICAL_EMBEDDER_MS', 3000, 0, 600_000),
+      check: int(env, 'SERVE_TYPICAL_CHECK_MS', 1000, 0, 600_000),
+    },
+    fakeLoadMs: int(env, 'SERVE_FAKE_LOAD_MS', 300, 0, 60_000),
+    fakeLoadFail: fakeLoadFail(env.SERVE_FAKE_LOAD_FAIL),
     keepAlive: keepAlive(env.SERVE_KEEP_ALIVE),
     embedModel: 'bge-m3',
     walletFile: env.SERVE_WALLET_FILE || path.join('data', 'showcase', 'wallet.json'),

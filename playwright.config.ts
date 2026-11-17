@@ -26,11 +26,14 @@ const server = (name: string, port: number, extra: Record<string, string>) => ({
     SERVE_MODE: 'tunnel',
     SERVE_LOG_DIR: path.join(os.tmpdir(), `homos-e2e-${name}-logs`),
     SERVE_PAUSE_FILE: path.join(os.tmpdir(), `homos-e2e-${name}-PAUSED`),
+    // Step 4.10a: the owner switch is on for every test server except "off"; the models start unloaded.
+    SERVE_SWITCH_FILE: path.join('showcase', 'e2e', 'fixtures', 'switch-on'),
+    SERVE_FAKE_LOAD_MS: '150',
     ...extra,
   },
 });
 
-export const PORTS = { main: 8801, tight: 8802, staticOnly: 8803 };
+export const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807 };
 
 export default defineConfig({
   testDir: path.join('showcase', 'e2e'),
@@ -62,6 +65,12 @@ export default defineConfig({
           SERVE_FAKE_DELAY_MS: '3000',
           SERVE_WALLET_FILE: path.join(os.tmpdir(), 'homos-e2e-no-wallet.json'),
         }),
+        // Step 4.10a: the switch off; a slow load seen from start to end (one server per project, since a load once
+        // done stays done until 4.10b brings the idle unload); and a load that fails at the generator.
+        server('off', PORTS.off, { SERVE_SWITCH_FILE: path.join(os.tmpdir(), 'homos-e2e-no-switch-file') }),
+        server('load-desktop', PORTS.loadDesktop, { SERVE_FAKE_LOAD_MS: '900' }),
+        server('load-phone', PORTS.loadPhone, { SERVE_FAKE_LOAD_MS: '900' }),
+        server('load-fail', PORTS.loadFail, { SERVE_FAKE_LOAD_FAIL: 'generator', SERVE_LOAD_LIMIT_HOUR: '100', SERVE_LOAD_LIMIT_DAY: '100', SERVE_LOAD_LIMIT_GLOBAL_DAY: '1000' }),
         {
           command: `node --import tsx ${path.join('showcase', 'e2e', 'static-only.ts')} ${PORTS.staticOnly}`,
           url: `http://127.0.0.1:${PORTS.staticOnly}/`,

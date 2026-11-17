@@ -47,6 +47,8 @@ test-results/
 ai/serve/logs/
 # Pause switch of the public chat (CC-Win creates it before using the GPU for other work).
 ai/serve/PAUSED
+# Owner switch of the models (step 4.10), local dry runs only; on the box it lives outside the repo.
+ai/serve/SWITCH
 # Python (inference/ services): bytecode cache and virtual environments.
 __pycache__/
 .venv/

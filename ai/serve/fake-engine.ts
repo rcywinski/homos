@@ -15,6 +15,7 @@ import { loadCorpus } from '../corpus/load';
 import type { Chunk } from '../corpus/types';
 import { FakeEmbedder } from '../embed/fake';
 import { FakeReranker } from '../rerank/fake';
+import type { LoadTarget, ModelBackend } from './models-state';
 import { buildLocalRetrieval, metaView, type ChatRetrieval } from './retrieve';
 
 export const FAKE_ENGINE = { id: 'fake', label: 'dry run: fake models, no GPU' };
@@ -83,4 +84,41 @@ export async function fakeRetrieval(root = process.cwd()): Promise<ChatRetrieval
   const embedder = new FakeEmbedder(64);
   const index = { ids: view.map((c) => c.id), vectors: await embedder.embed(view.map((c) => c.text), 'document') };
   return buildLocalRetrieval({ chunks, embedder, reranker: new FakeReranker(), index });
+}
+
+/**
+ * Dry-run model services for the state machine of step 4.10a: each stage waits `stageMs` (cancellable) and the stage
+ * named in `failAt` throws, so the browser suite sees staged progress and the failure path without a GPU.
+ */
+export class FakeModelBackend implements ModelBackend {
+  readonly calls: string[] = [];
+  constructor(
+    private readonly stageMs = 300,
+    private readonly failAt: '' | 'generator' | 'embedder' | 'check' = '',
+  ) {}
+
+  private wait(name: string, signal: AbortSignal): Promise<void> {
+    this.calls.push(name);
+    return new Promise((resolve, reject) => {
+      if (signal.aborted) return reject(signal.reason);
+      const t = setTimeout(() => (this.failAt === name ? reject(new Error(`dry run: ${name} failed on purpose`)) : resolve()), this.stageMs);
+      signal.addEventListener('abort', () => (clearTimeout(t), reject(signal.reason)), { once: true });
+    });
+  }
+
+  loadGenerator(signal: AbortSignal) {
+    return this.wait('generator', signal);
+  }
+  loadEmbedder(signal: AbortSignal) {
+    return this.wait('embedder', signal);
+  }
+  releaseEmbedder(signal: AbortSignal) {
+    return this.wait('release-embedder', signal);
+  }
+  /** The dry run's residency check: a problem string when failAt is "check", as the real check reports one. */
+  async check(target: LoadTarget): Promise<string | null> {
+    this.calls.push('check');
+    await new Promise((r) => setTimeout(r, this.stageMs));
+    return this.failAt === 'check' ? `dry run: the ${target} check failed on purpose` : null;
+  }
 }

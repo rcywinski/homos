@@ -3,6 +3,9 @@
  * waiting, the server streams status events (queued with position, retrieving, generating).
  */
 import type { AskResponse } from '../ai/serve/ask';
+import type { ModelsView } from '../ai/serve/models-state';
+
+export type { ModelsView };
 
 export type ChatStatus = { kind: 'queued'; position: number; waiting: number } | { kind: 'retrieving' } | { kind: 'generating' };
 
@@ -12,7 +15,69 @@ export interface ChatError {
   retryAfterSec?: number;
 }
 
-export type Health = { status: 'up' | 'busy' | 'paused' | 'model-offline'; engine: { id: string; label: string } } | { status: 'unreachable' };
+export type Health =
+  | { status: 'up' | 'busy' | 'paused' | 'model-offline'; engine: { id: string; label: string }; models?: ModelsView }
+  | { status: 'unreachable' };
+
+/** The state of the served models (step 4.10a); null when the server cannot be reached. */
+export async function getModels(): Promise<ModelsView | null> {
+  try {
+    const r = await fetch('api/models', { cache: 'no-store' });
+    return r.ok ? ((await r.json()) as ModelsView) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Starts the model load, or joins the one already running, and follows its stages over the event stream. Resolves
+ * with the final view, or with the fixed error text the UI shows as it is.
+ */
+export async function loadModels(onView: (v: ModelsView) => void): Promise<{ ok: true; models: ModelsView } | { ok: false; error: ChatError }> {
+  let res: Response;
+  try {
+    res = await fetch('api/models/load', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'text/event-stream' }, body: '{}' });
+  } catch {
+    return { ok: false, error: UNREACHABLE };
+  }
+  if (!(res.headers.get('content-type') ?? '').includes('text/event-stream')) {
+    try {
+      const body = (await res.json()) as { models: ModelsView } | ChatError;
+      return 'models' in body ? { ok: true, models: body.models } : { ok: false, error: body };
+    } catch {
+      return { ok: false, error: UNREACHABLE };
+    }
+  }
+  const out = await readEvents(res, (name, payload) => {
+    if (name === 'models') onView(payload as unknown as ModelsView);
+    else if (name === 'result') return { ok: true as const, models: (payload as unknown as { models: ModelsView }).models };
+    else if (name === 'error') return { ok: false as const, error: payload as unknown as ChatError };
+    return undefined;
+  });
+  return out ?? { ok: false, error: UNREACHABLE };
+}
+
+/** Reads a Server-Sent Events body; `onEvent` returns a value to stop with it. */
+async function readEvents<T>(res: Response, onEvent: (name: string | undefined, payload: Record<string, unknown>) => T | undefined): Promise<T | undefined> {
+  const reader = res.body?.getReader();
+  if (!reader) return undefined;
+  const decoder = new TextDecoder();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return undefined;
+    buffer += decoder.decode(value, { stream: true });
+    let cut: number;
+    while ((cut = buffer.indexOf('\n\n')) >= 0) {
+      const block = buffer.slice(0, cut);
+      buffer = buffer.slice(cut + 2);
+      const name = block.match(/^event: (.+)$/m)?.[1];
+      const data = block.match(/^data: (.*)$/m)?.[1] ?? '{}';
+      const r = onEvent(name, JSON.parse(data) as Record<string, unknown>);
+      if (r !== undefined) return r;
+    }
+  }
+}
 
 export async function health(): Promise<Health> {
   try {
@@ -48,26 +113,12 @@ export async function askQuestion(question: string, onStatus: (s: ChatStatus) =>
       return { ok: false, error: UNREACHABLE };
     }
   }
-  const reader = res.body?.getReader();
-  if (!reader) return { ok: false, error: UNREACHABLE };
-  const decoder = new TextDecoder();
-  let buffer = '';
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let cut: number;
-    while ((cut = buffer.indexOf('\n\n')) >= 0) {
-      const block = buffer.slice(0, cut);
-      buffer = buffer.slice(cut + 2);
-      const name = block.match(/^event: (.+)$/m)?.[1];
-      const data = block.match(/^data: (.*)$/m)?.[1] ?? '{}';
-      const payload = JSON.parse(data) as Record<string, unknown>;
-      if (name === 'queued') onStatus({ kind: 'queued', position: Number(payload.position), waiting: Number(payload.waiting) });
-      else if (name === 'retrieving' || name === 'generating') onStatus({ kind: name });
-      else if (name === 'result') return { ok: true, answer: payload as unknown as AskResponse };
-      else if (name === 'error') return { ok: false, error: payload as unknown as ChatError };
-    }
-  }
-  return { ok: false, error: UNREACHABLE };
+  const out = await readEvents<{ ok: true; answer: AskResponse } | { ok: false; error: ChatError }>(res, (name, payload) => {
+    if (name === 'queued') onStatus({ kind: 'queued', position: Number(payload.position), waiting: Number(payload.waiting) });
+    else if (name === 'retrieving' || name === 'generating') onStatus({ kind: name });
+    else if (name === 'result') return { ok: true, answer: payload as unknown as AskResponse };
+    else if (name === 'error') return { ok: false, error: payload as unknown as ChatError };
+    return undefined;
+  });
+  return out ?? { ok: false, error: UNREACHABLE };
 }

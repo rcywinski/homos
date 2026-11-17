@@ -597,3 +597,17 @@ would be false.
 **Gap analysis.** Live retrieval gave the same chunks as the saved lists on all 34 questions; the 12 against 16 and
 18 is the fixed text plus run-to-run variation (`ai/eval/results/2026-11-17-judged-lan48-4.8j.md`). A second live run
 is needed before concluding.
+
+## 2026-11-17, step 4.10a: models state machine with a retrieval-only state (owner)
+
+**Decision.** The owner accepted 4.10a with two changes to the design of section 10: models are tracked separately,
+with a retrieval-only state ("search": bge-m3 and the reranker, no generator) for guest-key mode; and every load is
+an explicit visitor action counted against the load limits, including the guest's "load search" control (4.6), so no
+load happens as a side effect of a question.
+
+**Why.** Guest-key mode needs retrieval but not the 17 GB generator, and with only bge-m3 resident the VRAM headroom
+is about 19 GiB instead of about 520 MiB. The step 3.5 eviction fixes the transition: from "search" to "ready" bge-m3
+is released, then the generator and bge-m3 load in the fixed order.
+
+**Scope.** Dry run and Playwright only. The real engine keeps loading at start until 4.10b (explicit unload, idle
+timer, start-up without loaded models); typical stage times default to the 4.8j2 measurement until 4.10d.

@@ -6,8 +6,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AskResponse } from '../../ai/serve/ask';
 import { EXAMPLES } from '../examples';
-import { askQuestion, health, type ChatError, type ChatStatus, type Health } from '../api';
+import { askQuestion, getModels, health, loadModels, type ChatError, type ChatStatus, type Health, type ModelsView } from '../api';
 import { Citations, Legend, MarkedText, NumberSummary, where } from './Marks';
+import { ModelsPanel } from './ModelsPanel';
 
 const MAX = 500;
 
@@ -26,6 +27,9 @@ function statusLine(s: ChatStatus | null): string {
   return 'The local model is writing the answer. This can take a minute.';
 }
 
+const SWITCH_OFF =
+  'The assistant is offline right now: the owner has switched the local model off. The saved answers and the reports still work.';
+
 const HEALTH_TEXT: Record<Exclude<Health['status'], 'up'>, string> = {
   busy: 'The local model is busy with other questions right now. You can still try; the saved answers are under "Compare".',
   paused: 'The chat is paused while the GPU is used for other work. The saved answers and the reports still work.',
@@ -41,6 +45,9 @@ export function Ask() {
   const [answer, setAnswer] = useState<{ question: string; response: AskResponse } | null>(null);
   const [error, setError] = useState<ChatError | null>(null);
   const abort = useRef<AbortController | null>(null);
+  /** The served models (step 4.10a); null until known, and on servers without the state machine. */
+  const [models, setModels] = useState<ModelsView | null>(null);
+  const [loadingOwn, setLoadingOwn] = useState(false);
   /** The live region that shows progress, then the answer or the error; it takes focus after every submit. */
   const result = useRef<HTMLDivElement | null>(null);
   const bringIntoView = () =>
@@ -54,16 +61,45 @@ export function Ask() {
 
   useEffect(() => {
     let live = true;
-    health().then((h) => live && setState(h));
+    health().then((h) => {
+      if (!live) return;
+      setState(h);
+      if (h.status !== 'unreachable' && h.models) setModels(h.models);
+    });
     return () => {
       live = false;
       abort.current?.abort();
     };
   }, []);
 
+  // Someone else's load: follow it by polling until it ends; our own load follows the event stream instead.
+  useEffect(() => {
+    if (models?.state !== 'loading' || loadingOwn) return;
+    const t = setInterval(() => {
+      void getModels().then((v) => v && setModels(v));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [models?.state, loadingOwn]);
+
+  const load = async () => {
+    if (loadingOwn) return;
+    setLoadingOwn(true);
+    setError(null);
+    const r = await loadModels(setModels);
+    setLoadingOwn(false);
+    if (r.ok) setModels(r.models);
+    else {
+      setError(r.error);
+      const v = await getModels();
+      if (v) setModels(v);
+    }
+  };
+
+  const canAsk = !models || models.state === 'ready';
+
   const submit = async (q: string) => {
     const text = q.trim();
-    if (!text || pending) return;
+    if (!text || pending || !canAsk) return;
     setQuestion(text);
     setPending(true);
     setStatus(null);
@@ -75,11 +111,19 @@ export function Ask() {
     if (r.ok) {
       setAnswer({ question: text, response: r.answer });
       setError(null);
-    } else setError(r.error);
+    } else {
+      setError(r.error);
+      // The models were released or lost meanwhile: show the load button again.
+      if (['not-loaded', 'loading', 'switch-off'].includes(r.error.error)) {
+        const v = await getModels();
+        if (v) setModels(v);
+      }
+    }
     bringIntoView();
   };
 
-  const down = state && state.status !== 'up' ? HEALTH_TEXT[state.status] : null;
+  const down =
+    state && state.status !== 'up' ? HEALTH_TEXT[state.status] : models?.state === 'off' ? SWITCH_OFF : null;
 
   return (
     <section className="ask" aria-labelledby="ask-title">
@@ -114,20 +158,21 @@ export function Ask() {
             }}
           />
           <div className="ask-row">
-            <button type="submit" className="primary" disabled={pending || !question.trim()}>
+            <button type="submit" className="primary" disabled={pending || !question.trim() || !canAsk}>
               {pending ? 'Answering' : 'Ask'}
             </button>
             <span className="counter" aria-live="polite">
               {question.length} of {MAX} characters
             </span>
           </div>
+          {models && models.state !== 'off' && <ModelsPanel view={models} busy={loadingOwn} onLoad={() => void load()} />}
           {!answer && !pending && (
             <div className="examples">
               <span className="field-label">Or ask one of these</span>
               <ul>
                 {EXAMPLES.map((ex) => (
                   <li key={ex}>
-                    <button type="button" className="example" onClick={() => void submit(ex)}>
+                    <button type="button" className="example" onClick={() => void submit(ex)} disabled={!canAsk}>
                       {ex}
                     </button>
                   </li>

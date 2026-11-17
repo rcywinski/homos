@@ -344,3 +344,56 @@ select {
   color: var(--ink-soft);
   margin: 0 0 0.5rem;
 }
+
+/* Models on demand (step 4.10a): the load button and the staged progress. */
+.models-panel,
+.models-note {
+  margin: 0.75rem 0;
+}
+.models-panel {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper);
+}
+.models-title {
+  margin: 0 0 0.5rem;
+  font-weight: var(--label-weight);
+}
+.models-note {
+  color: var(--ink-soft);
+}
+.stages {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.stage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  padding: 0.15rem 0;
+}
+.stage-name {
+  min-width: 12ch;
+}
+.stage-status {
+  font-weight: var(--label-weight);
+}
+.stage-time {
+  color: var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+.stage-done .stage-status {
+  color: var(--ok);
+}
+.stage-failed .stage-status {
+  color: var(--bad);
+}
+.stage-pending {
+  color: var(--ink-soft);
+}
+.example:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

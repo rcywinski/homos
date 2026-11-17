@@ -5,6 +5,11 @@
  *                     `Accept: text/event-stream`: status events (queued with position, retrieving, generating) and
  *                     then one `result` event with the whole verified answer. The answer text is never streamed token
  *                     by token, because it is verified only once complete.
+ *   GET  /api/models       the state of the served models (step 4.10a): off, idle, loading with stages, search, ready.
+ *   POST /api/models/load  starts a model load or joins the running one; with `Accept: text/event-stream` it streams
+ *                     a `models` event on every stage change and ends with `result` (the state reached) or `error`.
+ *                     Loads have their own limits; joining a running load is free. A visitor who leaves does not stop
+ *                     the load: other visitors may be waiting for it.
  * `/api/retrieve` (guest-key mode) waits for step 4.6. Errors never carry a stack or an internal message.
  *
  * Order of checks for a question: shape and length, rate limit (counted), refusal without GPU work (advice), box
@@ -13,6 +18,7 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { ask, ModelUnavailable, refusedBeforeWork, type AskDeps, type AskResponse, type Stage } from './ask';
 import type { RequestLog } from './log';
+import { LoadFailed, Models, type ModelBackend, type ModelsView } from './models-state';
 import { GpuQueue, JobCancelled, JobTimeout, QueueRefused } from './queue';
 import { clientIp, RateLimiter } from './ratelimit';
 import { securityHeaders } from './headers';
@@ -40,7 +46,21 @@ export interface AppOptions {
    * served at /data/wallet.json. Undefined: 404, and the page hides the Wallet tab.
    */
   walletJson?: string;
+  /**
+   * The served models (step 4.10a). Omitted: the models count as always loaded while the chat is not paused, which is
+   * how the real engine runs until 4.10b and how the older tests run.
+   */
+  models?: Models;
+  /** Limits on model loads, apart from the question limits. Required with `models`. */
+  loadLimiter?: RateLimiter;
 }
+
+const NO_BACKEND: ModelBackend = {
+  loadGenerator: async () => undefined,
+  loadEmbedder: async () => undefined,
+  releaseEmbedder: async () => undefined,
+  check: async () => null,
+};
 
 /** Fixed messages for every refusal; the UI shows them as they are. */
 export const MESSAGES = {
@@ -55,9 +75,23 @@ export const MESSAGES = {
     'The local model could not answer right now: the GPU may be busy with other work, or the model may not fit in its memory at the moment. Please try again later. The saved comparison is still available.',
   timeout: 'The answer took too long and was stopped. Please try again later.',
   internal: 'Something went wrong on the server.',
+  'not-loaded': 'The local model is not loaded. Press "Load the local model" first; loading takes about half a minute.',
+  loading: 'The local model is still loading. Your question can be sent as soon as it is ready.',
+  'switch-off': 'The assistant is offline right now: the owner has switched the local model off. The saved answers and the reports still work.',
+  'load-hour': 'You have started the most model loads allowed in an hour. Please try again later.',
+  'load-day': 'You have started the most model loads allowed today. Please come back tomorrow.',
+  'load-global': 'The model has been loaded as many times as allowed today. Please come back tomorrow. The saved answers are still available.',
+  'load-failed': 'The local model could not be loaded right now. Please try again later. The saved answers are still available.',
 } as const;
 
 type ErrorCode = keyof typeof MESSAGES | 'bad-request' | 'too-long' | 'too-large' | 'not-found';
+
+/** The message for a question that arrives while the models cannot answer it. */
+function notServing(view: ModelsView): 'not-loaded' | 'loading' | 'switch-off' {
+  if (view.state === 'off') return 'switch-off';
+  if (view.state === 'loading' || view.state === 'unloading') return 'loading';
+  return 'not-loaded';
+}
 
 class Reply {
   private sse = false;
@@ -69,11 +103,11 @@ class Reply {
     this.res.flushHeaders();
   }
 
-  event(name: 'queued' | Stage, data: Record<string, unknown> = {}) {
+  event(name: 'queued' | 'models' | Stage, data: Record<string, unknown> | ModelsView = {}) {
     if (this.sse && !this.res.writableEnded) this.res.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
   }
 
-  result(r: AskResponse) {
+  result(r: AskResponse | { models: ModelsView }) {
     if (this.sse) this.end('result', r);
     else this.res.json(r);
   }
@@ -92,6 +126,8 @@ class Reply {
 
 export function createApp(deps: AskDeps, opts: AppOptions) {
   const app = express();
+  const models = opts.models ?? new Models({ backend: NO_BACKEND, typicalMs: { 'release-embedder': 0, generator: 0, embedder: 0, check: 0 }, switchOn: () => !opts.paused(), initial: 'ready' });
+  const loadLimiter = opts.loadLimiter ?? new RateLimiter({ perHour: 2, perDay: 6, globalPerDay: 30 });
   app.disable('x-powered-by');
   app.use(securityHeaders);
 
@@ -114,7 +150,55 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
     const q = opts.queue.state();
     const up = await opts.probe.up().catch(() => false);
     const status = opts.paused() ? 'paused' : !up ? 'model-offline' : q.running && q.waiting >= q.maxWaiting ? 'busy' : 'up';
-    res.set('cache-control', 'no-store').json({ status, queue: { waiting: q.waiting, max: q.maxWaiting }, engine: deps.engine });
+    res.set('cache-control', 'no-store').json({ status, queue: { waiting: q.waiting, max: q.maxWaiting }, engine: deps.engine, models: models.view() });
+  });
+
+  app.get('/api/models', (_req, res) => {
+    res.set('cache-control', 'no-store').json(models.view());
+  });
+
+  app.post('/api/models/load', async (req: Request, res: Response) => {
+    const reply = new Reply(res);
+    const body: unknown = req.body;
+    const raw = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>).target : undefined;
+    // Only the full load has a visitor control so far; "search" (retrieval only) opens with guest-key mode (4.6).
+    if (raw !== undefined && raw !== 'ready') return reply.error(400, 'bad-request', BAD_QUESTION);
+    const visitor = opts.limiter.visitor(clientIp(req.headers, req.socket.remoteAddress, opts.trustProxy));
+    const t0 = Date.now();
+    const log = (outcome: string, detail?: string) => opts.log.write({ visitor, outcome: `load-${outcome}`, ms: Date.now() - t0, ...(detail ? { detail } : {}) });
+
+    if (opts.paused() || models.state() === 'off') {
+      log('switch-off');
+      return reply.error(503, 'switch-off', MESSAGES['switch-off']);
+    }
+    if (models.serves('ready')) return reply.result({ models: models.view() });
+    const joining = models.joins('ready');
+    if (!joining) {
+      const limit = loadLimiter.take(visitor);
+      if (!limit.ok) {
+        log(`limited-${limit.reason}`);
+        const code = `load-${limit.reason}` as const;
+        return reply.error(429, code, MESSAGES[code], limit.retryAfterSec);
+      }
+    }
+    if (String(req.headers.accept ?? '').includes('text/event-stream')) reply.startStream();
+    const off = models.subscribe((v) => reply.event('models', v));
+    try {
+      const reached = await models.start('ready', (work) => opts.queue.run(`load:${visitor}`, work, {}));
+      log(joining ? 'joined' : 'done', reached);
+      reply.result({ models: models.view() });
+    } catch (e) {
+      if (e instanceof QueueRefused) {
+        if (!joining) loadLimiter.refund(visitor);
+        log(`refused-${e.reason}`);
+        return reply.error(503, 'busy', MESSAGES.busy);
+      }
+      log('failed', e instanceof LoadFailed ? e.stage : e instanceof Error ? e.message : 'unknown');
+      if (e instanceof Error && e.message === 'switch-off') return reply.error(503, 'switch-off', MESSAGES['switch-off']);
+      reply.error(503, 'load-failed', MESSAGES['load-failed']);
+    } finally {
+      off();
+    }
   });
 
   app.post('/api/ask', async (req: Request, res: Response) => {
@@ -146,6 +230,13 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
       opts.limiter.refund(visitor);
       log('paused');
       return reply.error(503, 'paused', MESSAGES.paused);
+    }
+
+    if (!models.serves('ready')) {
+      opts.limiter.refund(visitor);
+      const code = notServing(models.view());
+      log(code);
+      return reply.error(503, code, MESSAGES[code]);
     }
 
     if (!(await opts.probe.up().catch(() => false))) {

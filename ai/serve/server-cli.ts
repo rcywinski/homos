@@ -10,14 +10,15 @@
  * SERVE_ENGINE=fake runs the dry run (fake models, no GPU). With the real engine the server refuses to start when the
  * saved index does not match the corpus on disk.
  */
-import { existsSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import { LocalGenerator } from '../answer/local';
 import { loadCorpus } from '../corpus/load';
 import { createApp, type BoxProbe } from './app';
 import type { AskDeps } from './ask';
 import { ConfigError, loadServeConfig } from './config';
-import { DryRunGenerator, FAKE_ENGINE, fakeRetrieval } from './fake-engine';
+import { DryRunGenerator, FAKE_ENGINE, FakeModelBackend, fakeRetrieval } from './fake-engine';
+import { Models } from './models-state';
 import { FileLog } from './log';
 import { loadWalletForServing } from './wallet-export';
 import { GpuQueue } from './queue';
@@ -42,10 +43,20 @@ function boxProbe(inferenceUrl: string, rerankUrl: string): BoxProbe {
   };
 }
 
+/** The owner switch: on only when the file exists and says "on" (step 4.10). */
+function switchSaysOn(file: string): boolean {
+  try {
+    return readFileSync(file, 'utf8').trim().toLowerCase() === 'on';
+  } catch {
+    return false;
+  }
+}
+
 async function main() {
   const cfg = loadServeConfig();
   let deps: AskDeps;
   let probe: BoxProbe;
+  let models: Models | undefined;
   if (cfg.engine === 'fake') {
     // The dry run never needs the index, but it reports on it, so CC-Win can check a copied index before step 4.8.
     const chunks = loadCorpus();
@@ -58,6 +69,14 @@ async function main() {
     } else console.log(`[serve] dry run: ${file} not present; the real engine would refuse to start`);
     deps = { retrieval: await fakeRetrieval(), generator: new DryRunGenerator(cfg.fakeDelayMs), engine: FAKE_ENGINE, k: cfg.preset.k };
     probe = { up: async () => true };
+    // Step 4.10a: the dry run starts with nothing loaded; a visitor loads the fake models, if the owner switch is on.
+    models = new Models({
+      backend: new FakeModelBackend(cfg.fakeLoadMs, cfg.fakeLoadFail),
+      typicalMs: cfg.typicalLoadMs,
+      switchOn: () => switchSaysOn(cfg.switchFile) && !existsSync(cfg.pauseFile),
+      logFailure: (m) => console.log(`[serve] ${new Date().toISOString()} model load failed: ${m}`),
+    });
+    console.log(`[serve] dry run: models start unloaded; owner switch ${switchSaysOn(cfg.switchFile) ? 'on' : 'off'} (${cfg.switchFile})`);
   } else {
     const residency: ResidencyOptions = {
       baseUrl: cfg.inferenceUrl,
@@ -97,6 +116,8 @@ async function main() {
     trustProxy: cfg.trustProxy,
     paused: () => existsSync(cfg.pauseFile),
     walletJson: wallet.ok ? wallet.json : undefined,
+    models,
+    loadLimiter: new RateLimiter(cfg.loadLimits),
     staticDir: existsSync(path.join('showcase', 'public', 'app.js')) ? path.join('showcase', 'public') : undefined,
   });
   if (!existsSync(path.join('showcase', 'public', 'app.js'))) console.log('[serve] showcase not built (npm run showcase:build): API only');

@@ -283,7 +283,9 @@ async function disconnectTests() {
 async function dryRunProcess() {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'homos-serve-dry-'));
   const envFile = path.join(dir, 'serve.env');
-  writeFileSync(envFile, `SERVE_ENGINE=fake\nSERVE_PORT=0\nSERVE_LOG_DIR=${path.join(dir, 'logs').replace(/\\/g, '/')}\nSERVE_PAUSE_FILE=${path.join(dir, 'PAUSED').replace(/\\/g, '/')}\n`);
+  writeFileSync(envFile, `SERVE_ENGINE=fake\nSERVE_PORT=0\nSERVE_LOG_DIR=${path.join(dir, 'logs').replace(/\\/g, '/')}\nSERVE_PAUSE_FILE=${path.join(dir, 'PAUSED').replace(/\\/g, '/')}\nSERVE_SWITCH_FILE=${path.join(dir, 'SWITCH').replace(/\\/g, '/')}\nSERVE_FAKE_LOAD_MS=10\n`);
+  // Step 4.10a: the dry run starts unloaded and loads only when the owner switch is on.
+  writeFileSync(path.join(dir, 'SWITCH'), 'on\n');
   const env = { ...process.env };
   delete env.ANTHROPIC_API_KEY;
   delete env.INFERENCE_URL;
@@ -306,6 +308,8 @@ async function dryRunProcess() {
       child.on('exit', (code) => reject(new Error(`exited ${code}: ${out}`)));
     });
     check('dry run starts on loopback', url.startsWith('http://127.0.0.1:'));
+    const loaded = (await (await fetch(`${url}/api/models/load`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).json()) as { models: { state: string } };
+    check('dry run loads its fake models on request', loaded.models.state === 'ready', JSON.stringify(loaded));
     const r = (await (await fetch(`${url}/api/ask`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question: 'Why wide ranges?' }) })).json()) as { outcome: string; engine: { label: string } };
     check('dry run answers, labelled as a dry run', r.outcome === 'answered' && r.engine.label.includes('dry run'), JSON.stringify(r).slice(0, 200));
     writeFileSync(path.join(dir, 'PAUSED'), '');
