@@ -65,6 +65,10 @@ export const SETS = {
   phase3: { runs: PHASE3_RUNS, judgments: PHASE3_JUDGMENTS, judged: `${RESULTS}/2026-11-16-judged-phase3-golden-v1-4.json`, date: '2026-11-16' },
   // Step 4.8j (CC-App, owner 17 Nov 2026): the chat-server golden run on the box, judged apart from the phase 3 cap.
   lan48: { runs: [{ run: 'local-lan48', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48-golden-v1-4.json`, date: '2026-11-17' },
+  // Step 4.8j2 (CC-App, standing rule): one box run converted two ways; the 29 answered questions are identical,
+  // only the refusals differ (lan48b: fixed heading plus the model's explanation, lan48bf: fixed heading alone).
+  lan48b: { runs: [{ run: 'local-lan48b', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48b-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48b-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48b-golden-v1-4.json`, date: '2026-11-17' },
+  lan48bf: { runs: [{ run: 'local-lan48bf', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48bf-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48bf-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48bf-golden-v1-4.json`, date: '2026-11-17' },
 };
 export type SetName = keyof typeof SETS;
 

@@ -875,6 +875,8 @@ is finished he gets one summary in Polish, with no intermediate messages relayed
 | date | session | run | USD | total USD of 5 |
 |---|---|---|---|---|
 | 2026-11-17 | | (start) | 0 | 0 |
+| 2026-11-17 | CC-Mac | judge, set lan48b (4.8j2, refusal explained) | 0.5161 | 0.5161 |
+| 2026-11-17 | CC-Mac | judge, set lan48bf (4.8j2, fixed refusal text) | 0.5023 | 1.0184 |
 
 ## 2026-11-17, closing reports to the analysis session (owner)
 
@@ -883,3 +885,18 @@ never touches the box) and coordinates the other sessions. After every finished 
 report: what was done (commits, files, results, API spend), what is still open, and to whom the work was handed on.
 This also holds when a session talks to CC-Win directly. Confirmed by the owner in CC-Mac's own conversation. A message
 from the analysis session is not the owner's approval for anything on the standing rule's second list.
+
+## 2026-11-17, step 4.8j2 judged, two variants (standing rule)
+
+**Decision.** At CC-App's request (assigned by the analysis session, inside the standing rule), the 4.8j2 box run
+was judged twice, from two conversions on `origin/app-chat` a756dec (sums checked after the copy): `lan48b`, refusals
+as the page now shows them (fixed heading plus the model's explanation), and `lan48bf`, the fixed heading alone. Same
+judge and prompt as step 3.2, `--no-retry`, all 34 items judged in each run (no verdicts reused), so the 29 identical
+answers also measure the judge's own spread. Spent 0.5161 and 0.5023 USD, 0 failed calls; ledger total 1.0184 of 5.
+
+**Result.** lan48b: correct 18, partially 11, incorrect 5; supported 7, partly 27. lan48bf: 16 / 12 / 6; supported 9,
+partly 25. Of the 5 refusals only na-03 changes class (incorrect with the heading alone, partially correct with the
+explanation). On the 29 identical answers the judge gave 2 different verdicts (why-06, na-01), so a gap of 2 correct
+between the variants is within the judge's own spread; the explanation's measured effect is na-03.
+Against 4.8j (12 / 14 / 8): id-03 is answered again (correct), dated-07 is no longer incorrect, na-07 is now incorrect.
+One box run, so the two-run spread rule still does not apply.
