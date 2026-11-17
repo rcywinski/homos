@@ -4,10 +4,15 @@
  * same prompt. Offline. Prints the SHA-256 of the output.
  *
  *   node --import tsx ai/serve/tools/to-judge-input.mts --in <lan-run-golden.json> --out <answers file> [--label lan48]
+ *     [--refusal explained|fixed]
+ * --refusal fixed judges "not in the data" on the fixed heading alone (as in 4.8j), so a run with explanations can
+ * be judged both ways and the effect of the explanation measured on the same answers. Default: explained.
  *
  * Differences from a step 3.2 file, stated in the output's `note`: answers come through the chat server (live
  * retrieval, not saved chunk lists); for "not in the data" the answer text is the fixed text the visitor sees, not the
- * model's own sentence; token usage and cost are not available (local model, no API cost).
+ * model's own sentence, unless the run has the model's explanation (server after 17 Nov 2026), in which case the
+ * answer is the heading plus that explanation, as the visitor sees it, with the explanation's quotes; token usage
+ * and cost are not available (local model, no API cost).
  */
 import { createHash } from 'crypto';
 import { readFileSync, writeFileSync } from 'fs';
@@ -23,6 +28,11 @@ const opt = (n: string, f?: string) => (args.includes(n) ? args[args.indexOf(n) 
 const inFile = opt('--in');
 const outFile = opt('--out');
 const label = opt('--label', 'lan48')!;
+const refusal = opt('--refusal', 'explained');
+if (refusal !== 'explained' && refusal !== 'fixed') {
+  console.error('--refusal must be explained or fixed');
+  process.exit(2);
+}
 if (!inFile || !outFile) {
   console.error('usage: to-judge-input.mts --in <lan-run-golden.json> --out <answers file> [--label lan48]');
   process.exit(2);
@@ -35,6 +45,7 @@ interface Row {
   text: string;
   quotes: { status: string; reason?: string; file: string; chunkId?: string; quote?: string; lines: [number, number] | null }[];
   sources: string[] | number;
+  explanation?: { text: string; quotes: Row['quotes'] };
   timing: { totalMs: number };
   serverMs: number | null;
 }
@@ -66,7 +77,8 @@ const perQuestion: AnswerRecord[] = golden.map((q) => {
   const r = byId.get(q.id)!;
   const searched = (r.sources as string[]).map((id) => corpus.get(id)).filter((c): c is Chunk => !!c);
   const onEvidence = (c: Chunk | undefined) => !!c && q.evidence.some((e) => overlaps(c, e));
-  const citations = r.quotes.map((c) => {
+  const ex = r.outcome === 'not-in-data' && refusal === 'explained' ? r.explanation : undefined;
+  const citations = (ex ? ex.quotes : r.quotes).map((c) => {
     const status = c.status === 'verified' ? 'ok' : c.reason === 'unknown-chunk' ? 'unknown-chunk' : 'not-found';
     const words = (c.quote ?? '').trim().split(/\s+/).filter(Boolean).length;
     return { chunkId: c.chunkId!, quote: c.quote!, words, tooLong: words > 40, status, file: c.file, ...(c.lines ? { lines: c.lines } : {}) };
@@ -83,7 +95,7 @@ const perQuestion: AnswerRecord[] = golden.map((q) => {
     usage: { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 },
     costUsd: 0,
     ms: r.serverMs ?? r.timing.totalMs,
-    answer: r.text,
+    answer: ex ? `${r.text}\n\nThe model's own explanation: ${ex.text}` : r.text,
     chunkIds: r.sources as string[],
     ...(coverage === 'error' ? { error: r.outcome } : {}),
   };
@@ -103,6 +115,9 @@ const out = {
   source: { file: inFile.split(/[\\/]/).pop(), sha256: createHash('sha256').update(raw).digest('hex') },
   perQuestion,
 };
+const explained = refusal === 'explained' ? run.rows.filter((r) => r.outcome === 'not-in-data' && r.explanation).length : 0;
+if (refusal === 'fixed') out.note += ' Judged with the fixed heading alone for "not in the data" (--refusal fixed), even where the run has the explanation.';
+if (explained) out.note += ` ${explained} "not in the data" answers include the model's own explanation under the fixed heading, as the page shows it.`;
 const body = JSON.stringify(out, null, 1) + '\n';
 writeFileSync(outFile, body);
 const counts = perQuestion.reduce<Record<string, number>>((m, r) => ((m[r.coverage] = (m[r.coverage] ?? 0) + 1), m), {});

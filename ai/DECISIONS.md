@@ -582,3 +582,18 @@ still need the owner's answer in the session that asks.
 **Spending ledger.** One shared ledger, kept by CC-Mac in `ai/DECISIONS.md` on `ai-layer` (commit fbb2c58, section
 "standing rule"), so there is a single total. CC-App sends each paid run (date, run, USD) to CC-Mac. The 4.8j judge
 (0.54 USD) came before the rule; the total since the rule starts at 0 USD.
+
+## 2026-11-17, "not in the data" shows the model's explanation (owner)
+
+**Decision.** For "not in the data" the chat keeps the fixed heading and shows the model's own explanation under it.
+Without a verified quote it is labelled "not backed by a quote"; with verified quotes (5 of 11 refusals in pb1 and pb2
+had them), "only the parts the quotes below cover are backed", and the quotes are shown. Numbers carry the same marks
+as in an answer. Prompt P is unchanged.
+
+**Why.** In 4.8j the fixed text alone cost 3 correct verdicts (id-03, na-02, na-03): it cannot correct a false
+premise, and it hid id-03's partial answer. The label wording differs from "not backed by a quote" only where that
+would be false.
+
+**Gap analysis.** Live retrieval gave the same chunks as the saved lists on all 34 questions; the 12 against 16 and
+18 is the fixed text plus run-to-run variation (`ai/eval/results/2026-11-17-judged-lan48-4.8j.md`). A second live run
+is needed before concluding.

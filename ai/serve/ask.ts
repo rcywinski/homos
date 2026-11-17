@@ -31,6 +31,12 @@ export interface AskResponse {
   numbers: NumberMark[];
   /** Chunks given to the model, so the visitor can see what was searched. Empty when retrieval did not run. */
   sources: { chunkId: string; file: string; lines: [number, number]; title: string }[];
+  /**
+   * Only for "not-in-data" (owner, 17 Nov 2026): the model's own explanation under the fixed heading, so a false
+   * premise can be corrected. Its quotes are checked and its numbers marked by the same rules as an answer; the page
+   * labels it as the model's explanation, "not backed by a quote" when no quote of it is verified.
+   */
+  explanation?: { text: string; citations: ShowcaseCitation[]; numbers: NumberMark[] };
   ms: number;
 }
 
@@ -99,8 +105,6 @@ export async function ask(deps: AskDeps, question: string, onStage?: (s: Stage) 
   const r = await during('generating', () => answerWithChecks(deps.generator, question, chunks, deps.root, signal));
   const out = r.output;
   if (!out || r.error) return fixed(deps, 'failed', FAILED, t0, sources);
-  if (out.coverage === 'none') return fixed(deps, 'not-in-data', NOT_IN_DATA, t0, sources);
-
   const citations: ShowcaseCitation[] = r.citations.map((c) => ({
     chunkId: c.chunkId,
     file: c.file ?? c.chunkId.split(':')[0],
@@ -114,13 +118,18 @@ export async function ask(deps: AskDeps, question: string, onStage?: (s: Stage) 
   const verifiedQuotes = r.citations.filter((c) => c.status === 'ok').map((c) => c.quote);
   const given = new Map(chunks.map((c) => [c.id, c]));
   const citedChunks = [...new Set(r.citations.filter((c) => c.status === 'ok').map((c) => c.chunkId))].map((id) => given.get(id)?.text ?? '');
+  const numbers = markNumbers(text, verifiedQuotes, citedChunks, { searchedChunks: chunks.map((c) => c.text) });
+  if (out.coverage === 'none') {
+    const base = fixed(deps, 'not-in-data', NOT_IN_DATA, t0, sources);
+    return text.trim() ? { ...base, explanation: { text, citations, numbers } } : base;
+  }
   return {
     outcome: 'answered',
     engine: deps.engine,
     coverage: out.coverage,
     text,
     citations,
-    numbers: markNumbers(text, verifiedQuotes, citedChunks, { searchedChunks: chunks.map((c) => c.text) }),
+    numbers,
     sources,
     ms: Date.now() - t0,
   };

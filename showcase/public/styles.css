@@ -331,3 +331,16 @@ select {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* The model's own explanation under "not in the data" (owner, 17 Nov 2026): set apart from the fixed heading. */
+.explanation {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--rule);
+  background: var(--paper);
+}
+.explanation-label {
+  font-weight: var(--label-weight);
+  color: var(--ink-soft);
+  margin: 0 0 0.5rem;
+}

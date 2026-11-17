@@ -180,6 +180,32 @@ export function Ask() {
   );
 }
 
+/**
+ * The model's own explanation under the fixed "not in the data" heading (owner, 17 Nov 2026). It can correct a false
+ * premise, so it is shown, but it is labelled: no verified quote means "not backed by a quote"; with verified quotes,
+ * only the quoted parts are backed. Numbers carry the same marks as in an answer.
+ */
+function Explanation({ e }: { e: NonNullable<AskResponse['explanation']> }) {
+  const backed = e.citations.some((c) => c.status === 'verified');
+  return (
+    <div className="explanation" data-testid="chat-explanation" data-backed={backed ? 'partly' : 'no'}>
+      <p className="explanation-label">
+        {backed
+          ? "The model's own explanation. Only the parts the quotes below cover are backed; the rest is not."
+          : "The model's own explanation. It is not backed by a quote."}
+      </p>
+      <NumberSummary numbers={e.numbers} />
+      <MarkedText text={e.text} numbers={e.numbers} />
+      {e.citations.length > 0 && (
+        <>
+          <h3 className="sub-title">Quotes</h3>
+          <Citations citations={e.citations} />
+        </>
+      )}
+    </div>
+  );
+}
+
 function AnswerBlock({ question, r }: { question: string; r: AskResponse }) {
   return (
     <article className={`answer answer-${r.outcome}`} data-testid="chat-answer" data-outcome={r.outcome}>
@@ -195,9 +221,12 @@ function AnswerBlock({ question, r }: { question: string; r: AskResponse }) {
           <Citations citations={r.citations} />
         </>
       ) : (
-        <p className="fixed-text" data-testid="chat-fixed-text">
-          {r.text}
-        </p>
+        <>
+          <p className="fixed-text" data-testid="chat-fixed-text">
+            {r.text}
+          </p>
+          {r.explanation && <Explanation e={r.explanation} />}
+        </>
       )}
       {r.sources.length > 0 && (
         <details className="sources">

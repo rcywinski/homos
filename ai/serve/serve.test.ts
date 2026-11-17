@@ -232,7 +232,7 @@ async function main() {
       const words = given[0].text.split(/\s+/).filter(Boolean).slice(0, 8).join(' ');
       const out: GeneratedAnswer =
         this.mode === 'none'
-          ? { answer: 'I could not find it.', coverage: 'none', citations: [] }
+          ? { answer: 'I could not find it; the sources name 7 pools, not 9.', coverage: 'none', citations: [] }
           : {
               answer: `The box at 192.168.1.8:8787 says "${words}" and invented 4242.`,
               coverage: 'partial',
@@ -264,6 +264,10 @@ async function main() {
   const none = await ask(deps(new ScriptedGenerator('none')), 'What was the weather in Warsaw on 3 Sep?');
   check('coverage none gives the fixed text', none.outcome === 'not-in-data' && none.text === NOT_IN_DATA && none.citations.length === 0);
   check('not-in-data still lists what was searched', none.sources.length === 10);
+  // Owner, 17 Nov 2026: the model's own explanation goes under the fixed heading, with its quotes and number marks.
+  check('not-in-data carries the model explanation', none.explanation?.text === 'I could not find it; the sources name 7 pools, not 9.', JSON.stringify(none.explanation));
+  check('the explanation has number marks, here not verified (no quote)', none.explanation?.numbers.length === 2 && none.explanation.numbers.every((n) => n.status === 'not-verified'), JSON.stringify(none.explanation?.numbers));
+  check('the fixed heading itself has no marks or quotes', none.numbers.length === 0 && none.citations.length === 0);
 
   const bad = await ask(deps(new ScriptedGenerator('invalid')), 'What happened on 27.08?');
   check('invalid output gives the plain failure text', bad.outcome === 'failed' && bad.text === FAILED && bad.citations.length === 0 && bad.numbers.length === 0);

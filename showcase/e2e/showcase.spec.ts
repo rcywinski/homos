@@ -155,6 +155,11 @@ test('a question with no answer in the data gets the fixed "not in the data" tex
   const answer = page.getByTestId('chat-answer');
   await expect(answer).toHaveAttribute('data-outcome', 'not-in-data');
   await expect(answer.getByTestId('chat-fixed-text')).toContainText('The project data does not answer this question.');
+  // The model's own explanation under the heading, labelled as not backed by a quote (owner, 17 Nov 2026).
+  const ex = answer.getByTestId('chat-explanation');
+  await expect(ex).toHaveAttribute('data-backed', 'no');
+  await expect(ex).toContainText("The model's own explanation. It is not backed by a quote.");
+  await expect(ex).toContainText('Dry run: the best source does not mention the question.');
   await expect(answer.locator('.sources summary')).toContainText('Sources searched (10)');
   await shot(page, info, 'not-in-data');
 });

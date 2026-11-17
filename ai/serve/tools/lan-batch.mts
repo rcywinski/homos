@@ -43,6 +43,8 @@ interface Row {
   quotes: { status: string; reason?: string; file: string; chunkId: string; quote: string; lines: [number, number] | null }[];
   numbers: { text: string; status: string; transformation?: string; from?: string; context: string }[];
   sources: string[];
+  /** "not-in-data" only: the model's own explanation shown under the fixed heading (owner, 17 Nov 2026). */
+  explanation?: { text: string; quotes: Row['quotes']; numbers: Row['numbers'] };
   timing: Timing;
   serverMs: number | null;
   error?: string;
@@ -91,17 +93,26 @@ async function askTimed(question: string, abortAfterGeneratingMs?: number): Prom
   return { events, result, status: res.status, aborted: false };
 }
 
-function toRow(id: string, question: string, r: Awaited<ReturnType<typeof askTimed>>): Row {
-  const e = r.events;
-  const out = (r.result ?? {}) as Record<string, unknown>;
-  const text = String(out.text ?? out.message ?? '');
-  const numbers = ((out.numbers ?? []) as { text: string; start: number; end: number; status: string; transformation?: string; from?: string }[]).map((n) => ({
+type RawNumber = { text: string; start: number; end: number; status: string; transformation?: string; from?: string; reason?: string };
+type RawQuote = { status: string; reason?: string; file: string; chunkId: string; quote: string; lines: [number, number] | null };
+const numbersOf = (text: string, raw: unknown) =>
+  ((raw ?? []) as RawNumber[]).map((n) => ({
     text: n.text,
     status: n.status,
     ...(n.transformation ? { transformation: n.transformation } : {}),
     ...(n.from ? { from: n.from } : {}),
+    ...(n.reason ? { reason: n.reason } : {}),
     context: text.slice(Math.max(0, n.start - 40), n.end + 25).replace(/\s+/g, ' '),
   }));
+const quotesOf = (raw: unknown) =>
+  ((raw ?? []) as RawQuote[]).map((c) => ({ status: c.status, ...(c.reason ? { reason: c.reason } : {}), file: c.file, chunkId: c.chunkId, quote: c.quote, lines: c.lines }));
+
+function toRow(id: string, question: string, r: Awaited<ReturnType<typeof askTimed>>): Row {
+  const e = r.events;
+  const out = (r.result ?? {}) as Record<string, unknown>;
+  const text = String(out.text ?? out.message ?? '');
+  const numbers = numbersOf(text, out.numbers);
+  const ex = out.explanation as { text: string; citations: unknown; numbers: unknown } | undefined;
   return {
     id,
     question,
@@ -109,16 +120,10 @@ function toRow(id: string, question: string, r: Awaited<ReturnType<typeof askTim
     outcome: String(out.outcome ?? out.error ?? 'none'),
     coverage: (out.coverage as string | null) ?? null,
     text,
-    quotes: ((out.citations ?? []) as { status: string; reason?: string; file: string; chunkId: string; quote: string; lines: [number, number] | null }[]).map((c) => ({
-      status: c.status,
-      ...(c.reason ? { reason: c.reason } : {}),
-      file: c.file,
-      chunkId: c.chunkId,
-      quote: c.quote,
-      lines: c.lines,
-    })),
+    quotes: quotesOf(out.citations),
     numbers,
     sources: ((out.sources ?? []) as { chunkId: string }[]).map((x) => x.chunkId),
+    ...(ex ? { explanation: { text: ex.text, quotes: quotesOf(ex.citations), numbers: numbersOf(ex.text, ex.numbers) } } : {}),
     timing: {
       queuedMs: e.queued ?? null,
       retrievalMs: e.retrieving !== undefined && e.generating !== undefined ? e.generating - e.retrieving : null,
