@@ -453,11 +453,12 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   for the owner (`ai/eval/results/2026-11-17-number-marks-4.8n.md`). Owner's decisions applied: proposals 1 and 3 on,
   2 rejected, identifiers checked as one token; final: 18 "not verified" (6 with the uncited reason) on the 57 real
   answers, 34 of 34 seeded errors caught, including two invented identifiers the old rule did not mark at all.
-- [ ] NEXT **4.8j** Blind judge (same judge and prompt as step 3.2), about $1.5, owner approved. Variant (b) chosen by
-  the owner: the 4.8 file lacks the quote texts the judge reads, so CC-Win reruns the 34 golden questions on the box
-  with the fixed batch tool, CC-App converts the output to the step 3.2 answers format, and CC-Mac runs the judge from
-  the main checkout (the key stays out of this worktree).
-- [ ] **4.10** On-demand models with an owner switch (section 10), design accepted 17 Nov 2026 with variant (a)
+- [x] **4.8j** Blind judge (same judge and prompt as step 3.2) on two live runs of the 34 golden questions through the
+  chat server (4.8j and 4.8j2), refusals judged with and without the model's explanation. Live retrieval gave the
+  step 3.2 chunk lists on all 34 questions in both runs. With the explanation (the page as built): 18 / 11 / 5, within
+  the phase 3 spread (one run); with the fixed heading alone (two runs): incorrect beyond the spread. Judge cost
+  $0.54 + $0.52 + $0.50. Result: `ai/eval/results/2026-11-17-judged-lan48-4.8j.md`.
+- [ ] NEXT **4.10** On-demand models with an owner switch (section 10), design accepted 17 Nov 2026 with variant (a)
   Cloudflare Access and a 15-minute idle period; until the tunnel exists the switch is the file on the box. Starts
   after 4.8n. Follow-up: the master switch should eventually release the reranker too, so the whole GPU is free when
   the chat is off; this needs load and unload endpoints in `inference/`, coordinated with CC-Mac when we get there.
