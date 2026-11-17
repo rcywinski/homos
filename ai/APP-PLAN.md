@@ -344,7 +344,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   health with `up`, `busy`, `paused` and `model-offline`, the "model unavailable" message, pause file, dry-run engine
   (`SERVE_ENGINE=fake`), start-up refusal on a missing or mismatched index. Tests with a slow fake generator and the
   dry-run server started as a child process. Fake. M.
-- [ ] NEXT **4.4b** [CC-Win] Windows dry run with fake models, without touching the GPU: CC-Win clones `app-chat` into
+- [ ] **4.4b** [CC-Win] Windows dry run with fake models, without touching the GPU: CC-Win clones `app-chat` into
   the serving checkout as `homos-web`, runs `npm ci`, the serve tests and `npm run showcase:build`, writes `serve.env`
   with `SERVE_ENGINE=fake`, starts the server with the node command of section 6 on 127.0.0.1, calls `/api/health`
   and asks one question with `curl.exe`, creates and deletes the pause file, and reports the outputs. Does not need
