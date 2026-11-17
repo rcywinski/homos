@@ -840,3 +840,21 @@ on the pushed merge passed (run 43926626532, 2 min 42 s). The merge brings steps
 
 **Note for whoever merges `app-chat`.** That branch changes `ai/answer/` (an optional `signal` parameter in
 `Generator.generate` and `answerWithChecks`) and appends to `ai/DECISIONS.md`: check both against `main` at the merge.
+
+## 2026-11-17, step 4.8j judged on the Mac (owner)
+
+**Decision.** At CC-App's request and with the owner's approval, the 4.8j chat-server golden run (34 questions,
+answers file taken from `origin/app-chat` 244d345, SHA-256 5da61a7f...474d, checked after the copy) was judged on
+`ai-layer` with the same judge (Opus 5.5, effort medium) and prompt as step 3.2, in its own set `lan48`, kept apart
+from the phase 3 cap. Cap 2 USD, spent 0.5402 USD.
+
+**No retries.** The owner asked for no retries of failed calls. `judge.ts` retried twice over: the SDK client with
+`maxRetries: 4`, and a second call when a verdict was missing (whose first cost was then not counted in the spend
+total). A `--no-retry` flag now turns both off; this run used it and had 0 failed calls, so the result is the same
+as it would have been with retries. Earlier sets keep the old behaviour.
+
+**Result.** correct 12, partially correct 14, incorrect 8; supported 6, partly supported 27, unsupported 1 (pb1:
+16/15/3, pb2: 18/11/5). Three of the 8 incorrect (id-03, na-02, na-03) are the chat server's fixed "not in the data"
+text: the reference of each gives a real answer (id-03) or corrects the premise with facts (na-02, na-03), which the
+fixed text cannot. One run, live retrieval and the fixed text differ from 3.2, so this is not a like-for-like
+comparison under the two-run spread rule.
