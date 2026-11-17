@@ -455,9 +455,10 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   answers, 34 of 34 seeded errors caught, including two invented identifiers the old rule did not mark at all.
 - [x] **4.8j** Blind judge (same judge and prompt as step 3.2) on two live runs of the 34 golden questions through the
   chat server (4.8j and 4.8j2), refusals judged with and without the model's explanation. Live retrieval gave the
-  step 3.2 chunk lists on all 34 questions in both runs. With the explanation (the page as built): 18 / 11 / 5, within
-  the phase 3 spread (one run); with the fixed heading alone (two runs): incorrect beyond the spread. Judge cost
-  $0.54 + $0.52 + $0.50. Result: `ai/eval/results/2026-11-17-judged-lan48-4.8j.md`.
+  step 3.2 chunk lists on all 34 questions in both runs. With the explanation (the page as built), two runs (4.8j2 18 / 11 / 5,
+  4.8j3 16 / 14 / 4): within the phase 3 spread on every count; with the fixed heading alone (two runs): incorrect
+  beyond the spread. Live retrieval matched the saved chunk lists on 34 of 34 in all three runs. Judge cost
+  $0.54 + $0.52 + $0.50 + $0.53. Result: `ai/eval/results/2026-11-17-judged-lan48-4.8j.md`.
 - [ ] NEXT **4.10** On-demand models with an owner switch (section 10), design accepted 17 Nov 2026 with variant (a)
   Cloudflare Access and a 15-minute idle period; until the tunnel exists the switch is the file on the box. Starts
   after 4.8n. Follow-up: the master switch should eventually release the reranker too, so the whole GPU is free when
