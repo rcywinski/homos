@@ -482,7 +482,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   17 Nov 2026): counted per visitor, not against the site total, and 2 minutes before the next load
   (`SERVE_LOAD_COOLDOWN_MS`). On the box this needs `SERVE_SWITCH_FILE` in `serve.env`, pointing outside the clone
   (for example `C:\HomosServe\SWITCH`), or the models stay off.
-  **4.10d done on the box (17 Nov 2026), awaiting the owner's OK:** loads 21.7 and 15.6 s (generator) plus 2.6 s
+  **4.10d done on the box (17 Nov 2026, owner's OK):** loads 21.7 and 15.6 s (generator) plus 2.6 s
   (bge-m3); idle releases in 1 s; a switch-off during a load aborted it in Ollama itself, no late model; the 8 GB
   commit rise is the generator's llama-server and is fully returned on release (21.9 GB again, stable for an hour);
   VRAM per process not readable under WDDM. `ai/eval/results/2026-11-17-models-on-demand-4.10d.md`.
