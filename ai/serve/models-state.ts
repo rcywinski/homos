@@ -269,6 +269,8 @@ export class Models {
     }
     this.current = target;
     this.lastUse = this.now();
+    // The stage times feed the typical times shown to visitors (measured in 4.10d).
+    this.log(`models loaded to ${target}: ${stages.map((x) => `${x.name} ${((x.elapsedMs ?? 0) / 1000).toFixed(1)} s`).join(', ')}`);
     this.emit();
     return target;
   }
@@ -293,6 +295,7 @@ export class Models {
 
   private releaseNow(reason: string, watchMs = 0): Promise<void> {
     let watch = watchMs;
+    const began = this.now();
     const attempt = async () => {
       const r = this.release!;
       const problem = await this.o.backend.releaseAll(watch).catch((e: unknown) => (e instanceof Error ? e.message : String(e)));
@@ -305,7 +308,7 @@ export class Models {
         this.emit();
         return false;
       }
-      this.log(`models released (${reason})`);
+      this.log(`models released (${reason}) in ${((this.now() - began) / 1000).toFixed(1)} s`);
       this.release = null;
       this.current = 'idle';
       this.emit();

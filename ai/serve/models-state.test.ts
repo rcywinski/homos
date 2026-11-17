@@ -226,10 +226,13 @@ async function ollama() {
   // A normal load and release through the real backend.
   const f = fakeOllama();
   const be = new OllamaModelBackend({ ...base, fetchFn: f.fetchFn, pollMs: 5, releaseWaitMs: 500 });
-  const m = new Models({ backend: be, typicalMs: TYPICAL, switchOn: () => true });
+  const lines: string[] = [];
+  const m = new Models({ backend: be, typicalMs: TYPICAL, switchOn: () => true, log: (x) => lines.push(x) });
   check('real backend: full load reaches ready', (await m.start('ready', direct)) === 'ready');
   check('real backend: generator loaded before bge-m3', f.calls.indexOf('/api/chat qwen3.8:27b') < f.calls.indexOf('/api/embed bge-m3'), f.calls.join());
+  check('the log gives each stage time', lines.some((l) => /^models loaded to ready: generator [\d.]+ s, embedder [\d.]+ s, check [\d.]+ s$/.test(l)), lines.join(' | '));
   await m.unload('test');
+  check('the log gives the release time', lines.some((l) => /^models released \(test\) in [\d.]+ s$/.test(l)), lines.join(' | '));
   check('real backend: release confirmed by /api/ps, generator stopped first', m.state() === 'idle' && f.loaded.size === 0 && f.calls.indexOf('/api/generate qwen3.8:27b stop') < f.calls.indexOf('/api/generate bge-m3:latest stop'), f.calls.join());
 
   // Abort during the generator stage; Ollama finishes the load a moment later; the release still clears it.

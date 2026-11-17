@@ -471,7 +471,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   (`SERVE_SWITCH_FILE`, missing = off, the pause file wins), the load panel with staged progress and typical times.
   The dry run uses it; the real engine keeps loading at start until 4.10b. Guest loads ("search") get their visitor
   control with 4.6, counted against the same load limits.
-  **4.10b built (17 Nov 2026), awaiting the owner's OK:** releases through Ollama the way `ollama stop` does
+  **4.10b done (17 Nov 2026, owner's OK):** releases through Ollama the way `ollama stop` does
   (keep_alive 0, generator first, tagged names), confirmed by `/api/ps`; the switch turned off aborts a running load
   and releases both models, and the state says "unloading" until the release is confirmed; after an aborted or failed
   load the release watches `/api/ps` for 30 s and releases a model that appears late (Ollama may finish a load whose
