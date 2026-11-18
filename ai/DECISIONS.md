@@ -879,6 +879,7 @@ is finished he gets one summary in Polish, with no intermediate messages relayed
 | 2026-11-17 | CC-Mac | judge, set lan48bf (4.8j2, fixed refusal text) | 0.5023 | 1.0184 |
 | 2026-11-17 | CC-Mac | judge, set lan48c (4.8j3, refusal explained) | 0.5320 | 1.5504 |
 | 2026-11-18 | CC-Mac | guest-key run 4.6e, 34 golden questions, Sonnet 5.5 (owner approved about 1 USD) | 1.0049 | 2.5553 |
+| 2026-11-18 | CC-Mac | judge, set guest46e (4.6e guest-key run) | 0.5479 | 3.1032 |
 
 ## 2026-11-17, closing reports to the analysis session (owner)
 
@@ -914,3 +915,19 @@ this is the first two-run pair of the chat server: mean 17 / 12.5 / 4.5, against
 4; the gaps are within both spreads, so the chat server is not distinguishable from step 3.2 on these counts. 7 of 34
 questions changed class between the two runs. dated-04, dated-05, dated-06 and id-07 are incorrect in all three box
 runs (4.8j, 4.8j2, 4.8j3).
+
+## 2026-11-18, step 4.6e guest-key run and its judgment (owner)
+
+**Decision.** On the owner's word in CC-Mac's conversation (about 1 USD, then the judge), CC-Mac ran CC-App's
+`ai/serve/tools/guest-batch.mts` (from `origin/app-chat`, sum checked) from the main checkout against the public
+address, which was read from a local file outside the repo and appears in no file, log or commit. The 34 golden
+questions went through the visitor's path: our retrieve, one Sonnet 5.5 call with the key, our verify, no retry.
+CC-Win raised the per-visitor limits for the run and restored them afterwards. Spent 1.0049 USD; 34 of 34 done, 30
+answered, 4 not-in-data (na-03 to na-06), 98 quotes all verified. CC-App converted the output (label `guest46e`); the
+answers file was judged as set `guest46e`, same judge and prompt as step 3.2, `--no-retry`. Spent 0.5479 USD, 0
+failed calls; ledger total 3.1032 of 5.
+
+**Result.** correct 18, partially 11, incorrect 5 (dated-01, dated-04, dated-05, id-07, na-07); supported 5, partly
+29, unsupported 0. One run, so the two-run spread rule does not apply; the counts sit within the range of the chat
+server's lan48b and lan48c (18 / 11 / 5 and 16 / 14 / 4) and of step 3.2 (17 / 13 / 4). CC-App sets it against the
+cloud run of steps 1.10 and 3.2 and the local runs.
