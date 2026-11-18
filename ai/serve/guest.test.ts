@@ -17,7 +17,7 @@ import { DryRunGenerator, FAKE_ENGINE, FakeModelBackend, fakeRetrieval } from '.
 import { GUEST_MAX_TOKENS, guestRequestBody, maskChunk, MEASURED_ANSWER_SCHEMA, parseGuestAnswer, Tickets } from './guest';
 import { MemoryLog } from './log';
 import { MASK } from './mask';
-import { Models, type ModelState } from './models-state';
+import { Models } from './models-state';
 import { GpuQueue } from './queue';
 import { RateLimiter } from './ratelimit';
 
