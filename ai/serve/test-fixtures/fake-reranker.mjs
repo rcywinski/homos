@@ -1,4 +1,4 @@
-/* global process, console */
+/* global process, console, setTimeout */
 // Test stand-in for the reranker service (step 4.10e): `node fake-reranker.mjs app:app --port <port> [mode]`.
 // mode: cuda (default), cpu (answers on the CPU), crash (exits at once with an out-of-memory line), slow (answers
 // after 1.5 s), child (also starts a grandchild that holds the process tree).
