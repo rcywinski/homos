@@ -509,6 +509,11 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   18 Aug report's 11 log lines stored as UTF-8 read as Windows-1250 ("majÄ…") are re-decoded in the showcase data only
   (`ai/serve/encoding.ts`; a line is changed only when it round-trips cleanly), with a note on that report; the corpus
   file keeps its bytes, and the other 36 reports are byte for byte unchanged (test).
+  Admin page wording after the owner's first use: "Visitors may load the models: yes / no", "Allowed on the box",
+  "Allowed from this page", a line that turning on only allows loading, and a clearly disabled button (683684d).
+  Updating the serving clone (from 18 Nov 2026): clone and build in `C:\HomosServe\homos-next` at the pin, copy the
+  gitignored `.env` and `data\showcase\wallet.json`, then stop the server task, swap the folders, start it; the page is
+  down only for the swap, and the previous folder stays for a rollback.
 - [ ] **4.6** Guest-key mode. Plan written 16 Nov 2026 (no code yet); details in section 9. M, in five parts:
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;
@@ -860,6 +865,9 @@ typical load times, VRAM per process (`nvidia-smi --query-compute-apps`), commit
   automatically and possibly the less profitable ones are closed; that needs a stated rule for "less profitable" and
   the switch cost counted, as the selector's rotation rule already does (the edge must cover 0.3% of capital within
   10 days).
+- *Visitors' questions on the admin page* (owner, 18 Nov 2026, later, no design yet): a read-only view of the most
+  recent questions from the existing request log (30 days, masked, no IP), with outcome and engine, behind the same
+  Access check; no visitor hash shown, no download, and the page's text about logging stays true.
 - Still no design and no code.
 
 The owner's goal beyond this phase: the original application as the main page, with a mock wallet and no signing; a
