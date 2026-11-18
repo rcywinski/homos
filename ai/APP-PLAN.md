@@ -755,6 +755,33 @@ typical load times, VRAM per process (`nvidia-smi --query-compute-apps`), commit
 
 ## 11. Later (owner's direction, 17 Nov 2026; no design, no code)
 
+**Owner's decision of 18 Nov 2026 (relayed by the analysis session): order of work and the hosted paper copy.**
+
+- *Order.* Finish everything started first, including the tunnel: 4.6b to 4.6e, 4.9, 4.10c, the merge to `main`.
+  Then the hosted paper-trading copy.
+- *Two separate sections on the site.* (1) **Archive**: the measurements from the period with real capital, with the
+  chat; the project's conclusion is stated here. (2) **Live**: a demonstration only of how those measurements were
+  made, running on a fixed virtual portfolio started at 10 000 USD per pool, for the pools the paper trading ran from
+  the beginning; it draws no conclusion of its own and is labelled as a demonstration.
+- *First version (size M).* The existing single strategy per pool, as a new thin page built from the wallet-free
+  panels, without the cockpit, no wallet, no signing; basis: CC-Mac's reconnaissance `ai/PAPER-HOST-RECON.md` on
+  `ai-layer` (e3513f9). It keeps the pair ranking (the selection gate that ranked pools by recent yield and
+  backtested candidates), so a visitor sees by what rule the pools were chosen; the ranking panel is wallet-free and
+  the selector needs `data/llama/`.
+- *Pools.* The step 4.1b export holds six paper pools of 10 000 USD each, two pairs across chains and fee tiers:
+  `mainnet-usdc-weth-005`, `mainnet-usdc-weth-030`, `arbitrum-weth-usdc-005`, `base-weth-usdc-030`,
+  `base-cbbtc-weth-005`, `base-weth-cbbtc-030` (checked against the local export on 18 Nov 2026). The first version
+  can start with the same six; the owner said "4 or 5" and confirms the list at design time.
+- *Start dates matter.* Five pools opened on 18 Aug 2026, `base-weth-cbbtc-030` on 26 Aug 2026; that is why the two
+  cbBTC pools end with very different holding values (13 998 against 11 066 USD), not the token order. Any
+  side-by-side display shows each pool's start date.
+- *Later version.* Two strategies on the same pair side by side: fees collected, estimated cost of rebalances, and
+  the difference between each strategy and holding, to show what the project found (frequent rebalancing in a narrow
+  range did not beat holding). The page shows what the simulation measures on its period, estimated values labelled
+  as estimates; it promises no outcome in advance, in line with the standing wording that the strategy did not
+  reliably beat holding and that nothing is investment advice.
+- Still no design and no code.
+
 The owner's goal beyond this phase: the original application as the main page, with a mock wallet and no signing; a
 shared live paper-trading simulation on live prices (virtual 10 000 USD positions, wide and narrow ranges,
 rebalances, fees, conversion losses); the chat as a linked subpage; later a chat that reads the live simulation state;
