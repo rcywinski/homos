@@ -1012,3 +1012,16 @@ as data, not through the SDK, so the server's import graph has no Anthropic SDK 
 **Departures.** Verify has its own limiter; canonical base64url required for the ticket signature (a test showed
 that changing the unused bits of the last character decoded to the same signature); the cap is 2,048 output tokens
 against 8,000 in the measured runs, three times the largest measured answer (629).
+
+## 2026-11-18, phase 4 merged into main (owner)
+
+**Decision.** `app-chat` merged into `main` as `7846549` after a dry run: the merge result was pushed as a draft pull
+request (#1) so the CI workflow checked it on GitHub (run 44298471773, success); the real merge repeated the same
+conflict resolutions (the phase 3 judge files from main, `package.json` as a union, both `DECISIONS.md` tails) and has
+an identical tree; CI on `main` passed (run 44299150330). The pull request was closed without merging.
+
+**Why.** The owner's direction of 18 Nov: finish what was started, go live, then merge; the site runs from a pinned
+commit on the box, so the merge changes nothing there.
+
+**Next.** Step 4.10e (the reranker on demand) continues on `app-chat`; `ai-layer` has 12 commits after the phase 3
+merge that are not in `main` yet.

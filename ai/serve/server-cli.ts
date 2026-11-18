@@ -26,11 +26,12 @@ import { FileLog } from './log';
 import { loadWalletForServing } from './wallet-export';
 import { GpuQueue } from './queue';
 import { RateLimiter } from './ratelimit';
-import { leftoverModels, loadedModels, OllamaModelBackend, rerankHealth, rerankProblem, residencyProblem, ResidencyError, startupProblem, type ResidencyOptions } from './residency';
+import { leftoverModels, loadedModels, OllamaModelBackend, residencyProblem, ResidencyError, startupProblem, type ResidencyOptions } from './residency';
+import { defaultRerankerCommand, nvidiaSmiApps, nvidiaSmiPids, RerankerProcess } from './reranker-process';
 import { checkCorpus, IndexMismatch, loadCheckedIndex, localRetrieval, servedIndexPath } from './retrieve';
 
 /** Asks both model services for a sign of life, at most every 30 s; 3 s timeout each. */
-function boxProbe(inferenceUrl: string, rerankUrl: string): BoxProbe {
+function boxProbe(inferenceUrl: string, rerankUrl: string | null): BoxProbe {
   let last = 0;
   let value = false;
   const ping = async (url: string) => (await fetch(url, { signal: AbortSignal.timeout(3000) })).ok;
@@ -38,7 +39,8 @@ function boxProbe(inferenceUrl: string, rerankUrl: string): BoxProbe {
     async up() {
       if (Date.now() - last < 30_000) return value;
       last = Date.now();
-      value = await Promise.all([ping(`${inferenceUrl.replace(/\/$/, '')}/api/version`), ping(`${rerankUrl.replace(/\/$/, '')}/health`)])
+      // A child reranker (4.10e) is off while idle, so only an outside reranker service is part of the probe.
+      value = await Promise.all([ping(`${inferenceUrl.replace(/\/$/, '')}/api/version`), ...(rerankUrl ? [ping(`${rerankUrl.replace(/\/$/, '')}/health`)] : [])])
         .then((r) => r.every(Boolean))
         .catch(() => false);
       return value;
@@ -72,6 +74,8 @@ async function main() {
     log,
   };
   let models: Models;
+  /** Read-only check for the admin page (4.10e): another Python process on the GPU, not the site's own reranker. */
+  let otherReranker: (() => Promise<boolean | null>) | undefined;
   if (cfg.engine === 'fake') {
     // The dry run never needs the index, but it reports on it, so CC-Win can check a copied index before step 4.8.
     const chunks = loadCorpus();
@@ -97,10 +101,35 @@ async function main() {
     };
     // Start-up checks only what does not need the GPU (4.10b): Ollama answers, both models on disk, the reranker on
     // CUDA. Nothing is loaded here; the fixed load order runs when a visitor presses "Load" (ai/serve/models-state.ts).
-    const problem = await startupProblem(residency);
+    const rr = cfg.reranker;
+    const problem = await startupProblem(residency, rr ? { python: rr.python, appFile: path.join(rr.dir, 'app.py') } : undefined);
     if (problem) throw new ResidencyError(problem);
-    console.log(`[serve] start-up check: Ollama answers, ${residency.generator} and ${residency.embedder} on disk, reranker ${residency.reranker} on cuda; this server loads nothing at start`);
-    const backend = new OllamaModelBackend(residency);
+    const rerankerNote = rr ? `reranker started on demand as a child (${rr.python} found)` : `reranker ${residency.reranker} on cuda`;
+    console.log(`[serve] start-up check: Ollama answers, ${residency.generator} and ${residency.embedder} on disk, ${rerankerNote}; this server loads nothing at start`);
+    const rerankerProcess = rr
+      ? new RerankerProcess({
+          command: defaultRerankerCommand(rr.python, rr.port),
+          cwd: rr.dir,
+          port: rr.port,
+          env: { HF_HUB_OFFLINE: '1', TRANSFORMERS_OFFLINE: '1', ...(rr.hfHome ? { HF_HOME: rr.hfHome } : {}) },
+          pidFile: path.join(cfg.logDir, 'reranker.pid'),
+          logFile: path.join(cfg.logDir, 'reranker.log'),
+          marker: ['app:app', `--port ${rr.port}`],
+          gpuPids: nvidiaSmiPids,
+          log,
+        })
+      : undefined;
+    if (rerankerProcess) {
+      const left = await rerankerProcess.endLeftover();
+      if (left) log(left);
+    }
+    const backend = new OllamaModelBackend({ ...residency, rerankerProcess });
+    otherReranker = async () => {
+      const apps = await nvidiaSmiApps();
+      if (!apps) return null;
+      const own = rerankerProcess?.ownPids() ?? [];
+      return apps.some((a) => /python/i.test(a.name) && !own.includes(a.pid));
+    };
     models = new Models({ ...modelsOptions, backend });
     const m = models;
     // Models a previous server left loaded (crash, restart, swap) are released now, not after keep_alive.
@@ -113,7 +142,7 @@ async function main() {
       // Before each question: the resident set is still as loaded. If not (Ollama restarted, a model evicted), nothing
       // reloads by itself: the rest is released, the state drops to idle and the visitor sees the load button again.
       beforeWork: async () => {
-        const problem = residencyProblem(await loadedModels(residency), residency) ?? rerankProblem(await rerankHealth(residency), residency);
+        const problem = residencyProblem(await loadedModels(residency), residency) ?? (await backend.rerankerHealth());
         if (problem) {
           void m.lost(problem);
           throw new ResidencyError(problem);
@@ -128,7 +157,7 @@ async function main() {
         }
       },
     };
-    probe = boxProbe(cfg.inferenceUrl, cfg.rerankUrl);
+    probe = boxProbe(cfg.inferenceUrl, cfg.reranker ? null : cfg.rerankUrl);
   }
   // M1: the wallet file is served only if it is under data/ (or a test fixture in the dry run), is JSON of the right
   // shape and passes the export audit; otherwise the Wallet tab stays hidden and the log says why.
@@ -157,6 +186,7 @@ async function main() {
             htmlFile: path.join('showcase', 'admin', 'admin.html'),
             cssFile: path.join('showcase', 'admin', 'admin.css'),
             jsFile: path.join('showcase', 'admin-dist', 'admin.js'),
+            otherReranker,
           },
         }
       : {}),

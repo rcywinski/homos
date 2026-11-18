@@ -13,6 +13,7 @@ interface AdminState {
   idleReleaseInMinutes: number | null;
   queue: { running: boolean; waiting: number };
   today: { day: string; outcomes: Record<string, number> };
+  otherReranker: boolean | null;
 }
 
 async function getState(): Promise<AdminState | null> {
@@ -79,6 +80,12 @@ function Admin() {
         <p className="state-note" role="status" data-testid="admin-master-off">
           Not allowed on the box, so visitors cannot load the models whatever this page says. That is changed only on the
           box.
+        </p>
+      )}
+      {s.otherReranker && (
+        <p className="state-note" role="status" data-testid="admin-other-reranker">
+          Another reranker is running on the graphics card (the evaluation instance). It is not part of this switch; it is
+          stopped on the box after the evaluation.
         </p>
       )}
       {note && (
