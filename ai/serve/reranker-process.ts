@@ -11,12 +11,17 @@
  *     out-of-memory exit is reported with the last lines of its log);
  *   - stop: the whole process tree by pid, then confirmed by the pid leaving `nvidia-smi --query-compute-apps` (on
  *     Windows the memory column is often N/A under WDDM, the pid is not);
- *   - a pid file lets a restarted server end a leftover child, after checking the pid is still our reranker.
+ *   - on Windows a venv's Scripts\python.exe is a launcher whose child holds the CUDA context (review of 18 Nov 2026),
+ *     so once /health answers, the spawned pid's descendants are resolved and the whole set is tracked: the release is
+ *     confirmed when none of them is alive or listed by nvidia-smi, and any of them counts as "ours";
+ *   - a pid file (the set, root first) lets a restarted server end a leftover, after checking the command line;
+ *   - the child gets a short allow-list of environment variables, not the server's whole environment; its log is
+ *     capped at 5 MB (one older file kept).
  * It listens on 127.0.0.1 only, so no firewall rule is touched, and on 11436, apart from the evaluation instance on
  * 11435 (CC-Mac's, started for a run by the owner's word).
  */
 import { execFile, spawn, type ChildProcess } from 'child_process';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'fs';
 import path from 'path';
 
 export interface RerankerProcessOptions {
@@ -35,6 +40,8 @@ export interface RerankerProcessOptions {
   gpuPids?: () => Promise<number[] | null>;
   /** The command line of a running pid, or null when there is no such process. */
   commandLineOf?: (pid: number) => Promise<string | null>;
+  /** All descendants of a pid (children, grandchildren). */
+  descendantsOf?: (pid: number) => Promise<number[]>;
   fetchFn?: typeof fetch;
   sleep?: (ms: number) => Promise<void>;
   log?: (line: string) => void;
@@ -66,6 +73,40 @@ export async function nvidiaSmiApps(): Promise<{ pid: number; name: string }[] |
     .map((l) => l.split(',').map((x) => x.trim()))
     .filter(([p]) => Number(p) > 0)
     .map(([p, name]) => ({ pid: Number(p), name: name ?? '' }));
+}
+
+/** Every descendant of a pid, from the process table (Win32_Process on Windows, ps elsewhere). */
+export async function descendants(pid: number): Promise<number[]> {
+  const out =
+    process.platform === 'win32'
+      ? await run('powershell', ['-NoProfile', '-Command', 'Get-CimInstance Win32_Process | ForEach-Object { "$($_.ProcessId) $($_.ParentProcessId)" }'])
+      : await run('ps', ['-A', '-o', 'pid=,ppid=']);
+  if (!out) return [];
+  const pairs = out
+    .split(/\r?\n/)
+    .map((l) => l.trim().split(/\s+/).map(Number))
+    .filter(([a, b]) => Number.isInteger(a) && Number.isInteger(b));
+  const found: number[] = [];
+  const queue = [pid];
+  while (queue.length) {
+    const p = queue.shift()!;
+    for (const [c, parent] of pairs) {
+      if (parent === p && c !== pid && !found.includes(c)) {
+        found.push(c);
+        queue.push(c);
+      }
+    }
+  }
+  return found;
+}
+
+/** Environment variables the reranker may see: what Windows, Python and CUDA need, nothing of the chat server. */
+const ENV_ALLOW = /^(PATH|PATHEXT|SYSTEMROOT|SYSTEMDRIVE|WINDIR|COMSPEC|TEMP|TMP|HOME|USERPROFILE|LOCALAPPDATA|APPDATA|HOMEDRIVE|HOMEPATH|PROGRAMDATA|PROGRAMFILES|PROGRAMFILES\(X86\)|COMMONPROGRAMFILES|NUMBER_OF_PROCESSORS|PROCESSOR_ARCHITECTURE|OS|LANG|LC_ALL|CUDA_PATH.*|CUDA_VISIBLE_DEVICES)$/i;
+
+export function rerankerEnv(base: NodeJS.ProcessEnv, extra: Record<string, string>): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [k, v] of Object.entries(base)) if (v !== undefined && ENV_ALLOW.test(k)) env[k] = v;
+  return { ...env, ...extra };
 }
 
 export async function commandLine(pid: number): Promise<string | null> {
@@ -104,6 +145,8 @@ async function killTree(pid: number): Promise<void> {
 export class RerankerProcess {
   private child: ChildProcess | null = null;
   private pid: number | null = null;
+  /** The spawned pid and its descendants, resolved once /health answers (the launcher and the interpreter). */
+  private pids: number[] = [];
   private exited: string | null = null;
 
   constructor(private readonly o: RerankerProcessOptions) {}
@@ -150,12 +193,17 @@ export class RerankerProcess {
     }
     mkdirSync(path.dirname(this.o.logFile), { recursive: true });
     mkdirSync(path.dirname(this.o.pidFile), { recursive: true });
+    try {
+      if (statSync(this.o.logFile).size > 5 * 1024 * 1024) renameSync(this.o.logFile, `${this.o.logFile}.1`);
+    } catch {
+      // no log yet
+    }
     const fd = openSync(this.o.logFile, 'a');
     this.exited = null;
     const [cmd, ...args] = this.o.command;
     const child = spawn(cmd, args, {
       cwd: this.o.cwd,
-      env: { ...process.env, ...this.o.env },
+      env: rerankerEnv(process.env, this.o.env),
       stdio: ['ignore', fd, fd],
       windowsHide: true,
       // Its own process group on POSIX, so the whole tree can be ended at once; Windows uses taskkill /T.
@@ -164,6 +212,7 @@ export class RerankerProcess {
     closeSync(fd);
     this.child = child;
     this.pid = child.pid ?? null;
+    this.pids = this.pid !== null ? [this.pid] : [];
     child.on('exit', (code, sig) => {
       this.exited = `exited with ${code ?? sig}`;
     });
@@ -188,6 +237,11 @@ export class RerankerProcess {
           await this.stop();
           throw new Error(`reranker runs on ${h.device ?? 'an unknown device'}, not on the GPU (is the venv's torch a CUDA build?)`);
         }
+        // The process that holds the CUDA context may be a child of the one we spawned (the venv launcher on Windows).
+        if (this.pid !== null) {
+          this.pids = [this.pid, ...(await (this.o.descendantsOf ?? descendants)(this.pid))];
+          writeFileSync(this.o.pidFile, this.pids.join('\n') + '\n');
+        }
         return;
       }
       if (Date.now() > deadline) {
@@ -201,25 +255,32 @@ export class RerankerProcess {
   private forget() {
     this.child = null;
     this.pid = null;
+    this.pids = [];
     rmSync(this.o.pidFile, { force: true });
   }
 
   /** Ends the child's whole tree and waits until it has left the GPU. Null when confirmed, else the problem. */
   async stop(): Promise<string | null> {
-    const pid = this.pid;
-    if (pid === null) return null;
-    await killTree(pid);
-    const problem = await this.waitGone(pid);
+    if (this.pid === null && !this.pids.length) return null;
+    const set = this.pids.length ? [...this.pids] : [this.pid!];
+    // The tree from the root, then any member left (a descendant whose parent already died is no longer in the tree).
+    await killTree(set[0]);
+    for (const p of set.slice(1)) if (alive(p)) await killTree(p);
+    const problem = await this.waitGone(set);
     if (!problem) this.forget();
     return problem;
   }
 
-  private async waitGone(pid: number): Promise<string | null> {
+  private async waitGone(set: number[]): Promise<string | null> {
     const deadline = Date.now() + (this.o.stopTimeoutMs ?? 15_000);
     for (;;) {
       const gpu = this.o.gpuPids ? await this.o.gpuPids() : null;
-      if (!alive(pid) && !(gpu ?? []).includes(pid)) return null;
-      if (Date.now() > deadline) return `reranker pid ${pid} still ${alive(pid) ? 'running' : 'listed by nvidia-smi'} after ${Math.round((this.o.stopTimeoutMs ?? 15_000) / 1000)} s`;
+      const running = set.filter(alive);
+      const listed = set.filter((p) => (gpu ?? []).includes(p));
+      if (!running.length && !listed.length) return null;
+      if (Date.now() > deadline) {
+        return `reranker ${running.length ? `pid ${running.join(', ')} still running` : `pid ${listed.join(', ')} still listed by nvidia-smi`} after ${Math.round((this.o.stopTimeoutMs ?? 15_000) / 1000)} s`;
+      }
       await this.sleep(300);
     }
   }
@@ -230,19 +291,29 @@ export class RerankerProcess {
    */
   async endLeftover(): Promise<string | null> {
     if (!existsSync(this.o.pidFile)) return null;
-    const pid = Number(readFileSync(this.o.pidFile, 'utf8').trim());
-    if (!Number.isInteger(pid) || pid <= 0 || !alive(pid)) {
+    const set = readFileSync(this.o.pidFile, 'utf8')
+      .split(/\s+/)
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n > 0);
+    const living = set.filter(alive);
+    if (!living.length) {
       rmSync(this.o.pidFile, { force: true });
       return null;
     }
-    const cmdline = await (this.o.commandLineOf ?? commandLine)(pid);
-    if (!cmdline || !this.o.marker.every((m) => cmdline.includes(m))) {
-      rmSync(this.o.pidFile, { force: true });
-      return `pid ${pid} from the pid file is not our reranker; left alone`;
+    // Ours only if a living member's command line is our reranker's (the launcher and the interpreter both carry it).
+    let ours = false;
+    for (const p of living) {
+      const cmdline = await (this.o.commandLineOf ?? commandLine)(p);
+      if (cmdline && this.o.marker.every((m) => cmdline.includes(m))) ours = true;
     }
-    this.pid = pid;
+    if (!ours) {
+      rmSync(this.o.pidFile, { force: true });
+      return `pid ${living.join(', ')} from the pid file is not our reranker; left alone`;
+    }
+    this.pid = living[0];
+    this.pids = living;
     const problem = await this.stop();
-    return problem ? `leftover reranker pid ${pid}: ${problem}` : `leftover reranker pid ${pid} ended`;
+    return problem ? `leftover reranker pid ${living.join(', ')}: ${problem}` : `leftover reranker pid ${living.join(', ')} ended`;
   }
 
   /** True while our child is running. */
@@ -252,5 +323,10 @@ export class RerankerProcess {
 
   ownPid(): number | null {
     return this.pid;
+  }
+
+  /** Every pid of our reranker (the launcher and the interpreter on Windows), for the admin page's "ours". */
+  ownPids(): number[] {
+    return [...this.pids];
   }
 }

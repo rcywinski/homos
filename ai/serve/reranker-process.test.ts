@@ -6,7 +6,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'fs';
 import os from 'os';
 import path from 'path';
 import { plan } from './models-state';
-import { RerankerProcess } from './reranker-process';
+import { descendants, RerankerProcess, rerankerEnv } from './reranker-process';
 
 let passed = 0;
 let failed = 0;
@@ -66,13 +66,28 @@ async function main() {
   check('stop: the pid file is removed', !existsSync(path.join(a.dir, 'reranker.pid')));
   check('stop when nothing runs: nothing to do', (await a.r.stop()) === null);
 
-  // A process tree: the grandchild goes too.
+  // A process tree, as the venv launcher on Windows: the grandchild holds "the GPU". It is found, counted as ours, and
+  // the release is confirmed only when it has gone too (review of 18 Nov 2026).
   const t = make('child');
   await t.r.start(new AbortController().signal);
   const tp = t.r.ownPid()!;
   await new Promise((r) => setTimeout(r, 300));
+  const kids = await descendants(tp);
+  check('descendants of the spawned pid are found', kids.length >= 1, JSON.stringify(kids));
+  const t2 = make('child');
+  await t2.r.start(new AbortController().signal);
+  const own = t2.r.ownPids();
+  check('the tracked set holds the spawned pid and its child', own.length >= 2 && own[0] === t2.r.ownPid(), JSON.stringify(own));
+  check('the pid file holds the whole set', readFileSync(path.join(t2.dir, 'reranker.pid'), 'utf8').trim().split('\n').length === own.length);
+  t2.gpu.push(own[own.length - 1]);
+  const r2 = await t2.r.stop();
+  check('stop ends the whole tree and waits for the GPU holder', r2 === null && own.every((p) => !alive(p)), String(r2));
   await t.r.stop();
-  check('stop ends the whole tree', !alive(tp));
+  check('stop ends the whole tree', !alive(tp) && kids.every((p) => !alive(p)));
+
+  // The child sees a short allow-list of the environment, not the server's.
+  const env = rerankerEnv({ PATH: '/bin', SystemRoot: 'C:\\Windows', SERVE_ADMIN_EMAIL: 'owner@example.com', SERVE_ACCESS_AUD: 'x', INFERENCE_URL: 'y', TEMP: '/tmp' }, { HF_HUB_OFFLINE: '1' });
+  check('environment allow-list', env.PATH === '/bin' && env.SystemRoot === 'C:\\Windows' && env.TEMP === '/tmp' && env.HF_HUB_OFFLINE === '1' && !('SERVE_ADMIN_EMAIL' in env) && !('SERVE_ACCESS_AUD' in env) && !('INFERENCE_URL' in env), JSON.stringify(env));
 
   // Loud failures: CPU torch, a crash with out of memory, no answer in time.
   const c = make('cpu');

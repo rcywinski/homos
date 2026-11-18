@@ -861,7 +861,11 @@ command line is ours. The start-up check asks only for the reranker's files; the
 admin page shows, read only, when another Python process holds the GPU (the evaluation instance on 11435, whose boot
 trigger goes in the same deploy; CC-Mac's Mac pre-flight, 21c7f07 on ai-layer, catches a run started while it is off).
 `ai/serve/tools/rerank-time.mts` measures one rerank call on the GPU and on the CPU (option c). Default stays
-`external`, so the box is unchanged until its `serve.env` says `child`.
+`external`, so the box is unchanged until its `serve.env` says `child`. After the review (18 Nov 2026): on Windows the
+venv's `Scripts\python.exe` is a launcher whose child holds the CUDA context, so the server tracks the spawned pid and
+its descendants (the pid file holds the set), confirms a release only when none of them is alive or listed by
+nvidia-smi, and counts any of them as ours on the admin page; the child gets an allow-list of environment variables;
+its log is capped at 5 MB.
 
 ## 10b. Merge of app-chat into main (merged 18 Nov 2026)
 

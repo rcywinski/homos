@@ -126,8 +126,8 @@ async function main() {
     otherReranker = async () => {
       const apps = await nvidiaSmiApps();
       if (!apps) return null;
-      const own = rerankerProcess?.ownPid() ?? null;
-      return apps.some((a) => /python/i.test(a.name) && a.pid !== own);
+      const own = rerankerProcess?.ownPids() ?? [];
+      return apps.some((a) => /python/i.test(a.name) && !own.includes(a.pid));
     };
     models = new Models({ ...modelsOptions, backend });
     const m = models;
