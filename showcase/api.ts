@@ -33,10 +33,10 @@ export async function getModels(): Promise<ModelsView | null> {
  * Starts the model load, or joins the one already running, and follows its stages over the event stream. Resolves
  * with the final view, or with the fixed error text the UI shows as it is.
  */
-export async function loadModels(onView: (v: ModelsView) => void): Promise<{ ok: true; models: ModelsView } | { ok: false; error: ChatError }> {
+export async function loadModels(onView: (v: ModelsView) => void, target: 'ready' | 'search' = 'ready'): Promise<{ ok: true; models: ModelsView } | { ok: false; error: ChatError }> {
   let res: Response;
   try {
-    res = await fetch('api/models/load', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'text/event-stream' }, body: '{}' });
+    res = await fetch('api/models/load', { method: 'POST', headers: { 'content-type': 'application/json', accept: 'text/event-stream' }, body: JSON.stringify({ target }) });
   } catch {
     return { ok: false, error: UNREACHABLE };
   }

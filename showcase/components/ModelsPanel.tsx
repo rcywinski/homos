@@ -16,7 +16,29 @@ const STATUS_LABEL: Record<string, string> = { pending: 'waiting', running: 'loa
 
 const seconds = (ms: number) => Math.max(1, Math.round(ms / 1000));
 
-export function ModelsPanel({ view, busy, onLoad }: { view: ModelsView; busy: boolean; onLoad: () => void }) {
+export function ModelsPanel({ view, busy, onLoad, need = 'ready' }: { view: ModelsView; busy: boolean; onLoad: () => void; need?: 'ready' | 'search' }) {
+  // Guest-key mode (4.6b) needs only the search model: the cloud model answers with the visitor's key.
+  if (need === 'search' && (view.state === 'search' || view.state === 'ready'))
+    return (
+      <p className="models-note" data-testid="models-panel" data-state={view.state}>
+        The search model is loaded. It is released after {view.idleUnloadMinutes} minutes without questions.
+      </p>
+    );
+  if (need === 'search' && (view.state === 'idle' || view.state === 'off'))
+    return (
+      <div className="models-panel" data-testid="models-panel" data-state={view.state}>
+        <p className="models-title">The search model is not loaded right now, to keep the owner&apos;s graphics card free.</p>
+        <button type="button" className="primary" onClick={onLoad} disabled={busy || view.retryAfterSec !== undefined}>
+          Load search
+        </button>
+        {view.retryAfterSec !== undefined && (
+          <p className="state-note" role="status" data-testid="models-cooldown">
+            The last load did not finish. A new attempt is possible in about {view.retryAfterSec} s.
+          </p>
+        )}
+        <p className="fine-print">Loading the search model takes a few seconds; your key is not needed for it.</p>
+      </div>
+    );
   if (view.state === 'ready')
     return (
       <p className="models-note" data-testid="models-panel" data-state="ready">
