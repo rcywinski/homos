@@ -29,6 +29,9 @@ const server = (name: string, port: number, extra: Record<string, string>) => ({
     // Step 4.10a: the owner switch is on for every test server except "off"; the models start unloaded.
     SERVE_SWITCH_FILE: path.join('showcase', 'e2e', 'fixtures', 'switch-on'),
     SERVE_FAKE_LOAD_MS: '150',
+    // Every test server gets the made-up wallet fixture unless the test says otherwise, so no server ever reads the
+    // real export under data/ (gitignored: present on the owner's Mac, absent in CI, where it gave a 404).
+    SERVE_WALLET_FILE: path.join('showcase', 'e2e', 'fixtures', 'wallet.fixture.json'),
     ...extra,
   },
 });
