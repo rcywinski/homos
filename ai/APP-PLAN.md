@@ -493,7 +493,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   (bge-m3); idle releases in 1 s; a switch-off during a load aborted it in Ollama itself, no late model; the 8 GB
   commit rise is the generator's llama-server and is fully returned on release (21.9 GB again, stable for an hour);
   VRAM per process not readable under WDDM. `ai/eval/results/2026-11-17-models-on-demand-4.10d.md`.
-  **4.10c built (18 Nov 2026), awaiting the owner's OK:** the admin page behind Cloudflare Access (application
+  **4.10c done (18 Nov 2026, owner's OK):** the admin page behind Cloudflare Access (application
   "showcase admin", paths `admin`, `admin/*`, `api/admin/*`, the owner's e-mail only, made in his dashboard).
   `ai/serve/access.ts` checks Cf-Access-Jwt-Assertion on every admin request with Node's crypto (8 KB cap, RS256, kid
   in the team JWKS fetched with timeout and size cap and refreshed at most every 5 min, fail closed without keys;
@@ -528,7 +528,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   the kill. Swap procedure: retry the folder rename a few times 2 s apart (a transient file handle failed the first
   rename once), and keep a rollback that does not depend on the task action. CI's showcase job now also runs the
   tests added in 4.6 and 4.10 (they were in `test:ai`, which CI does not run).
-- [ ] **4.6** Guest-key mode. Plan written 16 Nov 2026 (no code yet); details in section 9. M, in five parts:
+- [x] **4.6** Guest-key mode (done 18 Nov 2026, all five parts ticked by the owner). Details in section 9. M, in five parts:
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;
   4.6e one measurement of the cloud generator on the fully local retrieval (owner's key, owner's OK first).
@@ -549,13 +549,13 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   the page shows the API's own message; the "unreadable" text stays for organisations whose policy blocks browser
   calls and for blocking extensions. The browser call works only after 4.6c adds `https://api.anthropic.com` to
   `connect-src`; 4.6d tests the whole path.
-  **4.6c built (18 Nov 2026), awaiting the owner's OK:** `connect-src 'self' https://api.anthropic.com` in the header
+  **4.6c done (18 Nov 2026, owner's OK):** `connect-src 'self' https://api.anthropic.com` in the header
   and the meta tag (the sync test checks the directive in both, no third-party host in any other directive, no
   wildcard); the build guard is an allow-list (react, react-dom, scheduler and our code; checked against the build:
   exactly these three packages), the wallet list kept to name the reason. From the 4.6b review: only a value that
   starts with "sk-ant-" is accepted as a key (a plain message otherwise, nothing stored or sent), and a 401 forgets the
   key at once and shows the field again.
-  **4.6d built (18 Nov 2026), awaiting the owner's OK:** `showcase/e2e/guest.spec.ts`, 8 tests on desktop and phone,
+  **4.6d done (18 Nov 2026, owner's OK):** `showcase/e2e/guest.spec.ts`, 8 tests on desktop and phone,
   api.anthropic.com mocked with `page.route` (no call leaves the machine): a full guest question answered and checked
   on our server (verified quote, unverified figure, "not measured" label); the key only in `x-api-key` of the one call
   to Anthropic and in no request to our origin (URL, headers, body); nothing in localStorage, sessionStorage, cookies
@@ -571,10 +571,10 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   transport or API error; a model answer that cannot be checked is recorded as "failed". Output has no hostname and no
   key; `to-judge-input.mts --engine guest` converts it with the real usage and cost. Dry run against a mocked API:
   34 rows, 1.02 USD at 13 000 input and 400 output tokens a question.
-  **4.6e done (18 Nov 2026):** run by CC-Mac through the public address, 34 of 34, 30 answered, 4 not in the data, 98
+  **4.6e done (18 Nov 2026, owner's tick):** run by CC-Mac through the public address, 34 of 34, 30 answered, 4 not in the data, 98
   quotes all verified, 1.0049 USD, median 5.3 s; judged 18 / 11 / 5 (0.5479 USD). The page labels the guest engine with
   this result. `ai/eval/results/2026-11-18-guest-run-4.6e.md`.
-- [ ] **4.9** Tunnel and private link, after a separate OK from the owner (precondition: the server runs as `homos-web`
+- [x] **4.9** Tunnel and private link (done 18 Nov 2026, owner's tick), after a separate OK from the owner (precondition: the server runs as `homos-web`
   from `C:\HomosServe\homos`, not as the desktop user): Cloudflare Tunnel, static hosting choice,
   optional Access, kill switch documented in `inference/README.md`. S. Checklist: `SERVE_MODE=tunnel` and
   `SERVE_HOST=127.0.0.1` in `serve.env` (the server refuses tunnel mode on any other address); the start-up log shows
@@ -601,7 +601,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   site; loads 2 an hour and 6 a day per visitor, 30 for the site). CC-Win found the raised batch limits of step 4.8
   (100, 200, 1000) still in `serve.env` before the tunnel started, 18 Nov 2026; removed. Rule since then: a batch that
   needs raised limits raises them for its run and restores them in the same instruction.
-  **4.9 live (18 Nov 2026), awaiting the owner's tick.** Public at the pin `a15762b` through a Cloudflare Tunnel
+  **4.9 live (18 Nov 2026), ticked by the owner.** Public at the pin `a15762b` through a Cloudflare Tunnel
   (hostname kept out of the repo). Checklist: LAN probe of 8790 from the Mac fails (11435 answers as a control);
   `index.html` (939 B) and `app.js` (191 554 B) byte for byte equal to the build through the tunnel, so nothing is
   injected (Rocket Loader, email obfuscation and Web Analytics off); CSP, nosniff, no-referrer, permissions policy,
