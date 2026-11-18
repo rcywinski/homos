@@ -514,6 +514,11 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   Updating the serving clone (from 18 Nov 2026): clone and build in `C:\HomosServe\homos-next` at the pin, copy the
   gitignored `.env` and `data\showcase\wallet.json`, then stop the server task, swap the folders, start it; the page is
   down only for the swap, and the previous folder stays for a rollback.
+  Supervisor for a node exit (owner, 18 Nov 2026): `ai/serve/supervise-cli.ts` runs the server as a child and starts it
+  again after an exit, waiting 5 s, 15 s, 60 s, then 300 s (reset after 10 minutes of running), at most 10 restarts in
+  any hour; one log line per exit; stopping it stops the server (signals forwarded; on the box the task's job object
+  as well). The "HOMOS showcase server" task runs the supervisor instead of the server. Measured on the Mac: a killed
+  server answers again after 6 s.
 - [ ] **4.6** Guest-key mode. Plan written 16 Nov 2026 (no code yet); details in section 9. M, in five parts:
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;
