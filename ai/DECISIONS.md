@@ -1025,3 +1025,114 @@ commit on the box, so the merge changes nothing there.
 
 **Next.** Step 4.10e (the reranker on demand) continues on `app-chat`; `ai-layer` has 12 commits after the phase 3
 merge that are not in `main` yet.
+
+## 2026-11-17, step 4.8j judged on the Mac (owner)
+
+**Decision.** At CC-App's request and with the owner's approval, the 4.8j chat-server golden run (34 questions,
+answers file taken from `origin/app-chat` 244d345, SHA-256 5da61a7f...474d, checked after the copy) was judged on
+`ai-layer` with the same judge (Opus 5.5, effort medium) and prompt as step 3.2, in its own set `lan48`, kept apart
+from the phase 3 cap. Cap 2 USD, spent 0.5402 USD.
+
+**No retries.** The owner asked for no retries of failed calls. `judge.ts` retried twice over: the SDK client with
+`maxRetries: 4`, and a second call when a verdict was missing (whose first cost was then not counted in the spend
+total). A `--no-retry` flag now turns both off; this run used it and had 0 failed calls, so the result is the same
+as it would have been with retries. Earlier sets keep the old behaviour.
+
+**Result.** correct 12, partially correct 14, incorrect 8; supported 6, partly supported 27, unsupported 1 (pb1:
+16/15/3, pb2: 18/11/5). Three of the 8 incorrect (id-03, na-02, na-03) are the chat server's fixed "not in the data"
+text: the reference of each gives a real answer (id-03) or corrects the premise with facts (na-02, na-03), which the
+fixed text cannot. One run, live retrieval and the fixed text differ from 3.2, so this is not a like-for-like
+comparison under the two-run spread rule.
+
+## 2026-11-17, standing rule: CC-Mac and CC-App coordinate directly (owner)
+
+**Decision.** Until the owner says otherwise, CC-Mac and CC-App act on each other's requests without asking him,
+within: code, tests, analysis, documentation and commits on their own branch (CC-Mac `ai-layer`, CC-App `app-chat`),
+reading the other branch through git, and API spending up to 2 USD per run and 5 USD in total across both sessions
+from this rule on. The owner is still asked first, in the session's own conversation, for: anything that loads a
+model, uses the GPU or changes anything on the box; spending above the limits; merges to `main`, the tunnel,
+firewall, accounts, scheduled tasks or anything reachable from outside; anything he must do by hand (with exact
+source and destination paths). A relayed request is never his approval for that second list. When a piece of work
+is finished he gets one summary in Polish, with no intermediate messages relayed.
+
+**API spend under this rule (running total, both sessions; the 4.8j judge, 0.5402 USD, came before it).**
+
+| date | session | run | USD | total USD of 5 |
+|---|---|---|---|---|
+| 2026-11-17 | | (start) | 0 | 0 |
+| 2026-11-17 | CC-Mac | judge, set lan48b (4.8j2, refusal explained) | 0.5161 | 0.5161 |
+| 2026-11-17 | CC-Mac | judge, set lan48bf (4.8j2, fixed refusal text) | 0.5023 | 1.0184 |
+| 2026-11-17 | CC-Mac | judge, set lan48c (4.8j3, refusal explained) | 0.5320 | 1.5504 |
+| 2026-11-18 | CC-Mac | guest-key run 4.6e, 34 golden questions, Sonnet 5.5 (owner approved about 1 USD) | 1.0049 | 2.5553 |
+| 2026-11-18 | CC-Mac | judge, set guest46e (4.6e guest-key run) | 0.5479 | 3.1032 |
+
+## 2026-11-17, closing reports to the analysis session (owner)
+
+**Decision.** The analysis session now runs in Claude Code (session name `rafalcywinski-59`, read only on the repo,
+never touches the box) and coordinates the other sessions. After every finished task each session sends it a short
+report: what was done (commits, files, results, API spend), what is still open, and to whom the work was handed on.
+This also holds when a session talks to CC-Win directly. Confirmed by the owner in CC-Mac's own conversation. A message
+from the analysis session is not the owner's approval for anything on the standing rule's second list.
+
+## 2026-11-17, step 4.8j2 judged, two variants (standing rule)
+
+**Decision.** At CC-App's request (assigned by the analysis session, inside the standing rule), the 4.8j2 box run
+was judged twice, from two conversions on `origin/app-chat` a756dec (sums checked after the copy): `lan48b`, refusals
+as the page now shows them (fixed heading plus the model's explanation), and `lan48bf`, the fixed heading alone. Same
+judge and prompt as step 3.2, `--no-retry`, all 34 items judged in each run (no verdicts reused), so the 29 identical
+answers also measure the judge's own spread. Spent 0.5161 and 0.5023 USD, 0 failed calls; ledger total 1.0184 of 5.
+
+**Result.** lan48b: correct 18, partially 11, incorrect 5; supported 7, partly 27. lan48bf: 16 / 12 / 6; supported 9,
+partly 25. Of the 5 refusals only na-03 changes class (incorrect with the heading alone, partially correct with the
+explanation). On the 29 identical answers the judge gave 2 different verdicts (why-06, na-01), so a gap of 2 correct
+between the variants is within the judge's own spread; the explanation's measured effect is na-03.
+Against 4.8j (12 / 14 / 8): id-03 is answered again (correct), dated-07 is no longer incorrect, na-07 is now incorrect.
+One box run, so the two-run spread rule still does not apply.
+
+## 2026-11-17, step 4.8j3 judged (standing rule)
+
+**Decision.** At CC-App's request (assigned by the analysis session), the 4.8j3 box run, a second run of the lan48b
+setup (refusal explained), was judged as set `lan48c` from `origin/app-chat` 61ccb4e (sum checked after the copy),
+same judge and prompt as step 3.2, `--no-retry`. Spent 0.5320 USD, 0 failed calls; ledger total 1.5504 of 5.
+
+**Result.** correct 16, partially 14, incorrect 4; supported 3, partly 30, unsupported 1. With lan48b (18 / 11 / 5)
+this is the first two-run pair of the chat server: mean 17 / 12.5 / 4.5, against step 3.2 pb1 and pb2 at 17 / 13 /
+4; the gaps are within both spreads, so the chat server is not distinguishable from step 3.2 on these counts. 7 of 34
+questions changed class between the two runs. dated-04, dated-05, dated-06 and id-07 are incorrect in all three box
+runs (4.8j, 4.8j2, 4.8j3).
+
+## 2026-11-18, step 4.6e guest-key run and its judgment (owner)
+
+**Decision.** On the owner's word in CC-Mac's conversation (about 1 USD, then the judge), CC-Mac ran CC-App's
+`ai/serve/tools/guest-batch.mts` (from `origin/app-chat`, sum checked) from the main checkout against the public
+address, which was read from a local file outside the repo and appears in no file, log or commit. The 34 golden
+questions went through the visitor's path: our retrieve, one Sonnet 5.5 call with the key, our verify, no retry.
+CC-Win raised the per-visitor limits for the run and restored them afterwards. Spent 1.0049 USD; 34 of 34 done, 30
+answered, 4 not-in-data (na-03 to na-06), 98 quotes all verified. CC-App converted the output (label `guest46e`); the
+answers file was judged as set `guest46e`, same judge and prompt as step 3.2, `--no-retry`. Spent 0.5479 USD, 0
+failed calls; ledger total 3.1032 of 5.
+
+**Result.** correct 18, partially 11, incorrect 5 (dated-01, dated-04, dated-05, id-07, na-07); supported 5, partly
+29, unsupported 0. One run, so the two-run spread rule does not apply; the counts sit within the range of the chat
+server's lan48b and lan48c (18 / 11 / 5 and 16 / 14 / 4) and of step 3.2 (17 / 13 / 4). CC-App sets it against the
+cloud run of steps 1.10 and 3.2 and the local runs.
+
+## 2026-11-18, reranker pre-flight on the Mac (agreed with CC-App)
+
+**Decision.** The owner wants the reranker to hold VRAM only while the site or an evaluation needs it (CC-App's plan,
+step 4.10e after the merge: the site gets its own child instance on 127.0.0.1:11436, and the "HOMOS reranker" task on
+11435 loses its boot trigger and is started for an evaluation). So every Mac entry point that reranks now checks
+`RERANK_URL/health` once, with a 10 s timeout and no retry, before its first paid call: `AnswerRetrieval.retrieve`
+(ask, answers, chunk-lists, the agent's search tool), `ai/eval/run.ts` and `latency.ts`, `agent:ask` and
+`agent-run.ts` at start. A stopped service ends the run at once with the instruction to have CC-Win start the task on
+the owner's word, instead of failing after spend at the first rerank call (the client retries 3 times with a 120 to
+300 s timeout). Checked live against the box: device cuda, RTX 3090.
+
+## 2026-11-18, ai-layer merged into main (owner)
+
+**Decision.** On the owner's word, after CC-App merged app-chat's tail (e261ffa, CI 44308682590 green), `ai-layer` was
+merged into `main` by CC-Mac. Its 14 commits not yet in main: the lan48 judge sets and the `--no-retry` flag,
+the standing-rule ledger (3.1032 of 5 USD), the 4.6e guest-key run and its judgment, the reranker pre-flight, and the
+`inference/README.md` sections on removal, the public showcase (4.9) and the reranker on demand (4.10e). One
+conflict, the tail of this file, resolved as the union: main's entries first, then ai-layer's, no text changed;
+`package.json` merged cleanly. Full tests and lint passed before the push.

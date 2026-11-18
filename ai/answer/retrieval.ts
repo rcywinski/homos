@@ -13,7 +13,7 @@ import type { Chunk } from '../corpus/types';
 import { indexPath, readIndex } from '../embed/index-file';
 import { indexView } from '../embed/index-view';
 import { LocalEmbedder } from '../embed/local';
-import { LocalReranker } from '../rerank/local';
+import { LocalReranker, checkReranker } from '../rerank/local';
 import { RerankRetriever } from '../rerank/retriever';
 import { Bm25Index } from '../store/bm25';
 import { HybridRetriever } from '../store/hybrid';
@@ -36,6 +36,9 @@ export class AnswerRetrieval {
   private rewriter: ClaudeQueryRewriter | null = null;
   /** Questions translated live (not in the cached file), for the cost line. */
   liveTranslations = 0;
+  /** The reranker pre-flight, done once before the first retrieval (and before any paid translation call). */
+  private checked: Promise<unknown> | null = null;
+  private readonly rerankUrl: string;
   /** Called with the token usage of every live translation call (step 2.2: the agent counts it in its spend). */
   onUsage: ((u: TokenUsage) => void) | null = null;
 
@@ -46,6 +49,7 @@ export class AnswerRetrieval {
     const inferenceUrl = process.env.INFERENCE_URL;
     const rerankUrl = process.env.RERANK_URL;
     if (!inferenceUrl || !rerankUrl) throw new Error('INFERENCE_URL and RERANK_URL must be set (see .env.example)');
+    this.rerankUrl = rerankUrl;
     const chunks = loadCorpus(root);
     this.source = new Map(chunks.map((c) => [c.id, c]));
     const local = variant === 'local';
@@ -89,6 +93,8 @@ export class AnswerRetrieval {
   }
 
   async retrieve(questions: string[], k: number): Promise<Chunk[][]> {
+    this.checked ??= checkReranker(this.rerankUrl);
+    await this.checked;
     if (this.variant !== 'local') await this.ensureTranslated(questions);
     const hits = await this.retriever.search(questions, k);
     return hits.map((list) => list.map((h) => this.source.get(h.id)!));

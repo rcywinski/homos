@@ -19,6 +19,7 @@ import { AnthropicAgentModel } from './model';
 import { DEFAULT_CAP_USD, runAgent, type AgentRunResult, type ToolCallRecord, type TurnRecord } from './run';
 import type { JobPlan } from './jobs';
 import { realDeps } from './tools';
+import { checkReranker } from '../rerank/local';
 
 const width = () => process.stdout.columns || 100;
 
@@ -106,6 +107,8 @@ async function main() {
   if (!question) throw new Error('usage: npm run agent:ask -- "<question>" [--cap 0.5] [--jobs [--yes-jobs]]');
   if (yesJobs && !jobs) throw new Error('--yes-jobs needs --jobs');
   if (!(capUsd > 0)) throw new Error('--cap must be a positive amount in USD');
+  // search_journal needs the reranker on the box; check it before the first paid call (owner, 18 Nov 2026).
+  await checkReranker(process.env.RERANK_URL ?? '');
   const log = new JsonlLog(question);
   const approve = yesJobs
     ? async (plan: JobPlan & { jobId: string }) => {

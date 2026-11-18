@@ -24,6 +24,7 @@ import type { PromptVariant } from '../agent/prompt';
 import { DEFAULT_CAP_USD, runAgent } from '../agent/run';
 import { realDeps } from '../agent/tools';
 import { legendCitations, redundantCalls, requiredSources, unneededJob, type AgentTask, type CallRecord } from './agent-measures';
+import { checkReranker } from '../rerank/local';
 
 export const RUNS: Record<string, { prompt: PromptVariant; effort: AgentEffort }> = {
   A1: { prompt: 'A', effort: 'medium' },
@@ -111,6 +112,8 @@ async function main() {
   if (!cfg) throw new Error(`--run must be one of ${[...Object.keys(RUNS), ...Object.keys(LOCAL_AGENT_RUNS)].join(', ')}`);
   const out = `${RESULTS}/${localCfg ? LOCAL_EVAL_PREFIX : EVAL_PREFIX}${run}.json`;
   if (existsSync(out)) throw new Error(`${out} exists; an evaluation run is not repeated over itself`);
+  // search_journal needs the reranker on the box; check it before the first paid call (owner, 18 Nov 2026).
+  await checkReranker(process.env.RERANK_URL ?? '');
   const runsDir = path.join(process.cwd(), 'ai/agent/runs-eval', run);
   if (existsSync(runsDir) && readdirSync(runsDir).length) throw new Error(`${runsDir} is not empty`);
   mkdirSync(runsDir, { recursive: true });

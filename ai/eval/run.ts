@@ -23,7 +23,7 @@ import { Bm25Index } from '../store/bm25';
 import { HybridRetriever } from '../store/hybrid';
 import type { Stem } from '../store/tokenize';
 import type { Retriever } from '../store/types';
-import { LocalReranker } from '../rerank/local';
+import { LocalReranker, checkReranker } from '../rerank/local';
 import { RerankRetriever } from '../rerank/retriever';
 import { CATEGORIES, overlaps, type GoldenQuestion } from './golden';
 import { firstHitRank, fmtRatio, journalOnly, mrrAt, recallAt } from './metrics';
@@ -97,6 +97,7 @@ async function main() {
       const maxLength = arg('--rerank-max-length') ? Number(arg('--rerank-max-length')) : undefined;
       const device = arg('--rerank-device') as 'cuda' | 'cpu' | undefined;
       if (device && !['cuda', 'cpu'].includes(device)) throw new Error('--rerank-device must be cuda or cpu');
+      await checkReranker(rerankUrl);
       reranker = new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 300_000, maxLength, device });
       // Warm-up outside the measurement: on the first CPU request the service loads its CPU copy of the model.
       await reranker.rerank('warm-up', [{ id: 'w', text: 'warm-up' }]);

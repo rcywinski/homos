@@ -17,11 +17,13 @@ inference server for the AI layer. The bot services are no longer running. (This
 | Service | Port | Mac config | Started by |
 |---|---|---|---|
 | Ollama, embedding model `bge-m3` (`POST /api/embed`, 1024-dimension vectors) | 11434 | `INFERENCE_URL` | task `HOMOS inference (Ollama)` |
-| Reranker `bge-reranker-v2-m3` (`POST /rerank`, step 1.6) | 11435 | `RERANK_URL` | task `HOMOS reranker` |
+| Reranker `bge-reranker-v2-m3` (`POST /rerank`, step 1.6), for evaluations | 11435 | `RERANK_URL` | task `HOMOS reranker`, on demand only since 18 Nov 2026 |
+| Reranker of the public chat server (step 4.10e) | 11436, 127.0.0.1 only | none | child process of the chat server, only while a model is loaded |
 
 - Same network boundary as the old bot API: one Windows Firewall rule per port admits only the LAN and VPN subnets,
   with no port forwarding on the router. Neither service has authentication, so these rules are the only boundary.
-- Both tasks run as `SYSTEM` at startup, so the services need no desktop login.
+- Both tasks run as `SYSTEM`, so the services need no desktop login. Ollama starts at boot; the evaluation reranker
+  has had no trigger since 18 Nov 2026 (step 4.10e) and is started for an evaluation only, see "Reranker on demand".
 
 ### Reboot test without login
 
@@ -159,7 +161,7 @@ Written by CC-Mac, deployed and operated by CC-Win.
 | Model | `BAAI/bge-reranker-v2-m3` (568M parameters, backbone bge-m3, 8192-token positions; ~1.2 GB VRAM in fp16) |
 | Address | `http://192.168.1.8:11435` (LAN) and port 11435 on the VPN address; Mac config `RERANK_URL` in `.env` |
 | Endpoints | `GET /health`, `POST /rerank` |
-| Availability | starts by itself after a reboot, without a desktop login (same requirement as Ollama) |
+| Availability | until 18 Nov 2026 started by itself after a reboot; since step 4.10e started on demand for an evaluation (see "Reranker on demand") |
 | Exposure | TCP 11435 limited to the LAN and VPN subnets, same pattern as the Ollama rule; no authentication |
 
 ### Request and response
@@ -249,7 +251,7 @@ On 11 Nov 2026 the box lost power 4 times under qwen3.8:27b (Kernel-Power 41, bu
 On 13 Nov 2026 the PSU was replaced with a 1200 W be quiet! unit and the cap was removed:
 - The task is disabled.
 - The launchers no longer call the script.
-- MSI Afterburner does not run: its logon task is disabled, fans are on auto.
+- MSI Afterburner: the power slider no longer caps the card. Its logon task `\MSIAfterburner` (runs as cywil, `MSIAfterburner.exe /s`) is enabled and was in state Running on 18 Nov 2026 (CC-Win inventory), which contradicts the earlier note that it was disabled; the card limit then read 420 W, the default. The owner checks the slider and fan settings; nothing was changed.
 - The card runs at its default limit of 420 W.
 
 A watched full-load test passed: qwen3.8:27b at num_ctx 16384 generating 4000 tokens alongside back-to-back reranker calls. It drew up to 421 W (397 W on average) and reached 69 C, with no shutdown.
@@ -350,8 +352,9 @@ $env:HF_HOME = 'C:\ollama\hf'
 
 ### Start and reboot survival
 
-Same pattern as Ollama: scheduled task `HOMOS reranker`, trigger "At startup", runs as `SYSTEM` (no desktop login
-needed), no execution time limit, restarts every minute on failure (up to 999 times). Action:
+Since 18 Nov 2026 (step 4.10e) the task has no trigger: it is started for an evaluation only, see "Reranker on demand"
+below. Until then it followed the same pattern as Ollama: scheduled task `HOMOS reranker`, trigger "At startup", runs as
+`SYSTEM` (no desktop login needed), no execution time limit, restarts every minute on failure (up to 999 times). Action:
 `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:\ollama\start-reranker.ps1`.
 The service is ready about 11 s after the task starts (model load to the GPU).
 
@@ -550,3 +553,214 @@ The CLI reads `OLLAMA_HOST`; `0.0.0.0` is a listen address, so in an interactive
   reproducible (the same call now takes 80 to 220 ms).
 - Local smoke test on 9 Nov 2026: the Polish and English sentences from the Mac check returned `2 [1024, 1024]`,
   cosine similarity between the two vectors 0.894.
+
+## Public showcase (step 4.9)
+
+The showcase chat server is public through a Cloudflare Tunnel. Nothing on the box listens for it on the LAN: the server binds 127.0.0.1 only, and cloudflared dials out to Cloudflare.
+
+| Item | Value |
+|---|---|
+| Serving clone | `C:\HomosServe\homos`, detached at the public pin (`a15762b` at go-live), never a branch |
+| Config | `C:\HomosServe\serve.env`: `SERVE_MODE=tunnel`, `SERVE_HOST=127.0.0.1`, `SERVE_SWITCH_FILE`, `SERVE_LOG_DIR`; no rate-limit overrides (code defaults) |
+| Owner switch | `C:\HomosServe\SWITCH`, `on` or `off` (off = no model loads, no GPU use; the chat and guest mode answer "offline", saved views still work) |
+| Logs | `C:\HomosServe\logs\`: `server.log`, `cloudflared.log`, request log `YYYY-MM-DD.jsonl` (visitor hash, outcome, masked question) |
+| Tunnel token | `C:\HomosServe\cloudflared\token`, read by `--token-file`, never on a command line or in a task definition |
+| cloudflared | `C:\Program Files (x86)\cloudflared\cloudflared.exe` (winget `Cloudflare.cloudflared`, 2026.11.1), no Windows service |
+| Task XML | `C:\HomosServe\tasks\` (kept for re-import) |
+| Run account | local standard user `homos-web` (SID `S-1-5-21-2739273501-424694354-1965777676-1003`), member of Users only, hidden from the sign-in screen |
+
+Scheduled tasks. Both run as `homos-web`, "run whether the user is logged on or not" (LogonType Password, RunLevel Limited). Trigger: at startup with a 1 min delay. Restart on failure 999 times every 1 min, no time limit. Neither needs cywil to be signed in.
+- `HOMOS showcase server`: `cmd.exe /c "cd /d C:\HomosServe\homos && "C:\Program Files\nodejs\node.exe" --env-file=C:\HomosServe\serve.env --import tsx ai\serve\server-cli.ts >> C:\HomosServe\logs\server.log 2>&1"`
+- `HOMOS tunnel`: `cloudflared.exe tunnel --no-autoupdate --logfile C:\HomosServe\logs\cloudflared.log run --token-file C:\HomosServe\cloudflared\token`
+
+Access control. Least privilege for `homos-web`, set with icacls using SIDs, because group names are localized on this box:
+- `C:\HomosServe` does not inherit. SYSTEM, Administrators and cywil have Full; homos-web has RX.
+- `C:\HomosServe\logs`: homos-web has Modify. This is the only place it writes.
+- The token: homos-web R; SYSTEM, Administrators and cywil F; no one else.
+- `C:\Projects\homos` (wallet-era clone, reranker code): explicit Deny RX for homos-web. The reranker runs as SYSTEM and is unaffected.
+- homos-web cannot write the code, `serve.env` or `SWITCH` (tested).
+- `homos-web` holds "Log on as a batch job" (SeBatchLogonRight). It was granted with secedit (USER_RIGHTS area only), because the tasks were registered with Register-ScheduledTask, which does not grant it; the Task Scheduler GUI import would have.
+
+How to:
+- Take the site offline at once: `Stop-ScheduledTask "HOMOS tunnel"` (tested: no cloudflared process is left, and the public address stops answering). Back online: `Start-ScheduledTask "HOMOS tunnel"`.
+- Stop GPU use: `Set-Content C:\HomosServe\SWITCH off`. The server releases loaded models and refuses loads; the page stays up.
+- Pause the chat: create `C:\HomosServe\homos\ai\serve\PAUSED` as cywil (the default `SERVE_PAUSE_FILE`, relative to the clone; homos-web only checks that it exists); remove it to resume. It wins over the switch.
+- Stop the server: `Stop-ScheduledTask "HOMOS showcase server"`. Stop the tunnel first, or visitors get an error page.
+- Check:
+  - `Get-ScheduledTask "HOMOS*"` shows Running.
+  - `Get-NetTCPConnection -LocalPort 8790 -State Listen` shows 127.0.0.1 only.
+  - `Get-Process node,cloudflared -IncludeUserName` shows homos-web.
+  - `Invoke-RestMethod http://127.0.0.1:8790/api/health`.
+  - cloudflared.log shows "Registered tunnel connection" (normally 4).
+  - server.log shows "mode tunnel (visitor = CF-Connecting-IP, listening on 127.0.0.1 only)" and no CF-Connecting-IP warning.
+- Update the serving clone: as cywil, git fetch, check out the new pin detached, run npm ci and the showcase build. Child files inherit the ACL. Then restart the server task.
+
+Known limits and box facts:
+- Restart on failure does not cover a node exit. Task Scheduler restarts only when the task fails to launch; if node crashes, the server stays down until the next boot or a manual `Start-ScheduledTask`. A wrapper loop or watchdog is a later item.
+- Never bind 0.0.0.0 on this box while the "Homebridge" firewall rule exists. It allows `C:\Program Files\nodejs\node.exe` inbound on any protocol and port from any address, profile Any. The 127.0.0.1 bind is the server's only LAN protection; a LAN probe of 192.168.1.8:8790 from the Mac fails, as it should.
+- Remote Desktop listens on TCP and UDP 10666, not 3389. The firewall rules "RDP 10666 (TCP/UDP)" allow any remote address. Per the owner there is no router forward; outside access is through his WireGuard VPN only.
+- Sign-in: cywil has a password and signs in by hand after a reboot. The site does not depend on it: Ollama runs as SYSTEM, the showcase tasks and the site's reranker (step 4.10e) as homos-web.
+- Raised rate limits for a batch run are set for that run only and removed in the same instruction.
+
+## Reranker on demand (step 4.10e, 18 Nov 2026)
+
+Owner's requirement: nothing of the project holds VRAM while idle or after a boot. Facts from CC-App and CC-Win, measured
+on the box (`ai/eval/results/2026-11-18-reranker-on-demand-4.10e.md` on `app-chat`).
+
+Two reranker instances, never shared:
+
+| Instance | Port | Runs from | Started | Stopped |
+|---|---|---|---|---|
+| Evaluation (Mac runs) | 11435, LAN and VPN | `C:\Projects\homos\inference\reranker\.venv` (pre-AI clone), task `HOMOS reranker` as SYSTEM | `Start-ScheduledTask 'HOMOS reranker'` on the owner's word, for an evaluation | `Stop-ScheduledTask` plus the process line in "Start and reboot survival", after the evaluation |
+| Public chat server | 11436, 127.0.0.1 only, no firewall rule | `C:\HomosServe\reranker-venv`, cwd `C:\HomosServe\homos\inference\reranker` (the pinned clone), as `homos-web` | first stage of any model load from idle | every release: idle 15 min, switch off (box or admin page), a failed or aborted load, a leftover at server start |
+
+The evaluation task has no trigger since 18 Nov 2026 ("On demand only"); its previous definition is kept in
+`C:\HomosServe\tasks\HOMOS reranker.before-4.10e.xml`. A Mac run that needs it while it is off stops at the
+pre-flight (`checkReranker` in `ai/rerank/local.ts`, ai-layer 21c7f07) before any paid call. While it runs it holds
+about 3 GB of VRAM and the chat server's admin page shows "another reranker is running"; two instances at once are
+allowed and not locked, because evaluations are rare and announced.
+
+The site instance:
+- Command: `C:\HomosServe\reranker-venv\Scripts\python.exe -m uvicorn app:app --host 127.0.0.1 --port 11436`, with an
+  environment allow-list plus `HF_HOME=C:\ollama\hf`, `HF_HUB_OFFLINE=1`, `TRANSFORMERS_OFFLINE=1`.
+- Venv: Python 3.11.9 (`C:\Program Files\Python311`), torch 2.14.1+cu130 installed first from the cu130 index, then
+  `requirements.txt` at the evaluation venv's versions (fastapi 0.162.2, sentence-transformers 6.2.0, transformers
+  5.22.2, uvicorn 0.54.0); 3.38 GB; built by cywil, `homos-web` has RX. `requirements.txt` alone would give a CPU-only
+  torch; the server checks that `/health` reports device `cuda` and `cudaAvailable` true.
+- `serve.env`: `SERVE_RERANKER=child`, `SERVE_RERANKER_PYTHON=C:\HomosServe\reranker-venv\Scripts\python.exe`,
+  `SERVE_RERANKER_HF_HOME=C:\ollama\hf` (`RERANK_URL` stays but is ignored in child mode).
+- Files: `C:\HomosServe\logs\reranker.pid` (two pids, launcher first, then the interpreter, which owns the CUDA context
+  and is what nvidia-smi lists) and `C:\HomosServe\logs\reranker.log` (rotated at 5 MB, one older file kept).
+- Ready signal: `/health` answers only after the model is on the GPU (`app.py` loads it before uvicorn binds).
+- Release: both pids ended and confirmed gone from the process table and from `nvidia-smi --query-compute-apps`. A
+  leftover named in the pid file is ended only if a living member's command line has `app:app` and `--port 11436`.
+- Stage order: full load = reranker, generator, bge-m3, check; search load (guest-key mode) = reranker, bge-m3, check.
+
+Measured (nvidia-smi of 24 576 MiB; times on the box):
+
+| Point | Value |
+|---|---|
+| Idle VRAM, before (boot-time reranker) / after the change | 4 177 / 1 218 MiB |
+| Full load | 23 972 MiB used: 604 MiB spare as total minus used, 355 MiB as memory.free (driver reserve 250 MiB) |
+| After a release | 1 218 MiB, equal to idle |
+| Reranker start, cold / warm | 16.0 s / 11.2 s |
+| Generator / bge-m3 / release | 22.1 s / 2.9 s / 1.0 s |
+| One rerank of 30 chunks, GPU / CPU | 0.585 s / 41.4 s (the CPU option was rejected) |
+| Hard kill of the server | the reranker exited with node within 0.6 s |
+
+## Removing the project from the box
+
+Written by CC-Mac on 18 Nov 2026 from CC-Win's read-only inventory of that day. This is a checklist only: nothing on
+the box is deleted or changed without the owner's word. Labels: **[project]** created by the project (the AI layer),
+**[pre-AI]** HOMOS work from before the AI layer (Sept 2026), **[ask]** unclear or shared, the owner decides.
+Run the steps in this order, as Administrator unless noted; each step names its revert or what it restores.
+
+### What the project left on the box (18 Nov 2026)
+
+| Item | Label | Size | Notes |
+|---|---|---|---|
+| `C:\ollama\` (app, models, hf, logs, three launchers) | [project] | 89.1 GB, about 23 GB after 18 Nov | models 83.8 GB, 17.6 GB after the four unneeded models were removed; Hugging Face cache 2.1 GB |
+| `C:\HomosServe\` (serving clone, serve.env, SWITCH, run outputs 4.8 to 4.10d) | [project] | 0.9 GB | the run outputs are results; copy what is wanted to the Mac first |
+| `C:\Projects\homos-dryrun\`, `C:\Projects\showcase-raw-4.1b\`, `C:\Projects\homos-dryrun-serve.env`, `homos-dryrun-server.err`, `homos-dryrun-server.out` | [project] | 0.9 GB | showcase-raw-4.1b: delete only on the owner's word (earlier note) |
+| `C:\Projects\homos\inference\reranker\.venv\` and `C:\Projects\homos\ai\index\` | [project] | 3.4 GB, 0.2 GB | inside the pre-AI clone |
+| `C:\Projects\homos\` (the clone itself, `data\` 20 GB, `.bot-live-backup\`, `.bot`, `backtest`) | [pre-AI] | 24.2 GB in all | keep; its `.env` may hold keys and `.bot-live-backup\` is wallet-era state: treat both as secrets (see below) |
+| `C:\Projects\homos-bot-state-2026-09-23.zip` | [pre-AI] | 3.5 MB | keep |
+| `C:\Users\cywil\AppData\Local\ms-playwright\` | [project] | 0.7 GB | Playwright browsers for step 4.8 |
+| `C:\Users\cywil\AppData\Local\npm-cache\` | [ask] | 0.6 GB | shared npm cache since 27 Sep |
+| `C:\Users\cywil\AppData\Local\Ollama\`, `C:\Users\cywil\.ollama\` | [project] | under 1 MB | tray app logs, client key pair |
+| `C:\Users\cywil\.claude\projects\C--Projects-homos\`, `%TEMP%\claude\` | [ask] | small | CC-Win's memory and scratchpad |
+| `C:\Skrypty\` | not the project's | small | the owner's, for other work on this computer: keep |
+| Tasks `HOMOS inference (Ollama)` (SYSTEM, at startup, running), `HOMOS reranker` (SYSTEM, on demand only since 18 Nov), `HOMOS GPU power limit` (disabled) | [project] | | |
+| Task `\MSIAfterburner` (cywil, running) | [ask] | | the owner's tool, predates the project |
+| Firewall rules `HOMOS inference (LAN+VPN only)` (TCP 11434), `HOMOS reranker (LAN+VPN only)` (TCP 11435) | [project] | | |
+| Machine variables `OLLAMA_HOST`, `OLLAMA_MODELS`, `HF_HOME` | [project] | | |
+| Fixed pagefile 48 GB | [project] | 48 GB on C: | set 16 Nov 2026 |
+| Ollama 0.40.15 (`C:\ollama\app`), Python 3.11.9 (`C:\Program Files\Python311`) | [project] | | |
+| Git 2.56.0.4 (installed 9 Nov) | [ask] | | probably installed for the project, useful anyway |
+| Node.js 24.19.0, Python 3.12.10 (per user), Visual C++ redistributables | [pre-AI] or not the project's | | keep |
+
+Models in Ollama, and who still needs them:
+
+| Model | Size | Pulled | By step | Still needed |
+|---|---|---|---|---|
+| `qwen3.8:27b` | 17 GB | 11 Nov | 1.11 | yes: the local agent (3.5) and the chat server (phase 4) |
+| `bge-m3:latest` | 1.2 GB | 9 Nov | 0.3 | yes: embeddings for every index and the chat server |
+| `gemma4:26b` | 18 GB | 11 Nov | 1.11 extra run, used again in 3.3 | no later step uses it; **removed 18 Nov 2026** |
+| `gemma4:31b-it-q4_K_M` | 20 GB | 16 Nov | 3.4 candidate | no: Muse was the best of the 3.4 candidates and still below Qwen; **removed 18 Nov 2026** |
+| `gpt-oss:20b` | 13 GB | 16 Nov | 3.4 candidate | no; **removed 18 Nov 2026** |
+| `muse-glimmer:30b` | 18 GB | 16 Nov | 3.4 candidate | no; **removed 18 Nov 2026** |
+
+The four models no later step needed took 69 GB. On the owner's word they were removed on 18 Nov 2026 by CC-Win
+(`ollama rm`, each exit 0): `ollama list` now shows only `qwen3.8:27b` (aaee06c39dcf) and `bge-m3:latest` (790764642607),
+`C:\ollama\models` went from 83.79 to 17.60 GB and C: gained 66.18 GiB free (369.47 GiB). The reranker model in
+`C:\ollama\hf` was not touched. A rerun of 1.11, 3.3 or 3.4 would need them pulled again.
+
+### Dependency to know first
+
+Only the evaluation reranker depends on the pre-AI clone; the site's reranker (step 4.10e) runs from `C:\HomosServe`.
+The evaluation reranker runs from the pre-AI clone: the `HOMOS reranker` task runs `C:\ollama\start-reranker.ps1`, which does
+`Set-Location C:\Projects\homos\inference\reranker` and starts `.venv\Scripts\python.exe` there. Deleting or moving
+`C:\Projects\homos` (or its `inference\reranker\.venv`) stops the reranker at its next start. Delete the venv only
+after the task is gone (step 1 and 2).
+
+### Secrets in the pre-AI clone
+
+`C:\Projects\homos\.env` may hold keys (owner, 18 Nov 2026), and `.bot-live-backup\` holds state from the live bot.
+`.gitignore` only keeps such files out of commits; the files themselves stay on the disk. Nobody reads or prints them
+for this checklist. Precondition for step 4.9 (tunnel): the serving account `homos-web` has no read access to
+`C:\Projects\homos`; the chat server runs from `C:\HomosServe\homos` with `C:\HomosServe\serve.env` and needs nothing from the pre-AI clone.
+
+### Removal order
+
+1. **Stop everything.** The chat server has no task; check that no `node` process serves port 8790. Then:
+   ```powershell
+   Disable-ScheduledTask -TaskName 'HOMOS inference (Ollama)'; Stop-ScheduledTask -TaskName 'HOMOS inference (Ollama)'
+   Disable-ScheduledTask -TaskName 'HOMOS reranker'; Stop-ScheduledTask -TaskName 'HOMOS reranker'
+   Get-Process ollama -ErrorAction SilentlyContinue | Stop-Process -Force
+   Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object CommandLine -match 'uvicorn app:app' | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+   ```
+   Revert: `Enable-ScheduledTask` and `Start-ScheduledTask` for both.
+2. **Tasks, firewall, environment.**
+   ```powershell
+   Unregister-ScheduledTask -TaskName 'HOMOS inference (Ollama)' -Confirm:$false
+   Unregister-ScheduledTask -TaskName 'HOMOS reranker' -Confirm:$false
+   Unregister-ScheduledTask -TaskName 'HOMOS GPU power limit' -Confirm:$false
+   Remove-NetFirewallRule -DisplayName 'HOMOS inference (LAN+VPN only)'
+   Remove-NetFirewallRule -DisplayName 'HOMOS reranker (LAN+VPN only)'
+   foreach ($v in 'OLLAMA_HOST','OLLAMA_MODELS','HF_HOME') { [Environment]::SetEnvironmentVariable($v, $null, 'Machine') }
+   ```
+   Restores: no inbound port opened by the project (11434 and 11435 closed); the variables are gone, so a later Ollama
+   install would listen on 127.0.0.1 and store models under the user profile. Revert: recreate from the sections
+   "Start and reboot survival", "Network exposure", "Reranker operations" and "Environment" above.
+   `\MSIAfterburner` is not the project's: leave it unless the owner says otherwise.
+3. **Ollama.** As cywil (the uninstall entry is under cywil's HKCU), elevated if asked: `C:\ollama\app\unins000.exe`.
+   Then delete `C:\ollama\` (89 GB with the models and the reranker model cache; copy `C:\ollama\logs\` to the Mac first
+   if the run CSVs are wanted), `C:\Users\cywil\AppData\Local\Ollama\` and `C:\Users\cywil\.ollama\`.
+4. **Project folders.** `C:\HomosServe\` (copy wanted run outputs first), `C:\Projects\homos-dryrun\`, the three loose
+   `homos-dryrun-*` files in `C:\Projects\`, `C:\Users\cywil\AppData\Local\ms-playwright\`, and inside the pre-AI clone
+   `inference\reranker\.venv\` and `ai\index\` (both gitignored, so the clone stays clean). `C:\Projects\showcase-raw-4.1b\`
+   only on the owner's word.
+5. **Pagefile back to Windows-managed**, then reboot (it was about 8.6 GB, commit limit 40.3 GB):
+   ```powershell
+   $cs = Get-CimInstance Win32_ComputerSystem
+   Set-CimInstance -InputObject $cs -Property @{AutomaticManagedPagefile = $true}
+   ```
+6. **Python 3.11.9** (all users) from Settings, Apps. Not the per-user Python 3.12.10, which is the owner's.
+7. **[ask] items:** Git, the npm cache, CC-Win's memory and scratchpad, `\MSIAfterburner`. `C:\Skrypty\` is the owner's and stays.
+8. **Full wipe only (the owner decides):** if `C:\Projects\homos` itself is ever removed, its `.env` and
+   `.bot-live-backup\` are secrets: delete them, do not copy, read or print them, and do not leave them in a recycle bin or backup.
+
+Added in step 4.10e (18 Nov 2026), not yet in the order above: the venv `C:\HomosServe\reranker-venv\` (3.38 GB),
+`reranker.pid` and `reranker.log` in `C:\HomosServe\logs\`, and the `SERVE_RERANKER*` lines in `serve.env`; all go with
+`C:\HomosServe\` in step 4. The evaluation task lost its boot trigger; its earlier definition is in
+`C:\HomosServe\tasks\HOMOS reranker.before-4.10e.xml`, and step 2 unregisters it either way.
+
+Added in step 4.9 (18 Nov 2026), not yet in the order above: the tasks `HOMOS showcase server` and `HOMOS tunnel`,
+the Cloudflare tunnel and its token in `C:\HomosServe\cloudflared\`, cloudflared itself, the account `homos-web` and
+its "Log on as a batch job" right. Remove the tunnel task first (it is what makes the site public), then the server task,
+then the account; see "Public showcase (step 4.9)". The tunnel in the Cloudflare dashboard is the owner's to delete.
+
+Kept: `C:\Projects\homos\` and its pre-AI data, the 23 Sep bot-state zip, Node.js, Python 3.12, the Visual C++ runtimes.
+The GPU power limit is already at the default 420 W, so there is nothing to revert while the power-limit task is gone.
+After step 5, check: `Get-ScheduledTask -TaskName 'HOMOS*'` empty, `Get-NetFirewallRule -DisplayName 'HOMOS*'` empty,
+the three variables unset in a new shell, `Test-NetConnection 127.0.0.1 -Port 11434` and `-Port 11435` failing.

@@ -1,11 +1,13 @@
 /**
- * npm run ai:judge -- --max-usd <cap> [--concurrency 4] [--set 1.9|local]
+ * npm run ai:judge -- --max-usd <cap> [--concurrency 4] [--set 1.9|local] [--no-retry]
+ * --no-retry (step 4.8j, owner): no SDK retries and no second call when a verdict is missing; a failed call stays failed.
  * Step 1.9: the Opus 5.5 judge grades every answer of the three generation runs (k5-run1, k5-run2, k10) on golden
  * v1.4. Each answer is one blind call (see ai/judge/items.ts). Verdicts are appended to a JSONL file as they arrive,
  * so an interrupted run resumes without paying twice. Writes the judgments file and a JSON with every item; the
  * report with tables is written only after the owner's blind grading (npm run ai:blind -- score).
  */
 import 'dotenv/config';
+import Anthropic from '@anthropic-ai/sdk';
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'fs';
 import type { AnswerRecord } from '../answer/measures';
 import { MODELS } from '../context/pricing';
@@ -61,6 +63,15 @@ export const SETS = {
   local: { runs: LOCAL_RUNS, judgments: `${RESULTS}/2026-11-11-judgments-local-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-11-judged-local-golden-v1-4.json`, date: '2026-11-11' },
   tuning: { runs: TUNING_RUNS, judgments: `${RESULTS}/2026-11-11-judgments-tuning-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-11-judged-tuning-golden-v1-4.json`, date: '2026-11-11' },
   phase3: { runs: PHASE3_RUNS, judgments: PHASE3_JUDGMENTS, judged: `${RESULTS}/2026-11-16-judged-phase3-golden-v1-4.json`, date: '2026-11-16' },
+  // Step 4.8j (CC-App, owner 17 Nov 2026): the chat-server golden run on the box, judged apart from the phase 3 cap.
+  lan48: { runs: [{ run: 'local-lan48', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48-golden-v1-4.json`, date: '2026-11-17' },
+  // Step 4.8j2 (CC-App, standing rule): one box run converted two ways; the 29 answered questions are identical,
+  // only the refusals differ (lan48b: fixed heading plus the model's explanation, lan48bf: fixed heading alone).
+  lan48b: { runs: [{ run: 'local-lan48b', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48b-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48b-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48b-golden-v1-4.json`, date: '2026-11-17' },
+  lan48bf: { runs: [{ run: 'local-lan48bf', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48bf-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48bf-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48bf-golden-v1-4.json`, date: '2026-11-17' },
+  // Step 4.8j3 (CC-App, standing rule): a second box run of the lan48b setup, refusal explained.
+  lan48c: { runs: [{ run: 'local-lan48c', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48c-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48c-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48c-golden-v1-4.json`, date: '2026-11-17' },
+  guest46e: { runs: [{ run: 'guest-guest46e', file: `${RESULTS}/2026-11-18-answers-k10-guest-guest46e-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-18-judgments-guest46e-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-18-judged-guest46e-golden-v1-4.json`, date: '2026-11-18' },
 };
 export type SetName = keyof typeof SETS;
 
@@ -105,14 +116,15 @@ async function main() {
   const { judgments, judged, date } = SETS[set];
   const items = byHash(loadItems(set));
   const todo = items.filter((x) => !x.result);
-  const judge = new ClaudeJudge();
+  const noRetry = process.argv.includes('--no-retry');
+  const judge = new ClaudeJudge(noRetry ? new Anthropic({ maxRetries: 0 }) : undefined);
   // Worst case of one call: the prompt (about 3 characters per token) plus the whole 8000-token output budget.
   const worst = (x: JudgedItem) => ((JSON.stringify(x.input).length / 3 + 2000) * MODELS.opus.price.input + 8000 * MODELS.opus.price.output) / 1e6;
   let spent = 0;
   let reserved = 0;
   let stopped = false;
   let errors = 0;
-  console.log(`${items.length} answers, ${items.length - todo.length} already judged, ${todo.length} to judge; ${judge.name}; cap $${maxUsd}`);
+  console.log(`${items.length} answers, ${items.length - todo.length} already judged, ${todo.length} to judge; ${judge.name}; cap $${maxUsd}${noRetry ? '; no retries' : ''}`);
 
   let next = 0;
   const worker = async () => {
@@ -127,7 +139,7 @@ async function main() {
       let r: JudgeResult;
       try {
         r = await judge.judge(x.input);
-        if (!r.verdict) r = await judge.judge(x.input);
+        if (!r.verdict && !noRetry) r = await judge.judge(x.input);
       } finally {
         reserved -= w;
       }

@@ -86,3 +86,35 @@ export class LocalReranker implements Reranker {
 }
 
 class RequestError extends Error {}
+
+export interface RerankerHealth {
+  device?: string;
+  cudaAvailable?: boolean;
+  loadedDevices?: string[];
+}
+
+/**
+ * Pre-flight before a run that needs the reranker (owner, 18 Nov 2026): the service on the box holds VRAM only while an
+ * evaluation needs it, so it may be stopped. One GET /health with a short timeout and no retry, so a run stops at once
+ * with an instruction instead of spending money and then failing at its first rerank call.
+ */
+export async function checkReranker(baseUrl: string, opts: { timeoutMs?: number; fetchFn?: typeof fetch } = {}): Promise<RerankerHealth> {
+  if (!baseUrl) throw new Error('RERANK_URL is not set (see .env.example)');
+  const fetchFn = opts.fetchFn ?? fetch;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 10_000);
+  let reason: string;
+  try {
+    const r = await fetchFn(`${baseUrl.replace(/\/$/, '')}/health`, { signal: controller.signal });
+    if (r.ok) return (await r.json()) as RerankerHealth;
+    reason = `HTTP ${r.status}`;
+  } catch (e) {
+    reason = controller.signal.aborted ? 'no answer within the timeout' : e instanceof Error ? e.message : String(e);
+  } finally {
+    clearTimeout(timer);
+  }
+  throw new Error(
+    `reranker at ${baseUrl} is not available (${reason}). It runs only when an evaluation needs it: ask the owner to ` +
+      `have CC-Win start the "HOMOS reranker" task on the box (a cold start takes about 35 s), then run again.`,
+  );
+}
