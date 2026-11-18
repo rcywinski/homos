@@ -99,7 +99,7 @@ async function main() {
     // CUDA. Nothing is loaded here; the fixed load order runs when a visitor presses "Load" (ai/serve/models-state.ts).
     const problem = await startupProblem(residency);
     if (problem) throw new ResidencyError(problem);
-    console.log(`[serve] start-up check: Ollama answers, ${residency.generator} and ${residency.embedder} on disk, reranker ${residency.reranker} on cuda; nothing loaded`);
+    console.log(`[serve] start-up check: Ollama answers, ${residency.generator} and ${residency.embedder} on disk, reranker ${residency.reranker} on cuda; this server loads nothing at start`);
     const backend = new OllamaModelBackend(residency);
     models = new Models({ ...modelsOptions, backend });
     const m = models;
