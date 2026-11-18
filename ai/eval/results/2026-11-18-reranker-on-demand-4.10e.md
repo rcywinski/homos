@@ -10,12 +10,21 @@ task "HOMOS reranker" stopped and left without a trigger (on demand only, for ev
 |---|---|---|
 | M0, before: SYSTEM reranker running, nothing loaded | 4 177 MiB | the reranker held about 2.96 GB with its CUDA context |
 | M1, after: nothing of the project running | 1 218 MiB | the desktop only; no python, no llama-server on the compute list |
-| M2, full load (reranker, generator, bge-m3) | 23 972 MiB | 355 MiB free; both models 100% on the GPU |
+| M2, full load (reranker, generator, bge-m3) | 23 972 MiB | spare 604 MiB (total minus used), 355 MiB by memory.free; both models 100% on the GPU |
 | M3, after the release (switch off) | 1 218 MiB | equal to M1 |
 
-So nothing of the project holds VRAM while idle or after a boot, which was the owner's requirement. With everything
-loaded the card has 355 MiB free, less than the 520 to 570 MiB of earlier measurements (the reranker now starts in a
-fresh process); no layer moved to the CPU.
+So nothing of the project holds VRAM while idle or after a boot, which was the owner's requirement.
+
+**Spare VRAM, two bases** (CC-Win, 18 Nov 2026). nvidia-smi's memory.free leaves out 250 MiB the driver reserves on
+this card: total 24 576 = reserved 250 + used + free. On one basis: full load used 24 004 MiB in 4.10d and 23 972 MiB
+here, so the spare is 572 then and 604 now as total minus used, or about 322 then and 355 now as memory.free. Nothing
+grew. The 4.10d report and the "520 to 570 MiB" quoted since (step 4.8 review, the glossary) are total minus used;
+this report gives both. Per-process VRAM cannot be read under WDDM, only totals.
+
+If a load ever fails for lack of memory (another program on the owner's desktop holding VRAM), the visitor sees the
+fixed text "The local model could not be loaded right now. Please try again later." and the load button after the
+2-minute pause; the server log has the reason (torch's out-of-memory line from reranker.log, or the check finding a
+model not fully on the GPU), and what was loaded is released.
 
 ## Times
 
@@ -47,5 +56,7 @@ Option (c), the reranker on the CPU, would add about 40 s to every question: rej
 - Evaluations from the Mac need `Start-ScheduledTask "HOMOS reranker"` on the owner's word and a stop afterwards; the
   Mac pre-flight (ai-layer 21c7f07) says so when it is off.
 - The admin page shows "another reranker is running" while that task runs.
-- Typical times on the page: the defaults (reranker 12 s, generator 21 s, bge-m3 2.6 s) give "about 36 s" for a full
-  load and "about 15 s" for a search load, close to the measured warm figures.
+- Typical times on the page, set from these measurements as warm times (the usual case: the files are in the
+  operating system's cache after the first load): reranker 11.5 s, generator 22 s, bge-m3 2.9 s, check 0.2 s, so
+  "about 37 s" for a full load and "about 15 s" for a search load; the first load after the box restarts is cold,
+  about 5 s longer (41.0 s measured), and the page says so.

@@ -87,8 +87,8 @@ export function ModelsPanel({ view, busy, onLoad, need = 'ready' }: { view: Mode
         </p>
       )}
       <p className="fine-print">
-        Loading usually takes about {seconds(view.typicalLoadMs)} s. The model is released again after{' '}
-        {view.idleUnloadMinutes} minutes without questions.
+        Loading usually takes about {seconds(view.typicalLoadMs)} s, a few seconds more just after the owner&apos;s
+        computer restarts. The model is released again after {view.idleUnloadMinutes} minutes without questions.
       </p>
     </div>
   );

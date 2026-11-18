@@ -246,11 +246,12 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
     // check 0.0 to 0.1 s. The release of bge-m3 alone is not measured yet (no public search load).
     typicalLoadMs: {
       'release-embedder': int(env, 'SERVE_TYPICAL_RELEASE_MS', 1000, 0, 600_000),
-      generator: int(env, 'SERVE_TYPICAL_GENERATOR_MS', 21_000, 0, 600_000),
-      embedder: int(env, 'SERVE_TYPICAL_EMBEDDER_MS', 2600, 0, 600_000),
+      // Warm times measured in 4.10e (18 Nov 2026): generator 21.2 to 22.1 s, bge-m3 2.9 to 3.0 s.
+      generator: int(env, 'SERVE_TYPICAL_GENERATOR_MS', 22_000, 0, 600_000),
+      embedder: int(env, 'SERVE_TYPICAL_EMBEDDER_MS', 2900, 0, 600_000),
       check: int(env, 'SERVE_TYPICAL_CHECK_MS', 200, 0, 600_000),
-      // 4.10e: 34 s on a cold boot and 10 to 11 s warm (inference/README.md); measured again on the box.
-      reranker: int(env, 'SERVE_TYPICAL_RERANKER_MS', 12_000, 0, 600_000),
+      // 4.10e on the box: 11.2 s warm, 16.0 s cold (the first load after a restart of the box).
+      reranker: int(env, 'SERVE_TYPICAL_RERANKER_MS', 11_500, 0, 600_000),
     },
     loadCooldownMs: int(env, 'SERVE_LOAD_COOLDOWN_MS', 120_000, 0, 3_600_000),
     access: accessConfig(env, engine),

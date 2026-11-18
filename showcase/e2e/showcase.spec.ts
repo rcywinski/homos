@@ -330,7 +330,7 @@ test('models on demand: load button, staged progress with typical times, then th
   await open(page, url, info, { load: false });
   const panel = page.getByTestId('models-panel');
   await expect(panel).toHaveAttribute('data-state', 'idle');
-  await expect(panel).toContainText('Loading usually takes about 24 s');
+  await expect(panel).toContainText('Loading usually takes about 25 s');
   await expect(panel).toContainText('released again after 15 minutes without questions');
   await page.getByLabel('Your question').fill('Why were the ranges kept wide?');
   await expect(page.getByRole('button', { name: 'Ask', exact: true })).toBeDisabled();
@@ -344,7 +344,7 @@ test('models on demand: load button, staged progress with typical times, then th
   await expect(stages.nth(0)).toContainText('Language model');
   await expect(stages.nth(1)).toContainText('Search model');
   await expect(stages.nth(2)).toContainText('Checking both are ready');
-  await expect(stages.nth(0)).toContainText('usually about 21 s');
+  await expect(stages.nth(0)).toContainText('usually about 22 s');
   // Order: the language model first; the search model waits until it is done (step 3.5).
   await expect(stages.nth(0)).toHaveAttribute('data-status', 'running');
   await expect(stages.nth(1)).toHaveAttribute('data-status', 'pending');
