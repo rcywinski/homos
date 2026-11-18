@@ -878,6 +878,7 @@ is finished he gets one summary in Polish, with no intermediate messages relayed
 | 2026-11-17 | CC-Mac | judge, set lan48b (4.8j2, refusal explained) | 0.5161 | 0.5161 |
 | 2026-11-17 | CC-Mac | judge, set lan48bf (4.8j2, fixed refusal text) | 0.5023 | 1.0184 |
 | 2026-11-17 | CC-Mac | judge, set lan48c (4.8j3, refusal explained) | 0.5320 | 1.5504 |
+| 2026-11-18 | CC-Mac | guest-key run 4.6e, 34 golden questions, Sonnet 5.5 (owner approved about 1 USD) | 1.0049 | 2.5553 |
 
 ## 2026-11-17, closing reports to the analysis session (owner)
 
