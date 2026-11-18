@@ -520,6 +520,15 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   exactly these three packages), the wallet list kept to name the reason. From the 4.6b review: only a value that
   starts with "sk-ant-" is accepted as a key (a plain message otherwise, nothing stored or sent), and a 401 forgets the
   key at once and shows the field again.
+  **4.6d built (18 Nov 2026), awaiting the owner's OK:** `showcase/e2e/guest.spec.ts`, 8 tests on desktop and phone,
+  api.anthropic.com mocked with `page.route` (no call leaves the machine): a full guest question answered and checked
+  on our server (verified quote, unverified figure, "not measured" label); the key only in `x-api-key` of the one call
+  to Anthropic and in no request to our origin (URL, headers, body); nothing in localStorage, sessionStorage, cookies
+  or IndexedDB; the key gone after a reload and after "Forget my key"; only an "sk-ant-" value accepted; a refused
+  question makes no Anthropic call; a 401 shows the API message, forgets the key and makes no verify call; a call
+  without a readable answer shows the likely causes; an answer cut at max_tokens is not sent to verify; the CSP in
+  header and meta allows exactly `'self' https://api.anthropic.com` and the browser blocks any other host. This
+  commit is the one to pin for the public site.
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner (precondition: the server runs as `homos-web`
   from `C:\HomosServe\homos`, not as the desktop user): Cloudflare Tunnel, static hosting choice,
   optional Access, kill switch documented in `inference/README.md`. S. Checklist: `SERVE_MODE=tunnel` and
@@ -528,6 +537,21 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   `homos-web`; the response headers of section 4.7 present on the public URL. Rocket Loader, automatic Web Analytics
   and email obfuscation off for the hostname, and the HTML served through the tunnel byte for byte equal to the built
   `showcase/public/index.html` (review of 17 Nov 2026; required before guest-key mode goes public).
+  Precondition wording agreed on 18 Nov 2026 (least privilege, replaces "runs as homos-web from the clone"):
+  `homos-web` (a plain local user, SID-based ACLs because the box's Windows is Polish) gets read-and-execute on
+  `C:\HomosServe\homos`, read on `serve.env` and the switch file, modify only on `C:\HomosServe\logs` (no other user
+  there), owns none of them, and has an explicit deny on `C:\Projects\homos` (its `.env` may hold wallet-era keys; the
+  reranker runs from it as SYSTEM, unaffected). `npm ci` and the build run as the owner's account, never as
+  `homos-web`; nothing at run time writes inside the clone. The server and tunnel tasks run as `homos-web` at startup,
+  whether or not anyone is signed in, created in the Task Scheduler window (which grants "log on as a batch job");
+  the owner types the password there and nowhere else. Before the tunnel: read-only checks of
+  LimitBlankPasswordUse, Remote Desktop exposure and the firewall rules for 8790, 11434 and 11435.
+  Found by CC-Win before A1 ran (18 Nov 2026): the default ACL of `C:\` gives Authenticated Users Modify on every
+  top-level folder, so `homos-web` could have rewritten the code, `serve.env` and the owner's switch. Fix: inheritance
+  cut at `C:\HomosServe` with an explicit ACL (SYSTEM, Administrators and the owner's account full, `homos-web`
+  read-and-execute), `C:\HomosServe\logs` the only place `homos-web` may write, and a test that `homos-web` cannot
+  write the switch file. The clone's `.env` holds only `SHOWCASE_WALLET_ADDRESS` (a public address read by the build,
+  not by the server); the precondition is "no other variable there".
 
 Steps 4.1 to 4.5 can be built while phase 3 holds the box (4.4b needs CC-Win on the box but not the GPU). 4.7, 4.8,
 4.6 and 4.9 wait until the owner says phase 3 is finished.
