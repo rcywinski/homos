@@ -249,7 +249,7 @@ On 11 Nov 2026 the box lost power 4 times under qwen3.8:27b (Kernel-Power 41, bu
 On 13 Nov 2026 the PSU was replaced with a 1200 W be quiet! unit and the cap was removed:
 - The task is disabled.
 - The launchers no longer call the script.
-- MSI Afterburner does not run: its logon task is disabled, fans are on auto.
+- MSI Afterburner: the power slider no longer caps the card. Its logon task `\MSIAfterburner` (runs as cywil, `MSIAfterburner.exe /s`) is enabled and was in state Running on 18 Nov 2026 (CC-Win inventory), which contradicts the earlier note that it was disabled; the card limit then read 420 W, the default. The owner checks the slider and fan settings; nothing was changed.
 - The card runs at its default limit of 420 W.
 
 A watched full-load test passed: qwen3.8:27b at num_ctx 16384 generating 4000 tokens alongside back-to-back reranker calls. It drew up to 421 W (397 W on average) and reached 69 C, with no shutdown.
@@ -550,3 +550,98 @@ The CLI reads `OLLAMA_HOST`; `0.0.0.0` is a listen address, so in an interactive
   reproducible (the same call now takes 80 to 220 ms).
 - Local smoke test on 9 Nov 2026: the Polish and English sentences from the Mac check returned `2 [1024, 1024]`,
   cosine similarity between the two vectors 0.894.
+
+## Removing the project from the box
+
+Written by CC-Mac on 18 Nov 2026 from CC-Win's read-only inventory of that day. This is a checklist only: nothing on
+the box is deleted or changed without the owner's word. Labels: **[project]** created by the project (the AI layer),
+**[pre-AI]** HOMOS work from before the AI layer (Sept 2026), **[ask]** unclear or shared, the owner decides.
+Run the steps in this order, as Administrator unless noted; each step names its revert or what it restores.
+
+### What the project left on the box (18 Nov 2026)
+
+| Item | Label | Size | Notes |
+|---|---|---|---|
+| `C:\ollama\` (app, models, hf, logs, three launchers) | [project] | 89.1 GB | models 83.8 GB, Hugging Face cache 2.1 GB |
+| `C:\HomosServe\` (serving clone, serve.env, SWITCH, run outputs 4.8 to 4.10d) | [project] | 0.9 GB | the run outputs are results; copy what is wanted to the Mac first |
+| `C:\Projects\homos-dryrun\`, `C:\Projects\showcase-raw-4.1b\`, `C:\Projects\homos-dryrun-serve.env`, `homos-dryrun-server.err`, `homos-dryrun-server.out` | [project] | 0.9 GB | showcase-raw-4.1b: delete only on the owner's word (earlier note) |
+| `C:\Projects\homos\inference\reranker\.venv\` and `C:\Projects\homos\ai\index\` | [project] | 3.4 GB, 0.2 GB | inside the pre-AI clone |
+| `C:\Projects\homos\` (the clone itself, `data\` 20 GB, `.bot-live-backup\`, `.bot`, `backtest`) | [pre-AI] | 24.2 GB in all | keep |
+| `C:\Projects\homos-bot-state-2026-09-23.zip` | [pre-AI] | 3.5 MB | keep |
+| `C:\Users\cywil\AppData\Local\ms-playwright\` | [project] | 0.7 GB | Playwright browsers for step 4.8 |
+| `C:\Users\cywil\AppData\Local\npm-cache\` | [ask] | 0.6 GB | shared npm cache since 27 Sep |
+| `C:\Users\cywil\AppData\Local\Ollama\`, `C:\Users\cywil\.ollama\` | [project] | under 1 MB | tray app logs, client key pair |
+| `C:\Users\cywil\.claude\projects\C--Projects-homos\`, `%TEMP%\claude\` | [ask] | small | CC-Win's memory and scratchpad |
+| `C:\Skrypty\` | [ask] | small | looks like the owner's own GPU logger |
+| Tasks `HOMOS inference (Ollama)`, `HOMOS reranker` (SYSTEM, at startup, running), `HOMOS GPU power limit` (disabled) | [project] | | |
+| Task `\MSIAfterburner` (cywil, running) | [ask] | | the owner's tool, predates the project |
+| Firewall rules `HOMOS inference (LAN+VPN only)` (TCP 11434), `HOMOS reranker (LAN+VPN only)` (TCP 11435) | [project] | | |
+| Machine variables `OLLAMA_HOST`, `OLLAMA_MODELS`, `HF_HOME` | [project] | | |
+| Fixed pagefile 48 GB | [project] | 48 GB on C: | set 16 Nov 2026 |
+| Ollama 0.40.15 (`C:\ollama\app`), Python 3.11.9 (`C:\Program Files\Python311`) | [project] | | |
+| Git 2.56.0.4 (installed 9 Nov) | [ask] | | probably installed for the project, useful anyway |
+| Node.js 24.19.0, Python 3.12.10 (per user), Visual C++ redistributables | [pre-AI] or not the project's | | keep |
+
+Models in Ollama, and who still needs them:
+
+| Model | Size | Pulled | By step | Still needed |
+|---|---|---|---|---|
+| `qwen3.8:27b` | 17 GB | 11 Nov | 1.11 | yes: the local agent (3.5) and the chat server (phase 4) |
+| `bge-m3:latest` | 1.2 GB | 9 Nov | 0.3 | yes: embeddings for every index and the chat server |
+| `gemma4:26b` | 18 GB | 11 Nov | 1.11 extra run, used again in 3.3 | no later step uses it |
+| `gemma4:31b-it-q4_K_M` | 20 GB | 16 Nov | 3.4 candidate | no: Muse was the best of the 3.4 candidates and still below Qwen |
+| `gpt-oss:20b` | 13 GB | 16 Nov | 3.4 candidate | no |
+| `muse-glimmer:30b` | 18 GB | 16 Nov | 3.4 candidate | no |
+
+The four models no later step needs take 69 GB. Removing only them (`ollama rm <name>`) is a smaller step than the full
+removal below; it is still a deletion on the box, so it needs the owner's word. A rerun of 3.3 or 3.4 would need them pulled again.
+
+### Dependency to know first
+
+The reranker runs from the pre-AI clone: the `HOMOS reranker` task runs `C:\ollama\start-reranker.ps1`, which does
+`Set-Location C:\Projects\homos\inference\reranker` and starts `.venv\Scripts\python.exe` there. Deleting or moving
+`C:\Projects\homos` (or its `inference\reranker\.venv`) stops the reranker at its next start. Delete the venv only
+after the task is gone (step 1 and 2).
+
+### Removal order
+
+1. **Stop everything.** The chat server has no task; check that no `node` process serves port 8790. Then:
+   ```powershell
+   Disable-ScheduledTask -TaskName 'HOMOS inference (Ollama)'; Stop-ScheduledTask -TaskName 'HOMOS inference (Ollama)'
+   Disable-ScheduledTask -TaskName 'HOMOS reranker'; Stop-ScheduledTask -TaskName 'HOMOS reranker'
+   Get-Process ollama -ErrorAction SilentlyContinue | Stop-Process -Force
+   Get-CimInstance Win32_Process -Filter "Name='python.exe'" | Where-Object CommandLine -match 'uvicorn app:app' | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+   ```
+   Revert: `Enable-ScheduledTask` and `Start-ScheduledTask` for both.
+2. **Tasks, firewall, environment.**
+   ```powershell
+   Unregister-ScheduledTask -TaskName 'HOMOS inference (Ollama)' -Confirm:$false
+   Unregister-ScheduledTask -TaskName 'HOMOS reranker' -Confirm:$false
+   Unregister-ScheduledTask -TaskName 'HOMOS GPU power limit' -Confirm:$false
+   Remove-NetFirewallRule -DisplayName 'HOMOS inference (LAN+VPN only)'
+   Remove-NetFirewallRule -DisplayName 'HOMOS reranker (LAN+VPN only)'
+   foreach ($v in 'OLLAMA_HOST','OLLAMA_MODELS','HF_HOME') { [Environment]::SetEnvironmentVariable($v, $null, 'Machine') }
+   ```
+   Restores: no inbound port opened by the project (11434 and 11435 closed); the variables are gone, so a later Ollama
+   install would listen on 127.0.0.1 and store models under the user profile. Revert: recreate from the sections
+   "Start and reboot survival", "Network exposure", "Reranker operations" and "Environment" above.
+   `\MSIAfterburner` is not the project's: leave it unless the owner says otherwise.
+3. **Ollama.** As cywil (the uninstall entry is under cywil's HKCU), elevated if asked: `C:\ollama\app\unins000.exe`.
+   Then delete `C:\ollama\` (89 GB with the models and the reranker model cache; copy `C:\ollama\logs\` to the Mac first
+   if the run CSVs are wanted), `C:\Users\cywil\AppData\Local\Ollama\` and `C:\Users\cywil\.ollama\`.
+4. **Project folders.** `C:\HomosServe\` (copy wanted run outputs first), `C:\Projects\homos-dryrun\`, the three loose
+   `homos-dryrun-*` files in `C:\Projects\`, `C:\Users\cywil\AppData\Local\ms-playwright\`, and inside the pre-AI clone
+   `inference\reranker\.venv\` and `ai\index\` (both gitignored, so the clone stays clean). `C:\Projects\showcase-raw-4.1b\`
+   only on the owner's word.
+5. **Pagefile back to Windows-managed**, then reboot (it was about 8.6 GB, commit limit 40.3 GB):
+   ```powershell
+   $cs = Get-CimInstance Win32_ComputerSystem
+   Set-CimInstance -InputObject $cs -Property @{AutomaticManagedPagefile = $true}
+   ```
+6. **Python 3.11.9** (all users) from Settings, Apps. Not the per-user Python 3.12.10, which is the owner's.
+7. **[ask] items:** Git, the npm cache, CC-Win's memory and scratchpad, `C:\Skrypty\`, `\MSIAfterburner`.
+
+Kept: `C:\Projects\homos\` and its pre-AI data, the 23 Sep bot-state zip, Node.js, Python 3.12, the Visual C++ runtimes.
+The GPU power limit is already at the default 420 W, so there is nothing to revert while the power-limit task is gone.
+After step 5, check: `Get-ScheduledTask -TaskName 'HOMOS*'` empty, `Get-NetFirewallRule -DisplayName 'HOMOS*'` empty,
+the three variables unset in a new shell, `Test-NetConnection 127.0.0.1 -Port 11434` and `-Port 11435` failing.
