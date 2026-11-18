@@ -1,7 +1,7 @@
 name: CI
 on:
   push:
-    branches: [main]
+    branches: [main, app-chat]
   pull_request:
 jobs:
   test:
@@ -18,3 +18,27 @@ jobs:
       - run: npm run test:math
       - run: npm run backtest:validate
       - run: npm run build
+
+  # Phase 4: the public showcase and the chat server, with fake models only (no GPU, no API key, no network).
+  showcase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Unit tests of the chat server and the showcase
+        run: npx tsx ai/serve/mask.test.ts && npx tsx ai/serve/export.test.ts && npx tsx showcase/guard.test.ts && npx tsx ai/serve/serve.test.ts && npx tsx ai/serve/queue.test.ts && npx tsx ai/serve/wallet-export.test.ts && npx tsx ai/serve/residency.test.ts && npx tsx ai/serve/security.test.ts && npx tsx ai/serve/models-state.test.ts && npx tsx ai/serve/guest.test.ts && npx tsx showcase/guest-key.test.ts && npx tsx ai/serve/admin.test.ts && npx tsx ai/serve/encoding.test.ts && npx tsx ai/serve/supervise.test.ts
+      - run: npm run showcase:build
+      - run: npx playwright install --with-deps chromium
+      - name: Browser suite (Playwright, desktop and phone)
+        run: npx playwright test
+      - name: Screenshots and traces of failed paths
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: showcase/e2e/results/
+          retention-days: 14

@@ -1,0 +1,2176 @@
+{
+ "label": "answers-k10-local-lan48bf",
+ "date": "2026-11-17",
+ "goldenVersion": "1.4",
+ "generator": "answer:ollama:qwen3.8:27b(think=false,num_ctx=17408,num_predict=2048,temperature=0.7,presence_penalty=0,prompt=LOCAL_QUOTE_SYSTEM (ai/answer/prompt-local.ts),cite=quote)",
+ "retrieval": "hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.meta (live, through the chat server on the box)",
+ "k": 10,
+ "note": "Step 4.8j: the served preset through the public chat server on the box (ai/serve), converted by ai/serve/tools/to-judge-input.mts. Live retrieval, not saved chunk lists. For \"not in the data\" the answer is the fixed text the visitor sees. No token usage or cost (local model). Judged with the fixed heading alone for \"not in the data\" (--refusal fixed), even where the run has the explanation.",
+ "source": {
+  "file": "lan-run-golden-4.8j2.json",
+  "sha256": "9f1d964012769539c5fc807234bef3fd5cea24b66a5555b19b0234054d43239e"
+ },
+ "perQuestion": [
+  {
+   "id": "why-01",
+   "category": "why",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/CONTEXT.md:1362#p7",
+     "quote": "zwężanie zarobiło DUŻO więcej fee — cbBTC $2169 vs $541, base-030 $3147 vs $1354 — a skończyło NIŻEJ.",
+     "words": 18,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      1702,
+      1703
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:1362#p7",
+     "quote": "Czyli IL i re-centering zjadły ~$1.9k (cbBTC) i ~$2.9k (base-030) ponad to, co dołożyły fee",
+     "words": 15,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      1704,
+      1705
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:1362#p7",
+     "quote": "w SAMYM REŻIMIE FLAT, gdzie zwężanie ma teoretyczną przewagę — cbBTC Pasywny 86% wygr. vs ±5% 59%",
+     "words": 17,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      1698,
+      1700
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:44",
+     "quote": "a passive wide range ≈ HODL + fees − a little IL, and narrowing added variance without adding expectancy",
+     "words": 19,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      60,
+      61
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 15102,
+   "answer": "The project avoided frequent re-centering (narrowing) because the 720-day backtests showed the extra fees were more than offset by impermanent loss (IL) from rebalancing. Specifically, the narrow strategy earned 4x more fees but finished lower; the IL and re-centering costs consumed ~$1.9k (cbBTC) and ~$2.9k (base-030) more than the fee gains. The earlier 365-day results were an artifact that ignored IL. In the flat regime, where narrowing should theoretically win, the passive wide range still outperformed (e.g., 86% vs 59% win rate on cbBTC).",
+   "chunkIds": [
+    "journal/CONTEXT.md:1362#p7",
+    "docs/CASE-STUDY.md:67",
+    "journal/RESEARCH-QUEUE.md:926#p2",
+    "docs/CASE-STUDY.md:44",
+    "journal/CONTEXT.md:1362#p8",
+    "journal/CONTEXT.md:1362#p4",
+    "journal/reports/morning-2026-09-22.md:101",
+    "journal/reports/morning-2026-09-20.md:101",
+    "journal/RESEARCH-QUEUE.md:1073#p1",
+    "journal/reports/morning-2026-09-18.md:101"
+   ]
+  },
+  {
+   "id": "why-02",
+   "category": "why",
+   "answerable": "yes",
+   "evidenceGiven": "no",
+   "coverage": "partial",
+   "citations": [
+    {
+     "chunkId": "journal/CONTEXT.md:969",
+     "quote": "przy wzroście zarabiamy MNIEJ niż HODL (pula wyprzedaje rosnące aktywo, ~70% ekspozycji, sufit pasma)",
+     "words": 14,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      999,
+      1000
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:969",
+     "quote": "wartość trwała = pomiar + maszyna badawcza + wiedza",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      1000,
+      1001
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "I deposited 6 092 USDC on Base",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      69,
+      69
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 11198,
+   "answer": "The sources do not state that capital was kept small specifically because ETH and BTC were rising. They explain that the strategy underperforms HODL in rising markets because the pool sells the rising asset, capping upside, and that the project's primary goal was research and measurement rather than profit maximization. The small tranche ($6,092) was treated as a test to validate the system and measure the edge, with the decision on scale deferred to a later review.",
+   "chunkIds": [
+    "journal/CONTEXT.md:969",
+    "journal/CONTEXT.md:116#p1",
+    "docs/CASE-STUDY.md:67",
+    "journal/CONTEXT.md:684",
+    "journal/CONTEXT.md:4240#p1",
+    "journal/reports/morning-2026-09-09.md:127",
+    "journal/RESEARCH-QUEUE.md:597#p1",
+    "docs/EMERGENCY.md:11",
+    "docs/DECISION-LOG.md:29",
+    "journal/reports/morning-2026-09-10.md:146"
+   ]
+  },
+  {
+   "id": "why-03",
+   "category": "why",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/DECYZJE-2026-08-26.md:656",
+     "quote": "jednorazowy eksperyment na 2–3 pulach rdzenia (base-030, mainnet-005, arb-005)",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/DECYZJE-2026-08-26.md",
+     "lines": [
+      671,
+      672
+     ]
+    },
+    {
+     "chunkId": "journal/DECYZJE-2026-08-26.md:656",
+     "quote": "dzisiaj ~54 min przy 8GB heap na 365d",
+     "words": 8,
+     "tooLong": false,
+     "status": "not-found",
+     "file": "journal/DECYZJE-2026-08-26.md"
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 10117,
+   "answer": "The 720-day backtests covered only a few pools because fetching and processing that much swap-level data was expensive and time-consuming (e.g., ~54 min for 365d on 8GB RAM). The specific pools chosen (base-030, mainnet-005, arb-005, cbBTC-005) were the core candidates used throughout the project for calibration and live trading, allowing a direct comparison of 365d vs 720d gate results on the same assets to test if the longer window (including a bull market) changed the verdict.",
+   "chunkIds": [
+    "docs/CASE-STUDY.md:44",
+    "docs/PLAN.md:151",
+    "docs/ALGORITHM.md:1",
+    "journal/CONTEXT.md:2178#p1",
+    "docs/CASE-STUDY.md:16",
+    "journal/CONTEXT.md:2178#p2",
+    "docs/DECISION-LOG.md:22",
+    "journal/RESEARCH-QUEUE.md:7#p1",
+    "journal/DECYZJE-2026-08-26.md:656",
+    "docs/CASE-STUDY.md:67"
+   ]
+  },
+  {
+   "id": "why-04",
+   "category": "why",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "docs/AI-WORKFLOW.md:25",
+     "quote": "Sessions cannot see each other. They coordinated through the repository",
+     "words": 10,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/AI-WORKFLOW.md",
+     "lines": [
+      27,
+      27
+     ]
+    },
+    {
+     "chunkId": "docs/AI-WORKFLOW.md:25",
+     "quote": "Later in the project the two Claude Code sessions could message each other directly after a push or a deployment; when that channel was down they fell back to the inbox plus asking the owner to relay",
+     "words": 37,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/AI-WORKFLOW.md",
+     "lines": [
+      53,
+      55
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 10346,
+   "answer": "The Claude Code sessions (CC-Mac and CC-Win) did not start with direct messaging because, as the workflow doc states, “Sessions cannot see each other. They coordinated through the repository.” Direct pings were added later: “Later in the project the two Claude Code sessions could message each other directly after a push or a deployment; when that channel was down they fell back to the inbox plus asking the owner to relay.” The hand-off files therefore served as the always-available coordination layer before the direct channel existed and as the fallback when it was down.",
+   "chunkIds": [
+    "docs/AI-WORKFLOW.md:25",
+    "docs/CASE-STUDY.md:105",
+    "docs/PLAN.md:151",
+    "journal/HANDOFF.md:3",
+    "journal/HANDOFF.md:641#p2",
+    "journal/HANDOFF.md:641#p3",
+    "journal/HANDOFF.md:1264#p2",
+    "journal/HANDOFF.md:641#p10",
+    "docs/AI-WORKFLOW.md:8",
+    "journal/HANDOFF.md:641#p1"
+   ]
+  },
+  {
+   "id": "why-05",
+   "category": "why",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "docs/INFRA.md:8",
+     "quote": "NSSM service homos-bot      bot/observer.ts — prices, signals, proposals",
+     "words": 8,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/INFRA.md",
+     "lines": [
+      12,
+      12
+     ]
+    },
+    {
+     "chunkId": "docs/INFRA.md:8",
+     "quote": "They run outside the user session, start at boot and restart after a crash",
+     "words": 14,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/INFRA.md",
+     "lines": [
+      26,
+      27
+     ]
+    },
+    {
+     "chunkId": "docs/INFRA.md:8",
+     "quote": "Mac (browser)",
+     "words": 2,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/INFRA.md",
+     "lines": [
+      19,
+      19
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:3140",
+     "quote": "Usunięto autostart `pm2-windows-startup`",
+     "words": 3,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      3142,
+      3142
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:16",
+     "quote": "An observer bot running 24/7 on a Windows machine",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      36,
+      36
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 10560,
+   "answer": "The Windows machine was chosen because it could run the bot and API server 24/7 as background services. The Mac was used only for development and browser access. The Windows setup used NSSM services (replacing pm2) so the processes ran outside the user session, started at boot, and restarted after crashes, with sleep disabled and power-on after power loss configured in the BIOS. The architecture diagram explicitly labels the Windows box as the \"server, 24/7\" while the Mac is just a browser client. The journal notes that pm2 was used only on the first day and later replaced by NSSM for proper service management.",
+   "chunkIds": [
+    "journal/TASKS-INFRA.md:9",
+    "journal/CONTEXT.md:3081",
+    "docs/CASE-STUDY.md:16",
+    "journal/CONTEXT.md:2347#p1",
+    "docs/INFRA.md:8",
+    "journal/CONTEXT.md:3140",
+    "journal/HANDOFF.md:641#p2",
+    "docs/AI-WORKFLOW.md:8",
+    "journal/CONTEXT.md:3036",
+    "journal/CONTEXT.md:3473"
+   ]
+  },
+  {
+   "id": "why-06",
+   "category": "why",
+   "answerable": "yes",
+   "evidenceGiven": "no",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "docs/EMERGENCY.md:1",
+     "quote": "Everything runs in PROPOSE mode: the bot executes nothing on its own.",
+     "words": 12,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/EMERGENCY.md",
+     "lines": [
+      9,
+      9
+     ]
+    },
+    {
+     "chunkId": "docs/PLAN.md:151",
+     "quote": "AUTO mode was never enabled",
+     "words": 5,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/PLAN.md",
+     "lines": [
+      168,
+      168
+     ]
+    },
+    {
+     "chunkId": "docs/PLAN.md:151",
+     "quote": "semi-automatic execution (signal → ready transaction → signature in Rabby)",
+     "words": 10,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/PLAN.md",
+     "lines": [
+      167,
+      167
+     ]
+    },
+    {
+     "chunkId": "docs/UI-DESIGN.md:50",
+     "quote": "AUTO (not built): execution within limits",
+     "words": 6,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/UI-DESIGN.md",
+     "lines": [
+      58,
+      58
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 9733,
+   "answer": "The bot operated exclusively in PROPOSE mode, meaning it \"executes nothing on its own.\" Automatic execution (AUTO mode) was designed but \"never enabled\" and \"not built.\" Consequently, all position actions—opening, closing, or re-ranging—required manual human approval and signature via a browser wallet (Rabby), rather than being triggered automatically by the bot.",
+   "chunkIds": [
+    "docs/EMERGENCY.md:1",
+    "docs/UI-DESIGN.md:50",
+    "docs/PLAN.md:151",
+    "journal/CONTEXT.md:2347#p2",
+    "journal/TASKS-UI.md:700#p1",
+    "journal/TASKS-UI.md:522#p1",
+    "journal/TASKS-UI.md:700#p2",
+    "journal/TASKS-UI.md:592#p2",
+    "journal/CONTEXT.md:2347#p3",
+    "journal/HANDOFF.md:254#p3"
+   ]
+  },
+  {
+   "id": "why-07",
+   "category": "why",
+   "answerable": "partial",
+   "evidenceGiven": "no-evidence",
+   "coverage": "partial",
+   "citations": [
+    {
+     "chunkId": "docs/UI-DESIGN.md:35",
+     "quote": "The vision suggested a small VPS (~$5/month); in the end a home Windows machine running 24/7 took that role.",
+     "words": 19,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/UI-DESIGN.md",
+     "lines": [
+      46,
+      48
+     ]
+    },
+    {
+     "chunkId": "docs/UI-DESIGN.md:35",
+     "quote": "a closed laptop means a dead autopilot. The bot is a separate process.",
+     "words": 13,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/UI-DESIGN.md",
+     "lines": [
+      46,
+      46
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 8376,
+   "answer": "The project documentation does not state a specific reason for choosing a home Windows machine over a VPS. It notes that the original vision suggested a small VPS (~$5/month), but a home Windows machine running 24/7 ultimately took that role. The only technical constraint mentioned is that a closed laptop cannot serve as the automation engine, necessitating a separate process on a dedicated machine.",
+   "chunkIds": [
+    "docs/UI-DESIGN.md:35",
+    "journal/RESEARCH-QUEUE.md:684#p2",
+    "docs/CASE-STUDY.md:16",
+    "docs/PLAN.md:151",
+    "journal/CONTEXT.md:3140",
+    "journal/TASKS-INFRA.md:9",
+    "journal/CONTEXT.md:3081",
+    "journal/CONTEXT.md:2871#p2",
+    "docs/INFRA.md:8",
+    "docs/AI-WORKFLOW.md:8"
+   ]
+  },
+  {
+   "id": "why-08",
+   "category": "why",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/CONTEXT.md:3806",
+     "quote": "para spadła z całym kryptem (obie nogi crypto = pełna beta, ŻADNEJ poduszki stable)",
+     "words": 14,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      3818,
+      3819
+     ]
+    },
+    {
+     "chunkId": "journal/RESEARCH-QUEUE.md:7#p1",
+     "quote": "obie nogi crypto = pełna beta, zero poduszki stable",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/RESEARCH-QUEUE.md",
+     "lines": [
+      47,
+      48
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 13047,
+   "answer": "A crypto/crypto pair like cbBTC/WETH is riskier because both legs are crypto, so the position carries full market beta with no stable-coin cushion. In the 365-day backtest, HODL 50/50 lost −51.5% APR with maxDD 61.5% because \"para spadła z całym kryptem (obie nogi crypto = pełna beta, ŻADNEJ poduszki stable).\" Although LP-vs-HODL alpha was the best of all pools, the absolute result was poor, and the journal notes the \"łagodny reżim\" was an artifact; the pair's portfolio role depends on the exposure/hedge decision, not LP quality.",
+   "chunkIds": [
+    "journal/CONTEXT.md:3806",
+    "docs/PAIRS.md:41",
+    "journal/RESEARCH-QUEUE.md:7#p1",
+    "journal/reports/morning-2026-09-05.md:114",
+    "journal/reports/morning-2026-09-10.md:146",
+    "journal/reports/morning-2026-09-04.md:134",
+    "journal/reports/morning-2026-09-12.md:171",
+    "journal/reports/morning-2026-09-18.md:165",
+    "journal/reports/morning-2026-09-20.md:170",
+    "journal/reports/morning-2026-09-03.md:134"
+   ]
+  },
+  {
+   "id": "why-09",
+   "category": "why",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "docs/CASE-STUDY.md:44",
+     "quote": "a mostly sideways-to-down year",
+     "words": 4,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      46,
+      46
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:44",
+     "quote": "The 365-day year had flattered range-bound strategies",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      57,
+      58
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:44",
+     "quote": "0 of 21 configurations passed the gate",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      57,
+      57
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:4554#p5",
+     "quote": "reżim UP systematycznie najgorszy (0–25% wygr.)",
+     "words": 6,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      4775,
+      4775
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:4554#p5",
+     "quote": "365d wyglądało lepiej głównie dlatego, że okno było spadkowo-boczne",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      4777,
+      4777
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 10345,
+   "answer": "The 365-day window covered a “mostly sideways-to-down year” that “flattered range-bound strategies,” making them appear profitable. The 720-day window included a “strong uptrend” where “0 of 21 configurations passed the gate.” In up-trends, the strategy performed worst (“0–25% wygr.”), because narrowing added variance without expectancy, and a passive wide range merely approximated HODL plus fees minus impermanent loss.",
+   "chunkIds": [
+    "docs/CASE-STUDY.md:44",
+    "docs/DECISION-LOG.md:22",
+    "journal/CONTEXT.md:4554#p5",
+    "docs/ALGORITHM.md:1",
+    "journal/HANDOFF.md:641#p5",
+    "docs/CASE-STUDY.md:16",
+    "docs/PLAN.md:151",
+    "journal/CONTEXT.md:2178#p2",
+    "journal/DECYZJE-2026-08-26.md:602",
+    "journal/CONTEXT.md:798#p3"
+   ]
+  },
+  {
+   "id": "why-10",
+   "category": "why",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "partial",
+   "citations": [
+    {
+     "chunkId": "journal/CONTEXT.md:3011",
+     "quote": "wąskie+częste (±5% naiwny, adaptacyjna k=1.5/2h) zebrały NAJWIĘCEJ fees ($2.7–5.3k)",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      3027,
+      3027
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:3011",
+     "quote": "koszty rotacji + realizowany IL zjadają wszystko",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      3027,
+      3027
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:3806",
+     "quote": "We FLAT wszystko wygrywa: adapt k3h24 100%wygr/najgorsze +2.66",
+     "words": 8,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      3837,
+      3837
+     ]
+    },
+    {
+     "chunkId": "docs/PLAN.md:79",
+     "quote": "fees do not cover LVR",
+     "words": 5,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/PLAN.md",
+     "lines": [
+      81,
+      81
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 12722,
+   "answer": "The project did not find that LPs earned less in fees during uptrends; the opposite was true. Narrow positions collected the most fees in volatile/trending windows (e.g., \"$2.7–5.3k\"), but those fees were wiped out by realized IL/LVR and rotation costs, producing the worst net results. In flat markets, the same or wider positions kept IL low and fees positive, so they beat HODL. Thus, fee income was not lower in uptrends; the net edge was lower because trend-driven losses exceeded the extra fees.",
+   "chunkIds": [
+    "journal/CONTEXT.md:3806",
+    "docs/CASE-STUDY.md:67",
+    "journal/DECYZJE-2026-08-26.md:90#p2",
+    "journal/RESEARCH-QUEUE.md:529#p2",
+    "journal/DECYZJE-2026-08-26.md:546",
+    "journal/CONTEXT.md:593",
+    "journal/CONTEXT.md:1362#p1",
+    "journal/CONTEXT.md:190#p1",
+    "journal/CONTEXT.md:3011",
+    "docs/PLAN.md:79"
+   ]
+  },
+  {
+   "id": "dated-01",
+   "category": "dated-fact",
+   "answerable": "yes",
+   "evidenceGiven": "no",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/HANDOFF.md:641#p10",
+     "quote": "docs: dzień decyzji zamknięty — produkt hybryda live, obie nogi otwarte",
+     "words": 11,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/HANDOFF.md",
+     "lines": [
+      1169,
+      1170
+     ]
+    },
+    {
+     "chunkId": "journal/HANDOFF.md:641#p10",
+     "quote": "karta realnej pozycji #5886957",
+     "words": 4,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/HANDOFF.md",
+     "lines": [
+      1159,
+      1159
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 9446,
+   "answer": "The first real capital entered through the application on 27.08. The journal marks this date as the \"day of the decision\" where the hybrid product went live with both legs opened, and confirms the presence of a real position (#5886957) in the UI.",
+   "chunkIds": [
+    "journal/HANDOFF.md:641#p3",
+    "journal/CONTEXT.md:4554#p3",
+    "docs/PLAN.md:1",
+    "journal/HANDOFF.md:1264#p1",
+    "journal/TASKS-WINDOWS.md:16",
+    "journal/DECYZJE-2026-08-26.md:153",
+    "journal/HANDOFF.md:641#p10",
+    "journal/HANDOFF.md:254#p8",
+    "docs/INFRA.md:8",
+    "docs/DB-SCHEMA.md:1"
+   ]
+  },
+  {
+   "id": "dated-02",
+   "category": "dated-fact",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "The narrowing experiment (31 Aug → 11 Sep)",
+     "words": 8,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      81,
+      81
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "including a two-transaction rebalance whose first attempt reverted on a slippage check",
+     "words": 12,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      85,
+      85
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:1004",
+     "quote": "Rebalans eksperymentu 31.08 (#5887690 → #5908083) usunął starą nogę",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      1008,
+      1009
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 9708,
+   "answer": "The first rebalance on real capital was executed on 31 August 2026 (the 'narrowing experiment' started 31 Aug). The case study notes it was a two-transaction rebalance whose first attempt reverted on a slippage check, but it was completed and documented the same day.",
+   "chunkIds": [
+    "docs/CASE-STUDY.md:44",
+    "docs/CASE-STUDY.md:67",
+    "journal/HANDOFF.md:641#p3",
+    "journal/DECYZJE-2026-08-26.md:378",
+    "journal/RESEARCH-QUEUE.md:95#p2",
+    "journal/TASKS-UI.md:225#p1",
+    "docs/DB-SCHEMA.md:174",
+    "journal/CONTEXT.md:2673",
+    "journal/CONTEXT.md:4165",
+    "journal/CONTEXT.md:1004"
+   ]
+  },
+  {
+   "id": "dated-03",
+   "category": "dated-fact",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "partial",
+   "citations": [
+    {
+     "chunkId": "journal/reports/morning-2026-09-15.md:217",
+     "quote": "#5886957 | base-weth-usdc-030 | SZEROKI | $3468",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/reports/morning-2026-09-15.md",
+     "lines": [
+      221,
+      221
+     ]
+    },
+    {
+     "chunkId": "journal/reports/morning-2026-09-15.md:217",
+     "quote": "#5978579 | base-cbbtc-weth-005 | SZEROKI | $2266",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/reports/morning-2026-09-15.md",
+     "lines": [
+      222,
+      222
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:246",
+     "quote": "15.09 $5 966.88 (−2.05%) → 16.09 $5 830.92 (−4.29%)",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      251,
+      251
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:246",
+     "quote": "różnica = „ruch rynku na LP\" (−$160 → −$288)",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      252,
+      252
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 11521,
+   "answer": "On 15 September two real LP positions were open (product FlatWide): #5886957 (base-weth-usdc-030, SZEROKI, $3,468) and #5978579 (base-cbbtc-weth-005, SZEROKI, $2,266). Their combined value was $5,733.13. That day's PnL: the transza balance moved from $5,966.88 (−2.05%) to $5,830.92 (−4.29%) by 16.09, a loss of $135.96, attributed to 'ruch rynku na LP' (−$160 → −$288).",
+   "chunkIds": [
+    "journal/CONTEXT.md:246",
+    "journal/reports/morning-2026-09-15.md:228",
+    "journal/reports/morning-2026-09-15.md:217",
+    "journal/reports/morning-2026-09-15.md:112",
+    "journal/CONTEXT.md:116#p2",
+    "journal/CONTEXT.md:190#p1",
+    "journal/CONTEXT.md:7#p1",
+    "journal/reports/morning-2026-09-15.md:101",
+    "journal/reports/morning-2026-09-15.md:67#p1",
+    "journal/reports/morning-2026-09-15.md:195"
+   ]
+  },
+  {
+   "id": "dated-04",
+   "category": "dated-fact",
+   "answerable": "yes",
+   "evidenceGiven": "no",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/reports/morning-2026-09-09.md:7#p2",
+     "quote": "2026-09-09T04:53:01.139Z krok backtest-run: exit 0",
+     "words": 5,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/reports/morning-2026-09-09.md",
+     "lines": [
+      43,
+      43
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 12457,
+   "answer": "The last backtest run completed on 2026-09-09 at 04:53:01.139Z (exit 0).",
+   "chunkIds": [
+    "journal/reports/morning-2026-08-26.md:7#p2",
+    "journal/reports/morning-2026-08-20.md:7#p2",
+    "journal/reports/morning-2026-08-22.md:7#p2",
+    "journal/reports/morning-2026-08-20.md:51",
+    "journal/reports/morning-2026-08-31.md:51",
+    "journal/reports/morning-2026-08-23.md:7#p2",
+    "journal/reports/morning-2026-09-07.md:7#p2",
+    "journal/reports/morning-2026-09-06.md:7#p2",
+    "journal/reports/morning-2026-08-27.md:7#p2",
+    "journal/reports/morning-2026-09-09.md:7#p2"
+   ]
+  },
+  {
+   "id": "dated-05",
+   "category": "dated-fact",
+   "answerable": "yes",
+   "evidenceGiven": "no",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "on 18 Sep, when break-even was hit and the LP was unwound at +0.6 %",
+     "words": 15,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      94,
+      95
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "keep the tokens as a spot bet with a −5 % floor",
+     "words": 12,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      95,
+      96
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "on 21 Sep, in a short-squeeze rally",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      96,
+      96
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "sell everything today",
+     "words": 3,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      97,
+      97
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "The tranche closed at +5.5 % in 25 days",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      97,
+      98
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 10702,
+   "answer": "Yes. On 18 September 2026, when break-even was hit and the LP was unwound at +0.6%, the exit rule was revised to \"keep the tokens as a spot bet with a −5% floor and a 24 Oct review,\" converting the LP position into a spot holding. On 21 September, in a short-squeeze rally, the decision changed again to \"sell everything today,\" and the tranche closed at +5.5% in 25 days.",
+   "chunkIds": [
+    "journal/TASKS-UI.md:592#p2",
+    "docs/CASE-STUDY.md:67",
+    "journal/TASKS-UI.md:592#p1",
+    "docs/DB-SCHEMA.md:40#p2",
+    "journal/CONTEXT.md:2713",
+    "journal/TASKS-UI.md:773",
+    "journal/TASKS-UI.md:126#p1",
+    "docs/EMERGENCY.md:81",
+    "journal/reports/morning-2026-09-08.md:7#p1",
+    "docs/PLAN.md:99"
+   ]
+  },
+  {
+   "id": "dated-06",
+   "category": "dated-fact",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/CONTEXT.md:2347#p1",
+     "quote": "pipeline 07:30 19/19 kroków hs-* exit 0, zero asysty",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      2348,
+      2349
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:2347#p1",
+     "quote": "pierwszy w pełni czysty przebieg automatu w historii projektu",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      2349,
+      2350
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:2347#p1",
+     "quote": "backtest-run exit 134 (OOM, Node ~4GB heap)",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      2353,
+      2353
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:2347#p1",
+     "quote": "backtest-run dostaje NODE_OPTIONS=--max-old-space-size=8192",
+     "words": 3,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      2357,
+      2357
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:4411#p1",
+     "quote": "Test raportu porannego ZDANY.",
+     "words": 4,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      4412,
+      4412
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:4411#p1",
+     "quote": "Obawa o powrót OOM przy rosnącym oknie na razie się nie zmaterializowała",
+     "words": 12,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      4421,
+      4422
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 13221,
+   "answer": "The first fully clean nightly automation run occurred on 2026-08-20, with \"pipeline 07:30 19/19 kroków hs-* exit 0, zero asysty\" and \"pierwszy w pełni czysty przebieg automatu w historii projektu\". However, errors continued; that same night `backtest-run` exited with code 134 due to OOM (Node ~4GB heap) on `arbitrum-usdc-usdt-001`. This was fixed by increasing the heap limit: `backtest-run dostaje NODE_OPTIONS=--max-old-space-size=8192`. Later, on 2026-08-22, the morning report test passed (\"Test raportu porannego ZDANY\"), confirming the earlier fix for the unstaged `data/pipeline.log` issue worked, but the OOM risk remained a monitoring item (\"Obawa o powrót OOM... nadal warto zrobić\").",
+   "chunkIds": [
+    "journal/CONTEXT.md:4411#p1",
+    "docs/CASE-STUDY.md:16",
+    "docs/INFRA.md:8",
+    "docs/AI-WORKFLOW.md:25",
+    "journal/RESEARCH-QUEUE.md:367#p2",
+    "journal/CONTEXT.md:4554#p4",
+    "docs/CASE-STUDY.md:67",
+    "journal/CONTEXT.md:2514#p1",
+    "journal/CONTEXT.md:2347#p1",
+    "journal/CONTEXT.md:4361"
+   ]
+  },
+  {
+   "id": "dated-07",
+   "category": "dated-fact",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "partial",
+   "citations": [
+    {
+     "chunkId": "journal/CONTEXT.md:4300#p1",
+     "quote": "wciąż kończył się `pm2 startOrReload` + `pm2 save`, podczas gdy produkcja od 10.08 stoi na usługach NSSM",
+     "words": 17,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      4308,
+      4310
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:4300#p1",
+     "quote": "NAPRAWIONE: `deploy/deploy.ps1` przepisany na NSSM (pm2 usunięte ze skryptu)",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      4320,
+      4321
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "a two-transaction rebalance whose first attempt reverted on a slippage check because the UI had priced the mint from a stale pool state — found, fixed, and documented the same day",
+     "words": 31,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      85,
+      86
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:141",
+     "quote": "Capital deployed | 6 092 USDC on Base, 27 Aug 2026",
+     "words": 11,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      145,
+      145
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 9876,
+   "answer": "Yes. On 21 Aug 2026, a deployment script (`deploy/deploy.ps1`) still ended with `pm2 startOrReload` + `pm2 save` while production ran NSSM services since 10 Aug. CC-Win assumed an intended NSSM→pm2 migration, stopped the NSSM services, and left production on pm2. This caused recurring \"two empty node terminals\" after reboots because every deployment silently restored pm2 beside NSSM. The script was rewritten to use NSSM only. This happened before live capital (deposited 27 Aug). A separate live incident: a two-transaction rebalance's first attempt reverted on a slippage check due to stale pool state, fixed the same day (31 Aug–11 Sep window).",
+   "chunkIds": [
+    "journal/RESEARCH-QUEUE.md:684#p3",
+    "docs/AI-WORKFLOW.md:25",
+    "docs/PLAN.md:1",
+    "docs/CASE-STUDY.md:67",
+    "docs/CASE-STUDY.md:141",
+    "docs/INFRA.md:8",
+    "docs/CASE-STUDY.md:44",
+    "journal/CONTEXT.md:4300#p1",
+    "journal/CONTEXT.md:7#p2",
+    "docs/PLAN.md:151"
+   ]
+  },
+  {
+   "id": "dated-08",
+   "category": "dated-fact",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "docs/EMERGENCY.md:88",
+     "quote": "the tranche was closed to EUR on 18–21 Sep 2026",
+     "words": 10,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/EMERGENCY.md",
+     "lines": [
+      90,
+      91
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "on 21 Sep, in a short-squeeze rally with BTC at a widely flagged resistance, \"sell everything today\". I sold.",
+     "words": 19,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      96,
+      97
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 6244,
+   "answer": "The capital was withdrawn in two stages. The LP position was unwound on 18 Sep 2026 (the tranche closed to EUR on 18–21 Sep). The final sale of all tokens occurred on 21 Sep 2026, closing the tranche at +5.5% in EUR on the exchange.",
+   "chunkIds": [
+    "docs/EMERGENCY.md:88",
+    "journal/CONTEXT.md:190#p2",
+    "docs/CASE-STUDY.md:67",
+    "journal/CONTEXT.md:190#p1",
+    "docs/DECISION-LOG.md:32",
+    "docs/DECISION-LOG.md:23",
+    "docs/CASE-STUDY.md:141",
+    "journal/DECYZJE-2026-08-26.md:153",
+    "journal/DECYZJE-2026-08-26.md:218",
+    "docs/PLAN.md:1"
+   ]
+  },
+  {
+   "id": "dated-09",
+   "category": "dated-fact",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "The narrowing experiment (31 Aug → 11 Sep).",
+     "words": 8,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      81,
+      81
+     ]
+    },
+    {
+     "chunkId": "docs/CASE-STUDY.md:67",
+     "quote": "It sat in range for 11 days",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/CASE-STUDY.md",
+     "lines": [
+      83,
+      83
+     ]
+    },
+    {
+     "chunkId": "docs/DECISION-LOG.md:28",
+     "quote": "Close the narrowing episode (trend breaker fired on cbBTC)",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/DECISION-LOG.md",
+     "lines": [
+      28,
+      28
+     ]
+    },
+    {
+     "chunkId": "docs/DECISION-LOG.md:28",
+     "quote": "Episode: 11 days in flat, ≈ $8.6 fees, −$32 vs HODL",
+     "words": 11,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/DECISION-LOG.md",
+     "lines": [
+      28,
+      28
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 10420,
+   "answer": "The market was flat on the cbBTC leg from 31 Aug to 11 Sep 2026. This was the only live narrowing episode, which lasted 11 days (31 Aug → 11 Sep), earned ≈ $8.6 in fees, and closed at −$32 versus HODL when the trend breaker fired on 11 Sep.",
+   "chunkIds": [
+    "docs/CASE-STUDY.md:67",
+    "docs/CASE-STUDY.md:44",
+    "docs/CASE-STUDY.md:105",
+    "docs/DECISION-LOG.md:28",
+    "journal/RESEARCH-QUEUE.md:926#p1",
+    "journal/CONTEXT.md:190#p1",
+    "journal/CONTEXT.md:1130#p1",
+    "journal/CONTEXT.md:1880#p2",
+    "journal/RESEARCH-QUEUE.md:926#p3",
+    "journal/HANDOFF.md:641#p4"
+   ]
+  },
+  {
+   "id": "dated-10",
+   "category": "dated-fact",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/CONTEXT.md:4165",
+     "quote": "PIERWSZE 3 REBALANSE w paper tradingu",
+     "words": 6,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      4165,
+      4165
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:4165",
+     "quote": "reb 0→1 na trzech pulach ETH/USDC",
+     "words": 6,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      4175,
+      4175
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:4165",
+     "quote": "histereza 24h poza zakresem dobiegła",
+     "words": 5,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      4176,
+      4177
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:7#p1",
+     "quote": "25 dni (27.08→21.09)",
+     "words": 3,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      10,
+      10
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 11658,
+   "answer": "The paper-trading bot rebalanced three times before real capital was deployed. This occurred on 21 August 2026, when the 24-hour out-of-range hysteresis condition was met and payback was ≤7 days on three pools: ETH/USDC mainnet 0.30, mainnet 0.05, and base 0.30. Real capital entered the system on 27 August 2026.",
+   "chunkIds": [
+    "journal/DECYZJE-2026-08-26.md:378",
+    "journal/TASKS-UI.md:225#p1",
+    "journal/CONTEXT.md:4165",
+    "journal/CONTEXT.md:2623",
+    "journal/TASKS-UI.md:225#p2",
+    "journal/CONTEXT.md:3473",
+    "journal/TASKS-UI.md:1190",
+    "journal/CONTEXT.md:7#p1",
+    "journal/CONTEXT.md:2347#p1",
+    "journal/DECYZJE-2026-08-26.md:602"
+   ]
+  },
+  {
+   "id": "id-01",
+   "category": "identifier",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/TASKS-UI.md:1134",
+     "quote": "nowe rodzaje propozycji `kind: 'FLAT_NARROW'` (zwężenie do k×σ w POTWIERDZONYM flacie)",
+     "words": 11,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/TASKS-UI.md",
+     "lines": [
+      1137,
+      1138
+     ]
+    },
+    {
+     "chunkId": "journal/reports/morning-2026-09-19.md:101",
+     "quote": "flat POTWIERDZONY (|gap|<2% ≥12h) — zwężenie z ±40% do ±5%",
+     "words": 10,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/reports/morning-2026-09-19.md",
+     "lines": [
+      120,
+      120
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:1362#p5",
+     "quote": "propozycja FLAT_NARROW niesie WŁASNY `paybackDays`",
+     "words": 5,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      1576,
+      1577
+     ]
+    },
+    {
+     "chunkId": "journal/HANDOFF.md:641#p4",
+     "quote": "bot wystawi pierwszą w historii propozycję FLAT_NARROW",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/HANDOFF.md",
+     "lines": [
+      861,
+      862
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 14494,
+   "answer": "FLAT_NARROW is a proposal kind (an action), not a specific position or a range algorithm. The bot emits it when a flat is confirmed (|gap|<2% for ≥12h) to narrow the position from a wide band (e.g., ±40%) to a fixed product width (e.g., ±5%). The width comes from a product config field (productNarrowWidthPct) or, previously, a k×σ advisor; the range is computed via suggestFixedRange. It is paired with FLAT_WIDEN (widen back after flat ends).",
+   "chunkIds": [
+    "journal/HANDOFF.md:641#p4",
+    "journal/CONTEXT.md:1362#p5",
+    "journal/HANDOFF.md:254#p4",
+    "journal/TASKS-UI.md:1134",
+    "journal/reports/morning-2026-09-19.md:101",
+    "journal/reports/morning-2026-09-22.md:101",
+    "journal/reports/morning-2026-09-21.md:101",
+    "journal/reports/morning-2026-09-20.md:101",
+    "journal/HANDOFF.md:29#p4",
+    "journal/CONTEXT.md:1880#p3"
+   ]
+  },
+  {
+   "id": "id-02",
+   "category": "identifier",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/reports/morning-2026-09-18.md:270",
+     "quote": "#5978579 | base-cbbtc-weth-005 | SZEROKI",
+     "words": 5,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/reports/morning-2026-09-18.md",
+     "lines": [
+      275,
+      275
+     ]
+    },
+    {
+     "chunkId": "journal/reports/morning-2026-09-18.md:101",
+     "quote": "\"kind\": \"FLAT_NARROW\"",
+     "words": 2,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/reports/morning-2026-09-18.md",
+     "lines": [
+      109,
+      109
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 9422,
+   "answer": "Position #5978579 is a wide position. In the real positions table, its \"postura\" is listed as \"SZEROKI\" (wide). Although the bot generated a \"FLAT_NARROW\" proposal suggesting a narrowing from ±40% to ±5%, the position itself remained in the wide posture.",
+   "chunkIds": [
+    "journal/reports/morning-2026-09-17.md:101",
+    "journal/reports/morning-2026-09-18.md:101",
+    "journal/reports/morning-2026-09-18.md:270",
+    "journal/reports/morning-2026-09-17.md:256",
+    "journal/reports/morning-2026-09-23.md:101",
+    "journal/reports/morning-2026-09-22.md:101",
+    "journal/reports/morning-2026-09-16.md:101",
+    "journal/reports/morning-2026-09-21.md:101",
+    "journal/reports/morning-2026-09-20.md:101",
+    "journal/reports/morning-2026-09-16.md:237"
+   ]
+  },
+  {
+   "id": "id-03",
+   "category": "identifier",
+   "answerable": "yes",
+   "evidenceGiven": "no",
+   "coverage": "partial",
+   "citations": [
+    {
+     "chunkId": "journal/reports/morning-2026-08-29.md:181",
+     "quote": "#5886957 | base-weth-usdc-030 | $3435 | $-4.09 | $-72.82 (od 2026-08-27) | w zakresie",
+     "words": 14,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/reports/morning-2026-08-29.md",
+     "lines": [
+      185,
+      185
+     ]
+    },
+    {
+     "chunkId": "journal/reports/morning-2026-09-18.md:270",
+     "quote": "#5886957 | base-weth-usdc-030 | SZEROKI | $3466 | $-1.38 | $-41.50 (od 2026-08-27) | $26.09 | $1.20 | w zakresie",
+     "words": 20,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/reports/morning-2026-09-18.md",
+     "lines": [
+      274,
+      274
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 7521,
+   "answer": "Based on the provided source chunks, there is no record indicating that the range of position #5886957 was ever changed. In every morning report from August 29 to September 18, 2026, the 'zakres' (range) status for this position is consistently listed as 'w zakresie' (within range). The chunks do not contain any entries describing a range modification or re-centering.",
+   "chunkIds": [
+    "journal/reports/morning-2026-08-29.md:181",
+    "journal/reports/morning-2026-09-12.md:276",
+    "journal/reports/morning-2026-08-31.md:219",
+    "journal/reports/morning-2026-09-17.md:256",
+    "journal/reports/morning-2026-09-05.md:219",
+    "journal/reports/morning-2026-09-13.md:276",
+    "journal/reports/morning-2026-09-18.md:270",
+    "journal/reports/morning-2026-09-09.md:232",
+    "journal/reports/morning-2026-09-07.md:219",
+    "journal/reports/morning-2026-09-02.md:219"
+   ]
+  },
+  {
+   "id": "id-04",
+   "category": "identifier",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/RESEARCH-QUEUE.md:498",
+     "quote": "observer: detektor flatu przestaje emitować FLAT_NARROW/FLAT_WIDEN",
+     "words": 6,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/RESEARCH-QUEUE.md",
+     "lines": [
+      499,
+      499
+     ]
+    },
+    {
+     "chunkId": "journal/RESEARCH-QUEUE.md:498",
+     "quote": "KOSMETYKA \"k×σ\" (3 kryjówki starej formułki)",
+     "words": 6,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/RESEARCH-QUEUE.md",
+     "lines": [
+      501,
+      501
+     ]
+    },
+    {
+     "chunkId": "journal/RESEARCH-QUEUE.md:498",
+     "quote": "NIE wdrażać przed zamknięciem epizodu",
+     "words": 5,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/RESEARCH-QUEUE.md",
+     "lines": [
+      506,
+      506
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 9721,
+   "answer": "The D0 package (\"DETEKTOR→POMIAR\") contained two tasks: (1) modifying the observer so the flat detector stops emitting FLAT_NARROW/FLAT_WIDEN signals, keeping only episode measurement and logs; and (2) cosmetic updates to the 'k×σ' formula in three places (observer.ts alert, Telegram proposal format, and the cycleLine component label). It was about project functionality (changing detector behavior and UI labels), not about tests.",
+   "chunkIds": [
+    "journal/HANDOFF.md:641#p2",
+    "journal/RESEARCH-QUEUE.md:498",
+    "journal/CONTEXT.md:3140",
+    "journal/CONTEXT.md:3081",
+    "docs/PLAN.md:151",
+    "journal/RESEARCH-QUEUE.md:509",
+    "journal/HANDOFF.md:641#p11",
+    "docs/AI-WORKFLOW.md:25",
+    "journal/TASKS-WINDOWS-ADDENDUM.md:1",
+    "journal/CONTEXT.md:4554#p2"
+   ]
+  },
+  {
+   "id": "id-05",
+   "category": "identifier",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/CONTEXT.md:277#p2",
+     "quote": "factory.getPool → slot0 + liquidity → nowy Pool z tymi samymi tokenami/fee",
+     "words": 12,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      351,
+      352
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:277#p2",
+     "quote": "fail-open (zwraca stary pool, gdy fabryka/RPC zawiedzie)",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      352,
+      353
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:277#p2",
+     "quote": "wpięty w useRebalanceExecution i useRotateExecution tuż przed buildMintStep",
+     "words": 8,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      353,
+      354
+     ]
+    },
+    {
+     "chunkId": "journal/CONTEXT.md:277#p2",
+     "quote": "ticki zakresu nadal z planu (liczone przy starym kursie)",
+     "words": 9,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/CONTEXT.md",
+     "lines": [
+      355,
+      356
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 11573,
+   "answer": "fetchFreshPool (in src/utils/uniswap.ts) refreshes pool state before executing a mint: it calls factory.getPool, reads slot0 and liquidity, and constructs a new Pool object with the same tokens and fee tier. It is fail-open—if the factory or RPC call fails, it returns the old pool object instead of throwing. It is wired into useRebalanceExecution and useRotateExecution immediately before buildMintStep. A known caveat: the range ticks still come from the plan (computed at the old price), so after a price move the range is slightly off-center, which is negligible for ±40/50% ranges but can slightly increase post-mint dust.",
+   "chunkIds": [
+    "journal/CONTEXT.md:277#p2",
+    "journal/HANDOFF.md:254#p1",
+    "journal/CONTEXT.md:246",
+    "journal/RESEARCH-QUEUE.md:529#p2",
+    "journal/TASKS-UI.md:225#p1",
+    "journal/TASKS-UI.md:317#p1",
+    "journal/TASKS-FUNNEL.md:10",
+    "journal/TASKS-FUNNEL.md:167",
+    "journal/TASKS-UI.md:465#p2",
+    "journal/CONTEXT.md:4085#p1"
+   ]
+  },
+  {
+   "id": "id-06",
+   "category": "identifier",
+   "answerable": "yes",
+   "evidenceGiven": "yes",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "journal/RESEARCH-QUEUE.md:367#p1",
+     "quote": "E8.2 HOUSE (CC-Mac, ~15 min)",
+     "words": 5,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/RESEARCH-QUEUE.md",
+     "lines": [
+      397,
+      397
+     ]
+    },
+    {
+     "chunkId": "journal/RESEARCH-QUEUE.md:294#p1",
+     "quote": "E8.2 „DOM KASYNA\" — ZAMKNIĘTE 09.09 (wieczór)",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/RESEARCH-QUEUE.md",
+     "lines": [
+      324,
+      324
+     ]
+    },
+    {
+     "chunkId": "journal/RESEARCH-QUEUE.md:294#p1",
+     "quote": "LP = kontrpartner traderów z dźwignią; wycena po oraklach → brak LVR",
+     "words": 12,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/RESEARCH-QUEUE.md",
+     "lines": [
+      325,
+      326
+     ]
+    }
+   ],
+   "citesEvidence": true,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 14050,
+   "answer": "E8.2 was the “HOUSE” (\"dom kasyna\") stage: testing oracle-priced LP pools (GM v2, JLP, GLP) as a counterparty to leveraged traders, structurally different from AMM v3 because it has no LVR. It was closed on 09.09 with a positive edge verdict.",
+   "chunkIds": [
+    "journal/RESEARCH-QUEUE.md:367#p1",
+    "journal/RESEARCH-QUEUE.md:294#p1",
+    "journal/CONTEXT.md:684",
+    "journal/CONTEXT.md:721",
+    "journal/CONTEXT.md:454",
+    "journal/HANDOFF.md:29#p2",
+    "journal/CONTEXT.md:593",
+    "journal/HANDOFF.md:29#p1",
+    "journal/CONTEXT.md:500",
+    "journal/CONTEXT.md:548"
+   ]
+  },
+  {
+   "id": "id-07",
+   "category": "identifier",
+   "answerable": "yes",
+   "evidenceGiven": "no",
+   "coverage": "partial",
+   "citations": [
+    {
+     "chunkId": "docs/DB-SCHEMA.md:164",
+     "quote": "The database holds only `backtest_run` (results index).",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/DB-SCHEMA.md",
+     "lines": [
+      168,
+      169
+     ]
+    },
+    {
+     "chunkId": "docs/DB-SCHEMA.md:164",
+     "quote": "stay in files: the backtest reads them sequentially",
+     "words": 8,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/DB-SCHEMA.md",
+     "lines": [
+      167,
+      167
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 10361,
+   "answer": "The backtest results were stored in a database that held only the `backtest_run` table (described as a \"results index\"). The raw tick-level swap data itself was deliberately kept in NDJSON files, not in the database. The specific database engine (e.g., SQLite, Postgres) is not named in the provided chunks.",
+   "chunkIds": [
+    "docs/DB-SCHEMA.md:164",
+    "journal/reports/morning-2026-08-23.md:51",
+    "docs/PLAN.md:151",
+    "journal/reports/morning-2026-08-20.md:51",
+    "journal/reports/morning-2026-09-01.md:51",
+    "journal/reports/morning-2026-08-26.md:7#p2",
+    "journal/reports/morning-2026-08-28.md:51",
+    "journal/reports/morning-2026-08-29.md:51",
+    "journal/reports/morning-2026-08-31.md:51",
+    "journal/reports/morning-2026-08-20.md:7#p2"
+   ]
+  },
+  {
+   "id": "na-01",
+   "category": "no-answer",
+   "answerable": "partial",
+   "evidenceGiven": "no-evidence",
+   "coverage": "full",
+   "citations": [
+    {
+     "chunkId": "docs/UI-DESIGN.md:100",
+     "quote": "CSV export for the Polish income-tax return (PIT-38)",
+     "words": 8,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/UI-DESIGN.md",
+     "lines": [
+      101,
+      102
+     ]
+    },
+    {
+     "chunkId": "docs/EMERGENCY.md:88",
+     "quote": "Selling crypto for fiat is a taxable event in Poland",
+     "words": 10,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/EMERGENCY.md",
+     "lines": [
+      104,
+      104
+     ]
+    },
+    {
+     "chunkId": "journal/TASKS-LEDGER.md:36",
+     "quote": "netto przybliżone (outUsd−inUsd, TYLKO gdy obie strony wyceniane, jawnie oznaczone „bez gazu\")",
+     "words": 12,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/TASKS-LEDGER.md",
+     "lines": [
+      54,
+      56
+     ]
+    },
+    {
+     "chunkId": "journal/TASKS-LEDGER.md:1",
+     "quote": "podatki PL + audytowalność",
+     "words": 4,
+     "tooLong": false,
+     "status": "ok",
+     "file": "journal/TASKS-LEDGER.md",
+     "lines": [
+      4,
+      4
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 8733,
+   "answer": "The application does not calculate the tax amount. It only provides data for the Polish income-tax return: a CSV export (one row per on-chain event, with dates, network, tx, tokens, amounts, USD) intended for PIT-38, and a closed-positions panel showing per-position results, fees, gas, and a net approximation (explicitly excluding gas). Selling crypto for fiat is noted as a taxable event in Poland (PIT-38), but no tax computation is performed by the app.",
+   "chunkIds": [
+    "journal/TASKS-LEDGER.md:36",
+    "docs/UI-DESIGN.md:13",
+    "journal/CONTEXT.md:2931",
+    "journal/TASKS-UI.md:592#p2",
+    "docs/UI-DESIGN.md:100",
+    "docs/EMERGENCY.md:88",
+    "journal/HANDOFF.md:641#p6",
+    "journal/TASKS-LEDGER.md:1",
+    "docs/UI-DESIGN.md:149",
+    "journal/TASKS-UI.md:1237"
+   ]
+  },
+  {
+   "id": "na-02",
+   "category": "no-answer",
+   "answerable": "partial",
+   "evidenceGiven": "no-evidence",
+   "coverage": "none",
+   "citations": [],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 11902,
+   "answer": "The project data does not answer this question. This assistant answers questions about a DeFi liquidity-provision trading system, a research project run from August to September 2026, using its journal, decision log, documentation and daily reports: what was built, what was decided and why, and what happened on which day.",
+   "chunkIds": [
+    "journal/RESEARCH-QUEUE.md:597#p1",
+    "journal/reports/morning-2026-08-26.md:7#p2",
+    "journal/reports/morning-2026-08-20.md:51",
+    "journal/reports/morning-2026-08-20.md:7#p2",
+    "journal/reports/morning-2026-09-01.md:51",
+    "journal/reports/morning-2026-08-30.md:51",
+    "journal/CONTEXT.md:548",
+    "journal/reports/morning-2026-08-28.md:51",
+    "journal/reports/morning-2026-08-29.md:51",
+    "journal/reports/morning-2026-08-31.md:51"
+   ]
+  },
+  {
+   "id": "na-03",
+   "category": "no-answer",
+   "answerable": "partial",
+   "evidenceGiven": "no-evidence",
+   "coverage": "none",
+   "citations": [],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 9799,
+   "answer": "The project data does not answer this question. This assistant answers questions about a DeFi liquidity-provision trading system, a research project run from August to September 2026, using its journal, decision log, documentation and daily reports: what was built, what was decided and why, and what happened on which day.",
+   "chunkIds": [
+    "journal/TASKS-UI.md:700#p1",
+    "journal/CONTEXT.md:2347#p2",
+    "journal/RESEARCH-QUEUE.md:684#p3",
+    "docs/ALGORITHM.md:43",
+    "journal/CONTEXT.md:277#p1",
+    "journal/CONTEXT.md:3519",
+    "journal/CONTEXT.md:3375",
+    "journal/CONTEXT.md:3503",
+    "journal/TASKS-UI.md:522#p1",
+    "journal/TASKS-UI.md:700#p2"
+   ]
+  },
+  {
+   "id": "na-04",
+   "category": "no-answer",
+   "answerable": "no",
+   "evidenceGiven": "no-evidence",
+   "coverage": "none",
+   "citations": [],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 9678,
+   "answer": "The project data does not answer this question. This assistant answers questions about a DeFi liquidity-provision trading system, a research project run from August to September 2026, using its journal, decision log, documentation and daily reports: what was built, what was decided and why, and what happened on which day.",
+   "chunkIds": [
+    "journal/CONTEXT.md:3081",
+    "docs/UI-DESIGN.md:35",
+    "docs/CASE-STUDY.md:105",
+    "docs/INFRA.md:8",
+    "journal/CONTEXT.md:3140",
+    "journal/RESEARCH-QUEUE.md:7#p1",
+    "journal/HANDOFF.md:1264#p2",
+    "journal/CONTEXT.md:3427",
+    "journal/CONTEXT.md:3473",
+    "journal/CONTEXT.md:2178#p3"
+   ]
+  },
+  {
+   "id": "na-05",
+   "category": "no-answer",
+   "answerable": "no",
+   "evidenceGiven": "no-evidence",
+   "coverage": "none",
+   "citations": [],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 10502,
+   "answer": "The project data does not answer this question. This assistant answers questions about a DeFi liquidity-provision trading system, a research project run from August to September 2026, using its journal, decision log, documentation and daily reports: what was built, what was decided and why, and what happened on which day.",
+   "chunkIds": [
+    "docs/CASE-STUDY.md:141",
+    "journal/reports/morning-2026-09-10.md:51",
+    "journal/reports/morning-2026-08-24.md:7#p2",
+    "journal/reports/morning-2026-09-10.md:7#p1",
+    "journal/reports/morning-2026-09-21.md:51",
+    "journal/reports/morning-2026-09-12.md:51",
+    "journal/reports/morning-2026-09-22.md:51",
+    "journal/reports/morning-2026-09-04.md:51",
+    "journal/reports/morning-2026-09-22.md:7#p1",
+    "journal/reports/morning-2026-09-07.md:51"
+   ]
+  },
+  {
+   "id": "na-06",
+   "category": "no-answer",
+   "answerable": "no",
+   "evidenceGiven": "no-evidence",
+   "coverage": "none",
+   "citations": [],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 9646,
+   "answer": "The project data does not answer this question. This assistant answers questions about a DeFi liquidity-provision trading system, a research project run from August to September 2026, using its journal, decision log, documentation and daily reports: what was built, what was decided and why, and what happened on which day.",
+   "chunkIds": [
+    "docs/CASE-STUDY.md:67",
+    "journal/RESEARCH-QUEUE.md:367#p1",
+    "journal/CONTEXT.md:4554#p4",
+    "journal/CONTEXT.md:4554#p2",
+    "journal/RESEARCH-QUEUE.md:7#p1",
+    "docs/PLAN.md:151",
+    "journal/HANDOFF.md:641#p6",
+    "journal/HANDOFF.md:1264#p1",
+    "journal/TASKS-UI.md:183",
+    "docs/AI-WORKFLOW.md:25"
+   ]
+  },
+  {
+   "id": "na-07",
+   "category": "no-answer",
+   "answerable": "partial",
+   "evidenceGiven": "no-evidence",
+   "coverage": "partial",
+   "citations": [
+    {
+     "chunkId": "docs/DB-SCHEMA.md:164",
+     "quote": "The database holds only `backtest_run` (results index).",
+     "words": 7,
+     "tooLong": false,
+     "status": "ok",
+     "file": "docs/DB-SCHEMA.md",
+     "lines": [
+      168,
+      169
+     ]
+    }
+   ],
+   "citesEvidence": false,
+   "usage": {
+    "input": 0,
+    "cacheWrite": 0,
+    "cacheRead": 0,
+    "output": 0
+   },
+   "costUsd": 0,
+   "ms": 9097,
+   "answer": "The chunks do not provide a detailed SQL schema (e.g., table definitions or column types) for the backtest data. They only note that the database holds a 'backtest_run' table as a 'results index' and that raw tick-level swap data was deliberately kept in NDJSON files rather than the database.",
+   "chunkIds": [
+    "docs/DB-SCHEMA.md:164",
+    "journal/reports/morning-2026-08-26.md:7#p2",
+    "journal/reports/morning-2026-08-20.md:7#p2",
+    "docs/PLAN.md:151",
+    "journal/reports/morning-2026-08-20.md:51",
+    "journal/CONTEXT.md:2989",
+    "journal/reports/morning-2026-08-29.md:51",
+    "journal/reports/morning-2026-08-31.md:51",
+    "journal/reports/morning-2026-09-15.md:51",
+    "journal/reports/morning-2026-09-08.md:51"
+   ]
+  }
+ ]
+}

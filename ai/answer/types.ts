@@ -53,5 +53,6 @@ export interface GeneratorResult {
 
 export interface Generator {
   readonly name: string;
-  generate(question: string, chunks: Chunk[]): Promise<GeneratorResult>;
+  /** `signal` (optional, step 4.7): aborting it cancels the model call, so a visitor who left frees the GPU. */
+  generate(question: string, chunks: Chunk[], signal?: AbortSignal): Promise<GeneratorResult>;
 }

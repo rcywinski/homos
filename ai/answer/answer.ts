@@ -10,8 +10,8 @@ export interface CheckedAnswer extends GeneratorResult {
   citations: VerifiedCitation[];
 }
 
-export async function answerWithChecks(gen: Generator, question: string, chunks: Chunk[], root = process.cwd()): Promise<CheckedAnswer> {
-  const r = await gen.generate(question, chunks);
+export async function answerWithChecks(gen: Generator, question: string, chunks: Chunk[], root = process.cwd(), signal?: AbortSignal): Promise<CheckedAnswer> {
+  const r = await gen.generate(question, chunks, signal);
   const given = new Map(chunks.map((c) => [c.id, c]));
   return { ...r, citations: (r.output?.citations ?? []).map((c) => verifyCitation(c, given, root)) };
 }
