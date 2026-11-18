@@ -26,7 +26,7 @@ import { FileLog } from './log';
 import { loadWalletForServing } from './wallet-export';
 import { GpuQueue } from './queue';
 import { RateLimiter } from './ratelimit';
-import { loadedModels, OllamaModelBackend, rerankHealth, rerankProblem, residencyProblem, ResidencyError, startupProblem, type ResidencyOptions } from './residency';
+import { leftoverModels, loadedModels, OllamaModelBackend, rerankHealth, rerankProblem, residencyProblem, ResidencyError, startupProblem, type ResidencyOptions } from './residency';
 import { checkCorpus, IndexMismatch, loadCheckedIndex, localRetrieval, servedIndexPath } from './retrieve';
 
 /** Asks both model services for a sign of life, at most every 30 s; 3 s timeout each. */
@@ -103,6 +103,8 @@ async function main() {
     const backend = new OllamaModelBackend(residency);
     models = new Models({ ...modelsOptions, backend });
     const m = models;
+    // Models a previous server left loaded (crash, restart, swap) are released now, not after keep_alive.
+    void m.releaseLeftovers(await leftoverModels(residency));
     deps = {
       retrieval: localRetrieval(cfg.inferenceUrl, cfg.rerankUrl, cfg.preset, cfg.keepAlive),
       generator: new LocalGenerator({ ...cfg.preset.generator, keepAlive: cfg.keepAlive, baseUrl: cfg.inferenceUrl, timeoutMs: cfg.generateTimeoutMs }),

@@ -251,6 +251,23 @@ async function ollama() {
   check('late model: released after it appeared, then off', (await settled(ml)) === 'off' && late.loaded.size === 0, JSON.stringify([...late.loaded.keys()]));
   check('late model: the release was sent again once the model showed up', late.calls.filter((c) => c === '/api/generate qwen3.8:27b stop').length >= 2, late.calls.join());
 
+  // Models left loaded by a previous server are found at start-up and released (review of 18 Nov 2026).
+  const left = fakeOllama();
+  left.loaded.set('qwen3.8:27b', { name: 'qwen3.8:27b', model: 'qwen3.8:27b', size: 17e9, size_vram: 17e9, context_length: 17408 });
+  left.loaded.set('bge-m3:latest', { name: 'bge-m3:latest', model: 'bge-m3:latest', size: 1.1e9, size_vram: 1.1e9 });
+  const lb = new OllamaModelBackend({ ...base, fetchFn: left.fetchFn, pollMs: 5, releaseWaitMs: 500 });
+  const lm = new Models({ backend: lb, typicalMs: TYPICAL, switchOn: () => true });
+  const { leftoverModels } = await import('./residency');
+  const found = await leftoverModels({ ...base, fetchFn: left.fetchFn });
+  check('start-up: leftovers found', found.join() === 'qwen3.8:27b,bge-m3', found.join());
+  const releasing = lm.releaseLeftovers(found);
+  check('start-up: "unloading" while they are released, never "idle"', lm.state() === 'unloading');
+  await releasing;
+  check('start-up: released, then idle, /api/ps empty', lm.state() === 'idle' && left.loaded.size === 0);
+  const none = new Models({ backend: lb, typicalMs: TYPICAL, switchOn: () => true });
+  await none.releaseLeftovers([]);
+  check('start-up: nothing found, nothing done', none.state() === 'idle');
+
   // A model that /api/ps keeps listing: the release is reported unconfirmed and the state stays "unloading".
   const stuck = fakeOllama({ stuck: ['qwen3.8:27b'] });
   const bs = new OllamaModelBackend({ ...base, fetchFn: stuck.fetchFn, pollMs: 5, releaseWaitMs: 60 });

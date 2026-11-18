@@ -341,6 +341,18 @@ export class Models {
   private retryRelease: (() => Promise<void>) | null = null;
 
   /**
+   * At start-up: models left loaded by a previous server process are released, so the state never says "off" or
+   * "idle" while they hold VRAM ("unloading" until the release is confirmed).
+   */
+  releaseLeftovers(names: string[]): Promise<void> {
+    if (!names.length || this.current !== 'idle') return Promise.resolve();
+    this.log(`models found loaded at start-up (${names.join(', ')}): releasing them`);
+    this.current = 'unloading';
+    this.emit();
+    return this.releaseNow('found loaded at start-up');
+  }
+
+  /**
    * The per-question residency check failed (Ollama restarted, a model evicted): release whatever is left, then the
    * visitor sees the load button again; nothing reloads by itself.
    */

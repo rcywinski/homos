@@ -188,6 +188,16 @@ export async function startupProblem(o: ResidencyOptions): Promise<string | null
   return rerankProblem(await rerankHealth(o), o);
 }
 
+/**
+ * At start-up the server knows of no loaded model, but a previous server process may have left the generator and
+ * bge-m3 in Ollama (a crash, a restart, a swap): up to keep_alive (60 min) of occupied VRAM while the page says "off".
+ * Returns the served models /api/ps lists, so the caller can release them through the normal release path.
+ */
+export async function leftoverModels(o: ResidencyOptions): Promise<string[]> {
+  const listedNow = await loadedModels(o);
+  return [o.generator, o.embedder].filter((m) => listed(listedNow, m));
+}
+
 export interface OllamaBackendOptions extends ResidencyOptions {
   /** How long a release waits for /api/ps to drop the models before it reports a problem. */
   releaseWaitMs?: number;
