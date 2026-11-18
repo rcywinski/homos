@@ -13,6 +13,8 @@ export interface LogEntry {
   ms: number;
   question?: string;
   detail?: string;
+  /** "guest-key" for guest-key mode (step 4.6a); absent for the local chat. */
+  engine?: string;
 }
 
 export interface RequestLog {

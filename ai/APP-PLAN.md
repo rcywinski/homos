@@ -497,6 +497,13 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;
   4.6e one measurement of the cloud generator on the fully local retrieval (owner's key, owner's OK first).
+  **4.6a built (18 Nov 2026), awaiting the owner's OK:** `ai/serve/guest.ts` and the routes `/api/guest/retrieve` and
+  `/api/guest/verify` in `app.ts`; "Load search" opened in `/api/models/load`; `present()` shared with the chat.
+  Departures from section 9 and the review: verify has its own per-visitor limiter with the question limits (one guest
+  question costs one retrieval from the question limit and one verification); the request body keeps the SDK's
+  transformed answer schema of the measured runs (enum moved into a description), checked by a test against the SDK;
+  `max_tokens` is 2,048 against 8,000 in the measured runs (largest measured answer 629 output tokens); a ticket's
+  signature must be in canonical base64url; the key refusal covers every `/api` route, not only the guest ones.
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner (precondition: the server runs as `homos-web`
   from `C:\HomosServe\homos`, not as the desktop user): Cloudflare Tunnel, static hosting choice,
   optional Access, kill switch documented in `inference/README.md`. S. Checklist: `SERVE_MODE=tunnel` and

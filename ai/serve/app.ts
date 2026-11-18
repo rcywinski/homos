@@ -10,13 +10,20 @@
  *                     a `models` event on every stage change and ends with `result` (the state reached) or `error`.
  *                     Loads have their own limits; joining a running load is free. A visitor who leaves does not stop
  *                     the load: other visitors may be waiting for it.
- * `/api/retrieve` (guest-key mode) waits for step 4.6. Errors never carry a stack or an internal message.
+ *   POST /api/guest/retrieve  guest-key mode (step 4.6a): { question } -> the Messages API request body, the
+ *                     sources and a signed ticket; the browser calls Anthropic with the visitor's key.
+ *   POST /api/guest/verify    { question, ticket, answer } -> the answer checked like a local one, as AskResponse.
+ * Nothing that looks like an Anthropic key (sk-ant-) is accepted anywhere under /api: in the URL, a header or the
+ * body it is refused with a fixed text before anything else runs, and the log keeps only the outcome.
+ * Errors never carry a stack or an internal message.
  *
  * Order of checks for a question: shape and length, rate limit (counted), refusal without GPU work (advice), box
  * probe, queue. A question the queue refuses is given back to the visitor's limit.
  */
 import express, { type NextFunction, type Request, type Response } from 'express';
-import { ask, ModelUnavailable, refusedBeforeWork, type AskDeps, type AskResponse, type Stage } from './ask';
+import type { Chunk } from '../corpus/types';
+import { ask, ModelUnavailable, present, refusedBeforeWork, sourceOf, type AskDeps, type AskResponse, type Stage } from './ask';
+import { checkGuestAnswer, GUEST_ENGINE, guestRequestBody, looksLikeKey, maskChunk, type Tickets } from './guest';
 import type { RequestLog } from './log';
 import { LoadFailed, LoadRefused, Models, type ModelBackend, type ModelsView } from './models-state';
 import { GpuQueue, JobCancelled, JobTimeout, QueueRefused } from './queue';
@@ -53,7 +60,21 @@ export interface AppOptions {
   models?: Models;
   /** Limits on model loads, apart from the question limits. Required with `models`. */
   loadLimiter?: RateLimiter;
+  /** Guest-key mode (step 4.6a); omitted: its routes answer 404. */
+  guest?: GuestOptions;
 }
+
+export interface GuestOptions {
+  tickets: Tickets;
+  /** The corpus chunk for an id (unmasked; masked here as for retrieval). */
+  chunkById: (id: string) => Chunk | undefined;
+  /** Limits on verify calls, apart from retrieval, which counts as a question. */
+  verifyLimiter: RateLimiter;
+  root?: string;
+}
+
+/** Largest accepted body of /api/guest/verify: the measured answers are at most about 4 KB of JSON. */
+export const GUEST_VERIFY_MAX_BYTES = 16 * 1024;
 
 const NO_BACKEND: ModelBackend = {
   loadGenerator: async () => undefined,
@@ -84,12 +105,19 @@ export const MESSAGES = {
   'load-hour': 'You have started the most model loads allowed in an hour. Please try again later.',
   'load-day': 'You have started the most model loads allowed today. Please come back tomorrow.',
   'load-global': 'The model has been loaded as many times as allowed today. Please come back tomorrow. The saved answers are still available.',
+  'key-refused':
+    'This request contained something that looks like an API key, so it was refused and not stored. Your key is only for Anthropic: the page sends it from your browser to api.anthropic.com, never to this site.',
+  'search-not-loaded': 'The search model is not loaded. Press "Load search" first; it takes a few seconds.',
+  ticket: 'This answer can no longer be checked: more than 10 minutes passed, or the server restarted. Please ask again.',
   'load-failed': 'The local model could not be loaded right now. Please try again later. The saved answers are still available.',
   unloading: 'The local model is being released. You can load it again in a moment.',
   cooldown: 'The last attempt to load the local model failed. A new attempt is possible in a moment.',
 } as const;
 
 type ErrorCode = keyof typeof MESSAGES | 'bad-request' | 'too-long' | 'too-large' | 'not-found';
+
+/** True when any header value carries something that looks like an Anthropic key. */
+const keyInHeaders = (h: Request['headers']) => Object.values(h).some((v) => (Array.isArray(v) ? v.some(looksLikeKey) : typeof v === 'string' && looksLikeKey(v)));
 
 /** The message for a question that arrives while the models cannot answer it. */
 function notServing(view: ModelsView): 'not-loaded' | 'loading' | 'unloading' | 'switch-off' {
@@ -150,7 +178,18 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
       console.warn('[serve] SERVE_MODE is tunnel but a request came without CF-Connecting-IP: it was counted by its socket address.');
     }
   };
-  app.use(express.json({ limit: '2kb', strict: true, type: 'application/json' }));
+  // Step 4.6a: an Anthropic key never reaches a handler or the log. URL and headers are checked before the body is
+  // parsed, the body right after; the response does not echo what was sent.
+  const refuseKey = (req: Request, res: Response) => {
+    const visitor = opts.limiter.visitor(clientIp(req.headers, req.socket.remoteAddress, opts.trustProxy));
+    opts.log.write({ visitor, outcome: 'refused-key', ms: 0 });
+    res.status(400).json({ error: 'key-refused', message: MESSAGES['key-refused'] });
+  };
+  app.use('/api', (req, res, next) => (looksLikeKey(req.originalUrl) || keyInHeaders(req.headers) ? refuseKey(req, res) : next()));
+  const smallJson = express.json({ limit: '2kb', strict: true, type: 'application/json' });
+  const verifyJson = express.json({ limit: GUEST_VERIFY_MAX_BYTES, strict: true, type: 'application/json' });
+  app.use((req, res, next) => (req.path === '/api/guest/verify' ? verifyJson(req, res, next) : smallJson(req, res, next)));
+  app.use('/api', (req, res, next) => (req.body !== undefined && looksLikeKey(JSON.stringify(req.body)) ? refuseKey(req, res) : next()));
 
   app.get('/api/health', async (_req, res) => {
     const q = opts.queue.state();
@@ -167,8 +206,9 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
     const reply = new Reply(res);
     const body: unknown = req.body;
     const raw = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>).target : undefined;
-    // Only the full load has a visitor control so far; "search" (retrieval only) opens with guest-key mode (4.6).
-    if (raw !== undefined && raw !== 'ready') return reply.error(400, 'bad-request', BAD_LOAD);
+    // "ready" for the chat; "search" (bge-m3 and the reranker only) for guest-key mode (4.6a). Same limits for both.
+    if (raw !== undefined && raw !== 'ready' && raw !== 'search') return reply.error(400, 'bad-request', BAD_LOAD);
+    const target = raw === 'search' ? 'search' : 'ready';
     const visitor = opts.limiter.visitor(clientIp(req.headers, req.socket.remoteAddress, opts.trustProxy));
     const t0 = Date.now();
     const log = (outcome: string, detail?: string) => opts.log.write({ visitor, outcome: `load-${outcome}`, ms: Date.now() - t0, ...(detail ? { detail } : {}) });
@@ -186,8 +226,8 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
       log('cooldown');
       return reply.error(503, 'cooldown', MESSAGES.cooldown, cooldown);
     }
-    if (models.serves('ready')) return reply.result({ models: models.view() });
-    const joining = models.joins('ready');
+    if (models.serves(target)) return reply.result({ models: models.view() });
+    const joining = models.joins(target);
     if (!joining) {
       const limit = loadLimiter.take(visitor);
       if (!limit.ok) {
@@ -199,7 +239,7 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
     if (String(req.headers.accept ?? '').includes('text/event-stream')) reply.startStream();
     const off = models.subscribe((v) => reply.event('models', v));
     try {
-      const reached = await models.start('ready', (work) => opts.queue.run(`load:${visitor}`, work, {}));
+      const reached = await models.start(target, (work) => opts.queue.run(`load:${visitor}`, work, {}));
       log(joining ? 'joined' : 'done', reached);
       reply.result({ models: models.view() });
     } catch (e) {
@@ -308,6 +348,101 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
       reply.error(500, 'internal', MESSAGES.internal);
     }
   });
+
+  const guest = opts.guest;
+  if (guest) {
+    const questionOf = (body: unknown) => {
+      const raw = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>).question : undefined;
+      return typeof raw === 'string' ? cleanQuestion(raw) : '';
+    };
+
+    app.post('/api/guest/retrieve', async (req: Request, res: Response) => {
+      const reply = new Reply(res);
+      const question = questionOf(req.body);
+      if (!question || !isPlainQuestion(question)) return reply.error(400, 'bad-request', BAD_QUESTION);
+      if (question.length > opts.maxQuestionChars) return reply.error(400, 'too-long', `Please keep the question under ${opts.maxQuestionChars} characters.`);
+      const visitor = opts.limiter.visitor(clientIp(req.headers, req.socket.remoteAddress, opts.trustProxy));
+      const t0 = Date.now();
+      const log = (outcome: string, detail?: string) => opts.log.write({ visitor, outcome, ms: Date.now() - t0, question, engine: GUEST_ENGINE.id, ...(detail ? { detail } : {}) });
+      // A guest question counts against the same limits as a local one.
+      const limit = opts.limiter.take(visitor);
+      if (!limit.ok) {
+        log(`limited-${limit.reason}`);
+        return reply.error(429, limit.reason, MESSAGES[limit.reason], limit.retryAfterSec);
+      }
+      if (refusedBeforeWork(question)) {
+        const r = await ask({ ...deps, engine: GUEST_ENGINE }, question);
+        log(r.outcome);
+        return reply.result(r);
+      }
+      if (opts.paused() || !models.switchIsOn()) {
+        opts.limiter.refund(visitor);
+        log('switch-off');
+        return reply.error(503, 'switch-off', MESSAGES['switch-off']);
+      }
+      if (!models.serves('search')) {
+        opts.limiter.refund(visitor);
+        const code = models.state() === 'idle' ? 'search-not-loaded' : notServing(models.view());
+        log(code);
+        return reply.error(503, code, MESSAGES[code]);
+      }
+      try {
+        const chunks = await opts.queue.run(visitor, async (signal) => {
+          models.touch();
+          if (deps.beforeSearch) await deps.beforeSearch();
+          const found = await deps.retrieval.retrieve(question, deps.k);
+          signal.throwIfAborted();
+          return found;
+        });
+        const masked = chunks.map(maskChunk);
+        log('guest-retrieved');
+        res.set('cache-control', 'no-store').json({
+          request: guestRequestBody(question, masked),
+          sources: masked.map(sourceOf),
+          ticket: guest.tickets.issue(question, masked.map((c) => c.id)),
+          engine: GUEST_ENGINE,
+        });
+      } catch (e) {
+        if (e instanceof QueueRefused) {
+          opts.limiter.refund(visitor);
+          log(`refused-${e.reason}`);
+          return reply.error(e.reason === 'busy' ? 503 : 429, e.reason, MESSAGES[e.reason]);
+        }
+        log('model-unavailable', e instanceof Error ? e.name : 'unknown');
+        reply.error(503, 'model-unavailable', MESSAGES['model-unavailable']);
+      }
+    });
+
+    // Verify needs no model: it works in every model state while the ticket is valid; only the owner switch stops it.
+    app.post('/api/guest/verify', (req: Request, res: Response) => {
+      const reply = new Reply(res);
+      const body = req.body as Record<string, unknown> | undefined;
+      const question = questionOf(body);
+      if (!question || !isPlainQuestion(question) || question.length > opts.maxQuestionChars) return reply.error(400, 'bad-request', BAD_QUESTION);
+      const visitor = opts.limiter.visitor(clientIp(req.headers, req.socket.remoteAddress, opts.trustProxy));
+      const t0 = Date.now();
+      const log = (outcome: string, detail?: string) => opts.log.write({ visitor, outcome, ms: Date.now() - t0, question, engine: GUEST_ENGINE.id, ...(detail ? { detail } : {}) });
+      if (opts.paused() || !models.switchIsOn()) {
+        log('switch-off');
+        return reply.error(503, 'switch-off', MESSAGES['switch-off']);
+      }
+      const limit = guest.verifyLimiter.take(visitor);
+      if (!limit.ok) {
+        log(`limited-verify-${limit.reason}`);
+        return reply.error(429, limit.reason, MESSAGES[limit.reason], limit.retryAfterSec);
+      }
+      const t = guest.tickets.check(body?.ticket, question);
+      const chunks = t.ok ? t.ids.map((id) => guest.chunkById(id)) : [];
+      if (!t.ok || chunks.some((c) => !c)) {
+        log('ticket', t.ok ? 'unknown-chunk' : t.problem);
+        return reply.error(400, 'ticket', MESSAGES.ticket);
+      }
+      const masked = (chunks as Chunk[]).map(maskChunk);
+      const r = present(GUEST_ENGINE, checkGuestAnswer(body?.answer, masked, guest.root), masked, masked.map(sourceOf), t0);
+      log(r.outcome);
+      reply.result(r);
+    });
+  }
 
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'not-found' });

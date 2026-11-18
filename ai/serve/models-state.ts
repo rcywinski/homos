@@ -177,6 +177,11 @@ export class Models {
     };
   }
 
+  /** The owner switch as it is now (guest verify needs no model, only the switch on: step 4.6a). */
+  switchIsOn(): boolean {
+    return this.o.switchOn();
+  }
+
   /** True when the resident set serves the need: questions need "ready", guest retrieval needs "search" or more. */
   serves(need: LoadTarget): boolean {
     const s = this.state();

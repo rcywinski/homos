@@ -625,3 +625,18 @@ aborted or failed load therefore watches `/api/ps` for 30 s and releases anythin
 
 **Open.** Real Ollama behaviour of the release (keep_alive 0 on `/api/generate` for bge-m3, as `ollama stop` does) and
 of a late model is checked on the box in 4.10d.
+
+## 2026-11-18, step 4.6a: guest-key mode on the server (owner's OK, review folded in)
+
+**Decision.** `/api/guest/retrieve` returns the Messages API request body (measured Sonnet prompt and answer schema,
+the 10 chunks masked, `max_tokens` 2,048), the sources and an HMAC ticket (question hash, chunk ids, corpus hash,
+10 minutes; secret in memory). `/api/guest/verify` checks the ticket in constant time and the posted answer with the
+chat's own `present()`. Verify needs no model and works in every state while the switch is on. Anything that looks
+like an Anthropic key under `/api` (URL, header, body) is refused before a handler runs; the log keeps the outcome.
+
+**Why.** The key never reaches our server, and the guest sees the same checks as the local chat. The schema is kept
+as data, not through the SDK, so the server's import graph has no Anthropic SDK (a test walks it).
+
+**Departures.** Verify has its own limiter; canonical base64url required for the ticket signature (a test showed
+that changing the unused bits of the last character decoded to the same signature); the cap is 2,048 output tokens
+against 8,000 in the measured runs, three times the largest measured answer (629).

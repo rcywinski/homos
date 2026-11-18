@@ -6,7 +6,7 @@
  * verified quotes, and masks private network addresses last. When the model's output is invalid, or the sources do not
  * answer, or the question asks for trading advice, the visitor gets a fixed text instead of model output.
  */
-import { answerWithChecks } from '../answer/answer';
+import { answerWithChecks, type CheckedAnswer } from '../answer/answer';
 import type { Chunk } from '../corpus/types';
 import type { Generator } from '../answer/types';
 import type { ShowcaseCitation } from './showcase-data';
@@ -48,9 +48,11 @@ export interface AskDeps {
   root?: string;
   /** Run inside the GPU queue before any model call, for example the residency check of ai/serve/residency.ts. */
   beforeWork?: () => Promise<void>;
+  /** The same for guest-key retrieval (step 4.6a), which needs only bge-m3 and the reranker. */
+  beforeSearch?: () => Promise<void>;
 }
 
-const fixed = (deps: AskDeps, outcome: Outcome, text: string, t0: number, sources: AskResponse['sources'] = []): AskResponse => ({
+const fixed = (deps: Pick<AskDeps, 'engine'>, outcome: Outcome, text: string, t0: number, sources: AskResponse['sources'] = []): AskResponse => ({
   outcome,
   engine: deps.engine,
   coverage: null,
@@ -61,7 +63,7 @@ const fixed = (deps: AskDeps, outcome: Outcome, text: string, t0: number, source
   ms: Date.now() - t0,
 });
 
-const sourceOf = (c: Chunk) => ({ chunkId: c.id, file: c.file, lines: [c.lineStart, c.lineEnd] as [number, number], title: maskNetwork(c.title) });
+export const sourceOf = (c: Chunk) => ({ chunkId: c.id, file: c.file, lines: [c.lineStart, c.lineEnd] as [number, number], title: maskNetwork(c.title) });
 
 export type Stage = 'retrieving' | 'generating';
 
@@ -103,6 +105,16 @@ export async function ask(deps: AskDeps, question: string, onStage?: (s: Stage) 
   const sources = chunks.map(sourceOf);
   onStage?.('generating');
   const r = await during('generating', () => answerWithChecks(deps.generator, question, chunks, deps.root, signal));
+  return present(deps.engine, r, chunks, sources, t0);
+}
+
+/**
+ * Turns a generated and citation-checked answer into what the visitor sees: quotes with their status, number marks,
+ * the fixed texts for "failed" and "not in the data" (with the model's explanation under the latter), masking.
+ * Shared by the local chat and guest-key mode (step 4.6a), so both show the same checks.
+ */
+export function present(engine: AskDeps['engine'], r: CheckedAnswer, chunks: Chunk[], sources: AskResponse['sources'], t0: number): AskResponse {
+  const deps = { engine };
   const out = r.output;
   if (!out || r.error) return fixed(deps, 'failed', FAILED, t0, sources);
   const citations: ShowcaseCitation[] = r.citations.map((c) => ({

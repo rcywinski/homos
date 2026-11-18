@@ -299,8 +299,8 @@ async function http() {
     check('the refused question is given back to the limit', before.ok && after.ok && before.remainingToday - 1 === after.remainingToday, JSON.stringify([before, after]));
     check('no GPU work for a refused question', backend.calls.length === 0);
 
-    const bad = await load('application/json', '{"target":"search"}');
-    check('a search load has no public control yet, with its own text', bad.status === 400 && !((await bad.json()) as { message: string }).message.includes('question'));
+    const bad = await load('application/json', '{"target":"everything"}');
+    check('an unknown load target is refused with its own text', bad.status === 400 && !((await bad.json()) as { message: string }).message.includes('question'));
 
     // Streamed load: models events per stage, then the result.
     const s = await load('text/event-stream');
@@ -364,7 +364,8 @@ async function abortedLoadMessage() {
   let on = true;
   const models = new Models({ backend: new FakeModelBackend(300), typicalMs: TYPICAL, switchOn: () => on, lateLoadWatchMs: 0 });
   const loadLimiter = new RateLimiter({ perHour: 1, perDay: 6, globalPerDay: 30 });
-  const app = createApp(deps, { maxQuestionChars: 500, queue: new GpuQueue(5, 60_000), limiter: new RateLimiter({ perHour: 9, perDay: 9, globalPerDay: 9 }), log: new MemoryLog(), probe: { up: async () => true }, trustProxy: 'none', paused: () => false, models, loadLimiter });
+  const qLimiter = new RateLimiter({ perHour: 9, perDay: 9, globalPerDay: 9 });
+  const app = createApp(deps, { maxQuestionChars: 500, queue: new GpuQueue(5, 60_000), limiter: qLimiter, log: new MemoryLog(), probe: { up: async () => true }, trustProxy: 'none', paused: () => false, models, loadLimiter });
   const srv = await new Promise<{ url: string; close: () => void }>((resolve) => {
     const s = app.listen(0, '127.0.0.1', () => resolve({ url: `http://127.0.0.1:${(s.address() as AddressInfo).port}`, close: () => s.close() }));
   });
@@ -377,7 +378,7 @@ async function abortedLoadMessage() {
     check('a load stopped by the switch answers switch-off, not load-failed', r.status === 503 && ((await r.json()) as { error: string }).error === 'switch-off');
     await settled(models);
     on = true;
-    check('and is given back to the visitor (limit 1 an hour still free)', loadLimiter.take(loadLimiter.visitor('127.0.0.1')).ok);
+    check('and is given back to the visitor (limit 1 an hour still free)', loadLimiter.take(qLimiter.visitor('127.0.0.1')).ok);
   } finally {
     srv.close();
   }

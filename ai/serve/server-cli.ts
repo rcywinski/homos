@@ -18,6 +18,7 @@ import { createApp, type BoxProbe } from './app';
 import type { AskDeps } from './ask';
 import { ConfigError, loadServeConfig } from './config';
 import { DryRunGenerator, FAKE_ENGINE, FakeModelBackend, fakeRetrieval } from './fake-engine';
+import { Tickets } from './guest';
 import { Models } from './models-state';
 import { FileLog } from './log';
 import { loadWalletForServing } from './wallet-export';
@@ -95,7 +96,8 @@ async function main() {
     const problem = await startupProblem(residency);
     if (problem) throw new ResidencyError(problem);
     console.log(`[serve] start-up check: Ollama answers, ${residency.generator} and ${residency.embedder} on disk, reranker ${residency.reranker} on cuda; nothing loaded`);
-    models = new Models({ ...modelsOptions, backend: new OllamaModelBackend(residency) });
+    const backend = new OllamaModelBackend(residency);
+    models = new Models({ ...modelsOptions, backend });
     const m = models;
     deps = {
       retrieval: localRetrieval(cfg.inferenceUrl, cfg.rerankUrl, cfg.preset, cfg.keepAlive),
@@ -106,6 +108,14 @@ async function main() {
       // reloads by itself: the rest is released, the state drops to idle and the visitor sees the load button again.
       beforeWork: async () => {
         const problem = residencyProblem(await loadedModels(residency), residency) ?? rerankProblem(await rerankHealth(residency), residency);
+        if (problem) {
+          void m.lost(problem);
+          throw new ResidencyError(problem);
+        }
+      },
+      // Guest-key retrieval (4.6a) needs bge-m3 and the reranker only.
+      beforeSearch: async () => {
+        const problem = await backend.check('search');
         if (problem) {
           void m.lost(problem);
           throw new ResidencyError(problem);
@@ -130,6 +140,16 @@ async function main() {
     walletJson: wallet.ok ? wallet.json : undefined,
     models,
     loadLimiter: new RateLimiter(cfg.loadLimits),
+    // Guest-key mode (4.6a): tickets signed with a secret drawn now and kept in memory only; verify has its own
+    // limits, as many as questions, so one guest question costs one retrieval and one verification.
+    guest: {
+      tickets: new Tickets(cfg.preset.corpusHash),
+      chunkById: (() => {
+        const byId = new Map(loadCorpus().map((c) => [c.id, c]));
+        return (id: string) => byId.get(id);
+      })(),
+      verifyLimiter: new RateLimiter(cfg.limits),
+    },
     staticDir: existsSync(path.join('showcase', 'public', 'app.js')) ? path.join('showcase', 'public') : undefined,
   });
   if (!existsSync(path.join('showcase', 'public', 'app.js'))) console.log('[serve] showcase not built (npm run showcase:build): API only');
