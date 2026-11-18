@@ -95,6 +95,11 @@ async function verifier() {
   st2.keys = [jwk];
   t += 6 * 60_000;
   check('jwt: keys fetched again after 5 minutes on an unknown kid', (await v2.verify(sign({ aud: [AUD], iss: `https://${TEAM}`, email: EMAIL, exp: Math.floor(t / 1000) + 600 }))).ok && st2.calls === 2);
+  // Concurrent requests during the first fetch share it (review of 18 Nov 2026).
+  const st4 = { calls: 0 };
+  const v4 = new AccessVerifier({ teamDomain: TEAM, aud: AUD, adminEmail: EMAIL, fetchFn: jwksFetch(st4) });
+  const both = await Promise.all([v4.verify(good()), v4.verify(good()), v4.verify(good())]);
+  check('jwt: three concurrent first requests all pass, one fetch', both.every((r) => r.ok) && st4.calls === 1, JSON.stringify(both) + st4.calls);
   const st3 = { calls: 0, fail: true };
   const v3 = new AccessVerifier({ teamDomain: TEAM, aud: AUD, adminEmail: EMAIL, fetchFn: jwksFetch(st3) });
   const r3 = await v3.verify(good());

@@ -68,6 +68,8 @@ const b64json = (s: string): Record<string, unknown> | null => {
 export class AccessVerifier {
   private keys = new Map<string, KeyObject>();
   private lastFetch = 0;
+  /** One fetch at a time: concurrent requests during the first fetch wait for it instead of seeing no keys. */
+  private inFlight: Promise<void> | null = null;
   private readonly fetchFn: typeof fetch;
   private readonly now: () => number;
   private readonly certsUrl: string;
@@ -104,7 +106,11 @@ export class AccessVerifier {
   }
 
   private async keyFor(kid: string): Promise<KeyObject | 'no-keys' | null> {
-    if (!this.keys.has(kid) && this.now() - this.lastFetch >= REFETCH_MS) await this.refresh();
+    if (this.inFlight) await this.inFlight;
+    if (!this.keys.has(kid) && this.now() - this.lastFetch >= REFETCH_MS) {
+      this.inFlight = this.refresh().finally(() => (this.inFlight = null));
+      await this.inFlight;
+    }
     if (!this.keys.size) return 'no-keys';
     return this.keys.get(kid) ?? null;
   }
