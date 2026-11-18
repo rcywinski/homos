@@ -49,18 +49,20 @@ test('admin: the owner turns the models on and off; the page state is fail-safe 
   await asOwner(page);
   await page.goto(ADMIN + '/admin');
   await expect(page.getByTestId('admin')).toBeVisible();
-  await expect(page.getByTestId('admin-effective')).toHaveText('Models off');
-  await expect(page.getByTestId('admin-page')).toHaveText('not set yet (off)');
-  await expect(page.getByTestId('admin-master')).toHaveText('on');
+  await expect(page.getByTestId('admin-effective')).toHaveText('Visitors may load the models: no');
+  await expect(page.getByTestId('admin-page')).toHaveText('no (not set yet)');
+  await expect(page.getByTestId('admin-master')).toHaveText('yes');
+  await expect(page.getByTestId('admin')).toContainText('nothing is loaded until someone presses "Load" on the site');
   await page.getByRole('button', { name: 'Turn on' }).click();
-  await expect(page.getByTestId('admin-effective')).toHaveText('Models allowed');
+  await expect(page.getByTestId('admin-effective')).toHaveText('Visitors may load the models: yes');
+  await expect(page.getByTestId('admin-page')).toHaveText('yes');
   expect(readFileSync(STATE, 'utf8').trim()).toBe('on');
   await page.screenshot({ path: info.outputPath('admin-on.png'), fullPage: true });
   // The public page now offers the load button.
   const pub = await page.request.get(ADMIN + '/api/models');
   expect(((await pub.json()) as { state: string }).state).toBe('idle');
   await page.getByRole('button', { name: 'Turn off' }).click();
-  await expect(page.getByTestId('admin-effective')).toHaveText('Models off');
+  await expect(page.getByTestId('admin-effective')).toHaveText('Visitors may load the models: no');
   expect(readFileSync(STATE, 'utf8').trim()).toBe('off');
   expect(errors).toEqual([]);
 });
@@ -69,7 +71,8 @@ test('admin: with the switch on the box off, the page cannot turn the models on'
   writeFileSync(MASTER, 'off\n');
   await asOwner(page);
   await page.goto(ADMIN + '/admin');
-  await expect(page.getByTestId('admin-master-off')).toContainText('The switch on the box is off');
+  await expect(page.getByTestId('admin-master-off')).toContainText('Not allowed on the box');
+  await expect(page.getByTestId('admin-master')).toHaveText('no');
   await expect(page.getByRole('button', { name: 'Turn on' })).toBeDisabled();
   // Even a direct request is refused.
   const r = await page.request.post(ADMIN + '/api/admin/switch', { headers: { 'content-type': 'application/json', origin: ADMIN, 'cf-access-jwt-assertion': token() }, data: { on: true } });

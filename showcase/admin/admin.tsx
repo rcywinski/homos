@@ -62,7 +62,7 @@ function Admin() {
       <h1>Model switch</h1>
       <div className="admin-switch">
         <span className={`state state-${on ? 'on' : 'off'}`} data-testid="admin-effective">
-          Models {on ? 'allowed' : 'off'}
+          Visitors may load the models: {on ? 'yes' : 'no'}
         </span>
         <button type="button" className="primary" disabled={busy || on || s.switch.master !== 'on'} onClick={() => void set(true)}>
           Turn on
@@ -70,10 +70,15 @@ function Admin() {
         <button type="button" className="primary" disabled={busy || !on} onClick={() => void set(false)}>
           Turn off
         </button>
+        <p className="admin-hint">
+          Turning on only allows visitors to load the models; nothing is loaded until someone presses &quot;Load&quot; on
+          the site. Turning off releases loaded models at once.
+        </p>
       </div>
       {s.switch.master !== 'on' && (
         <p className="state-note" role="status" data-testid="admin-master-off">
-          The switch on the box is off, so the models stay off whatever this page says. It is turned on only on the box.
+          Not allowed on the box, so visitors cannot load the models whatever this page says. That is changed only on the
+          box.
         </p>
       )}
       {note && (
@@ -82,11 +87,11 @@ function Admin() {
         </p>
       )}
       <dl>
-        <dt>Switch on the box</dt>
-        <dd data-testid="admin-master">{s.switch.master}</dd>
-        <dt>This page</dt>
-        <dd data-testid="admin-page">{s.switch.page === 'unset' ? 'not set yet (off)' : s.switch.page}</dd>
-        <dt>Models</dt>
+        <dt>Allowed on the box</dt>
+        <dd data-testid="admin-master">{s.switch.master === 'on' ? 'yes' : 'no'}</dd>
+        <dt>Allowed from this page</dt>
+        <dd data-testid="admin-page">{s.switch.page === 'unset' ? 'no (not set yet)' : s.switch.page === 'on' ? 'yes' : 'no'}</dd>
+        <dt>Models now</dt>
         <dd data-testid="admin-models">{s.models.state}</dd>
         {s.idleReleaseInMinutes !== null && (
           <>
