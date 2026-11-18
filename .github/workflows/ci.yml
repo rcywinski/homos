@@ -22,6 +22,8 @@ jobs:
   # Phase 4: the public showcase and the chat server, with fake models only (no GPU, no API key, no network).
   showcase:
     runs-on: ubuntu-latest
+    # A slow apt mirror once stretched the browser install from about 18 s to 6.6 min (18 Nov 2026): fail fast instead.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,7 +34,22 @@ jobs:
       - name: Unit tests of the chat server and the showcase
         run: npx tsx ai/serve/mask.test.ts && npx tsx ai/serve/export.test.ts && npx tsx showcase/guard.test.ts && npx tsx ai/serve/serve.test.ts && npx tsx ai/serve/queue.test.ts && npx tsx ai/serve/wallet-export.test.ts && npx tsx ai/serve/residency.test.ts && npx tsx ai/serve/security.test.ts && npx tsx ai/serve/models-state.test.ts && npx tsx ai/serve/guest.test.ts && npx tsx showcase/guest-key.test.ts && npx tsx ai/serve/admin.test.ts && npx tsx ai/serve/encoding.test.ts && npx tsx ai/serve/supervise.test.ts && npx tsx ai/serve/reranker-process.test.ts
       - run: npm run showcase:build
-      - run: npx playwright install --with-deps chromium
+      # The browser download is cached by the Playwright version from the lockfile. The hosted Ubuntu image already has
+      # the system libraries Chromium needs, so on a cache hit nothing is installed with apt; on a miss the browser is
+      # downloaded with its system packages, as before.
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache the Playwright browser
+        id: pw-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: Install the browser (cache miss)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 10
+        run: npx playwright install --with-deps chromium
       - name: Browser suite (Playwright, desktop and phone)
         run: npx playwright test
       - name: Screenshots and traces of failed paths
