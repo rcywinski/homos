@@ -25,7 +25,7 @@ const utf8 = new TextDecoder('utf-8', { fatal: true });
 
 /** The line as it was before the mis-decoding, or null when it does not round-trip cleanly. */
 export function redecodeLine(line: string): string | null {
-  if (!/[^\x00-\x7f]/.test(line)) return null;
+  if (![...line].some((ch) => ch.codePointAt(0)! > 0x7f)) return null;
   const bytes: number[] = [];
   for (const ch of line) {
     const c = ch.codePointAt(0)!;
