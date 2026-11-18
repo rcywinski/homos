@@ -551,6 +551,54 @@ The CLI reads `OLLAMA_HOST`; `0.0.0.0` is a listen address, so in an interactive
 - Local smoke test on 9 Nov 2026: the Polish and English sentences from the Mac check returned `2 [1024, 1024]`,
   cosine similarity between the two vectors 0.894.
 
+## Public showcase (step 4.9)
+
+The showcase chat server is public through a Cloudflare Tunnel. Nothing on the box listens for it on the LAN: the server binds 127.0.0.1 only, and cloudflared dials out to Cloudflare.
+
+| Item | Value |
+|---|---|
+| Serving clone | `C:\HomosServe\homos`, detached at the public pin (`a15762b` at go-live), never a branch |
+| Config | `C:\HomosServe\serve.env`: `SERVE_MODE=tunnel`, `SERVE_HOST=127.0.0.1`, `SERVE_SWITCH_FILE`, `SERVE_LOG_DIR`; no rate-limit overrides (code defaults) |
+| Owner switch | `C:\HomosServe\SWITCH`, `on` or `off` (off = no model loads, no GPU use; the chat and guest mode answer "offline", saved views still work) |
+| Logs | `C:\HomosServe\logs\`: `server.log`, `cloudflared.log`, request log `YYYY-MM-DD.jsonl` (visitor hash, outcome, masked question) |
+| Tunnel token | `C:\HomosServe\cloudflared\token`, read by `--token-file`, never on a command line or in a task definition |
+| cloudflared | `C:\Program Files (x86)\cloudflared\cloudflared.exe` (winget `Cloudflare.cloudflared`, 2026.11.1), no Windows service |
+| Task XML | `C:\HomosServe\tasks\` (kept for re-import) |
+| Run account | local standard user `homos-web` (SID `S-1-5-21-2739273501-424694354-1965777676-1003`), member of Users only, hidden from the sign-in screen |
+
+Scheduled tasks. Both run as `homos-web`, "run whether the user is logged on or not" (LogonType Password, RunLevel Limited). Trigger: at startup with a 1 min delay. Restart on failure 999 times every 1 min, no time limit. Neither needs cywil to be signed in.
+- `HOMOS showcase server`: `cmd.exe /c "cd /d C:\HomosServe\homos && "C:\Program Files\nodejs\node.exe" --env-file=C:\HomosServe\serve.env --import tsx ai\serve\server-cli.ts >> C:\HomosServe\logs\server.log 2>&1"`
+- `HOMOS tunnel`: `cloudflared.exe tunnel --no-autoupdate --logfile C:\HomosServe\logs\cloudflared.log run --token-file C:\HomosServe\cloudflared\token`
+
+Access control. Least privilege for `homos-web`, set with icacls using SIDs, because group names are localized on this box:
+- `C:\HomosServe` does not inherit. SYSTEM, Administrators and cywil have Full; homos-web has RX.
+- `C:\HomosServe\logs`: homos-web has Modify. This is the only place it writes.
+- The token: homos-web R; SYSTEM, Administrators and cywil F; no one else.
+- `C:\Projects\homos` (wallet-era clone, reranker code): explicit Deny RX for homos-web. The reranker runs as SYSTEM and is unaffected.
+- homos-web cannot write the code, `serve.env` or `SWITCH` (tested).
+- `homos-web` holds "Log on as a batch job" (SeBatchLogonRight). It was granted with secedit (USER_RIGHTS area only), because the tasks were registered with Register-ScheduledTask, which does not grant it; the Task Scheduler GUI import would have.
+
+How to:
+- Take the site offline at once: `Stop-ScheduledTask "HOMOS tunnel"` (tested: no cloudflared process is left, and the public address stops answering). Back online: `Start-ScheduledTask "HOMOS tunnel"`.
+- Stop GPU use: `Set-Content C:\HomosServe\SWITCH off`. The server releases loaded models and refuses loads; the page stays up.
+- Pause the chat: create `C:\HomosServe\homos\ai\serve\PAUSED` as cywil (the default `SERVE_PAUSE_FILE`, relative to the clone; homos-web only checks that it exists); remove it to resume. It wins over the switch.
+- Stop the server: `Stop-ScheduledTask "HOMOS showcase server"`. Stop the tunnel first, or visitors get an error page.
+- Check:
+  - `Get-ScheduledTask "HOMOS*"` shows Running.
+  - `Get-NetTCPConnection -LocalPort 8790 -State Listen` shows 127.0.0.1 only.
+  - `Get-Process node,cloudflared -IncludeUserName` shows homos-web.
+  - `Invoke-RestMethod http://127.0.0.1:8790/api/health`.
+  - cloudflared.log shows "Registered tunnel connection" (normally 4).
+  - server.log shows "mode tunnel (visitor = CF-Connecting-IP, listening on 127.0.0.1 only)" and no CF-Connecting-IP warning.
+- Update the serving clone: as cywil, git fetch, check out the new pin detached, run npm ci and the showcase build. Child files inherit the ACL. Then restart the server task.
+
+Known limits and box facts:
+- Restart on failure does not cover a node exit. Task Scheduler restarts only when the task fails to launch; if node crashes, the server stays down until the next boot or a manual `Start-ScheduledTask`. A wrapper loop or watchdog is a later item.
+- Never bind 0.0.0.0 on this box while the "Homebridge" firewall rule exists. It allows `C:\Program Files\nodejs\node.exe` inbound on any protocol and port from any address, profile Any. The 127.0.0.1 bind is the server's only LAN protection; a LAN probe of 192.168.1.8:8790 from the Mac fails, as it should.
+- Remote Desktop listens on TCP and UDP 10666, not 3389. The firewall rules "RDP 10666 (TCP/UDP)" allow any remote address. Per the owner there is no router forward; outside access is through his WireGuard VPN only.
+- Sign-in: cywil has a password and signs in by hand after a reboot. The site does not depend on it: Ollama and the reranker run as SYSTEM, the showcase tasks as homos-web.
+- Raised rate limits for a batch run are set for that run only and removed in the same instruction.
+
 ## Removing the project from the box
 
 Written by CC-Mac on 18 Nov 2026 from CC-Win's read-only inventory of that day. This is a checklist only: nothing on
@@ -651,6 +699,11 @@ for this checklist. Precondition for step 4.9 (tunnel): the serving account `hom
 7. **[ask] items:** Git, the npm cache, CC-Win's memory and scratchpad, `\MSIAfterburner`. `C:\Skrypty\` is the owner's and stays.
 8. **Full wipe only (the owner decides):** if `C:\Projects\homos` itself is ever removed, its `.env` and
    `.bot-live-backup\` are secrets: delete them, do not copy, read or print them, and do not leave them in a recycle bin or backup.
+
+Added in step 4.9 (18 Nov 2026), not yet in the order above: the tasks `HOMOS showcase server` and `HOMOS tunnel`,
+the Cloudflare tunnel and its token in `C:\HomosServe\cloudflared\`, cloudflared itself, the account `homos-web` and
+its "Log on as a batch job" right. Remove the tunnel task first (it is what makes the site public), then the server task,
+then the account; see "Public showcase (step 4.9)". The tunnel in the Cloudflare dashboard is the owner's to delete.
 
 Kept: `C:\Projects\homos\` and its pre-AI data, the 23 Sep bot-state zip, Node.js, Python 3.12, the Visual C++ runtimes.
 The GPU power limit is already at the default 420 W, so there is nothing to revert while the power-limit task is gone.
