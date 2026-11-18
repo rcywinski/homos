@@ -847,7 +847,11 @@ engine (fake stages with delays) and Playwright; 4.10b explicit unload, the idle
 without loaded models, tests with a fake Ollama; 4.10c the admin page with the chosen design; 4.10d on the box:
 typical load times, VRAM per process (`nvidia-smi --query-compute-apps`), commit memory at the points above.
 
-## 10b. Merge of app-chat into main: preparation (18 Nov 2026, not merged)
+## 10b. Merge of app-chat into main (merged 18 Nov 2026)
+
+**Merged** on the owner's word: `7846549` on `main` (from `a845c64`, app-chat up to `8c8c7f1`), the same tree as the
+dry run whose pull request #1 (draft, closed without merging) passed CI run 44298471773; CI on `main` after the merge:
+run 44299150330, success. The preparation below is kept as the record.
 
 Dry run on the scratch branch `merge-dry-run` (worktree `HOMOS-merge-dry`, from `origin/main` at `a845c64`), merged
 with `app-chat` up to `52503a8`. Four conflicts, resolved as follows; the real merge repeats them:
