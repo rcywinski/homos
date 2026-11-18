@@ -466,7 +466,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   4.8j3 16 / 14 / 4): within the phase 3 spread on every count; with the fixed heading alone (two runs): incorrect
   beyond the spread. Live retrieval matched the saved chunk lists on 34 of 34 in all three runs. Judge cost
   $0.54 + $0.52 + $0.50 + $0.53. Result: `ai/eval/results/2026-11-17-judged-lan48-4.8j.md`.
-- [ ] NEXT **4.10** On-demand models with an owner switch (section 10), design accepted 17 Nov 2026 with variant (a)
+- [x] **4.10** On-demand models with an owner switch (done 18 Nov 2026, all parts ticked by the owner) (section 10), design accepted 17 Nov 2026 with variant (a)
   Cloudflare Access and a 15-minute idle period; until the tunnel exists the switch is the file on the box. Starts
   after 4.8n. Follow-up: the master switch should eventually release the reranker too, so the whole GPU is free when
   the chat is off; this needs load and unload endpoints in `inference/`, coordinated with CC-Mac when we get there.
@@ -847,7 +847,7 @@ engine (fake stages with delays) and Playwright; 4.10b explicit unload, the idle
 without loaded models, tests with a fake Ollama; 4.10c the admin page with the chosen design; 4.10d on the box:
 typical load times, VRAM per process (`nvidia-smi --query-compute-apps`), commit memory at the points above.
 
-## 10c. Step 4.10e: the reranker on demand (built 18 Nov 2026, box part pending)
+## 10c. Step 4.10e: the reranker on demand (done 18 Nov 2026)
 
 Owner's requirement of 18 Nov: nothing of the project in VRAM while nobody uses the site, the reranker included, and
 nothing started at boot. Plan agreed with CC-Mac and reviewed by the analysis session. Built:
@@ -865,7 +865,7 @@ trigger goes in the same deploy; CC-Mac's Mac pre-flight, 21c7f07 on ai-layer, c
 venv's `Scripts\python.exe` is a launcher whose child holds the CUDA context, so the server tracks the spawned pid and
 its descendants (the pid file holds the set), confirms a release only when none of them is alive or listed by
 nvidia-smi, and counts any of them as ours on the admin page; the child gets an allow-list of environment variables;
-its log is capped at 5 MB. **Deployed and measured (18 Nov 2026, `e3f6e80`), awaiting the owner's tick:** idle VRAM 1 218 MiB (was
+its log is capped at 5 MB. **Deployed and measured (18 Nov 2026, `e3f6e80`), ticked by the owner:** idle VRAM 1 218 MiB (was
 4 177 with the boot-time reranker), equal after a release; full load 23 972 MiB with both models 100% GPU; reranker
 16.0 s cold, 11.2 s warm; the interpreter (a child of the venv launcher) holds the CUDA context and is in the tracked
 set; CPU reranking 41 s a question (rejected). `ai/eval/results/2026-11-18-reranker-on-demand-4.10e.md`.
