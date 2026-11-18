@@ -529,6 +529,13 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   without a readable answer shows the likely causes; an answer cut at max_tokens is not sent to verify; the CSP in
   header and meta allows exactly `'self' https://api.anthropic.com` and the browser blocks any other host. This
   commit is the one to pin for the public site.
+  **4.6e prepared (18 Nov 2026):** `ai/serve/tools/guest-batch.mts`, self-contained (Node built-ins only) so CC-Mac
+  runs it from the main checkout where the key is: one "Load search", then for each golden question
+  `/api/guest/retrieve`, one Messages API call with the owner's key, `/api/guest/verify`, through the public address
+  (`GUEST_BASE`, given by the owner in CC-Mac's conversation, never written down); no retry; stops on the first
+  transport or API error; a model answer that cannot be checked is recorded as "failed". Output has no hostname and no
+  key; `to-judge-input.mts --engine guest` converts it with the real usage and cost. Dry run against a mocked API:
+  34 rows, 1.02 USD at 13 000 input and 400 output tokens a question.
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner (precondition: the server runs as `homos-web`
   from `C:\HomosServe\homos`, not as the desktop user): Cloudflare Tunnel, static hosting choice,
   optional Access, kill switch documented in `inference/README.md`. S. Checklist: `SERVE_MODE=tunnel` and
@@ -567,6 +574,10 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   with secedit because the tasks were registered from PowerShell. Operations in `inference/README.md` (ai-layer).
   Open: SSE through the tunnel needs the switch on (owner's call); "Always Use HTTPS" in Cloudflare (owner's call;
   plain http answers 200 today); a node exit is not restarted by Task Scheduler (wrapper or watchdog, later).
+  Same day: SSE through the tunnel checked with the switch on for one load (pin `a15762b`): load events at +0.1 s,
+  +21.8 s and +24.4 s, then the result; a question's retrieving at +0.0 s, generating at +1.6 s, result at +11.4 s;
+  so Cloudflare does not buffer the stream. Switch back off, models released in 0.9 s. "Always Use HTTPS" turned on
+  by the owner: http answers 301, the page hash unchanged.
 
 Steps 4.1 to 4.5 can be built while phase 3 holds the box (4.4b needs CC-Win on the box but not the GPU). 4.7, 4.8,
 4.6 and 4.9 wait until the owner says phase 3 is finished.

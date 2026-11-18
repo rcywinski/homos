@@ -4,7 +4,9 @@
  * same prompt. Offline. Prints the SHA-256 of the output.
  *
  *   node --import tsx ai/serve/tools/to-judge-input.mts --in <lan-run-golden.json> --out <answers file> [--label lan48]
- *     [--refusal explained|fixed]
+ *     [--refusal explained|fixed] [--engine local|guest]
+ * --engine guest converts a guest-key run (ai/serve/tools/guest-batch.mts, step 4.6e): the generator is the measured
+ * cloud generator of step 1.8, and each row's token usage and cost are kept.
  * --refusal fixed judges "not in the data" on the fixed heading alone (as in 4.8j), so a run with explanations can
  * be judged both ways and the effect of the explanation measured on the same answers. Default: explained.
  *
@@ -29,6 +31,11 @@ const inFile = opt('--in');
 const outFile = opt('--out');
 const label = opt('--label', 'lan48')!;
 const refusal = opt('--refusal', 'explained');
+const engine = opt('--engine', 'local');
+if (engine !== 'local' && engine !== 'guest') {
+  console.error('--engine must be local or guest');
+  process.exit(2);
+}
 if (refusal !== 'explained' && refusal !== 'fixed') {
   console.error('--refusal must be explained or fixed');
   process.exit(2);
@@ -48,6 +55,8 @@ interface Row {
   explanation?: { text: string; quotes: Row['quotes'] };
   timing: { totalMs: number };
   serverMs: number | null;
+  usage?: { input: number; output: number; cacheWrite: number; cacheRead: number } | null;
+  costUsd?: number;
 }
 
 const raw = readFileSync(inFile, 'utf8');
@@ -92,9 +101,10 @@ const perQuestion: AnswerRecord[] = golden.map((q) => {
     coverage,
     citations,
     citesEvidence: citations.some((c) => c.status === 'ok' && onEvidence(corpus.get(c.chunkId))),
-    usage: { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 },
-    costUsd: 0,
-    ms: r.serverMs ?? r.timing.totalMs,
+    usage: r.usage ?? { input: 0, cacheWrite: 0, cacheRead: 0, output: 0 },
+    costUsd: r.costUsd ?? 0,
+    // A guest answer's time is the whole path (retrieval, the cloud call, verification); a local one the server's.
+    ms: engine === 'guest' ? r.timing.totalMs : (r.serverMs ?? r.timing.totalMs),
     answer: ex ? `${r.text}\n\nThe model's own explanation: ${ex.text}` : r.text,
     chunkIds: r.sources as string[],
     ...(coverage === 'error' ? { error: r.outcome } : {}),
@@ -102,16 +112,19 @@ const perQuestion: AnswerRecord[] = golden.map((q) => {
 });
 
 const preset = PRESETS[DEFAULT_PRESET];
-const generator = new LocalGenerator({ ...preset.generator, baseUrl: 'http://127.0.0.1:11434', countTokens: (s) => s.length }).name;
+// The guest engine's name is the cloud generator's of step 1.8 (ai/answer/claude.ts), without importing the SDK here.
+const generator = engine === 'guest' ? 'answer:claude-sonnet-5-5(effort=medium)' : new LocalGenerator({ ...preset.generator, baseUrl: 'http://127.0.0.1:11434', countTokens: (s) => s.length }).name;
 const out = {
-  label: `answers-k10-local-${label}`,
+  label: `answers-k10-${engine === 'guest' ? 'guest' : 'local'}-${label}`,
   date: run.summary.when.slice(0, 10),
   goldenVersion: '1.4',
   generator,
   retrieval: 'hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.meta (live, through the chat server on the box)',
   k: preset.k,
   note:
-    'Step 4.8j: the served preset through the public chat server on the box (ai/serve), converted by ai/serve/tools/to-judge-input.mts. Live retrieval, not saved chunk lists. For "not in the data" the answer is the fixed text the visitor sees. No token usage or cost (local model).',
+    engine === 'guest'
+      ? 'Step 4.6e: guest-key mode through the public chat server (ai/serve): local retrieval on the box, Claude Sonnet 5.5 called with the owner key outside the browser, verification on the server; converted by ai/serve/tools/to-judge-input.mts. Usage and cost are the real API figures of each call.'
+      : 'Step 4.8j: the served preset through the public chat server on the box (ai/serve), converted by ai/serve/tools/to-judge-input.mts. Live retrieval, not saved chunk lists. For "not in the data" the answer is the fixed text the visitor sees. No token usage or cost (local model).',
   source: { file: inFile.split(/[\\/]/).pop(), sha256: createHash('sha256').update(raw).digest('hex') },
   perQuestion,
 };
