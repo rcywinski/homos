@@ -505,6 +505,10 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   second bundle in `showcase/admin-dist/` (gitignored), served under `/admin/` only after the check; no new package,
   the allow-list and CSP unchanged, `app.js` byte for byte unchanged. Unconfigured, `/admin` and `/api/admin` answer
   404. Tests: admin 52; Playwright adds 3 tests x 2 with a stand-in key endpoint that makes its key at start.
+  After the review (18 Nov 2026): concurrent first JWKS fetch shared. Display fix asked by the owner the same day: the
+  18 Aug report's 11 log lines stored as UTF-8 read as Windows-1250 ("majÄ…") are re-decoded in the showcase data only
+  (`ai/serve/encoding.ts`; a line is changed only when it round-trips cleanly), with a note on that report; the corpus
+  file keeps its bytes, and the other 36 reports are byte for byte unchanged (test).
 - [ ] **4.6** Guest-key mode. Plan written 16 Nov 2026 (no code yet); details in section 9. M, in five parts:
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;

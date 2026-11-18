@@ -104,6 +104,8 @@ export interface ShowcaseReport {
   title: string;
   /** Full report text, masked. Polish, as written by the report generator. */
   text: string;
+  /** Set when some lines were re-decoded for display (ai/serve/encoding.ts); the page shows it on the report. */
+  note?: string;
 }
 
 export interface ReportsData {

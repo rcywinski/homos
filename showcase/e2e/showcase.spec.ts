@@ -252,6 +252,22 @@ test('daily reports: a live-capital day, Markdown rendered, logs folded @real', 
   await shot(page, info, 'reports');
 });
 
+test('daily reports: 18 Aug log lines re-decoded for display, with the note @real', async ({ page }, info) => {
+  await open(page, MAIN, info);
+  await page.getByRole('button', { name: 'Daily reports' }).click();
+  await page.getByRole('button', { name: '18 Aug', exact: true }).click();
+  const report = page.getByTestId('report');
+  await expect(report).toContainText('Tuesday, 18 August 2026');
+  await expect(report.getByTestId('report-note')).toContainText('re-decoded for display');
+  for (const d of await report.locator('details').all()) await d.evaluate((el) => ((el as HTMLDetailsElement).open = true));
+  const text = await report.innerText();
+  expect(text).toContain('zbiegł');
+  expect(text).not.toMatch(/Ä…|Ĺ‚|â€/);
+  // Another day has no note.
+  await page.getByRole('button', { name: '19 Aug', exact: true }).click();
+  await expect(report.getByTestId('report-note')).toHaveCount(0);
+});
+
 test('wallet tab: the exclusion note, nothing that can sign, fixture data marked as such @real', async ({ page }, info) => {
   const errors = await open(page, MAIN, info);
   const tab = page.getByRole('button', { name: 'Wallet' });

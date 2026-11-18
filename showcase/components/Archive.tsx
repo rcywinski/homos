@@ -108,6 +108,11 @@ export function Archive() {
           <p className="meta">
             Original title, in Polish: <span lang="pl">{current.title}</span>
           </p>
+          {current.note && (
+            <p className="meta" data-testid="report-note">
+              {current.note}
+            </p>
+          )}
         </header>
         <p className="report-contents">
           What a report holds: the money first (tranche balance, real positions, paper trading), then the machinery

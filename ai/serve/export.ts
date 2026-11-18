@@ -4,6 +4,7 @@
  *
  * CLI: `ai/serve/export-cli.ts` (npm run showcase:data).
  */
+import { REDECODED_NOTE, redecodeText } from './encoding';
 import { createHash } from 'crypto';
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
@@ -182,9 +183,11 @@ export function buildReports(root = process.cwd()): ReportsData {
     .sort();
   const reports = files.map((f) => {
     const file = `${REPORTS_DIR}/${f}`;
-    const text = read.text(file).replace(/\r\n/g, '\n');
+    // Display copy only: lines stored with the wrong encoding are repaired here; the corpus file is never touched.
+    const fixed = redecodeText(read.text(file).replace(/\r\n/g, '\n'));
+    const text = fixed.text;
     const title = (text.match(/^# (.+)$/m)?.[1] ?? f).trim();
-    return { date: f.slice('morning-'.length, -'.md'.length), file, title: maskNetwork(title), text: maskNetwork(text) };
+    return { date: f.slice('morning-'.length, -'.md'.length), file, title: maskNetwork(title), text: maskNetwork(text), ...(fixed.repaired ? { note: REDECODED_NOTE } : {}) };
   });
   return { reports, sources: read.sources() };
 }
