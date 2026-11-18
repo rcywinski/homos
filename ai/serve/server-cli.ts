@@ -18,6 +18,8 @@ import { createApp, type BoxProbe } from './app';
 import type { AskDeps } from './ask';
 import { ConfigError, loadServeConfig } from './config';
 import { DryRunGenerator, FAKE_ENGINE, FakeModelBackend, fakeRetrieval } from './fake-engine';
+import { AccessVerifier } from './access';
+import { OwnerSwitch } from './admin';
 import { Tickets } from './guest';
 import { Models } from './models-state';
 import { FileLog } from './log';
@@ -59,10 +61,12 @@ async function main() {
   let probe: BoxProbe;
   const queue = new GpuQueue(cfg.queueMax, cfg.jobDeadlineMs);
   const log = (m: string) => console.log(`[serve] ${new Date().toISOString()} ${m}`);
+  // Step 4.10c: the master switch file (read-only to the server) and, with the admin page configured, the page's state.
+  const ownerSwitch = new OwnerSwitch(cfg.switchFile, cfg.adminStateFile, cfg.access !== null, cfg.adminLogFile);
   // Step 4.10: the models start unloaded; a visitor loads them, if the owner switch is on (the pause file wins).
   const modelsOptions = {
     typicalMs: cfg.typicalLoadMs,
-    switchOn: () => switchSaysOn(cfg.switchFile) && !existsSync(cfg.pauseFile),
+    switchOn: () => ownerSwitch.on() && !existsSync(cfg.pauseFile),
     busy: () => queue.state().running || queue.state().waiting > 0,
     cooldownMs: cfg.loadCooldownMs,
     log,
@@ -142,6 +146,18 @@ async function main() {
     loadLimiter: new RateLimiter(cfg.loadLimits),
     // Guest-key mode (4.6a): tickets signed with a secret drawn now and kept in memory only; verify has its own
     // limits, as many as questions, so one guest question costs one retrieval and one verification.
+    ...(cfg.access
+      ? {
+          admin: {
+            verifier: new AccessVerifier(cfg.access),
+            switch: ownerSwitch,
+            denyLimiter: new RateLimiter({ perHour: 20, perDay: 100, globalPerDay: 2000 }),
+            htmlFile: path.join('showcase', 'admin', 'admin.html'),
+            cssFile: path.join('showcase', 'admin', 'admin.css'),
+            jsFile: path.join('showcase', 'admin-dist', 'admin.js'),
+          },
+        }
+      : {}),
     guest: {
       tickets: new Tickets(cfg.preset.corpusHash),
       chunkById: (() => {
@@ -155,6 +171,11 @@ async function main() {
   if (!existsSync(path.join('showcase', 'public', 'app.js'))) console.log('[serve] showcase not built (npm run showcase:build): API only');
   models.startTimer();
   console.log(`[serve] models start unloaded; owner switch ${switchSaysOn(cfg.switchFile) ? 'on' : 'off'} (${cfg.switchFile}); released after 15 min without questions`);
+  console.log(
+    cfg.access
+      ? `[serve] admin page on (Access team ${cfg.access.teamDomain}); page switch ${ownerSwitch.page()} (${cfg.adminStateFile}); models allowed: ${ownerSwitch.on() ? 'yes' : 'no'}`
+      : '[serve] admin page off (no SERVE_ACCESS_* values); the switch file alone decides',
+  );
   const server = app.listen(cfg.port, cfg.host, () => {
     const a = server.address();
     const port = a && typeof a === 'object' ? a.port : cfg.port;

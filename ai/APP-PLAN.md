@@ -493,6 +493,18 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   (bge-m3); idle releases in 1 s; a switch-off during a load aborted it in Ollama itself, no late model; the 8 GB
   commit rise is the generator's llama-server and is fully returned on release (21.9 GB again, stable for an hour);
   VRAM per process not readable under WDDM. `ai/eval/results/2026-11-17-models-on-demand-4.10d.md`.
+  **4.10c built (18 Nov 2026), awaiting the owner's OK:** the admin page behind Cloudflare Access (application
+  "showcase admin", paths `admin`, `admin/*`, `api/admin/*`, the owner's e-mail only, made in his dashboard).
+  `ai/serve/access.ts` checks Cf-Access-Jwt-Assertion on every admin request with Node's crypto (8 KB cap, RS256, kid
+  in the team JWKS fetched with timeout and size cap and refreshed at most every 5 min, fail closed without keys;
+  signature, aud, iss, exp and nbf with 60 s leeway; e-mail trimmed and case-insensitive; no e-mail denied; team
+  domain must be `*.cloudflareaccess.com`). `ai/serve/admin.ts`: the owner's switch file stays the read-only master;
+  the page writes its own state file; models allowed only when both say on, and with the page configured a missing
+  state file is off (fail-safe). One action, POST `/api/admin/switch` with JSON and a same-origin check; off releases
+  the models at once; `admin.jsonl` records "owner", never the address; denials limited per visitor. The page is a
+  second bundle in `showcase/admin-dist/` (gitignored), served under `/admin/` only after the check; no new package,
+  the allow-list and CSP unchanged, `app.js` byte for byte unchanged. Unconfigured, `/admin` and `/api/admin` answer
+  404. Tests: admin 52; Playwright adds 3 tests x 2 with a stand-in key endpoint that makes its key at start.
 - [ ] **4.6** Guest-key mode. Plan written 16 Nov 2026 (no code yet); details in section 9. M, in five parts:
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;

@@ -49,6 +49,10 @@ ai/serve/logs/
 ai/serve/PAUSED
 # Owner switch of the models (step 4.10), local dry runs only; on the box it lives outside the repo.
 ai/serve/SWITCH
+# The admin page's switch state (step 4.10c), local dry runs only; on the box it lives outside the repo.
+ai/serve/ADMIN-SWITCH
+# The admin page's build output (step 4.10c): served only after the Access check, never from showcase/public.
+showcase/admin-dist/
 # Python (inference/ services): bytecode cache and virtual environments.
 __pycache__/
 .venv/

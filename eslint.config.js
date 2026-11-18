@@ -5,7 +5,7 @@ const reactHooks = require('eslint-plugin-react-hooks');
 const globals = require('globals');
 
 module.exports = tseslint.config(
-  { ignores: ['node_modules/', 'public/', 'showcase/public/', 'data/', '.bot/', 'backtest/results/', 'deploy/'] },
+  { ignores: ['node_modules/', 'public/', 'showcase/public/', 'showcase/admin-dist/', 'data/', '.bot/', 'backtest/results/', 'deploy/'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

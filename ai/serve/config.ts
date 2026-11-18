@@ -8,6 +8,7 @@
  *
  * There is no Anthropic key on this path: `loadServeConfig` refuses to start when `ANTHROPIC_API_KEY` is set.
  */
+import { checkAccessConfig } from './access';
 import path from 'path';
 import { LOCAL_QUOTE_SYSTEM } from '../answer/prompt-local';
 import type { LocalGenOptions } from '../answer/local';
@@ -100,6 +101,15 @@ export interface ServeConfig {
   /** Dry run only: duration of each fake load stage, and a stage that fails (for the browser suite). */
   /** After a failed load, no new load for this long (owner, 17 Nov 2026: 2 minutes). */
   loadCooldownMs: number;
+  /**
+   * Admin page (step 4.10c): set only when all three Access values are in serve.env; otherwise the page does not
+   * exist (its routes answer 404) and the master switch alone decides.
+   */
+  access: { teamDomain: string; aud: string; adminEmail: string; certsUrl?: string } | null;
+  /** The admin page's switch state, in a folder only the server may write (the master stays read-only to it). */
+  adminStateFile: string;
+  /** One line per switch change made on the admin page. */
+  adminLogFile: string;
   fakeLoadMs: number;
   fakeLoadFail: '' | 'generator' | 'embedder' | 'check';
   /**
@@ -131,6 +141,23 @@ function keepAlive(raw: string | undefined): string {
   const v = raw || '60m';
   if (!/^(-1|\d+(s|m|h))$/.test(v)) throw new ConfigError('SERVE_KEEP_ALIVE must look like 24h, 90m, 3600s or -1');
   return v;
+}
+
+/** All three Access values, or none (no admin page); a test-only certs URL is accepted in the dry run only. */
+function accessConfig(env: Env, engine: string): ServeConfig['access'] {
+  const teamDomain = env.SERVE_ACCESS_TEAM_DOMAIN ?? '';
+  const aud = env.SERVE_ACCESS_AUD ?? '';
+  const adminEmail = env.SERVE_ADMIN_EMAIL ?? '';
+  const set = [teamDomain, aud, adminEmail].filter(Boolean).length;
+  if (env.SERVE_ACCESS_CERTS_URL && engine !== 'fake') throw new ConfigError('SERVE_ACCESS_CERTS_URL is for the dry run only');
+  if (set === 0) return null;
+  if (set < 3) throw new ConfigError('the admin page needs SERVE_ACCESS_TEAM_DOMAIN, SERVE_ACCESS_AUD and SERVE_ADMIN_EMAIL together');
+  try {
+    checkAccessConfig({ teamDomain, aud, adminEmail });
+  } catch (e) {
+    throw new ConfigError(e instanceof Error ? e.message : String(e));
+  }
+  return { teamDomain, aud, adminEmail, ...(env.SERVE_ACCESS_CERTS_URL ? { certsUrl: env.SERVE_ACCESS_CERTS_URL } : {}) };
 }
 
 function fakeLoadFail(raw: string | undefined): ServeConfig['fakeLoadFail'] {
@@ -202,6 +229,9 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
       check: int(env, 'SERVE_TYPICAL_CHECK_MS', 200, 0, 600_000),
     },
     loadCooldownMs: int(env, 'SERVE_LOAD_COOLDOWN_MS', 120_000, 0, 3_600_000),
+    access: accessConfig(env, engine),
+    adminStateFile: env.SERVE_ADMIN_STATE_FILE || path.join('ai', 'serve', 'ADMIN-SWITCH'),
+    adminLogFile: path.join(env.SERVE_LOG_DIR || path.join('ai', 'serve', 'logs'), 'admin.jsonl'),
     fakeLoadMs: int(env, 'SERVE_FAKE_LOAD_MS', 300, 0, 60_000),
     fakeLoadFail: fakeLoadFail(env.SERVE_FAKE_LOAD_FAIL),
     keepAlive: keepAlive(env.SERVE_KEEP_ALIVE),

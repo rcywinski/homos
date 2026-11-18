@@ -23,6 +23,9 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import type { Chunk } from '../corpus/types';
 import { ask, ModelUnavailable, present, refusedBeforeWork, sourceOf, type AskDeps, type AskResponse, type Stage } from './ask';
+import path from 'path';
+import type { AccessVerifier } from './access';
+import type { OwnerSwitch } from './admin';
 import { checkGuestAnswer, GUEST_ENGINE, guestRequestBody, looksLikeKey, maskChunk, type Tickets } from './guest';
 import type { RequestLog } from './log';
 import { LoadFailed, LoadRefused, Models, type ModelBackend, type ModelsView } from './models-state';
@@ -62,6 +65,19 @@ export interface AppOptions {
   loadLimiter?: RateLimiter;
   /** Guest-key mode (step 4.6a); omitted: its routes answer 404. */
   guest?: GuestOptions;
+  /** The admin page (step 4.10c); omitted: /admin and /api/admin answer 404. */
+  admin?: AdminOptions;
+}
+
+export interface AdminOptions {
+  verifier: AccessVerifier;
+  switch: OwnerSwitch;
+  /** Limits denied admin requests per visitor, so a flood of bad tokens cannot fill the log. */
+  denyLimiter: RateLimiter;
+  /** The page's HTML and CSS (showcase/admin) and its built script (showcase/admin-dist). */
+  htmlFile: string;
+  cssFile: string;
+  jsFile: string;
 }
 
 export interface GuestOptions {
@@ -109,6 +125,8 @@ export const MESSAGES = {
     'This request contained something that looks like an API key, so it was refused and not stored. Your key is only for Anthropic: the page sends it from your browser to api.anthropic.com, never to this site.',
   'search-not-loaded': 'The search model is not loaded. Press "Load search" first; it takes a few seconds.',
   ticket: 'This answer can no longer be checked: more than 10 minutes passed, or the server restarted. Please ask again.',
+  'admin-denied': 'Not allowed.',
+  'admin-master-off': 'The switch on the box is off; the page cannot turn the models on until it is on.',
   'load-failed': 'The local model could not be loaded right now. Please try again later. The saved answers are still available.',
   unloading: 'The local model is being released. You can load it again in a moment.',
   cooldown: 'The last attempt to load the local model failed. A new attempt is possible in a moment.',
@@ -162,6 +180,24 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
   const app = express();
   const models = opts.models ?? new Models({ backend: NO_BACKEND, typicalMs: { 'release-embedder': 0, generator: 0, embedder: 0, check: 0 }, switchOn: () => !opts.paused(), initial: 'ready' });
   const loadLimiter = opts.loadLimiter ?? new RateLimiter({ perHour: 2, perDay: 6, globalPerDay: 30 });
+
+  // Today's outcomes for the admin page: counted from the request log as it is written, per UTC day, in memory.
+  const today = { day: '', counts: {} as Record<string, number> };
+  const baseLog = opts.log;
+  opts = {
+    ...opts,
+    log: {
+      write(e) {
+        const d = new Date().toISOString().slice(0, 10);
+        if (d !== today.day) {
+          today.day = d;
+          today.counts = {};
+        }
+        today.counts[e.outcome] = (today.counts[e.outcome] ?? 0) + 1;
+        baseLog.write(e);
+      },
+    },
+  };
   app.disable('x-powered-by');
   app.use(securityHeaders);
 
@@ -441,6 +477,54 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
       const r = present(GUEST_ENGINE, checkGuestAnswer(body?.answer, masked, guest.root), masked, masked.map(sourceOf), t0);
       log(r.outcome);
       reply.result(r);
+    });
+  }
+
+  const admin = opts.admin;
+  if (admin) {
+    // Every /admin and /api/admin request: a valid Access JWT first. Denials are limited per visitor and logged with
+    // the reason only; the response is a fixed text.
+    const gate = async (req: Request, res: Response, next: NextFunction) => {
+      const r = await admin.verifier.verify(req.headers['cf-access-jwt-assertion']);
+      if (r.ok) return next();
+      const visitor = opts.limiter.visitor(clientIp(req.headers, req.socket.remoteAddress, opts.trustProxy));
+      if (!admin.denyLimiter.take(visitor).ok) return res.status(429).type('text/plain').send('Too many requests.');
+      opts.log.write({ visitor, outcome: 'admin-denied', ms: 0, detail: r.reason });
+      res.status(403).type('text/plain').send(MESSAGES['admin-denied']);
+    };
+    app.use(['/admin', '/api/admin'], (req, res, next) => void gate(req, res, next));
+    app.get('/admin', (_req, res) => res.set({ 'cache-control': 'no-store', 'x-robots-tag': 'noindex' }).sendFile(path.resolve(admin.htmlFile)));
+    app.get('/admin/admin.js', (_req, res) => res.set('cache-control', 'no-store').sendFile(path.resolve(admin.jsFile)));
+    app.get('/admin/admin.css', (_req, res) => res.set('cache-control', 'no-store').sendFile(path.resolve(admin.cssFile)));
+    app.get('/api/admin/state', (_req, res) => {
+      const idle = models.idleRemainingMs();
+      const q = opts.queue.state();
+      res.set('cache-control', 'no-store').json({
+        switch: { effective: models.switchIsOn(), master: admin.switch.master(), page: admin.switch.page() },
+        models: models.view(),
+        release: models.releaseStatus(),
+        idleReleaseInMinutes: idle === null ? null : Math.ceil(idle / 60_000),
+        queue: { running: q.running, waiting: q.waiting },
+        today: { day: today.day || new Date().toISOString().slice(0, 10), outcomes: today.counts },
+      });
+    });
+    // The one action: on or off. JSON only (a cross-site form cannot send it without a preflight), same origin only.
+    app.post('/api/admin/switch', (req: Request, res: Response) => {
+      const host = req.headers.host ?? '';
+      const origin = req.headers.origin ?? '';
+      const site = req.headers['sec-fetch-site'];
+      const sameOrigin = origin === `https://${host}` || (/^(127\.0\.0\.1|localhost)(:\d+)?$/.test(host) && origin === `http://${host}`);
+      if (!req.is('application/json') || !sameOrigin || (site !== undefined && site !== 'same-origin')) {
+        return res.status(403).type('text/plain').send(MESSAGES['admin-denied']);
+      }
+      const body = req.body as Record<string, unknown> | undefined;
+      if (typeof body?.on !== 'boolean') return res.status(400).json({ error: 'bad-request', message: 'Send { "on": true } or { "on": false }.' });
+      const r = admin.switch.set(body.on ? 'on' : 'off');
+      if (!r.ok) return res.status(409).json({ error: 'master-off', message: MESSAGES['admin-master-off'] });
+      opts.log.write({ visitor: 'owner', outcome: 'admin-switch', ms: 0, detail: `${r.from}->${body.on ? 'on' : 'off'}` });
+      // Off releases the models through the same path as the switch file (4.10b), without waiting for the timer.
+      if (!body.on) void models.unload('admin page off');
+      res.set('cache-control', 'no-store').json({ ok: true, switch: { effective: models.switchIsOn(), master: admin.switch.master(), page: admin.switch.page() } });
     });
   }
 

@@ -188,6 +188,12 @@ export class Models {
     return s === 'ready' || (need === 'search' && s === 'search');
   }
 
+  /** Milliseconds until the idle release, while models are resident; null otherwise (admin page, 4.10c). */
+  idleRemainingMs(): number | null {
+    if (this.current !== 'ready' && this.current !== 'search') return null;
+    return Math.max(0, (this.o.idleUnloadMinutes ?? 15) * 60_000 - (this.now() - this.lastUse));
+  }
+
   /** A question used the models: the idle release counts from here. */
   touch() {
     this.lastUse = this.now();

@@ -9,7 +9,7 @@ require('dotenv').config();
 const address = process.env.SHOWCASE_WALLET_ADDRESS || '';
 if (address && !/^0x[0-9a-fA-F]{40}$/.test(address)) throw new Error('SHOWCASE_WALLET_ADDRESS must be a 0x address or empty');
 
-module.exports = (_env, argv) => ({
+const publicPage = (_env, argv) => ({
   entry: './showcase/index.tsx',
   output: {
     filename: 'app.js',
@@ -53,3 +53,12 @@ module.exports = (_env, argv) => ({
   },
   performance: { hints: false },
 });
+
+// The admin page (step 4.10c): a separate bundle written outside showcase/public, so the public static server never
+// has it; the chat server sends it only after the Access check. Same guard, same allow-list.
+const adminPage = (env, argv) => {
+  const base = publicPage(env, argv);
+  return { ...base, name: 'admin', entry: './showcase/admin/admin.tsx', output: { filename: 'admin.js', path: path.resolve(__dirname, 'showcase/admin-dist') }, devServer: undefined };
+};
+
+module.exports = (env, argv) => [publicPage(env, argv), adminPage(env, argv)];

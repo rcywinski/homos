@@ -36,7 +36,10 @@ const server = (name: string, port: number, extra: Record<string, string>) => ({
   },
 });
 
-export const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807, switching: 8808 };
+export const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807, switching: 8808, fakeAccess: 8809, admin: 8810 };
+/** Step 4.10c: the admin server's two switch files, written by the admin test. */
+export const ADMIN_MASTER = path.join(os.tmpdir(), 'homos-e2e-admin-SWITCH');
+export const ADMIN_STATE = path.join(os.tmpdir(), 'homos-e2e-admin-state', 'admin-switch');
 /** The switch file of the "switching" server, written by the test that turns the switch off (step 4.10b). */
 export const SWITCH_FILE = path.join(os.tmpdir(), 'homos-e2e-switching-SWITCH');
 
@@ -77,6 +80,21 @@ export default defineConfig({
         server('load-phone', PORTS.loadPhone, { SERVE_FAKE_LOAD_MS: '900' }),
         server('load-fail', PORTS.loadFail, { SERVE_FAKE_LOAD_FAIL: 'generator', SERVE_LOAD_COOLDOWN_MS: '3000', SERVE_LOAD_LIMIT_HOUR: '100', SERVE_LOAD_LIMIT_DAY: '100', SERVE_LOAD_LIMIT_GLOBAL_DAY: '1000' }),
         server('switching', PORTS.switching, { SERVE_SWITCH_FILE: SWITCH_FILE }),
+        // Step 4.10c: a stand-in for Access's key endpoint, and a server with the admin page configured against it.
+        {
+          command: `node --import tsx ${path.join('showcase', 'e2e', 'fake-access.ts')} ${PORTS.fakeAccess}`,
+          url: `http://127.0.0.1:${PORTS.fakeAccess}/certs`,
+          reuseExistingServer: false,
+          timeout: 60_000,
+        },
+        server('admin', PORTS.admin, {
+          SERVE_SWITCH_FILE: ADMIN_MASTER,
+          SERVE_ADMIN_STATE_FILE: ADMIN_STATE,
+          SERVE_ACCESS_TEAM_DOMAIN: 'e2e.cloudflareaccess.com',
+          SERVE_ACCESS_AUD: 'e'.repeat(64),
+          SERVE_ADMIN_EMAIL: 'owner@example.com',
+          SERVE_ACCESS_CERTS_URL: `http://127.0.0.1:${PORTS.fakeAccess}/certs`,
+        }),
         {
           command: `node --import tsx ${path.join('showcase', 'e2e', 'static-only.ts')} ${PORTS.staticOnly}`,
           url: `http://127.0.0.1:${PORTS.staticOnly}/`,
