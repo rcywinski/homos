@@ -104,7 +104,8 @@ async function main() {
     const rr = cfg.reranker;
     const problem = await startupProblem(residency, rr ? { python: rr.python, appFile: path.join(rr.dir, 'app.py') } : undefined);
     if (problem) throw new ResidencyError(problem);
-    console.log(`[serve] start-up check: Ollama answers, ${residency.generator} and ${residency.embedder} on disk, reranker ${residency.reranker} on cuda; this server loads nothing at start`);
+    const rerankerNote = rr ? `reranker started on demand as a child (${rr.python} found)` : `reranker ${residency.reranker} on cuda`;
+    console.log(`[serve] start-up check: Ollama answers, ${residency.generator} and ${residency.embedder} on disk, ${rerankerNote}; this server loads nothing at start`);
     const rerankerProcess = rr
       ? new RerankerProcess({
           command: defaultRerankerCommand(rr.python, rr.port),

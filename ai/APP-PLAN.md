@@ -865,7 +865,10 @@ trigger goes in the same deploy; CC-Mac's Mac pre-flight, 21c7f07 on ai-layer, c
 venv's `Scripts\python.exe` is a launcher whose child holds the CUDA context, so the server tracks the spawned pid and
 its descendants (the pid file holds the set), confirms a release only when none of them is alive or listed by
 nvidia-smi, and counts any of them as ours on the admin page; the child gets an allow-list of environment variables;
-its log is capped at 5 MB.
+its log is capped at 5 MB. **Deployed and measured (18 Nov 2026, `e3f6e80`), awaiting the owner's tick:** idle VRAM 1 218 MiB (was
+4 177 with the boot-time reranker), equal after a release; full load 23 972 MiB with both models 100% GPU; reranker
+16.0 s cold, 11.2 s warm; the interpreter (a child of the venv launcher) holds the CUDA context and is in the tracked
+set; CPU reranking 41 s a question (rejected). `ai/eval/results/2026-11-18-reranker-on-demand-4.10e.md`.
 
 ## 10b. Merge of app-chat into main (merged 18 Nov 2026)
 
