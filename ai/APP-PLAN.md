@@ -571,6 +571,9 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   transport or API error; a model answer that cannot be checked is recorded as "failed". Output has no hostname and no
   key; `to-judge-input.mts --engine guest` converts it with the real usage and cost. Dry run against a mocked API:
   34 rows, 1.02 USD at 13 000 input and 400 output tokens a question.
+  **4.6e done (18 Nov 2026):** run by CC-Mac through the public address, 34 of 34, 30 answered, 4 not in the data, 98
+  quotes all verified, 1.0049 USD, median 5.3 s; judged 18 / 11 / 5 (0.5479 USD). The page labels the guest engine with
+  this result. `ai/eval/results/2026-11-18-guest-run-4.6e.md`.
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner (precondition: the server runs as `homos-web`
   from `C:\HomosServe\homos`, not as the desktop user): Cloudflare Tunnel, static hosting choice,
   optional Access, kill switch documented in `inference/README.md`. S. Checklist: `SERVE_MODE=tunnel` and
