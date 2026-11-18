@@ -523,6 +523,11 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   Gap found on the first swap (CC-Win, 18 Nov 2026): a restart left Qwen and bge-m3 loaded in Ollama for up to an hour
   while the new server showed "idle". Since 149f492 the server releases, at start-up, any served model `/api/ps`
   lists, through the 4.10b release path ("unloading" until confirmed).
+  Deployed at 149f492 by CC-Win (18 Nov 2026): a killed server answered again after 6.4 s, killed again after 16.3 s
+  (the 15 s wait); killed with the models loaded, it released them at start-up and `ollama ps` was empty 7.5 s after
+  the kill. Swap procedure: retry the folder rename a few times 2 s apart (a transient file handle failed the first
+  rename once), and keep a rollback that does not depend on the task action. CI's showcase job now also runs the
+  tests added in 4.6 and 4.10 (they were in `test:ai`, which CI does not run).
 - [ ] **4.6** Guest-key mode. Plan written 16 Nov 2026 (no code yet); details in section 9. M, in five parts:
   4.6a server endpoints `/api/guest/retrieve` and `/api/guest/verify` with tickets, fake models; 4.6b the browser
   call and the key field; 4.6c CSP, guard and bundle allow-list; 4.6d Playwright with a mocked Anthropic API;
