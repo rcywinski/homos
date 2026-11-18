@@ -562,7 +562,7 @@ Run the steps in this order, as Administrator unless noted; each step names its 
 
 | Item | Label | Size | Notes |
 |---|---|---|---|
-| `C:\ollama\` (app, models, hf, logs, three launchers) | [project] | 89.1 GB | models 83.8 GB, Hugging Face cache 2.1 GB |
+| `C:\ollama\` (app, models, hf, logs, three launchers) | [project] | 89.1 GB, about 23 GB after 18 Nov | models 83.8 GB, 17.6 GB after the four unneeded models were removed; Hugging Face cache 2.1 GB |
 | `C:\HomosServe\` (serving clone, serve.env, SWITCH, run outputs 4.8 to 4.10d) | [project] | 0.9 GB | the run outputs are results; copy what is wanted to the Mac first |
 | `C:\Projects\homos-dryrun\`, `C:\Projects\showcase-raw-4.1b\`, `C:\Projects\homos-dryrun-serve.env`, `homos-dryrun-server.err`, `homos-dryrun-server.out` | [project] | 0.9 GB | showcase-raw-4.1b: delete only on the owner's word (earlier note) |
 | `C:\Projects\homos\inference\reranker\.venv\` and `C:\Projects\homos\ai\index\` | [project] | 3.4 GB, 0.2 GB | inside the pre-AI clone |
@@ -588,13 +588,15 @@ Models in Ollama, and who still needs them:
 |---|---|---|---|---|
 | `qwen3.8:27b` | 17 GB | 11 Nov | 1.11 | yes: the local agent (3.5) and the chat server (phase 4) |
 | `bge-m3:latest` | 1.2 GB | 9 Nov | 0.3 | yes: embeddings for every index and the chat server |
-| `gemma4:26b` | 18 GB | 11 Nov | 1.11 extra run, used again in 3.3 | no later step uses it |
-| `gemma4:31b-it-q4_K_M` | 20 GB | 16 Nov | 3.4 candidate | no: Muse was the best of the 3.4 candidates and still below Qwen |
-| `gpt-oss:20b` | 13 GB | 16 Nov | 3.4 candidate | no |
-| `muse-glimmer:30b` | 18 GB | 16 Nov | 3.4 candidate | no |
+| `gemma4:26b` | 18 GB | 11 Nov | 1.11 extra run, used again in 3.3 | no later step uses it; **removed 18 Nov 2026** |
+| `gemma4:31b-it-q4_K_M` | 20 GB | 16 Nov | 3.4 candidate | no: Muse was the best of the 3.4 candidates and still below Qwen; **removed 18 Nov 2026** |
+| `gpt-oss:20b` | 13 GB | 16 Nov | 3.4 candidate | no; **removed 18 Nov 2026** |
+| `muse-glimmer:30b` | 18 GB | 16 Nov | 3.4 candidate | no; **removed 18 Nov 2026** |
 
-The four models no later step needs take 69 GB. Removing only them (`ollama rm <name>`) is a smaller step than the full
-removal below; it is still a deletion on the box, so it needs the owner's word. A rerun of 3.3 or 3.4 would need them pulled again.
+The four models no later step needed took 69 GB. On the owner's word they were removed on 18 Nov 2026 by CC-Win
+(`ollama rm`, each exit 0): `ollama list` now shows only `qwen3.8:27b` (aaee06c39dcf) and `bge-m3:latest` (790764642607),
+`C:\ollama\models` went from 83.79 to 17.60 GB and C: gained 66.18 GiB free (369.47 GiB). The reranker model in
+`C:\ollama\hf` was not touched. A rerun of 1.11, 3.3 or 3.4 would need them pulled again.
 
 ### Dependency to know first
 
