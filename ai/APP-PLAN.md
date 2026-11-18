@@ -780,6 +780,14 @@ typical load times, VRAM per process (`nvidia-smi --query-compute-apps`), commit
   range did not beat holding). The page shows what the simulation measures on its period, estimated values labelled
   as estimates; it promises no outcome in advance, in line with the standing wording that the strategy did not
   reliably beat holding and that nothing is investment advice.
+- *How the pools were chosen, and what the first version copies* (owner, 18 Nov 2026). The paper simulation ran on
+  the fixed list `BOT_POOLS` in `bot/config.ts` (10 000 USD per pool); range suggestion, rebalances and the trend exit
+  and re-entry were automatic; the selector only proposed OPEN and ROTATE to the owner and never added a pool by
+  itself. The first version copies that: the fixed six pools, with the ranking shown beside them as the reason for
+  the choice. Later, with the two-strategy comparison and no design yet: pools enter the simulation from the ranking
+  automatically and possibly the less profitable ones are closed; that needs a stated rule for "less profitable" and
+  the switch cost counted, as the selector's rotation rule already does (the edge must cover 0.3% of capital within
+  10 days).
 - Still no design and no code.
 
 The owner's goal beyond this phase: the original application as the main page, with a mock wallet and no signing; a
