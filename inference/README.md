@@ -566,13 +566,13 @@ Run the steps in this order, as Administrator unless noted; each step names its 
 | `C:\HomosServe\` (serving clone, serve.env, SWITCH, run outputs 4.8 to 4.10d) | [project] | 0.9 GB | the run outputs are results; copy what is wanted to the Mac first |
 | `C:\Projects\homos-dryrun\`, `C:\Projects\showcase-raw-4.1b\`, `C:\Projects\homos-dryrun-serve.env`, `homos-dryrun-server.err`, `homos-dryrun-server.out` | [project] | 0.9 GB | showcase-raw-4.1b: delete only on the owner's word (earlier note) |
 | `C:\Projects\homos\inference\reranker\.venv\` and `C:\Projects\homos\ai\index\` | [project] | 3.4 GB, 0.2 GB | inside the pre-AI clone |
-| `C:\Projects\homos\` (the clone itself, `data\` 20 GB, `.bot-live-backup\`, `.bot`, `backtest`) | [pre-AI] | 24.2 GB in all | keep |
+| `C:\Projects\homos\` (the clone itself, `data\` 20 GB, `.bot-live-backup\`, `.bot`, `backtest`) | [pre-AI] | 24.2 GB in all | keep; its `.env` may hold keys and `.bot-live-backup\` is wallet-era state: treat both as secrets (see below) |
 | `C:\Projects\homos-bot-state-2026-09-23.zip` | [pre-AI] | 3.5 MB | keep |
 | `C:\Users\cywil\AppData\Local\ms-playwright\` | [project] | 0.7 GB | Playwright browsers for step 4.8 |
 | `C:\Users\cywil\AppData\Local\npm-cache\` | [ask] | 0.6 GB | shared npm cache since 27 Sep |
 | `C:\Users\cywil\AppData\Local\Ollama\`, `C:\Users\cywil\.ollama\` | [project] | under 1 MB | tray app logs, client key pair |
 | `C:\Users\cywil\.claude\projects\C--Projects-homos\`, `%TEMP%\claude\` | [ask] | small | CC-Win's memory and scratchpad |
-| `C:\Skrypty\` | [ask] | small | looks like the owner's own GPU logger |
+| `C:\Skrypty\` | not the project's | small | the owner's, for other work on this computer: keep |
 | Tasks `HOMOS inference (Ollama)`, `HOMOS reranker` (SYSTEM, at startup, running), `HOMOS GPU power limit` (disabled) | [project] | | |
 | Task `\MSIAfterburner` (cywil, running) | [ask] | | the owner's tool, predates the project |
 | Firewall rules `HOMOS inference (LAN+VPN only)` (TCP 11434), `HOMOS reranker (LAN+VPN only)` (TCP 11435) | [project] | | |
@@ -602,6 +602,13 @@ The reranker runs from the pre-AI clone: the `HOMOS reranker` task runs `C:\olla
 `Set-Location C:\Projects\homos\inference\reranker` and starts `.venv\Scripts\python.exe` there. Deleting or moving
 `C:\Projects\homos` (or its `inference\reranker\.venv`) stops the reranker at its next start. Delete the venv only
 after the task is gone (step 1 and 2).
+
+### Secrets in the pre-AI clone
+
+`C:\Projects\homos\.env` may hold keys (owner, 18 Nov 2026), and `.bot-live-backup\` holds state from the live bot.
+`.gitignore` only keeps such files out of commits; the files themselves stay on the disk. Nobody reads or prints them
+for this checklist. Precondition for step 4.9 (tunnel): the serving account `homos-web` has no read access to
+`C:\Projects\homos`; the chat server runs from `C:\HomosServe\homos` with `C:\HomosServe\serve.env` and needs nothing from the pre-AI clone.
 
 ### Removal order
 
@@ -639,7 +646,9 @@ after the task is gone (step 1 and 2).
    Set-CimInstance -InputObject $cs -Property @{AutomaticManagedPagefile = $true}
    ```
 6. **Python 3.11.9** (all users) from Settings, Apps. Not the per-user Python 3.12.10, which is the owner's.
-7. **[ask] items:** Git, the npm cache, CC-Win's memory and scratchpad, `C:\Skrypty\`, `\MSIAfterburner`.
+7. **[ask] items:** Git, the npm cache, CC-Win's memory and scratchpad, `\MSIAfterburner`. `C:\Skrypty\` is the owner's and stays.
+8. **Full wipe only (the owner decides):** if `C:\Projects\homos` itself is ever removed, its `.env` and
+   `.bot-live-backup\` are secrets: delete them, do not copy, read or print them, and do not leave them in a recycle bin or backup.
 
 Kept: `C:\Projects\homos\` and its pre-AI data, the 23 Sep bot-state zip, Node.js, Python 3.12, the Visual C++ runtimes.
 The GPU power limit is already at the default 420 W, so there is nothing to revert while the power-limit task is gone.
