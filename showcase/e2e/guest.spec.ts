@@ -111,7 +111,7 @@ test('guest key: a full question through the mocked API, checked on this site, k
   const figure = answer.locator('.answer-text .num', { hasText: '9999' });
   await expect(figure).toHaveAttribute('data-state', 'not-verified');
   await expect(answer).toContainText('Claude Sonnet 5.5 with your own key');
-  await expect(answer).toContainText('has not been measured yet');
+  await expect(answer).toContainText('Measured on the 34 test questions in this combination');
 
   expect(calls).toHaveLength(1);
   expect(calls[0].headers['x-api-key']).toBe(KEY);

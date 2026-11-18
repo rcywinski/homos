@@ -571,6 +571,9 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   transport or API error; a model answer that cannot be checked is recorded as "failed". Output has no hostname and no
   key; `to-judge-input.mts --engine guest` converts it with the real usage and cost. Dry run against a mocked API:
   34 rows, 1.02 USD at 13 000 input and 400 output tokens a question.
+  **4.6e done (18 Nov 2026):** run by CC-Mac through the public address, 34 of 34, 30 answered, 4 not in the data, 98
+  quotes all verified, 1.0049 USD, median 5.3 s; judged 18 / 11 / 5 (0.5479 USD). The page labels the guest engine with
+  this result. `ai/eval/results/2026-11-18-guest-run-4.6e.md`.
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner (precondition: the server runs as `homos-web`
   from `C:\HomosServe\homos`, not as the desktop user): Cloudflare Tunnel, static hosting choice,
   optional Access, kill switch documented in `inference/README.md`. S. Checklist: `SERVE_MODE=tunnel` and
@@ -843,6 +846,36 @@ commit should return. The 8 GB rise of 4.8 is attributed to a process with these
 engine (fake stages with delays) and Playwright; 4.10b explicit unload, the idle timer, the 60-minute ceiling, start-up
 without loaded models, tests with a fake Ollama; 4.10c the admin page with the chosen design; 4.10d on the box:
 typical load times, VRAM per process (`nvidia-smi --query-compute-apps`), commit memory at the points above.
+
+## 10b. Merge of app-chat into main: preparation (18 Nov 2026, not merged)
+
+Dry run on the scratch branch `merge-dry-run` (worktree `HOMOS-merge-dry`, from `origin/main` at `a845c64`), merged
+with `app-chat` up to `52503a8`. Four conflicts, resolved as follows; the real merge repeats them:
+
+| File | Resolution |
+|---|---|
+| `ai/eval/results/2026-11-16-judged-phase3-golden-v1-4.json` and the `.jsonl` beside it | main's version: a superset (272 items, runs pb1, pb2 and the step 3.4 runs); the 68 pb1 and pb2 items are identical on both sides, and the comparison export reads only those two runs |
+| `package.json` | `test:ai` is the union (main's list plus the 14 app-chat tests; `ai/agent/model-ollama.test.ts` from main kept); scripts: main's `ai:agent:*` plus app-chat's `showcase:*` and `serve:chat` |
+| `ai/DECISIONS.md` | the two tails kept whole, phase 3 entries first, then phase 4; no shared heading |
+
+`ai/answer/local.ts` merged automatically: the `signal` parameter of step 4.7 is still on `Generator.generate`,
+`answerWithChecks`, `LocalGenerator.generate` and `chat` (8 uses, as on app-chat), next to phase 3's new options
+(think levels, template overhead, overcount tolerance, stripped trailing tokens).
+
+Checks on the merge result, run locally with the CI steps: lint, typecheck, `test:math` (2925), `backtest:validate`,
+build, `test:ai` (all suites), `showcase:build`, Playwright 63 passed and 1 skipped. Against main: 103 files changed,
+22 352 lines added, 11 removed.
+
+What main will contain after the merge, beyond phase 3: the chat server `ai/serve/` (local engine with models on
+demand and the supervisor, guest-key mode, the admin page behind Cloudflare Access, rate limits, request log, security
+headers), the showcase front end `showcase/` (Ask with local and guest modes, Compare, Daily reports, Wallet, the
+admin page bundle), their tests and the Playwright suite, the CI job "showcase", `ai/APP-PLAN.md` and the phase 4
+results in `ai/eval/results/`. Not in main: `ai-layer`'s 10 commits after the phase 3 merge (they go with the next
+ai-layer merge), anything gitignored (the index, the wallet export, `data/`).
+
+Open before the real merge: CI on GitHub for the merge result (the workflow runs on pushes to main and app-chat and on
+pull requests; a draft pull request from `merge-dry-run` would run it without merging; it is public, so the owner's
+word first), and the owner's yes at the moment of the merge.
 
 ## 11. Later (owner's direction, 17 Nov 2026; no design, no code)
 
