@@ -504,7 +504,7 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   transformed answer schema of the measured runs (enum moved into a description), checked by a test against the SDK;
   `max_tokens` is 2,048 against 8,000 in the measured runs (largest measured answer 629 output tokens); a ticket's
   signature must be in canonical base64url; the key refusal covers every `/api` route, not only the guest ones.
-  **4.6b built (18 Nov 2026), awaiting the owner's OK:** `showcase/guest-key.ts` (the key in one module variable, no
+  **4.6b done (18 Nov 2026, owner's OK):** `showcase/guest-key.ts` (the key in one module variable, no
   getter, used only in the `x-api-key` header of the one call to api.anthropic.com, no credentials, no referrer, no
   retry; `stop_reason` max_tokens and refusal, a missing text block and invalid JSON sorted into plain outcomes and
   never posted to verify), `showcase/guest-api.ts` (retrieve and verify, no import of the key module; a refused
@@ -514,6 +514,12 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   the page shows the API's own message; the "unreadable" text stays for organisations whose policy blocks browser
   calls and for blocking extensions. The browser call works only after 4.6c adds `https://api.anthropic.com` to
   `connect-src`; 4.6d tests the whole path.
+  **4.6c built (18 Nov 2026), awaiting the owner's OK:** `connect-src 'self' https://api.anthropic.com` in the header
+  and the meta tag (the sync test checks the directive in both, no third-party host in any other directive, no
+  wildcard); the build guard is an allow-list (react, react-dom, scheduler and our code; checked against the build:
+  exactly these three packages), the wallet list kept to name the reason. From the 4.6b review: only a value that
+  starts with "sk-ant-" is accepted as a key (a plain message otherwise, nothing stored or sent), and a 401 forgets the
+  key at once and shows the field again.
 - [ ] **4.9** Tunnel and private link, after a separate OK from the owner (precondition: the server runs as `homos-web`
   from `C:\HomosServe\homos`, not as the desktop user): Cloudflare Tunnel, static hosting choice,
   optional Access, kill switch documented in `inference/README.md`. S. Checklist: `SERVE_MODE=tunnel` and

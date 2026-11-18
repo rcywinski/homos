@@ -7,9 +7,13 @@
  */
 import type { NextFunction, Request, Response } from 'express';
 
-/** Same origin only; no inline script or style; no eval; nothing from third-party hosts. */
-export const CSP_META =
-  "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'none'";
+/**
+ * Same origin only; no inline script or style; no eval; nothing from third-party hosts. One exception (step 4.6c):
+ * `connect-src` also allows https://api.anthropic.com, the only place guest-key mode sends the visitor's key. Nothing
+ * else changes: no third-party script, style, font, image or frame source.
+ */
+export const GUEST_API_ORIGIN = 'https://api.anthropic.com';
+export const CSP_META = `default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self' ${GUEST_API_ORIGIN}; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'none'`;
 
 export const CSP_HEADER = `${CSP_META}; frame-ancestors 'none'`;
 

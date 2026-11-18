@@ -44,7 +44,7 @@ const HEALTH_TEXT: Record<Exclude<Health['status'], 'up'>, string> = {
 export function modelCallText(c: Exclude<ModelCall, { ok: true }>): ChatError {
   if (c.kind === 'api-error')
     return c.status === 401
-      ? { error: 'guest-key-rejected', message: `Anthropic did not accept the key: ${c.message}.` }
+      ? { error: 'guest-key-rejected', message: `Anthropic did not accept the key: ${c.message}. The key was forgotten; you can enter another one.` }
       : { error: 'guest-api-error', message: `Anthropic answered with an error (${c.status || 'no status'}): ${c.message}` };
   if (c.kind === 'unreadable')
     return {
@@ -148,6 +148,8 @@ export function Ask() {
     else {
       setGuestStep('calling');
       const call = await callModel(r.value.request);
+      // A 401 makes the key module forget the key: show the field again.
+      setKeySet(hasKey());
       if (!call.ok) outcome = { ok: false, value: modelCallText(call) };
       else {
         setGuestStep('checking');

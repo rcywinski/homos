@@ -3,17 +3,20 @@
  * key", handed to showcase/guest-key.ts and cleared at once; React state holds only whether a key is set. No <form>
  * element, so a browser has no form to offer to save; the password managers' ignore attributes are set as well.
  */
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { forgetKey, setKey } from '../guest-key';
 
 export function KeyPanel({ keySet, onChange }: { keySet: boolean; onChange: (set: boolean) => void }) {
   const field = useRef<HTMLInputElement | null>(null);
+  /** True after a value that is not an Anthropic key was refused (the value itself is not kept). */
+  const [notAKey, setNotAKey] = useState(false);
 
   const use = () => {
     const el = field.current;
     if (!el) return;
     const ok = setKey(el.value);
     el.value = '';
+    setNotAKey(!ok);
     onChange(ok);
   };
 
@@ -56,6 +59,11 @@ export function KeyPanel({ keySet, onChange }: { keySet: boolean; onChange: (set
           <button type="button" className="primary" onClick={use}>
             Use this key
           </button>
+          {notAKey && (
+            <p className="state-note error" role="alert" data-testid="key-not-anthropic">
+              That does not look like an Anthropic API key, which starts with &quot;sk-ant-&quot;. Nothing was stored or sent.
+            </p>
+          )}
         </div>
       )}
       <ul className="key-notes" data-testid="key-notes">

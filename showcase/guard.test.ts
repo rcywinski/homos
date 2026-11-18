@@ -7,7 +7,12 @@ import path from 'path';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const { forbiddenPackage, FORBIDDEN_PACKAGES } = require('./guard.js') as { forbiddenPackage: (p: string) => string | null; FORBIDDEN_PACKAGES: string[] };
+const { forbiddenPackage, disallowedPackage, ALLOWED_PACKAGES, FORBIDDEN_PACKAGES } = require('./guard.js') as {
+  forbiddenPackage: (p: string) => string | null;
+  disallowedPackage: (p: string) => string | null;
+  ALLOWED_PACKAGES: string[];
+  FORBIDDEN_PACKAGES: string[];
+};
 
 let passed = 0;
 let failed = 0;
@@ -31,6 +36,16 @@ check('react is allowed', forbiddenPackage('/x/node_modules/react/index.js') ===
 check('react-dom is allowed', forbiddenPackage('/x/node_modules/react-dom/client.js') === null);
 check('a name that only starts like a forbidden one is allowed', forbiddenPackage('/x/node_modules/viem-like-but-not/index.js') === null);
 check('own source is allowed', forbiddenPackage('/x/showcase/App.tsx') === null);
+
+// Step 4.6c: the allow-list. Only react, react-dom and scheduler; any other package fails the build.
+check('allow-list is exactly react, react-dom, scheduler', ALLOWED_PACKAGES.join() === 'react,react-dom,scheduler');
+check('react on the allow-list', disallowedPackage('/x/node_modules/react/jsx-runtime.js') === null);
+check('scheduler on the allow-list', disallowedPackage('/x/node_modules/scheduler/index.js') === null);
+check('own code passes', disallowedPackage('/x/showcase/guest-key.ts') === null && disallowedPackage('/x/ai/serve/numbers.ts') === null);
+check('an unknown harmless-looking package fails', disallowedPackage('/x/node_modules/left-pad/index.js') === 'left-pad');
+check('a scoped package fails', disallowedPackage('/x/node_modules/@anthropic-ai/sdk/index.js') === '@anthropic-ai/sdk');
+check('a package nested under react fails', disallowedPackage('/x/node_modules/react/node_modules/loose-envify/index.js') === 'loose-envify');
+check('Windows path', disallowedPackage('C:\\x\\node_modules\\lodash\\index.js') === 'lodash');
 
 // Source scan: no file in showcase/ imports a forbidden package, and nothing reaches into the cockpit UI in src/,
 // which carries the wallet and signing hooks.

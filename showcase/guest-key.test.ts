@@ -23,6 +23,7 @@ const json = (status: number, body: unknown) => new Response(JSON.stringify(body
 async function main() {
   check('no key at start', !hasKey());
   check('an empty or spaced value is not stored', !setKey('  ') && !setKey('sk-ant abc') && !hasKey());
+  check('only an Anthropic key is accepted', !setKey('hunter2') && !setKey('sk-proj-abc123') && !setKey('AKIAIOSFODNN7EXAMPLE') && !setKey('ghp_abcdef') && !hasKey());
   const noKey = await callModel({});
   check('no call without a key', !noKey.ok && noKey.kind === 'api-error');
   check('a key is stored', setKey(`  ${KEY} `) && hasKey());
@@ -47,6 +48,11 @@ async function main() {
 
   const r401 = await callModel({}, fake(json(401, { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } })));
   check('401 with a readable body: the API message', !r401.ok && r401.kind === 'api-error' && r401.status === 401 && r401.message === 'invalid x-api-key');
+  check('a rejected key is forgotten at once', !hasKey());
+  const afterReject = calls.length;
+  await callModel({}, fake(json(200, {})));
+  check('no second call with a rejected key', calls.length === afterReject);
+  setKey(KEY);
   const net = await callModel({}, fake(() => {
     throw new TypeError('Failed to fetch');
   }));

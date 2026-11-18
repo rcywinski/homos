@@ -31,7 +31,6 @@ function check(name: string, cond: boolean, detail?: string) {
   }
 }
 const TYPICAL = { 'release-embedder': 1000, generator: 21_000, embedder: 2600, check: 200 };
-const direct = (work: (s: AbortSignal) => Promise<ModelState>) => work(new AbortController().signal);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const FAKE_KEY = 'sk-ant-api03-test-not-a-real-key';
 

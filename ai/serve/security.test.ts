@@ -135,6 +135,13 @@ async function main() {
   const meta = html.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)?.[1];
   check('index.html meta CSP equals the server policy', meta === CSP_META, meta);
   check('the header adds frame-ancestors none', CSP_HEADER === `${CSP_META}; frame-ancestors 'none'`);
+  // Step 4.6c: connect-src allows exactly our origin and api.anthropic.com, in the header and in the meta tag alike.
+  const directive = (policy: string | undefined, name: string) => policy?.split(';').map((d) => d.trim()).find((d) => d.startsWith(`${name} `));
+  for (const [where, policy] of [['meta tag', meta], ['header', CSP_HEADER]] as const) {
+    check(`${where}: connect-src is exactly self and api.anthropic.com`, directive(policy, 'connect-src') === "connect-src 'self' https://api.anthropic.com", directive(policy, 'connect-src'));
+    for (const d of ['script-src', 'style-src', 'img-src', 'font-src']) check(`${where}: ${d} has no third-party host`, !/https?:/.test(directive(policy, d) ?? ''), directive(policy, d));
+    check(`${where}: no wildcard anywhere`, !(policy ?? '').includes('*'));
+  }
 
   // --- L5: cleaning ---------------------------------------------------------------------------------------------
   check('bidi overrides removed', cleanQuestion('a‮b⁦c⁩d‎e؜f') === 'abcdef');

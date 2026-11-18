@@ -9,10 +9,14 @@
 
 let key: string | null = null;
 
-/** Stores the key for this page view. Returns false (and stores nothing) for an empty value or one with spaces. */
+/**
+ * Stores the key for this page view. Only an Anthropic key is accepted (it starts with "sk-ant-"), so another secret
+ * pasted by mistake (a password, another vendor's key) is never sent anywhere. Returns false and stores nothing
+ * otherwise.
+ */
 export function setKey(value: string): boolean {
   const v = value.trim();
-  if (!v || /\s/.test(v)) return false;
+  if (!/^sk-ant-[A-Za-z0-9_-]+$/.test(v)) return false;
   key = v;
   return true;
 }
@@ -68,6 +72,8 @@ export async function callModel(body: unknown, fetchFn: typeof fetch = fetch): P
     return res.ok ? { ok: false, kind: 'invalid' } : { ok: false, kind: 'unreadable' };
   }
   if (!res.ok) {
+    // A rejected key is forgotten at once, so the next click cannot send it again (review of 18 Nov 2026).
+    if (res.status === 401) key = null;
     const err = data.error as { message?: unknown } | undefined;
     return { ok: false, kind: 'api-error', status: res.status, message: typeof err?.message === 'string' ? err.message.slice(0, 300) : `HTTP ${res.status}` };
   }
