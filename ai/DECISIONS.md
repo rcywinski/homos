@@ -931,3 +931,14 @@ failed calls; ledger total 3.1032 of 5.
 29, unsupported 0. One run, so the two-run spread rule does not apply; the counts sit within the range of the chat
 server's lan48b and lan48c (18 / 11 / 5 and 16 / 14 / 4) and of step 3.2 (17 / 13 / 4). CC-App sets it against the
 cloud run of steps 1.10 and 3.2 and the local runs.
+
+## 2026-11-18, reranker pre-flight on the Mac (agreed with CC-App)
+
+**Decision.** The owner wants the reranker to hold VRAM only while the site or an evaluation needs it (CC-App's plan,
+step 4.10e after the merge: the site gets its own child instance on 127.0.0.1:11436, and the "HOMOS reranker" task on
+11435 loses its boot trigger and is started for an evaluation). So every Mac entry point that reranks now checks
+`RERANK_URL/health` once, with a 10 s timeout and no retry, before its first paid call: `AnswerRetrieval.retrieve`
+(ask, answers, chunk-lists, the agent's search tool), `ai/eval/run.ts` and `latency.ts`, `agent:ask` and
+`agent-run.ts` at start. A stopped service ends the run at once with the instruction to have CC-Win start the task on
+the owner's word, instead of failing after spend at the first rerank call (the client retries 3 times with a 120 to
+300 s timeout). Checked live against the box: device cuda, RTX 3090.

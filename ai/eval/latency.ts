@@ -10,7 +10,7 @@ import path from 'path';
 import { loadCorpus } from '../corpus/load';
 import { corpusHash, indexPath, readIndex } from '../embed/index-file';
 import { LocalEmbedder } from '../embed/local';
-import { LocalReranker } from '../rerank/local';
+import { LocalReranker, checkReranker } from '../rerank/local';
 import { docText, type DocFormat } from '../rerank/retriever';
 import { Bm25Index } from '../store/bm25';
 import { HybridRetriever } from '../store/hybrid';
@@ -30,6 +30,7 @@ async function main() {
   const baseUrl = process.env.INFERENCE_URL;
   const rerankUrl = process.env.RERANK_URL;
   if (!baseUrl || !rerankUrl) throw new Error('INFERENCE_URL and RERANK_URL must be set');
+  await checkReranker(rerankUrl);
 
   const root = process.cwd();
   const chunks = loadCorpus(root);

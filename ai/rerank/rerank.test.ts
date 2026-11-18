@@ -5,7 +5,7 @@
 import type { Chunk } from '../corpus/types';
 import type { Retriever, SearchHit } from '../store/types';
 import { FakeReranker } from './fake';
-import { LocalReranker } from './local';
+import { LocalReranker, checkReranker } from './local';
 import { RerankRetriever, docText } from './retriever';
 import type { RerankDoc, Reranker } from './types';
 
@@ -103,6 +103,26 @@ async function main() {
     check('meta header', docText(metaChunk, 'meta') === '[journal/CONTEXT.md | 2026-08-11 | Sesja X]\ntekst' && docText(metaChunk, 'plain') === 'tekst');
     check('meta header without date', docText({ ...metaChunk, date: undefined }, 'meta').startsWith('[journal/CONTEXT.md | Sesja X]'));
     check('ties counted', rt.tiedCandidates === 2 && rt.tiedInTop10 === 2 && rt.queriesWithTies === 1, `${rt.tiedCandidates}/${rt.tiedInTop10}/${rt.queriesWithTies}`);
+  }
+
+  {
+    // Pre-flight: a healthy service returns its health; a stopped one fails at once with the instruction, one call.
+    let n = 0;
+    const ok = (async () => (n++, new Response(JSON.stringify({ device: 'cuda', cudaAvailable: true })))) as typeof fetch;
+    const h = await checkReranker('http://box:11435/', { fetchFn: ok });
+    check('pre-flight healthy', h.device === 'cuda' && n === 1);
+    let calls = 0;
+    const down = (async () => {
+      calls++;
+      throw new TypeError('fetch failed');
+    }) as typeof fetch;
+    const err = await checkReranker('http://box:11435', { fetchFn: down }).catch((e: Error) => e.message);
+    check('pre-flight down: one call, instruction', calls === 1 && String(err).includes('HOMOS reranker') && String(err).includes('fetch failed'), String(err));
+    const http = (async () => new Response('x', { status: 503 })) as typeof fetch;
+    const err503 = await checkReranker('http://box:11435', { fetchFn: http }).catch((e: Error) => e.message);
+    check('pre-flight HTTP error', String(err503).includes('HTTP 503'), String(err503));
+    const unset = await checkReranker('').catch((e: Error) => e.message);
+    check('pre-flight unset URL', String(unset).includes('RERANK_URL is not set'), String(unset));
   }
 
   console.log(`${passed} passed, ${failed} failed`);
