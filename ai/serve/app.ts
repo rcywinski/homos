@@ -78,6 +78,11 @@ export interface AdminOptions {
   htmlFile: string;
   cssFile: string;
   jsFile: string;
+  /**
+   * Step 4.10e, read only: true when a Python process other than the site's own reranker holds the GPU (the
+   * evaluation instance on 11435, started for a run); null when nvidia-smi cannot be read.
+   */
+  otherReranker?: () => Promise<boolean | null>;
 }
 
 export interface GuestOptions {
@@ -496,8 +501,9 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
     app.get('/admin', (_req, res) => res.set({ 'cache-control': 'no-store', 'x-robots-tag': 'noindex' }).sendFile(path.resolve(admin.htmlFile)));
     app.get('/admin/admin.js', (_req, res) => res.set('cache-control', 'no-store').sendFile(path.resolve(admin.jsFile)));
     app.get('/admin/admin.css', (_req, res) => res.set('cache-control', 'no-store').sendFile(path.resolve(admin.cssFile)));
-    app.get('/api/admin/state', (_req, res) => {
+    app.get('/api/admin/state', async (_req, res) => {
       const idle = models.idleRemainingMs();
+      const otherReranker = admin.otherReranker ? await admin.otherReranker().catch(() => null) : null;
       const q = opts.queue.state();
       res.set('cache-control', 'no-store').json({
         switch: { effective: models.switchIsOn(), master: admin.switch.master(), page: admin.switch.page() },
@@ -506,6 +512,7 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
         idleReleaseInMinutes: idle === null ? null : Math.ceil(idle / 60_000),
         queue: { running: q.running, waiting: q.waiting },
         today: { day: today.day || new Date().toISOString().slice(0, 10), outcomes: today.counts },
+        otherReranker,
       });
     });
     // The one action: on or off. JSON only (a cross-site form cannot send it without a preflight), same origin only.

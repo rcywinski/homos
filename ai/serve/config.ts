@@ -97,7 +97,7 @@ export interface ServeConfig {
   /** Model loads, separately from questions: per visitor per hour and per UTC day, and for the site per UTC day. */
   loadLimits: { perHour: number; perDay: number; globalPerDay: number };
   /** Typical stage times in milliseconds, shown to the visitor while loading (measured on the box, 4.10d). */
-  typicalLoadMs: { 'release-embedder': number; generator: number; embedder: number; check: number };
+  typicalLoadMs: { 'release-embedder': number; generator: number; embedder: number; check: number; reranker: number };
   /** Dry run only: duration of each fake load stage, and a stage that fails (for the browser suite). */
   /** After a failed load, no new load for this long (owner, 17 Nov 2026: 2 minutes). */
   loadCooldownMs: number;
@@ -110,6 +110,11 @@ export interface ServeConfig {
   adminStateFile: string;
   /** One line per switch change made on the admin page. */
   adminLogFile: string;
+  /**
+   * Step 4.10e: with SERVE_RERANKER=child the server starts the reranker itself as the first load stage and ends it on
+   * every release (nothing in VRAM while idle); null keeps the outside reranker service at RERANK_URL.
+   */
+  reranker: { python: string; dir: string; port: number; hfHome: string } | null;
   fakeLoadMs: number;
   fakeLoadFail: '' | 'generator' | 'embedder' | 'check';
   /**
@@ -160,6 +165,20 @@ function accessConfig(env: Env, engine: string): ServeConfig['access'] {
   return { teamDomain, aud, adminEmail, ...(env.SERVE_ACCESS_CERTS_URL ? { certsUrl: env.SERVE_ACCESS_CERTS_URL } : {}) };
 }
 
+function rerankerConfig(env: Env): ServeConfig['reranker'] {
+  const mode = env.SERVE_RERANKER || 'external';
+  if (mode === 'external') return null;
+  if (mode !== 'child') throw new ConfigError('SERVE_RERANKER must be external or child');
+  const python = env.SERVE_RERANKER_PYTHON ?? '';
+  if (!python) throw new ConfigError('SERVE_RERANKER=child needs SERVE_RERANKER_PYTHON, the venv python with CUDA torch');
+  return {
+    python,
+    dir: env.SERVE_RERANKER_DIR || path.join('inference', 'reranker'),
+    port: int(env, 'SERVE_RERANKER_PORT', 11436, 1024, 65535),
+    hfHome: env.SERVE_RERANKER_HF_HOME ?? '',
+  };
+}
+
 function fakeLoadFail(raw: string | undefined): ServeConfig['fakeLoadFail'] {
   const v = raw ?? '';
   if (v !== '' && v !== 'generator' && v !== 'embedder' && v !== 'check') throw new ConfigError('SERVE_FAKE_LOAD_FAIL must be empty, generator, embedder or check');
@@ -183,8 +202,10 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
   const engine = env.SERVE_ENGINE || 'local';
   if (engine !== 'local' && engine !== 'fake') throw new ConfigError('SERVE_ENGINE must be local or fake');
   const inferenceUrl = env.INFERENCE_URL ?? '';
-  const rerankUrl = env.RERANK_URL ?? '';
-  if (engine === 'local' && (!inferenceUrl || !rerankUrl)) throw new ConfigError('INFERENCE_URL and RERANK_URL must be set (see .env.example)');
+  const reranker = rerankerConfig(env);
+  const rerankUrl = reranker ? `http://127.0.0.1:${reranker.port}` : (env.RERANK_URL ?? '');
+  if (engine === 'local' && !inferenceUrl) throw new ConfigError('INFERENCE_URL must be set (see .env.example)');
+  if (engine === 'local' && !rerankUrl) throw new ConfigError('RERANK_URL must be set, or SERVE_RERANKER=child (see .env.example)');
   const host = env.SERVE_HOST || '127.0.0.1';
   if (host !== '127.0.0.1' && host !== 'localhost' && host !== '::1') {
     throw new ConfigError('SERVE_HOST must be a loopback address: the chat is reached only through the tunnel (step 4.9)');
@@ -198,6 +219,7 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
     preset,
     inferenceUrl,
     rerankUrl,
+    reranker,
     host,
     port: int(env, 'SERVE_PORT', 8790, 0, 65535),
     maxQuestionChars: int(env, 'SERVE_MAX_QUESTION_CHARS', 500, 20, 2000),
@@ -227,6 +249,8 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
       generator: int(env, 'SERVE_TYPICAL_GENERATOR_MS', 21_000, 0, 600_000),
       embedder: int(env, 'SERVE_TYPICAL_EMBEDDER_MS', 2600, 0, 600_000),
       check: int(env, 'SERVE_TYPICAL_CHECK_MS', 200, 0, 600_000),
+      // 4.10e: 34 s on a cold boot and 10 to 11 s warm (inference/README.md); measured again on the box.
+      reranker: int(env, 'SERVE_TYPICAL_RERANKER_MS', 12_000, 0, 600_000),
     },
     loadCooldownMs: int(env, 'SERVE_LOAD_COOLDOWN_MS', 120_000, 0, 3_600_000),
     access: accessConfig(env, engine),

@@ -847,6 +847,22 @@ engine (fake stages with delays) and Playwright; 4.10b explicit unload, the idle
 without loaded models, tests with a fake Ollama; 4.10c the admin page with the chosen design; 4.10d on the box:
 typical load times, VRAM per process (`nvidia-smi --query-compute-apps`), commit memory at the points above.
 
+## 10c. Step 4.10e: the reranker on demand (built 18 Nov 2026, box part pending)
+
+Owner's requirement of 18 Nov: nothing of the project in VRAM while nobody uses the site, the reranker included, and
+nothing started at boot. Plan agreed with CC-Mac and reviewed by the analysis session. Built:
+`ai/serve/reranker-process.ts`: with `SERVE_RERANKER=child` the chat server starts the reranker as a child process
+(`python -m uvicorn app:app --host 127.0.0.1 --port 11436` in `inference/reranker` of the pinned clone, a venv with CUDA
+torch, HF offline) as the FIRST stage of any load from idle (the VRAM order every measurement used: reranker resident
+before the generator); the stage waits for `/health` with device cuda, or fails loudly (CPU torch, an out-of-memory exit
+with its log line, no answer in 90 s). Every release ends the whole process tree by pid and is confirmed by the pid
+leaving `nvidia-smi --query-compute-apps`; a pid file lets a restarted server end a leftover after checking the
+command line is ours. The start-up check asks only for the reranker's files; the box probe stops asking a reranker; the
+admin page shows, read only, when another Python process holds the GPU (the evaluation instance on 11435, whose boot
+trigger goes in the same deploy; CC-Mac's Mac pre-flight, 21c7f07 on ai-layer, catches a run started while it is off).
+`ai/serve/tools/rerank-time.mts` measures one rerank call on the GPU and on the CPU (option c). Default stays
+`external`, so the box is unchanged until its `serve.env` says `child`.
+
 ## 10b. Merge of app-chat into main (merged 18 Nov 2026)
 
 **Merged** on the owner's word: `7846549` on `main` (from `a845c64`, app-chat up to `8c8c7f1`), the same tree as the

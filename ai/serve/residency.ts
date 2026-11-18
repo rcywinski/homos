@@ -15,7 +15,9 @@
  * bge-m3. If the check still fails, the question gets the "model unavailable" text.
  */
 
+import { existsSync } from 'fs';
 import type { LoadTarget, ModelBackend } from './models-state';
+import type { RerankerProcess } from './reranker-process';
 
 export interface ResidencyOptions {
   baseUrl: string;
@@ -175,7 +177,7 @@ const listed = (models: PsModel[], m: string) => models.some((x) => x.name === t
  * What the server checks at start when the models load on demand: everything that does not need the GPU. Ollama
  * answers, both models are on disk, the reranker serves its model on CUDA. Null when all is well.
  */
-export async function startupProblem(o: ResidencyOptions): Promise<string | null> {
+export async function startupProblem(o: ResidencyOptions, childReranker?: { python: string; appFile: string }): Promise<string | null> {
   try {
     await call(o, '/api/version');
   } catch (e) {
@@ -184,6 +186,12 @@ export async function startupProblem(o: ResidencyOptions): Promise<string | null
   const tags = ((await call(o, '/api/tags')) as { models?: { name: string; model?: string }[] }).models ?? [];
   for (const m of [o.generator, o.embedder]) {
     if (!tags.some((x) => x.name === tagged(m) || x.model === tagged(m))) return `${m} is not on disk (ollama pull ${m})`;
+  }
+  // 4.10e: a child reranker is not running at start; its files must exist so the first load can start it.
+  if (childReranker) {
+    if (!existsSync(childReranker.python)) return `the reranker's python is missing: ${childReranker.python}`;
+    if (!existsSync(childReranker.appFile)) return `the reranker's app.py is missing: ${childReranker.appFile}`;
+    return null;
   }
   return rerankProblem(await rerankHealth(o), o);
 }
@@ -203,6 +211,8 @@ export interface OllamaBackendOptions extends ResidencyOptions {
   releaseWaitMs?: number;
   pollMs?: number;
   sleep?: (ms: number) => Promise<void>;
+  /** Step 4.10e: the server starts the reranker itself; omitted, the reranker is an outside service (RERANK_URL). */
+  rerankerProcess?: RerankerProcess;
 }
 
 /**
@@ -212,7 +222,24 @@ export interface OllamaBackendOptions extends ResidencyOptions {
  * the release was sent (Ollama finishing a load whose request was aborted) is released again while waiting.
  */
 export class OllamaModelBackend implements ModelBackend {
-  constructor(private readonly o: OllamaBackendOptions) {}
+  /** Present only with a child reranker: the state machine then plans a "reranker" stage first. */
+  readonly loadReranker?: (signal: AbortSignal) => Promise<void>;
+
+  constructor(private readonly o: OllamaBackendOptions) {
+    if (o.rerankerProcess) {
+      const r = o.rerankerProcess;
+      this.loadReranker = (signal) => r.start(signal);
+    }
+  }
+
+  /** The reranker's state for the checks: the child's /health, or the outside service's. */
+  private async rerankerProblem(): Promise<string | null> {
+    if (!this.o.rerankerProcess) return rerankProblem(await rerankHealth(this.o), this.o);
+    const h = await this.o.rerankerProcess.health();
+    if (!h) return 'the reranker does not answer';
+    if (h.device !== 'cuda' || h.cudaAvailable === false) return `the reranker runs on ${h.device ?? 'an unknown device'}, not on the GPU`;
+    return null;
+  }
 
   private sleep(ms: number) {
     return (this.o.sleep ?? ((x: number) => new Promise<void>((r) => setTimeout(r, x))))(ms);
@@ -253,14 +280,22 @@ export class OllamaModelBackend implements ModelBackend {
   async check(target: LoadTarget): Promise<string | null> {
     const models = await loadedModels(this.o);
     const problem = target === 'ready' ? residencyProblem(models, this.o) : listed(models, this.o.embedder) ? null : `${this.o.embedder} is not loaded`;
-    return problem ?? rerankProblem(await rerankHealth(this.o), this.o);
+    return problem ?? this.rerankerProblem();
   }
 
   async releaseAll(watchMs = 0): Promise<string | null> {
     const models = [this.o.generator, this.o.embedder];
     // Generator first, then bge-m3. An error here (model not loaded, Ollama down) is not final: /api/ps decides.
     for (const m of models) await this.stop(m).catch(() => undefined);
-    return this.waitGone(models, watchMs);
+    // The child reranker goes too (4.10e): nothing of the project stays in VRAM after a release.
+    const rerankerProblem = this.o.rerankerProcess ? await this.o.rerankerProcess.stop() : null;
+    const ollamaProblem = await this.waitGone(models, watchMs);
+    return [ollamaProblem, rerankerProblem].filter(Boolean).join('; ') || null;
+  }
+
+  /** For the per-question check and the admin page. */
+  rerankerHealth() {
+    return this.rerankerProblem();
   }
 
   /**

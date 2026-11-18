@@ -268,6 +268,39 @@ async function ollama() {
   await none.releaseLeftovers([]);
   check('start-up: nothing found, nothing done', none.state() === 'idle');
 
+  // Step 4.10e: the child reranker is the first stage and leaves with every release.
+  {
+    const { RerankerProcess } = await import('./reranker-process');
+    const pathMod = await import('path');
+    const os = await import('os');
+    const fs = await import('fs');
+    const dir = fs.mkdtempSync(pathMod.join(os.tmpdir(), 'homos-rr-ms-'));
+    const port = 18_700 + Math.floor(Math.random() * 200);
+    const rp = new RerankerProcess({
+      command: [process.execPath, pathMod.resolve('ai/serve/test-fixtures/fake-reranker.mjs'), 'app:app', '--port', String(port), 'cuda'],
+      cwd: dir,
+      port,
+      env: {},
+      pidFile: pathMod.join(dir, 'reranker.pid'),
+      logFile: pathMod.join(dir, 'reranker.log'),
+      marker: ['app:app', `--port ${port}`],
+      startTimeoutMs: 10_000,
+      gpuPids: async () => [],
+    });
+    const fr = fakeOllama();
+    const br = new OllamaModelBackend({ ...base, fetchFn: fr.fetchFn, pollMs: 5, releaseWaitMs: 500, rerankerProcess: rp });
+    const seen: string[] = [];
+    const mr = new Models({ backend: br, typicalMs: { ...TYPICAL, reranker: 12_000 }, switchOn: () => true });
+    check('with a child reranker the button includes its typical time', mr.view().typicalLoadMs === TYPICAL.generator + TYPICAL.embedder + TYPICAL.check + 12_000 && mr.view().typicalSearchMs === 12_000 + TYPICAL.embedder + TYPICAL.check);
+    mr.subscribe((v) => v.stages && seen.push(v.stages.map((x) => x.name).join()));
+    check('full load with the child reranker reaches ready', (await mr.start('ready', direct)) === 'ready');
+    check('the reranker is the first stage', seen[0] === 'reranker,generator,embedder,check', seen[0]);
+    check('the reranker runs after the load', rp.running() && (await rp.health())?.device === 'cuda');
+    check('the reranker started before the generator was asked for', fr.calls.indexOf('/api/chat qwen3.8:27b') >= 0);
+    await mr.unload('test');
+    check('a release ends the reranker too', mr.state() === 'idle' && !rp.running() && fr.loaded.size === 0);
+  }
+
   // A model that /api/ps keeps listing: the release is reported unconfirmed and the state stays "unloading".
   const stuck = fakeOllama({ stuck: ['qwen3.8:27b'] });
   const bs = new OllamaModelBackend({ ...base, fetchFn: stuck.fetchFn, pollMs: 5, releaseWaitMs: 60 });

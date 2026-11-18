@@ -24,7 +24,7 @@
 
 export type ModelState = 'off' | 'idle' | 'loading' | 'search' | 'ready' | 'unloading';
 export type LoadTarget = 'search' | 'ready';
-export type StageName = 'release-embedder' | 'generator' | 'embedder' | 'check';
+export type StageName = 'release-embedder' | 'reranker' | 'generator' | 'embedder' | 'check';
 
 export interface Stage {
   name: StageName;
@@ -45,6 +45,8 @@ export interface ModelsView {
   idleUnloadMinutes: number;
   /** Typical time of a full load, for the "Load" button. */
   typicalLoadMs: number;
+  /** Typical time of a search load (guest-key mode's "Load search"). */
+  typicalSearchMs: number;
   /** After a failed load: seconds until a new load can be started. */
   retryAfterSec?: number;
 }
@@ -63,6 +65,8 @@ export interface ModelBackend {
   loadGenerator(signal: AbortSignal): Promise<void>;
   loadEmbedder(signal: AbortSignal): Promise<void>;
   releaseEmbedder(signal: AbortSignal): Promise<void>;
+  /** Step 4.10e: present when the server starts the reranker itself; then releaseAll ends it too. */
+  loadReranker?(signal: AbortSignal): Promise<void>;
   /** Null when the target set is resident as required, else the problem (for the log). */
   check(target: LoadTarget): Promise<string | null>;
   /**
@@ -73,7 +77,8 @@ export interface ModelBackend {
   releaseAll(watchMs?: number): Promise<string | null>;
 }
 
-export type TypicalMs = Record<StageName, number>;
+/** Typical stage times; "reranker" is needed only when the server starts the reranker itself (step 4.10e). */
+export type TypicalMs = Record<Exclude<StageName, 'reranker'>, number> & { reranker?: number };
 
 export class LoadFailed extends Error {
   /** True when the load was stopped on purpose (switch off), not failed by the box. */
@@ -92,11 +97,16 @@ export class LoadRefused extends Error {
   }
 }
 
-/** The stages a load runs, in order, from the current state to the target. */
-export function plan(from: 'idle' | 'search' | 'ready', target: LoadTarget): StageName[] {
-  if (target === 'search') return from === 'idle' ? ['embedder', 'check'] : [];
+/**
+ * The stages a load runs, in order, from the current state to the target. With `withReranker` (step 4.10e: the server
+ * starts the reranker itself) the reranker is the first stage of any load from idle, so it is resident before the
+ * generator, the order every VRAM measurement used; from "search" it is already running.
+ */
+export function plan(from: 'idle' | 'search' | 'ready', target: LoadTarget, withReranker = false): StageName[] {
+  const first: StageName[] = withReranker && from === 'idle' ? ['reranker'] : [];
+  if (target === 'search') return from === 'idle' ? [...first, 'embedder', 'check'] : [];
   if (from === 'ready') return [];
-  return from === 'search' ? ['release-embedder', 'generator', 'embedder', 'check'] : ['generator', 'embedder', 'check'];
+  return from === 'search' ? ['release-embedder', 'generator', 'embedder', 'check'] : [...first, 'generator', 'embedder', 'check'];
 }
 
 const rank = (s: ModelState) => (s === 'ready' ? 2 : s === 'search' ? 1 : 0);
@@ -144,6 +154,18 @@ export class Models {
     this.o.log?.(m);
   }
 
+  private withReranker(): boolean {
+    return typeof this.o.backend.loadReranker === 'function';
+  }
+
+  private typical(name: StageName): number {
+    return name === 'reranker' ? (this.o.typicalMs.reranker ?? 0) : this.o.typicalMs[name];
+  }
+
+  private typicalOf(names: StageName[]): number {
+    return names.reduce((sum, n) => sum + this.typical(n), 0);
+  }
+
   state(): ModelState {
     if (this.current === 'loading' || this.current === 'unloading') return this.current;
     if (this.o.switchOn()) return this.current;
@@ -157,7 +179,8 @@ export class Models {
     const base: ModelsView = {
       state,
       idleUnloadMinutes: this.o.idleUnloadMinutes ?? 15,
-      typicalLoadMs: this.o.typicalMs.generator + this.o.typicalMs.embedder + this.o.typicalMs.check,
+      typicalLoadMs: this.typicalOf(plan('idle', 'ready', this.withReranker())),
+      typicalSearchMs: this.typicalOf(plan('idle', 'search', this.withReranker())),
       ...(state === 'idle' && this.cooldownUntil > t ? { retryAfterSec: Math.ceil((this.cooldownUntil - t) / 1000) } : {}),
     };
     if (!this.load || this.current !== 'loading') return base;
@@ -233,8 +256,8 @@ export class Models {
     const t = this.now();
     if (this.cooldownUntil > t) throw new LoadRefused('cooldown', Math.ceil((this.cooldownUntil - t) / 1000));
     const from = this.current as 'idle' | 'search';
-    const names = plan(from, target);
-    const stages: Stage[] = names.map((name) => ({ name, status: 'pending', elapsedMs: null, typicalMs: this.o.typicalMs[name] }));
+    const names = plan(from, target, this.withReranker());
+    const stages: Stage[] = names.map((name) => ({ name, status: 'pending', elapsedMs: null, typicalMs: this.typical(name) }));
     const started: number[] = names.map(() => 0);
     const abort = new AbortController();
     this.current = 'loading';
@@ -265,6 +288,7 @@ export class Models {
       try {
         signal.throwIfAborted();
         if (s.name === 'release-embedder') await this.o.backend.releaseEmbedder(signal);
+        else if (s.name === 'reranker') await this.o.backend.loadReranker!(signal);
         else if (s.name === 'generator') await this.o.backend.loadGenerator(signal);
         else if (s.name === 'embedder') await this.o.backend.loadEmbedder(signal);
         else {

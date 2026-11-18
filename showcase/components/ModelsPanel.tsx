@@ -7,6 +7,7 @@ import type { ModelsView } from '../api';
 
 const STAGE_LABEL: Record<string, string> = {
   'release-embedder': 'Freeing memory',
+  reranker: 'Search reranker',
   generator: 'Language model',
   embedder: 'Search model',
   check: 'Checking both are ready',
@@ -36,7 +37,9 @@ export function ModelsPanel({ view, busy, onLoad, need = 'ready' }: { view: Mode
             The last load did not finish. A new attempt is possible in about {view.retryAfterSec} s.
           </p>
         )}
-        <p className="fine-print">Loading the search model takes a few seconds; your key is not needed for it.</p>
+        <p className="fine-print">
+          Loading the search models usually takes about {seconds(view.typicalSearchMs)} s; your key is not needed for it.
+        </p>
       </div>
     );
   if (view.state === 'ready')
