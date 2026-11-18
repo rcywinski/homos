@@ -552,6 +552,21 @@ Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
   read-and-execute), `C:\HomosServe\logs` the only place `homos-web` may write, and a test that `homos-web` cannot
   write the switch file. The clone's `.env` holds only `SHOWCASE_WALLET_ADDRESS` (a public address read by the build,
   not by the server); the precondition is "no other variable there".
+  Limits on the public server: the code defaults (per visitor 5 questions an hour and 20 a day, 200 a day for the
+  site; loads 2 an hour and 6 a day per visitor, 30 for the site). CC-Win found the raised batch limits of step 4.8
+  (100, 200, 1000) still in `serve.env` before the tunnel started, 18 Nov 2026; removed. Rule since then: a batch that
+  needs raised limits raises them for its run and restores them in the same instruction.
+  **4.9 live (18 Nov 2026), awaiting the owner's tick.** Public at the pin `a15762b` through a Cloudflare Tunnel
+  (hostname kept out of the repo). Checklist: LAN probe of 8790 from the Mac fails (11435 answers as a control);
+  `index.html` (939 B) and `app.js` (191 554 B) byte for byte equal to the build through the tunnel, so nothing is
+  injected (Rocket Loader, email obfuscation and Web Analytics off); CSP, nosniff, no-referrer, permissions policy,
+  COOP and CORP same-origin, X-Frame-Options DENY present; `/api/tags` and `/api/generate` answer our JSON 404,
+  `/health` and other paths our plain-text 404 (Ollama and the reranker unreachable); start-up log "mode tunnel",
+  no CF-Connecting-IP warning, visitors counted by hash; kill switch tested (task stopped: Cloudflare 530/1033 for
+  every path; started: page back, equal hash). Tasks run as `homos-web` at startup; the batch logon right was granted
+  with secedit because the tasks were registered from PowerShell. Operations in `inference/README.md` (ai-layer).
+  Open: SSE through the tunnel needs the switch on (owner's call); "Always Use HTTPS" in Cloudflare (owner's call;
+  plain http answers 200 today); a node exit is not restarted by Task Scheduler (wrapper or watchdog, later).
 
 Steps 4.1 to 4.5 can be built while phase 3 holds the box (4.4b needs CC-Win on the box but not the GPU). 4.7, 4.8,
 4.6 and 4.9 wait until the owner says phase 3 is finished.
