@@ -840,3 +840,175 @@ on the pushed merge passed (run 43926626532, 2 min 42 s). The merge brings steps
 
 **Note for whoever merges `app-chat`.** That branch changes `ai/answer/` (an optional `signal` parameter in
 `Generator.generate` and `answerWithChecks`) and appends to `ai/DECISIONS.md`: check both against `main` at the merge.
+
+---
+
+## 2026-11-16, phase 4 planned: public showcase app with chat (approved by the owner)
+
+**Decision.** A second CC-Mac session (CC-App) plans phase 4 in a separate worktree (`../HOMOS-app`,
+branch `app-chat` off `main`) so that it never touches the main checkout while phase 3 runs there. The plan is in
+`ai/APP-PLAN.md`, not `docs/`, because the corpus loader indexes every `docs/*.md` except two named files. Main
+design choices: the chat backend runs on the box behind an outbound tunnel; guests always get retrieval variant
+`local`, because variant `chosen` translates each question with a live Sonnet call on the owner's key; the backend
+refuses to start with `ANTHROPIC_API_KEY` set; a guest's own key is used only from the guest's browser
+(`dangerouslyAllowBrowser`), with retrieval from our server and verification in the browser; answers are sent whole
+after verification, with only status events streamed; the static comparison and archive work when the box is off.
+
+**Alternatives.** Backend on the Mac (not on 24/7) or on a cloud server (would expose the model ports). A server-side
+pass-through for guest keys (the key would reach our process). Token-by-token streaming (would show unverified text).
+Plan in `docs/` (would change the corpus hash).
+
+**Evidence.** Reconnaissance in `ai/APP-PLAN.md` section 1; Claude API documentation on browser access checked on
+16 Nov 2026 (section 2). The live ledger and paper ledger exist only in the box's `.bot/`.
+
+**Owner decisions on approval.** Backend in `ai/serve/`, front end in `showcase/`; a display-only filter masks LAN and VPN addresses (corpus unchanged); the comparison shows Sonnet k=10 next to the served local configuration (step 3.2) with other variants collapsed and single runs labelled; the served model and prompt are configuration; failed verification is marked, never hidden; out-of-scope refusal and no trading advice; no wallet or signing library in the front end, enforced by a test; visitor IPs hashed with a daily salt; guest-key mode moved after the first LAN run. Recorded in `ai/APP-PLAN.md` section 5.
+
+**Open.** The UI build was not checked
+(no `node_modules` in the worktree). This entry is appended on `app-chat`, while `ai-layer` appends phase 3 entries
+to the same file; the merge will need a manual join at the end of the file.
+
+**Review questions.** Is running a public backend on a machine in the owner's home LAN acceptable with a separate
+user and a tunnel, or should it move off the LAN before stage B?
+
+## 2026-11-16, clarification: unverified quotes in step 1.11 (24 and 25 are both right)
+
+**Decision.** The step 1.11 entry gives "Qwen 24 of 321" unverified quotes; the showcase export (step 4.1) counts 25.
+Both are right: in the five Qwen runs of step 1.11, 24 quotes were not found in the cited chunk and 1 (run `local-b`)
+cited a chunk the model was not given, so 25 were unverified in total. The 1.11 entry is not edited on `app-chat`,
+because that part of the file belongs to `ai-layer`; this entry clarifies it.
+
+**Alternatives.** Editing the 1.11 entry on this branch (rejected by the owner: it would conflict with `ai-layer`).
+
+**Evidence.** Citation statuses in `ai/eval/results/2026-11-11-answers-k10-local-{a1,a2,b,b2,a-think}-golden-v1-4.json`:
+not found 6, 4, 3, 6, 5; unknown chunk 0, 0, 1, 0, 0. The compare report shows verified 59/65, 53/57, 58/62, 52/58,
+74/79.
+
+**Open.** At the merge of `app-chat`, tell the CC-Mac session on `ai-layer` about this entry, so the 1.11 entry can
+say "24 not found plus 1 unknown chunk" if the owner wants it there.
+
+**Review questions.** None.
+
+## 2026-11-16, step 4.5: three number states, design pass, browser suite
+
+**Decision.** Numbers in answers get three states, approved by the owner: "Verified", "In the cited source", "Not
+verified". The three code-checked transformations are only the ones named (date written out, project year added,
+rounding to the printed decimals); a transformation never gives "Verified". Two guards were added while counting,
+both of them restrictions: a number found only in a long cited chunk needs at least two significant digits (a lone
+"4" or "8" is in almost every chunk; without the guard "Phase 4" and the "4" of "4x" counted as in the source), and a
+multiplier is "Verified" only when a quote holds the same multiplier and is never "In the cited source". The showcase
+was redesigned for an outside reader (owner's list of 16 Nov 2026) and is walked by a Playwright suite in CI.
+
+**Alternatives.** Two states only (rejected by the owner: the strict check marked 54 of 134 numbers in pb1, many of
+them dates written out or values from the cited source). More transformations, such as sums or unit changes
+(rejected by the owner). Counting a number as in the source wherever it appears in a cited chunk (rejected after the
+count: chance matches of single digits).
+
+**Evidence.** `npx tsx ai/serve/tools/number-states.ts`: pb1 134 numbers, before 80 verified and 54 not verified,
+after 80 verified, 30 in the cited source (25 as is, 5 by a transformation), 24 not verified; pb2 130 numbers, before
+75 and 55, after 75, 38 (32 and 6), 17. Every transformation case is listed by the same command. Tests in
+`ai/serve/serve.test.ts`; browser suite `showcase/e2e/showcase.spec.ts`, 24 of 24 passed (12 paths, desktop and
+phone).
+
+**Open.** The manual classification of the remaining "Not verified" numbers on real answers is step 4.8. The
+out-of-scope path and the "not in the data" path show the same fixed text, because the served prompt cannot tell
+them apart (only trading advice is detected before the model).
+
+**Review questions.** Is two significant digits the right floor, or should a chunk match also need the unit (%, $)?
+
+## 2026-11-16, step 4.1b: wallet export, two manual positions excluded (owner)
+
+**Decision.** The showcase Wallet tab reads a sanitized export of the bot's ledger and paper-trading files. The two
+liquidity positions opened manually in March 2025 (mainnet #953427 and #953465, closed on 25 Aug 2026) are excluded
+from every list and total by the owner's decision, and the export holds no trace of them; one line on the tab says
+that two manual positions from before the project are excluded. The raw files stay in `data/showcase-raw/`
+(gitignored); their SHA-256 sums matched CC-Win's list. Typography: the owner chose Source Sans 3 with Source Code
+Pro (variant C of three).
+
+**Alternatives.** Showing only the closing of the two old positions (option b, rejected by the owner). Passing raw
+records through with a deny-list (rejected: the export copies an allow-list of fields, and an audit checks the
+result).
+
+**Evidence.** `ai/serve/wallet-export.ts`, `ai/serve/wallet-export.test.ts` (30 checks: a synthetic folder with an
+excluded position, a pre-project entry, a URL with a key, private addresses, an unknown address and a key-shaped hex
+string in extra fields; the audit on each kind of leak; the real files). The first run of the test caught the
+excluded position numbers in a field of the export itself; that field was removed and the audit now matches the
+numbers anywhere. Browser suite 29 passed, 1 skipped (the laptop-viewport test on the phone project).
+
+**Open.** Whether to commit the sanitized `wallet.json` (needed for the box and for CI to show the tab); the owner's
+wallet address is set at build time through `SHOWCASE_WALLET_ADDRESS` and is not in the export.
+
+**Review questions.** Is the field allow-list complete for stage B, or will paper trading on live data need its own
+export path?
+
+## 2026-11-17, step 4.8j result and the API spending ledger (CC-App)
+
+**Result.** Blind judge on the chat-server golden run: 12 correct, 14 partly, 8 incorrect (pb1 16/15/3, pb2 18/11/5);
+3 of the 8 are the fixed "not in the data" text on id-03, na-02 and na-03. Details:
+`ai/eval/results/2026-11-17-judged-lan48-4.8j.md`.
+
+**Standing rule (owner, 17 Nov 2026).** CC-Mac and CC-App coordinate directly within: code, tests, analysis, docs and
+commits on their own branch; API spending up to 2 USD per run and 5 USD in total across both sessions from the rule
+on. Box, GPU, spending above the limits, merges to main, tunnel, firewall, accounts, scheduled tasks and manual steps
+still need the owner's answer in the session that asks.
+
+**Spending ledger.** One shared ledger, kept by CC-Mac in `ai/DECISIONS.md` on `ai-layer` (commit fbb2c58, section
+"standing rule"), so there is a single total. CC-App sends each paid run (date, run, USD) to CC-Mac. The 4.8j judge
+(0.54 USD) came before the rule; the total since the rule starts at 0 USD.
+
+## 2026-11-17, "not in the data" shows the model's explanation (owner)
+
+**Decision.** For "not in the data" the chat keeps the fixed heading and shows the model's own explanation under it.
+Without a verified quote it is labelled "not backed by a quote"; with verified quotes (5 of 11 refusals in pb1 and pb2
+had them), "only the parts the quotes below cover are backed", and the quotes are shown. Numbers carry the same marks
+as in an answer. Prompt P is unchanged.
+
+**Why.** In 4.8j the fixed text alone cost 3 correct verdicts (id-03, na-02, na-03): it cannot correct a false
+premise, and it hid id-03's partial answer. The label wording differs from "not backed by a quote" only where that
+would be false.
+
+**Gap analysis.** Live retrieval gave the same chunks as the saved lists on all 34 questions; the 12 against 16 and
+18 is the fixed text plus run-to-run variation (`ai/eval/results/2026-11-17-judged-lan48-4.8j.md`). A second live run
+is needed before concluding.
+
+## 2026-11-17, step 4.10a: models state machine with a retrieval-only state (owner)
+
+**Decision.** The owner accepted 4.10a with two changes to the design of section 10: models are tracked separately,
+with a retrieval-only state ("search": bge-m3 and the reranker, no generator) for guest-key mode; and every load is
+an explicit visitor action counted against the load limits, including the guest's "load search" control (4.6), so no
+load happens as a side effect of a question.
+
+**Why.** Guest-key mode needs retrieval but not the 17 GB generator, and with only bge-m3 resident the VRAM headroom
+is about 19 GiB instead of about 520 MiB. The step 3.5 eviction fixes the transition: from "search" to "ready" bge-m3
+is released, then the generator and bge-m3 load in the fixed order.
+
+**Scope.** Dry run and Playwright only. The real engine keeps loading at start until 4.10b (explicit unload, idle
+timer, start-up without loaded models); typical stage times default to the 4.8j2 measurement until 4.10d.
+
+## 2026-11-17, step 4.10b: releases, failed loads, a late model after an abort (owner)
+
+**Decision.** The owner accepted 4.10b and the rule for failed loads: a failed load counts against the visitor's
+load limit but not against the site's daily total, and no new load starts for 2 minutes after it. Releases target
+both models, are confirmed by `/api/ps`, and an unconfirmed release keeps the state "unloading".
+
+**Why.** 30 failed loads on a failing box would otherwise lock the site for the UTC day, while a per-visitor count
+and a short pause still stop hammering. Aborting a request does not stop Ollama from finishing a load: the unit test
+with a fake Ollama showed a release confirmed on an empty `/api/ps` before the model appeared. The release after an
+aborted or failed load therefore watches `/api/ps` for 30 s and releases anything that appears.
+
+**Open.** Real Ollama behaviour of the release (keep_alive 0 on `/api/generate` for bge-m3, as `ollama stop` does) and
+of a late model is checked on the box in 4.10d.
+
+## 2026-11-18, step 4.6a: guest-key mode on the server (owner's OK, review folded in)
+
+**Decision.** `/api/guest/retrieve` returns the Messages API request body (measured Sonnet prompt and answer schema,
+the 10 chunks masked, `max_tokens` 2,048), the sources and an HMAC ticket (question hash, chunk ids, corpus hash,
+10 minutes; secret in memory). `/api/guest/verify` checks the ticket in constant time and the posted answer with the
+chat's own `present()`. Verify needs no model and works in every state while the switch is on. Anything that looks
+like an Anthropic key under `/api` (URL, header, body) is refused before a handler runs; the log keeps the outcome.
+
+**Why.** The key never reaches our server, and the guest sees the same checks as the local chat. The schema is kept
+as data, not through the SDK, so the server's import graph has no Anthropic SDK (a test walks it).
+
+**Departures.** Verify has its own limiter; canonical base64url required for the ticket signature (a test showed
+that changing the unused bits of the last character decoded to the same signature); the cap is 2,048 output tokens
+against 8,000 in the measured runs, three times the largest measured answer (629).

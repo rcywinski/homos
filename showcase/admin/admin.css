@@ -1,0 +1,59 @@
+/* The admin page (step 4.10c): one panel, the switch and the state. Uses the public page's tokens and fonts. */
+.admin {
+  max-width: 44rem;
+  margin: 1.5rem auto;
+  padding: 0 1rem;
+}
+.admin h1 {
+  font-size: 1.4rem;
+  margin: 0 0 1rem;
+}
+.admin-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--sheet);
+}
+.admin-switch .state {
+  font-weight: var(--label-weight);
+  font-size: 1.1rem;
+}
+.admin-switch .state-on {
+  color: var(--ok);
+}
+.admin-switch .state-off {
+  color: var(--bad);
+}
+.admin dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1rem;
+  margin: 1rem 0;
+}
+.admin dt {
+  color: var(--ink-soft);
+}
+.admin dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.95em;
+}
+
+.admin-hint {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.95em;
+}
+/* A disabled button must not look like the active one (owner, 18 Nov 2026). */
+.admin-switch button:disabled {
+  background: var(--paper);
+  color: var(--ink-soft);
+  border: 1px dashed var(--rule);
+  cursor: not-allowed;
+  opacity: 1;
+}
