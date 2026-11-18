@@ -294,6 +294,13 @@ installs, runs the tests and operates the services.
   job (Ollama evicting or failing to load the model, out of memory, a prompt over the context) gives the visitor the
   fixed "model could not answer right now" text; the request log records `model-unavailable` and the stage.
 
+**Pinned commit on the box (rule since 18 Nov 2026).** Every instruction to CC-Win that starts the server begins with:
+`git fetch`, `git checkout --detach <pinned commit>`, and `git rev-parse HEAD` reported before the server starts; the
+cleanup step leaves the clone on that pinned commit, never on a local branch. Reason: after 4.10d a cleanup
+`git checkout app-chat` put `C:\HomosServe\homos` on the stale local branch at `ac5a06a` (behind origin by 9), whose
+code has neither models on demand nor the owner switch. Changing the clone is a box change: CC-Win takes the owner's
+go in its own conversation.
+
 ## 7. Steps, stage A
 
 Order: 4.1, 4.2, 4.3, 4.4, 4.4b, 4.5, 4.7, 4.8, 4.6, 4.9.
