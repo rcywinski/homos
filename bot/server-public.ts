@@ -8,8 +8,9 @@
  *   - only GET, only the routes the Live page reads; every other method and path answers 404 before any handler;
  *   - no static folder, no CORS header (its only client is the chat server on 127.0.0.1), bound to 127.0.0.1;
  *   - no write route (no proposal dismissal), no ledger, no closed positions, no positions history, no token;
- *   - every response is built from an allow-list of fields, never a file passed through: no RPC URLs (a paid key
- *     would sit in one), no watch address, no local paths, no proposals;
+ *   - state, paper, history and the two rankings are built from allow-lists of fields: no RPC URLs (a paid key would
+ *     sit in one), no watch address, no local paths, no proposals; the wide daily model, the full-run summaries and
+ *     the candidate verdicts are public market and backtest data, passed through with the scrub below only;
  *   - /api/results/:name serves only the walk-forward files of the six paper pools, by a fixed list.
  * A last check scrubs any string that still looks like a URL, a local path or an unknown 40-hex address.
  */
@@ -61,6 +62,10 @@ const PAPER_POSITION_FIELDS = [
 ] as const;
 const PAPER_HISTORY_FIELDS = ['ts', 'poolId', 'status', 'equityUsd', 'hodlUsd', 'feesUsd', 'costsUsd', 'inRange', 'trendDown', 'rebalances', 'price', 'lo', 'hi'] as const;
 const HISTORY_FIELDS = ['ts', 'poolId', 'price', 'volDaily', 'feeYieldDaily', 'rangeLo', 'rangeHi', 'emaGapPct'] as const;
+const RANKING_ROW_FIELDS = [
+  'rank', 'symbol', 'chain', 'poolMeta', 'apy7d', 'streak', 'eligible', 'tvlUsd', 'botPoolId', 'llamaUuid',
+  'cls', 'feeAprWide', 'dragPct', 'sigmaAnnPct', 'driftFlag', 'wOursPct',
+] as const;
 
 /** The walk-forward files the observation analysis asks for, one per paper pool. */
 export const RESULT_NAMES = new Set(BOT_POOLS.map((p) => `walkforward-${p.id}-365d-45d.json`));
@@ -135,9 +140,11 @@ export function createPublicBotApp(o: PublicApiOptions): Express {
   });
 
   const rankingFile = (file: string, missing: string) => (_req: express.Request, res: express.Response) => {
-    const r = readJson(path.join(o.stateDir, file));
+    const r = readJson(path.join(o.stateDir, file)) as Record<string, unknown> | null;
     if (!r) return res.status(503).json({ error: missing });
-    send(res, r);
+    const rows = (Array.isArray(r.rows) ? r.rows : []).map((x) => pick<Record<string, unknown>>(x, [...RANKING_ROW_FIELDS]));
+    const criteria = r.criteria && typeof r.criteria === 'object' ? Object.fromEntries(Object.entries(r.criteria).filter(([, v]) => ['string', 'number', 'boolean'].includes(typeof v))) : {};
+    send(res, { day: str(r.day), generatedAt: str(r.generatedAt), criteria, rows });
   };
   app.get('/api/ranking', rankingFile('selector-ranking.json', 'ranking not generated yet'));
   app.get('/api/wide-ranking', rankingFile('wide-ranking.json', 'wide ranking not generated yet'));

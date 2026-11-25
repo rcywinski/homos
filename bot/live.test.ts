@@ -122,6 +122,8 @@ async function publicApi() {
     const paper = (await (await fetch(srv.url + '/api/paper?hours=24')).json()) as { state: { positions: Record<string, Record<string, unknown>> }; events: Record<string, unknown>[] };
     check('paper: the position keeps its numbers, not the wallet field', paper.state.positions[pool.id].capitalUsd === 10000 && !('wallet' in paper.state.positions[pool.id]));
     check('paper: the hedge keeps only size, entry, funding', JSON.stringify(paper.state.positions[pool.id].hedge) === JSON.stringify({ sizeBase: 1, entryUsd: 2, fundingUsd: 0 }));
+    const rk = (await (await fetch(srv.url + '/api/ranking')).json()) as { rows: Record<string, unknown>[] };
+    check('ranking: rows keep only listed fields', rk.rows.length === 1 && rk.rows[0].symbol === 'WETH-USDC' && !('link' in rk.rows[0]) && !('addr' in rk.rows[0]) && !('pool' in rk.rows[0]));
     check('paper: events keep primitives only', paper.events.length === 1 && !('nested' in paper.events[0]) && paper.events[0].kind === 'OPEN');
     for (const [m, route] of [['POST', '/api/state'], ['POST', '/api/proposals/p1/dismiss'], ['PUT', '/api/paper'], ['DELETE', '/api/state'], ['OPTIONS', '/api/state']] as const) {
       check(`${m} ${route}: 404`, (await fetch(srv.url + route, { method: m })).status === 404);

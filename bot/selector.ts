@@ -21,7 +21,9 @@ import { BOT_POOLS, BotPool, STATE_DIR } from './config';
 import { readVerdicts } from './candidates';
 
 const ROOT = path.join(__dirname, '..');
-const LLAMA = path.join(ROOT, 'data', 'llama');
+// DefiLlama history; the Live demo keeps it in its state folder (BOT_LLAMA_DIR, set by bot/live.ts), so a redeploy
+// of the clone does not delete it. Default unchanged: data/llama in the repo.
+const LLAMA = process.env.BOT_LLAMA_DIR ? path.resolve(process.env.BOT_LLAMA_DIR) : path.join(ROOT, 'data', 'llama');
 const SELECTOR_STATE = path.resolve(ROOT, STATE_DIR, 'selector-state.json');
 
 // --- policy parameters (frozen in docs/ALGORITHM.md; single source of truth here and in the backtest) ---

@@ -75,6 +75,8 @@ async function main() {
     process.exit(1);
   }
   process.env.BOT_MODE = 'live';
+  // The DefiLlama history for the selector lives in the state folder too, not in the clone (a redeploy replaces it).
+  process.env.BOT_LLAMA_DIR ??= path.join(process.env.BOT_STATE_DIR!, 'llama');
   // dotenv/config (imported by the observer) reads this path; it does not exist, so nothing is loaded.
   process.env.DOTENV_CONFIG_PATH = path.join(process.env.BOT_STATE_DIR!, '.no-env-file');
   if (process.env.LIVE_COUNT_CALLS === '1') countCalls(process.env.BOT_STATE_DIR!);

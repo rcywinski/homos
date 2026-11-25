@@ -9,7 +9,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const OUT = path.join(__dirname, '..', 'data', 'llama');
+// BOT_LLAMA_DIR: the Live demo's folder outside the clone (phase 5); default unchanged.
+const OUT = process.env.BOT_LLAMA_DIR ? path.resolve(process.env.BOT_LLAMA_DIR) : path.join(__dirname, '..', 'data', 'llama');
 const HIST = path.join(OUT, 'history');
 fs.mkdirSync(HIST, { recursive: true });
 

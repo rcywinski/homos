@@ -1126,8 +1126,16 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   repo, public RPCs; one day of running to measure the RPC load and the gaps; `bot/server.ts` in a public read-only
   mode (an allow-list of GET routes, no CORS wildcard, bound to 127.0.0.1, no dismiss, ledger or positions routes),
   with tests. S to M.
+  Review notes of 25 Nov (analysis session), done in 5.1: the DefiLlama history follows the state folder in Live
+  mode (`BOT_LLAMA_DIR`, default `<state>/llama`; default outside Live unchanged: `data/llama`), so a redeploy of the
+  clone does not delete it; the two ranking routes build rows from a field allow-list (the page keys rows by rank and
+  symbol, no address field is used). Live writes nothing else inside the clone: every file the observer, the paper
+  step and the selector write is under the state folder (checked by grep of the write calls).
 - **5.2** The chat server forwards `/live/api/*` to the bot server on 127.0.0.1 (the allow-list again, timeouts, no
   write method), so the page stays same-origin and the CSP unchanged. S.
+  From the 5.1 review: a short response cache in front of the bot API (30 s per route and `hours` value, a few allowed
+  `hours` values instead of any number), a response size cap, and the chat server's rate limit on `/live/api/*`; the
+  5.2 report gives the worst-case response size (today `readNdjson` reads the whole file on every request).
 - **5.3** The "Live" page: the second entry, the cockpit shell, the paper summary (B), the paper panel with start
   dates, the legend, the "Archive / Live" switch on both pages, the demonstration notice; guard and viem helper;
   Playwright with a fixture bot API. M.
@@ -1138,6 +1146,10 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   from the period and dated. M.
 - **5.6** On the box: the observer and the bot server as tasks under `homos-web` with the supervisor, state folder,
   RPC settings, the daily and nightly steps; measured; then public on the owner's word. M.
+  From the 5.1 review: if a paid RPC key arrives through `RPC_MAINNET`, `RPC_BASE` or `RPC_ARBITRUM`, no log line may
+  carry the URL. Checked on the Mac: the observer's `log()` and the advisor's warning printed no URL in the smoke run
+  and in the first hours of the one-day run, but a viem error that ends a fallback (all hosts failed) can carry
+  "URL: ..." in its message; 5.6 adds a URL scrub to `log()` in Live mode and a test, and states it in the box notes.
 - **5.7** (optional, after 5.6) Read-only proposal cards derived from the paper decision log (REBALANCE, EXIT_TREND,
   FLAT_*), no buttons. M.
 - Later: wide against narrow on one pair (new paper strategies, L), automatic entry from the ranking under the
