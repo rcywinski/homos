@@ -24,20 +24,8 @@ import { nightlyDue, readNightly, runNightly, stepsLeft } from './live-nightly';
 import { countCalls } from './live-count';
 import { installConsoleScrub, scrubUrls } from './live-scrub';
 
-/** Environment variables that must not be present in the Live process. */
-export const FORBIDDEN_ENV = /^(PRIVATE_KEY|.*_PRIVATE_KEY|MNEMONIC|.*_MNEMONIC|SEED_PHRASE|BOT_WATCH_ADDRESS|TG_TOKEN|TG_CHAT|HYPERSYNC_BEARER_TOKEN|ENVIO_API_TOKEN|ANTHROPIC_API_KEY|WALLET_CONNECT_PROJECT_ID|BOT_API_TOKEN)$/i;
-
-/** Why the Live process must not start, or null. */
-export function liveStartProblem(env: NodeJS.ProcessEnv, repoRoot: string): string | null {
-  const bad = Object.keys(env).filter((k) => FORBIDDEN_ENV.test(k) && env[k]);
-  if (bad.length) return `refusing to start: the environment holds ${bad.join(', ')} (the Live demo uses no wallet, key or token)`;
-  const dir = env.BOT_STATE_DIR;
-  if (!dir) return 'refusing to start: set BOT_STATE_DIR to a folder outside the repo';
-  if (!path.isAbsolute(dir)) return 'refusing to start: BOT_STATE_DIR must be an absolute path';
-  const rel = path.relative(path.resolve(repoRoot), path.resolve(dir));
-  if (!rel.startsWith('..') && !path.isAbsolute(rel)) return 'refusing to start: BOT_STATE_DIR must be outside the repo';
-  return null;
-}
+export { FORBIDDEN_ENV, liveStartProblem } from './live-guard';
+import { liveStartProblem } from './live-guard';
 
 /** Keeps a log under `max` bytes: past it, the file becomes `<name>.1` (replacing an older one) and a new one starts. */
 export function rotateLog(file: string, max = 5 * 1024 * 1024): boolean {

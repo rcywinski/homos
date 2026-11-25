@@ -1109,7 +1109,12 @@ or a drive or home path.
 `src/utils/advisor.ts` and the DefiLlama fetch: the public RPCs `eth.drpc.org`, `base.drpc.org`, `arbitrum.drpc.org`,
 `ethereum-rpc.publicnode.com`, `base-rpc.publicnode.com`, `arbitrum-one-rpc.publicnode.com`, `eth.llamarpc.com`,
 `base.llamarpc.com`, `1rpc.io`, `yields.llama.fi` for the daily ranking, and `coins.llama.fi` (token prices for the
-WIDE ranking and the daily model; found in 5.5, 25 Nov). Nothing else (no Telegram, no HyperSync,
+WIDE ranking and the daily model; found in 5.5, 25 Nov).
+Superseded for the box by the measured list of 25 Nov (5.1 numbers and a getLogs probe): `ethereum-rpc.publicnode.com`
+and `eth.drpc.org`, `base-rpc.publicnode.com` and `base.drpc.org`, `arb1.arbitrum.io` and `arbitrum.drpc.org`, plus
+the two DefiLlama hosts; the llamarpc hosts, `arbitrum-one-rpc.publicnode.com` and `1rpc.io` are left out. Live mode
+uses this list (`LIVE_RPC` in bot/config.ts); details, the Arbitrum options and the recommendation are in
+`deploy/live/README.md`. Nothing else (no Telegram, no HyperSync,
 no wallet relay). When a host fails, the observer keeps the last value, marks its data age (the telemetry table's
 "Data age" column and the status dot), tries the next fallback RPC on the next cycle, and never retries in a tight
 loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale data as stale.

@@ -170,7 +170,20 @@ export const BOT_POOLS: BotPool[] = [
   },
 ];
 
-export const RPC: Record<string, string[]> = {
+/**
+ * Live demo (BOT_MODE=live): the public hosts that answered in the 5.1 measurement and the 5.6 probe (25 Nov 2026),
+ * the one that serves 24 h of logs first, a price-only fallback second. drpc's free plan takes getLogs ranges of at
+ * most 100 blocks; eth/base.llamarpc.com answered 525; arbitrum-one-rpc.publicnode.com asks a token for logs; 1rpc.io
+ * hit its usage limit; arb1.arbitrum.io (Arbitrum's own public RPC) served 24 h of logs in 10,000-block chunks.
+ * The default lists below are unchanged.
+ */
+const LIVE_RPC: Record<string, string[]> = {
+  mainnet: ['https://ethereum-rpc.publicnode.com', 'https://eth.drpc.org'],
+  base: ['https://base-rpc.publicnode.com', 'https://base.drpc.org'],
+  arbitrum: ['https://arb1.arbitrum.io/rpc', 'https://arbitrum.drpc.org'],
+};
+
+const DEFAULT_RPC: Record<string, string[]> = {
   mainnet: [
     ...(process.env.RPC_MAINNET ? [process.env.RPC_MAINNET] : []),
     'https://eth.drpc.org',
@@ -190,6 +203,14 @@ export const RPC: Record<string, string[]> = {
     'https://1rpc.io/arb',
   ],
 };
+
+const withOverride = (chain: string, list: string[]) => {
+  const v = process.env[`RPC_${chain === 'mainnet' ? 'MAINNET' : chain.toUpperCase()}`];
+  return v ? [v, ...list] : list;
+};
+export const RPC: Record<string, string[]> = process.env.BOT_MODE === 'live' // LIVE_MODE, declared further down
+  ? Object.fromEntries(Object.entries(LIVE_RPC).map(([c, l]) => [c, withOverride(c, l)]))
+  : DEFAULT_RPC;
 
 export const NFT_MANAGER: Record<number, `0x${string}`> = {
   1: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',

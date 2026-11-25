@@ -28,10 +28,15 @@ restarts an hour. Same trigger as the other tasks: at startup with a 1 minute de
 
 Nothing is written inside the clone: a redeploy (build and swap) replaces the clone and keeps the demo's history.
 
-## Files to copy from the owner's Mac
+## Files to copy from the owner's Mac (the owner's manual step)
 
-Source: the main checkout, `backtest/results/` (not in git, by the owner's choice of step 2.1). Keep the file dates.
-Target: `C:\HomosServe\live\results\`. Check the hashes after the copy.
+- Source, on the Mac: `/Users/rafalcywinski/WebstormProjects/HOMOS/backtest/results/` (the main checkout; these files
+  are not in git, by the owner's choice of step 2.1).
+- Destination, on the box: `C:\HomosServe\live\results\`
+- How they travel: the earlier manual copies to the box are not recorded in the project notes, so the owner picks the
+  way (a USB stick or a share he already uses). The five files are small (11 to 14 KB each). Keep their dates.
+- Last line, on the box, in PowerShell: `Get-FileHash C:\HomosServe\live\results\*.json -Algorithm SHA256`, and each
+  hash must equal the table below.
 
 | File | SHA-256 |
 |---|---|
@@ -43,6 +48,17 @@ Target: `C:\HomosServe\live\results\`. Check the hashes after the copy.
 
 `base-weth-cbbtc-030` has no such file (only a candidate run under another name); the page says so. The full-run file
 `wide-backtests.json` is not on the Mac; whether to look for it on the old box is the owner's decision.
+
+## Rights (well-known SID form, as on 18 Nov: group names are localized on this box)
+
+```
+# homos-web = *S-1-5-21-2739273501-424694354-1965777676-1003; C:\HomosServe does not inherit and gives homos-web RX.
+New-Item -ItemType Directory C:\HomosServe\live\state, C:\HomosServe\live\results
+icacls C:\HomosServe\live\state /grant "*S-1-5-21-2739273501-424694354-1965777676-1003:(OI)(CI)M"
+icacls C:\HomosServe\live          # check: homos-web RX inherited, SYSTEM (*S-1-5-18) and Administrators (*S-1-5-32-544) F
+icacls C:\HomosServe\live\state    # check: homos-web M, nothing else added
+icacls C:\HomosServe\live.env       # check after writing it: homos-web RX only
+```
 
 ## Task commands
 
@@ -56,13 +72,61 @@ cmd.exe /c "cd /d C:\HomosServe\homos && "C:\Program Files\nodejs\node.exe" --im
 
 ## Outbound hosts (for the owner's approval)
 
-Public RPCs: `eth.drpc.org`, `base.drpc.org`, `arbitrum.drpc.org`, `ethereum-rpc.publicnode.com`,
-`base-rpc.publicnode.com`, `arbitrum-one-rpc.publicnode.com`, `eth.llamarpc.com`, `base.llamarpc.com`, `1rpc.io`.
+Trimmed to the hosts that answered in the 5.1 measurement and the probe of 25 Nov; Live mode uses these lists
+(`LIVE_RPC` in `bot/config.ts`; the default lists of the original bot are unchanged). Order per chain: the host that
+serves 24 h of swap logs first, a price-only fallback second.
+
+| Chain | First (logs and prices) | Fallback (prices; its free plan takes logs of at most 100 blocks) |
+|---|---|---|
+| Ethereum | `ethereum-rpc.publicnode.com` (1,000-block logs ok) | `eth.drpc.org` |
+| Base | `base-rpc.publicnode.com` (1,000-block logs ok) | `base.drpc.org` |
+| Arbitrum | `arb1.arbitrum.io` (Arbitrum's own public RPC, 10,000-block logs ok) | `arbitrum.drpc.org` |
+
 DefiLlama: `yields.llama.fi` (rankings, history), `coins.llama.fi` (token prices for the WIDE ranking and the daily
-model). No key, no Telegram, no HyperSync, no wallet relay. Calls are counted per host in `net-stats.json`.
+model). No key, no Telegram, no HyperSync, no wallet relay. Calls are counted per host in `net-stats.json` (main
+process) and `net-stats-<step>.json` (nightly steps).
+
+Left out, with the reason measured on 25 Nov: `eth.llamarpc.com` and `base.llamarpc.com` (HTTP 525 on every call),
+`arbitrum-one-rpc.publicnode.com` (HTTP 403, "Archive requests require a personal token" for any log range),
+`1rpc.io` (served prices, then "reached the usage limit" for the day).
+
+### Arbitrum 0.05%: the owner's decision before go-live
+
+On the original host list the pool never opens: in 2.2 hours, statistics in 0 of 9 cycles (price and tick fine; only
+the 24 h swap-log read fails). Probe of 25 Nov, largest eth_getLogs range accepted per host:
+
+| Host | Result |
+|---|---|
+| `arbitrum.drpc.org` | 100 blocks at most on the free plan: 24 h is about 345,600 blocks, so about 3,500 calls a cycle |
+| `arbitrum-one-rpc.publicnode.com` | refused at every range (token required) |
+| `1rpc.io/arb` | daily usage limit reached |
+| `arb1.arbitrum.io/rpc` | 10,000 blocks fine; the full 24 h read (35 calls) took 11.6 s, 29,000 swaps, no failure; statistics computed (volatility 1.99%/d) |
+
+Options:
+- (a) Smaller ranges on the hosts that answer 400: only drpc gives an answer, at 100 blocks; about 3,500 calls every
+  15 minutes for one pool is the tight loop 12.2 rules out and a sure way to get the address blocked. Not viable.
+- (b) Arbitrum's own public RPC, `arb1.arbitrum.io`: keyless, 35 calls a cycle. Adds one host. Arbitrum documents it
+  as rate-limited and not meant for production; if it refuses, the pool shows "waiting for market data" as today.
+- (c) A provider key, server side only through `RPC_ARBITRUM` in `live.env`: an account with a provider (the owner's),
+  adds that provider's host, and the key never leaves the box (the start refusal does not block RPC_* variables; the
+  logs scrub URLs).
+- (d) Go live with five pools and Arbitrum shown as waiting: no new host.
+
+Recommendation: (b), already wired as the Live list's first Arbitrum host (so approving the list above approves it);
+(d) is what happens by itself if the host refuses. (c) only if (b) proves unreliable over the first days.
 
 ## Go-live order
 
+0. The tasks run as `homos-web`, so registering them needs that account's password. Only the owner types it, in his
+   own administrator PowerShell window on the box (as in the 4.9 runbook); CC-Win prepares the two commands below and
+   never sees or types the password:
+   ```
+   $c = Get-Credential homos-web      # the owner types the password here
+   $a = New-ScheduledTaskAction -Execute cmd.exe -Argument '/c "<the observer command above>"'
+   $t = New-ScheduledTaskTrigger -AtStartup; $t.Delay = 'PT1M'
+   Register-ScheduledTask "HOMOS live observer" -Action $a -Trigger $t -User $c.UserName -Password $c.GetNetworkCredential().Password -RunLevel Limited
+   # the same for "HOMOS live api" with the API command; then the settings of the existing tasks (restart on failure)
+   ```
 1. As cywil: create the two folders with the rights above, copy and hash-check the five files, write `live.env`.
 2. Start `HOMOS live observer`. Cold start: the log shows "cold start: fetching the DefiLlama history" (about 9
    minutes, 223 calls to yields.llama.fi), then "LIVE loops started". The paper positions open at the first statistics
@@ -75,6 +139,22 @@ model). No key, no Telegram, no HyperSync, no wallet relay. Calls are counted pe
 
 Rollback: remove the `SERVE_LIVE_BOT_URL` line and restart the server task: `/live` is a plain 404 again and the
 archive page looks as before. Then stop the two Live tasks; the state folder stays for later.
+
+## Load on the box (the owner's gaming machine)
+
+Measured on the Mac (Apple silicon), to be measured again on the box in the 5.6 report:
+- Observer (`bot/live.ts`): about 1.6% of one core on average; a burst of about 12% of one core for about 15 s at each
+  statistics cycle (every 15 minutes); 185 to 215 MB of memory.
+- Read-only API (`bot/server-public.ts`): idle between requests; about 90 MB.
+- Nightly steps, once a day after 05:00 local: the DefiLlama fetch is network-bound (about 9 minutes, 223 calls,
+  little CPU); wide-score 1.1 s of CPU, 180 MB; wide-daily 0.6 s of CPU, 105 MB. No step loads a core for minutes.
+- State folder: about 0.3 MB a day (history and paper history about 0.28 MB, dated score files 0.02 MB), so about
+  10 MB a month; the DefiLlama folder (22 MB) and the daily model are replaced, not added to; `observer.log` is
+  capped at 2 x 5 MB. The task logs (`live-observer.log`, `live-api.log`) are not rotated and grow by about 2 MB a
+  month.
+
+For the 5.6 report on the box: CPU share and memory of both processes over the first hour and during the nightly
+steps (with the hour they ran), and the state folder's size after a day with the monthly growth it implies.
 
 ## Checked on the Mac (dry run, 25 Nov 2026)
 

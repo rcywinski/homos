@@ -39,6 +39,20 @@ function startChecks() {
   // The real entry refuses before loading the observer (no network is touched).
   const r = spawnSync(process.execPath, ['--import', 'tsx', 'bot/live.ts'], { cwd: ROOT, env: { PATH: process.env.PATH, BOT_STATE_DIR: OUT, PRIVATE_KEY: 'x' }, encoding: 'utf8', timeout: 30_000 });
   check('the entry exits 1 with a key in the environment', r.status === 1 && /refusing to start.*PRIVATE_KEY/.test(r.stderr), r.stderr);
+  // The read-only API reads the same env file and refuses the same way.
+  const api = spawnSync(process.execPath, ['--import', 'tsx', 'bot/server-public.ts'], { cwd: ROOT, env: { PATH: process.env.PATH, BOT_STATE_DIR: OUT, TG_TOKEN: 'x' }, encoding: 'utf8', timeout: 30_000 });
+  check('the read-only API exits 1 with a token in the environment', api.status === 1 && /refusing to start.*TG_TOKEN/.test(api.stderr), api.stderr);
+  const apiIn = spawnSync(process.execPath, ['--import', 'tsx', 'bot/server-public.ts'], { cwd: ROOT, env: { PATH: process.env.PATH, BOT_STATE_DIR: path.join(ROOT, '.bot') }, encoding: 'utf8', timeout: 30_000 });
+  check('the read-only API refuses a state folder inside the repo', apiIn.status === 1 && /outside the repo/.test(apiIn.stderr), apiIn.stderr);
+  // RPC lists: Live mode uses the measured hosts; the default lists are unchanged.
+  const rpcOf = (env: Record<string, string>) =>
+    JSON.parse(spawnSync(process.execPath, ['--import', 'tsx', '-e', `import(${JSON.stringify(path.join(ROOT, 'bot', 'config.ts'))}).then((c) => console.log(JSON.stringify(c.RPC ?? c.default.RPC)))`], { cwd: ROOT, env: { PATH: process.env.PATH!, ...env }, encoding: 'utf8', timeout: 30_000 }).stdout.trim().split('\n').pop()!);
+  const live = rpcOf({ BOT_MODE: 'live' });
+  check('Live RPC: arbitrum logs host first', live.arbitrum[0] === 'https://arb1.arbitrum.io/rpc' && live.arbitrum.length === 2, JSON.stringify(live.arbitrum));
+  check('Live RPC: no host that failed every call', !JSON.stringify(live).match(/llamarpc|arbitrum-one-rpc\.publicnode|1rpc\.io/));
+  check('Live RPC: an RPC_ARBITRUM override goes first', rpcOf({ BOT_MODE: 'live', RPC_ARBITRUM: 'https://paid.example/arb' }).arbitrum[0] === 'https://paid.example/arb');
+  const def = rpcOf({});
+  check('default RPC lists unchanged', def.mainnet.includes('https://eth.llamarpc.com') && def.arbitrum.includes('https://1rpc.io/arb') && def.base[0] === 'https://base.drpc.org');
 }
 
 /** Every repo file reachable from bot/live.ts through static and dynamic relative imports. */

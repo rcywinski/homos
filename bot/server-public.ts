@@ -19,6 +19,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { BOT_POOLS } from './config';
 import { readVerdicts } from './candidates';
+import { liveStartProblem } from './live-guard';
 
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const str = (v: unknown) => (typeof v === 'string' ? v : null);
@@ -170,11 +171,13 @@ export function createPublicBotApp(o: PublicApiOptions): Express {
 }
 
 if (require.main === module) {
-  const stateDir = process.env.BOT_STATE_DIR;
-  if (!stateDir || !path.isAbsolute(stateDir)) {
-    console.error('[bot-public] set BOT_STATE_DIR to an absolute folder');
+  // The same refusal as bot/live.ts: both Live processes read the same env file and behave the same.
+  const problem = liveStartProblem(process.env, path.join(__dirname, '..'));
+  if (problem) {
+    console.error(`[bot-public] ${problem}`);
     process.exit(1);
   }
+  const stateDir = process.env.BOT_STATE_DIR!;
   const resultsDir = process.env.BOT_RESULTS_DIR || path.join(stateDir, 'results');
   const port = Number(process.env.BOT_API_PORT || 8788);
   createPublicBotApp({ stateDir, resultsDir }).listen(port, '127.0.0.1', () => console.log(`[bot-public] read-only API on http://127.0.0.1:${port}, state ${stateDir}`));
