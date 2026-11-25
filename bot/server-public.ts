@@ -67,8 +67,13 @@ const RANKING_ROW_FIELDS = [
   'cls', 'feeAprWide', 'dragPct', 'sigmaAnnPct', 'driftFlag', 'wOursPct',
 ] as const;
 
-/** The walk-forward files the observation analysis asks for, one per paper pool. */
-export const RESULT_NAMES = new Set(BOT_POOLS.map((p) => `walkforward-${p.id}-365d-45d.json`));
+/**
+ * The walk-forward files the observation analysis asks for, one per paper pool: the 720-day hybrid run with 30-day
+ * steps (WALKFORWARD_NAME_SUFFIX in src/components/ObservationAnalysis.tsx; the comment in bot/server.ts that names
+ * 365d-45d is out of date).
+ */
+export const WALKFORWARD_SUFFIX = '-720d-30d';
+export const RESULT_NAMES = new Set(BOT_POOLS.map((p) => `walkforward-${p.id}${WALKFORWARD_SUFFIX}.json`));
 
 export interface PublicApiOptions {
   stateDir: string;

@@ -38,6 +38,29 @@ test('Live: notice, summary, six pool cards, events; only same-origin GETs', asy
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
+test('Live: networks, start dates, value ranges, telemetry, observation analysis, walk-forward caption', async ({ page }) => {
+  await page.goto(`${LIVE}/live/`);
+  await expect(page.locator('.paper-pool-card')).toHaveCount(6);
+  const headers = page.locator('.paper-pool-header');
+  await expect(headers.nth(0)).toContainText('USDC/WETH · 0.30% · Ethereum');
+  await expect(page.locator('.paper-pool-card', { hasText: 'Arbitrum' })).toContainText('waiting for market data from the network; no position opened yet.');
+  await expect(page.locator('.paper-pool-start')).toHaveCount(6);
+  await expect(page.locator('.paper-pool-start', { hasText: /^started / })).toHaveCount(5);
+  await expect(page.locator('.paper-pool-start', { hasText: 'not started yet' })).toHaveCount(1);
+  await expect(page.locator('.paper-range-caption', { hasText: 'value shown:' })).toHaveCount(5);
+  await expect(page.locator('.paper-event-pool').first()).toContainText(/· (Ethereum|Base|Arbitrum)$/);
+  await page.locator('.telemetry-title', { hasText: 'Bot telemetry' }).click();
+  await expect(page.locator('.telemetry-table').first()).toBeVisible();
+  await page.locator('.telemetry-title', { hasText: 'Observation analysis' }).click();
+  await expect(page.locator('.observation-pool-block svg').first()).toBeVisible();
+  await expect(page.locator('.observation-walkforward-table')).toHaveCount(2);
+  await expect(page.locator('.live-walkforward-note')).toContainText('computed on 22.09.2026 and fixed');
+  const text = await page.locator('body').innerText();
+  expect(text).not.toMatch(/https?:\/\//);
+  expect(text).not.toContain('/Users/');
+  expect(text).not.toMatch(/0x[0-9a-fA-F]{40}/);
+});
+
 test('Live: the Archive/Live switch works both ways', async ({ page }) => {
   await page.goto(`${LIVE}/`);
   await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Live' }).click();
@@ -69,7 +92,7 @@ test('Live configured but the bot API down: the panel says it is unavailable', a
 test('Live: the forward refuses writes and unknown routes', async ({ request }) => {
   expect((await request.post(`${LIVE}/live/api/state`)).status()).toBe(404);
   expect((await request.get(`${LIVE}/live/api/ledger`)).status()).toBe(404);
-  expect((await request.get(`${LIVE}/live/api/results/walkforward-x-365d-45d.json`)).status()).toBe(404);
+  expect((await request.get(`${LIVE}/live/api/results/walkforward-x-720d-30d.json`)).status()).toBe(404);
   const r = await request.get(`${LIVE}/live/api/state`);
   expect(r.status()).toBe(200);
   const body = await r.text();

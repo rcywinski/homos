@@ -45,7 +45,7 @@ export const LIVE_POOL_IDS = [
   'base-weth-cbbtc-030',
   'arbitrum-weth-usdc-005',
 ] as const;
-export const LIVE_RESULT_NAMES = new Set(LIVE_POOL_IDS.map((id) => `walkforward-${id}-365d-45d.json`));
+export const LIVE_RESULT_NAMES = new Set(LIVE_POOL_IDS.map((id) => `walkforward-${id}-720d-30d.json`));
 /** Errors are kept shorter than answers, so a "not ready" at start clears soon after the bot API is up. */
 const ERROR_CACHE_MS = 5_000;
 export const LIVE_MAX_BYTES = 4 * 1024 * 1024;

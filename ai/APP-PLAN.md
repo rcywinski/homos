@@ -1166,6 +1166,16 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   so an archive deploy before 5.6 looks as it did. Both cases are in live.spec.ts.
 - **5.4** Telemetry and observation analysis on the page, read only; the walk-forward table from the period's result
   files, dated. S.
+  Built 25 Nov: the original `BotTelemetry` and `ObservationAnalysis` on the Live page, read only (base `/live`, no
+  token); a fixed caption dates the walk-forward tables (research period, 720 days, 30-day steps, computed 22.09.2026).
+  Correction: the page asks for `walkforward-<pool>-720d-30d.json` (WALKFORWARD_NAME_SUFFIX), not `365d-45d` as the
+  comment in bot/server.ts says; RESULT_NAMES and the forward's list are fixed and pinned to the page's constant. Five
+  of six exist (main checkout, backtest/results, 22 Sep 2026); WETH/cbBTC 0.30% on Base exists only as the candidate run
+  `walkforward-cand-base-weth-cbbtc-030-720d-30d.json`, so the caption says so instead of "no results".
+  Display items from the analysis session (owner's answers of 25 Nov): network on cards and events, start date per card,
+  value range under the equity chart (optional props of PaperTradingPanel and Sparkline; without them the original
+  renders as before, proven by `showcase/live/panel.test.tsx` against a snapshot taken before the change); in the
+  original too: the pending pool's own text and en-US for the two amounts that used the browser's locale.
 - **5.5** Both rankings with the gate columns: the daily ranking live (DefiLlama fetch plus the selector, daily), the
   wide ranking and daily model nightly (light steps of the pipeline), the full-run column and candidate verdicts fixed
   from the period and dated. M.
@@ -1176,6 +1186,9 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   and in the first hours of the one-day run, but a viem error that ends a fallback (all hosts failed) can carry
   "URL: ..." in its message; 5.6 adds a URL scrub to `log()` in Live mode and a test, and states it in the box notes.
   The full-day and multi-day measurement of RPC load and gaps runs here, on the box (moved from 5.1, 25 Nov).
+  Walk-forward files for the box: copy the five `-720d-30d` files from the owner's Mac (main checkout,
+  backtest/results; not in git by the owner's choice of step 2.1) to the box's results folder outside the clone
+  (`BOT_RESULTS_DIR`), keeping their dates (`cp -p` or equivalent).
 - **5.7** (optional, after 5.6) Read-only proposal cards derived from the paper decision log (REBALANCE, EXIT_TREND,
   FLAT_*), no buttons. M.
 - Later: wide against narrow on one pair (new paper strategies, L), automatic entry from the ranking under the

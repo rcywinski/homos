@@ -54,6 +54,14 @@ writeFileSync(path.join(dir, 'paper-events.ndjson'), [
   { ts: iso(3 * H), poolId: 'base-weth-cbbtc-030', kind: 'EXIT_TREND', who: OWNER_BAIT },
   { ts: iso(1 * H), poolId: 'mainnet-usdc-weth-005', kind: 'REBALANCE' },
 ].map((e) => JSON.stringify(e)).join('\n') + '\n');
+// Observation history (every 15 min) and two walk-forward result files, the names the page asks for.
+const obs: string[] = [];
+for (const p of pools) for (let k = 24; k >= 0; k--) obs.push(JSON.stringify({ ts: iso(k * 0.25 * H), poolId: p.id, price: p.price * (1 + 0.003 * Math.cos(k)), volDaily: 0.03, feeYieldDaily: 0.001, rangeLo: p.lo || null, rangeHi: p.hi || null, emaGapPct: -1 + k * 0.05, extra: RPC_BAIT }));
+writeFileSync(path.join(dir, 'history.ndjson'), obs.join('\n') + '\n');
+mkdirSync(path.join(dir, 'results'), { recursive: true });
+for (const id of ['mainnet-usdc-weth-030', 'base-weth-usdc-030']) {
+  writeFileSync(path.join(dir, 'results', `walkforward-${id}-720d-30d.json`), JSON.stringify({ id, source: '/Users/owner/backtest', summary: { hybrid: { mean: 1.25, winPct: 62, worst: -3.5 }, hodl: { mean: 0.4, winPct: 51, worst: -9.1 } } }));
+}
 writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ updatedAt: iso(0), mode: 'OBSERVE', watch: OWNER_BAIT, rpc: RPC_BAIT, pools: pools.map((p) => ({ id: p.id, ethUsd: p.price, tick: 1, updatedAt: iso(0) })) }));
 
 createPublicBotApp({ stateDir: dir, resultsDir: path.join(dir, 'results') }).listen(port, '127.0.0.1', () => console.log(`[live-fixture-bot] on ${port}`));

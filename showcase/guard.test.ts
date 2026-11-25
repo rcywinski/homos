@@ -63,7 +63,7 @@ const IMPORT = /(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|import\(\s*['"
  * The src/ modules the Live page may import (phase 5, step 5.3): the paper panel and what it pulls in. Each holds only
  * React and types; utils/formatters (which imports viem) is swapped by the Live build for showcase/live/formatters.ts.
  */
-const LIVE_SRC_MODULES = ['components/ExpandableSection', 'components/PaperTradingPanel'];
+const LIVE_SRC_MODULES = ['components/ExpandableSection', 'components/PaperTradingPanel', 'components/BotTelemetry', 'components/ObservationAnalysis'];
 const LIVE_SRC_TYPES = ['hooks/useBotApi'];
 /** What those modules may import in turn (checked below), so a later change in src/ cannot widen the Live bundle. */
 const LIVE_SRC_REACH: Record<string, string[]> = {
@@ -71,6 +71,9 @@ const LIVE_SRC_REACH: Record<string, string[]> = {
   'components/PaperTradingPanel.tsx': ['react', '../hooks/useBotApi', '../config/botPools', './PositionCharts', '../utils/formatters'],
   'components/PositionCharts.tsx': ['react', '../config/botPools'],
   'config/botPools.ts': ['viem'],
+  'components/BotTelemetry.tsx': ['react', '../hooks/useBotApi', '../config/botPools', './CycleLine'],
+  'components/CycleLine.tsx': ['react', '../hooks/useBotApi', '../utils/formatters'],
+  'components/ObservationAnalysis.tsx': ['react', '../hooks/useBotApi', '../config/botPools'],
 };
 for (const [file, allowed] of Object.entries(LIVE_SRC_REACH)) {
   const text = readFileSync(path.join('src', file), 'utf8');

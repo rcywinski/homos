@@ -47,7 +47,7 @@ async function serve(opts: { body?: (url: string) => { status: number; text: str
 async function routes() {
   const s = await serve({});
   try {
-    for (const r of ['state', 'paper', 'history', 'ranking', 'wide-ranking', 'wide-daily', 'wide-backtests', 'candidates', 'results/walkforward-base-weth-usdc-030-365d-45d.json']) {
+    for (const r of ['state', 'paper', 'history', 'ranking', 'wide-ranking', 'wide-daily', 'wide-backtests', 'candidates', 'results/walkforward-base-weth-usdc-030-720d-30d.json']) {
       check(`GET ${r}: 200`, (await fetch(`${s.base}/${r}`)).status === 200);
     }
     for (const r of ['ledger', 'ledger.csv', 'closed-positions', 'positions-history', 'proposals', 'results/other.json', 'results/..%2Fstate.json', 'state/extra', '']) {
@@ -55,7 +55,7 @@ async function routes() {
     }
     const keys = s.cacheSize();
     const calls = s.calls.length;
-    for (let i = 0; i < 50; i++) await fetch(`${s.base}/results/walkforward-made-up-${i}-365d-45d.json`);
+    for (let i = 0; i < 50; i++) await fetch(`${s.base}/results/walkforward-made-up-${i}-720d-30d.json`);
     check('unknown result names: no upstream call, cache size unchanged', s.calls.length === calls && s.cacheSize() === keys, `${s.calls.length - calls} calls, ${s.cacheSize() - keys} keys`);
     for (const name of LIVE_RESULT_NAMES) check(`GET results/${name}: 200`, (await fetch(`${s.base}/results/${name}`)).status === 200);
     check('cache keys stay within 8 routes + 6 results (+4 for the extra hours values)', s.cacheSize() <= 18, String(s.cacheSize()));
@@ -177,6 +177,8 @@ function config() {
   }
   check('the result list equals the bot API list', [...LIVE_RESULT_NAMES].sort().join() === [...RESULT_NAMES].sort().join());
   check('the pool list equals BOT_POOLS', BOT_POOLS.length === LIVE_RESULT_NAMES.size);
+  const suffix = readFileSync('src/components/ObservationAnalysis.tsx', 'utf8').match(/WALKFORWARD_NAME_SUFFIX = '([^']+)'/)?.[1];
+  check('result names use the suffix the page asks for', !!suffix && [...LIVE_RESULT_NAMES].every((n) => n.endsWith(`${suffix}.json`)), suffix);
   const html = readFileSync('showcase/public/live/index.html', 'utf8');
   const meta = html.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)?.[1];
   check('the Live page has the same CSP as the archive page', meta === CSP_META, meta);

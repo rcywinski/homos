@@ -83,6 +83,9 @@ const LIVE_OWN_SOURCES = [
   'src/components/PaperTradingPanel.tsx',
   'src/components/PositionCharts.tsx',
   'src/config/botPools.ts',
+  'src/components/BotTelemetry.tsx',
+  'src/components/CycleLine.tsx',
+  'src/components/ObservationAnalysis.tsx',
 ];
 
 /**
