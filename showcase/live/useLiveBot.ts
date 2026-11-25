@@ -4,10 +4,86 @@
  * the whole difference from the cockpit's useBotApi.
  */
 import { useEffect, useState } from 'react';
-import type { PaperData, PaperStatus, BotStateShape } from '../../src/hooks/useBotApi';
+import type {
+  BotStateShape,
+  CandidateVerdict,
+  PaperData,
+  PaperStatus,
+  RankingData,
+  RankingStatus,
+  WideBacktestsData,
+  WideDailyData,
+} from '../../src/hooks/useBotApi';
 
 export const PAPER_HOURS = 168;
 const POLL_MS = 60_000;
+/** The rankings change once a day (selector after 06:00, nightly steps after 05:00): a slow poll is enough. */
+const RANKING_POLL_MS = 30 * 60_000;
+
+export interface LiveRankings {
+  ranking: RankingData | null;
+  rankingStatus: RankingStatus;
+  wideRanking: RankingData | null;
+  wideRankingStatus: RankingStatus;
+  wideDaily: WideDailyData | null;
+  wideBacktests: WideBacktestsData | null;
+  candidates: CandidateVerdict[] | null;
+}
+
+const EMPTY_RANKINGS: LiveRankings = {
+  ranking: null,
+  rankingStatus: 'loading',
+  wideRanking: null,
+  wideRankingStatus: 'loading',
+  wideDaily: null,
+  wideBacktests: null,
+  candidates: null,
+};
+
+async function getJson<T>(url: string): Promise<{ status: number; body: T | null }> {
+  try {
+    const r = await fetch(url);
+    return { status: r.status, body: r.ok ? ((await r.json()) as T) : null };
+  } catch {
+    return { status: 0, body: null };
+  }
+}
+
+const rankingStatus = (status: number): RankingStatus => (status === 200 ? 'ok' : status === 503 ? 'not-started' : 'error');
+
+/** Both rankings and their extra columns, read-only, polled every 30 minutes. */
+export function useLiveRankings(): LiveRankings {
+  const [r, setR] = useState<LiveRankings>(EMPTY_RANKINGS);
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      const [daily, wide, wideDaily, wideBacktests, candidates] = await Promise.all([
+        getJson<RankingData>('/live/api/ranking'),
+        getJson<RankingData>('/live/api/wide-ranking'),
+        getJson<WideDailyData>('/live/api/wide-daily'),
+        getJson<WideBacktestsData>('/live/api/wide-backtests'),
+        getJson<CandidateVerdict[]>('/live/api/candidates'),
+      ]);
+      if (!alive) return;
+      setR({
+        ranking: daily.body,
+        rankingStatus: rankingStatus(daily.status),
+        wideRanking: wide.body,
+        wideRankingStatus: rankingStatus(wide.status),
+        wideDaily: wideDaily.body,
+        wideBacktests: wideBacktests.body,
+        candidates: candidates.body,
+      });
+    };
+    void load();
+    const id = setInterval(() => void load(), RANKING_POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
+  return r;
+}
 
 export interface LiveBot {
   paper: PaperData | null;

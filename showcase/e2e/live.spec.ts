@@ -70,6 +70,18 @@ test('Live: networks, start dates, value ranges, telemetry, observation analysis
   await expect(page.locator('.observation-walkforward-table td', { hasText: 'Pasywny' })).toHaveCount(0);
   await expect(page.locator('.observation-chart-scale').first()).toContainText(/price scale shown: [\d,.]+ to [\d,.]+ · EMA gap scale shown: -5\.0% to [-\d.]+% \(safety-switch threshold -5%\)/);
   await expect(page.locator('.live-notice').first()).not.toContainText('the same algorithm');
+  // 5.5: both rankings, read-only, with the dated note.
+  await page.locator('.telemetry-title', { hasText: 'Daily ranking (TOP 10)' }).click();
+  await page.locator('.telemetry-title', { hasText: 'WIDE ranking' }).click();
+  await expect(page.locator('.topranking-status-in')).toHaveCount(1); // the simulation's pool
+  await expect(page.getByText('WETH-USDT').first()).toBeVisible();
+  await expect(page.getByText('TBTC-WBTC').first()).toBeVisible();
+  await expect(page.locator('.live-ranking-note')).toContainText('fixed results of the research period');
+  await expect(page.locator('.live-ranking-note')).toContainText('17.08.2026 and 19.08.2026');
+  const rankingText = await page.locator('body').innerText();
+  expect(rankingText).not.toMatch(/https?:\/\//);
+  expect(rankingText).not.toMatch(/0x[0-9a-fA-F]{40}/);
+  await expect(page.locator('button', { hasText: /open|enter|add/i })).toHaveCount(0);
   const text = await page.locator('body').innerText();
   expect(text).not.toMatch(/https?:\/\//);
   expect(text).not.toContain('/Users/');
@@ -113,4 +125,17 @@ test('Live: the forward refuses writes and unknown routes', async ({ request }) 
   const body = await r.text();
   expect(body).not.toContain('0x1111111111111111111111111111111111111111');
   expect(body).not.toContain('SECRETKEY');
+});
+
+test('Live: one malformed data file fails only its own section', async ({ page }) => {
+  // A daily-model file of the wrong shape (as a broken nightly step could write) is served to the page.
+  await page.route('**/live/api/wide-daily', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ generatedAt: 'x', params: {}, pools: { 'u-3': { windows: { w365: {} } } } }) }),
+  );
+  await page.goto(`${LIVE}/live/`);
+  await expect(page.locator('.paper-pool-card')).toHaveCount(6);
+  await page.locator('.telemetry-title', { hasText: 'WIDE ranking' }).click();
+  await expect(page.locator('.live-section-failed')).toContainText('WIDE ranking: this section could not be shown.');
+  await expect(page.locator('.paper-pool-card')).toHaveCount(6);
+  await expect(page.locator('.telemetry-title', { hasText: 'Observation analysis' })).toBeVisible();
 });

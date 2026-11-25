@@ -1108,7 +1108,8 @@ or a drive or home path.
 **Outbound hosts** (review of 25 Nov 2026; a fixed list the owner approves at CC-Win). From `bot/config.ts`,
 `src/utils/advisor.ts` and the DefiLlama fetch: the public RPCs `eth.drpc.org`, `base.drpc.org`, `arbitrum.drpc.org`,
 `ethereum-rpc.publicnode.com`, `base-rpc.publicnode.com`, `arbitrum-one-rpc.publicnode.com`, `eth.llamarpc.com`,
-`base.llamarpc.com`, `1rpc.io`, and `yields.llama.fi` for the daily ranking. Nothing else (no Telegram, no HyperSync,
+`base.llamarpc.com`, `1rpc.io`, `yields.llama.fi` for the daily ranking, and `coins.llama.fi` (token prices for the
+WIDE ranking and the daily model; found in 5.5, 25 Nov). Nothing else (no Telegram, no HyperSync,
 no wallet relay). When a host fails, the observer keeps the last value, marks its data age (the telemetry table's
 "Data age" column and the status dot), tries the next fallback RPC on the next cycle, and never retries in a tight
 loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale data as stale.
@@ -1136,7 +1137,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   (calls per host and hour, failure share per host, which pools open, whether Arbitrum 0.05% opens on public hosts).
   The full-day and multi-day measurement moves to 5.6 on the box. The paper positions opened on the Mac are
   throwaway; the fresh start is at go-live.
-- **5.2** The chat server forwards `/live/api/*` to the bot server on 127.0.0.1 (the allow-list again, timeouts, no
+- [ ] **5.2** (built and reviewed by the analysis session; owner's tick pending) The chat server forwards `/live/api/*` to the bot server on 127.0.0.1 (the allow-list again, timeouts, no
   write method), so the page stays same-origin and the CSP unchanged. S.
   From the 5.1 review: a short response cache in front of the bot API (30 s per route and `hours` value, a few allowed
   `hours` values instead of any number), a response size cap, and the chat server's rate limit on `/live/api/*`; the
@@ -1146,7 +1147,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   its own rate limiter (600 per visitor per hour, 5 000 per day, 200 000 site-wide), the bot URL loopback only.
   Worst-case responses at 168 h, estimated from the row formats: paper 1.04 MB (4 032 history rows and 500 events),
   history 0.69 MB; both under the cap, the bot API's own limit (30 days, 20 000 rows) is never reached through it.
-- **5.3** The "Live" page: the second entry, the cockpit shell, the paper summary (B), the paper panel with start
+- [ ] **5.3** (built and reviewed by the analysis session; owner's tick pending) The "Live" page: the second entry, the cockpit shell, the paper summary (B), the paper panel with start
   dates, the legend, the "Archive / Live" switch on both pages, the demonstration notice; guard and viem helper;
   Playwright with a fixture bot API. M.
   First cut 25 Nov (`showcase/live/`, served at `/live/`): the cockpit shell, the summary turned to the virtual
@@ -1164,7 +1165,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   NoWalletPlugin; a value import of `src/hooks/useBotApi` fails the build); the archive page shows the Live link only
   when /api/health says `live: true`, and without SERVE_LIVE_BOT_URL `/live`, its page and its API are the plain 404,
   so an archive deploy before 5.6 looks as it did. Both cases are in live.spec.ts.
-- **5.4** Telemetry and observation analysis on the page, read only; the walk-forward table from the period's result
+- [ ] **5.4** (built and reviewed by the analysis session; owner's tick pending) Telemetry and observation analysis on the page, read only; the walk-forward table from the period's result
   files, dated. S.
   Built 25 Nov: the original `BotTelemetry` and `ObservationAnalysis` on the Live page, read only (base `/live`, no
   token); a fixed caption dates the walk-forward tables (research period, 720 days, 30-day steps, computed 22.09.2026).
@@ -1176,9 +1177,19 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   value range under the equity chart (optional props of PaperTradingPanel and Sparkline; without them the original
   renders as before, proven by `showcase/live/panel.test.tsx` against a snapshot taken before the change); in the
   original too: the pending pool's own text and en-US for the two amounts that used the browser's locale.
-- **5.5** Both rankings with the gate columns: the daily ranking live (DefiLlama fetch plus the selector, daily), the
+- [ ] **5.5** (built 25 Nov; review pending, then the owner's tick) Both rankings with the gate columns: the daily ranking live (DefiLlama fetch plus the selector, daily), the
   wide ranking and daily model nightly (light steps of the pipeline), the full-run column and candidate verdicts fixed
   from the period and dated. M.
+  Built 25 Nov: both `TopRankingPanel` variants on the Live page, unchanged in src/, fed read-only from
+  `/live/api/{ranking,wide-ranking,wide-daily,wide-backtests,candidates}` (30-minute poll). Nightly steps in
+  `bot/live-nightly.ts`, run by `bot/live.ts` once a day after 05:00 local: fetch-llama-history, wide-score, wide-daily,
+  as child processes with the checked environment, outcome in `<state>/nightly-state.json`; on a cold start the
+  DefiLlama fetch runs before the observer, because the selector skips the whole day without it. The scripts gained
+  `BOT_DATA_DIR` and `BOT_LLAMA_DIR` (defaults unchanged) and `path.resolve` for an absolute state folder. Measured on
+  the Mac: wide-score 4 s, wide-daily 22 s, fetch 512 s. Fixed and dated on the page: candidate verdicts (seed list,
+  17 and 19 Aug 2026); the full-run file (`wide-backtests.json`, written by wide-collect) was not found on the Mac,
+  so the column stays empty. Open for 5.6: whether the old box still holds it. Each Live section now renders inside
+  an error boundary, so one malformed data file fails only its own section (tested).
 - **5.6** On the box: the observer and the bot server as tasks under `homos-web` with the supervisor, state folder,
   RPC settings, the daily and nightly steps; measured; then public on the owner's word. M.
   From the 5.1 review: if a paid RPC key arrives through `RPC_MAINNET`, `RPC_BASE` or `RPC_ARBITRUM`, no log line may
@@ -1233,6 +1244,9 @@ What follows is recorded so that the Live page and the case study do not oversta
   walk-forward tables (720d-30d) also describe the hybrid. The Live page says which rule each section shows.
   Playing the hybrid in the paper step is not part of 5.x: it belongs to the later "two strategies on the same pool"
   item.
+- **The real-capital figures are outside both findings.** The Archive page's real-capital numbers (positions,
+  fees, gas, the tranche) are measured from the chain through the ledger, not modelled, so neither the fee scaling
+  nor the paper rule touches them.
 
 ### 12.3 Open questions for the owner
 

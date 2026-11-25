@@ -11,9 +11,11 @@ import BotTelemetry from '../../src/components/BotTelemetry';
 import ExpandableSection from '../../src/components/ExpandableSection';
 import ObservationAnalysis from '../../src/components/ObservationAnalysis';
 import PaperTradingPanel from '../../src/components/PaperTradingPanel';
+import TopRankingPanel from '../../src/components/TopRankingPanel';
 import type { BotStateShape, PaperData, UseBotApi } from '../../src/hooks/useBotApi';
 import { feeYieldExample, strategyLabel } from './labels';
-import { useLiveBot } from './useLiveBot';
+import { SectionBoundary } from './SectionBoundary';
+import { useLiveBot, useLiveRankings } from './useLiveBot';
 
 /** The network of a paper pool, from its id (mainnet-, base-, arbitrum-). */
 export const networkOf = (poolId: string): string =>
@@ -90,14 +92,15 @@ const TelemetryNotes: FC<{ pools: NonNullable<BotStateShape['pools']> }> = ({ po
 
 export const LivePage: FC = () => {
   const live = useLiveBot();
+  const rankings = useLiveRankings();
   const summary = live.paper ? paperSummary(live.paper) : null;
   // The panel reads only `paper` and `paperStatus`; the rest of the cockpit hook (token, address, actions) has no
   // counterpart here on purpose.
   // Telemetry and observation analysis read `state`, `apiBase` and `apiToken`: the base is this page's forward and the
   // token is empty (the forward needs none), so they fetch /live/api/history and /live/api/results only.
-  const bot = { paper: live.paper, paperStatus: live.paperStatus, state: live.state, apiBase: '/live', apiToken: '' } as Pick<
+  const bot = { paper: live.paper, paperStatus: live.paperStatus, state: live.state, apiBase: '/live', apiToken: '', ...rankings } as Pick<
     UseBotApi,
-    'paper' | 'paperStatus' | 'state' | 'apiBase' | 'apiToken'
+    'paper' | 'paperStatus' | 'state' | 'apiBase' | 'apiToken' | keyof typeof rankings
   > as UseBotApi;
   return (
     <div className="app live-app">
@@ -131,11 +134,30 @@ export const LivePage: FC = () => {
             cash on the trend signal. The research run of August and September 2026 played the same rule.
           </div>
           <ExpandableSection title="📊 Paper trading" defaultExpanded={true}>
-            <PaperTradingPanel bot={bot} poolLabel={withNetwork} showStartDate showValueRange />
+            <SectionBoundary name="Paper trading">
+              <PaperTradingPanel bot={bot} poolLabel={withNetwork} showStartDate showValueRange />
+            </SectionBoundary>
           </ExpandableSection>
-          <BotTelemetry bot={bot} hideRawState hideWatchedPositions feeYieldLabel="Fee yield of the active tick, %/day" />
+          <SectionBoundary name="Bot telemetry">
+            <BotTelemetry bot={bot} hideRawState hideWatchedPositions feeYieldLabel="Fee yield of the active tick, %/day" />
+          </SectionBoundary>
           <TelemetryNotes pools={live.state?.pools ?? []} />
-          <ObservationAnalysis bot={bot} poolLabel={withNetwork} strategyLabel={strategyLabel} showScale />
+          <SectionBoundary name="Observation analysis">
+            <ObservationAnalysis bot={bot} poolLabel={withNetwork} strategyLabel={strategyLabel} showScale />
+          </SectionBoundary>
+          <SectionBoundary name="Daily ranking">
+            <TopRankingPanel bot={bot} />
+          </SectionBoundary>
+          <SectionBoundary name="WIDE ranking">
+            <TopRankingPanel bot={bot} variant="wide" />
+          </SectionBoundary>
+          <div className="live-stat-note live-ranking-note">
+            Rankings: the daily ranking is recomputed every morning from DefiLlama data, the WIDE ranking and its 365d/720d
+            columns every night (light steps of the research pipeline). The full-run column and the candidate verdicts are
+            fixed results of the research period and are not recomputed: the verdicts date from 17.08.2026 and 19.08.2026,
+            and the full-run file of the period is not part of this copy, so that column stays empty. &quot;Played by the
+            bot&quot; marks the six pools of the simulation above.
+          </div>
           <div className="live-stat-note live-walkforward-note">
             Walk-forward tables in the observation analysis are research-period results (720 days of history, 30-day
             steps), computed on 22.09.2026 and fixed; they are not recomputed on live data. WETH/cbBTC 0.30% · Base has

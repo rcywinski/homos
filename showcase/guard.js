@@ -80,6 +80,7 @@ const LIVE_OWN_SOURCES = [
   'showcase/live/useLiveBot.ts',
   'showcase/live/formatters.ts',
   'showcase/live/labels.ts',
+  'showcase/live/SectionBoundary.tsx',
   'src/components/ExpandableSection.tsx',
   'src/components/PaperTradingPanel.tsx',
   'src/components/PositionCharts.tsx',
@@ -87,6 +88,7 @@ const LIVE_OWN_SOURCES = [
   'src/components/BotTelemetry.tsx',
   'src/components/CycleLine.tsx',
   'src/components/ObservationAnalysis.tsx',
+  'src/components/TopRankingPanel.tsx',
 ];
 
 /**

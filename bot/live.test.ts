@@ -11,6 +11,7 @@ import os from 'os';
 import path from 'path';
 import { BOT_POOLS } from './config';
 import { liveStartProblem } from './live';
+import { NIGHTLY_AFTER_HOUR, NIGHTLY_STEPS, nightlyDue } from './live-nightly';
 import { createPublicBotApp, RESULT_NAMES } from './server-public';
 
 let passed = 0;
@@ -64,7 +65,14 @@ function reachable(entry: string): { files: string[]; external: Set<string> } {
 }
 
 function noSigning() {
+  // The entry, plus the nightly steps it runs as child processes (bot/live-nightly.ts NIGHTLY_STEPS).
   const { files, external } = reachable(path.join(ROOT, 'bot', 'live.ts'));
+  for (const step of NIGHTLY_STEPS) {
+    const r = reachable(path.join(ROOT, 'scripts', `${step}.ts`));
+    for (const f of r.files) if (!files.includes(f)) files.push(f);
+    for (const x of r.external) external.add(x);
+  }
+  check('the nightly steps are scanned', files.some((f) => f.endsWith(path.join('scripts', 'wide-daily.ts'))));
   check('the observer is reachable from the entry', files.some((f) => f.endsWith(path.join('bot', 'observer.ts'))) && files.some((f) => f.endsWith(path.join('bot', 'paper.ts'))));
   const forbidden = /\b(createWalletClient|privateKeyToAccount|mnemonicToAccount|hdKeyToAccount|signTransaction|sendTransaction|writeContract|signMessage|signTypedData)\b/;
   const hits = files.filter((f) => forbidden.test(readFileSync(f, 'utf8'))).map((f) => path.relative(ROOT, f));
@@ -136,7 +144,16 @@ async function publicApi() {
   }
 }
 
+function nightly() {
+  const at = (h: number) => new Date(2026, 10, 25, h, 30);
+  const today = '2026-11-25';
+  check('nightly not due before the hour', !nightlyDue({}, at(NIGHTLY_AFTER_HOUR - 1)));
+  check('nightly due after the hour with no run today', nightlyDue({ lastOkDay: '2026-11-24' }, at(NIGHTLY_AFTER_HOUR)));
+  check('nightly not due after a complete run today', !nightlyDue({ lastOkDay: today }, at(23)));
+}
+
 async function main() {
+  nightly();
   startChecks();
   noSigning();
   await publicApi();

@@ -63,6 +63,20 @@ mkdirSync(path.join(dir, 'results'), { recursive: true });
 for (const id of ['mainnet-usdc-weth-030', 'base-weth-usdc-030']) {
   writeFileSync(path.join(dir, 'results', `walkforward-${id}-720d-30d.json`), JSON.stringify({ id, source: '/Users/owner/backtest', summary: { hybrid: { mean: 1.25, winPct: 62, worst: -3.5 }, hodl: { mean: 0.4, winPct: 51, worst: -9.1 }, ...(id === 'base-weth-usdc-030' ? { 'Pasywny ±50%': { mean: 0.1, winPct: 50, worst: -11.7 } } : {}) } }));
 }
+// Both rankings and the daily model, as the selector and the nightly steps write them (rows carry bait fields).
+const rankRow = (rank: number, symbol: string, chain: string, botPoolId: string | null, uuid: string) => ({
+  rank, symbol, chain, poolMeta: '0.05%', apy7d: 40 - rank, streak: 4, eligible: true, tvlUsd: 5_000_000, botPoolId, llamaUuid: uuid,
+  link: 'https://defillama.example/pool', addr: OWNER_BAIT,
+});
+const day = iso(0).slice(0, 10);
+writeFileSync(path.join(dir, 'selector-ranking.json'), JSON.stringify({ day, generatedAt: iso(0), criteria: { window: '7d', persistDays: 3, minTvlUsd: 1_000_000, source: RPC_BAIT },
+  rows: [rankRow(1, 'WETH-USDC', 'Base', 'base-weth-usdc-030', 'u-1'), rankRow(2, 'WETH-USDT', 'Ethereum', null, '3a2f2faf-6423-4569-ad93-821c54cbe702')] }));
+writeFileSync(path.join(dir, 'wide-ranking.json'), JSON.stringify({ day, generatedAt: iso(0), criteria: { window: '30d' },
+  rows: [{ ...rankRow(1, 'TBTC-WBTC', 'Ethereum', null, 'u-3'), cls: 'pegged-btc', feeAprWide: 3.1, dragPct: 0.4, sigmaAnnPct: 2, driftFlag: false, wOursPct: 5 }] }));
+writeFileSync(path.join(dir, 'wide-daily.json'), JSON.stringify({ generatedAt: iso(0), params: {}, pools: {
+  'u-3': { symbol: 'TBTC-WBTC', chain: 'Ethereum', cls: 'pegged-btc', widthPct: 5, feeCapture: 0.5, ageDays: 900, windows: { w365: { n: 13, latest: { lpPct: -28.24, hodlPct: -29.73, deltaPct: 1.49, feesPct: 3, inRangePct: 100, recenters: 0 }, medLpPct: -20, medHodlPct: -21, medDeltaPct: 1.99, worstDeltaPct: -1, winPct: 70 }, w720: null }, flatPct365: 100, feeAprMean365: 3 },
+} }));
+
 // Pool state as the observer publishes it: for the cbBTC pools "ethUsd" is the price of cbBTC (as on the box), and
 // the suggestion is in the pool's raw orientation (token1 per token0).
 const statePools = [

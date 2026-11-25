@@ -11,12 +11,16 @@
  *     owner's watch address, Telegram, HyperSync or Envio tokens, or an Anthropic key;
  *   - the state folder is given, absolute, and is not inside the repo;
  *   - BOT_MODE=live, so the observer runs only its wallet-free loops (prices, statistics, gas, the paper step, the
- *     selector).
+ *     selector);
+ *   - the nightly data steps (bot/live-nightly.ts: DefiLlama history, WIDE ranking, daily model) run once a day after
+ *     05:00 local, as child processes with this same checked environment; on a cold start (no DefiLlama universe in
+ *     the state folder yet) the first fetch runs before the observer, so the selector has data on its first check.
  * The observer reads the chain through viem's public client only (no account, no key, no wallet client); a test
  * (bot/live.test.ts) checks that no signing API is reachable from this entry.
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { nightlyDue, readNightly, runNightly } from './live-nightly';
 
 /** Environment variables that must not be present in the Live process. */
 export const FORBIDDEN_ENV = /^(PRIVATE_KEY|.*_PRIVATE_KEY|MNEMONIC|.*_MNEMONIC|SEED_PHRASE|BOT_WATCH_ADDRESS|TG_TOKEN|TG_CHAT|HYPERSYNC_BEARER_TOKEN|ENVIO_API_TOKEN|ANTHROPIC_API_KEY|WALLET_CONNECT_PROJECT_ID|BOT_API_TOKEN)$/i;
@@ -79,7 +83,31 @@ async function main() {
   process.env.BOT_LLAMA_DIR ??= path.join(process.env.BOT_STATE_DIR!, 'llama');
   // dotenv/config (imported by the observer) reads this path; it does not exist, so nothing is loaded.
   process.env.DOTENV_CONFIG_PATH = path.join(process.env.BOT_STATE_DIR!, '.no-env-file');
+  // Every data folder of the demo lives in the state folder, none in the clone (a redeploy replaces the clone).
+  process.env.BOT_DATA_DIR ??= path.join(process.env.BOT_STATE_DIR!, 'data');
   if (process.env.LIVE_COUNT_CALLS === '1') countCalls(process.env.BOT_STATE_DIR!);
+  const stateDir = process.env.BOT_STATE_DIR!;
+  const repoRoot = path.join(__dirname, '..');
+  const log = (m: string) => {
+    const line = `${new Date().toISOString()} ${m}`;
+    console.log(line);
+    fs.appendFileSync(path.join(stateDir, 'observer.log'), line + '\n');
+  };
+  fs.mkdirSync(stateDir, { recursive: true });
+  if (process.env.LIVE_NIGHTLY !== '0') {
+    if (!fs.existsSync(path.join(process.env.BOT_LLAMA_DIR!, 'universe.json'))) {
+      log('cold start: fetching the DefiLlama history before the observer (the selector needs it)');
+      await runNightly(stateDir, repoRoot, log, ['fetch-llama-history']);
+    }
+    let running = false;
+    const tick = () => {
+      if (running || !nightlyDue(readNightly(stateDir))) return;
+      running = true;
+      void runNightly(stateDir, repoRoot, log).finally(() => (running = false));
+    };
+    setInterval(tick, 10 * 60_000);
+    setTimeout(tick, 60_000);
+  }
   await import('./observer');
 }
 
