@@ -12,24 +12,27 @@ const BOT = 'http://127.0.0.1:8811';
 const SNAPSHOT = path.join('showcase', 'e2e', 'fixtures', 'harness.before.html');
 
 /** The agreed visible changes in the original app (owner, 25 Nov 2026): [what, before, after]. */
-export const AGREED: [string, RegExp, string][] = [
-  // Item b of the 5.4 review: pools without a stablecoin leg show their price per cbBTC and the range in WETH per cbBTC.
-  ['cbBTC 0.05% price per cbBTC', /(base-cbbtc-weth-005<\/td><td>)\$100,000(<\/td>)/, '$1$$100,000/cbBTC$2'],
-  ['cbBTC 0.05% range in WETH per cbBTC', /(base-cbbtc-weth-005<\/td>(?:<td>[^<]*<\/td>){4}<td>)\$26 – \$50(<\/td>)/, '$125.6 – 50.3 WETH per cbBTC$2'],
-  ['cbBTC 0.30% price per cbBTC', /(base-weth-cbbtc-030<\/td><td>)\$100,000(<\/td>)/, '$1$$100,000/cbBTC$2'],
-  ['cbBTC 0.30% range in WETH per cbBTC', /(base-weth-cbbtc-030<\/td>(?:<td>[^<]*<\/td>){4}<td>)\$32 – \$40(<\/td>)/, '$132.3 – 39.8 WETH per cbBTC$2'],
-];
+/**
+ * The agreed visible changes in the original app, relative to the snapshot: [what, before, after]. The snapshot was
+ * retaken on 25 Nov 2026 from the src/ of 4427528, which already holds the earlier agreed changes (the cbBTC units,
+ * checked against the first snapshot in 04108dc); since then the components only gained optional props, so the list
+ * is empty and the HTML must match exactly.
+ */
+export const AGREED: [string, RegExp, string][] = [];
 
 const normalize = (html: string) =>
   html
     .replace(/(just now|\d+ min ago|\d+ h ago)/g, 'AGE') // the data-age column depends on the clock
     .replace(/ style="[^"]*"/g, ''); // inline styles carry nothing the snapshot is about
 
-test('original telemetry and observation analysis render as before without the Live props', async ({ page }, info) => {
+test('original telemetry, observation analysis and both rankings render as before without the Live props', async ({ page }, info) => {
   test.skip(info.project.name !== 'desktop', 'one viewport is enough for an HTML comparison');
   await page.goto(`${BOT}/harness/`);
   await page.locator('.telemetry-title', { hasText: 'Bot telemetry' }).click();
   await page.locator('.telemetry-title', { hasText: 'Observation analysis' }).click();
+  await page.locator('.telemetry-title', { hasText: 'Daily ranking (TOP 10)' }).click();
+  await page.locator('.telemetry-title', { hasText: 'WIDE ranking' }).click();
+  await expect(page.locator('.topranking-status-in')).toHaveCount(1);
   await expect(page.locator('.observation-walkforward-table')).toHaveCount(2);
   await expect(page.locator('.observation-pool-block svg').first()).toBeVisible();
   const html = normalize(await page.locator('#sections').innerHTML());

@@ -22,6 +22,7 @@ import { getAmountsForLiquidity, sqrtPriceX96ToHumanPrice } from '../src/utils/v
 import { runSelectorIfDue, SelectorProposal } from './selector';
 import { paperTick, LegPrices } from './paper';
 import { updateLedger, readLedger, LedgerEntry } from './ledger';
+import { scrubUrls } from './live-scrub';
 
 const ROOT = path.join(__dirname, '..');
 const DIR = path.resolve(ROOT, STATE_DIR);
@@ -31,7 +32,8 @@ const PROPOSALS_PATH = path.join(DIR, 'proposals.json');
 const LOG_PATH = path.join(DIR, 'observer.log');
 
 const log = (msg: string) => {
-  const line = `${new Date().toISOString()} ${msg}`;
+  // Live demo: no URL in any log line (a paid RPC key would sit in one); the default observer logs as before.
+  const line = `${new Date().toISOString()} ${LIVE_MODE ? scrubUrls(msg) : msg}`;
   console.log(line);
   fs.appendFileSync(LOG_PATH, line + '\n');
 };

@@ -85,6 +85,8 @@ interface Props {
   strategyLabel?: (name: string) => string;
   /** Optional (the Live page): a caption with the price and EMA-gap ranges drawn under each history chart. */
   showScale?: boolean;
+  /** Optional (the Live page): a note shown under the walk-forward tables when the section is open. */
+  footer?: React.ReactNode;
 }
 
 /** Price for a scale caption: whole dollars for USD prices, four significant digits for ratios (cbBTC pools). */
@@ -334,7 +336,7 @@ const WalkforwardPoolBlock: FC<{
   );
 };
 
-const ObservationAnalysis: FC<Props> = ({ bot, poolLabel, strategyLabel, showScale }) => {
+const ObservationAnalysis: FC<Props> = ({ bot, poolLabel, strategyLabel, showScale, footer }) => {
   const pairLabel = (meta: { sym0: string; sym1: string; feeBps: number }) => `${meta.sym0}/${meta.sym1} · ${(meta.feeBps / 10_000).toFixed(2)}%`;
   const [expanded, setExpanded] = useState(false);
   const { points, failed: historyFailed } = useHistory(bot.apiBase, bot.apiToken, 72);
@@ -402,6 +404,7 @@ const ObservationAnalysis: FC<Props> = ({ bot, poolLabel, strategyLabel, showSca
               strategyLabel={strategyLabel}
             />
           ))}
+          {footer}
 
           <div className="morning-note muted observation-footer-note">
             Proposal hit-rate table (what happened N days after the signal) — outside the scope of this section, requires bot-side logic.

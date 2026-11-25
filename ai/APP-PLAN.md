@@ -1177,7 +1177,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   value range under the equity chart (optional props of PaperTradingPanel and Sparkline; without them the original
   renders as before, proven by `showcase/live/panel.test.tsx` against a snapshot taken before the change); in the
   original too: the pending pool's own text and en-US for the two amounts that used the browser's locale.
-- [ ] **5.5** (built 25 Nov; review pending, then the owner's tick) Both rankings with the gate columns: the daily ranking live (DefiLlama fetch plus the selector, daily), the
+- [ ] **5.5** (built and reviewed by the analysis session; owner's tick pending) Both rankings with the gate columns: the daily ranking live (DefiLlama fetch plus the selector, daily), the
   wide ranking and daily model nightly (light steps of the pipeline), the full-run column and candidate verdicts fixed
   from the period and dated. M.
   Built 25 Nov: both `TopRankingPanel` variants on the Live page, unchanged in src/, fed read-only from
@@ -1190,6 +1190,12 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   17 and 19 Aug 2026); the full-run file (`wide-backtests.json`, written by wide-collect) was not found on the Mac,
   so the column stays empty. Open for 5.6: whether the old box still holds it. Each Live section now renders inside
   an error boundary, so one malformed data file fails only its own section (tested).
+  Review follow-ups (25 Nov): at most 3 nightly attempts a day, at least an hour apart (`nightlyDue`, tested); after
+  that the previous day's data stays, and the ranking shows its own day. Each explanation now sits inside the section
+  it explains (optional `footer` prop on BotTelemetry, ObservationAnalysis and TopRankingPanel), left-aligned. The
+  365d/720d legend says what the three numbers are (wide band as LP / HODL 50/50 / difference, percent of the
+  starting capital over the window ending today, from scripts/wide-daily.ts). The empty "full run" column is left out
+  on Live (`hideFullRun`) until its file exists; whether to fetch it from the old box is the owner's decision.
 - **5.6** On the box: the observer and the bot server as tasks under `homos-web` with the supervisor, state folder,
   RPC settings, the daily and nightly steps; measured; then public on the owner's word. M.
   From the 5.1 review: if a paid RPC key arrives through `RPC_MAINNET`, `RPC_BASE` or `RPC_ARBITRUM`, no log line may

@@ -70,11 +70,23 @@ const Notice: FC<{ startedAt: string | null }> = ({ startedAt }) => (
   </>
 );
 
+/** Inside both ranking sections, under their own footnotes. */
+const RankingNote: FC = () => (
+  <div className="live-section-note live-ranking-note">
+    365d and 720d: three numbers, in percent of the starting capital over the window ending today: the wide band as an
+    LP position / holding the two tokens 50/50 / the difference between the two. The daily ranking is recomputed every
+    morning from DefiLlama data, the WIDE ranking and these columns every night. The candidate verdicts (status column)
+    are fixed results of the research period, dated 17.08.2026 and 19.08.2026; the full-run results of the period are
+    not part of this copy, so that column is left out. &quot;Played by the bot&quot; marks the six pools of the
+    simulation above.
+  </div>
+);
+
 /** Under the telemetry table: which rule its suggestion shows, and the fee-yield rule worked out on one row. */
 const TelemetryNotes: FC<{ pools: NonNullable<BotStateShape['pools']> }> = ({ pools }) => {
   const row = pools.map((p) => ({ p, ex: feeYieldExample(p) })).find((x) => x.ex);
   return (
-    <div className="live-stat-note live-telemetry-note">
+    <div className="live-section-note live-telemetry-note">
       The suggested range for the two product pools (WETH/USDC 0.30% and WETH/cbBTC 0.05%, both on Base) and the
       walk-forward tables below show the FlatWide hybrid, the project's later strategy; the simulation above does not
       play it. Fee yield of the active tick: fees per day earned by liquidity sitting exactly at the current price, one
@@ -128,7 +140,7 @@ export const LivePage: FC = () => {
               <span className="morning-stat-label">Fees accrued (estimate from the fee model)</span>
             </div>
           </div>
-          <div className="live-stat-note live-rule-note">
+          <div className="live-section-note live-rule-note">
             How the simulation decides: paper trading plays ALGORITHM v1.2 on all six pools, with k×σ ranges from the
             advisor, a rebalance after 24 h out of range when the cost pays back from fees within 7 days, and an exit to
             cash on the trend signal. The research run of August and September 2026 played the same rule.
@@ -139,30 +151,35 @@ export const LivePage: FC = () => {
             </SectionBoundary>
           </ExpandableSection>
           <SectionBoundary name="Bot telemetry">
-            <BotTelemetry bot={bot} hideRawState hideWatchedPositions feeYieldLabel="Fee yield of the active tick, %/day" />
+            <BotTelemetry
+              bot={bot}
+              hideRawState
+              hideWatchedPositions
+              feeYieldLabel="Fee yield of the active tick, %/day"
+              footer={<TelemetryNotes pools={live.state?.pools ?? []} />}
+            />
           </SectionBoundary>
-          <TelemetryNotes pools={live.state?.pools ?? []} />
           <SectionBoundary name="Observation analysis">
-            <ObservationAnalysis bot={bot} poolLabel={withNetwork} strategyLabel={strategyLabel} showScale />
+            <ObservationAnalysis
+              bot={bot}
+              poolLabel={withNetwork}
+              strategyLabel={strategyLabel}
+              showScale
+              footer={
+                <div className="live-section-note live-walkforward-note">
+                  These walk-forward tables are research-period results (720 days of history, 30-day steps), computed on
+                  22.09.2026 and fixed; they are not recomputed on live data. WETH/cbBTC 0.30% · Base has no table: it
+                  was computed only as a candidate run, under another file name.
+                </div>
+              }
+            />
           </SectionBoundary>
           <SectionBoundary name="Daily ranking">
-            <TopRankingPanel bot={bot} />
+            <TopRankingPanel bot={bot} hideFullRun footer={<RankingNote />} />
           </SectionBoundary>
           <SectionBoundary name="WIDE ranking">
-            <TopRankingPanel bot={bot} variant="wide" />
+            <TopRankingPanel bot={bot} variant="wide" hideFullRun footer={<RankingNote />} />
           </SectionBoundary>
-          <div className="live-stat-note live-ranking-note">
-            Rankings: the daily ranking is recomputed every morning from DefiLlama data, the WIDE ranking and its 365d/720d
-            columns every night (light steps of the research pipeline). The full-run column and the candidate verdicts are
-            fixed results of the research period and are not recomputed: the verdicts date from 17.08.2026 and 19.08.2026,
-            and the full-run file of the period is not part of this copy, so that column stays empty. &quot;Played by the
-            bot&quot; marks the six pools of the simulation above.
-          </div>
-          <div className="live-stat-note live-walkforward-note">
-            Walk-forward tables in the observation analysis are research-period results (720 days of history, 30-day
-            steps), computed on 22.09.2026 and fixed; they are not recomputed on live data. WETH/cbBTC 0.30% · Base has
-            no table: it was computed only as a candidate run, under another file name.
-          </div>
           {live.updatedAt && <div className="live-stat-note">Data read {new Date(live.updatedAt).toLocaleTimeString('pl-PL')}, refreshed every minute.</div>}
         </div>
       </div>

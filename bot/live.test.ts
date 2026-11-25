@@ -11,7 +11,8 @@ import os from 'os';
 import path from 'path';
 import { BOT_POOLS } from './config';
 import { liveStartProblem } from './live';
-import { NIGHTLY_AFTER_HOUR, NIGHTLY_STEPS, nightlyDue } from './live-nightly';
+import { NIGHTLY_AFTER_HOUR, NIGHTLY_MAX_ATTEMPTS, NIGHTLY_STEPS, nightlyDue } from './live-nightly';
+import { installConsoleScrub, scrubUrls } from './live-scrub';
 import { createPublicBotApp, RESULT_NAMES } from './server-public';
 
 let passed = 0;
@@ -150,9 +151,32 @@ function nightly() {
   check('nightly not due before the hour', !nightlyDue({}, at(NIGHTLY_AFTER_HOUR - 1)));
   check('nightly due after the hour with no run today', nightlyDue({ lastOkDay: '2026-11-24' }, at(NIGHTLY_AFTER_HOUR)));
   check('nightly not due after a complete run today', !nightlyDue({ lastOkDay: today }, at(23)));
+  const failedAt = (h: number, count: number) => ({ lastOkDay: '2026-11-24', attempts: { day: today, count, lastAt: at(h).toISOString() } });
+  check('after a failed attempt: not due within the hour', !nightlyDue(failedAt(6, 1), new Date(at(6).getTime() + 59 * 60_000)));
+  check('after a failed attempt: due again after an hour', nightlyDue(failedAt(6, 1), new Date(at(6).getTime() + 60 * 60_000)));
+  check(`at most ${NIGHTLY_MAX_ATTEMPTS} attempts a day`, !nightlyDue(failedAt(6, NIGHTLY_MAX_ATTEMPTS), at(23)));
+  check('the attempt count starts over the next day', nightlyDue({ lastOkDay: '2026-11-24', attempts: { day: '2026-11-24', count: 3, lastAt: at(23).toISOString() } }, at(NIGHTLY_AFTER_HOUR)));
+}
+
+function scrub() {
+  const key = 'https://base-mainnet.g.alchemy.com/v2/SECRETKEY123';
+  const viemLike = `HTTP request failed.\n\nStatus: 429\nURL: ${key}\nRequest body: {"method":"eth_getLogs"}`;
+  check('a keyed RPC URL is removed', !scrubUrls(viemLike).includes('SECRETKEY123') && scrubUrls(viemLike).includes('URL: [url]'));
+  check('a bare host keeps its name', scrubUrls('failed: https://eth.drpc.org') === 'failed: [url eth.drpc.org]');
+  check('credentials and queries are removed', !/secret|k=1/.test(scrubUrls('wss://user:secret@rpc.example/ws https://x.example/?k=1')));
+  check('text without a URL is unchanged', scrubUrls('stats base-weth-usdc-030 failed: timeout') === 'stats base-weth-usdc-030 failed: timeout');
+  const seen: string[] = [];
+  const fake = { log: (...a: unknown[]) => seen.push(a.join(' ')), info: (...a: unknown[]) => seen.push(a.join(' ')), warn: (...a: unknown[]) => seen.push(a.join(' ')), error: (...a: unknown[]) => seen.push(a.join(' ')) };
+  installConsoleScrub(fake);
+  fake.warn('advisor getLogs chunk failed:', viemLike);
+  fake.error(new Error(`boom at ${key}`));
+  check('the console wrapper scrubs strings and errors', seen.length === 2 && seen.every((l) => !l.includes('SECRETKEY123')), seen.join(' | '));
+  const obs = readFileSync(path.join(ROOT, 'bot', 'observer.ts'), 'utf8');
+  check('the observer log() scrubs in Live mode', /LIVE_MODE \? scrubUrls\(msg\) : msg/.test(obs));
 }
 
 async function main() {
+  scrub();
   nightly();
   startChecks();
   noSigning();

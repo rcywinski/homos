@@ -21,6 +21,8 @@ interface Props {
   hideWatchedPositions?: boolean;
   /** Optional (the Live page): the header of the fee-yield column. */
   feeYieldLabel?: string;
+  /** Optional (the Live page): a note shown at the end of the section when it is open. */
+  footer?: React.ReactNode;
 }
 
 const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -68,7 +70,7 @@ const suggestedUsdRange = (pool: BotPoolLive): { lo: number; hi: number } | null
   return { lo: 1 / s.priceUpper, hi: 1 / s.priceLower };
 };
 
-const BotTelemetry: FC<Props> = ({ bot, hideRawState, hideWatchedPositions, feeYieldLabel }) => {
+const BotTelemetry: FC<Props> = ({ bot, hideRawState, hideWatchedPositions, feeYieldLabel, footer }) => {
   const [expanded, setExpanded] = useState(false);
   const [showJson, setShowJson] = useState(false);
 
@@ -170,6 +172,7 @@ const BotTelemetry: FC<Props> = ({ bot, hideRawState, hideWatchedPositions, feeY
               </button>
             )}
           </div>
+          {footer}
         </div>
       )}
 

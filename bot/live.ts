@@ -21,6 +21,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { nightlyDue, readNightly, runNightly } from './live-nightly';
+import { installConsoleScrub, scrubUrls } from './live-scrub';
 
 /** Environment variables that must not be present in the Live process. */
 export const FORBIDDEN_ENV = /^(PRIVATE_KEY|.*_PRIVATE_KEY|MNEMONIC|.*_MNEMONIC|SEED_PHRASE|BOT_WATCH_ADDRESS|TG_TOKEN|TG_CHAT|HYPERSYNC_BEARER_TOKEN|ENVIO_API_TOKEN|ANTHROPIC_API_KEY|WALLET_CONNECT_PROJECT_ID|BOT_API_TOKEN)$/i;
@@ -79,6 +80,8 @@ async function main() {
     process.exit(1);
   }
   process.env.BOT_MODE = 'live';
+  // No URL in any console line of this process (the advisor and viem print to the console).
+  installConsoleScrub();
   // The DefiLlama history for the selector lives in the state folder too, not in the clone (a redeploy replaces it).
   process.env.BOT_LLAMA_DIR ??= path.join(process.env.BOT_STATE_DIR!, 'llama');
   // dotenv/config (imported by the observer) reads this path; it does not exist, so nothing is loaded.
@@ -89,7 +92,7 @@ async function main() {
   const stateDir = process.env.BOT_STATE_DIR!;
   const repoRoot = path.join(__dirname, '..');
   const log = (m: string) => {
-    const line = `${new Date().toISOString()} ${m}`;
+    const line = `${new Date().toISOString()} ${scrubUrls(m)}`;
     console.log(line);
     fs.appendFileSync(path.join(stateDir, 'observer.log'), line + '\n');
   };

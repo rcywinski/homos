@@ -76,8 +76,15 @@ test('Live: networks, start dates, value ranges, telemetry, observation analysis
   await expect(page.locator('.topranking-status-in')).toHaveCount(1); // the simulation's pool
   await expect(page.getByText('WETH-USDT').first()).toBeVisible();
   await expect(page.getByText('TBTC-WBTC').first()).toBeVisible();
-  await expect(page.locator('.live-ranking-note')).toContainText('fixed results of the research period');
-  await expect(page.locator('.live-ranking-note')).toContainText('17.08.2026 and 19.08.2026');
+  await expect(page.locator('.live-ranking-note')).toHaveCount(2); // inside each ranking section
+  await expect(page.locator('.live-ranking-note').first()).toContainText('fixed results of the research period');
+  await expect(page.locator('.live-ranking-note').first()).toContainText('LP position / holding the two tokens 50/50 / the difference');
+  await expect(page.locator('.telemetry-table th', { hasText: 'full run' })).toHaveCount(0);
+  // Each note sits inside the section it explains.
+  for (const cls of ['live-telemetry-note', 'live-walkforward-note', 'live-ranking-note']) {
+    expect(await page.locator(`.telemetry-section .${cls}`).count(), cls).toBeGreaterThan(0);
+  }
+  await expect(page.locator('.live-ranking-note').first()).toContainText('17.08.2026 and 19.08.2026');
   const rankingText = await page.locator('body').innerText();
   expect(rankingText).not.toMatch(/https?:\/\//);
   expect(rankingText).not.toMatch(/0x[0-9a-fA-F]{40}/);
