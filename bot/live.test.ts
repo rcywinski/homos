@@ -11,6 +11,7 @@ import os from 'os';
 import path from 'path';
 import { BOT_POOLS } from './config';
 import { liveStartProblem, rotateLog } from './live';
+import { countCalls, rpcErrorOf } from './live-count';
 import { NIGHTLY_AFTER_HOUR, NIGHTLY_MAX_ATTEMPTS, NIGHTLY_STEPS, nightlyDue, stepsLeft } from './live-nightly';
 import { installConsoleScrub, scrubUrls } from './live-scrub';
 import { createPublicBotApp, RESULT_NAMES } from './server-public';
@@ -202,7 +203,41 @@ function rotation() {
   check('a missing log is not an error', rotateLog(path.join(OUT, 'none.log'), 1000) === false);
 }
 
+async function counting() {
+  check('rpc error in a single body', rpcErrorOf('{"jsonrpc":"2.0","id":1,"error":{"code":-32001,"message":"You\'ve reached the usage limit, see https://x.example/plans"}}')?.startsWith('-32001: ') === true);
+  check('rpc error text has no URL', !rpcErrorOf('{"error":{"code":1,"message":"see https://x.example/a?key=1"}}')!.includes('http'));
+  check('rpc error in a batch', rpcErrorOf('[{"result":"0x1"},{"error":{"code":35,"message":"ranges over 100 blocks"}}]') === '35: ranges over 100 blocks');
+  check('no rpc error in a result', rpcErrorOf('{"jsonrpc":"2.0","id":1,"result":"0x10"}') === null && rpcErrorOf('not json') === null);
+  // The counter over a stub fetch: 200 with a result, 200 with an RPC error, 400, and a network error.
+  const realFetch = globalThis.fetch;
+  const replies: (() => Response)[] = [
+    () => new Response('{"result":"0x1"}', { status: 200, headers: { 'content-type': 'application/json' } }),
+    () => new Response('{"error":{"code":-32001,"message":"usage limit"}}', { status: 200, headers: { 'content-type': 'application/json' } }),
+    () => new Response('{"error":{"code":35,"message":"range"}}', { status: 400, headers: { 'content-type': 'application/json' } }),
+    () => { throw new TypeError('fetch failed https://rpc.example/key'); },
+  ];
+  let n = 0;
+  globalThis.fetch = (async () => replies[n++]()) as unknown as typeof fetch;
+  const file = path.join(OUT, 'net-stats-test.json');
+  const c = countCalls(file);
+  for (let i = 0; i < 4; i++) {
+    try {
+      const r = await fetch('https://rpc.example/v2/KEY', { method: 'POST', body: '{}' });
+      if (i === 0) check('the caller still reads the body', (await r.json()).result === '0x1');
+    } catch {
+      // the network error is rethrown, as without the counter
+    }
+  }
+  globalThis.fetch = realFetch;
+  c.flush();
+  const h = (JSON.parse(readFileSync(file, 'utf8')) as { hosts: Record<string, { calls: number; httpFailures: number; rpcErrors: number; byHour: Record<string, { calls: number }>; lastHttpFailure?: string }> }).hosts['rpc.example'];
+  check('counts: 4 calls, 2 HTTP failures, 1 RPC error', h.calls === 4 && h.httpFailures === 2 && h.rpcErrors === 1, JSON.stringify(h));
+  check('counts per hour add up', Object.values(h.byHour).reduce((a, b) => a + b.calls, 0) === 4);
+  check('no URL or key in the stored failure', !JSON.stringify(h).includes('KEY') && !JSON.stringify(h).includes('rpc.example/'));
+}
+
 async function main() {
+  await counting();
   rotation();
   scrub();
   nightly();

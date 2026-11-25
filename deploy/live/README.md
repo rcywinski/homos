@@ -90,6 +90,25 @@ Left out, with the reason measured on 25 Nov: `eth.llamarpc.com` and `base.llama
 `arbitrum-one-rpc.publicnode.com` (HTTP 403, "Archive requests require a personal token" for any log range),
 `1rpc.io` (served prices, then "reached the usage limit" for the day).
 
+### Known limit: one logs host per chain
+
+After the trimming, each chain has one host that serves the 24 h swap logs (publicnode for Ethereum and Base,
+`arb1.arbitrum.io` for Arbitrum); drpc is the fallback for prices only (its free plan refuses log ranges over 100
+blocks). If the logs host fails, nothing retries in a loop: the next attempt is the next 15-minute cycle. What the code
+does in that state (bot/observer.ts refreshStats, bot/paper.ts paperTick, read on 25 Nov):
+- **Prices keep updating** every 60 s through the fallback, so the position's in-range state stays current.
+- **The statistics are not replaced, they freeze.** `refreshStats` writes new statistics only when they compute; on a
+  failure the pool keeps the last ones. A chunk that fails inside the 24 h read is skipped silently
+  (`fetchRecentSwaps`), so a partial failure can also produce statistics from an incomplete window.
+- **The paper step keeps going on the frozen statistics.** While in range it still accrues fees each cycle with the
+  last fee yield, and after 24 h out of range the rebalance decision uses the last statistics too. It does not pause.
+- **The page does not show it.** The telemetry's "Data age" is the age of the price (60 s loop), not of the
+  statistics, so frozen statistics look fresh.
+
+Proposed for the owner (not built): record the time of the last successful statistics per pool, show it in the Live
+telemetry, and let the paper step skip fee accrual and rebalance decisions when the statistics are older than, say,
+two cycles. The original paper run behaved as above, so this would be a change from it, and is his decision.
+
 ### Arbitrum 0.05%: the owner's decision before go-live
 
 On the original host list the pool never opens: in 2.2 hours, statistics in 0 of 9 cycles (price and tick fine; only
