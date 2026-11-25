@@ -1135,7 +1135,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   dated; real-capital panels only in Archive; hosting on the box beside the chat server; the original cockpit CSS
   scoped to Live. Not yet approved, asked at CC-Win when step 5.6 comes: the outbound host list and everything on the
   box.
-- [ ] NEXT **5.1** Paper observer on the Mac, read only: `bot/observer.ts` with no watch address, state in a folder outside the
+- [x] **5.1** (ticked by the owner, 25 Nov) Paper observer on the Mac, read only: `bot/observer.ts` with no watch address, state in a folder outside the
   repo, public RPCs; one day of running to measure the RPC load and the gaps; `bot/server.ts` in a public read-only
   mode (an allow-list of GET routes, no CORS wildcard, bound to 127.0.0.1, no dismiss, ledger or positions routes),
   with tests. S to M.
@@ -1149,7 +1149,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   (calls per host and hour, failure share per host, which pools open, whether Arbitrum 0.05% opens on public hosts).
   The full-day and multi-day measurement moves to 5.6 on the box. The paper positions opened on the Mac are
   throwaway; the fresh start is at go-live.
-- [ ] **5.2** (built and reviewed by the analysis session; owner's tick pending) The chat server forwards `/live/api/*` to the bot server on 127.0.0.1 (the allow-list again, timeouts, no
+- [x] **5.2** (ticked by the owner, 25 Nov) The chat server forwards `/live/api/*` to the bot server on 127.0.0.1 (the allow-list again, timeouts, no
   write method), so the page stays same-origin and the CSP unchanged. S.
   From the 5.1 review: a short response cache in front of the bot API (30 s per route and `hours` value, a few allowed
   `hours` values instead of any number), a response size cap, and the chat server's rate limit on `/live/api/*`; the
@@ -1159,7 +1159,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   its own rate limiter (600 per visitor per hour, 5 000 per day, 200 000 site-wide), the bot URL loopback only.
   Worst-case responses at 168 h, estimated from the row formats: paper 1.04 MB (4 032 history rows and 500 events),
   history 0.69 MB; both under the cap, the bot API's own limit (30 days, 20 000 rows) is never reached through it.
-- [ ] **5.3** (built and reviewed by the analysis session; owner's tick pending) The "Live" page: the second entry, the cockpit shell, the paper summary (B), the paper panel with start
+- [x] **5.3** (ticked by the owner, 25 Nov) The "Live" page: the second entry, the cockpit shell, the paper summary (B), the paper panel with start
   dates, the legend, the "Archive / Live" switch on both pages, the demonstration notice; guard and viem helper;
   Playwright with a fixture bot API. M.
   First cut 25 Nov (`showcase/live/`, served at `/live/`): the cockpit shell, the summary turned to the virtual
@@ -1177,7 +1177,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   NoWalletPlugin; a value import of `src/hooks/useBotApi` fails the build); the archive page shows the Live link only
   when /api/health says `live: true`, and without SERVE_LIVE_BOT_URL `/live`, its page and its API are the plain 404,
   so an archive deploy before 5.6 looks as it did. Both cases are in live.spec.ts.
-- [ ] **5.4** (built and reviewed by the analysis session; owner's tick pending) Telemetry and observation analysis on the page, read only; the walk-forward table from the period's result
+- [x] **5.4** (ticked by the owner, 25 Nov) Telemetry and observation analysis on the page, read only; the walk-forward table from the period's result
   files, dated. S.
   Built 25 Nov: the original `BotTelemetry` and `ObservationAnalysis` on the Live page, read only (base `/live`, no
   token); a fixed caption dates the walk-forward tables (research period, 720 days, 30-day steps, computed 22.09.2026).
@@ -1189,7 +1189,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   value range under the equity chart (optional props of PaperTradingPanel and Sparkline; without them the original
   renders as before, proven by `showcase/live/panel.test.tsx` against a snapshot taken before the change); in the
   original too: the pending pool's own text and en-US for the two amounts that used the browser's locale.
-- [ ] **5.5** (built and reviewed by the analysis session; owner's tick pending) Both rankings with the gate columns: the daily ranking live (DefiLlama fetch plus the selector, daily), the
+- [x] **5.5** (ticked by the owner, 25 Nov) Both rankings with the gate columns: the daily ranking live (DefiLlama fetch plus the selector, daily), the
   wide ranking and daily model nightly (light steps of the pipeline), the full-run column and candidate verdicts fixed
   from the period and dated. M.
   Built 25 Nov: both `TopRankingPanel` variants on the Live page, unchanged in src/, fed read-only from
@@ -1208,7 +1208,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   365d/720d legend says what the three numbers are (wide band as LP / HODL 50/50 / difference, percent of the
   starting capital over the window ending today, from scripts/wide-daily.ts). The empty "full run" column is left out
   on Live (`hideFullRun`) until its file exists; whether to fetch it from the old box is the owner's decision.
-- [ ] **5.5b** (built and reviewed by the analysis session; owner's tick pending) The two-part structure made obvious, page only:
+- [x] **5.5b** (ticked by the owner, 25 Nov) The two-part structure made obvious, page only:
   a site header shared by both pages (`showcase/site-header.tsx`, its own `site-header.css` with fixed light colours
   and a system font, so it looks the same on the archive and on Live): the neutral site name and two tabs, "Research
   archive" and "Live simulation", each with one line, the current one marked (`aria-current`, at least 44 px high); a
@@ -1216,7 +1216,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   notice). The Live tab and card appear only when /api/health says `live: true`. Light only for everyone (owner,
   25 Nov: "nie chce ciemnego w ogole"): the archive's dark block is removed from `showcase/public/styles.css`,
   `color-scheme: light` on the archive, Live and admin pages. Contrast checked in light (all pairs 5.2:1 or more).
-- **5.6** On the box: the observer and the bot server as tasks under `homos-web` with the supervisor, state folder,
+- [ ] NEXT **5.6** On the box: the observer and the bot server as tasks under `homos-web` with the supervisor, state folder,
   RPC settings, the daily and nightly steps; measured; then public on the owner's word. M.
   From the 5.1 review: if a paid RPC key arrives through `RPC_MAINNET`, `RPC_BASE` or `RPC_ARBITRUM`, no log line may
   carry the URL. Checked on the Mac: the observer's `log()` and the advisor's warning printed no URL in the smoke run
