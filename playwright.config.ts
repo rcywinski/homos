@@ -36,7 +36,7 @@ const server = (name: string, port: number, extra: Record<string, string>) => ({
   },
 });
 
-export const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807, switching: 8808, fakeAccess: 8809, admin: 8810, liveBot: 8811, live: 8812 };
+export const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807, switching: 8808, fakeAccess: 8809, admin: 8810, liveBot: 8811, live: 8812, liveDown: 8813 };
 /** Step 4.10c: the admin server's two switch files, written by the admin test. */
 export const ADMIN_MASTER = path.join(os.tmpdir(), 'homos-e2e-admin-SWITCH');
 export const ADMIN_STATE = path.join(os.tmpdir(), 'homos-e2e-admin-state', 'admin-switch');
@@ -102,6 +102,8 @@ export default defineConfig({
           reuseExistingServer: false,
           timeout: 60_000,
         },
+        // The Live forward configured, but nothing listens at the bot address (8814): the page says "unavailable".
+        server('live-down', PORTS.liveDown, { SERVE_LIVE_BOT_URL: 'http://127.0.0.1:8814' }),
         server('live', PORTS.live, { SERVE_LIVE_BOT_URL: `http://127.0.0.1:${PORTS.liveBot}`, SERVE_LIMIT_HOUR: '1000', SERVE_LIMIT_DAY: '1000', SERVE_LIMIT_GLOBAL_DAY: '100000' }),
         {
           command: `node --import tsx ${path.join('showcase', 'e2e', 'static-only.ts')} ${PORTS.staticOnly}`,

@@ -3,7 +3,7 @@
 // Content Security Policy in showcase/public/index.html can forbid eval.
 const path = require('path');
 const webpack = require('webpack');
-const { NoWalletPlugin } = require('./showcase/guard.js');
+const { NoWalletPlugin, LIVE_OWN_SOURCES } = require('./showcase/guard.js');
 require('dotenv').config();
 
 const address = process.env.SHOWCASE_WALLET_ADDRESS || '';
@@ -74,7 +74,9 @@ const livePage = (env, argv) => {
     output: { filename: 'live.js', path: path.resolve(__dirname, 'showcase/public/live') },
     plugins: [
       new webpack.NormalModuleReplacementPlugin(/[\\/]utils[\\/]formatters$/, path.resolve(__dirname, 'showcase/live/formatters.ts')),
-      ...base.plugins,
+      // The package allow-list plus a fixed list of our own modules (see LIVE_OWN_SOURCES).
+      ...base.plugins.filter((p) => !(p instanceof NoWalletPlugin)),
+      new NoWalletPlugin({ ownSources: LIVE_OWN_SOURCES, root: __dirname }),
     ],
     devServer: undefined,
   };

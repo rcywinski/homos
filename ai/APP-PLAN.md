@@ -1160,6 +1160,10 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   on the page, no form, only same-origin GETs, no horizontal scroll, the switch both ways, the bot API down, writes
   and unknown routes refused. Review fix to 5.2: result names from a fixed list (pinned to the bot API's list by a
   test), so the cache keys are finite; errors cached 5 s instead of 30 s.
+  Review of 4db0255: the Live build also pins our own modules (`LIVE_OWN_SOURCES` in showcase/guard.js, enforced by
+  NoWalletPlugin; a value import of `src/hooks/useBotApi` fails the build); the archive page shows the Live link only
+  when /api/health says `live: true`, and without SERVE_LIVE_BOT_URL `/live`, its page and its API are the plain 404,
+  so an archive deploy before 5.6 looks as it did. Both cases are in live.spec.ts.
 - **5.4** Telemetry and observation analysis on the page, read only; the walk-forward table from the period's result
   files, dated. S.
 - **5.5** Both rankings with the gate columns: the daily ranking live (DefiLlama fetch plus the selector, daily), the

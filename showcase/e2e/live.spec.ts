@@ -7,6 +7,7 @@ import { expect, test } from '@playwright/test';
 
 const LIVE = 'http://127.0.0.1:8812';
 const MAIN = 'http://127.0.0.1:8801';
+const LIVE_DOWN = 'http://127.0.0.1:8813';
 
 test('Live: notice, summary, six pool cards, events; only same-origin GETs', async ({ page }) => {
   const requests: { method: string; url: string }[] = [];
@@ -46,8 +47,21 @@ test('Live: the Archive/Live switch works both ways', async ({ page }) => {
   await expect(page).toHaveURL(`${LIVE}/`);
 });
 
-test('Live: without the bot API the panel says it is unavailable', async ({ page }) => {
-  await page.goto(`${MAIN}/live/`);
+test('Live not configured: no Live link on the archive page, /live/ is the plain 404', async ({ page, request }) => {
+  await page.goto(`${MAIN}/`);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('navigation', { name: 'Pages' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Live' })).toHaveCount(0);
+  for (const p of ['/live', '/live/', '/live/live.js', '/live/api/state']) {
+    const r = await request.get(`${MAIN}${p}`);
+    expect(r.status(), p).toBe(404);
+    expect(await r.text(), p).toBe('Not found');
+  }
+});
+
+test('Live configured but the bot API down: the panel says it is unavailable', async ({ page }) => {
+  await page.goto(`${LIVE_DOWN}/live/`);
   await expect(page.getByText('Paper trading unavailable')).toBeVisible();
   await expect(page.locator('.live-notice').first()).toBeVisible();
 });

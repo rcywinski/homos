@@ -2,12 +2,14 @@
  * Tests for the showcase wallet guard (phase 4, step 4.2). Offline.
  * Run: npx tsx showcase/guard.test.ts
  */
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-const { forbiddenPackage, disallowedPackage, ALLOWED_PACKAGES, FORBIDDEN_PACKAGES } = require('./guard.js') as {
+const { forbiddenPackage, disallowedPackage, unlistedOwnSource, LIVE_OWN_SOURCES, ALLOWED_PACKAGES, FORBIDDEN_PACKAGES } = require('./guard.js') as {
+  unlistedOwnSource: (resource: string, root: string, allowed: string[]) => string | null;
+  LIVE_OWN_SOURCES: string[];
   forbiddenPackage: (p: string) => string | null;
   disallowedPackage: (p: string) => string | null;
   ALLOWED_PACKAGES: string[];
@@ -101,6 +103,24 @@ for (const f of sources) {
   }
 }
 check('the scan saw the showcase sources', sources.length >= 8, String(sources.length));
+
+// Phase 5: the Live bundle's own modules are a fixed list, enforced by the build (NoWalletPlugin with ownSources).
+const root = path.resolve('.');
+check('a listed own module passes', unlistedOwnSource(path.join(root, 'src/components/PaperTradingPanel.tsx'), root, LIVE_OWN_SOURCES) === null);
+check('the cockpit data hook is refused', unlistedOwnSource(path.join(root, 'src/hooks/useBotApi.ts'), root, LIVE_OWN_SOURCES) === 'src/hooks/useBotApi.ts');
+check('the viem formatter is refused', unlistedOwnSource(path.join(root, 'src/utils/formatters.ts'), root, LIVE_OWN_SOURCES) === 'src/utils/formatters.ts');
+check('packages are left to the package check', unlistedOwnSource(path.join(root, 'node_modules/react/index.js'), root, LIVE_OWN_SOURCES) === null);
+check('a query string is ignored', unlistedOwnSource(path.join(root, 'showcase/live/index.tsx') + '?x', root, LIVE_OWN_SOURCES) === null);
+check('the Live build uses the own-source list', /new NoWalletPlugin\(\{ ownSources: LIVE_OWN_SOURCES, root: __dirname \}\)/.test(readFileSync('webpack.showcase.config.js', 'utf8')));
+// When the Live bundle is built (CI builds before the tests), its source map lists exactly those modules.
+const mapFile = path.join('showcase', 'public', 'live', 'live.js.map');
+if (existsSync(mapFile)) {
+  const own = (JSON.parse(readFileSync(mapFile, 'utf8')) as { sources: string[] }).sources
+    .filter((x) => !x.includes('node_modules') && !x.startsWith('webpack/') && !x.includes('/webpack/'))
+    .map((x) => x.replace(/^webpack:\/\/[^/]*\/\.\//, ''))
+    .sort();
+  check('the built Live bundle holds exactly the listed own modules', own.join() === [...LIVE_OWN_SOURCES].sort().join(), own.join(', '));
+}
 
 console.log(`guard: ${passed} passed, ${failed} failed (${sources.length} showcase files scanned)`);
 if (failed > 0) process.exit(1);

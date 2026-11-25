@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { health } from './api';
 import { PROJECT_TITLE } from '../ai/serve/texts';
 import { Archive } from './components/Archive';
 import { Ask } from './components/Ask';
@@ -21,13 +22,25 @@ export function App() {
   // The Wallet tab exists only when the server has the wallet data (owner, 16 Nov 2026): never an empty or failing tab.
   const wallet = useWallet();
   const tabs = TABS.filter((t) => t.id !== 'wallet' || wallet.state === 'ready');
+  // Phase 5: the Live link only when this server forwards the Live page's data (`live` in /api/health); otherwise
+  // /live/ is a 404 and the archive page looks as it did before the demo.
+  const [liveOn, setLiveOn] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void health().then((h) => alive && setLiveOn('live' in h && h.live === true));
+    return () => {
+      alive = false;
+    };
+  }, []);
   return (
     <div className="page">
       {/* Phase 5: the two pages, the research archive (this one) and the paper-trading demonstration at /live/. */}
-      <nav className="page-switch" aria-label="Pages">
-        <span aria-current="page">Archive</span>
-        <a href="/live/">Live</a>
-      </nav>
+      {liveOn && (
+        <nav className="page-switch" aria-label="Pages">
+          <span aria-current="page">Archive</span>
+          <a href="/live/">Live</a>
+        </nav>
+      )}
       <header className="masthead">
         <div className="masthead-text">
           <h1>{PROJECT_TITLE}</h1>
