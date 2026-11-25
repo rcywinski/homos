@@ -22,7 +22,7 @@ import { readVerdicts } from './candidates';
 
 const ROOT = path.join(__dirname, '..');
 const LLAMA = path.join(ROOT, 'data', 'llama');
-const SELECTOR_STATE = path.join(ROOT, STATE_DIR, 'selector-state.json');
+const SELECTOR_STATE = path.resolve(ROOT, STATE_DIR, 'selector-state.json');
 
 // --- policy parameters (frozen in docs/ALGORITHM.md; single source of truth here and in the backtest) ---
 const TOP_N = 5;
@@ -244,7 +244,7 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
   // a FAIL/UNMAPPED verdict does not take a place in the top, is not eligible
   // and gets no OPEN proposal — the walkforward gate takes precedence over
   // headline APY (6/7 examined top candidates dropped out).
-  const verdictBy = new Map(readVerdicts(path.join(ROOT, STATE_DIR)).map((v) => [v.llamaPool, v.verdict]));
+  const verdictBy = new Map(readVerdicts(path.resolve(ROOT, STATE_DIR)).map((v) => [v.llamaPool, v.verdict]));
   const isRejected = (uuid: string) => {
     const v = verdictBy.get(uuid);
     return v === 'FAIL' || v === 'UNMAPPED';
@@ -256,7 +256,7 @@ export function runSelectorIfDue(ctx: SelectorCtx): void {
   // in the UI).
   try {
     fs.writeFileSync(
-      path.join(ROOT, STATE_DIR, 'selector-ranking.json'),
+      path.resolve(ROOT, STATE_DIR, 'selector-ranking.json'),
       JSON.stringify({
         day: today(),
         generatedAt: new Date().toISOString(),

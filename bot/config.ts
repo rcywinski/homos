@@ -209,4 +209,15 @@ export const INTERVALS = {
   positionsSec: 5 * 60, // NFT positions read
 };
 
-export const STATE_DIR = '.bot';
+/**
+ * State folder of the observer, the paper ledger and the server. Default `.bot` in the repo (unchanged); the "Live"
+ * demo (phase 5, `bot/live.ts`) sets BOT_STATE_DIR to a folder outside the repo, given as an absolute path.
+ */
+export const STATE_DIR = process.env.BOT_STATE_DIR || '.bot';
+
+/**
+ * Phase 5 "Live" demo (`bot/live.ts` sets BOT_MODE=live): no watched wallet. The observer then runs only the
+ * wallet-free loops (prices, statistics, gas, the paper step, the selector) and skips positions, the ledger,
+ * GMX reads, proposal commands and Telegram. Default off: the existing entry points behave as before.
+ */
+export const LIVE_MODE = process.env.BOT_MODE === 'live';

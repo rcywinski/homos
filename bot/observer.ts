@@ -15,7 +15,7 @@ import * as path from 'path';
 import { createPublicClient, http, fallback, formatUnits, type PublicClient } from 'viem';
 
 import { mainnet, base, arbitrum } from 'viem/chains';
-import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR, TREND, FLAT, TRANCHE } from './config';
+import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR, TREND, FLAT, TRANCHE, LIVE_MODE } from './config';
 import { ADVISOR_PARAMS } from '../src/utils/advisor';
 import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, suggestFixedRange, PoolStats } from '../src/utils/advisor';
 import { getAmountsForLiquidity, sqrtPriceX96ToHumanPrice } from '../src/utils/v3math';
@@ -24,7 +24,7 @@ import { paperTick, LegPrices } from './paper';
 import { updateLedger, readLedger, LedgerEntry } from './ledger';
 
 const ROOT = path.join(__dirname, '..');
-const DIR = path.join(ROOT, STATE_DIR);
+const DIR = path.resolve(ROOT, STATE_DIR);
 fs.mkdirSync(DIR, { recursive: true });
 const STATE_PATH = path.join(DIR, 'state.json');
 const PROPOSALS_PATH = path.join(DIR, 'proposals.json');
@@ -1439,6 +1439,20 @@ async function runLedger() {
 
 // --- start ---
 (async () => {
+  if (LIVE_MODE) {
+    // Phase 5 "Live" demo: no wallet, so only the wallet-free loops; the paper step runs inside refreshStats.
+    log(`observer start — LIVE demo (no wallet), pools=${BOT_POOLS.map((p) => p.id).join(', ')}, state=${DIR}`);
+    await refreshPrices();
+    await refreshStats();
+    await refreshGas();
+    runSelector();
+    setInterval(refreshPrices, INTERVALS.priceSec * 1000);
+    setInterval(refreshGas, 5 * 60 * 1000);
+    setInterval(refreshStats, INTERVALS.statsSec * 1000);
+    setInterval(runSelector, 60 * 60 * 1000);
+    log('LIVE loops started (60s prices / 15min statistics and paper / 5min gas / selector 1x daily)');
+    return;
+  }
   log(`observer start — watch=${WATCH_ADDRESS}, pools=${BOT_POOLS.map((p) => p.id).join(', ')}, mode=OBSERVE`);
   await refreshPrices();
   await refreshStats();

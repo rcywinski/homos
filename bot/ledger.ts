@@ -39,7 +39,7 @@ import * as path from 'path';
 import { keccak256, toBytes } from 'viem';
 import { NFT_MANAGER, WATCH_ADDRESS, STATE_DIR, RPC } from './config';
 
-const DIR = path.join(__dirname, '..', STATE_DIR);
+const DIR = path.resolve(__dirname, '..', STATE_DIR);
 const LEDGER_PATH = path.join(DIR, 'tx-ledger.ndjson');
 const STATE_PATH = path.join(DIR, 'ledger-state.json');
 const CLOSED_PATH = path.join(DIR, 'closed-positions.json');
