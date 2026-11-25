@@ -1,8 +1,10 @@
 {
-  "version": "1.4",
+  "version": "1.5",
   "rules": [
     "A chunk or range is added to evidence only if a human reading it agrees it answers the question; appearing in a retriever's top-k is never the reason.",
-    "Every evaluation result records the golden version it used."
+    "Every evaluation result records the golden version it used.",
+    "An evidence span is 'required' only if a reader could state a fact the reference needs from that span alone; anything that only corroborates it is 'supporting'. Unmarked spans count as required until step 6.2 (b) marks them.",
+    "An item changes because it is defective as a test, never because the system fails it."
   ],
   "changes": [
     {
@@ -29,6 +31,11 @@
       "version": "1.4",
       "date": "2026-11-10",
       "summary": "Reviewed once from the pooled list of 15 runs on v1.3 (ai/eval/review/pool-v1.4.md, 611 chunk-question pairs): the analysis session pre-read the pool and read about 35 candidates in full, the owner decided and checked three against his memory and the journal. Evidence added to why-01, why-02, why-03, why-04, why-06, why-08, why-10, dated-01, dated-02, dated-03, dated-08, id-01, id-02, id-06, id-07; ranges narrowed to the sentence where wider. Not reviewed: the 145 pairs of the partial/no questions. Known limit: most rejected chunks were judged from their first lines, and one long chunk (CONTEXT.md:1721-1776) was first rejected that way and recovered only because the owner questioned it, so v1.4 evidence is a floor, not a complete set."
+    },
+    {
+      "version": "1.5",
+      "date": "2026-11-25",
+      "summary": "Step 6.2 (a), owner review of the five items flagged by the step 6.1 diagnosis (ai/eval/results/2026-11-25-golden-review-cards.md, reviewed by the analysis session): dated-04 and dated-05 unchanged (fair questions; their failures are retrieval failures); dated-09 reference unchanged, spans marked required or supporting; id-03 three report rows added as supporting; dated-01 HANDOFF.md:1166-1170 added as required and HANDOFF.md:1156-1160 as supporting. New optional evidence field 'role'. No question or reference text changed, so judged verdicts are unaffected; retrieval numbers change for id-03 and dated-01 only, see ai/eval/results/2026-11-25-rescore-k10-lists-golden-v1-5.md."
     }
   ]
 }

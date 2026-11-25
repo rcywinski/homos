@@ -10,7 +10,9 @@
  * - how many evidence spans the 10 chunks given to the generator cover (stored lists of 11 Nov; the live guest run of
  *   18 Nov received exactly these lists for all 34 questions).
  * The failure classes are assigned by hand in ai/eval/results/2026-11-25-diagnosis-golden-v1-4.md.
+ * The golden set is read from git at its last v1.4 commit, since the stored ranks were computed on v1.4 evidence.
  */
+import { execFileSync } from 'child_process';
 import { readFileSync } from 'fs';
 import { loadCorpus } from '../corpus/load';
 import { corpusHash } from '../embed/index-file';
@@ -28,6 +30,8 @@ const RUNS: [string, string][] = [
 const FIRST_STAGE = '2026-11-10-meta-index-hybrid-golden-v1-4.json';
 const RERANKED = '2026-11-10-meta-index-hybrid-rerank-golden-v1-4.json';
 const LISTS = '2026-11-11-chunk-lists-k10-golden-v1-4.json';
+/** Last commit with golden v1.4. */
+const GOLDEN_V14 = '666b16a';
 
 interface JudgedItem {
   id: string;
@@ -46,7 +50,7 @@ const letter: Record<string, string> = { correct: 'C', partially_correct: 'P', i
 function main() {
   const chunks = loadCorpus();
   const byId = new Map(chunks.map((c) => [c.id, c]));
-  const golden = readFileSync('ai/eval/golden.jsonl', 'utf8')
+  const golden = execFileSync('git', ['show', `${GOLDEN_V14}:ai/eval/golden.jsonl`], { encoding: 'utf8' })
     .split('\n')
     .filter((l) => l.trim())
     .map((l) => JSON.parse(l) as GoldenQuestion);

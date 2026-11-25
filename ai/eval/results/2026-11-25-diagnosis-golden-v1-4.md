@@ -33,10 +33,10 @@ chat server) and 4.6e guest46e (Sonnet). For each question that was not correct 
 | dated-01 | yes | PCPCCI | 52 | >30 | 0/7 | A not retrieved, date lookup |
 | dated-03 | yes | CCCPCC | 4 | 1 | 3/3 | occasional |
 | dated-04 | yes | IIIIII | 48 | >30 | 0/5 | A not retrieved, date lookup, question ambiguous |
-| dated-05 | yes | IIIIII | 169 | >30 | 0/6 | A not retrieved, wording, question ambiguous |
+| dated-05 | yes | IIIIII | 169 | >30 | 0/6 | A not retrieved, wording |
 | dated-06 | yes | PIIIIP | 14 | 1 | 3/10 | C several chunks |
 | dated-07 | yes | PPIPPP | 10 | 8 | 1/10 | C several chunks, date list |
-| dated-09 | yes | PPPPPP | 1 | 1 | 3/9 | C several chunks, reference broader than the question |
+| dated-09 | yes | PPPPPP | 1 | 1 | 3/9 | C several chunks |
 | dated-10 | yes | PPPPPP | 4 | 3 | 1/5 | C several chunks |
 | id-01 | yes | CCPCCC | 1 | 1 | 6/17 | occasional |
 | id-02 | yes | CCCCPP | 8 | 3 | 3/12 | occasional |
@@ -63,8 +63,10 @@ chat server) and 4.6e guest46e (Sonnet). For each question that was not correct 
 | E reference arguable, retrieval complete | 1 | id-06 | partly |
 | F not retrieval: partly answerable or refusal questions, no evidence spans | 4 | why-07, na-02, na-03, na-07 | mixed |
 
-Secondary tags: date or id lookup (dated-01, dated-04, dated-07); question ambiguous or reference broader than the
-question (dated-04, dated-05, dated-09). The question asked about a first stage "of 50": the served pool is the top 30
+Secondary tags: date or id lookup (dated-01, dated-04, dated-07); question ambiguous (dated-04, by design: the golden
+notes give full credit for naming the meanings). Corrected on 25 Nov after the step 6.2 (a) review
+(`2026-11-25-golden-review-cards.md`): dated-05 is not ambiguous and dated-09's reference is not broader than the
+question; both tags were dropped. The question asked about a first stage "of 50": the served pool is the top 30
 of an RRF list of depth 100.
 
 ## What this says
@@ -75,14 +77,15 @@ of an RRF list of depth 100.
   question split into its parts.
 - **The persistent "incorrect" answers are classes A and B.** Three of the four class A questions have their first
   evidence chunk at first-stage rank 36 to 52, just outside the pool of 30: a deeper rerank pool reaches them. dated-05
-  (rank 169) is a wording gap ("converting a position into a different kind of position" for a perp-short hedge) and an
-  ambiguous question (narrowing is also a plausible reading). In class B the reranker pushes a first-stage top 5 chunk
+  (rank 169) is a wording gap ("converting a position into a different kind of position" for a perp-short hedge); the
+  step 6.2 (a) review found the question not ambiguous, since narrowing keeps the same kind of position. In class B the reranker pushes a first-stage top 5 chunk
   down to 14 and 29: fusing the reranker score with the first-stage rank would keep it.
 - **Chunking is not the problem.** 4 of 186 evidence spans cross a chunk boundary, and the top 10 lists hold on average
   0.5 chunks from the same parent entry, so neither chunk size, overlap nor de-duplication is supported.
 - **Four questions are not retrieval at all** (class F) and one (id-06) gets all its evidence and is still partly; the
-  golden set itself needs a look at dated-04, dated-05, dated-09 and the evidence lists of id-03 and dated-01 (both
-  answered correctly without any listed evidence in the top 10), before any tuning.
+  golden set itself needed a look at dated-04, dated-05, dated-09 and the evidence lists of id-03 and dated-01 (both
+  answered correctly without any listed evidence in the top 10), before any tuning. Done in step 6.2 (a): only the two
+  evidence lists changed (golden v1.5).
 
 ## Limits of this diagnosis
 

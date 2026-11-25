@@ -382,6 +382,8 @@ Common rules for every step:
   (a) The owner reviews five items the diagnosis flags, before any tuning: dated-04 and dated-05 (ambiguous questions),
   dated-09 (reference broader than the question), and the evidence lists of id-03 and dated-01 (answered correctly
   without any listed evidence).
+  Done 25 Nov, golden v1.5: two evidence lists changed (id-03, dated-01), dated-09 spans marked, the other two
+  unchanged; stored lists re-scored on both versions (`ai/eval/results/2026-11-25-rescore-k10-lists-golden-v1-5.md`).
   (b) Required and supporting spans. For each of the nine class C questions, and then for every question, each
   evidence span is marked `required` (a correct verdict needs its fact) or `supporting`. This separates "the answer
   really needs these spans" from "the reference lists more than the question asks", so a larger k is not rewarded for

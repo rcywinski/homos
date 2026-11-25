@@ -5,6 +5,7 @@
 import type { Chunk } from '../corpus/types';
 import { FakeEmbedder } from '../embed/fake';
 import { VectorStore } from '../store/vector';
+import { checkGolden, requiredOnly, type Evidence } from './golden';
 import { firstHitRank, fmtRatio, journalOnly, mrrAt, recallAt } from './metrics';
 
 let passed = 0;
@@ -42,6 +43,25 @@ async function main() {
   check('first hit journal-only', firstHitRank(ranked, journalOnly(evidence)) === 3);
   check('no hit', firstHitRank(ranked, [{ file: 'journal/HANDOFF.md', lines: [1, 5] }]) === null);
   check('adjacent lines are not a hit', firstHitRank([chunk('journal/CONTEXT.md', 97, 99)], [{ file: 'journal/CONTEXT.md', lines: [96, 96] }]) === null);
+
+  // 2b. evidence roles (golden v1.5): unmarked counts as required; supporting still counts as a hit.
+  const roles: Evidence[] = [
+    { file: 'journal/CONTEXT.md', lines: [96, 96] },
+    { file: 'docs/CASE-STUDY.md', lines: [81, 84], role: 'supporting' },
+    { file: 'journal/CONTEXT.md', lines: [255, 255], role: 'required' },
+  ];
+  check('required keeps unmarked and required', requiredOnly(roles).length === 2);
+  check('supporting is a hit', firstHitRank(ranked, roles) === 1);
+  check('first required hit', firstHitRank(ranked, requiredOnly(roles)) === 2);
+  const corpus = [chunk('journal/CONTEXT.md', 90, 100), chunk('journal/reports/morning-2026-08-29.md', 180, 190)];
+  const lines = new Map([['journal/CONTEXT.md', 300], ['journal/reports/morning-2026-08-29.md', 300]]);
+  const q = (ev: Evidence[]) =>
+    JSON.stringify({ id: 'dated-01', category: 'dated-fact', question: 'When did it happen?', answerable: 'yes', evidence: ev, reference: 'r' });
+  const errors = (ev: Evidence[]) => checkGolden(q(ev), corpus, lines).issues.filter((i) => i.level === 'error').map((i) => i.message);
+  const rep = { file: 'journal/reports/morning-2026-08-29.md', lines: [185, 185] as [number, number] };
+  check('role check passes', errors([rep, { ...rep, role: 'supporting' }]).length === 0, errors([rep]).join('; '));
+  check('only supporting is an error', errors([{ ...rep, role: 'supporting' }]).some((m) => m.includes('required')));
+  check('unknown role is an error', errors([{ ...rep, role: 'main' as never }]).some((m) => m.includes('role must be')));
 
   // 3. VectorStore with FakeEmbedder: the text sharing the query's words ranks first; scores descend.
   const e = new FakeEmbedder(64);

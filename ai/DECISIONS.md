@@ -1163,3 +1163,19 @@ so no paid phase 6 step starts before he sets it. Step 6.2 is next.
 **Decision.** The owner set the limit for the whole of phase 6 at 20 USD, with up to 4 USD per run, counted in the
 same ledger from the next paid run. This replaces the 5 USD total of 17 Nov for phase 6 work; the 3.1032 USD spent
 before stays in the ledger as history. Planned about 19 USD (6.4 2.1, 6.11 4.4, 6.12 12.7).
+
+## 2026-11-25, step 6.2 (a): golden v1.5 (owner)
+
+**Decision.** The owner accepted the five review cards (`ai/eval/results/2026-11-25-golden-review-cards.md`, with the
+analysis session's revision of dated-01). Golden v1.5: dated-04 and dated-05 unchanged; dated-09 spans marked, two of
+nine supporting; id-03 three report rows added as supporting; dated-01 `HANDOFF.md:1166-1170` added as required and
+`HANDOFF.md:1156-1160` as supporting. No question or reference text changed, so judged verdicts stand. New optional
+evidence field `role` (`required` or `supporting`, unmarked = required) with the rule: a span is required only if a
+reader could state a fact the reference needs from it alone. Step 6.2 (b) marks the other questions.
+
+**Re-score.** The stored k=10 lists of 11 Nov on v1.4 and v1.5 (`ai/eval/rescore.ts`,
+`ai/eval/results/2026-11-25-rescore-k10-lists-golden-v1-5.md`). Served variant: recall@10 73% (19/26) on v1.4, 81%
+(21/26) on v1.5; required span coverage 27% on both. The gain is two questions whose correct sources were missing from
+the list, not a retrieval change; id-03 counts as found only through supporting spans. v1.4 and v1.5 numbers are not
+compared otherwise. `ai/eval/diagnose.ts` now reads golden v1.4 from git, so the step 6.1 table still reproduces.
+0 USD.

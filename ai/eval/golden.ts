@@ -21,10 +21,24 @@ export const TARGET: Record<Category, number> = { why: 10, 'dated-fact': 10, ide
 export const ANSWERABLE = ['yes', 'partial', 'no'] as const;
 export type Answerable = (typeof ANSWERABLE)[number];
 
+export const ROLES = ['required', 'supporting'] as const;
+export type Role = (typeof ROLES)[number];
+
 export interface Evidence {
   file: string;
   /** 1-based, inclusive [start, end]. */
   lines: [number, number];
+  /**
+   * Step 6.2 (golden v1.5). "required": a reader could state a fact the reference needs from this span alone.
+   * "supporting": it only corroborates. Unmarked counts as required (the v1.4 meaning). Both count as a hit for
+   * recall and MRR; span coverage is reported for required spans and for all spans.
+   */
+  role?: Role;
+}
+
+/** Required spans of a question: marked "required" or unmarked. */
+export function requiredOnly(ranges: Evidence[]): Evidence[] {
+  return ranges.filter((r) => r.role !== 'supporting');
 }
 
 export interface GoldenQuestion {
@@ -118,6 +132,8 @@ export function checkGolden(content: string, chunks: Chunk[], fileLines: Map<str
     if (q.answerable === 'no' && q.evidence.length) err(id, 'answerable "no" must have evidence []');
     if (q.answerable === 'partial' && q.evidence.length) err(id, 'answerable "partial" must have evidence [] (use related)');
     if (q.answerable === 'partial' && !related.length) err(id, 'answerable "partial" needs a non-empty related list');
+    for (const e of q.evidence) if (e.role !== undefined && !ROLES.includes(e.role)) err(id, `evidence role must be one of ${ROLES.join(', ')}`);
+    if (q.answerable === 'yes' && q.evidence.length && !requiredOnly(q.evidence).length) err(id, 'answerable "yes" needs at least one required evidence range');
     if (q.category === 'no-answer' && q.answerable === 'yes') warn(id, 'no-answer category marked answerable "yes"');
     if (q.category !== 'no-answer' && q.answerable !== 'yes') warn(id, `${q.category} question marked answerable "${q.answerable}"`);
     if (q.category === 'why' && q.answerable === 'yes' && !q.evidence.some((e) => e.file?.startsWith('journal/')))
