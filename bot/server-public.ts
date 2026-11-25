@@ -56,7 +56,7 @@ export function scrub(v: unknown): unknown {
   return v;
 }
 
-const POOL_FIELDS = ['id', 'ethUsd', 'tick', 'sqrtPriceX96', 'stats', 'suggestion', 'updatedAt', 'flatSince', 'flatConfirmed', 'trendGapPct'] as const;
+const POOL_FIELDS = ['id', 'ethUsd', 'tick', 'sqrtPriceX96', 'stats', 'suggestion', 'updatedAt', 'flatSince', 'flatConfirmed', 'trendGapPct', 'statsAt', 'statsWindow'] as const;
 const PAPER_POSITION_FIELDS = [
   'poolId', 'status', 'tickLower', 'tickUpper', 'capitalUsd', 'feesUsd', 'feesSinceRebalanceUsd', 'costsUsd', 'rebalances',
   'hedge', 'hedgePnlRealizedUsd', 'openedAt', 'startedAt', 'outOfRangeSince',
@@ -118,7 +118,11 @@ export function createPublicBotApp(o: PublicApiOptions): Express {
     const st = readJson(path.join(o.stateDir, 'state.json')) as Record<string, unknown> | null;
     if (!st) return res.status(503).json({ error: 'state not available yet' });
     const flat = pick<{ enterGap: number; exitGap: number; confirmH: number }>(st.flatParams, ['enterGap', 'exitGap', 'confirmH'], (_k, v) => num(v));
-    const pools = (Array.isArray(st.pools) ? st.pools : []).map((p) => pick<Record<string, unknown>>(p, [...POOL_FIELDS]));
+    const pools = (Array.isArray(st.pools) ? st.pools : []).map((p) =>
+      pick<Record<string, unknown>>(p, [...POOL_FIELDS], (k, v) =>
+        k === 'statsWindow' ? pick<Record<string, unknown>>(v, ['at', 'chunks', 'failed', 'ok'], (x, y) => (x === 'at' ? str(y) : x === 'ok' ? bool(y) : num(y))) : v,
+      ),
+    );
     send(res, { updatedAt: str(st.updatedAt), mode: 'LIVE-DEMO', flatParams: flat, pools, positions: [], proposals: [] });
   });
 

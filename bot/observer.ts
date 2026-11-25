@@ -130,6 +130,9 @@ interface PoolLive {
   stats: PoolStats | null;
   suggestion: ReturnType<typeof suggestRange> | null;
   updatedAt: string;
+  /** Live demo only: when the statistics were last computed, and how the last 24 h read went (chunks read, failed). */
+  statsAt?: string;
+  statsWindow?: { at: string; chunks: number; failed: number; ok: boolean };
   /** trend circuit breaker (v1.1): deviation of log-price from EMA7d in % and signal state */
   trendGapPct?: number;
   trendDown?: boolean;
@@ -776,8 +779,15 @@ const HISTORY_PATH = path.join(DIR, 'history.ndjson');
 async function refreshStats() {
   for (const p of BOT_POOLS) {
     try {
-      const swaps = await fetchRecentSwaps(clients[p.chain] as any, p.address, p.chainId, 24);
+      const read = LIVE_MODE ? { chunks: 0, failed: 0 } : undefined;
+      const swaps = await fetchRecentSwaps(clients[p.chain] as any, p.address, p.chainId, 24, read);
       const stats = computeStats(swaps, p.chainId, p.d0, p.d1, p.feeBps / 1_000_000, TICK_SPACING[p.feeBps]);
+      if (LIVE_MODE && read && live[p.id]) {
+        // Live demo: the honest age of the statistics (the price's updatedAt says nothing about them)
+        const at = new Date().toISOString();
+        live[p.id].statsWindow = { at, chunks: read.chunks, failed: read.failed, ok: !!stats };
+        if (stats) live[p.id].statsAt = at;
+      }
       if (live[p.id] && stats) {
         live[p.id].stats = stats;
         // FlatWide hybrid: a product pool gets a fixed
@@ -807,6 +817,7 @@ async function refreshStats() {
       }
     } catch (e) {
       log(`stats ${p.id} failed: ${String(e).slice(0, 120)}`);
+      if (LIVE_MODE && live[p.id]) live[p.id].statsWindow = { at: new Date().toISOString(), chunks: 0, failed: 0, ok: false };
     }
   }
   // paper trading: virtual portfolio per ALGORITHM v1.2 (after the statistics refresh)

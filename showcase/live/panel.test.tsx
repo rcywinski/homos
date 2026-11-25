@@ -9,7 +9,7 @@ import { readFileSync } from 'fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import PaperTradingPanel from '../../src/components/PaperTradingPanel';
 import type { PaperData, UseBotApi } from '../../src/hooks/useBotApi';
-import { feeYieldExample, strategyLabel } from './labels';
+import { feeYieldExample, statsAgeCell, statsNote, strategyLabel } from './labels';
 import { networkOf } from './LivePage';
 import { PANEL_FIXTURE } from './panel-fixture';
 
@@ -57,6 +57,18 @@ check('an unknown strategy name stays as it is', strategyLabel('Adapt k=3 h=24h 
 const ex = feeYieldExample({ id: 'mainnet-usdc-weth-005', stats: { feeYieldDaily: 0.15344 }, suggestion: { tickLower: 194000, tickUpper: 199000 } });
 check('fee example: 15.344 × 2 × 10 / 5000 = 0.061', !!ex && ex.spacing === 10 && ex.width === 5000 && Math.abs(ex.rangePct - 0.061376) < 1e-9);
 check('fee example needs stats and a suggestion', feeYieldExample({ id: 'arbitrum-weth-usdc-005', stats: null, suggestion: null }) === null);
+
+// Statistics age (5.6 preparation): the cell and the card line.
+const NOW = Date.parse('2026-11-25T12:00:00Z');
+const at = (min: number) => new Date(NOW - min * 60_000).toISOString();
+check('fresh statistics: no card line', statsNote({ statsAt: at(10), statsWindow: { at: at(10), chunks: 35, failed: 0, ok: true } }, 'open', NOW) === null);
+check('stale statistics: the card line', statsNote({ statsAt: at(47), statsWindow: { at: at(2), chunks: 35, failed: 35, ok: false } }, 'open', NOW) === 'market statistics last read 47 min ago; the last 24 h read was incomplete (35 of 35 chunks failed); fees are accrued on the last known yield.');
+check('fresh but incomplete: the card line', statsNote({ statsAt: at(5), statsWindow: { at: at(5), chunks: 35, failed: 3, ok: true } }, 'open', NOW)?.includes('3 of 35 chunks failed') === true);
+check('pending pool: no line (its own text says it)', statsNote({ statsWindow: { at: at(1), chunks: 35, failed: 35, ok: false } }, 'pending', NOW) === null);
+check('telemetry cell', statsAgeCell({ statsAt: at(3) }, NOW) === '3 min ago' && statsAgeCell({ statsAt: at(120), statsWindow: { at: at(1), chunks: 10, failed: 2, ok: true } }, NOW) === '2 h ago (last read 2 of 10 chunks failed)');
+check('telemetry cell before any read', statsAgeCell({}, NOW) === '—' && statsAgeCell({ statsWindow: { at: at(1), chunks: 0, failed: 0, ok: false } }, NOW) === 'never read');
+const noted = renderToStaticMarkup(<PaperTradingPanel bot={botOf(PANEL_FIXTURE)} poolNote={(id) => (id === 'mainnet-usdc-weth-030' ? 'market statistics last read 47 min ago' : null)} />);
+check('the card note renders on its card only', (noted.match(/paper-pool-note/g) ?? []).length === 1);
 
 console.log(`panel: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

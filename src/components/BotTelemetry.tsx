@@ -23,6 +23,8 @@ interface Props {
   feeYieldLabel?: string;
   /** Optional (the Live page): a note shown at the end of the section when it is open. */
   footer?: React.ReactNode;
+  /** Optional (the Live page): one more column after "Data age". */
+  extraColumn?: { header: string; cell: (pool: BotPoolLive) => React.ReactNode };
 }
 
 const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -70,7 +72,7 @@ const suggestedUsdRange = (pool: BotPoolLive): { lo: number; hi: number } | null
   return { lo: 1 / s.priceUpper, hi: 1 / s.priceLower };
 };
 
-const BotTelemetry: FC<Props> = ({ bot, hideRawState, hideWatchedPositions, feeYieldLabel, footer }) => {
+const BotTelemetry: FC<Props> = ({ bot, hideRawState, hideWatchedPositions, feeYieldLabel, footer, extraColumn }) => {
   const [expanded, setExpanded] = useState(false);
   const [showJson, setShowJson] = useState(false);
 
@@ -100,6 +102,7 @@ const BotTelemetry: FC<Props> = ({ bot, hideRawState, hideWatchedPositions, feeY
                     <th>{feeYieldLabel ?? 'Fee-yield %/d'}</th>
                     <th>Suggested range $</th>
                     <th>Data age</th>
+                    {extraColumn && <th>{extraColumn.header}</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -121,6 +124,7 @@ const BotTelemetry: FC<Props> = ({ bot, hideRawState, hideWatchedPositions, feeY
                             : '—'}
                         </td>
                         <td className="muted">{ageLabel(p.updatedAt)}</td>
+                        {extraColumn && <td className="muted">{extraColumn.cell(p)}</td>}
                       </tr>
                     );
                   })}

@@ -108,7 +108,8 @@ async function publicApi() {
   writeFileSync(path.join(state, 'state.json'), JSON.stringify({
     updatedAt: '2026-11-25T10:00:00Z', mode: 'OBSERVE', watch: OWNER, rpc: 'https://base.example/v2/SECRETKEY',
     flatParams: { enterGap: 2, exitGap: 5, confirmH: 12 },
-    pools: [{ id: pool.id, ethUsd: 3000, tick: 1, sqrtPriceX96: '1', stats: null, suggestion: null, updatedAt: 'x', rpcUrl: 'https://x.example/key', localPath: '/Users/owner/HOMOS/.bot' }],
+    pools: [{ id: pool.id, ethUsd: 3000, tick: 1, sqrtPriceX96: '1', stats: null, suggestion: null, updatedAt: 'x', rpcUrl: 'https://x.example/key', localPath: '/Users/owner/HOMOS/.bot',
+      statsAt: '2026-11-25T09:45:00Z', statsWindow: { at: '2026-11-25T10:00:00Z', chunks: 35, failed: 2, ok: true, host: 'https://rpc.example/key' } }],
     positions: [{ tokenId: '1', owner: OWNER }], proposals: [{ id: 'p1' }], tranche: { depositedUsd: 6000 },
   }));
   writeFileSync(path.join(state, 'paper-state.json'), JSON.stringify({
@@ -142,6 +143,8 @@ async function publicApi() {
     }
     const st = (await (await fetch(srv.url + '/api/state')).json()) as Record<string, unknown>;
     check('state: no watch, no tranche, positions and proposals empty', !('watch' in st) && !('tranche' in st) && Array.isArray(st.positions) && (st.positions as unknown[]).length === 0 && (st.proposals as unknown[]).length === 0);
+    const sp = (st.pools as Record<string, unknown>[])[0];
+    check('state: statsAt and statsWindow pass, with listed subfields only', sp.statsAt === '2026-11-25T09:45:00Z' && JSON.stringify(sp.statsWindow) === JSON.stringify({ at: '2026-11-25T10:00:00Z', chunks: 35, failed: 2, ok: true }));
     check('state: pools keep only listed fields', JSON.stringify(st.pools).includes(pool.id) && !JSON.stringify(st.pools).includes('rpcUrl'));
     const paper = (await (await fetch(srv.url + '/api/paper?hours=24')).json()) as { state: { positions: Record<string, Record<string, unknown>> }; events: Record<string, unknown>[] };
     check('paper: the position keeps its numbers, not the wallet field', paper.state.positions[pool.id].capitalUsd === 10000 && !('wallet' in paper.state.positions[pool.id]));
@@ -191,6 +194,7 @@ function scrub() {
   fake.error(new Error(`boom at ${key}`));
   check('the console wrapper scrubs strings and errors', seen.length === 2 && seen.every((l) => !l.includes('SECRETKEY123')), seen.join(' | '));
   const obs = readFileSync(path.join(ROOT, 'bot', 'observer.ts'), 'utf8');
+  check('statistics age is recorded in Live mode only', /if \(LIVE_MODE && read && live\[p\.id\]\)/.test(obs) && /const read = LIVE_MODE \?/.test(obs));
   check('the observer log() scrubs in Live mode', /LIVE_MODE \? scrubUrls\(msg\) : msg/.test(obs));
 }
 

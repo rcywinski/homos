@@ -11,3 +11,4 @@
 .live-stat-note { font-size: 0.8rem; color: #6c757d; }
 @media (max-width: 600px) { .app.live-app { padding: 12px; } }
 .live-section-note { text-align: left; font-size: 0.85rem; line-height: 1.45; color: #495057; background: #f1f3f5; border-radius: 8px; padding: 8px 12px; margin: 10px 0; }
+.paper-pool-note { text-align: left; font-size: 0.8rem; color: #8a5a00; margin: 2px 0 6px; }

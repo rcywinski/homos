@@ -13,7 +13,7 @@ import ObservationAnalysis from '../../src/components/ObservationAnalysis';
 import PaperTradingPanel from '../../src/components/PaperTradingPanel';
 import TopRankingPanel from '../../src/components/TopRankingPanel';
 import type { BotStateShape, PaperData, UseBotApi } from '../../src/hooks/useBotApi';
-import { feeYieldExample, strategyLabel } from './labels';
+import { feeYieldExample, statsAgeCell, statsNote, strategyLabel } from './labels';
 import { SectionBoundary } from './SectionBoundary';
 import { useLiveBot, useLiveRankings } from './useLiveBot';
 
@@ -90,7 +90,9 @@ const TelemetryNotes: FC<{ pools: NonNullable<BotStateShape['pools']> }> = ({ po
       The suggested range for the two product pools (WETH/USDC 0.30% and WETH/cbBTC 0.05%, both on Base) and the
       walk-forward tables below show the FlatWide hybrid, the project's later strategy; the simulation above does not
       play it. Fee yield of the active tick: fees per day earned by liquidity sitting exactly at the current price, one
-      tick spacing wide; a position W ticks wide earns about that × 2 × spacing / W.
+      tick spacing wide; a position W ticks wide earns about that × 2 × spacing / W. &quot;Data age&quot; is the age of
+      the price (read every minute); &quot;Statistics age&quot; is the age of the last 24 h swap read behind the
+      volatility, the fee yield and the suggested range (every 15 minutes).
       {row?.ex && (
         <>
           {' '}
@@ -147,7 +149,13 @@ export const LivePage: FC = () => {
           </div>
           <ExpandableSection title="📊 Paper trading" defaultExpanded={true}>
             <SectionBoundary name="Paper trading">
-              <PaperTradingPanel bot={bot} poolLabel={withNetwork} showStartDate showValueRange />
+              <PaperTradingPanel
+                bot={bot}
+                poolLabel={withNetwork}
+                showStartDate
+                showValueRange
+                poolNote={(id) => statsNote(live.state?.pools?.find((p) => p.id === id), live.paper?.state.positions[id]?.status ?? 'pending')}
+              />
             </SectionBoundary>
           </ExpandableSection>
           <SectionBoundary name="Bot telemetry">
@@ -156,6 +164,7 @@ export const LivePage: FC = () => {
               hideRawState
               hideWatchedPositions
               feeYieldLabel="Fee yield of the active tick, %/day"
+              extraColumn={{ header: 'Statistics age', cell: (p) => statsAgeCell(p) }}
               footer={<TelemetryNotes pools={live.state?.pools ?? []} />}
             />
           </SectionBoundary>

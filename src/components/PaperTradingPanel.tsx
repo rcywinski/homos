@@ -100,7 +100,8 @@ const PoolCard: FC<{
   label: string;
   showStartDate?: boolean;
   showValueRange?: boolean;
-}> = ({ poolId, position, history, events, capitalPerPoolUsd, label, showStartDate, showValueRange }) => {
+  note?: string | null;
+}> = ({ poolId, position, history, events, capitalPerPoolUsd, label, showStartDate, showValueRange, note }) => {
   const last = latestFor(history, poolId);
   const equity = last?.equityUsd ?? position.capitalUsd ?? capitalPerPoolUsd;
   const hodl = last?.hodlUsd ?? capitalPerPoolUsd;
@@ -129,6 +130,7 @@ const PoolCard: FC<{
           {position.status === 'pending' || !position.startedAt ? 'not started yet' : `started ${new Date(position.startedAt).toLocaleString('pl-PL')}`}
         </div>
       )}
+      {note && <div className="muted paper-pool-note">{note}</div>}
 
       {/* Out-of-range timer. Shown ONLY when the
           position is open and out of range. `outOfRangeSince` resets
@@ -204,9 +206,11 @@ interface Props {
   showStartDate?: boolean;
   /** Optional (the Live page): the value range under the equity chart. */
   showValueRange?: boolean;
+  /** Optional (the Live page): a short line on a pool's card, for example about the age of its market statistics. */
+  poolNote?: (poolId: string) => string | null;
 }
 
-const PaperTradingPanel: FC<Props> = ({ bot, poolLabel: labelFor, showStartDate, showValueRange }) => {
+const PaperTradingPanel: FC<Props> = ({ bot, poolLabel: labelFor, showStartDate, showValueRange, poolNote }) => {
   const label = (poolId: string) => (labelFor ? labelFor(poolId, poolLabel(poolId)) : poolLabel(poolId));
   const { paper, paperStatus } = bot;
 
@@ -287,6 +291,7 @@ const PaperTradingPanel: FC<Props> = ({ bot, poolLabel: labelFor, showStartDate,
               label={label(poolId)}
               showStartDate={showStartDate}
               showValueRange={showValueRange}
+              note={poolNote ? poolNote(poolId) : null}
             />
           ))}
         </div>

@@ -17,6 +17,8 @@ export interface Counts {
   rpcErrors: number;
 }
 export interface HostCounts extends Counts {
+  /** HTTP 429 answers (rate limited), also counted in httpFailures. */
+  http429?: number;
   lastHttpFailure?: string;
   lastRpcError?: string;
   /** UTC hour "YYYY-MM-DDTHH" -> counts in that hour. */
@@ -62,7 +64,9 @@ export function countCalls(file: string): { flush: () => void; stats: Record<str
     try {
       const r = await orig(input, init);
       if (!r.ok) {
-        bump(host, 'httpFailures').lastHttpFailure = `${new Date().toISOString()} HTTP ${r.status}`;
+        const s = bump(host, 'httpFailures');
+        s.lastHttpFailure = `${new Date().toISOString()} HTTP ${r.status}`;
+        if (r.status === 429) s.http429 = (s.http429 ?? 0) + 1;
       } else if ((r.headers.get('content-type') ?? '').includes('json') && (init?.method ?? 'GET').toUpperCase() === 'POST') {
         // JSON-RPC calls are POSTs; read a copy of the body so the caller still gets the original stream
         const err = rpcErrorOf(await r.clone().text());

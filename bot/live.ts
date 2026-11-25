@@ -53,6 +53,9 @@ async function main() {
   process.env.DOTENV_CONFIG_PATH = path.join(process.env.BOT_STATE_DIR!, '.no-env-file');
   // Every data folder of the demo lives in the state folder, none in the clone (a redeploy replaces the clone).
   process.env.BOT_DATA_DIR ??= path.join(process.env.BOT_STATE_DIR!, 'data');
+  // DefiLlama pacing for the nightly fetch: 3 s between history calls, under their limit (the script still honours
+  // Retry-After on a 429).
+  process.env.LLAMA_DELAY_MS ??= '3000';
   if (process.env.LIVE_COUNT_CALLS === '1') countCalls(path.join(process.env.BOT_STATE_DIR!, 'net-stats.json'));
   const stateDir = process.env.BOT_STATE_DIR!;
   const repoRoot = path.join(__dirname, '..');

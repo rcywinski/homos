@@ -105,9 +105,14 @@ does in that state (bot/observer.ts refreshStats, bot/paper.ts paperTick, read o
 - **The page does not show it.** The telemetry's "Data age" is the age of the price (60 s loop), not of the
   statistics, so frozen statistics look fresh.
 
-Proposed for the owner (not built): record the time of the last successful statistics per pool, show it in the Live
-telemetry, and let the paper step skip fee accrual and rebalance decisions when the statistics are older than, say,
-two cycles. The original paper run behaved as above, so this would be a change from it, and is his decision.
+Built 25 Nov (Live mode only, no change to what the paper step decides): the observer records per pool when the
+statistics were last computed and how the last 24 h read went (`statsAt`, `statsWindow`: chunks read and failed); the
+read-only API passes both (allow-listed); the Live telemetry has a "Statistics age" column next to "Data age", and a
+pool card gets a line when its statistics are older than two cycles or the last read was incomplete ("market
+statistics last read 47 min ago; fees are accrued on the last known yield").
+
+Open for the owner: let the paper step skip fee accrual and rebalance decisions when the statistics are stale. The
+original paper run behaved as now (it kept accruing on the last known yield), so this would be a change from it.
 
 ### Arbitrum 0.05%: the owner's decision before go-live
 
@@ -165,8 +170,9 @@ Measured on the Mac (Apple silicon), to be measured again on the box in the 5.6 
 - Observer (`bot/live.ts`): about 1.6% of one core on average; a burst of about 12% of one core for about 15 s at each
   statistics cycle (every 15 minutes); 185 to 215 MB of memory.
 - Read-only API (`bot/server-public.ts`): idle between requests; about 90 MB.
-- Nightly steps, once a day after 05:00 local: the DefiLlama fetch is network-bound (about 9 minutes, 223 calls,
-  little CPU); wide-score 1.1 s of CPU, 180 MB; wide-daily 0.6 s of CPU, 105 MB. No step loads a core for minutes.
+- Nightly steps, once a day after 05:00 local: the DefiLlama fetch is network-bound (paced at 3 s between calls in
+  Live mode since 25 Nov, about 13 minutes for 223 pools; at the original 1.5 s, 34 of 261 calls got HTTP 429), little
+  CPU; wide-score 1.1 s of CPU, 180 MB; wide-daily 0.6 s of CPU, 105 MB. No step loads a core for minutes.
 - State folder: about 0.3 MB a day (history and paper history about 0.28 MB, dated score files 0.02 MB), so about
   10 MB a month; the DefiLlama folder (22 MB) and the daily model are replaced, not added to; `observer.log` is
   capped at 2 x 5 MB. The task logs (`live-observer.log`, `live-api.log`) are not rotated and grow by about 2 MB a

@@ -28,3 +28,33 @@ export function feeYieldExample(pool: { id: string; stats: { feeYieldDaily: numb
   const tickPct = pool.stats.feeYieldDaily * 100;
   return { tickPct, spacing, width, rangePct: tickPct * ((2 * spacing) / width) };
 }
+
+/** Statistics older than this (two 15-minute cycles) get a line on the pool's card. */
+export const STATS_STALE_MS = 30 * 60_000;
+
+interface StatsInfo {
+  statsAt?: string;
+  statsWindow?: { at: string; chunks: number; failed: number; ok: boolean };
+}
+
+const minutesAgo = (iso: string, now: number) => Math.max(0, Math.round((now - Date.parse(iso)) / 60_000));
+const ago = (min: number) => (min < 60 ? `${min} min ago` : `${Math.round(min / 60)} h ago`);
+
+/** The telemetry cell: the age of the last computed statistics, marked when the last 24 h read was incomplete. */
+export function statsAgeCell(p: StatsInfo, now = Date.now()): string {
+  if (!p.statsAt) return p.statsWindow ? 'never read' : '—';
+  const w = p.statsWindow;
+  return `${ago(minutesAgo(p.statsAt, now))}${w && w.failed > 0 ? ` (last read ${w.failed} of ${w.chunks} chunks failed)` : ''}`;
+}
+
+/** The line on a pool's card when its statistics are stale or the last read was incomplete; null otherwise. */
+export function statsNote(p: StatsInfo | undefined, positionStatus: string, now = Date.now()): string | null {
+  if (!p?.statsAt || positionStatus === 'pending') return null;
+  const age = minutesAgo(p.statsAt, now);
+  const w = p.statsWindow;
+  const incomplete = !!w && w.failed > 0;
+  if (age * 60_000 <= STATS_STALE_MS && !incomplete) return null;
+  const parts = [`market statistics last read ${ago(age)}`];
+  if (incomplete) parts.push(`the last 24 h read was incomplete (${w!.failed} of ${w!.chunks} chunks failed)`);
+  return `${parts.join('; ')}; fees are accrued on the last known yield.`;
+}
