@@ -1174,8 +1174,10 @@ evidence field `role` (`required` or `supporting`, unmarked = required) with the
 reader could state a fact the reference needs from it alone. Step 6.2 (b) marks the other questions.
 
 **Re-score.** The stored k=10 lists of 11 Nov on v1.4 and v1.5 (`ai/eval/rescore.ts`,
-`ai/eval/results/2026-11-25-rescore-k10-lists-golden-v1-5.md`). Served variant: recall@10 73% (19/26) on v1.4, 81%
-(21/26) on v1.5; required span coverage 27% on both. The gain is two questions whose correct sources were missing from
-the list, not a retrieval change; id-03 counts as found only through supporting spans. v1.4 and v1.5 numbers are not
-compared otherwise. `ai/eval/diagnose.ts` now reads golden v1.4 from git, so the step 6.1 table still reproduces.
+`ai/eval/results/2026-11-25-rescore-k10-lists-golden-v1-5.md`). At the analysis session's request, the headline
+numbers for phase 6 are computed on required spans only (recall@k, MRR@k, span coverage), with the any-span versions
+as a second column, so adding a supporting span cannot raise them. Served variant, required: recall@10 19/26 on v1.4,
+20/26 on v1.5 (dated-01, a required source that was missing), coverage 50/186 and 50/185; any span: 19/26 and 21/26
+(id-03 is found only through supporting spans). Not a retrieval change. v1.4 and v1.5 numbers are not compared
+otherwise. `ai/eval/diagnose.ts` now reads golden v1.4 from git, so the step 6.1 table still reproduces.
 0 USD.

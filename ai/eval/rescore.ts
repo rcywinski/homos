@@ -4,8 +4,9 @@
  *
  * The lists are those of 11 Nov (`2026-11-11-chunk-lists-k10-golden-v1-4.json`): for the served variant ("local") the
  * live guest run received exactly these lists. The old golden is read from git (default: the last commit on v1.4),
- * the new one from the working tree. Per version and variant: recall@5 and @10, MRR@10, and evidence span coverage in
- * the top 10 over answerable questions, for all spans and (new) for required spans only.
+ * the new one from the working tree. Per version and variant, over answerable questions: recall@5 and @10, MRR@10 and
+ * evidence span coverage in the top 10. Headline (phase 6 decisions): computed on required spans only, so adding a
+ * supporting span to an item cannot raise them. Second: the same on any span (the v1.4 definition).
  */
 import { execFileSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'fs';
@@ -34,6 +35,8 @@ interface Score {
   r5: string;
   r10: string;
   mrr: string;
+  r10Any: string;
+  mrrAny: string;
   all: string;
   req: string;
   perQ: Map<string, { rank: number | null; all: string; req: string }>;
@@ -45,13 +48,15 @@ function coverage(given: Chunk[], spans: Evidence[]): [number, number] {
 
 function score(golden: GoldenQuestion[], lists: Record<string, string[]>, byId: Map<string, Chunk>): Score {
   const ranks: Array<number | null> = [];
+  const anyRanks: Array<number | null> = [];
   let [aHit, aN, rHit, rN] = [0, 0, 0, 0];
   const perQ = new Map<string, { rank: number | null; all: string; req: string }>();
   for (const q of golden) {
     if (q.answerable !== 'yes') continue;
     const given = lists[q.id].map((id) => byId.get(id)!);
-    const rank = firstHitRank(given, q.evidence);
+    const rank = firstHitRank(given, requiredOnly(q.evidence));
     ranks.push(rank);
+    anyRanks.push(firstHitRank(given, q.evidence));
     const [ah, an] = coverage(given, q.evidence);
     const [rh, rn] = coverage(given, requiredOnly(q.evidence));
     aHit += ah;
@@ -64,6 +69,8 @@ function score(golden: GoldenQuestion[], lists: Record<string, string[]>, byId: 
     r5: fmtRatio(recallAt(ranks, 5)),
     r10: fmtRatio(recallAt(ranks, 10)),
     mrr: mrrAt(ranks, 10).toFixed(3),
+    r10Any: fmtRatio(recallAt(anyRanks, 10)),
+    mrrAny: mrrAt(anyRanks, 10).toFixed(3),
     all: fmtRatio({ hits: aHit, n: aN }),
     req: fmtRatio({ hits: rHit, n: rN }),
     perQ,
@@ -89,18 +96,19 @@ function main() {
     '',
     `Produced by \`npx tsx ai/eval/rescore.ts\`: no API call, no box. Lists: \`${LISTS.replace(R, '')}\` (made on golden`,
     `v${stored.goldenVersion}). Old golden from git \`${OLD_REV}\`, new from the working tree. Corpus \`${hash}\`, ${chunks.length} chunks.`,
-    'Answerable questions only. Recall and MRR count any evidence span (required or supporting) as a hit; span coverage',
-    'is the share of evidence spans that the 10 chunks cover, for all spans and for required spans (unmarked = required).',
+    'Answerable questions only. **Headline columns** (used for phase 6 decisions): recall, MRR and span coverage on',
+    'required spans only (unmarked = required), so a supporting span added to an item cannot raise them. Second columns:',
+    'the same on any span (required or supporting), the v1.4 definition, kept for comparison with earlier results.',
     '',
-    '| variant | golden | recall@5 | recall@10 | MRR@10 | spans covered, all | spans covered, required |',
-    '|---|---|---|---|---|---|---|',
+    '| variant | golden | **recall@5, required** | **recall@10, required** | **MRR@10, required** | **spans covered, required** | recall@10, any | MRR@10, any | spans covered, all |',
+    '|---|---|---|---|---|---|---|---|---|',
   ];
   const changed: string[] = [];
   for (const [name, v] of Object.entries(stored.variants)) {
     const a = score(oldGolden, v.lists, byId);
     const b = score(newGolden, v.lists, byId);
-    out.push(`| ${name} | v${oldVersion} | ${a.r5} | ${a.r10} | ${a.mrr} | ${a.all} | ${a.req} |`);
-    out.push(`| ${name} | v${newVersion} | ${b.r5} | ${b.r10} | ${b.mrr} | ${b.all} | ${b.req} |`);
+    for (const [ver, x] of [[oldVersion, a], [newVersion, b]] as const)
+      out.push(`| ${name} | v${ver} | ${x.r5} | ${x.r10} | ${x.mrr} | ${x.req} | ${x.r10Any} | ${x.mrrAny} | ${x.all} |`);
     for (const [id, x] of b.perQ) {
       const y = a.perQ.get(id);
       if (!y || y.rank !== x.rank || y.all !== x.all || y.req !== x.req)
@@ -115,7 +123,7 @@ function main() {
     '',
     '## Questions whose numbers changed',
     '',
-    `| variant | id | first hit v${oldVersion} | first hit v${newVersion} | all spans v${oldVersion} | all spans v${newVersion} | required v${oldVersion} | required v${newVersion} |`,
+    `| variant | id | first required hit v${oldVersion} | first required hit v${newVersion} | all spans v${oldVersion} | all spans v${newVersion} | required v${oldVersion} | required v${newVersion} |`,
     '|---|---|---|---|---|---|---|---|',
     ...changed,
     '',
