@@ -1087,6 +1087,32 @@ components from `src/` (`PaperTradingPanel`, `PositionCharts`, `BotTelemetry`, `
 allowed, so the three files that use `formatUnits` and viem types get a local helper and type-only imports.
 `useBotApi` gets a read-only variant (no dismiss, no ledger, no settings, same origin).
 
+**Where the "no wallet library" line runs** (review of 25 Nov 2026; an explicit choice for the owner, question 9). The
+browser bundle keeps the allow-list of step 4.6c: no `viem`, no wallet or signing package. The server-side observer
+needs a chain-read library to read `slot0` and `Swap` logs, so it runs with `viem`'s public client only: no account,
+no private key, no wallet client. A test of the Live process's code path fails if `createWalletClient`,
+`privateKeyToAccount`, `mnemonicToAccount` or a wallet module is reachable from the observer's entry, and the process
+refuses to start if its environment holds a key-like variable (`PRIVATE_KEY`, `MNEMONIC`, `BOT_WATCH_ADDRESS`, a
+`TG_TOKEN`, `HYPERSYNC_BEARER_TOKEN`, `ENVIO_API_TOKEN`), the same way the chat server refuses `ANTHROPIC_API_KEY`.
+
+**The bot server in read-only mode** (review of 25 Nov 2026). Today `bot/server.ts` sends `Access-Control-Allow-Origin:
+*` with GET and POST, serves `public/` with `express.static`, and passes `.bot/state.json` through as it is. In the
+read-only mode for "Live": no static folder, no CORS header at all (the chat server is the only client, on
+127.0.0.1), only GET is routed and every other method and path answers 404 before any handler. Responses are built
+from an allow-list of fields, not the files: `/api/state` without RPC addresses (a paid key would sit in the URL),
+without a watch address, local paths or proposals (unless step 5.7 is chosen); the same for `/api/paper` and
+`/api/history`; `/api/results/:name` accepts only names from a fixed list, with no path characters. A test asserts that
+no public response contains "http", a 40-hex-character `0x` address other than the listed pool and token contracts,
+or a drive or home path.
+
+**Outbound hosts** (review of 25 Nov 2026; a fixed list the owner approves at CC-Win). From `bot/config.ts`,
+`src/utils/advisor.ts` and the DefiLlama fetch: the public RPCs `eth.drpc.org`, `base.drpc.org`, `arbitrum.drpc.org`,
+`ethereum-rpc.publicnode.com`, `base-rpc.publicnode.com`, `arbitrum-one-rpc.publicnode.com`, `eth.llamarpc.com`,
+`base.llamarpc.com`, `1rpc.io`, and `yields.llama.fi` for the daily ranking. Nothing else (no Telegram, no HyperSync,
+no wallet relay). When a host fails, the observer keeps the last value, marks its data age (the telemetry table's
+"Data age" column and the status dot), tries the next fallback RPC on the next cycle, and never retries in a tight
+loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale data as stale.
+
 **Steps** (each small enough to review alone; box steps need the owner's word at CC-Win):
 
 - **5.0** Owner's choices on the open questions below. No code.
@@ -1126,9 +1152,23 @@ them. Nothing of the wallet era is copied: a new state folder and a new env file
 
 ### 12.3 Open questions for the owner
 
-1. **Start fresh or continue?** Recommendation: a fresh paper start on the go-live day (6 x 10 000 USD, dates shown);
-   the August and September paper results stay in Archive. Continuing the old `.bot/` files would mix wallet-era state
-   into the demo.
+1. **Start fresh, warm start, or continue?** Three options:
+   - *Fresh start* on the go-live day (6 x 10 000 USD, dates shown). Simple, but the charts are flat for days, and
+     over a short window the strategy can sit ahead of holding, which reads against the project's conclusion.
+   - *Warm start* (review of 25 Nov 2026): the paper positions are replayed from a fixed past date (60 or 90 days back)
+     with the existing paper engine on historical data, labelled "replayed" up to the go-live day and "live" after it,
+     with the boundary drawn on every chart. The existing code cannot do it as it is: `paperTick` reads its state from
+     a file and takes the time from the clock, and its inputs (advisor statistics from 24 h of swaps, leg prices, the
+     trend signal) come from the live observer. Needed: a replay driver that steps in 15-minute intervals, an
+     injectable clock and state path in `paper.ts` (no change to the strategy), and the advisor statistics computed
+     from historical `Swap` logs of the six pools on three chains for the window plus 24 h. Data: the swap history
+     for the window (the pipeline's resumable `fetch-swaps` over public RPCs, about 60 to 90 days of logs for six
+     pools; heavy on free endpoints, so fetched once on the Mac or the box, not on every start), prices from the same
+     swaps. Size L (M if the pipeline's swap cache already covers the window; the wallet-era cache is not copied).
+   - *Continue* the old `.bot/` paper files: rejected, it would mix wallet-era state into the demo.
+
+   Recommendation: the warm start if the owner accepts an L step before go-live, otherwise the fresh start with the
+   fixed notice below from the first day. Either way the August and September paper results stay in Archive.
 2. **Public RPCs or a paid key?** Recommendation: start on public RPCs in step 5.1 and measure the gaps; a paid key,
    server side only, if the 24 h `Swap` log reads fail too often.
 3. **Rankings live or fixed in the first version?** Recommendation: the daily DefiLlama ranking live, the heavy full-run
@@ -1141,7 +1181,16 @@ them. Nothing of the wallet era is copied: a new state folder and a new env file
    always-on host only if the box's uptime is not enough.
 7. **The original look:** Recommendation: the original cockpit CSS for "Live", scoped to that page, and the showcase
    look for "Archive", with the same switch on both.
-8. **Items the owner may have forgotten and might want back:** the out-of-range timer with its 24 h rule and payback
+8. **Fixed notice for "Live"** when the strategy is ahead of holding on the day (shown under the "vs HODL 50/50"
+   figure whenever it is positive): "This is a demonstration of how the project measured its strategy, on a virtual
+   portfolio. Over a few days or weeks the strategy can be ahead of holding. Over the measured period with real
+   capital (August to September 2026) it did not reliably beat simply holding the tokens: see Archive. Nothing here is
+   investment advice."
+9. **The chain-read library on the server side** (touches the standing rule "no wallet or signing libraries"):
+   Recommendation: allow `viem`'s public client in the server-side observer only, with the guards described in 12.2
+   (no account, no key, no wallet client, a code-path test, a refusing start on key-like variables); the browser
+   bundle stays without `viem`.
+10. **Items the owner may have forgotten and might want back:** the out-of-range timer with its 24 h rule and payback
    condition, the flat clock of the FlatWide cycle, the walk-forward check against fresh data, the candidate gate,
    the morning report. All but the morning report are in the proposed first version.
 
