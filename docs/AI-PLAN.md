@@ -376,29 +376,44 @@ Common rules for every step:
   Of the 20 questions wrong in 3 or more of 6 runs: A not retrieved 4 (why-02, dated-01, dated-04, dated-05),
   B cut by the reranker 2 (why-06, id-07), C the answer needs several chunks 9 (mostly "partly"), D split across chunks
   0 (4 of 186 spans cross a boundary), E reference arguable 1, F not retrieval 4. 0 USD.
-- [ ] **6.2 Golden set v1.5 and a held-out test set.** (a) The owner reviews five items the diagnosis flags before any
-  tuning: dated-04 and dated-05 (ambiguous questions), dated-09 (reference broader than the question), and the
-  evidence lists of id-03 and dated-01 (answered correctly without any listed evidence). (b) CC-Mac writes about 30 new
-  questions in the same five categories from the journal, with evidence spans and reference answers, the owner reviews
-  them, and the file is frozen with its hash in `ai/DECISIONS.md`. v1.4's 34 questions become the development set,
-  the new ones the test set. 0 USD.
+- [ ] **6.2 Golden set v1.5 and a held-out test set.** v1.5 is a change to the test, so: every changed item gets a
+  one-line reason in the file's change notes, the old wording stays in the git history, and v1.4 numbers are never
+  compared with v1.5 numbers unless the stored answers are re-scored on v1.5 where that is possible.
+  (a) The owner reviews five items the diagnosis flags, before any tuning: dated-04 and dated-05 (ambiguous questions),
+  dated-09 (reference broader than the question), and the evidence lists of id-03 and dated-01 (answered correctly
+  without any listed evidence).
+  (b) Required and supporting spans. For each of the nine class C questions, and then for every question, each
+  evidence span is marked `required` (a correct verdict needs its fact) or `supporting`. This separates "the answer
+  really needs these spans" from "the reference lists more than the question asks", so a larger k is not rewarded for
+  covering spans nobody needs.
+  (c) Held-out questions: about 30, in the same five categories. CC-Mac drafts them and their references from the
+  corpus itself (journal and docs read directly), never from retrieval output, in batches of five to eight; each
+  batch is read with the owner in a session, with the reasoning behind each reference, before the next. Then the file
+  is frozen with its hash in `ai/DECISIONS.md`. v1.4's 34 questions become the development set, the new ones the
+  test set. 0 USD.
 - [ ] **6.3 Retrieval measure and baseline, free.** `ai/eval/retrieval-diag.ts`: per question, the rank of every
-  evidence chunk after the first stage (to depth 100) and after the reranker, span coverage at k = 5, 10, 15 and 20.
+  evidence chunk after the first stage (to depth 100) and after the reranker, span coverage at k = 5, 10, 15 and 20,
+  reported twice: for the required spans of 6.2 and for all spans.
   Needs the query vectors (bge-m3) and the evaluation reranker `[CC-Win, owner's go]`: one short box window, the
   vectors are then cached in `ai/index/` so later candidates that keep the first stage need no box. Baseline numbers
   for the development set. 0 USD.
 - [ ] **6.4 Judged baseline on v1.5.** The served configuration, Qwen, development and test sets (64 questions), two
   runs. Gives the spread every later step is compared against. About 2.1 USD (judge only).
 - [ ] **6.5 Candidate: deeper rerank pool** (class A). Rerank the top 50 or 60 instead of 30. Three of the four class
-  A questions have their first evidence chunk at first-stage rank 36 to 52. Measured with 6.3, free. Live server: no
-  index rebuild; about 0.4 s more per question on the GPU (30 chunks take 0.585 s), no VRAM change.
+  A questions have their first evidence chunk at first-stage rank 36 to 52. Measured with 6.3, free. Cost on the
+  served system, measured in this step: reranker time per question at 30, 50 and 60 chunks (0.585 s for 30 on the
+  box in 4.10e, so about 1.0 to 1.2 s for 50 to 60, to be confirmed); no index rebuild, no VRAM change.
 - [ ] **6.6 Candidate: fuse the reranker score with the first-stage rank** (class B). A weighted RRF of the two orders
   instead of the reranker order alone; why-06 drops from first-stage 5 to 29 and id-07 from 2 to 14 today. The weight
   is set on the development set only. Free. Live server: no rebuild, no latency.
 - [ ] **6.7 Candidate: more context per answer** (class C, the largest). k = 15 and 20, and adding the neighbouring
-  chunk of the same journal entry or report to each of the top hits. Measured as span coverage, free. Live server: no
-  rebuild; a longer prompt for Qwen (median chunk about 1 050 characters, so 20 chunks fit well inside `num_ctx`
-  24576) and a few seconds more per answer; for guest-key visitors, more input tokens on their own key.
+  chunk of the same journal entry or report to each of the top hits. Measured as span coverage (required and all),
+  free. Cost on the served system, given before and after in this step: prompt tokens per answer for Qwen and for the
+  guest's Sonnet call (at k = 10 in 4.6e: median 13 117 input and 441 output tokens, 0.030 USD per guest answer on the
+  visitor's own key, 5.3 s per question end to end), Qwen latency on the box (prompt processing grows with the
+  prompt; 20 chunks of median 1 050 characters fit well inside `num_ctx` 24576), and the cost per guest answer. A
+  longer context can also lower answer quality, so a k that gains on coverage still has to hold its judged counts
+  under the two-run rule on the development set (6.11). No rebuild.
 - [ ] **6.8 Candidate: dates and ids in the question** (secondary tag of dated-01, dated-04, dated-07). Detect a date,
   a range or "first", "last" in the question and boost chunks by their entry or report date, and boost exact matches
   of decision ids and position numbers in BM25. Supersedes "Temporal filters" under "Later". Free. Live server: no
@@ -416,7 +431,9 @@ Common rules for every step:
   combination, Qwen, two runs each. Up to four configurations, about 4.4 USD.
 - [ ] **6.12 Held-out test and the guest path.** The final configuration against the 6.4 baseline on the frozen test
   set (Qwen, two runs, about 1 USD), and Sonnet on the guest path, baseline and final, two runs each on all 64
-  questions (about 11.7 USD with the judge). The owner decides from these numbers whether the live server changes.
+  questions (about 11.7 USD with the judge). The guest request body was measured at k = 10 (4.6e); a new k or pool
+  changes it, so this is where the guest path is measured again: tokens, cost per guest answer and time. The owner
+  decides from these numbers whether the live server changes.
 - [ ] **6.13 Deployment** `[CC-App, CC-Win]`, on the owner's word: retrieval code on `app-chat`, new pin on the box,
   index rebuild if 6.10 is in, the measured times on the page updated.
 
@@ -432,9 +449,13 @@ Budget proposal (for the owner; nothing above the standing limits of 2 USD per r
 is spent before he sets new ones in CC-Mac's conversation). Per run: up to 4 USD (a Sonnet run on 64 questions with
 the judge is about 2.9 USD). For the phase: 20 USD, about 19 planned: 6.4 2.1, 6.11 4.4, 6.12 12.7. A smaller variant
 without the Sonnet guest-path check in 6.12 costs about 7.5 USD. Of the roughly 50 USD on the account, about 30 stay
-in reserve. The key in `.env` expires about 10 Dec 2026: steps 6.1 to 6.3 need no key; the paid steps 6.4, 6.11 and
-6.12 fit before that date only if the owner's reviews in 6.1 and 6.2 take a few days at most, otherwise 6.11 and 6.12
-need a new key from him.
+in reserve.
+
+Timeline against the key. The key in `.env` expires about 10 Dec 2026. Steps 6.1 to 6.3 need no key; 6.4, 6.11 and
+6.12 do. For them to fit, 6.2 must be frozen by **3 Dec 2026**: 6.3 (box window) and 6.4 on 4 Dec, the free
+candidate measurements 5 to 7 Dec, 6.11 on 8 Dec, 6.12 on 9 Dec. If 6.2 is not frozen by 3 Dec, or the owner prefers
+no deadline, the fallback is a new API key from him before the first paid step after 10 Dec; deciding that early
+lets the batches of 6.2 take the time they need.
 
 ## Later, optional (not scheduled)
 
