@@ -906,6 +906,13 @@ word first), and the owner's yes at the moment of the merge.
 
 ## 11. Later (owner's direction, 17 Nov 2026; no design, no code)
 
+**Owner's decision of 25 Nov 2026 (relayed by the analysis session): scope of phase 5.** The DeFi side is finished at
+the lowest cost; the remaining effort goes into the RAG. Phase 5 keeps 5.5b and one deployment of Live on the box (5.6),
+as built. Rule for Live after that: if it breaks, it is repaired before a job interview, not continuously; the
+rollback line in `deploy/live/README.md` is the quick way to switch it off. The visitors' questions view on the admin
+page stays as an optional later item (it belongs to the AI side). After 5.6 is measured, phase 5 closes and merges on
+his word; no further DeFi work is planned. The struck items are listed in section 12, "Not pursued".
+
 **Owner's decision of 18 Nov 2026 (relayed by the analysis session): order of work and the hosted paper copy.**
 
 - *Order.* Finish everything started first, including the tunnel: 4.6b to 4.6e, 4.9, 4.10c, the merge to `main`.
@@ -1234,10 +1241,20 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   remaining nightly steps ran 3 minutes after start (wide-score 3 s, wide-daily 13 s), the day was marked complete,
   and the child processes' calls were counted per host (`net-stats-<step>.json`: coins.llama.fi 4 and 48 calls,
   yields.llama.fi 1).
-- **5.7** (optional, after 5.6) Read-only proposal cards derived from the paper decision log (REBALANCE, EXIT_TREND,
-  FLAT_*), no buttons. M.
-- Later: wide against narrow on one pair (new paper strategies, L), automatic entry from the ranking under the
-  rotation rule (edge covers 0.3 % of capital within 10 days), the visitors' questions view, a daily demo report.
+- ~~**5.7** (optional, after 5.6) Read-only proposal cards derived from the paper decision log (REBALANCE,
+  EXIT_TREND, FLAT_*), no buttons. M.~~ Not pursued (25 Nov), see below.
+- Later: the visitors' questions view on the admin page (optional, AI side). The other later items are not pursued.
+
+**Not pursued (owner's decision of 25 Nov 2026: the DeFi side ends with 5.6).** Kept here with their reasoning:
+- Two strategies on the same pool (wide against narrow, or v1.2 against the FlatWide hybrid), automatic entry from the
+  ranking under the rotation rule, and the paper step playing the FlatWide hybrid: new paper strategies, size L each.
+- The warm start (replay of past days before go-live): size L; the fresh start with its notice stays.
+- Proposal cards (5.7) and the daily demo report: new code on the paper decision log, M each.
+- The paper step skipping fee accrual on stale statistics (open item (i)): no logic change; the statistics age shown
+  on the page since a1ae85f is enough.
+- Looking for `wide-backtests.json` on the old box (open item (c)): not done; the full-run column stays hidden with its
+  sentence.
+- A dark theme for the site (owner, 25 Nov: "nie chce ciemnego w ogole"): the site is light only.
 
 **What runs on the box for "Live".**
 

@@ -184,6 +184,11 @@ export const LivePage: FC = () => {
                   }
                 />
               </SectionBoundary>
+              <div className="live-section-note live-fee-note">
+                The simulated fees are an upper estimate: the fee model scales its measured yield to a position width in a
+                way that gives about twice what the measurement itself implies. The archive&apos;s backtests and real-capital
+                figures do not depend on it.
+              </div>
             </ExpandableSection>
             <SectionBoundary name="Bot telemetry">
               <BotTelemetry

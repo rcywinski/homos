@@ -182,7 +182,8 @@ function config() {
   const html = readFileSync('showcase/public/live/index.html', 'utf8');
   const meta = html.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)?.[1];
   check('the Live page has the same CSP as the archive page', meta === CSP_META, meta);
-  check('the Live page loads only its own script and styles', [...html.matchAll(/(?:src|href)="([^"]+)"/g)].every((m) => m[1].startsWith('/live/')));
+  // Its own files under /live/, plus the one stylesheet shared with the archive (the site header, step 5.5b).
+  check('the Live page loads only its own script and styles and the shared header', [...html.matchAll(/(?:src|href)="([^"]+)"/g)].every((m) => m[1].startsWith('/live/') || m[1] === '/site-header.css'));
   for (const ms of [0, 59_000, 60_000, 3_599_000, 3_600_000, 86_399_000, 86_400_000, 1_000_000_000, -5]) check(`formatDuration(${ms}) matches src`, shim(ms) === original(ms));
 }
 

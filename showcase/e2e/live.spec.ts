@@ -70,6 +70,7 @@ test('Live: networks, start dates, value ranges, telemetry, observation analysis
   await expect(page.locator('.observation-walkforward-table td', { hasText: 'Pasywny' })).toHaveCount(0);
   await expect(page.locator('.observation-chart-scale').first()).toContainText(/price scale shown: [\d,.]+ to [\d,.]+ · EMA gap scale shown: -5\.0% to [-\d.]+% \(safety-switch threshold -5%\)/);
   await expect(page.locator('.live-notice').first()).not.toContainText('the same algorithm');
+  await expect(page.locator('.live-fee-note')).toContainText('upper estimate');
   // Statistics age: a column in telemetry, and a line on the stale pool's card only.
   await expect(page.locator('.telemetry-table th', { hasText: 'Statistics age' })).toHaveCount(1);
   // the fixture is written when its server starts, so the age grows during a long suite: match the form, not the minute
