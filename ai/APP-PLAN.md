@@ -950,3 +950,198 @@ rebalances, fees, conversion losses); the chat as a linked subpage; later a chat
 later a per-visitor virtual wallet kept in the browser. First step when this is picked up: reconnaissance of how deeply
 the wallet libraries (wagmi, ConnectKit, viem and the signing hooks) are tied into the old UI in `src/`.
 
+## 12. Phase 5: the hosted paper-trading copy, inventory and plan (written 25 Nov 2026, no code)
+
+**Change of direction (owner, 25 Nov 2026).** The demo stays faithful to the interface of the original application;
+the default is the original screens with the wallet parts removed or replaced by fixed or simulated data, not a new
+thin page (section 11 and `ai/PAPER-HOST-RECON.md` had recommended the thin page). The inventory below lists every
+screen, panel, chart, table and control of the original app as it stands in `src/` (36 files, the whole UI is one
+page, `MorningCockpit.tsx`), plus the screens removed in August and the ones planned but never built, so the owner sees
+the full list and picks.
+
+Verdicts: **A** works as is without a wallet; **B** works with fixed or simulated data (which is said); **C** needs a
+wallet or signing, left out or shown disabled; **D** not worth showing (why is said). Size: S under a day, M a few
+days, L a week or more. **18 Nov** marks what the decisions of 18 Nov already include (section 11).
+
+### 12.1 Inventory
+
+**Header (App.tsx)**
+
+| Item | What it shows, where | Data | Verdict | Size | 18 Nov |
+|---|---|---|---|---|---|
+| Title "HOMOS / Uniswap v3 liquidity cockpit" | top left | none | B: the neutral title of the showcase, never "HOMOS" | S | |
+| Bot status dot | top right, also in the cockpit | the observer's heartbeat (`/api/state` age) | A: the paper observer's freshness | S | |
+| Compact wallet balances per network | top right | the connected wallet (`useBalance` on three chains) | C: replaced by a "paper mode, no wallet" badge | S | |
+| Connect wallet button (ConnectKit) | top right | wallet | C: left out | S | |
+| Bot connection settings (⚙: API address, token) | cockpit header | browser storage | D: operator setting; the public page talks to its own server only | S | |
+
+**Financial summary (top of the cockpit)**
+
+| Item | What it shows, where | Data | Verdict | Size | 18 Nov |
+|---|---|---|---|---|---|
+| Total value (whole wallet, all chains) | first stat | wallet balances and positions | B: total of the virtual portfolio (6 x 10 000 USD start) | S | |
+| Positions in range X/Y | second stat | wallet positions | B: paper positions in range | S | |
+| Fees to collect | third stat | wallet positions | B: paper fees accrued, labelled as an estimate | S | |
+| Hedge-open note (from this browser) | under the stats | browser storage | D: a fallback for a real GMX short; no real hedge in the demo | S | |
+
+**Proposals and emergency procedure**
+
+| Item | What it shows, where | Data | Verdict | Size | 18 Nov |
+|---|---|---|---|---|---|
+| Emergency procedure (A hedge / B exit side by side) | above the proposals | observer proposals for real positions in a downtrend | B: only if the demo derives proposals for paper pools (new code); otherwise D | M | |
+| Proposal card REBALANCE (new range, cost, payback days) | "Bot proposals" | observer (advisor) for real positions | B: content read-only from the paper decision log (new code); buttons C | M | |
+| Proposal card OPEN (from the daily ranking) | same | selector | A for the text when the selector runs; button C | S | |
+| Proposal card ROTATE (break-even days of the switch) | same | selector, from a real position to a better pool | B: only with proposals derived for paper pools (new code); without a wallet the selector has no position to rotate; buttons C | M | |
+| Proposal card EXIT_TREND (trend safety switch) | same | observer, real positions | B as REBALANCE; button C | M | |
+| Proposal card HEDGE (size of the GMX short) | same | observer, real positions | B as REBALANCE; button C | M | |
+| Proposal cards FLAT_NARROW and FLAT_WIDEN (FlatWide cycle) | same | observer, product pools | B as REBALANCE; buttons C | M | |
+| Approve, Modify, Open, Close, Approve hedge buttons | on every card | signing hooks | C: left out (or shown disabled with "the demo signs nothing") | S | |
+| Dismiss proposal | on every card | `POST /api/proposals/:id/dismiss` (the only write route) | D: guests read only; not routed | S | |
+| "Bot offline", "data stale" notes | under the title | observer status | A | S | |
+
+**Real capital (tranche and wallet positions)**
+
+| Item | What it shows, where | Data | Verdict | Size | 18 Nov |
+|---|---|---|---|---|---|
+| Tranche balance bar (deposited, total today, difference; split into market move and entry costs) | "Positions, actions" | observer, the real tranche | D for "Live": real capital belongs to "Archive" (the Wallet tab shows it sanitized) | S | |
+| Real positions summary (total equity, PnL since start, vs HODL 50/50) | above the cards | wallet positions and their history | D for "Live": duplicate of the paper header; Archive has the real figures | S | |
+| Status legend (in range, out of range, rebalance due, not worth it) | above the cards | none | A | S | |
+| Real LP position card: status and advice icons, value, cycle line, out-of-range badge and timer, range bar, stats bar, equity vs HODL sparkline, price vs band chart | position cards | wallet NFTs, `/api/positions-history` | D for "Live" (the same visuals exist per paper pool, below); real cards in Archive | M | |
+| GMX short card (size, entry, collateral, PnL, sparkline, "Close short") | position cards | observer GMX read | D: real hedge only; C for its button | S | |
+| Position menu ⋮: Collect fees, Close, Manual rebalance | each real card | signing hooks | C | S | |
+| Close modal (percentage slider, slippage, amounts), Rebalance modal (custom range, token approvals) | modals | signing hooks | C | M | |
+| Rebalance, Rotate and Hedge sequence modals (multi-step signing) | modals | signing hooks | C | M | |
+| Closed positions panel with CSV export (tax) | bottom section | `/api/closed-positions`, `/api/ledger.csv` (the real wallet's ledger) | D for "Live": personal ledger; Archive covers the period | S | |
+| Transaction history (not mounted) | none | browser storage | D: retired in August | S | |
+
+**Paper trading panel (PaperTradingPanel.tsx, PositionCharts.tsx)**
+
+| Item | What it shows, where | Data | Verdict | Size | 18 Nov |
+|---|---|---|---|---|---|
+| Paper total header: total equity, PnL since start, vs HODL 50/50 | top of the panel | `/api/paper` (paper ledger) | A | S | yes |
+| Status legend | under the header | none | A | S | yes |
+| Per-pool card: status icon, pool, trend-down badge (price below EMA) | one card per pool | paper state, observer | A | S | yes |
+| Out-of-range timer with the 24 h hysteresis and the payback condition | per-pool card | paper state | A | S | yes |
+| Stats bar: PnL since start, vs HODL, fees reinvested, fees accrued, costs, rebalances | per-pool card | paper ledger | A; fees labelled as an estimate (paper rescales pool fee yield, no per-swap replay) | S | yes |
+| Hedge line (short size, entry, funding, PnL) | per-pool card, when the paper strategy hedges | paper ledger | A | S | yes |
+| Equity vs HODL sparkline with events | per-pool card | paper history | A | S | yes |
+| Price vs band chart with rebalance and exit events | per-pool card | paper history | A | S | yes |
+| Recent events (opens, rebalances, exits, with costs) | bottom of the panel | paper events | A: the rebalance history and its estimated cost | S | yes |
+| Start date per pool | not shown today | paper state | B: added (18 Nov decision: start dates shown) | S | yes |
+
+**Bot telemetry and observation analysis (collapsed sections)**
+
+| Item | What it shows, where | Data | Verdict | Size | 18 Nov |
+|---|---|---|---|---|---|
+| Pools table: USD price, tick, volatility %/d, fee yield %/d, suggested range, data age, advisor and cycle column | "Bot telemetry" | observer state | A | S | |
+| Positions watched by the bot | same | observer, real positions | D: empty without a watch address | S | |
+| Raw state.json modal | same | observer state | D: debugging view | S | |
+| Flat badge and clock per pool (flat confirmed after 12 h) | "Observation analysis" | `/api/history` | A | S | yes |
+| 72 h history per pool (price, volatility, fee yield, range, EMA gap) | same | `/api/history` | A | S | yes |
+| "Algorithm vs fresh data (hybrid walk-forward, 720 d)": mean, win rate, worst per strategy | same | `/api/results/:name` (backtest result files) | B: the result files of the period, fixed, with their date | S | yes |
+
+**Pair ranking (TopRankingPanel.tsx, two variants)**
+
+| Item | What it shows, where | Data | Verdict | Size | 18 Nov |
+|---|---|---|---|---|---|
+| Daily ranking TOP 10: rank, pair, APY 7 d, streak, TVL, eligible rows highlighted, criteria line | "Daily ranking" | `bot/selector.ts` daily from `data/llama/` (DefiLlama history) | A if the daily DefiLlama fetch and the selector run; B with the period's last ranking, dated | M | yes |
+| Wide ranking: class, score %/yr, fee wide, drag, σ/yr, streak, TVL | second ranking | nightly `scripts/wide-score.ts` | same as above | M | yes |
+| Wide-band daily model 365 d and 720 d vs HODL, flat share | columns of both rankings | nightly `scripts/wide-daily.ts` | same as above | M | yes |
+| "Full run" column: the backtest engine's verdict per pool (the gate) | columns of both rankings | `scripts/wide-collect.ts` (swap history fetch plus walk-forward, heavy) | B: the period's results, fixed and dated; a live run is L | S (fixed) / L (live) | yes |
+| Candidate status PASS / FAIL / QUEUED (the selection gate) | status column | `bot/candidates.ts` seed plus nightly verdicts | A with the seed and the period's verdicts | S | yes |
+
+**Removed in August 2026 or planned and never built (from `docs/UI-DESIGN.md`)**
+
+| Item | Status | Verdict | Size |
+|---|---|---|---|
+| Pool browser, manual Add Liquidity, My Positions, Top Pools | removed 21 Aug, replaced by the cockpit | D: superseded; the ranking shows the pools | M |
+| Profit forecast panel (v1.2 strategies) | removed; described strategies the product no longer played | D: would mislead | M |
+| Autopilot settings: OBSERVE / PROPOSE / AUTO per pool, limits, kill-switch | planned, never built | D: never existed; at most a note in "Archive" | L |
+| 08:00 news and risk-posture task | planned, never built | D | M |
+| SQLite ledger with PLN conversion for tax | planned, never built | D: personal tax data | M |
+| Telegram alerts (depeg, bot failure, price move, failed transaction) | built, bot side, no UI | D: personal channel; B only as an "alerts the bot would have sent" list (new) | M |
+| 07:30 morning report | built, bot side; the 37 reports are in "Archive" | B: a daily demo report from the paper state (new) | M |
+| Wide against narrow strategies on one pair | not built (paper runs one strategy) | later (owner, 18 Nov) | L |
+
+### 12.2 Plan: first version of "Live"
+
+**Fixed decisions.** Two sections: "Archive" (the real-capital measurements and the chat, where the conclusion is
+stated) and "Live" (a demonstration only, labelled so, drawing no conclusion of its own). Live: the six paper pools,
+10 000 USD of virtual capital each, one strategy per pool (the existing `bot/paper.ts`), start dates shown, the pair
+ranking shown as the reason for the choice. Later, not in the first version: two strategies side by side, automatic
+entry from the ranking under the project's own profitability rule, the visitors' questions view. The page makes
+visible that holding beat the strategy (the "vs HODL 50/50" figure at the top of the paper panel, and in Archive the
+stated result) and gives no investment advice.
+
+**Proposed first version.** The original cockpit's layout and look, in its original order: header with the status dot
+and a "paper mode" badge; the financial summary from the paper portfolio (B); the paper trading panel (A); the
+status legend; bot telemetry (A, without the watched positions and the raw JSON); observation analysis (A, the
+walk-forward table from the period's result files); both rankings with the gate columns (A for the daily DefiLlama
+ranking, B for the full-run column). Left out: everything C, the real-capital items (in Archive), the proposal cards
+(later, step 5.7). No original component that imports a signing hook is part of the build.
+
+**How it is built.** A second entry of the showcase build (like the admin page) that mounts the original wallet-free
+components from `src/` (`PaperTradingPanel`, `PositionCharts`, `BotTelemetry`, `ObservationAnalysis`,
+`TopRankingPanel`, `CycleLine`, `BotStatusDot`, `ExpandableSection`) inside a new cockpit shell that copies
+`MorningCockpit`'s layout and CSS without its signing imports. The build guard stays an allow-list: `viem` is not
+allowed, so the three files that use `formatUnits` and viem types get a local helper and type-only imports.
+`useBotApi` gets a read-only variant (no dismiss, no ledger, no settings, same origin).
+
+**Steps** (each small enough to review alone; box steps need the owner's word at CC-Win):
+
+- **5.0** Owner's choices on the open questions below. No code.
+- **5.1** Paper observer on the Mac, read only: `bot/observer.ts` with no watch address, state in a folder outside the
+  repo, public RPCs; one day of running to measure the RPC load and the gaps; `bot/server.ts` in a public read-only
+  mode (an allow-list of GET routes, no CORS wildcard, bound to 127.0.0.1, no dismiss, ledger or positions routes),
+  with tests. S to M.
+- **5.2** The chat server forwards `/live/api/*` to the bot server on 127.0.0.1 (the allow-list again, timeouts, no
+  write method), so the page stays same-origin and the CSP unchanged. S.
+- **5.3** The "Live" page: the second entry, the cockpit shell, the paper summary (B), the paper panel with start
+  dates, the legend, the "Archive / Live" switch on both pages, the demonstration notice; guard and viem helper;
+  Playwright with a fixture bot API. M.
+- **5.4** Telemetry and observation analysis on the page, read only; the walk-forward table from the period's result
+  files, dated. S.
+- **5.5** Both rankings with the gate columns: the daily ranking live (DefiLlama fetch plus the selector, daily), the
+  wide ranking and daily model nightly (light steps of the pipeline), the full-run column and candidate verdicts fixed
+  from the period and dated. M.
+- **5.6** On the box: the observer and the bot server as tasks under `homos-web` with the supervisor, state folder,
+  RPC settings, the daily and nightly steps; measured; then public on the owner's word. M.
+- **5.7** (optional, after 5.6) Read-only proposal cards derived from the paper decision log (REBALANCE, EXIT_TREND,
+  FLAT_*), no buttons. M.
+- Later: wide against narrow on one pair (new paper strategies, L), automatic entry from the ranking under the
+  rotation rule (edge covers 0.3 % of capital within 10 days), the visitors' questions view, a daily demo report.
+
+**What runs on the box for "Live".**
+
+| Process | How often | Reads from outside | State | After a restart |
+|---|---|---|---|---|
+| Paper observer (`bot/observer.ts`, no watch address) | prices every 60 s, statistics and the paper step every 15 min | `slot0` and 24 h of `Swap` logs per pool on mainnet, Base, Arbitrum (public RPCs, or a paid key kept server side) | `C:\HomosServe\live-state\` (paper state, events, history; outside the clone; `homos-web` Modify) | resumes from the state files; paper positions and their start dates persist |
+| Bot server (`bot/server.ts`, read-only mode) | on request | none | reads the state folder | stateless |
+| Selector (inside the observer, daily) | once a day after 08:00 | `data/llama/` | the ranking file in the state folder | the last ranking stays until the next run |
+| Daily DefiLlama fetch and the light nightly steps (wide-score, wide-daily) | daily | DefiLlama HTTP | `data/llama/` and the state folder | resumable (the pipeline already is) |
+
+They sit beside the chat server under `homos-web`, CPU only (no GPU, no model), each under the supervisor of step 4.10,
+listening on 127.0.0.1 only; the chat server is the only public entry. The owner switch of the models does not touch
+them. Nothing of the wallet era is copied: a new state folder and a new env file with only the RPC settings.
+
+### 12.3 Open questions for the owner
+
+1. **Start fresh or continue?** Recommendation: a fresh paper start on the go-live day (6 x 10 000 USD, dates shown);
+   the August and September paper results stay in Archive. Continuing the old `.bot/` files would mix wallet-era state
+   into the demo.
+2. **Public RPCs or a paid key?** Recommendation: start on public RPCs in step 5.1 and measure the gaps; a paid key,
+   server side only, if the 24 h `Swap` log reads fail too often.
+3. **Rankings live or fixed in the first version?** Recommendation: the daily DefiLlama ranking live, the heavy full-run
+   column fixed from the period and dated.
+4. **Proposal cards in the first version?** Recommendation: not in the first version (step 5.7 after go-live); the
+   paper panel already shows every rebalance and its cost.
+5. **Real-capital panels in "Live"?** Recommendation: no; they stay in Archive, sanitized, so "Live" never shows
+   personal data.
+6. **Where "Live" runs?** Recommendation: on the box beside the chat server (CPU only, measured in 5.6); a separate
+   always-on host only if the box's uptime is not enough.
+7. **The original look:** Recommendation: the original cockpit CSS for "Live", scoped to that page, and the showcase
+   look for "Archive", with the same switch on both.
+8. **Items the owner may have forgotten and might want back:** the out-of-range timer with its 24 h rule and payback
+   condition, the flat clock of the FlatWide cycle, the walk-forward check against fresh data, the candidate gate,
+   the morning report. All but the morning report are in the proposed first version.
+
