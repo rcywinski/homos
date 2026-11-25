@@ -5,7 +5,7 @@
  * Between the visitor and the bot API:
  *   - an allow-list of routes and GET only; anything else is a 404 before any upstream call;
  *   - `hours` accepts only a few values (24, 72, 168); any other value becomes the default, so the cache has few keys;
- *   - a cache of 30 s per route and `hours` value: however many visitors, the bot API sees at most one request per
+ *   - a cache of 30 s per route and `hours` value (5 s for an error): however many visitors, the bot API sees at most one request per
  *     key per 30 s, and one upstream request at a time per key (concurrent misses wait for the same fetch);
  *   - a response size cap (the bot API reads whole ndjson files; a cap keeps a grown file from becoming a large
  *     response), an upstream timeout, and a fixed 502 or 503 with no upstream details;
@@ -32,7 +32,22 @@ export const LIVE_ROUTES = new Set(['state', 'paper', 'history', 'ranking', 'wid
 const HOURS_ROUTES = new Set(['paper', 'history']);
 export const LIVE_HOURS = [24, 72, 168] as const;
 const DEFAULT_HOURS = 72;
-const RESULT_NAME = /^walkforward-[a-z0-9-]{3,60}-365d-45d\.json$/;
+/**
+ * The six paper pools' walk-forward files, the same list as RESULT_NAMES in bot/server-public.ts (pinned by
+ * live-proxy.test.ts). A fixed list keeps the cache keys finite: 8 routes, two of them times 3 `hours` values, plus
+ * these 6, so the cache map needs no eviction.
+ */
+export const LIVE_POOL_IDS = [
+  'mainnet-usdc-weth-030',
+  'mainnet-usdc-weth-005',
+  'base-weth-usdc-030',
+  'base-cbbtc-weth-005',
+  'base-weth-cbbtc-030',
+  'arbitrum-weth-usdc-005',
+] as const;
+export const LIVE_RESULT_NAMES = new Set(LIVE_POOL_IDS.map((id) => `walkforward-${id}-365d-45d.json`));
+/** Errors are kept shorter than answers, so a "not ready" at start clears soon after the bot API is up. */
+const ERROR_CACHE_MS = 5_000;
 export const LIVE_MAX_BYTES = 4 * 1024 * 1024;
 
 export class LiveConfigError extends Error {}
@@ -60,7 +75,7 @@ interface Entry {
   body: string;
 }
 
-export function liveRouter(o: LiveOptions): Router {
+export function liveRouter(o: LiveOptions): Router & { cacheSize: () => number } {
   const base = checkBotUrl(o.botUrl);
   const fetchFn = o.fetchFn ?? fetch;
   const now = o.now ?? Date.now;
@@ -87,7 +102,7 @@ export function liveRouter(o: LiveOptions): Router {
 
   const cached = async (key: string): Promise<Entry> => {
     const hit = cache.get(key);
-    if (hit && now() - hit.at < cacheMs) return hit;
+    if (hit && now() - hit.at < (hit.status === 200 ? cacheMs : Math.min(cacheMs, ERROR_CACHE_MS))) return hit;
     let p = inFlight.get(key);
     if (!p) {
       p = upstream(key).then((e) => {
@@ -112,7 +127,7 @@ export function liveRouter(o: LiveOptions): Router {
     res.status(e.status).set({ 'cache-control': 'no-store', 'content-type': 'application/json; charset=utf-8' }).send(e.body);
 
   router.get('/results/:name', async (req, res) => {
-    if (!RESULT_NAME.test(req.params.name)) return res.status(404).json({ error: 'not-found' });
+    if (!LIVE_RESULT_NAMES.has(req.params.name)) return res.status(404).json({ error: 'not-found' });
     send(res, await cached(`/api/results/${req.params.name}`));
   });
 
@@ -128,5 +143,6 @@ export function liveRouter(o: LiveOptions): Router {
   });
 
   router.use((_req, res) => res.status(404).json({ error: 'not-found' }));
-  return router;
+  // The number of cached keys, for the tests (the set of keys is finite, see LIVE_RESULT_NAMES).
+  return Object.assign(router, { cacheSize: () => cache.size });
 }

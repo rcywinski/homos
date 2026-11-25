@@ -23,6 +23,11 @@ export function App() {
   const tabs = TABS.filter((t) => t.id !== 'wallet' || wallet.state === 'ready');
   return (
     <div className="page">
+      {/* Phase 5: the two pages, the research archive (this one) and the paper-trading demonstration at /live/. */}
+      <nav className="page-switch" aria-label="Pages">
+        <span aria-current="page">Archive</span>
+        <a href="/live/">Live</a>
+      </nav>
       <header className="masthead">
         <div className="masthead-text">
           <h1>{PROJECT_TITLE}</h1>

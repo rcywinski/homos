@@ -71,6 +71,11 @@ body {
 }
 strong, b { font-weight: var(--label-weight); }
 .page { max-width: 1320px; margin: 0 auto; padding: 20px 16px 48px; }
+/* Phase 5: Archive / Live switch, the same two pills as on the Live page. */
+.page-switch { display: flex; gap: 6px; margin: 0 0 14px; font-size: 0.92rem; }
+.page-switch a, .page-switch span { padding: 4px 12px; border-radius: 999px; border: 1px solid var(--ink-soft); color: var(--ink); text-decoration: none; }
+.page-switch span[aria-current="page"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.page-switch a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
 a { color: var(--accent); }

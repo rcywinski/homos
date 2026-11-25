@@ -9,7 +9,9 @@ import { readFileSync } from 'fs';
 import type { AddressInfo } from 'net';
 import { formatDuration as original } from '../../src/utils/formatters';
 import { formatDuration as shim } from '../../showcase/live/formatters';
-import { checkBotUrl, liveRouter, LiveConfigError } from './live-proxy';
+import { BOT_POOLS } from '../../bot/config';
+import { RESULT_NAMES } from '../../bot/server-public';
+import { checkBotUrl, liveRouter, LiveConfigError, LIVE_RESULT_NAMES } from './live-proxy';
 import { RateLimiter } from './ratelimit';
 import { CSP_META } from './headers';
 
@@ -33,12 +35,13 @@ async function serve(opts: { body?: (url: string) => { status: number; text: str
     return new Response(b.text, { status: b.status });
   }) as unknown as typeof fetch;
   const app = express();
-  app.use('/live/api', liveRouter({ botUrl: 'http://127.0.0.1:8788', limiter: new RateLimiter(opts.limits ?? { perHour: 1000, perDay: 1000, globalPerDay: 1000 }), trustProxy: 'none', fetchFn, now: () => t, maxBytes: opts.maxBytes }));
+  const router = liveRouter({ botUrl: 'http://127.0.0.1:8788', limiter: new RateLimiter(opts.limits ?? { perHour: 1000, perDay: 1000, globalPerDay: 1000 }), trustProxy: 'none', fetchFn, now: () => t, maxBytes: opts.maxBytes });
+  app.use('/live/api', router);
   const srv = await new Promise<import('http').Server>((resolve) => {
     const s = app.listen(0, '127.0.0.1', () => resolve(s));
   });
   const base = `http://127.0.0.1:${(srv.address() as AddressInfo).port}/live/api`;
-  return { base, calls, tick: (ms: number) => (t += ms), close: () => srv.close() };
+  return { base, calls, cacheSize: router.cacheSize, tick: (ms: number) => (t += ms), close: () => srv.close() };
 }
 
 async function routes() {
@@ -50,6 +53,12 @@ async function routes() {
     for (const r of ['ledger', 'ledger.csv', 'closed-positions', 'positions-history', 'proposals', 'results/other.json', 'results/..%2Fstate.json', 'state/extra', '']) {
       check(`GET ${r || '(root)'}: 404`, (await fetch(`${s.base}/${r}`)).status === 404);
     }
+    const keys = s.cacheSize();
+    const calls = s.calls.length;
+    for (let i = 0; i < 50; i++) await fetch(`${s.base}/results/walkforward-made-up-${i}-365d-45d.json`);
+    check('unknown result names: no upstream call, cache size unchanged', s.calls.length === calls && s.cacheSize() === keys, `${s.calls.length - calls} calls, ${s.cacheSize() - keys} keys`);
+    for (const name of LIVE_RESULT_NAMES) check(`GET results/${name}: 200`, (await fetch(`${s.base}/results/${name}`)).status === 200);
+    check('cache keys stay within 8 routes + 6 results (+4 for the extra hours values)', s.cacheSize() <= 18, String(s.cacheSize()));
     for (const m of ['POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']) check(`${m} state: 404`, (await fetch(`${s.base}/state`, { method: m })).status === 404);
     const before = s.calls.length;
     await fetch(`${s.base}/ledger`);
@@ -124,6 +133,24 @@ async function failures() {
   }
 }
 
+async function errorCache() {
+  let status = 503;
+  const s = await serve({ body: () => ({ status, text: status === 200 ? '{"ok":true}' : '{"error":"x"}' }) });
+  try {
+    check('503 at start', (await fetch(`${s.base}/state`)).status === 503);
+    status = 200;
+    s.tick(3_000);
+    check('an error is still cached after 3 s', (await fetch(`${s.base}/state`)).status === 503);
+    s.tick(3_000);
+    check('an error is fetched again after 5 s', (await fetch(`${s.base}/state`)).status === 200);
+    s.tick(20_000);
+    status = 503;
+    check('a good answer is kept for 30 s', (await fetch(`${s.base}/state`)).status === 200);
+  } finally {
+    s.close();
+  }
+}
+
 async function limits() {
   const s = await serve({ limits: { perHour: 3, perDay: 100, globalPerDay: 100 } });
   try {
@@ -148,6 +175,8 @@ function config() {
     }
     check(`bot URL refused: ${bad}`, threw);
   }
+  check('the result list equals the bot API list', [...LIVE_RESULT_NAMES].sort().join() === [...RESULT_NAMES].sort().join());
+  check('the pool list equals BOT_POOLS', BOT_POOLS.length === LIVE_RESULT_NAMES.size);
   const html = readFileSync('showcase/public/live/index.html', 'utf8');
   const meta = html.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)?.[1];
   check('the Live page has the same CSP as the archive page', meta === CSP_META, meta);
@@ -160,6 +189,7 @@ async function main() {
   await routes();
   await hoursAndCache();
   await failures();
+  await errorCache();
   await limits();
   console.log(`live-proxy: ${passed} passed, ${failed} failed`);
   if (failed) process.exit(1);

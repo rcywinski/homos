@@ -1154,7 +1154,12 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   a throwaway-preview notice; the original CSS copied at build time to `/live/cockpit.css`. Guard: the bundle holds
   react, react-dom and scheduler only; `src/utils/formatters` (viem) is swapped for `showcase/live/formatters.ts`; the
   guard test allows `showcase/live/` exactly two src modules plus `useBotApi` for types, and pins what those import.
-  Still open in 5.3: the Archive/Live switch on the archive page and the Playwright tests with a fixture bot API.
+  Completed 25 Nov: the Archive/Live switch on the archive page; `showcase/e2e/live.spec.ts` (desktop and phone)
+  against a stand-in bot (`showcase/e2e/live-fixture-bot.ts`, fresh timestamps, bait values) behind the real
+  read-only API and the real forward: notice, summary 3/6 and fees, six cards, events, no address, URL or local path
+  on the page, no form, only same-origin GETs, no horizontal scroll, the switch both ways, the bot API down, writes
+  and unknown routes refused. Review fix to 5.2: result names from a fixed list (pinned to the bot API's list by a
+  test), so the cache keys are finite; errors cached 5 s instead of 30 s.
 - **5.4** Telemetry and observation analysis on the page, read only; the walk-forward table from the period's result
   files, dated. S.
 - **5.5** Both rankings with the gate columns: the daily ranking live (DefiLlama fetch plus the selector, daily), the
