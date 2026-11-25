@@ -199,7 +199,7 @@ export const NFT_MANAGER: Record<number, `0x${string}`> = {
 
 /** Wallet whose Uniswap v3 NFT positions the observer tracks. Set BOT_WATCH_ADDRESS in .env — there is no default. */
 export const WATCH_ADDRESS = (process.env.BOT_WATCH_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`;
-if (!process.env.BOT_WATCH_ADDRESS) {
+if (!process.env.BOT_WATCH_ADDRESS && process.env.BOT_MODE !== 'live') { // the Live demo watches no wallet on purpose
   console.warn('[config] BOT_WATCH_ADDRESS is not set — the observer will track the zero address (no positions). Set it in .env.');
 }
 

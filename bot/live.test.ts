@@ -10,7 +10,7 @@ import type { AddressInfo } from 'net';
 import os from 'os';
 import path from 'path';
 import { BOT_POOLS } from './config';
-import { liveStartProblem } from './live';
+import { liveStartProblem, rotateLog } from './live';
 import { NIGHTLY_AFTER_HOUR, NIGHTLY_MAX_ATTEMPTS, NIGHTLY_STEPS, nightlyDue } from './live-nightly';
 import { installConsoleScrub, scrubUrls } from './live-scrub';
 import { createPublicBotApp, RESULT_NAMES } from './server-public';
@@ -175,7 +175,17 @@ function scrub() {
   check('the observer log() scrubs in Live mode', /LIVE_MODE \? scrubUrls\(msg\) : msg/.test(obs));
 }
 
+function rotation() {
+  const f = path.join(OUT, 'rot.log');
+  writeFileSync(f, 'x'.repeat(100));
+  check('a small log is kept', rotateLog(f, 1000) === false && existsSync(f));
+  writeFileSync(f, 'y'.repeat(2000));
+  check('a large log is moved to .1', rotateLog(f, 1000) === true && !existsSync(f) && readFileSync(`${f}.1`, 'utf8').startsWith('y'));
+  check('a missing log is not an error', rotateLog(path.join(OUT, 'none.log'), 1000) === false);
+}
+
 async function main() {
+  rotation();
   scrub();
   nightly();
   startChecks();

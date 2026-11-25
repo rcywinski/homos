@@ -73,6 +73,17 @@ function countCalls(stateDir: string) {
   setInterval(() => fs.writeFileSync(path.join(stateDir, 'net-stats.json'), JSON.stringify({ startedAt, now: new Date().toISOString(), hosts: stats }, null, 1)), 60_000).unref();
 }
 
+/** Keeps a log under `max` bytes: past it, the file becomes `<name>.1` (replacing an older one) and a new one starts. */
+export function rotateLog(file: string, max = 5 * 1024 * 1024): boolean {
+  try {
+    if (fs.statSync(file).size <= max) return false;
+    fs.renameSync(file, `${file}.1`);
+    return true;
+  } catch {
+    return false; // missing file, or a rename that failed: try again next time
+  }
+}
+
 async function main() {
   const problem = liveStartProblem(process.env, path.join(__dirname, '..'));
   if (problem) {
@@ -97,6 +108,10 @@ async function main() {
     fs.appendFileSync(path.join(stateDir, 'observer.log'), line + '\n');
   };
   fs.mkdirSync(stateDir, { recursive: true });
+  // The observer appends to <state>/observer.log for as long as it runs; keep it bounded (checked hourly).
+  const observerLog = path.join(stateDir, 'observer.log');
+  rotateLog(observerLog);
+  setInterval(() => rotateLog(observerLog), 60 * 60_000).unref();
   if (process.env.LIVE_NIGHTLY !== '0') {
     if (!fs.existsSync(path.join(process.env.BOT_LLAMA_DIR!, 'universe.json'))) {
       log('cold start: fetching the DefiLlama history before the observer (the selector needs it)');
