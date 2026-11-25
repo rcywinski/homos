@@ -1151,3 +1151,9 @@ explain none (4 of 186 spans). Candidates are ranked from this; chunk size chang
 **Budget.** Proposed, not approved: up to 4 USD per run, 20 USD for the phase (about 19 planned), or about 7.5 USD
 without the Sonnet guest-path check. The standing limits (2 per run, 5 in total, 3.1032 used) apply until the owner
 sets new ones in CC-Mac's conversation. The key expires about 10 Dec 2026. 0 USD spent.
+
+## 2026-11-25, step 6.1 approved; per-run limit raised to 4 USD (owner)
+
+**Decision.** The owner approved the step 6.1 diagnosis and accepted a limit of 4 USD per run (was 2). The phase total
+he has not set yet: until he does, the standing total of 5 USD since 17 Nov (3.1032 used, 1.8968 left) still applies,
+so no paid phase 6 step starts before he sets it. Step 6.2 is next.

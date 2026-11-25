@@ -369,14 +369,14 @@ Common rules for every step:
   session; a deployment to the live server also needs his go.
 - Each step ends with the usual explanation in Polish, with an example from the project's data, and waits for his OK.
 
-- [ ] NEXT **6.1 Diagnosis, from stored files only.** For every question not judged correct in all six judged runs of
+- [x] 2026-11-25 **6.1 Diagnosis, from stored files only.** For every question not judged correct in all six judged runs of
   the served retrieval (3.2 pb1 and pb2, 4.8j lan48, lan48b, lan48c, 4.6e guest46e): first-stage and reranked rank of
   the first evidence chunk, evidence spans in the top 10, and a failure class.
-  Delivered as a draft for review: `ai/eval/diagnose.ts` and `ai/eval/results/2026-11-25-diagnosis-golden-v1-4.md`.
+  Delivered and approved by the owner on 25 Nov: `ai/eval/diagnose.ts` and `ai/eval/results/2026-11-25-diagnosis-golden-v1-4.md`.
   Of the 20 questions wrong in 3 or more of 6 runs: A not retrieved 4 (why-02, dated-01, dated-04, dated-05),
   B cut by the reranker 2 (why-06, id-07), C the answer needs several chunks 9 (mostly "partly"), D split across chunks
   0 (4 of 186 spans cross a boundary), E reference arguable 1, F not retrieval 4. 0 USD.
-- [ ] **6.2 Golden set v1.5 and a held-out test set.** v1.5 is a change to the test, so: every changed item gets a
+- [ ] NEXT **6.2 Golden set v1.5 and a held-out test set.** v1.5 is a change to the test, so: every changed item gets a
   one-line reason in the file's change notes, the old wording stays in the git history, and v1.4 numbers are never
   compared with v1.5 numbers unless the stored answers are re-scored on v1.5 where that is possible.
   (a) The owner reviews five items the diagnosis flags, before any tuning: dated-04 and dated-05 (ambiguous questions),
