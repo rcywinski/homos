@@ -1207,6 +1207,33 @@ They sit beside the chat server under `homos-web`, CPU only (no GPU, no model), 
 listening on 127.0.0.1 only; the chat server is the only public entry. The owner switch of the models does not touch
 them. Nothing of the wallet era is copied: a new state folder and a new env file with only the RPC settings.
 
+### 12.2a Known model limits (found 25 Nov 2026 while labelling the Live page; docs only, no code changed)
+
+The advisor's calculations are the research code the archived results were produced with, so they stay as they are.
+What follows is recorded so that the Live page and the case study do not overstate what the numbers mean.
+
+- **The fee-yield scaling appears to be two times too high.** `computeStats` (src/utils/advisor.ts, lines 165 to 172)
+  measures the fees earned per day by the liquidity in a band one tick spacing wide: from half a spacing below the
+  price to half a spacing above it. `assessPosition` (line 253) turns that into a position's yield with the factor
+  2 × spacing / width, which assumes the measured band is two spacings wide. If the measured band is one spacing, the
+  factor should be spacing / width, and every estimate built on it is about twice the model's own measurement.
+  - **Paper trading uses the same scaling.** `bot/paper.ts` line 214 accrues fees as value × feeYieldDaily ×
+    (2 × spacing / width) × days. So the paper "fees", in the August and September run and on the Live page, are about
+    twice what the measurement implies. Their costs and price effects are not affected.
+  - **The backtest does not use it.** `backtest/engine.ts` (lines 384 to 393) replays every swap and credits the
+    position its share of the swap fee, L / (L_pool + L). The archived walk-forward and backtest results, and so the
+    conclusion that holding beat the strategies, do not depend on this factor.
+  - **Direction.** If the factor is too high, paper trading and the advisor's payback estimates look better than they
+    were. The finding cannot weaken the conclusion "holding won"; it can only make the paper numbers look rosier
+    than they should.
+- **The paper step and the telemetry suggestion follow different rules.** Paper trading plays ALGORITHM v1.2 (k×σ
+  ranges from `suggestRange`) on all six pools, at open and at rebalance. This is unchanged since its first commit
+  (2416759, 18 Aug 2026), so the Live page is faithful to the research run. The observer's published suggestion for
+  the two product pools is the FlatWide hybrid's wide posture (`suggestFixedRange` at ±productIdleWidthPct). The
+  walk-forward tables (720d-30d) also describe the hybrid. The Live page says which rule each section shows.
+  Playing the hybrid in the paper step is not part of 5.x: it belongs to the later "two strategies on the same pool"
+  item.
+
 ### 12.3 Open questions for the owner
 
 1. **Start fresh, warm start, or continue?** Three options:

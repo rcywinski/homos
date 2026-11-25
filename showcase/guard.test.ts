@@ -54,7 +54,9 @@ check('Windows path', disallowedPackage('C:\\x\\node_modules\\lodash\\index.js')
 function files(dir: string): string[] {
   return readdirSync(dir).flatMap((f) => {
     const p = path.join(dir, f);
-    if (f === 'public' || f === 'node_modules') return [];
+    // The e2e harness (showcase/e2e/harness, harness-dist) is a test-only page that renders the cockpit's sections on
+    // purpose and is never part of a shipped bundle; the build guard covers what ships.
+    if (f === 'public' || f === 'node_modules' || f === 'harness' || f === 'harness-dist') return [];
     return statSync(p).isDirectory() ? files(p) : /\.(ts|tsx|js)$/.test(f) ? [p] : [];
   });
 }

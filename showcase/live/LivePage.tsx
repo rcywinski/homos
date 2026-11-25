@@ -11,7 +11,8 @@ import BotTelemetry from '../../src/components/BotTelemetry';
 import ExpandableSection from '../../src/components/ExpandableSection';
 import ObservationAnalysis from '../../src/components/ObservationAnalysis';
 import PaperTradingPanel from '../../src/components/PaperTradingPanel';
-import type { PaperData, UseBotApi } from '../../src/hooks/useBotApi';
+import type { BotStateShape, PaperData, UseBotApi } from '../../src/hooks/useBotApi';
+import { feeYieldExample, strategyLabel } from './labels';
 import { useLiveBot } from './useLiveBot';
 
 /** The network of a paper pool, from its id (mainnet-, base-, arbitrum-). */
@@ -53,8 +54,8 @@ export function paperSummary(paper: PaperData): PaperSummary {
 const Notice: FC<{ startedAt: string | null }> = ({ startedAt }) => (
   <>
     <div className="live-notice" role="note">
-      <strong>Demonstration.</strong> A simulated portfolio of $10,000 per pool, run by the same algorithm on live market
-      data. No wallet is connected and no transaction is ever sent: every position, fee and cost on this page is computed,
+      <strong>Demonstration.</strong> A simulated portfolio of $10,000 per pool, run by the project's ALGORITHM v1.2 on
+      live market data. No wallet is connected and no transaction is ever sent: every position, fee and cost on this page is computed,
       not real.{startedAt ? ` Simulation started ${fmtDateTime(startedAt)}.` : ''}{' '}
       The real-capital history of the project is on the Archive page.
     </div>
@@ -66,6 +67,26 @@ const Notice: FC<{ startedAt: string | null }> = ({ startedAt }) => (
     )}
   </>
 );
+
+/** Under the telemetry table: which rule its suggestion shows, and the fee-yield rule worked out on one row. */
+const TelemetryNotes: FC<{ pools: NonNullable<BotStateShape['pools']> }> = ({ pools }) => {
+  const row = pools.map((p) => ({ p, ex: feeYieldExample(p) })).find((x) => x.ex);
+  return (
+    <div className="live-stat-note live-telemetry-note">
+      The suggested range for the two product pools (WETH/USDC 0.30% and WETH/cbBTC 0.05%, both on Base) and the
+      walk-forward tables below show the FlatWide hybrid, the project's later strategy; the simulation above does not
+      play it. Fee yield of the active tick: fees per day earned by liquidity sitting exactly at the current price, one
+      tick spacing wide; a position W ticks wide earns about that × 2 × spacing / W.
+      {row?.ex && (
+        <>
+          {' '}
+          Example, {withNetwork(row.p.id, row.p.id)}: {row.ex.tickPct.toFixed(3)}%/day × 2 × {row.ex.spacing} /{' '}
+          {row.ex.width.toLocaleString('en-US')} ticks = {row.ex.rangePct.toFixed(3)}%/day for the suggested range.
+        </>
+      )}
+    </div>
+  );
+};
 
 export const LivePage: FC = () => {
   const live = useLiveBot();
@@ -104,11 +125,17 @@ export const LivePage: FC = () => {
               <span className="morning-stat-label">Fees accrued (estimate from the fee model)</span>
             </div>
           </div>
+          <div className="live-stat-note live-rule-note">
+            How the simulation decides: paper trading plays ALGORITHM v1.2 on all six pools, with k×σ ranges from the
+            advisor, a rebalance after 24 h out of range when the cost pays back from fees within 7 days, and an exit to
+            cash on the trend signal. The research run of August and September 2026 played the same rule.
+          </div>
           <ExpandableSection title="📊 Paper trading" defaultExpanded={true}>
             <PaperTradingPanel bot={bot} poolLabel={withNetwork} showStartDate showValueRange />
           </ExpandableSection>
-          <BotTelemetry bot={bot} />
-          <ObservationAnalysis bot={bot} />
+          <BotTelemetry bot={bot} hideRawState hideWatchedPositions feeYieldLabel="Fee yield of the active tick, %/day" />
+          <TelemetryNotes pools={live.state?.pools ?? []} />
+          <ObservationAnalysis bot={bot} poolLabel={withNetwork} strategyLabel={strategyLabel} showScale />
           <div className="live-stat-note live-walkforward-note">
             Walk-forward tables in the observation analysis are research-period results (720 days of history, 30-day
             steps), computed on 22.09.2026 and fixed; they are not recomputed on live data. WETH/cbBTC 0.30% · Base has

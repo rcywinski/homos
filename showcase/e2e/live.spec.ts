@@ -55,6 +55,21 @@ test('Live: networks, start dates, value ranges, telemetry, observation analysis
   await expect(page.locator('.observation-pool-block svg').first()).toBeVisible();
   await expect(page.locator('.observation-walkforward-table')).toHaveCount(2);
   await expect(page.locator('.live-walkforward-note')).toContainText('computed on 22.09.2026 and fixed');
+  // 5.4 review follow-ups: no raw state button, no watched positions, units on the cbBTC rows, the rule notes, the
+  // fee-yield example, networks in the analysis titles, English strategy names, scale captions.
+  await expect(page.getByRole('button', { name: 'Raw JSON' })).toHaveCount(0);
+  await expect(page.getByText('Positions watched by the bot')).toHaveCount(0);
+  await expect(page.locator('.telemetry-table th', { hasText: 'Fee yield of the active tick, %/day' })).toHaveCount(1);
+  await expect(page.locator('.telemetry-table td', { hasText: 'WETH per cbBTC' })).toHaveCount(2);
+  await expect(page.locator('.telemetry-table td', { hasText: '$100,000/cbBTC' })).toHaveCount(2);
+  await expect(page.locator('.live-rule-note')).toContainText('plays ALGORITHM v1.2 on all six pools');
+  await expect(page.locator('.live-telemetry-note')).toContainText('FlatWide hybrid');
+  await expect(page.locator('.live-telemetry-note')).toContainText('Example, mainnet-usdc-weth-030 · Ethereum: 2.560%/day × 2 × 60 / 3,000 ticks = 0.102%/day');
+  await expect(page.locator('.observation-pool-title', { hasText: 'USDC/WETH · 0.30% · Ethereum' })).toHaveCount(2);
+  await expect(page.locator('.observation-walkforward-table td', { hasText: 'Passive ±50%' })).toHaveCount(1);
+  await expect(page.locator('.observation-walkforward-table td', { hasText: 'Pasywny' })).toHaveCount(0);
+  await expect(page.locator('.observation-chart-scale').first()).toContainText(/price scale shown: [\d,.]+ to [\d,.]+ · EMA gap scale shown: -5\.0% to [-\d.]+% \(safety-switch threshold -5%\)/);
+  await expect(page.locator('.live-notice').first()).not.toContainText('the same algorithm');
   const text = await page.locator('body').innerText();
   expect(text).not.toMatch(/https?:\/\//);
   expect(text).not.toContain('/Users/');

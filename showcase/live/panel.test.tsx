@@ -9,6 +9,7 @@ import { readFileSync } from 'fs';
 import { renderToStaticMarkup } from 'react-dom/server';
 import PaperTradingPanel from '../../src/components/PaperTradingPanel';
 import type { PaperData, UseBotApi } from '../../src/hooks/useBotApi';
+import { feeYieldExample, strategyLabel } from './labels';
 import { networkOf } from './LivePage';
 import { PANEL_FIXTURE } from './panel-fixture';
 
@@ -48,6 +49,14 @@ check('start date on every card with a position', (live.match(/class="muted pape
 check('the pending card says not started', live.includes('paper-pool-start">not started yet<'));
 check('value range under each equity chart', (live.match(/value shown: \$[\d,.]+ to \$[\d,.]+/g) ?? []).length === 3);
 check('networkOf', networkOf('mainnet-x') === 'Ethereum' && networkOf('base-x') === 'Base' && networkOf('arbitrum-x') === 'Arbitrum' && networkOf('x') === '');
+
+// Display labels of the Live page.
+check('strategy names in English', strategyLabel('Pasywny ±50%') === 'Passive ±50%' && strategyLabel('Adaptacyjna k=3 h=24h payback≤7d') === 'Adaptive k=3 h=24h payback≤7d');
+check('strategy words inside a name', strategyLabel('FlatOnly [bez swapu] wąski ±5% |gap|<2%/12h→LP') === 'FlatOnly [no swap] narrow ±5% |gap|<2%/12h→LP');
+check('an unknown strategy name stays as it is', strategyLabel('Adapt k=3 h=24h + trend(exit,HL7d,5%)') === 'Adapt k=3 h=24h + trend(exit,HL7d,5%)' && strategyLabel('hodl') === 'hodl');
+const ex = feeYieldExample({ id: 'mainnet-usdc-weth-005', stats: { feeYieldDaily: 0.15344 }, suggestion: { tickLower: 194000, tickUpper: 199000 } });
+check('fee example: 15.344 × 2 × 10 / 5000 = 0.061', !!ex && ex.spacing === 10 && ex.width === 5000 && Math.abs(ex.rangePct - 0.061376) < 1e-9);
+check('fee example needs stats and a suggestion', feeYieldExample({ id: 'arbitrum-weth-usdc-005', stats: null, suggestion: null }) === null);
 
 console.log(`panel: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

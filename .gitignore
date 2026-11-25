@@ -43,6 +43,7 @@ showcase/public/live/cockpit.css
 showcase/public/fonts/
 # Playwright output (screenshots on failure, traces).
 showcase/e2e/results/
+showcase/e2e/harness-dist/
 playwright-report/
 test-results/
 # Public chat request logs (step 4.4): daily visitor hashes and questions, never committed.

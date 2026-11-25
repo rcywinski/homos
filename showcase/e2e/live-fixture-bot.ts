@@ -4,7 +4,8 @@
  * The files also carry what must never reach the page (an owner address, an RPC URL with a key, a local path).
  * Run: node --import tsx showcase/e2e/live-fixture-bot.ts <port>
  */
-import { mkdirSync, rmSync, writeFileSync } from 'fs';
+import express from 'express';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
 import os from 'os';
 import path from 'path';
 import { createPublicBotApp } from '../../bot/server-public';
@@ -60,8 +61,26 @@ for (const p of pools) for (let k = 24; k >= 0; k--) obs.push(JSON.stringify({ t
 writeFileSync(path.join(dir, 'history.ndjson'), obs.join('\n') + '\n');
 mkdirSync(path.join(dir, 'results'), { recursive: true });
 for (const id of ['mainnet-usdc-weth-030', 'base-weth-usdc-030']) {
-  writeFileSync(path.join(dir, 'results', `walkforward-${id}-720d-30d.json`), JSON.stringify({ id, source: '/Users/owner/backtest', summary: { hybrid: { mean: 1.25, winPct: 62, worst: -3.5 }, hodl: { mean: 0.4, winPct: 51, worst: -9.1 } } }));
+  writeFileSync(path.join(dir, 'results', `walkforward-${id}-720d-30d.json`), JSON.stringify({ id, source: '/Users/owner/backtest', summary: { hybrid: { mean: 1.25, winPct: 62, worst: -3.5 }, hodl: { mean: 0.4, winPct: 51, worst: -9.1 }, ...(id === 'base-weth-usdc-030' ? { 'Pasywny ±50%': { mean: 0.1, winPct: 50, worst: -11.7 } } : {}) } }));
 }
-writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ updatedAt: iso(0), mode: 'OBSERVE', watch: OWNER_BAIT, rpc: RPC_BAIT, pools: pools.map((p) => ({ id: p.id, ethUsd: p.price, tick: 1, updatedAt: iso(0) })) }));
+// Pool state as the observer publishes it: for the cbBTC pools "ethUsd" is the price of cbBTC (as on the box), and
+// the suggestion is in the pool's raw orientation (token1 per token0).
+const statePools = [
+  { id: 'mainnet-usdc-weth-030', ethUsd: 3000, stats: { volDaily: 0.031, feeYieldDaily: 0.0256, swapsAnalyzed: 900, hoursCovered: 24 }, suggestion: { tickLower: 195000, tickUpper: 198000, widthPct: 16.7, priceLower: 0.000294, priceUpper: 0.000400 } },
+  { id: 'mainnet-usdc-weth-005', ethUsd: 3000, stats: { volDaily: 0.03, feeYieldDaily: 0.1534, swapsAnalyzed: 2500, hoursCovered: 24 }, suggestion: { tickLower: 194000, tickUpper: 199000, widthPct: 30.2, priceLower: 0.000256, priceUpper: 0.000434 } },
+  { id: 'base-weth-usdc-030', ethUsd: 3000, stats: { volDaily: 0.03, feeYieldDaily: 0.0022, swapsAnalyzed: 700, hoursCovered: 24 }, suggestion: { tickLower: -205000, tickUpper: -197000, widthPct: 50, priceLower: 2000, priceUpper: 4500 } },
+  { id: 'base-cbbtc-weth-005', ethUsd: 100000, stats: { volDaily: 0.012, feeYieldDaily: 0.002, swapsAnalyzed: 300, hoursCovered: 24 }, suggestion: { tickLower: -39000, tickUpper: -32000, widthPct: 40, priceLower: 0.0199, priceUpper: 0.039 } },
+  { id: 'base-weth-cbbtc-030', ethUsd: 100000, stats: { volDaily: 0.012, feeYieldDaily: 0.00035, swapsAnalyzed: 120, hoursCovered: 24 }, suggestion: { tickLower: -36900, tickUpper: -34800, widthPct: 11, priceLower: 0.0251, priceUpper: 0.031 } },
+  { id: 'arbitrum-weth-usdc-005', ethUsd: 3000, stats: null, suggestion: null },
+].map((p) => ({ ...p, tick: 1, sqrtPriceX96: '1', updatedAt: iso(0), trendGapPct: -1.2 }));
+writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ updatedAt: iso(0), mode: 'OBSERVE', watch: OWNER_BAIT, rpc: RPC_BAIT, flatParams: { enterGap: 2, exitGap: 5, confirmH: 12 }, pools: statePools }));
 
-createPublicBotApp({ stateDir: dir, resultsDir: path.join(dir, 'results') }).listen(port, '127.0.0.1', () => console.log(`[live-fixture-bot] on ${port}`));
+// The test-only harness page (showcase/e2e/harness), same origin as the API, when it has been built.
+const app = express();
+const harnessDist = path.join(__dirname, 'harness-dist');
+if (existsSync(harnessDist)) {
+  app.get('/harness/', (_req, res) => res.sendFile(path.join(__dirname, 'harness', 'index.html')));
+  app.use('/harness', express.static(harnessDist));
+}
+app.use(createPublicBotApp({ stateDir: dir, resultsDir: path.join(dir, 'results') }));
+app.listen(port, '127.0.0.1', () => console.log(`[live-fixture-bot] on ${port}`));

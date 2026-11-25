@@ -97,7 +97,8 @@ export default defineConfig({
         }),
         // Phase 5, step 5.3: a stand-in bot behind the real read-only bot API, and a server forwarding /live/api to it.
         {
-          command: `node --import tsx ${path.join('showcase', 'e2e', 'live-fixture-bot.ts')} ${PORTS.liveBot}`,
+          // Builds the test-only harness first (showcase/e2e/harness), then serves it and the stand-in bot's API.
+          command: `npx webpack --config ${path.join('showcase', 'e2e', 'harness.webpack.js')} && node --import tsx ${path.join('showcase', 'e2e', 'live-fixture-bot.ts')} ${PORTS.liveBot}`,
           url: `http://127.0.0.1:${PORTS.liveBot}/health`,
           reuseExistingServer: false,
           timeout: 60_000,

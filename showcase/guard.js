@@ -79,6 +79,7 @@ const LIVE_OWN_SOURCES = [
   'showcase/live/LivePage.tsx',
   'showcase/live/useLiveBot.ts',
   'showcase/live/formatters.ts',
+  'showcase/live/labels.ts',
   'src/components/ExpandableSection.tsx',
   'src/components/PaperTradingPanel.tsx',
   'src/components/PositionCharts.tsx',
