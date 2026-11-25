@@ -7,6 +7,7 @@ import { Comparison } from './components/Comparison';
 import { About } from './components/About';
 import { Notice } from './components/Notice';
 import { Wallet } from './components/Wallet';
+import { CrossLink, SiteHeader } from './site-header';
 import { useWallet } from './data';
 
 const TABS = [
@@ -33,46 +34,54 @@ export function App() {
     };
   }, []);
   return (
-    <div className="page">
-      {/* Phase 5: the two pages, the research archive (this one) and the paper-trading demonstration at /live/. */}
-      {liveOn && (
-        <nav className="page-switch" aria-label="Pages">
-          <span aria-current="page">Archive</span>
-          <a href="/live/">Live</a>
+    <>
+      {/* Phase 5, step 5.5b: the site header shared with the Live page; its Live tab only when Live is configured. */}
+      <SiteHeader current="archive" liveOn={liveOn} />
+      <div className="page">
+        <header className="masthead">
+          <div className="masthead-text">
+            <h1>{PROJECT_TITLE}</h1>
+            <p className="tagline">
+              A closed research project from 2026, with an assistant that answers from its records and checks its own
+              quotes.
+            </p>
+            <details className="about-more">
+              <summary>More about this project</summary>
+              <About />
+            </details>
+          </div>
+          <div className="masthead-side">
+            <Notice />
+            {liveOn && (
+              <CrossLink
+                href="/live/"
+                testId="crosslink-live"
+                title="See it running"
+                text="The algorithm from this research plays six simulated positions on today's market."
+              />
+            )}
+          </div>
+        </header>
+        <nav className="tabs" aria-label="Sections">
+          {tabs.map((t) => (
+            <button key={t.id} type="button" className="tab" aria-pressed={t.id === tab} onClick={() => setTab(t.id)}>
+              {t.label}
+            </button>
+          ))}
         </nav>
-      )}
-      <header className="masthead">
-        <div className="masthead-text">
-          <h1>{PROJECT_TITLE}</h1>
-          <p className="tagline">
-            A closed research project from 2026, with an assistant that answers from its records and checks its own quotes.
+        <main>
+          {tab === 'ask' && <Ask />}
+          {tab === 'compare' && <Comparison />}
+          {tab === 'reports' && <Archive />}
+          {tab === 'wallet' && wallet.state === 'ready' && <Wallet data={wallet.data} />}
+        </main>
+        <footer className="foot">
+          <p>
+            Source code and the full case study: the public repository on GitHub. The assistant runs on a home machine,
+            so it is sometimes offline; the saved answers and the reports work without it.
           </p>
-          <details className="about-more">
-            <summary>More about this project</summary>
-            <About />
-          </details>
-        </div>
-        <Notice />
-      </header>
-      <nav className="tabs" aria-label="Sections">
-        {tabs.map((t) => (
-          <button key={t.id} type="button" className="tab" aria-pressed={t.id === tab} onClick={() => setTab(t.id)}>
-            {t.label}
-          </button>
-        ))}
-      </nav>
-      <main>
-        {tab === 'ask' && <Ask />}
-        {tab === 'compare' && <Comparison />}
-        {tab === 'reports' && <Archive />}
-        {tab === 'wallet' && wallet.state === 'ready' && <Wallet data={wallet.data} />}
-      </main>
-      <footer className="foot">
-        <p>
-          Source code and the full case study: the public repository on GitHub. The assistant runs on a home machine, so it is sometimes offline;
-          the saved answers and the reports work without it.
-        </p>
-      </footer>
-    </div>
+        </footer>
+      </div>
+    </>
   );
 }

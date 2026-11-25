@@ -14,16 +14,30 @@ import PaperTradingPanel from '../../src/components/PaperTradingPanel';
 import TopRankingPanel from '../../src/components/TopRankingPanel';
 import type { BotStateShape, PaperData, UseBotApi } from '../../src/hooks/useBotApi';
 import { feeYieldExample, statsAgeCell, statsNote, strategyLabel } from './labels';
+import { CrossLink, SiteHeader } from '../site-header';
 import { SectionBoundary } from './SectionBoundary';
 import { useLiveBot, useLiveRankings } from './useLiveBot';
 
 /** The network of a paper pool, from its id (mainnet-, base-, arbitrum-). */
 export const networkOf = (poolId: string): string =>
-  poolId.startsWith('mainnet-') ? 'Ethereum' : poolId.startsWith('base-') ? 'Base' : poolId.startsWith('arbitrum-') ? 'Arbitrum' : '';
+  poolId.startsWith('mainnet-')
+    ? 'Ethereum'
+    : poolId.startsWith('base-')
+      ? 'Base'
+      : poolId.startsWith('arbitrum-')
+        ? 'Arbitrum'
+        : '';
 const withNetwork = (poolId: string, label: string) => (networkOf(poolId) ? `${label} · ${networkOf(poolId)}` : label);
 
 /** The page uses the panel's formats: dates pl-PL, dollar amounts en-US. */
-const fmtDateTime = (iso: string) => new Date(iso).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const fmtDateTime = (iso: string) =>
+  new Date(iso).toLocaleString('pl-PL', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
 const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -57,9 +71,9 @@ const Notice: FC<{ startedAt: string | null }> = ({ startedAt }) => (
   <>
     <div className="live-notice" role="note">
       <strong>Demonstration.</strong> A simulated portfolio of $10,000 per pool, run by the project's ALGORITHM v1.2 on
-      live market data. No wallet is connected and no transaction is ever sent: every position, fee and cost on this page is computed,
-      not real.{startedAt ? ` Simulation started ${fmtDateTime(startedAt)}.` : ''}{' '}
-      The real-capital history of the project is on the Archive page.
+      live market data. No wallet is connected and no transaction is ever sent: every position, fee and cost on this
+      page is computed, not real.{startedAt ? ` Simulation started ${fmtDateTime(startedAt)}.` : ''} The real-capital
+      history of the project is in the research archive.
     </div>
     {__LIVE_PREVIEW__ && (
       <div className="live-notice live-preview" role="note">
@@ -112,86 +126,104 @@ export const LivePage: FC = () => {
   // counterpart here on purpose.
   // Telemetry and observation analysis read `state`, `apiBase` and `apiToken`: the base is this page's forward and the
   // token is empty (the forward needs none), so they fetch /live/api/history and /live/api/results only.
-  const bot = { paper: live.paper, paperStatus: live.paperStatus, state: live.state, apiBase: '/live', apiToken: '', ...rankings } as Pick<
-    UseBotApi,
-    'paper' | 'paperStatus' | 'state' | 'apiBase' | 'apiToken' | keyof typeof rankings
-  > as UseBotApi;
+  const bot = {
+    paper: live.paper,
+    paperStatus: live.paperStatus,
+    state: live.state,
+    apiBase: '/live',
+    apiToken: '',
+    ...rankings,
+  } as Pick<UseBotApi, 'paper' | 'paperStatus' | 'state' | 'apiBase' | 'apiToken' | keyof typeof rankings> as UseBotApi;
   return (
-    <div className="app live-app">
-      <nav className="live-switch" aria-label="Pages">
-        <a href="/">Archive</a>
-        <span aria-current="page">Live</span>
-      </nav>
-      <h1 className="live-title">Live: paper trading on current market data</h1>
-      <Notice startedAt={live.paper?.state.startedAt ?? null} />
-      <div className="morning-cockpit">
-        <div className="morning-body">
-          <div className="morning-summary">
-            <div className="morning-stat">
-              <span className="morning-stat-value">{summary ? fmtUsd(summary.totalUsd) : '…'}</span>
-              <span className="morning-stat-label">
-                Total value of the virtual portfolio{summary ? ` (start ${fmtUsd(summary.startUsd)})` : ''}
-              </span>
+    <>
+      <SiteHeader current="live" liveOn />
+      <div className="app live-app">
+        <h1 className="live-title">Live: paper trading on current market data</h1>
+        <Notice startedAt={live.paper?.state.startedAt ?? null} />
+        <CrossLink
+          href="/"
+          testId="crosslink-archive"
+          title="What came of it"
+          text="The real-capital results and the conclusion of the research are in the research archive."
+        />
+        <div className="morning-cockpit">
+          <div className="morning-body">
+            <div className="morning-summary">
+              <div className="morning-stat">
+                <span className="morning-stat-value">{summary ? fmtUsd(summary.totalUsd) : '…'}</span>
+                <span className="morning-stat-label">
+                  Total value of the virtual portfolio{summary ? ` (start ${fmtUsd(summary.startUsd)})` : ''}
+                </span>
+              </div>
+              <div className="morning-stat">
+                <span className="morning-stat-value">{summary ? `${summary.inRange}/${summary.pools}` : '…'}</span>
+                <span className="morning-stat-label">Paper positions in range</span>
+              </div>
+              <div className="morning-stat">
+                <span className="morning-stat-value">{summary ? fmtUsd(summary.feesUsd) : '…'}</span>
+                <span className="morning-stat-label">Fees accrued (estimate from the fee model)</span>
+              </div>
             </div>
-            <div className="morning-stat">
-              <span className="morning-stat-value">{summary ? `${summary.inRange}/${summary.pools}` : '…'}</span>
-              <span className="morning-stat-label">Paper positions in range</span>
+            <div className="live-section-note live-rule-note">
+              How the simulation decides: paper trading plays ALGORITHM v1.2 on all six pools, with k×σ ranges from the
+              advisor, a rebalance after 24 h out of range when the cost pays back from fees within 7 days, and an exit
+              to cash on the trend signal. The research run of August and September 2026 played the same rule.
             </div>
-            <div className="morning-stat">
-              <span className="morning-stat-value">{summary ? fmtUsd(summary.feesUsd) : '…'}</span>
-              <span className="morning-stat-label">Fees accrued (estimate from the fee model)</span>
-            </div>
-          </div>
-          <div className="live-section-note live-rule-note">
-            How the simulation decides: paper trading plays ALGORITHM v1.2 on all six pools, with k×σ ranges from the
-            advisor, a rebalance after 24 h out of range when the cost pays back from fees within 7 days, and an exit to
-            cash on the trend signal. The research run of August and September 2026 played the same rule.
-          </div>
-          <ExpandableSection title="📊 Paper trading" defaultExpanded={true}>
-            <SectionBoundary name="Paper trading">
-              <PaperTradingPanel
+            <ExpandableSection title="📊 Paper trading" defaultExpanded={true}>
+              <SectionBoundary name="Paper trading">
+                <PaperTradingPanel
+                  bot={bot}
+                  poolLabel={withNetwork}
+                  showStartDate
+                  showValueRange
+                  poolNote={(id) =>
+                    statsNote(
+                      live.state?.pools?.find((p) => p.id === id),
+                      live.paper?.state.positions[id]?.status ?? 'pending',
+                    )
+                  }
+                />
+              </SectionBoundary>
+            </ExpandableSection>
+            <SectionBoundary name="Bot telemetry">
+              <BotTelemetry
                 bot={bot}
-                poolLabel={withNetwork}
-                showStartDate
-                showValueRange
-                poolNote={(id) => statsNote(live.state?.pools?.find((p) => p.id === id), live.paper?.state.positions[id]?.status ?? 'pending')}
+                hideRawState
+                hideWatchedPositions
+                feeYieldLabel="Fee yield of the active tick, %/day"
+                extraColumn={{ header: 'Statistics age', cell: (p) => statsAgeCell(p) }}
+                footer={<TelemetryNotes pools={live.state?.pools ?? []} />}
               />
             </SectionBoundary>
-          </ExpandableSection>
-          <SectionBoundary name="Bot telemetry">
-            <BotTelemetry
-              bot={bot}
-              hideRawState
-              hideWatchedPositions
-              feeYieldLabel="Fee yield of the active tick, %/day"
-              extraColumn={{ header: 'Statistics age', cell: (p) => statsAgeCell(p) }}
-              footer={<TelemetryNotes pools={live.state?.pools ?? []} />}
-            />
-          </SectionBoundary>
-          <SectionBoundary name="Observation analysis">
-            <ObservationAnalysis
-              bot={bot}
-              poolLabel={withNetwork}
-              strategyLabel={strategyLabel}
-              showScale
-              footer={
-                <div className="live-section-note live-walkforward-note">
-                  These walk-forward tables are research-period results (720 days of history, 30-day steps), computed on
-                  22.09.2026 and fixed; they are not recomputed on live data. WETH/cbBTC 0.30% · Base has no table: it
-                  was computed only as a candidate run, under another file name.
-                </div>
-              }
-            />
-          </SectionBoundary>
-          <SectionBoundary name="Daily ranking">
-            <TopRankingPanel bot={bot} hideFullRun footer={<RankingNote />} />
-          </SectionBoundary>
-          <SectionBoundary name="WIDE ranking">
-            <TopRankingPanel bot={bot} variant="wide" hideFullRun footer={<RankingNote />} />
-          </SectionBoundary>
-          {live.updatedAt && <div className="live-stat-note">Data read {new Date(live.updatedAt).toLocaleTimeString('pl-PL')}, refreshed every minute.</div>}
+            <SectionBoundary name="Observation analysis">
+              <ObservationAnalysis
+                bot={bot}
+                poolLabel={withNetwork}
+                strategyLabel={strategyLabel}
+                showScale
+                footer={
+                  <div className="live-section-note live-walkforward-note">
+                    These walk-forward tables are research-period results (720 days of history, 30-day steps), computed
+                    on 22.09.2026 and fixed; they are not recomputed on live data. WETH/cbBTC 0.30% · Base has no table:
+                    it was computed only as a candidate run, under another file name.
+                  </div>
+                }
+              />
+            </SectionBoundary>
+            <SectionBoundary name="Daily ranking">
+              <TopRankingPanel bot={bot} hideFullRun footer={<RankingNote />} />
+            </SectionBoundary>
+            <SectionBoundary name="WIDE ranking">
+              <TopRankingPanel bot={bot} variant="wide" hideFullRun footer={<RankingNote />} />
+            </SectionBoundary>
+            {live.updatedAt && (
+              <div className="live-stat-note">
+                Data read {new Date(live.updatedAt).toLocaleTimeString('pl-PL')}, refreshed every minute.
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };

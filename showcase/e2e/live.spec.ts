@@ -103,20 +103,47 @@ test('Live: networks, start dates, value ranges, telemetry, observation analysis
   expect(text).not.toMatch(/0x[0-9a-fA-F]{40}/);
 });
 
-test('Live: the Archive/Live switch works both ways', async ({ page }) => {
+test('Site header: both parts named, current tab marked, cross-links both ways', async ({ page }) => {
   await page.goto(`${LIVE}/`);
-  await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Live' }).click();
+  const nav = page.getByRole('navigation', { name: 'Site sections' });
+  await expect(page.locator('.site-header-name')).toHaveText('DeFi liquidity-provision trading system');
+  await expect(nav.getByRole('link', { name: /Research archive/ })).toHaveAttribute('aria-current', 'page');
+  await expect(nav.getByRole('link', { name: /Live simulation/ })).not.toHaveAttribute('aria-current', 'page');
+  await expect(nav.getByRole('link', { name: /Live simulation/ })).toContainText("The same algorithm on today's market");
+  for (const tab of await nav.getByRole('link').all()) expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await page.getByTestId('crosslink-live').click();
   await expect(page).toHaveURL(`${LIVE}/live/`);
+  await expect(page.getByRole('navigation', { name: 'Site sections' }).getByRole('link', { name: /Live simulation/ })).toHaveAttribute('aria-current', 'page');
   await expect(page.getByRole('heading', { name: /Live: paper trading/ })).toBeVisible();
-  await page.getByRole('navigation', { name: 'Pages' }).getByRole('link', { name: 'Archive' }).click();
+  await page.getByTestId('crosslink-archive').click();
   await expect(page).toHaveURL(`${LIVE}/`);
+  await page.getByRole('navigation', { name: 'Site sections' }).getByRole('link', { name: /Live simulation/ }).click();
+  await expect(page).toHaveURL(`${LIVE}/live/`);
+  await page.getByRole('navigation', { name: 'Site sections' }).getByRole('link', { name: /Research archive/ }).click();
+  await expect(page).toHaveURL(`${LIVE}/`);
+});
+
+test('Both pages stay light under a dark colour scheme, with no horizontal scroll', async ({ page }) => {
+  await page.emulateMedia({ colorScheme: 'dark' });
+  for (const url of [`${LIVE}/`, `${LIVE}/live/`]) {
+    await page.goto(url);
+    await expect(page.locator('.site-header')).toBeVisible();
+    const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    const [r, g, b] = bg.match(/\d+/g)!.map(Number);
+    expect(r + g + b, `${url} body ${bg}`).toBeGreaterThan(600); // light
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, url).toBeLessThanOrEqual(0);
+  }
 });
 
 test('Live not configured: no Live link on the archive page, /live/ is the plain 404', async ({ page, request }) => {
   await page.goto(`${MAIN}/`);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await page.waitForLoadState('networkidle');
-  await expect(page.getByRole('navigation', { name: 'Pages' })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Site sections' })).toHaveCount(0);
+  await expect(page.locator('.site-header-name')).toHaveText('DeFi liquidity-provision trading system');
+  await expect(page.getByTestId('crosslink-live')).toHaveCount(0);
+  expect(await page.locator('body').innerText()).not.toMatch(/Live simulation|See it running/);
   await expect(page.getByRole('link', { name: 'Live' })).toHaveCount(0);
   for (const p of ['/live', '/live/', '/live/live.js', '/live/api/state']) {
     const r = await request.get(`${MAIN}${p}`);
