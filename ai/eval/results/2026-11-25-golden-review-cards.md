@@ -58,8 +58,10 @@ outcome. Verdicts are from the six judged runs of the served retrieval (C correc
   decyzji zamknięty, produkt hybryda live, obie nogi otwarte") and `HANDOFF.md:1156-1160` (27.08, "karta realnej
   pozycji #5886957"). Neither is in the evidence list.
 - Defective as a test? Yes, the same way as id-03: a correct, dated source for 27.08 is missing from the list.
-- **Proposal: add `HANDOFF.md:1156-1160` and `HANDOFF.md:1166-1170` as evidence** (required for the 27.08 fact as an
-  alternative to the listed spans). Question and reference unchanged.
+- **Proposal: add `HANDOFF.md:1166-1170` as required evidence** (an alternative source for the 27.08 fact: "produkt
+  hybryda live, obie nogi otwarte") **and `HANDOFF.md:1156-1160` as supporting only**: it is a deployment note about a
+  UI card that names #5886957, and it does not say that capital entered that day (revised after the analysis
+  session's review). Question and reference unchanged.
 
 ## Summary
 
@@ -69,7 +71,11 @@ outcome. Verdicts are from the six judged runs of the served retrieval (C correc
 | dated-05 | no change (diagnosis tag corrected) | none | none |
 | dated-09 | spans marked required or supporting | none | coverage of required spans becomes measurable |
 | id-03 | 3 report rows added as supporting evidence | none | evidence found in the top 10 for id-03 |
-| dated-01 | 2 HANDOFF spans added | none | evidence may be found in the top 10 for dated-01 |
+| dated-01 | 1 HANDOFF span added as required, 1 as supporting | none | evidence may be found in the top 10 for dated-01 |
+
+Rule for required spans (from the analysis session's review, applies to v1.5 and the held-out set): a span is
+"required" only if a reader could state the fact from that span alone; anything that only corroborates it is
+"supporting". The diagnosis file is corrected (dated-05 and dated-09 tags) in the same commit that introduces v1.5.
 
 The two evidence additions change retrieval metrics only, and only because the old list missed correct sources; the
 v1.4 and v1.5 retrieval numbers are therefore not compared without re-scoring the stored lists on v1.5.
