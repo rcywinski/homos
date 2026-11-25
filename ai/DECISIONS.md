@@ -1157,3 +1157,9 @@ sets new ones in CC-Mac's conversation. The key expires about 10 Dec 2026. 0 USD
 **Decision.** The owner approved the step 6.1 diagnosis and accepted a limit of 4 USD per run (was 2). The phase total
 he has not set yet: until he does, the standing total of 5 USD since 17 Nov (3.1032 used, 1.8968 left) still applies,
 so no paid phase 6 step starts before he sets it. Step 6.2 is next.
+
+## 2026-11-25, phase 6 spending limit (owner)
+
+**Decision.** The owner set the limit for the whole of phase 6 at 20 USD, with up to 4 USD per run, counted in the
+same ledger from the next paid run. This replaces the 5 USD total of 17 Nov for phase 6 work; the 3.1032 USD spent
+before stays in the ledger as history. Planned about 19 USD (6.4 2.1, 6.11 4.4, 6.12 12.7).
