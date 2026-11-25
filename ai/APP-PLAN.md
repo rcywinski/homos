@@ -1208,7 +1208,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   365d/720d legend says what the three numbers are (wide band as LP / HODL 50/50 / difference, percent of the
   starting capital over the window ending today, from scripts/wide-daily.ts). The empty "full run" column is left out
   on Live (`hideFullRun`) until its file exists; whether to fetch it from the old box is the owner's decision.
-- [ ] **5.5b** (built 25 Nov; review pending, then the owner's tick) The two-part structure made obvious, page only:
+- [ ] **5.5b** (built and reviewed by the analysis session; owner's tick pending) The two-part structure made obvious, page only:
   a site header shared by both pages (`showcase/site-header.tsx`, its own `site-header.css` with fixed light colours
   and a system font, so it looks the same on the archive and on Live): the neutral site name and two tabs, "Research
   archive" and "Live simulation", each with one line, the current one marked (`aria-current`, at least 44 px high); a

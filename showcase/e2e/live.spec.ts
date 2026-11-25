@@ -47,6 +47,19 @@ test('Live: networks, start dates, value ranges, telemetry, observation analysis
   await expect(page.locator('.paper-pool-start')).toHaveCount(6);
   await expect(page.locator('.paper-pool-start', { hasText: /^started / })).toHaveCount(5);
   await expect(page.locator('.paper-pool-start', { hasText: 'not started yet' })).toHaveCount(1);
+  // The start line is its own line under the header, left-aligned with the pool name, above the statistics row.
+  const card = page.locator('.paper-pool-card').first();
+  const head = await card.locator('.paper-pool-header').boundingBox();
+  const start = await card.locator('.paper-pool-start').boundingBox();
+  const startText = await card.locator('.paper-pool-start').evaluate((el) => {
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    return r.getBoundingClientRect();
+  });
+  const stats = await card.locator('.paper-pool-start ~ *').first().boundingBox();
+  expect(Math.abs(startText.left - head!.x)).toBeLessThanOrEqual(2);
+  expect(start!.y).toBeGreaterThanOrEqual(head!.y + head!.height - 1);
+  expect(stats!.y).toBeGreaterThanOrEqual(start!.y + start!.height - 1);
   await expect(page.locator('.paper-range-caption', { hasText: 'value shown:' })).toHaveCount(5);
   await expect(page.locator('.paper-event-pool').first()).toContainText(/· (Ethereum|Base|Arbitrum)$/);
   await page.locator('.telemetry-title', { hasText: 'Bot telemetry' }).click();

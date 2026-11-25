@@ -152,10 +152,14 @@ Recommendation: (b), already wired as the Live list's first Arbitrum host (so ap
    # the same for "HOMOS live api" with the API command; then the settings of the existing tasks (restart on failure)
    ```
 1. As cywil: create the two folders with the rights above, copy and hash-check the five files, write `live.env`.
-2. Start `HOMOS live observer`. Cold start: the log shows "cold start: fetching the DefiLlama history" (about 9
-   minutes, 223 calls to yields.llama.fi), then "LIVE loops started". The paper positions open at the first statistics
+2. Start `HOMOS live observer`. Cold start: the log shows "cold start: fetching the DefiLlama history" (about 13
+   minutes at the 3 s pacing, about 225 calls to yields.llama.fi), then "LIVE loops started"; about 3 minutes later
+   "nightly wide-score: ok" and "nightly wide-daily: ok" (the WIDE ranking and the daily model). The paper positions open at the first statistics
    cycle. This is the fresh start of the demo (owner's decision of 25 Nov): no history is carried over.
-3. Start `HOMOS live api`. Check: `curl http://127.0.0.1:8788/api/paper?hours=24` answers JSON with six positions.
+3. Start `HOMOS live api`. Check, in PowerShell (where plain `curl` is another command):
+   `curl.exe -s "http://127.0.0.1:8788/api/paper?hours=24"` answers JSON with six positions, each `"status":"open"`
+   (Arbitrum included, through arb1.arbitrum.io); `curl.exe -s http://127.0.0.1:8788/api/state` shows `statsAt` and a
+   `statsWindow` with `"failed":0` for every pool.
 4. Only then add `SERVE_LIVE_BOT_URL=http://127.0.0.1:8788` to `C:\HomosServe\serve.env` and restart
    `HOMOS showcase server`. From this moment the archive page shows the Live link and `/live/` answers publicly.
 5. Measure for a full day and more (moved here from 5.1): calls per host and hour, failures, gaps per pool, nightly
@@ -189,8 +193,12 @@ environment, the chat server with the forward on its own port: see the step 5.6 
 ## Instruction text for CC-Win (send only after the owner's OK at CC-Win)
 
 > Live demo, step 5.6, on the box. Pull, then check out the pinned commit the owner names, detached, and run npm ci and
-> the showcase build as for every deploy. Follow `deploy/live/README.md` of that commit in order: folders and rights,
-> the five files from the owner (check each SHA-256 against the table), `live.env` from the example, then the observer
-> task, then the API task, each started by hand once and checked in its log. Do not add `SERVE_LIVE_BOT_URL` to
-> `serve.env` until the owner says so in your session. Report: the pinned HEAD, the hashes, the first 30 lines of
-> `live-observer.log` after "LIVE loops started", the answer of the curl check, and `net-stats.json` after one hour.
+> the showcase build as for every deploy (build and swap, as before). Follow `deploy/live/README.md` of that commit in
+> order: step 0 (the owner types homos-web's password in his own administrator PowerShell window; you prepare the
+> commands and never see it), folders and rights with the SID form, the five files from the owner (check each SHA-256
+> against the table), `live.env` from the example, then the observer task, then the API task, each started by hand
+> once and checked in its log. Do not add `SERVE_LIVE_BOT_URL` to `serve.env` until the owner says so in your session.
+> Report: the pinned HEAD; the five hashes; the lines of `live-observer.log` from "cold start" to "nightly wide-daily";
+> the two curl.exe checks; after one hour, `net-stats.json` and `net-stats-*.json` from the state folder and
+> `nightly-state.json`; CPU and memory of the two node processes over that hour (and during the nightly steps when they
+> run), and the state folder's size.
