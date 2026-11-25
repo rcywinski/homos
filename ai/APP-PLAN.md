@@ -1115,8 +1115,14 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
 
 **Steps** (each small enough to review alone; box steps need the owner's word at CC-Win):
 
-- **5.0** Owner's choices on the open questions below. No code.
-- **5.1** Paper observer on the Mac, read only: `bot/observer.ts` with no watch address, state in a folder outside the
+- [x] **5.0** Owner's choices on the open questions below (25 Nov 2026, "zgoda na rekomendacje", relayed by the
+  analysis session): fresh start at go-live with the fixed notice, the warm start (replay) as its own step after
+  go-live, the old files rejected; the server-side read library as recommended (question 9); proposal cards (5.7) and
+  the daily demo report after go-live; public RPCs first; the daily ranking live and the full-run column fixed and
+  dated; real-capital panels only in Archive; hosting on the box beside the chat server; the original cockpit CSS
+  scoped to Live. Not yet approved, asked at CC-Win when step 5.6 comes: the outbound host list and everything on the
+  box.
+- [ ] NEXT **5.1** Paper observer on the Mac, read only: `bot/observer.ts` with no watch address, state in a folder outside the
   repo, public RPCs; one day of running to measure the RPC load and the gaps; `bot/server.ts` in a public read-only
   mode (an allow-list of GET routes, no CORS wildcard, bound to 127.0.0.1, no dismiss, ledger or positions routes),
   with tests. S to M.
