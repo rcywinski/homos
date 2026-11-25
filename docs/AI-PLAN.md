@@ -346,6 +346,96 @@ costs nothing). Common rules for every step:
   about 7.4 to 7.9 Wh per task. Judge $1.32; phase spend $5.53 of $10. Reports
   `ai/eval/results/2026-11-16-agent-local-report.md` and `2026-11-16-agent-step-limit.md`.
 
+## Phase 6: retrieval improvement
+
+Owner, 25 Nov 2026: the DeFi side of the showcase is closed at the lowest cost, and the remaining effort and API
+budget go into the RAG. Written by CC-Mac at the analysis session's request; nothing in it is spent or run on the box
+before the owner's word. (Phase 4 and 5 are the showcase and the paper-trading page in `ai/APP-PLAN.md`.)
+
+Target: the retrieval the public site serves, the fully local variant (meta index, plain BM25, hybrid RRF to depth
+100, reranker on the top 30, k = 10). The phase 1 cloud variant (generated contexts, Polish query translation) is not
+the target; its parts appear below only where they could run locally.
+
+Common rules for every step:
+- The corpus does not change in this phase (hash `8d7f9a3437b43594`); every compared row states it.
+- **Free first.** Each candidate is first measured on retrieval alone, with no API call: evidence span coverage in the
+  top k (186 spans over 26 answerable questions in v1.4) and the rank of every evidence chunk at both stages. These
+  numbers are deterministic, so they need no second run. Only candidates that improve them go to a judged run.
+- **Judged runs** follow the two-run rule. Generator: Qwen with prompt P, as served on the box (free, needs the box);
+  the judge is the same Opus 5.5 with the same prompt as step 3.2, `--no-retry`, with a cap per run.
+- **No tuning on the test.** The held-out questions of step 6.2 are written and frozen before any candidate is
+  measured and are used once, in step 6.12.
+- Anything that loads a model or uses the GPU on the box is `[CC-Win]` and waits for the owner's go in CC-Win's
+  session; a deployment to the live server also needs his go.
+- Each step ends with the usual explanation in Polish, with an example from the project's data, and waits for his OK.
+
+- [ ] NEXT **6.1 Diagnosis, from stored files only.** For every question not judged correct in all six judged runs of
+  the served retrieval (3.2 pb1 and pb2, 4.8j lan48, lan48b, lan48c, 4.6e guest46e): first-stage and reranked rank of
+  the first evidence chunk, evidence spans in the top 10, and a failure class.
+  Delivered as a draft for review: `ai/eval/diagnose.ts` and `ai/eval/results/2026-11-25-diagnosis-golden-v1-4.md`.
+  Of the 20 questions wrong in 3 or more of 6 runs: A not retrieved 4 (why-02, dated-01, dated-04, dated-05),
+  B cut by the reranker 2 (why-06, id-07), C the answer needs several chunks 9 (mostly "partly"), D split across chunks
+  0 (4 of 186 spans cross a boundary), E reference arguable 1, F not retrieval 4. 0 USD.
+- [ ] **6.2 Golden set v1.5 and a held-out test set.** (a) The owner reviews five items the diagnosis flags before any
+  tuning: dated-04 and dated-05 (ambiguous questions), dated-09 (reference broader than the question), and the
+  evidence lists of id-03 and dated-01 (answered correctly without any listed evidence). (b) CC-Mac writes about 30 new
+  questions in the same five categories from the journal, with evidence spans and reference answers, the owner reviews
+  them, and the file is frozen with its hash in `ai/DECISIONS.md`. v1.4's 34 questions become the development set,
+  the new ones the test set. 0 USD.
+- [ ] **6.3 Retrieval measure and baseline, free.** `ai/eval/retrieval-diag.ts`: per question, the rank of every
+  evidence chunk after the first stage (to depth 100) and after the reranker, span coverage at k = 5, 10, 15 and 20.
+  Needs the query vectors (bge-m3) and the evaluation reranker `[CC-Win, owner's go]`: one short box window, the
+  vectors are then cached in `ai/index/` so later candidates that keep the first stage need no box. Baseline numbers
+  for the development set. 0 USD.
+- [ ] **6.4 Judged baseline on v1.5.** The served configuration, Qwen, development and test sets (64 questions), two
+  runs. Gives the spread every later step is compared against. About 2.1 USD (judge only).
+- [ ] **6.5 Candidate: deeper rerank pool** (class A). Rerank the top 50 or 60 instead of 30. Three of the four class
+  A questions have their first evidence chunk at first-stage rank 36 to 52. Measured with 6.3, free. Live server: no
+  index rebuild; about 0.4 s more per question on the GPU (30 chunks take 0.585 s), no VRAM change.
+- [ ] **6.6 Candidate: fuse the reranker score with the first-stage rank** (class B). A weighted RRF of the two orders
+  instead of the reranker order alone; why-06 drops from first-stage 5 to 29 and id-07 from 2 to 14 today. The weight
+  is set on the development set only. Free. Live server: no rebuild, no latency.
+- [ ] **6.7 Candidate: more context per answer** (class C, the largest). k = 15 and 20, and adding the neighbouring
+  chunk of the same journal entry or report to each of the top hits. Measured as span coverage, free. Live server: no
+  rebuild; a longer prompt for Qwen (median chunk about 1 050 characters, so 20 chunks fit well inside `num_ctx`
+  24576) and a few seconds more per answer; for guest-key visitors, more input tokens on their own key.
+- [ ] **6.8 Candidate: dates and ids in the question** (secondary tag of dated-01, dated-04, dated-07). Detect a date,
+  a range or "first", "last" in the question and boost chunks by their entry or report date, and boost exact matches
+  of decision ids and position numbers in BM25. Supersedes "Temporal filters" under "Later". Free. Live server: no
+  rebuild, no latency.
+- [ ] **6.9 Candidate, only if 6.5 to 6.8 leave class A: the local model rewrites the question.** A Polish rendering
+  for BM25 by Qwen (the phase 1 variant did this with Sonnet), or a split into sub-questions. Targets why-02 and
+  dated-05. Live server: Qwen must be loaded before retrieval, which the guest-key "search" state (bge-m3 and the
+  reranker only) does not allow; several seconds more per question. Measured free, but a deployment decision for the
+  owner.
+- [ ] **6.10 Candidate, cheap: the committed contexts in the local index.** The Haiku contexts of step 1.7 are in
+  `ai/context/` already, so no API call: an index of chunk text plus context, used without query translation. In
+  1.7 they gave recall@10 20 and 19 of 26 in two runs against 19 for the meta index, within the spread, so this goes
+  to a judged run only if 6.3 shows a coverage gain. Live server: index rebuild on the box `[CC-Win]`, no latency.
+- [ ] **6.11 Judged comparison on the development set.** The candidates that gained on retrieval, then their best
+  combination, Qwen, two runs each. Up to four configurations, about 4.4 USD.
+- [ ] **6.12 Held-out test and the guest path.** The final configuration against the 6.4 baseline on the frozen test
+  set (Qwen, two runs, about 1 USD), and Sonnet on the guest path, baseline and final, two runs each on all 64
+  questions (about 11.7 USD with the judge). The owner decides from these numbers whether the live server changes.
+- [ ] **6.13 Deployment** `[CC-App, CC-Win]`, on the owner's word: retrieval code on `app-chat`, new pin on the box,
+  index rebuild if 6.10 is in, the measured times on the page updated.
+
+Dropped after the diagnosis: chunk size and overlap changes (4 of 186 spans cross a boundary), de-duplication or MMR
+of the top 10 (0.5 same-entry chunks per list on average).
+
+Is 34 enough? Not for judged counts: across five comparable judged runs of the served retrieval (lan48, with the fixed refusal text and 12 correct, left out) the correct count ranged from
+16 to 18, and the judge alone changes 2 of 29 verdicts on identical answers, so a gain of 2 or 3 correct cannot be
+told from noise. The plan therefore decides on the free span coverage (186 spans, deterministic), keeps the two-run
+rule for judged counts, and adds about 30 held-out questions so the final claim is made on questions nobody tuned on.
+
+Budget proposal (for the owner; nothing above the standing limits of 2 USD per run and 5 USD in total, 3.1032 used,
+is spent before he sets new ones in CC-Mac's conversation). Per run: up to 4 USD (a Sonnet run on 64 questions with
+the judge is about 2.9 USD). For the phase: 20 USD, about 19 planned: 6.4 2.1, 6.11 4.4, 6.12 12.7. A smaller variant
+without the Sonnet guest-path check in 6.12 costs about 7.5 USD. Of the roughly 50 USD on the account, about 30 stay
+in reserve. The key in `.env` expires about 10 Dec 2026: steps 6.1 to 6.3 need no key; the paid steps 6.4, 6.11 and
+6.12 fit before that date only if the owner's reviews in 6.1 and 6.2 take a few days at most, otherwise 6.11 and 6.12
+need a new key from him.
+
 ## Later, optional (not scheduled)
 
 - [ ] **Agent prompt for Qwen with a stopping rule** (owner, 16 Nov 2026, possible, not planned). A separately named
@@ -357,7 +447,7 @@ costs nothing). Common rules for every step:
   contexts and compare recall against the Claude-written contexts. Write up as "cloud vs local" in `docs/AI-RAG.md`: quality, latency, cost.
   This answers the question clients actually ask: can this run without sending data to a cloud model, and what does it cost in quality.
 - [ ] `VoyageEmbedder` as a cloud embedding alternative, if 1.4 to 1.6 showed retrieval misses that look like embedding quality.
-- [ ] Temporal filters in retrieval (restrict to a date range parsed from the question).
+- [ ] Temporal filters in retrieval (restrict to a date range parsed from the question). Moved into step 6.8.
 
 ## Out of scope, deliberately
 

@@ -1136,3 +1136,18 @@ the standing-rule ledger (3.1032 of 5 USD), the 4.6e guest-key run and its judgm
 `inference/README.md` sections on removal, the public showcase (4.9) and the reranker on demand (4.10e). One
 conflict, the tail of this file, resolved as the union: main's entries first, then ai-layer's, no text changed;
 `package.json` merged cleanly. Full tests and lint passed before the push.
+
+## 2026-11-25, phase 6 planned: retrieval improvement (analysis session, for the owner)
+
+**Decision.** At the analysis session's request (owner's direction of 25 Nov: close the DeFi side cheaply, put the
+remaining effort and budget into the RAG), CC-Mac wrote phase 6 in `docs/AI-PLAN.md` and delivered step 6.1, the
+diagnosis, as a draft from stored files only (`ai/eval/diagnose.ts`,
+`ai/eval/results/2026-11-25-diagnosis-golden-v1-4.md`). The target is the fully local retrieval the site serves; the
+guest run of 18 Nov received exactly its stored k=10 lists. Of 20 questions wrong in 3 or more of 6 judged runs: 9
+need several chunks (mostly "partly"), 4 are not retrieved (3 of them at first-stage rank 36 to 52, just outside the
+rerank pool of 30), 2 are cut by the reranker, 4 are not retrieval, 1 has an arguable reference; chunk boundaries
+explain none (4 of 186 spans). Candidates are ranked from this; chunk size changes and de-duplication are dropped.
+
+**Budget.** Proposed, not approved: up to 4 USD per run, 20 USD for the phase (about 19 planned), or about 7.5 USD
+without the Sonnet guest-path check. The standing limits (2 per run, 5 in total, 3.1032 used) apply until the owner
+sets new ones in CC-Mac's conversation. The key expires about 10 Dec 2026. 0 USD spent.
