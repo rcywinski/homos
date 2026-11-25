@@ -1131,14 +1131,30 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   clone does not delete it; the two ranking routes build rows from a field allow-list (the page keys rows by rank and
   symbol, no address field is used). Live writes nothing else inside the clone: every file the observer, the paper
   step and the selector write is under the state folder (checked by grep of the write calls).
+  The measurement run on the Mac (owner, 25 Nov): the Mac does not stay on for a day, so the run counts for whatever
+  length it reaches; the report separates gaps from sleep from gaps from hosts. A few hours answer 5.1's questions
+  (calls per host and hour, failure share per host, which pools open, whether Arbitrum 0.05% opens on public hosts).
+  The full-day and multi-day measurement moves to 5.6 on the box. The paper positions opened on the Mac are
+  throwaway; the fresh start is at go-live.
 - **5.2** The chat server forwards `/live/api/*` to the bot server on 127.0.0.1 (the allow-list again, timeouts, no
   write method), so the page stays same-origin and the CSP unchanged. S.
   From the 5.1 review: a short response cache in front of the bot API (30 s per route and `hours` value, a few allowed
   `hours` values instead of any number), a response size cap, and the chat server's rate limit on `/live/api/*`; the
   5.2 report gives the worst-case response size (today `readNdjson` reads the whole file on every request).
+  Built 25 Nov (`ai/serve/live-proxy.ts`, `SERVE_LIVE_BOT_URL`): routes and GET only, `hours` 24, 72 or 168 (anything
+  else becomes 72), cache 30 s per key with one upstream fetch per key, cap 4 MB, timeout 8 s, fixed 502/503 bodies,
+  its own rate limiter (600 per visitor per hour, 5 000 per day, 200 000 site-wide), the bot URL loopback only.
+  Worst-case responses at 168 h, estimated from the row formats: paper 1.04 MB (4 032 history rows and 500 events),
+  history 0.69 MB; both under the cap, the bot API's own limit (30 days, 20 000 rows) is never reached through it.
 - **5.3** The "Live" page: the second entry, the cockpit shell, the paper summary (B), the paper panel with start
   dates, the legend, the "Archive / Live" switch on both pages, the demonstration notice; guard and viem helper;
   Playwright with a fixture bot API. M.
+  First cut 25 Nov (`showcase/live/`, served at `/live/`): the cockpit shell, the summary turned to the virtual
+  portfolio, the original `PaperTradingPanel` unchanged, the demonstration notice and, with `SHOWCASE_LIVE_PREVIEW=1`,
+  a throwaway-preview notice; the original CSS copied at build time to `/live/cockpit.css`. Guard: the bundle holds
+  react, react-dom and scheduler only; `src/utils/formatters` (viem) is swapped for `showcase/live/formatters.ts`; the
+  guard test allows `showcase/live/` exactly two src modules plus `useBotApi` for types, and pins what those import.
+  Still open in 5.3: the Archive/Live switch on the archive page and the Playwright tests with a fixture bot API.
 - **5.4** Telemetry and observation analysis on the page, read only; the walk-forward table from the period's result
   files, dated. S.
 - **5.5** Both rankings with the gate columns: the daily ranking live (DefiLlama fetch plus the selector, daily), the
@@ -1150,6 +1166,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   carry the URL. Checked on the Mac: the observer's `log()` and the advisor's warning printed no URL in the smoke run
   and in the first hours of the one-day run, but a viem error that ends a fallback (all hosts failed) can carry
   "URL: ..." in its message; 5.6 adds a URL scrub to `log()` in Live mode and a test, and states it in the box notes.
+  The full-day and multi-day measurement of RPC load and gaps runs here, on the box (moved from 5.1, 25 Nov).
 - **5.7** (optional, after 5.6) Read-only proposal cards derived from the paper decision log (REBALANCE, EXIT_TREND,
   FLAT_*), no buttons. M.
 - Later: wide against narrow on one pair (new paper strategies, L), automatic entry from the ranking under the

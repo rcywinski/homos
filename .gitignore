@@ -38,6 +38,8 @@ ai/agent/runs-eval/
 # Showcase (phase 4): data generated from committed results by npm run showcase:data, and the built bundle.
 showcase/public/data/
 showcase/public/app.js*
+showcase/public/live/live.js*
+showcase/public/live/cockpit.css
 showcase/public/fonts/
 # Playwright output (screenshots on failure, traces).
 showcase/e2e/results/

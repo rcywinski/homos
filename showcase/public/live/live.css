@@ -1,0 +1,12 @@
+/* The "Live" page shell (phase 5, step 5.3). The cockpit's own look comes from cockpit.css, a copy of src/styles.css
+   made at build time; this file adds only the page frame, the switch and the demonstration notice. */
+.live-body { margin: 0; background: #f8f9fa; }
+.live-switch { display: flex; gap: 6px; justify-content: flex-start; margin: 0 0 14px; font-size: 0.92rem; }
+.live-switch a, .live-switch span { padding: 4px 12px; border-radius: 999px; border: 1px solid #ced4da; color: #343a40; text-decoration: none; }
+.live-switch span[aria-current="page"] { background: #343a40; color: #fff; border-color: #343a40; }
+.live-title { text-align: left; margin: 0 0 6px; font-size: 1.35rem; }
+.live-notice { text-align: left; background: #fff8e1; border: 1px solid #f0c36d; border-radius: 10px; padding: 10px 14px; margin: 0 0 16px; font-size: 0.92rem; line-height: 1.45; }
+.live-notice strong { font-weight: 600; }
+.live-preview { background: #fdecea; border-color: #e5a29b; }
+.live-stat-note { font-size: 0.8rem; color: #6c757d; }
+@media (max-width: 600px) { .app.live-app { padding: 12px; } }

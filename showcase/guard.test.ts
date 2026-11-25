@@ -57,6 +57,29 @@ function files(dir: string): string[] {
   });
 }
 const IMPORT = /(?:import|export)\s[^'"]*?from\s*['"]([^'"]+)['"]|import\(\s*['"]([^'"]+)['"]\s*\)|require\(\s*['"]([^'"]+)['"]\s*\)/g;
+/**
+ * The src/ modules the Live page may import (phase 5, step 5.3): the paper panel and what it pulls in. Each holds only
+ * React and types; utils/formatters (which imports viem) is swapped by the Live build for showcase/live/formatters.ts.
+ */
+const LIVE_SRC_MODULES = ['components/ExpandableSection', 'components/PaperTradingPanel'];
+const LIVE_SRC_TYPES = ['hooks/useBotApi'];
+/** What those modules may import in turn (checked below), so a later change in src/ cannot widen the Live bundle. */
+const LIVE_SRC_REACH: Record<string, string[]> = {
+  'components/ExpandableSection.tsx': ['react'],
+  'components/PaperTradingPanel.tsx': ['react', '../hooks/useBotApi', '../config/botPools', './PositionCharts', '../utils/formatters'],
+  'components/PositionCharts.tsx': ['react', '../config/botPools'],
+  'config/botPools.ts': ['viem'],
+};
+for (const [file, allowed] of Object.entries(LIVE_SRC_REACH)) {
+  const text = readFileSync(path.join('src', file), 'utf8');
+  const specs = [...text.matchAll(/^import\s[^;]*?from\s*['"]([^'"]+)['"]/gm)].map((m) => m[1]);
+  check(`src/${file} imports only ${allowed.join(', ')}`, specs.every((x) => allowed.includes(x)), specs.join(', '));
+}
+// botPools.ts takes only the Address type from viem, which the TypeScript preset erases; the bundle check above
+// (allow-list on the built Live bundle) is what proves no viem code ships.
+check('src/config/botPools.ts uses viem for a type only', /import \{ Address \} from 'viem'/.test(readFileSync('src/config/botPools.ts', 'utf8')) && !/viem'\)?\.|from 'viem';[\s\S]*\b(createPublicClient|formatUnits|parseUnits)\b/.test(readFileSync('src/config/botPools.ts', 'utf8')));
+check('the Live build swaps utils/formatters', /NormalModuleReplacementPlugin\(\/\[\\\\\/\]utils\[\\\\\/\]formatters\$\/, path\.resolve\(__dirname, 'showcase\/live\/formatters\.ts'\)\)/.test(readFileSync('webpack.showcase.config.js', 'utf8')));
+
 const sources = files('showcase').filter((f) => !f.endsWith('guard.test.ts'));
 for (const f of sources) {
   const text = readFileSync(f, 'utf8');
@@ -65,7 +88,16 @@ for (const f of sources) {
     const bare = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
     const scope = spec.startsWith('@') ? spec.split('/')[0] : '';
     check(`${f}: ${spec} is not a wallet package`, !FORBIDDEN_PACKAGES.includes(bare) && !FORBIDDEN_PACKAGES.includes(scope));
-    check(`${f}: ${spec} does not import the cockpit UI`, !path.resolve(path.dirname(f), spec).startsWith(path.resolve('src')));
+    const target = path.resolve(path.dirname(f), spec);
+    if (target.startsWith(path.resolve('src')) && f.startsWith(path.join('showcase', 'live') + path.sep)) {
+      // Phase 5: the Live page reuses the original read-only paper panel; only the listed modules, and the cockpit's
+      // data hook for its types only (an `import type` is erased from the bundle).
+      const rel = path.relative(path.resolve('src'), target).replace(/\\/g, '/');
+      const typeOnly = new RegExp(`import\\s+type\\s[^'"]*from\\s*['"]${spec.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}['"]`).test(text);
+      check(`${f}: ${spec} is on the Live list`, LIVE_SRC_MODULES.includes(rel) || (LIVE_SRC_TYPES.includes(rel) && typeOnly), rel);
+      continue;
+    }
+    check(`${f}: ${spec} does not import the cockpit UI`, !target.startsWith(path.resolve('src')));
   }
 }
 check('the scan saw the showcase sources', sources.length >= 8, String(sources.length));
