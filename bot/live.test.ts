@@ -194,6 +194,7 @@ function scrub() {
   fake.error(new Error(`boom at ${key}`));
   check('the console wrapper scrubs strings and errors', seen.length === 2 && seen.every((l) => !l.includes('SECRETKEY123')), seen.join(' | '));
   const obs = readFileSync(path.join(ROOT, 'bot', 'observer.ts'), 'utf8');
+  check('the price refresh carries the statistics age over', /\.\.\.\(prev\?\.statsAt \? \{ statsAt: prev\.statsAt \} : \{\}\)/.test(obs) && /\.\.\.\(prev\?\.statsWindow \? \{ statsWindow: prev\.statsWindow \} : \{\}\)/.test(obs));
   check('statistics age is recorded in Live mode only', /if \(LIVE_MODE && read && live\[p\.id\]\)/.test(obs) && /const read = LIVE_MODE \?/.test(obs));
   check('the observer log() scrubs in Live mode', /LIVE_MODE \? scrubUrls\(msg\) : msg/.test(obs));
 }

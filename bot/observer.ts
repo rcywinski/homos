@@ -755,6 +755,9 @@ async function refreshPrices() {
         stats: prev?.stats ?? null,
         suggestion: prev?.suggestion ?? null,
         updatedAt: new Date().toISOString(),
+        // Live demo: the statistics age survives the 60 s price refresh (absent, and so not added, outside Live)
+        ...(prev?.statsAt ? { statsAt: prev.statsAt } : {}),
+        ...(prev?.statsWindow ? { statsWindow: prev.statsWindow } : {}),
       };
       live[p.id].trendGapPct = updateTrend(p, trendPrice(p, human), Date.now());
       live[p.id].trendDown = trend[p.id]?.down ?? false;
