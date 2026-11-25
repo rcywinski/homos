@@ -11,7 +11,7 @@ import os from 'os';
 import path from 'path';
 import { BOT_POOLS } from './config';
 import { liveStartProblem, rotateLog } from './live';
-import { NIGHTLY_AFTER_HOUR, NIGHTLY_MAX_ATTEMPTS, NIGHTLY_STEPS, nightlyDue } from './live-nightly';
+import { NIGHTLY_AFTER_HOUR, NIGHTLY_MAX_ATTEMPTS, NIGHTLY_STEPS, nightlyDue, stepsLeft } from './live-nightly';
 import { installConsoleScrub, scrubUrls } from './live-scrub';
 import { createPublicBotApp, RESULT_NAMES } from './server-public';
 
@@ -151,7 +151,11 @@ function nightly() {
   check('nightly not due before the hour', !nightlyDue({}, at(NIGHTLY_AFTER_HOUR - 1)));
   check('nightly due after the hour with no run today', nightlyDue({ lastOkDay: '2026-11-24' }, at(NIGHTLY_AFTER_HOUR)));
   check('nightly not due after a complete run today', !nightlyDue({ lastOkDay: today }, at(23)));
-  const failedAt = (h: number, count: number) => ({ lastOkDay: '2026-11-24', attempts: { day: today, count, lastAt: at(h).toISOString() } });
+  const failedAt = (h: number, count: number) => ({ lastOkDay: '2026-11-24', attempts: { day: today, count, lastAt: at(h).toISOString(), lastFailed: true } });
+  const okPartial = { lastOkDay: '2026-11-24', attempts: { day: today, count: 1, lastAt: at(6).toISOString(), lastFailed: false }, okSteps: { day: today, steps: ['fetch-llama-history' as const] } };
+  check('after a successful partial run (cold start): due again at once', nightlyDue(okPartial, new Date(at(6).getTime() + 3 * 60_000)));
+  check('after a cold start only the remaining steps run', stepsLeft(okPartial, at(6)).join() === 'wide-score,wide-daily');
+  check('a new day runs every step', stepsLeft(okPartial, new Date(2026, 10, 26, 6)).join() === NIGHTLY_STEPS.join());
   check('after a failed attempt: not due within the hour', !nightlyDue(failedAt(6, 1), new Date(at(6).getTime() + 59 * 60_000)));
   check('after a failed attempt: due again after an hour', nightlyDue(failedAt(6, 1), new Date(at(6).getTime() + 60 * 60_000)));
   check(`at most ${NIGHTLY_MAX_ATTEMPTS} attempts a day`, !nightlyDue(failedAt(6, NIGHTLY_MAX_ATTEMPTS), at(23)));

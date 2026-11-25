@@ -20,7 +20,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
-import { nightlyDue, readNightly, runNightly } from './live-nightly';
+import { nightlyDue, readNightly, runNightly, stepsLeft } from './live-nightly';
 import { installConsoleScrub, scrubUrls } from './live-scrub';
 
 /** Environment variables that must not be present in the Live process. */
@@ -118,13 +118,16 @@ async function main() {
       await runNightly(stateDir, repoRoot, log, ['fetch-llama-history']);
     }
     let running = false;
+    // Runs only the steps that have not succeeded today: after a cold start that is the WIDE ranking and the daily model,
+    // a few minutes later (after the selector's first ranking), without fetching the DefiLlama history again.
     const tick = () => {
-      if (running || !nightlyDue(readNightly(stateDir))) return;
+      const st = readNightly(stateDir);
+      if (running || !nightlyDue(st)) return;
       running = true;
-      void runNightly(stateDir, repoRoot, log).finally(() => (running = false));
+      void runNightly(stateDir, repoRoot, log, stepsLeft(st)).finally(() => (running = false));
     };
     setInterval(tick, 10 * 60_000);
-    setTimeout(tick, 60_000);
+    setTimeout(tick, 3 * 60_000);
   }
   await import('./observer');
 }

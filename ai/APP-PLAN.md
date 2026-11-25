@@ -1206,6 +1206,14 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   Walk-forward files for the box: copy the five `-720d-30d` files from the owner's Mac (main checkout,
   backtest/results; not in git by the owner's choice of step 2.1) to the box's results folder outside the clone
   (`BOT_RESULTS_DIR`), keeping their dates (`cp -p` or equivalent).
+  Prepared on the Mac, 25 Nov (nothing done on the box): the runbook `deploy/live/README.md` (layout, rights, the five
+  files with their SHA-256, task commands under the supervisor, go-live order with the public switch last, rollback,
+  outbound hosts, and the instruction text for CC-Win, to be sent only after the owner's OK there) and
+  `deploy/live/live.env.example`. Code for the box: no URL in any Live log line (`bot/live-scrub.ts`: the observer's
+  log() in Live mode and every console line of the Live process; a keyed RPC URL in a viem-style error is tested);
+  `<state>/observer.log` rotated at 5 MB; the watch-address warning silenced in Live mode; nightly attempts limited
+  (at most 3 a day, an hour after a failure, only the steps not yet done today, so a cold start does not fetch twice).
+  Dry run of the whole stack on the Mac from a clean state folder: see the 5.6 report.
 - **5.7** (optional, after 5.6) Read-only proposal cards derived from the paper decision log (REBALANCE, EXIT_TREND,
   FLAT_*), no buttons. M.
 - Later: wide against narrow on one pair (new paper strategies, L), automatic entry from the ranking under the

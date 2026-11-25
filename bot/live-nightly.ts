@@ -29,8 +29,10 @@ export const NIGHTLY_MAX_ATTEMPTS = 3;
 
 export interface NightlyState {
   lastOkDay?: string;
-  /** Attempts of the current local day (every run counts, the cold-start fetch too). */
-  attempts?: { day: string; count: number; lastAt: string };
+  /** Attempts of the current local day (every run counts, the cold-start fetch too); lastFailed: a step failed. */
+  attempts?: { day: string; count: number; lastAt: string; lastFailed?: boolean };
+  /** Steps that succeeded today; the day is complete when all NIGHTLY_STEPS are in it. */
+  okSteps?: { day: string; steps: NightlyStep[] };
   last?: { day: string; startedAt: string; finishedAt: string; steps: { step: NightlyStep; ok: boolean; ms: number }[] };
 }
 
@@ -45,15 +47,22 @@ export function readNightly(stateDir: string): NightlyState {
 }
 
 /**
- * True when today's run is due: after the hour, no complete run today, fewer than NIGHTLY_MAX_ATTEMPTS attempts today,
- * and at least NIGHTLY_RETRY_AFTER_MS since the last attempt.
+ * True when today's run is due: after the hour, no complete day yet, fewer than NIGHTLY_MAX_ATTEMPTS attempts today,
+ * and, after a failed attempt, at least NIGHTLY_RETRY_AFTER_MS since it.
  */
 export function nightlyDue(state: NightlyState, now = new Date()): boolean {
   const today = localDay(now);
   if (now.getHours() < NIGHTLY_AFTER_HOUR || state.lastOkDay === today) return false;
   const a = state.attempts;
   if (!a || a.day !== today) return true;
-  return a.count < NIGHTLY_MAX_ATTEMPTS && now.getTime() - Date.parse(a.lastAt) >= NIGHTLY_RETRY_AFTER_MS;
+  if (a.count >= NIGHTLY_MAX_ATTEMPTS) return false;
+  return !a.lastFailed || now.getTime() - Date.parse(a.lastAt) >= NIGHTLY_RETRY_AFTER_MS;
+}
+
+/** The steps still to run today (all of them on a new day), in order. */
+export function stepsLeft(state: NightlyState, now = new Date()): NightlyStep[] {
+  const done = state.okSteps?.day === localDay(now) ? state.okSteps.steps : [];
+  return NIGHTLY_STEPS.filter((s) => !done.includes(s));
 }
 
 function recordAttempt(stateDir: string, now: Date): void {
@@ -88,13 +97,19 @@ export async function runNightly(stateDir: string, repoRoot: string, log: (m: st
     results.push({ step, ok, ms: Date.now() - t });
     log(`nightly ${step}: ${ok ? 'ok' : 'FAILED'} in ${Math.round((Date.now() - t) / 1000)} s`);
   }
-  const allOk = steps.length === NIGHTLY_STEPS.length && results.every((r) => r.ok);
   const prev = readNightly(stateDir);
+  const day = localDay(startedAt);
+  const okToday = new Set<NightlyStep>(prev.okSteps?.day === day ? prev.okSteps.steps : []);
+  for (const r of results) if (r.ok) okToday.add(r.step);
+  const dayComplete = NIGHTLY_STEPS.every((s) => okToday.has(s));
+  const failed = results.some((r) => !r.ok);
   const next: NightlyState = {
     ...prev,
-    lastOkDay: allOk ? localDay(startedAt) : prev.lastOkDay,
+    attempts: prev.attempts ? { ...prev.attempts, lastFailed: failed } : prev.attempts,
+    okSteps: { day, steps: NIGHTLY_STEPS.filter((s) => okToday.has(s)) },
+    lastOkDay: dayComplete ? day : prev.lastOkDay,
     last: { day: localDay(startedAt), startedAt: startedAt.toISOString(), finishedAt: new Date().toISOString(), steps: results },
   };
   fs.writeFileSync(path.join(stateDir, 'nightly-state.json'), JSON.stringify(next, null, 2));
-  return allOk;
+  return !failed;
 }
