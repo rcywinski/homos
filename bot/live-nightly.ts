@@ -74,7 +74,11 @@ function recordAttempt(stateDir: string, now: Date): void {
 
 function runStep(step: NightlyStep, repoRoot: string, log: (m: string) => void): Promise<boolean> {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ['--import', 'tsx', path.join('scripts', `${step}.ts`)], { cwd: repoRoot, env: process.env, stdio: ['ignore', 'ignore', 'pipe'] });
+    // With LIVE_COUNT_CALLS=1 the step counts its own calls per host into <state>/net-stats-<step>.json.
+    const count = process.env.LIVE_COUNT_CALLS === '1' && process.env.BOT_STATE_DIR;
+    const args = ['--import', 'tsx', ...(count ? ['--import', './bot/live-count.ts'] : []), path.join('scripts', `${step}.ts`)];
+    const env = count ? { ...process.env, LIVE_COUNT_FILE: path.join(process.env.BOT_STATE_DIR!, `net-stats-${step}.json`) } : process.env;
+    const child = spawn(process.execPath, args, { cwd: repoRoot, env, stdio: ['ignore', 'ignore', 'pipe'] });
     let err = '';
     child.stderr.on('data', (d: Buffer) => (err = (err + d.toString()).slice(-400)));
     const timer = setTimeout(() => child.kill('SIGTERM'), STEP_TIMEOUT_MS);

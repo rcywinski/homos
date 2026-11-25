@@ -21,6 +21,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { nightlyDue, readNightly, runNightly, stepsLeft } from './live-nightly';
+import { countCalls } from './live-count';
 import { installConsoleScrub, scrubUrls } from './live-scrub';
 
 /** Environment variables that must not be present in the Live process. */
@@ -36,41 +37,6 @@ export function liveStartProblem(env: NodeJS.ProcessEnv, repoRoot: string): stri
   const rel = path.relative(path.resolve(repoRoot), path.resolve(dir));
   if (!rel.startsWith('..') && !path.isAbsolute(rel)) return 'refusing to start: BOT_STATE_DIR must be outside the repo';
   return null;
-}
-
-/**
- * Optional measurement for step 5.1 (LIVE_COUNT_CALLS=1): counts outgoing HTTP calls and failures per host and writes
- * the totals to <state>/net-stats.json every minute. It only observes fetch; the observer behaves the same.
- */
-function countCalls(stateDir: string) {
-  const stats: Record<string, { calls: number; failures: number; lastFailure?: string }> = {};
-  const startedAt = new Date().toISOString();
-  const orig = globalThis.fetch;
-  globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
-    const host = (() => {
-      try {
-        return new URL(url).host;
-      } catch {
-        return 'unknown';
-      }
-    })();
-    const s = (stats[host] ??= { calls: 0, failures: 0 });
-    s.calls++;
-    try {
-      const r = await orig(input, init);
-      if (!r.ok) {
-        s.failures++;
-        s.lastFailure = `${new Date().toISOString()} HTTP ${r.status}`;
-      }
-      return r;
-    } catch (e) {
-      s.failures++;
-      s.lastFailure = `${new Date().toISOString()} ${String(e).slice(0, 80)}`;
-      throw e;
-    }
-  }) as typeof fetch;
-  setInterval(() => fs.writeFileSync(path.join(stateDir, 'net-stats.json'), JSON.stringify({ startedAt, now: new Date().toISOString(), hosts: stats }, null, 1)), 60_000).unref();
 }
 
 /** Keeps a log under `max` bytes: past it, the file becomes `<name>.1` (replacing an older one) and a new one starts. */
@@ -99,7 +65,7 @@ async function main() {
   process.env.DOTENV_CONFIG_PATH = path.join(process.env.BOT_STATE_DIR!, '.no-env-file');
   // Every data folder of the demo lives in the state folder, none in the clone (a redeploy replaces the clone).
   process.env.BOT_DATA_DIR ??= path.join(process.env.BOT_STATE_DIR!, 'data');
-  if (process.env.LIVE_COUNT_CALLS === '1') countCalls(process.env.BOT_STATE_DIR!);
+  if (process.env.LIVE_COUNT_CALLS === '1') countCalls(path.join(process.env.BOT_STATE_DIR!, 'net-stats.json'));
   const stateDir = process.env.BOT_STATE_DIR!;
   const repoRoot = path.join(__dirname, '..');
   const log = (m: string) => {

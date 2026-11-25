@@ -1213,7 +1213,14 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   log() in Live mode and every console line of the Live process; a keyed RPC URL in a viem-style error is tested);
   `<state>/observer.log` rotated at 5 MB; the watch-address warning silenced in Live mode; nightly attempts limited
   (at most 3 a day, an hour after a failure, only the steps not yet done today, so a cold start does not fetch twice).
-  Dry run of the whole stack on the Mac from a clean state folder: see the 5.6 report.
+  Dry run of the whole stack on the Mac, 25 Nov 11:05 to 11:30 UTC, clean state folder, cleared environment, both bot
+  processes under the supervisor with an env file, the chat server forwarding on its own port: cold start fetched the
+  DefiLlama history in 554 s, the observer started after it, the selector ranked at once, five pools opened at the first
+  statistics cycle (Arbitrum pending, as in 5.1), the page answered with six cards at phone width, the archive showed
+  the Live link, no URL other than the local listen addresses in any log. Resume check on the same folder: the
+  remaining nightly steps ran 3 minutes after start (wide-score 3 s, wide-daily 13 s), the day was marked complete,
+  and the child processes' calls were counted per host (`net-stats-<step>.json`: coins.llama.fi 4 and 48 calls,
+  yields.llama.fi 1).
 - **5.7** (optional, after 5.6) Read-only proposal cards derived from the paper decision log (REBALANCE, EXIT_TREND,
   FLAT_*), no buttons. M.
 - Later: wide against narrow on one pair (new paper strategies, L), automatic entry from the ranking under the
