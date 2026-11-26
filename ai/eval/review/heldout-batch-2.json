@@ -1,0 +1,156 @@
+{
+  "batch": 2,
+  "date": "2026-11-26",
+  "questions": [
+    {
+      "id": "ho-why-02",
+      "category": "why",
+      "answerable": "yes",
+      "author": "owner",
+      "question": "When was it known for sure that no strategy beat plain HODL, and why was the project continued if it turned out the strategies did not work?",
+      "reference": "On the evening of 26.08 the abandonment threshold set that day was formally met: the hedged and flat-only families showed no edge over their benchmarks, rotation was the worst of all, and the production v1.1 ended below its starting $5k on mainnet and Arbitrum, its active management costing more than it gave. The premise is not quite right: a wide passive LP of ±50% ('HODL with yield') beat HODL over the full period on 4 of 4 pools, as an allocation product rather than an algorithm. The project went on because the owner, after a discussion of the literature (about half of LPs lose to HODL, so the results match the market; full range does best, as the ±50% did), chose one final round instead of freezing at once, under a fixed rule: product or freeze after it, no further experiments.",
+      "facts": {
+        "a": "26.08 evening: the abandonment threshold was met (hedged and flat-only families without an edge; v1.1 below its starting $5k on mainnet/Arbitrum; active management cost more than it gave)",
+        "b": "one result survived: wide passive LP ±50% beat HODL over the full period on 4/4 pools (an allocation product, not an algorithm)",
+        "c": "the owner chose one final round instead of an immediate freeze, after the literature showed about half of LPs lose to HODL (results consistent with the market)",
+        "d": "fixed rule: after that round, product or freeze, no further experiments"
+      },
+      "spans": [
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            90,
+            95
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "evening verdict ~19:xx: abandonment threshold, conditions met; the threshold defined"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            118,
+            128
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "fullperiod: passive ±50% wins 4/4, v1.1 below $5k, active costs > value; the only observation that survived"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            134,
+            151
+          ],
+          "role": "required",
+          "facts": [
+            "c",
+            "d"
+          ],
+          "reason": "owner's decision after the literature: one last round instead of freezing; hard rule product-or-freeze"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2199,
+            2212
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "entry of 26.08: abandonment threshold formally met, passive ±50% 4/4, literature, one final round, then product or freeze"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            99,
+            117
+          ],
+          "role": "supporting",
+          "reason": "the four families one by one (hedge, flat-only, parking, rotation)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2033,
+            2037
+          ],
+          "role": "supporting",
+          "reason": "27.08 morning: final round received and independently verified"
+        }
+      ],
+      "closestDev": "why-09 (why the 720-day tests showed no strategy passing the gate): same conclusion area; this item asks when it was known and why the project went on, and shares no chunk with why-09's required evidence (checked by the tool). Also near why-02 (small capital) and dated-01 (capital on 27.08), see warnings.",
+      "notes": "Owner's wording, part 1 of his question 1 (split proposed, he decides). Polish original: 'kiedy bylo wiadomo ze na pewno zadna strategia nie przebila zwyklego HODL, i dlaczego projekt byl dalej kontynuowany jesli okazalo sie ze strategie nie przynosza efektu'. Expected: the 26.08 verdict and the final-round decision; an answer that only says 'none beat HODL' misses fact b. The 27.08 outcome (hybrid FlatWide, capital in) is left out of the reference: it is dev dated-01's fact and its chunks hold dated-01, id-03 and why-08 evidence (tool check)."
+    },
+    {
+      "id": "ho-na-02",
+      "category": "no-answer",
+      "answerable": "partial",
+      "author": "owner",
+      "question": "Could the simulation of the algorithms have made a calculation error, so that some strategy actually did beat HODL?",
+      "reference": "The corpus does not prove the simulator right, but it records how its results were checked and which errors were found: the validation itself caught an engine bug (probe swaps through empty ticks faked trend signals and made exit variants show -100%; filtered on 17.08, baselines unaffected, verdict unchanged); the final round was recomputed independently on 8 of 8 walk-forward files and agreed with CC-Win's reports to the hundredth; a nightly report that called FlatOnly 'better than HODL' when it was only 'positive' was corrected against its own numbers; a corrupted first price point in a 720-day cache was flagged. After the volatility measure was corrected, the recalibration series still passed zero gates, and the overall result matches the literature (about half of LPs lose to HODL). One strategy did beat HODL over the full period, the wide passive ±50%, so the claim concerns the active strategies.",
+      "spans": [],
+      "related": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3407,
+            3411
+          ],
+          "reason": "17.08: validation found an engine bug (probe swaps), fixed, verdict stands"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2033,
+            2037
+          ],
+          "reason": "27.08: final round verified independently on 8/8 JSON files, agreement to the hundredth"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2064,
+            2068
+          ],
+          "reason": "27.08: CC-Win's 'FlatOnly beats HODL' corrected from its own numbers"
+        },
+        {
+          "file": "journal/TASKS-RECAL.md",
+          "lines": [
+            3,
+            6
+          ],
+          "reason": "26.08: on the corrected sigma (grid15) the recal series passed zero gates"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2991,
+            2991
+          ],
+          "reason": "engine design: simulator on float for comparing strategies, position geometry exact, approximations listed in the file header"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            130,
+            132
+          ],
+          "reason": "corrupted first price point in a 720-day cache"
+        }
+      ],
+      "closestDev": "why-09 (365 vs 720 days): both are about trusting the backtest verdict; why-09 asks why the windows disagreed, this one whether the engine itself could be wrong",
+      "notes": "Owner's question 3. Polish original: 'czy symulacja algorytmow mogla sie pomylic w obliczeniach i faktycznie ktoras strategia mogla przebijac HODL?'. Partial: the corpus has checks and found errors, not a proof. Expected: no claim that the simulator was proven correct and no claim that a hidden winner exists; name the checks. Not used: ai/APP-PLAN.md (not corpus)."
+    }
+  ]
+}
