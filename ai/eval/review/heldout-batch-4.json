@@ -7,7 +7,7 @@
       "category": "dated-fact",
       "answerable": "yes",
       "author": "CC-Mac",
-      "question": "According to the morning report of 5 September, what was tranche 1 worth in total and how far was it from the amount paid in?",
+      "question": "What was tranche 1 worth on 5 September, and how far was it from the amount paid in?",
       "reference": "On 05.09 tranche 1 was worth $5,967.33 in total ($5,740.04 in the LP positions and $227.29 in the wallet as buffer and gas) against $6,092.00 paid in on 27.08, a difference of -$124.67 (-2.05%): -$118.01 from the market move on the LP and -$6.66 for the rest (entry costs -$7.90, buffer beta +$1.24).",
       "facts": {
         "a": "05.09: total $5,967.33 ($5,740.04 in LP, $227.29 in the wallet)",
@@ -48,10 +48,19 @@
           ],
           "role": "supporting",
           "reason": "the two positions that day; not asked"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            726,
+            726
+          ],
+          "role": "supporting",
+          "reason": "brief of 07.09 covering 05-07.09: balance -2.05% -> -0.75% -> -0.80%; gives the percentage only, by inference from the order, not the total"
         }
       ],
-      "closestDev": "dated-03 (positions open on 15.09 and their P/L that day): same kind of question on another report and another section",
-      "notes": "Report-based dated item (analysis session's request for step 6.8): 37 near-identical reports, only the date picks the right one. Medium."
+      "closestDev": "dated-03 (positions open on 15.09 and their P/L): same kind of question on another day; its facts are the positions and P/L of 15.09, not the tranche balance of 05.09",
+      "notes": "Report-based dated item (step 6.8), asked without naming the report, as a visitor would (analysis session's review). The journal has no entry of 05.09 with the total; the brief of 07.09 (CONTEXT.md:726) gives -2.05% for the first of three days, kept as supporting. Expected failure mode: 15.09 shows almost the same balance ($5,966.88, -2.05%, CONTEXT.md:251), so a wrong-day answer can look right; the total $5,967.33 tells them apart. Medium."
     },
     {
       "id": "ho-dated-06",
@@ -297,37 +306,37 @@
       "category": "no-answer",
       "answerable": "partial",
       "author": "CC-Mac",
-      "question": "How much was put into tranche 2, and what did it earn?",
-      "reference": "Nothing: tranche 2 never entered. It was planned as scaling to $12-15k in total around 31.08, on conditions (selector accuracy, at least 14 days of paper trading at or above HODL, clean pipelines). It never came: tranche 1 was closed in full on 21.09, and for the closing review of 24.09 tranche 2 was 'by default no, without a new thesis that beats HODL over 720 days'.",
+      "question": "How did tapping the link in a Telegram alert open the right proposal card on the phone?",
+      "reference": "It did not: a deep link from the Telegram message to the proposal card ({base}/?proposal=<id>) was planned on 17.08 as one step of 'approval from the phone' and never built (the queue item stays unticked). What existed: Telegram alerts for every proposal from 17.08, and from 19.08 the full cockpit on the iPhone with Rabby connected through WalletConnect, opened by hand.",
       "spans": [],
       "related": [
         {
-          "file": "journal/KAPITAL-REKOMENDACJA.md",
+          "file": "journal/RESEARCH-QUEUE.md",
           "lines": [
-            50,
-            60
+            751,
+            763
           ],
-          "reason": "tranche 2 plan: ~31.08, scaling to $12-15k, entry conditions"
+          "reason": "queue item from 17.08, unticked: Telegram active, deep link to the proposal card in the PWA, WalletConnect, web push"
         },
         {
           "file": "journal/CONTEXT.md",
           "lines": [
-            182,
-            188
+            3413,
+            3418
           ],
-          "reason": "closing review 24.09: whether and when tranche 2, by default no without a new thesis beating HODL on 720 days"
+          "reason": "17.08: Telegram notifications active for every proposal; phone approval with a deep link added to the ideas"
         },
         {
-          "file": "journal/RESEARCH-QUEUE.md",
+          "file": "docs/INFRA.md",
           "lines": [
-            1069,
-            1069
+            69,
+            71
           ],
-          "reason": "decision on tranche 2 only after at least one full cycle"
+          "reason": "iPhone UI from the Home Screen, approval through WalletConnect, alerts through Telegram"
         }
       ],
-      "closestDev": "why-02 (why the capital commitment stayed small) is the nearest; it uses KAPITAL-REKOMENDACJA 17-19 and DECYZJE 155-157, not these ranges",
-      "notes": "Expected: correct the premise (tranche 2 never entered), give the plan and the closing-review default as context; inventing an amount or a result is an error."
+      "closestDev": "why-05 mentions Telegram alerts only as part of why the bot ran 24/7; no dev fact on phone approval or deep links. Held-out ho-why-07 (wallet connection) shares the WalletConnect context, different facts",
+      "notes": "Expected: correct the premise (no deep link was built), name what existed (alerts, the phone cockpit opened by hand); describing a working deep link is an error. Replaces a first draft about tranche 2, withdrawn after the analysis session's review: it restated dev why-02's facts (planned scale-up to $12-15k that never happened)."
     },
     {
       "id": "ho-na-06",

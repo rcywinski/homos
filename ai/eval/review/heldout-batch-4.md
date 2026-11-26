@@ -9,13 +9,13 @@ from it alone.
 
 ## ho-dated-05 (dated-fact, answerable: yes, by CC-Mac)
 
-**Question.** According to the morning report of 5 September, what was tranche 1 worth in total and how far was it from the amount paid in?
+**Question.** What was tranche 1 worth on 5 September, and how far was it from the amount paid in?
 
 **Reference.** On 05.09 tranche 1 was worth $5,967.33 in total ($5,740.04 in the LP positions and $227.29 in the wallet as buffer and gas) against $6,092.00 paid in on 27.08, a difference of -$124.67 (-2.05%): -$118.01 from the market move on the LP and -$6.66 for the rest (entry costs -$7.90, buffer beta +$1.24).
 
-**Notes.** Report-based dated item (analysis session's request for step 6.8): 37 near-identical reports, only the date picks the right one. Medium.
+**Notes.** Report-based dated item (step 6.8), asked without naming the report, as a visitor would (analysis session's review). The journal has no entry of 05.09 with the total; the brief of 07.09 (CONTEXT.md:726) gives -2.05% for the first of three days, kept as supporting. Expected failure mode: 15.09 shows almost the same balance ($5,966.88, -2.05%, CONTEXT.md:251), so a wrong-day answer can look right; the total $5,967.33 tells them apart. Medium.
 
-**Closest dev question:** dated-03 (positions open on 15.09 and their P/L that day): same kind of question on another report and another section
+**Closest dev question:** dated-03 (positions open on 15.09 and their P/L): same kind of question on another day; its facts are the positions and P/L of 15.09, not the tranche balance of 05.09
 
 - **a**: 05.09: total $5,967.33 ($5,740.04 in LP, $227.29 in the wallet) (1 span)
 - **b**: difference vs $6,092.00 paid in: -$124.67 (-2.05%) (1 span)
@@ -26,6 +26,7 @@ from it alone.
 | morning-2026-09-05.md:201-205 | required | a, b | \| wpłacone (2026-08-27) \| $6092.00 \| | \| **różnica vs wpłacone** \| **$-124.67 (-2.05%)** \| | report 05.09, tranche balance rows: paid in, in LP, in wallet, total, difference (a state on a date, shown in  |
 | morning-2026-09-05.md:206-209 | required | c | \| — z tego ruch rynku na LP \| $-118.01 \| | \| &nbsp;&nbsp;• beta bufora (od kotwicy bufora) \| +$1.24 \| | the split of the difference: market move, rest, entry costs, buffer beta |
 | morning-2026-09-05.md:219-225 | supporting | - | ## POZYCJE REALNE (produkt FlatWide) | \| **RAZEM** \| \| \| **$5740.04** \| $-5.55 \| \| \| \| \| \| \| | the two positions that day; not asked |
+| CONTEXT.md:726-726 | supporting | - | 3 noce czyste (backtest-run ~1h10–1h15, porażki BRAK), zero propozycji, down:false 6/6. Bilans transzy −2.05%  | (one line) | brief of 07.09 covering 05-07.09: balance -2.05% -> -0.75% -> -0.80%; gives the percentage only, by inference  |
 
 ## ho-dated-06 (dated-fact, answerable: yes, by CC-Mac)
 
@@ -135,26 +136,26 @@ from it alone.
 
 ## ho-na-05 (no-answer, answerable: partial, by CC-Mac)
 
-**Question.** How much was put into tranche 2, and what did it earn?
+**Question.** How did tapping the link in a Telegram alert open the right proposal card on the phone?
 
-**Reference.** Nothing: tranche 2 never entered. It was planned as scaling to $12-15k in total around 31.08, on conditions (selector accuracy, at least 14 days of paper trading at or above HODL, clean pipelines). It never came: tranche 1 was closed in full on 21.09, and for the closing review of 24.09 tranche 2 was 'by default no, without a new thesis that beats HODL over 720 days'.
+**Reference.** It did not: a deep link from the Telegram message to the proposal card ({base}/?proposal=<id>) was planned on 17.08 as one step of 'approval from the phone' and never built (the queue item stays unticked). What existed: Telegram alerts for every proposal from 17.08, and from 19.08 the full cockpit on the iPhone with Rabby connected through WalletConnect, opened by hand.
 
-**Notes.** Expected: correct the premise (tranche 2 never entered), give the plan and the closing-review default as context; inventing an amount or a result is an error.
+**Notes.** Expected: correct the premise (no deep link was built), name what existed (alerts, the phone cockpit opened by hand); describing a working deep link is an error. Replaces a first draft about tranche 2, withdrawn after the analysis session's review: it restated dev why-02's facts (planned scale-up to $12-15k that never happened).
 
-**Closest dev question:** why-02 (why the capital commitment stayed small) is the nearest; it uses KAPITAL-REKOMENDACJA 17-19 and DECYZJE 155-157, not these ranges
+**Closest dev question:** why-05 mentions Telegram alerts only as part of why the bot ran 24/7; no dev fact on phone approval or deep links. Held-out ho-why-07 (wallet connection) shares the WalletConnect context, different facts
 
 **Same section as development ranges (read by hand):**
 
-- journal/CONTEXT.md:182-188 is in section journal/CONTEXT.md:116 ("2026-09-21 (pon.) 09:xx–19:30 PL — BRIEF + NEWSY + PEŁNE WYJ"), which also holds ranges of dated-04, na-01
+- journal/RESEARCH-QUEUE.md:751-763 is in section journal/RESEARCH-QUEUE.md:684 ("H. POMYSŁY NA PRZYSZŁE MODUŁY (backlog pomysłów — nie w budo"), which also holds ranges of why-06, why-07, id-07
 
 
 Related (should surface, does not answer):
 
 | range | first line | last line | reason |
 |---|---|---|---|
-| KAPITAL-REKOMENDACJA.md:50-60 | ## 3. Transza 2 — ~31.08, warunki wejścia | pierwszym miesiącu realnych pozycji. | tranche 2 plan: ~31.08, scaling to $12-15k, entry conditions |
-| CONTEXT.md:182-188 | PRZEGLĄD 24.09 = PRZEGLĄD ZAMKNIĘCIA: (1) werdykt FlatWide z | bije HODL na 720d. Fable przygotuje liczby do (1)–(2) przed 24.09. | closing review 24.09: whether and when tranche 2, by default no without a new thesis beating HODL on 720 days |
-| RESEARCH-QUEUE.md:1069-1069 | paper A/B; decyzja o transzy 2 dopiero po ≥1 pełnym cyklu | (one line) | decision on tranche 2 only after at least one full cycle |
+| RESEARCH-QUEUE.md:751-763 | - [ ] **ZATWIERDZANIE Z TELEFONU + PUSH (pomysł Rafała 17.08)**: pełna pętla | 4. [opcjonalnie] web-push z PWA (iOS ≥16.4 wspiera dla zainstalowanych | queue item from 17.08, unticked: Telegram active, deep link to the proposal card in the PWA, WalletConnect, we |
+| CONTEXT.md:3413-3418 | ### 2026-08-17 (~wieczór) — POWIADOMIENIA TELEGRAM AKTYWNE + backlog mobilny | zatwierdzanie z telefonu (deep-link z TG do karty PWA + WalletConnect → | 17.08: Telegram notifications active for every proposal; phone approval with a deep link added to the ideas |
+| INFRA.md:69-71 | - The responsive UI, added to the Home Screen, shows the full morning view and lets the | - Alerts go from the bot to Telegram: instant, free, and available without the VPN. | iPhone UI from the Home Screen, approval through WalletConnect, alerts through Telegram |
 
 ## ho-na-06 (no-answer, answerable: no, by CC-Mac)
 
@@ -185,14 +186,13 @@ By category: dated-fact/yes 7, identifier/yes 5, no-answer/partial 4, why/yes 7,
 |---|---|---|
 | CONTEXT.md | 17 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-why-04, ho-dated-03, ho-dated-04, ho-id-02, ho-id-03, ho-why-07, ho-why-06, ho-id-05, ho-id-06, ho-na-05, ho-na-06 |
 | DECYZJE-2026-08-26.md | 7 | ho-dated-01, ho-na-01, ho-why-02, ho-na-02, ho-id-03, ho-na-03, ho-why-08 |
+| INFRA.md | 4 | ho-na-03, ho-na-04, ho-why-07, ho-na-05 |
 | RESEARCH-QUEUE.md | 4 | ho-na-01, ho-why-04, ho-na-03, ho-na-05 |
-| INFRA.md | 3 | ho-na-03, ho-na-04, ho-why-07 |
 | SELECTOR-LOG.md | 2 | ho-dated-02, ho-id-01 |
 | TASKS-UI.md | 2 | ho-why-06, ho-id-06 |
 | EMERGENCY.md | 1 | ho-why-05 |
 | PLAN.md | 1 | ho-why-03 |
 | HANDOFF.md | 1 | ho-id-02 |
-| KAPITAL-REKOMENDACJA.md | 1 | ho-na-05 |
 | PYTANIE-SZEROKOSC-I-SIGMA.md | 1 | ho-na-01 |
 | morning-2026-08-19.md | 1 | ho-id-01 |
 | morning-2026-09-03.md | 1 | ho-dated-06 |
@@ -207,5 +207,5 @@ By category: dated-fact/yes 7, identifier/yes 5, no-answer/partial 4, why/yes 7,
 | month of the chunk | items | ids |
 |---|---|---|
 | no date (docs, notes, task files) | 19 | ho-dated-01, ho-dated-02, ho-id-01, ho-na-01, ho-why-02, ho-na-02, ho-why-03, ho-why-04, ho-why-05, ho-id-02, ho-id-03, ho-na-03, ho-na-04, ho-why-07, ho-why-06, ho-why-08, ho-id-06, ho-na-05, ho-na-06 |
-| 2026-08 | 10 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-id-03, ho-why-07, ho-why-06, ho-id-06 |
-| 2026-09 | 9 | ho-why-04, ho-dated-03, ho-dated-04, ho-id-02, ho-dated-05, ho-dated-06, ho-dated-07, ho-id-05, ho-na-05 |
+| 2026-08 | 11 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-id-03, ho-why-07, ho-why-06, ho-id-06, ho-na-05 |
+| 2026-09 | 8 | ho-why-04, ho-dated-03, ho-dated-04, ho-id-02, ho-dated-05, ho-dated-06, ho-dated-07, ho-id-05 |
