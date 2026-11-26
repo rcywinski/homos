@@ -1222,7 +1222,7 @@ loop (the next attempt is the next 60 s or 15 min cycle); the page shows stale d
   notice). The Live tab and card appear only when /api/health says `live: true`. Light only for everyone (owner,
   25 Nov: "nie chce ciemnego w ogole"): the archive's dark block is removed from `showcase/public/styles.css`,
   `color-scheme: light` on the archive, Live and admin pages. Contrast checked in light (all pairs 5.2:1 or more).
-- [ ] NEXT **5.6** On the box: the observer and the bot server as tasks under `homos-web` with the supervisor, state folder,
+- [x] **5.6** (ticked by the owner, 26 Nov; Live public since 10:48 UTC) On the box: the observer and the bot server as tasks under `homos-web` with the supervisor, state folder,
   RPC settings, the daily and nightly steps; measured; then public on the owner's word. M.
   From the 5.1 review: if a paid RPC key arrives through `RPC_MAINNET`, `RPC_BASE` or `RPC_ARBITRUM`, no log line may
   carry the URL. Checked on the Mac: the observer's `log()` and the advisor's warning printed no URL in the smoke run
