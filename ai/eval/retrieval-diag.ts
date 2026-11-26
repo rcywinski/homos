@@ -15,11 +15,15 @@
  * the served stable sort does). Check before anything is written: the served setting (rerank top 30, k = 10) must
  * give the same headline numbers as the stored 11 Nov lists, or the run exits non-zero; per question, a top 10 that
  * differs from the stored list is reported with the chunks that moved.
+ *
+ * The report also has one first-stage-only row that is not a served setting: the local index with the cached Sonnet
+ * Polish rendering given to BM25 (as "chosen" does), from the cached query vectors. It is the upper bound of what a
+ * Polish query alone can add to the local path before any reranking (input for step 6.9).
  */
 import 'dotenv/config';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { CONTEXTS_FILE, firstStage, QUERIES_FILE, RERANK_FORMAT, type FirstStage, type RetrievalVariant } from '../answer/retrieval';
-import { readQueries } from '../context/query';
+import { expandedQuery, readQueries } from '../context/query';
 import type { Chunk } from '../corpus/types';
 import { loadCorpus } from '../corpus/load';
 import { corpusHash } from '../embed/index-file';
@@ -28,6 +32,7 @@ import type { EmbedKind, Embedder } from '../embed/types';
 import { checkReranker, LocalReranker } from '../rerank/local';
 import { docText } from '../rerank/retriever';
 import { rrf } from '../store/hybrid';
+import { MappedRetriever } from '../store/mapped';
 import type { SearchHit } from '../store/types';
 import { factSpans, overlaps, requiredOnly, type Evidence, type GoldenQuestion } from './golden';
 import { score, type Score } from './span-score';
@@ -332,6 +337,68 @@ async function report(date: string) {
     );
   }
 
+  // Upper bound for 6.9: the local first stage with the Polish rendering given to BM25 (first stage only).
+  const queriesPl = readQueries(QUERIES_FILE);
+  const localFs = setup('local', embedder, chunks).fs;
+  const bm25Pl = new MappedRetriever(
+    localFs.bm25,
+    (q) => {
+      const pl = queriesPl.get(q);
+      if (!pl) throw new Error(`no Polish rendering for: ${q}`);
+      return expandedQuery(pl);
+    },
+    'query-pl',
+  );
+  const plFused: Record<string, string[]> = {};
+  const plBm25Full: Record<string, string[]> = {};
+  for (const q of golden) {
+    const [vec] = await localFs.vector.search([q.question], DEPTH);
+    const [bm] = await bm25Pl.search([q.question], DEPTH);
+    plFused[q.id] = rrf([vec, bm]).map((h: SearchHit) => h.id);
+    const [bf] = await bm25Pl.search([q.question], chunks.length);
+    plBm25Full[q.id] = bf.map((h) => h.id);
+  }
+  const plRows: string[] = [];
+  const plJson: Record<string, unknown> = {};
+  for (const k of K_FIRST) {
+    const s = score(golden, at(plFused, k), byId);
+    plRows.push(row(`first stage, k=${k}`, recallAtK(answerable, at(plFused, k), byId), s, false));
+    plJson[`first@${k}`] = { recall: recallAtK(answerable, at(plFused, k), byId), req: s.req, facts: s.facts, all: s.all };
+  }
+  json['local+query-pl'] = plJson;
+
+  // Where required spans are lost: beyond fused rank 100, and of those how many have no BM25 rank at all.
+  const lossRows: string[] = [];
+  const lossOf = (label: string, fused: (id: string) => string[], bm25Full: (id: string) => string[]) => {
+    let n = 0;
+    let far = 0;
+    let farNoBm25 = 0;
+    let noBm25 = 0;
+    for (const q of answerable)
+      for (const e of requiredOnly(q.evidence)) {
+        n++;
+        const fr = spanRank(fused(q.id).slice(0, DEPTH), byId, e);
+        const br = spanRank(bm25Full(q.id), byId, e);
+        if (br === null) noBm25++;
+        if (fr === null) {
+          far++;
+          if (br === null) farNoBm25++;
+        }
+      }
+    lossRows.push(`| ${label} | ${n} | ${far} | ${farNoBm25} | ${noBm25} |`);
+  };
+  for (const variant of VARIANTS)
+    lossOf(
+      variant,
+      (id) => views.get(variant)!.get(id)!.fused,
+      (id) => views.get(variant)!.get(id)!.bm25Full,
+    );
+  lossOf(
+    'local + Polish query for BM25',
+    (id) => plFused[id],
+    (id) => plBm25Full[id],
+  );
+
   // Per span ranks.
   const spanRows: string[] = [];
   const spanJson: unknown[] = [];
@@ -390,6 +457,23 @@ async function report(date: string) {
     '## Coverage by stage',
     '',
     ...tables,
+    '## Upper bound for 6.9: local index, Polish query for BM25, first stage only',
+    '',
+    'Not a served setting. The local index (`ollama-bge-m3.meta`, no generated context) with the cached Sonnet Polish',
+    `rendering (\`${QUERIES_FILE}\`) given to BM25 as "chosen" does, vectors from the cached query vectors, RRF as served.`,
+    'Compare with the first-stage rows of "local" (same index, plain question to BM25) and "chosen" (contexts in the index).',
+    '',
+    '| stage | **recall, required** | MRR@10, required | required spans covered | **facts covered** | all spans covered |',
+    '|---|---|---|---|---|---|',
+    ...plRows,
+    '',
+    'Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with',
+    'the chunk). The last column counts every required span with no BM25 rank.',
+    '',
+    '| first stage | required spans | beyond fused rank 100 | of those, no BM25 rank | no BM25 rank, all |',
+    '|---|---|---|---|---|',
+    ...lossRows,
+    '',
     '## Reranker score stability',
     '',
     'Largest difference between the served call (30 documents) and the 100-document call on the same 30 documents,',

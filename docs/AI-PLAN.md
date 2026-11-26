@@ -398,13 +398,15 @@ Common rules for every step:
   batch is read with the owner in a session, with the reasoning behind each reference, before the next. Then the file
   is frozen with its hash in `ai/DECISIONS.md`. v1.4's 34 questions become the development set, the new ones the
   test set. 0 USD.
-- [ ] NEXT **6.3 Retrieval measure and baseline, free.** `ai/eval/retrieval-diag.ts`: per question, the rank of every
+- [x] 2026-11-26 **6.3 Retrieval measure and baseline, free.** `ai/eval/retrieval-diag.ts`: per question, the rank of every
   evidence chunk after the first stage (to depth 100) and after the reranker, span coverage at k = 5, 10, 15 and 20,
   reported twice: for the required spans of 6.2 and for all spans.
   Needs the query vectors (bge-m3) and the evaluation reranker `[CC-Win, owner's go]`: one short box window, the
   vectors are then cached in `ai/index/` so later candidates that keep the first stage need no box. Baseline numbers
-  for the development set. 0 USD.
-- [ ] **6.4 Judged baseline on v1.5.** The served configuration, Qwen, development and test sets (64 questions), two
+  for the development set. 0 USD. Done 26 Nov: `ai/eval/results/2026-11-26-retrieval-diag-golden-v1-7.md`; the
+  largest loss is before first-stage rank 100 (local 64 of 173 required spans), and the Polish query alone does not
+  close it (upper bound row), the generated contexts do; details and the review corrections in `ai/DECISIONS.md`.
+- [ ] NEXT **6.4 Judged baseline on v1.5.** The served configuration, Qwen, development and test sets (64 questions), two
   runs. Gives the spread every later step is compared against. About 2.1 USD (judge only).
 - [ ] **6.5 Candidate: deeper rerank pool** (class A). Rerank the top 50 or 60 instead of 30. Three of the four class
   A questions have their first evidence chunk at first-stage rank 36 to 52. Measured with 6.3, free. Cost on the

@@ -1309,3 +1309,42 @@ the test set (no retrieval, no model); its first run is step 6.12, once, on the 
 development set. Tuning reads development results only. If a held-out item must change later, that is a new version
 with a reason and a new hash, and numbers on v1.0 are not compared with numbers on it. `ai/eval/heldout.test.ts`
 keeps failing any code outside the held-out tool that names the file. Step 6.2 is done; 6.3 is next. 0 USD.
+
+## 2026-11-26, step 6.3 retrieval diagnostic (owner)
+
+**Decision.** The owner approved the diagnostic and its baseline numbers for the development set (golden v1.7):
+`ai/eval/results/2026-11-26-retrieval-diag-golden-v1-7.md` and `.json`. One box window (CC-Win, the owner's go) cached
+the query vectors and the reranker scores of the first-stage top 100 in `ai/index/`; everything else is computed on the
+Mac. The served setting reproduces the stored 11 Nov lists exactly (local 17, 20 of 26, MRR 0.471, facts 49/130;
+chosen 16, 20, 0.490, 53/130). The analysis session reviewed the conclusions before this entry; its four corrections
+are in the text below.
+
+Where the 173 required spans are lost, served setting at k = 10:
+
+| | beyond first-stage rank 100 | ranks 31 to 100 | in the 30, outside the final 10 | in the top 10 |
+|---|---|---|---|---|
+| local | 64 | 37 | 26 | 46 |
+| chosen | 54 | 35 | 26 | 58 |
+
+In facts (130, 5 with no span): local reaches 82 in the first stage's top 100, 60 in its top 30, 49 in the served top
+10; chosen 95, 70, 53. So the largest loss is before rank 100, and on local no reranking of the top 100 can exceed
+82/130.
+
+Observations, not decisions:
+
+- The reranker adds no fact coverage at k = 10 in either variant (local 49 to 49, chosen first stage 56 to 53) and
+  improves the top 5 only on local (14 to 17 of 26). This rests on 3 facts and 2 questions with no judged answers:
+  "no reranker" and fusion are candidates for 6.6, decided on judged dev runs under the two-run rule.
+- Of the 64 local spans beyond rank 100, 35 have no BM25 rank at all (English question, Polish journal); chosen 4 of
+  54. A free upper bound measured at the owner's request (local index, cached Sonnet Polish rendering for BM25, first
+  stage only) closes the BM25 gap (5 of 64 with no BM25 rank) but not the coverage: still 64 spans beyond rank 100,
+  facts in the top 100 83 against 82, at k = 10 51 against 49. So chosen's lead in the first stage (95 facts in its
+  top 100) comes mostly from the generated contexts in the index, not from the Polish query. This argues against
+  moving 6.9 forward and for measuring 6.10 (committed contexts in the local index) early, as a first-stage
+  coverage check.
+- At equal pool cost more context helps more than a deeper pool on local: first stage k = 20 gives 57 facts, rerank
+  top 100 at k = 20 gives 62, served k = 10 gives 49. Input for 6.7.
+- Reranker scores are stable across batch sizes: at most 0.0017 between the 30- and 100-document calls; the served
+  top 10 changes in 2 (local) and 1 (chosen) of 34 questions.
+
+Step 6.3 is done; 6.4 is next. 0 USD.
