@@ -170,7 +170,20 @@ export const BOT_POOLS: BotPool[] = [
   },
 ];
 
-export const RPC: Record<string, string[]> = {
+/**
+ * Live demo (BOT_MODE=live): the public hosts that answered in the 5.1 measurement and the 5.6 probe (25 Nov 2026),
+ * the one that serves 24 h of logs first, a price-only fallback second. drpc's free plan takes getLogs ranges of at
+ * most 100 blocks; eth/base.llamarpc.com answered 525; arbitrum-one-rpc.publicnode.com asks a token for logs; 1rpc.io
+ * hit its usage limit; arb1.arbitrum.io (Arbitrum's own public RPC) served 24 h of logs in 10,000-block chunks.
+ * The default lists below are unchanged.
+ */
+const LIVE_RPC: Record<string, string[]> = {
+  mainnet: ['https://ethereum-rpc.publicnode.com', 'https://eth.drpc.org'],
+  base: ['https://base-rpc.publicnode.com', 'https://base.drpc.org'],
+  arbitrum: ['https://arb1.arbitrum.io/rpc', 'https://arbitrum.drpc.org'],
+};
+
+const DEFAULT_RPC: Record<string, string[]> = {
   mainnet: [
     ...(process.env.RPC_MAINNET ? [process.env.RPC_MAINNET] : []),
     'https://eth.drpc.org',
@@ -191,6 +204,14 @@ export const RPC: Record<string, string[]> = {
   ],
 };
 
+const withOverride = (chain: string, list: string[]) => {
+  const v = process.env[`RPC_${chain === 'mainnet' ? 'MAINNET' : chain.toUpperCase()}`];
+  return v ? [v, ...list] : list;
+};
+export const RPC: Record<string, string[]> = process.env.BOT_MODE === 'live' // LIVE_MODE, declared further down
+  ? Object.fromEntries(Object.entries(LIVE_RPC).map(([c, l]) => [c, withOverride(c, l)]))
+  : DEFAULT_RPC;
+
 export const NFT_MANAGER: Record<number, `0x${string}`> = {
   1: '0xC36442b4a4522E871399CD717aBDD847Ab11FE88',
   8453: '0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1',
@@ -199,7 +220,7 @@ export const NFT_MANAGER: Record<number, `0x${string}`> = {
 
 /** Wallet whose Uniswap v3 NFT positions the observer tracks. Set BOT_WATCH_ADDRESS in .env — there is no default. */
 export const WATCH_ADDRESS = (process.env.BOT_WATCH_ADDRESS || '0x0000000000000000000000000000000000000000') as `0x${string}`;
-if (!process.env.BOT_WATCH_ADDRESS) {
+if (!process.env.BOT_WATCH_ADDRESS && process.env.BOT_MODE !== 'live') { // the Live demo watches no wallet on purpose
   console.warn('[config] BOT_WATCH_ADDRESS is not set — the observer will track the zero address (no positions). Set it in .env.');
 }
 
@@ -209,4 +230,15 @@ export const INTERVALS = {
   positionsSec: 5 * 60, // NFT positions read
 };
 
-export const STATE_DIR = '.bot';
+/**
+ * State folder of the observer, the paper ledger and the server. Default `.bot` in the repo (unchanged); the "Live"
+ * demo (phase 5, `bot/live.ts`) sets BOT_STATE_DIR to a folder outside the repo, given as an absolute path.
+ */
+export const STATE_DIR = process.env.BOT_STATE_DIR || '.bot';
+
+/**
+ * Phase 5 "Live" demo (`bot/live.ts` sets BOT_MODE=live): no watched wallet. The observer then runs only the
+ * wallet-free loops (prices, statistics, gas, the paper step, the selector) and skips positions, the ledger,
+ * GMX reads, proposal commands and Telegram. Default off: the existing entry points behave as before.
+ */
+export const LIVE_MODE = process.env.BOT_MODE === 'live';

@@ -9,7 +9,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const OUT = path.join(__dirname, '..', 'data', 'llama');
+// BOT_LLAMA_DIR: the Live demo's folder outside the clone (phase 5); default unchanged.
+const OUT = process.env.BOT_LLAMA_DIR ? path.resolve(process.env.BOT_LLAMA_DIR) : path.join(__dirname, '..', 'data', 'llama');
 const HIST = path.join(OUT, 'history');
 fs.mkdirSync(HIST, { recursive: true });
 
@@ -86,7 +87,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     }
     done++;
     process.stdout.write(`\r${done}/${universe.length}  `);
-    await sleep(1500); // respect the API (limit ~40-60/min on /chart)
+    // respect the API (limit ~40-60/min on /chart); LLAMA_DELAY_MS: the Live demo paces at 3 s (25 Nov: 34 of 261
+    // calls got 429 at 1.5 s); default unchanged
+    await sleep(Number(process.env.LLAMA_DELAY_MS) || 1500);
   }
   console.log('\nDone → data/llama/');
 })();

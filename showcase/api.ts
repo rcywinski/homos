@@ -16,7 +16,7 @@ export interface ChatError {
 }
 
 export type Health =
-  | { status: 'up' | 'busy' | 'paused' | 'model-offline'; engine: { id: string; label: string }; models?: ModelsView }
+  | { status: 'up' | 'busy' | 'paused' | 'model-offline'; engine: { id: string; label: string }; models?: ModelsView; live?: boolean }
   | { status: 'unreachable' };
 
 /** The state of the served models (step 4.10a); null when the server cannot be reached. */

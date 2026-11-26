@@ -79,7 +79,18 @@ function tsSeconds(v: number | string): number {
 
 interface Props {
   bot: UseBotApi;
+  /** Optional (the Live page): the title of a pool, given the default "USDC/WETH · 0.30%", for example with the network. */
+  poolLabel?: (poolId: string, defaultLabel: string) => string;
+  /** Optional (the Live page): a display name for a strategy row of the walk-forward tables (an unknown name as it is). */
+  strategyLabel?: (name: string) => string;
+  /** Optional (the Live page): a caption with the price and EMA-gap ranges drawn under each history chart. */
+  showScale?: boolean;
+  /** Optional (the Live page): a note shown under the walk-forward tables when the section is open. */
+  footer?: React.ReactNode;
 }
+
+/** Price for a scale caption: whole dollars for USD prices, four significant digits for ratios (cbBTC pools). */
+const fmtScale = (v: number) => (Math.abs(v) >= 100 ? v.toLocaleString('en-US', { maximumFractionDigits: 0 }) : v.toPrecision(4));
 
 /** Handles both a JSON array and NDJSON (one line = one object) — the endpoint shape is not fixed yet. */
 function parseHistoryResponse(text: string): HistoryPoint[] {
@@ -185,7 +196,7 @@ const KIND_LABEL: Record<string, string> = {
   HEDGE: 'HEDGE',
 };
 
-const PoolHistoryChart: FC<{ points: HistoryPoint[]; proposals: BotProposal[] }> = ({ points, proposals }) => {
+const PoolHistoryChart: FC<{ points: HistoryPoint[]; proposals: BotProposal[]; showScale?: boolean }> = ({ points, proposals, showScale }) => {
   const pts = [...points]
     .map((p) => ({ ...p, tsSec: tsSeconds(p.ts) }))
     .filter((p) => isFinite(p.tsSec))
@@ -264,6 +275,12 @@ const PoolHistoryChart: FC<{ points: HistoryPoint[]; proposals: BotProposal[] }>
         {hasEma ? ` · emaGapPct (red background = below the safety-switch threshold ${EMA_GAP_DANGER_PCT}%)` : ''}
         {proposals.length > 0 ? ' · vertical lines = bot proposals' : ''}
       </div>
+      {showScale && allY.length > 0 && (
+        <div className="observation-chart-legend muted observation-chart-scale">
+          price scale shown: {fmtScale(yMin)} to {fmtScale(yMax)}
+          {hasEma ? ` · EMA gap scale shown: ${emaMin.toFixed(1)}% to ${emaMax.toFixed(1)}% (safety-switch threshold ${EMA_GAP_DANGER_PCT}%)` : ''}
+        </div>
+      )}
     </div>
   );
 };
@@ -272,7 +289,13 @@ const PoolHistoryChart: FC<{ points: HistoryPoint[]; proposals: BotProposal[] }>
 // the "pair · botPoolId" header too, instead of leaving it above a note.
 // Returns null when the 720d-30d file for this pool is missing (404/network error) or `summary` is empty — no verdicts of a
 // strategy we abandoned, nor empty headers without content.
-const WalkforwardPoolBlock: FC<{ meta: { id: string; sym0: string; sym1: string }; apiBase: string; apiToken: string }> = ({ meta, apiBase, apiToken }) => {
+const WalkforwardPoolBlock: FC<{
+  meta: { id: string; sym0: string; sym1: string };
+  apiBase: string;
+  apiToken: string;
+  title?: string;
+  strategyLabel?: (name: string) => string;
+}> = ({ meta, apiBase, apiToken, title, strategyLabel }) => {
   const { result, fileDate, failed } = useWalkforward(apiBase, apiToken, `walkforward-${meta.id}${WALKFORWARD_NAME_SUFFIX}`);
 
   if (failed || !result?.summary) return null;
@@ -282,7 +305,7 @@ const WalkforwardPoolBlock: FC<{ meta: { id: string; sym0: string; sym1: string 
   return (
     <div className="observation-pool-block">
       <div className="observation-pool-title muted">
-        {meta.sym0}/{meta.sym1} · {meta.id}
+        {title ?? `${meta.sym0}/${meta.sym1} · ${meta.id}`}
       </div>
       <div className="observation-walkforward-wrap">
         <div className="telemetry-table-wrap">
@@ -298,7 +321,7 @@ const WalkforwardPoolBlock: FC<{ meta: { id: string; sym0: string; sym1: string 
             <tbody>
               {rows.map(([name, r]) => (
                 <tr key={name}>
-                  <td>{name}</td>
+                  <td>{strategyLabel ? strategyLabel(name) : name}</td>
                   <td>{r.mean.toFixed(2)}</td>
                   <td>{r.winPct.toFixed(0)}%</td>
                   <td>{r.worst.toFixed(2)}</td>
@@ -313,7 +336,8 @@ const WalkforwardPoolBlock: FC<{ meta: { id: string; sym0: string; sym1: string 
   );
 };
 
-const ObservationAnalysis: FC<Props> = ({ bot }) => {
+const ObservationAnalysis: FC<Props> = ({ bot, poolLabel, strategyLabel, showScale, footer }) => {
+  const pairLabel = (meta: { sym0: string; sym1: string; feeBps: number }) => `${meta.sym0}/${meta.sym1} · ${(meta.feeBps / 10_000).toFixed(2)}%`;
   const [expanded, setExpanded] = useState(false);
   const { points, failed: historyFailed } = useHistory(bot.apiBase, bot.apiToken, 72);
   const proposals = bot.state?.proposals ?? [];
@@ -357,10 +381,10 @@ const ObservationAnalysis: FC<Props> = ({ bot }) => {
               return (
                 <div key={meta.id} className="observation-pool-block">
                   <div className="morning-section-title observation-pool-title">
-                    {meta.sym0}/{meta.sym1} · {(meta.feeBps / 10_000).toFixed(2)}%
+                    {poolLabel ? poolLabel(meta.id, pairLabel(meta)) : pairLabel(meta)}
                     {flatBadge}
                   </div>
-                  <PoolHistoryChart points={poolPoints} proposals={poolProposals} />
+                  <PoolHistoryChart points={poolPoints} proposals={poolProposals} showScale={showScale} />
                 </div>
               );
             })
@@ -371,8 +395,16 @@ const ObservationAnalysis: FC<Props> = ({ bot }) => {
               returns null) — no verdicts of the abandoned v1.2 strategy. */}
           <div className="morning-section-title observation-section-title">Algorithm vs fresh data (hybrid walk-forward, 720d)</div>
           {BOT_POOL_META.map((meta) => (
-            <WalkforwardPoolBlock key={meta.id} meta={meta} apiBase={bot.apiBase} apiToken={bot.apiToken} />
+            <WalkforwardPoolBlock
+              key={meta.id}
+              meta={meta}
+              apiBase={bot.apiBase}
+              apiToken={bot.apiToken}
+              title={poolLabel ? poolLabel(meta.id, pairLabel(meta)) : undefined}
+              strategyLabel={strategyLabel}
+            />
           ))}
+          {footer}
 
           <div className="morning-note muted observation-footer-note">
             Proposal hit-rate table (what happened N days after the signal) — outside the scope of this section, requires bot-side logic.

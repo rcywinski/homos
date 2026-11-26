@@ -38,24 +38,8 @@
   --emphasis-weight: 600;
   --label-weight: 700;
   font-size: 100%;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #141a18;
-    --sheet: #1b2321;
-    --ink: #e6ece8;
-    --ink-soft: #a9b6b0;
-    --rule: #34403b;
-    --accent: #5cc2b8;
-    --accent-ink: #0d1614;
-    --ok: #7fd396;
-    --ok-bg: #1d3524;
-    --src: #e9c55a;
-    --src-bg: #3a3117;
-    --bad: #ff9c90;
-    --bad-bg: #3d1f1c;
-    --focus: #5cc2b8;
-  }
+  /* Light only, for every visitor (owner, 25 Nov 2026): one look across the archive and the Live page. */
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }

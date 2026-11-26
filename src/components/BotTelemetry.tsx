@@ -15,9 +15,29 @@ import { renderCycleLine, DEFAULT_FLAT_PARAMS } from './CycleLine';
 
 interface Props {
   bot: UseBotApi;
+  /** Optional (the Live page): leave out the raw state modal button, a debugging view. */
+  hideRawState?: boolean;
+  /** Optional (the Live page): leave out the "Positions watched by the bot" block (the demo watches no wallet). */
+  hideWatchedPositions?: boolean;
+  /** Optional (the Live page): the header of the fee-yield column. */
+  feeYieldLabel?: string;
+  /** Optional (the Live page): a note shown at the end of the section when it is open. */
+  footer?: React.ReactNode;
+  /** Optional (the Live page): one more column after "Data age". */
+  extraColumn?: { header: string; cell: (pool: BotPoolLive) => React.ReactNode };
 }
 
 const fmtUsd = (v: number) => '$' + v.toLocaleString('en-US', { maximumFractionDigits: 0 });
+
+/** For a pool without a stablecoin leg (WETH/cbBTC): the non-ETH token, whose USD price `ethUsd` holds there and in
+ *  whose units the suggested range comes out (WETH per cbBTC); null for an ETH/stablecoin pool. */
+const nonStableToken = (poolId: string): string | null => {
+  const meta = findBotPoolById(poolId);
+  if (!meta) return null;
+  const syms = [meta.sym0, meta.sym1];
+  if (syms.some((s) => /^(USDC|USDT|DAI|USDBC)$/i.test(s))) return null;
+  return syms.find((s) => !/ETH$/i.test(s)) ?? null;
+};
 
 const ageLabel = (updatedAt: string): string => {
   const mins = Math.max(0, Math.round((Date.now() - new Date(updatedAt).getTime()) / 60000));
@@ -52,7 +72,7 @@ const suggestedUsdRange = (pool: BotPoolLive): { lo: number; hi: number } | null
   return { lo: 1 / s.priceUpper, hi: 1 / s.priceLower };
 };
 
-const BotTelemetry: FC<Props> = ({ bot }) => {
+const BotTelemetry: FC<Props> = ({ bot, hideRawState, hideWatchedPositions, feeYieldLabel, footer, extraColumn }) => {
   const [expanded, setExpanded] = useState(false);
   const [showJson, setShowJson] = useState(false);
 
@@ -79,23 +99,32 @@ const BotTelemetry: FC<Props> = ({ bot }) => {
                     <th>USD price</th>
                     <th>Tick</th>
                     <th>Volatility %/d</th>
-                    <th>Fee-yield %/d</th>
+                    <th>{feeYieldLabel ?? 'Fee-yield %/d'}</th>
                     <th>Suggested range $</th>
                     <th>Data age</th>
+                    {extraColumn && <th>{extraColumn.header}</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {pools.map((p) => {
                     const range = suggestedUsdRange(p);
+                    const other = nonStableToken(p.id);
                     return (
                       <tr key={p.id}>
                         <td className="telemetry-pool-id">{p.id}</td>
-                        <td>{fmtUsd(p.ethUsd)}</td>
+                        <td>{other ? `${fmtUsd(p.ethUsd)}/${other}` : fmtUsd(p.ethUsd)}</td>
                         <td>{p.tick}</td>
                         <td>{p.stats ? (p.stats.volDaily * 100).toFixed(2) : '—'}</td>
                         <td>{p.stats ? (p.stats.feeYieldDaily * 100).toFixed(3) : '—'}</td>
-                        <td>{range ? `${fmtUsd(range.lo)} – ${fmtUsd(range.hi)}` : '—'}</td>
+                        <td>
+                          {range
+                            ? other
+                              ? `${range.lo.toFixed(1)} – ${range.hi.toFixed(1)} WETH per ${other}`
+                              : `${fmtUsd(range.lo)} – ${fmtUsd(range.hi)}`
+                            : '—'}
+                        </td>
                         <td className="muted">{ageLabel(p.updatedAt)}</td>
+                        {extraColumn && <td className="muted">{extraColumn.cell(p)}</td>}
                       </tr>
                     );
                   })}
@@ -104,7 +133,7 @@ const BotTelemetry: FC<Props> = ({ bot }) => {
             </div>
           )}
 
-          {positions.length > 0 && (
+          {!hideWatchedPositions && positions.length > 0 && (
             <>
               <div className="morning-section-title">Positions watched by the bot</div>
               <div className="morning-advice-list">
@@ -141,10 +170,13 @@ const BotTelemetry: FC<Props> = ({ bot }) => {
 
           <div className="telemetry-footer">
             <span className="telemetry-observe-badge">👁 OBSERVE — the bot executes nothing</span>
-            <button className="action-button" onClick={() => setShowJson(true)} disabled={!bot.state}>
-              Raw JSON
-            </button>
+            {!hideRawState && (
+              <button className="action-button" onClick={() => setShowJson(true)} disabled={!bot.state}>
+                Raw JSON
+              </button>
+            )}
           </div>
+          {footer}
         </div>
       )}
 

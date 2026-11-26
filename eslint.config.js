@@ -5,7 +5,7 @@ const reactHooks = require('eslint-plugin-react-hooks');
 const globals = require('globals');
 
 module.exports = tseslint.config(
-  { ignores: ['node_modules/', 'public/', 'showcase/public/', 'showcase/admin-dist/', 'data/', '.bot/', 'backtest/results/', 'deploy/'] },
+  { ignores: ['node_modules/', 'public/', 'showcase/public/', 'showcase/admin-dist/', 'showcase/e2e/harness-dist/', 'data/', '.bot/', 'backtest/results/', 'deploy/'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -39,7 +39,7 @@ module.exports = tseslint.config(
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
   {
-    files: ['*.config.js'],
+    files: ['*.config.js', 'showcase/e2e/*.webpack.js'],
     languageOptions: { sourceType: 'commonjs', globals: globals.node },
     rules: { '@typescript-eslint/no-require-imports': 'off' },
   },

@@ -94,6 +94,12 @@ export interface ServeConfig {
    * 4.10b (until then it loads at start, as in 4.8).
    */
   switchFile: string;
+  /**
+   * Phase 5 "Live" page (step 5.2): the read-only bot API on 127.0.0.1 that `/live/api/*` forwards to; empty: the
+   * Live routes answer 404. Its own read limits per visitor (the page polls about twice a minute).
+   */
+  liveBotUrl?: string;
+  liveLimits: { perHour: number; perDay: number; globalPerDay: number };
   /** Model loads, separately from questions: per visitor per hour and per UTC day, and for the site per UTC day. */
   loadLimits: { perHour: number; perDay: number; globalPerDay: number };
   /** Typical stage times in milliseconds, shown to the visitor while loading (measured on the box, 4.10d). */
@@ -237,6 +243,12 @@ export function loadServeConfig(env: Env = process.env): ServeConfig {
     pauseFile: env.SERVE_PAUSE_FILE || path.join('ai', 'serve', 'PAUSED'),
     fakeDelayMs: int(env, 'SERVE_FAKE_DELAY_MS', 0, 0, 60_000),
     switchFile: env.SERVE_SWITCH_FILE || path.join('ai', 'serve', 'SWITCH'),
+    liveBotUrl: env.SERVE_LIVE_BOT_URL || undefined,
+    liveLimits: {
+      perHour: int(env, 'SERVE_LIVE_LIMIT_HOUR', 600, 10, 100_000),
+      perDay: int(env, 'SERVE_LIVE_LIMIT_DAY', 5_000, 10, 1_000_000),
+      globalPerDay: int(env, 'SERVE_LIVE_LIMIT_GLOBAL_DAY', 200_000, 100, 10_000_000),
+    },
     loadLimits: {
       perHour: int(env, 'SERVE_LOAD_LIMIT_HOUR', 2, 1, 100),
       perDay: int(env, 'SERVE_LOAD_LIMIT_DAY', 6, 1, 1000),

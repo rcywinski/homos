@@ -40,7 +40,7 @@ import * as path from 'path';
 import { BOT_POOLS, BotPool, STATE_DIR } from './config';
 import { ADVISOR_PARAMS, assessPosition, PoolStats, suggestRange } from '../src/utils/advisor';
 
-const DIR = path.join(__dirname, '..', STATE_DIR);
+const DIR = path.resolve(__dirname, '..', STATE_DIR);
 const STATE_PATH = path.join(DIR, 'paper-state.json');
 const EVENTS_PATH = path.join(DIR, 'paper-events.ndjson');
 const HISTORY_PATH = path.join(DIR, 'paper-history.ndjson');

@@ -15,23 +15,25 @@ import * as path from 'path';
 import { createPublicClient, http, fallback, formatUnits, type PublicClient } from 'viem';
 
 import { mainnet, base, arbitrum } from 'viem/chains';
-import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR, TREND, FLAT, TRANCHE } from './config';
+import { BOT_POOLS, BotPool, RPC, NFT_MANAGER, WATCH_ADDRESS, INTERVALS, STATE_DIR, TREND, FLAT, TRANCHE, LIVE_MODE } from './config';
 import { ADVISOR_PARAMS } from '../src/utils/advisor';
 import { fetchRecentSwaps, computeStats, assessPosition, suggestRange, suggestFixedRange, PoolStats } from '../src/utils/advisor';
 import { getAmountsForLiquidity, sqrtPriceX96ToHumanPrice } from '../src/utils/v3math';
 import { runSelectorIfDue, SelectorProposal } from './selector';
 import { paperTick, LegPrices } from './paper';
 import { updateLedger, readLedger, LedgerEntry } from './ledger';
+import { scrubUrls } from './live-scrub';
 
 const ROOT = path.join(__dirname, '..');
-const DIR = path.join(ROOT, STATE_DIR);
+const DIR = path.resolve(ROOT, STATE_DIR);
 fs.mkdirSync(DIR, { recursive: true });
 const STATE_PATH = path.join(DIR, 'state.json');
 const PROPOSALS_PATH = path.join(DIR, 'proposals.json');
 const LOG_PATH = path.join(DIR, 'observer.log');
 
 const log = (msg: string) => {
-  const line = `${new Date().toISOString()} ${msg}`;
+  // Live demo: no URL in any log line (a paid RPC key would sit in one); the default observer logs as before.
+  const line = `${new Date().toISOString()} ${LIVE_MODE ? scrubUrls(msg) : msg}`;
   console.log(line);
   fs.appendFileSync(LOG_PATH, line + '\n');
 };
@@ -128,6 +130,9 @@ interface PoolLive {
   stats: PoolStats | null;
   suggestion: ReturnType<typeof suggestRange> | null;
   updatedAt: string;
+  /** Live demo only: when the statistics were last computed, and how the last 24 h read went (chunks read, failed). */
+  statsAt?: string;
+  statsWindow?: { at: string; chunks: number; failed: number; ok: boolean };
   /** trend circuit breaker (v1.1): deviation of log-price from EMA7d in % and signal state */
   trendGapPct?: number;
   trendDown?: boolean;
@@ -750,6 +755,9 @@ async function refreshPrices() {
         stats: prev?.stats ?? null,
         suggestion: prev?.suggestion ?? null,
         updatedAt: new Date().toISOString(),
+        // Live demo: the statistics age survives the 60 s price refresh (absent, and so not added, outside Live)
+        ...(prev?.statsAt ? { statsAt: prev.statsAt } : {}),
+        ...(prev?.statsWindow ? { statsWindow: prev.statsWindow } : {}),
       };
       live[p.id].trendGapPct = updateTrend(p, trendPrice(p, human), Date.now());
       live[p.id].trendDown = trend[p.id]?.down ?? false;
@@ -774,8 +782,15 @@ const HISTORY_PATH = path.join(DIR, 'history.ndjson');
 async function refreshStats() {
   for (const p of BOT_POOLS) {
     try {
-      const swaps = await fetchRecentSwaps(clients[p.chain] as any, p.address, p.chainId, 24);
+      const read = LIVE_MODE ? { chunks: 0, failed: 0 } : undefined;
+      const swaps = await fetchRecentSwaps(clients[p.chain] as any, p.address, p.chainId, 24, read);
       const stats = computeStats(swaps, p.chainId, p.d0, p.d1, p.feeBps / 1_000_000, TICK_SPACING[p.feeBps]);
+      if (LIVE_MODE && read && live[p.id]) {
+        // Live demo: the honest age of the statistics (the price's updatedAt says nothing about them)
+        const at = new Date().toISOString();
+        live[p.id].statsWindow = { at, chunks: read.chunks, failed: read.failed, ok: !!stats };
+        if (stats) live[p.id].statsAt = at;
+      }
       if (live[p.id] && stats) {
         live[p.id].stats = stats;
         // FlatWide hybrid: a product pool gets a fixed
@@ -805,6 +820,7 @@ async function refreshStats() {
       }
     } catch (e) {
       log(`stats ${p.id} failed: ${String(e).slice(0, 120)}`);
+      if (LIVE_MODE && live[p.id]) live[p.id].statsWindow = { at: new Date().toISOString(), chunks: 0, failed: 0, ok: false };
     }
   }
   // paper trading: virtual portfolio per ALGORITHM v1.2 (after the statistics refresh)
@@ -1439,6 +1455,20 @@ async function runLedger() {
 
 // --- start ---
 (async () => {
+  if (LIVE_MODE) {
+    // Phase 5 "Live" demo: no wallet, so only the wallet-free loops; the paper step runs inside refreshStats.
+    log(`observer start — LIVE demo (no wallet), pools=${BOT_POOLS.map((p) => p.id).join(', ')}, state=${DIR}`);
+    await refreshPrices();
+    await refreshStats();
+    await refreshGas();
+    runSelector();
+    setInterval(refreshPrices, INTERVALS.priceSec * 1000);
+    setInterval(refreshGas, 5 * 60 * 1000);
+    setInterval(refreshStats, INTERVALS.statsSec * 1000);
+    setInterval(runSelector, 60 * 60 * 1000);
+    log('LIVE loops started (60s prices / 15min statistics and paper / 5min gas / selector 1x daily)');
+    return;
+  }
   log(`observer start — watch=${WATCH_ADDRESS}, pools=${BOT_POOLS.map((p) => p.id).join(', ')}, mode=OBSERVE`);
   await refreshPrices();
   await refreshStats();
