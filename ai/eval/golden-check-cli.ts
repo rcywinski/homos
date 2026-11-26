@@ -22,7 +22,8 @@ const fileLines = new Map(
 );
 const { questions, issues, hits, relatedHits, overlap } = checkGolden(readFileSync(file, 'utf8'), chunks, fileLines);
 
-const metaFile = path.join(path.dirname(file), 'golden-meta.json');
+// golden.jsonl -> golden-meta.json; any other set -> its own <name>-meta.json.
+const metaFile = file.replace(/\.jsonl$/, '-meta.json');
 const meta = existsSync(metaFile) ? (JSON.parse(readFileSync(metaFile, 'utf8')) as GoldenMeta) : undefined;
 const version = meta?.version ?? 'unknown';
 // Stored answers and verdicts are tied to the question and reference text through this hash (see golden-meta rules).

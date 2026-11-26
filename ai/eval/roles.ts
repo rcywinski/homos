@@ -10,6 +10,7 @@
  */
 import { readFileSync, writeFileSync } from 'fs';
 import type { Evidence, GoldenQuestion, Role } from './golden';
+import { cell, ends, short } from './span-text';
 
 interface SpanRole {
   file: string;
@@ -28,16 +29,6 @@ interface RolesFile {
 
 const GOLDEN = 'ai/eval/golden.jsonl';
 const key = (file: string, lines: [number, number]) => `${file}:${lines[0]}-${lines[1]}`;
-const short = (file: string) => file.replace(/^journal\/(reports\/)?/, '').replace(/^docs\//, '');
-const cell = (t: string) => t.trim().replace(/\|/g, '\\|').slice(0, 110);
-
-const fileCache = new Map<string, string[]>();
-function lineText(file: string, n: number): string {
-  if (!fileCache.has(file)) fileCache.set(file, readFileSync(file, 'utf8').split('\n'));
-  const l = fileCache.get(file)![n - 1];
-  if (l === undefined) throw new Error(`${file}:${n} does not exist`);
-  return l;
-}
 
 function load(rolesPath: string) {
   const roles = JSON.parse(readFileSync(rolesPath, 'utf8')) as RolesFile;
@@ -79,8 +70,7 @@ function review(rolesPath: string, out: string) {
     md.push('', '| span | change | role | facts | first line | last line | reason |', '|---|---|---|---|---|---|---|');
     for (const s of r.spans) {
       const change = s.add ? 'added' : s.replaces ? `was ${s.replaces[0]}-${s.replaces[1]}` : '';
-      const first = lineText(s.file, s.lines[0]);
-      const last = s.lines[1] > s.lines[0] ? lineText(s.file, s.lines[1]) : '(one line)';
+      const [first, last] = ends(s.file, s.lines);
       md.push(
         `| ${short(s.file)}:${s.lines[0]}-${s.lines[1]} | ${change} | ${s.role} | ${(s.facts ?? []).join(', ') || '-'} | ${cell(first)} | ${cell(last)} | ${cell(s.reason)} |`,
       );

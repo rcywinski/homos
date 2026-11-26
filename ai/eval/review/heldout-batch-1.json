@@ -1,0 +1,402 @@
+{
+  "batch": 1,
+  "date": "2026-11-26",
+  "questions": [
+    {
+      "id": "ho-why-01",
+      "category": "why",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "Why did the bot set much narrower ranges on some ETH/stablecoin pools than on others, even though every pool used the same width multiplier?",
+      "reference": "The volatility that sets the range width was computed from squared price changes swap by swap, which measures chop rather than the net price move, so it depended on each pool's microstructure (fee tier, trade frequency) rather than on the asset. Measured on 21.08 on four pools that all trade ETH, the production estimator gave 0.71 to 3.20% a day (a 4.5x spread) against 2.84 to 4.00% on a 1-hour grid (1.4x), so with the same k=3 the ranges ran from ±5.6% (Base WETH/USDC 0.30%) to ±25.4% (mainnet USDC/WETH 0.05%).",
+      "facts": {
+        "a": "sigma was computed from squared price changes swap by swap, which measures chop, not the net price move",
+        "b": "so sigma depended on the pool's microstructure (fee tier, trade frequency), not on the asset's volatility",
+        "c": "21.08, four pools all trading ETH: production sigma 0.71 to 3.20%/day (4.5x spread) against 2.84 to 4.00%/day on a 1-hour grid (1.4x)",
+        "d": "with the same k=3 the ranges ran from ±5.6% (Base WETH/USDC 0.30%) to ±25.4% (mainnet USDC/WETH 0.05%)"
+      },
+      "spans": [
+        {
+          "file": "journal/PYTANIE-SZEROKOSC-I-SIGMA.md",
+          "lines": [
+            41,
+            48
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "EWMA of squared changes swap by swap; measures chop, not displacement"
+        },
+        {
+          "file": "journal/PYTANIE-SZEROKOSC-I-SIGMA.md",
+          "lines": [
+            50,
+            58
+          ],
+          "role": "required",
+          "facts": [
+            "c",
+            "d"
+          ],
+          "reason": "measurement of 21.08, 1h grid; table with both sigmas and the k=3 range today per pool"
+        },
+        {
+          "file": "journal/PYTANIE-SZEROKOSC-I-SIGMA.md",
+          "lines": [
+            60,
+            64
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "c"
+          ],
+          "reason": "same asset four times; 4.5x vs 1.4x; estimator is a function of microstructure (fee tier, trade frequency)"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            422,
+            425
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "computeStats: sum of squares swap by swap measures chop, not real displacement"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            431,
+            436
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "earlier three-pool proof; 'function of fee tier and trade frequency, not of the asset's volatility'"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            453,
+            463
+          ],
+          "role": "required",
+          "facts": [
+            "c",
+            "d"
+          ],
+          "reason": "11a, CC-Win 21.08: table of advisor and corrected sigma and the k=3 range today"
+        },
+        {
+          "file": "journal/TASKS-RECAL.md",
+          "lines": [
+            18,
+            32
+          ],
+          "role": "supporting",
+          "reason": "the fix (15-minute grid behind a flag, 26.08); not asked"
+        }
+      ],
+      "notes": "Hard: the answer needs the mechanism and the measurement, and the 21.08 table is in two files with the same numbers. Two spans (DECYZJE 466-469 and 471-474) were dropped by the tool: they lie inside why-09's evidence DECYZJE 466-482; the facts remain covered elsewhere."
+    },
+    {
+      "id": "ho-dated-01",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "Was moving the capital automatically from pool to pool ever tested in a backtest, when, and what was the verdict?",
+      "reference": "Yes, on 26.08: the rotation backtest (backtest/rotation.ts) was built and run by CC-Win the same day. On the production engine v1.1 even an oracle that knew the next 7 days lost to holding 100% USDC on both windows (-23% on 365 days, -8% on 720 days), threshold rotation was the worst variant of all (-26 to -30%), and switching costs ($317 to 1890) outweighed the value of picking the pool, so automatic rotation between ETH/stable pools was not to be built.",
+      "facts": {
+        "a": "tested on 26.08: the rotation backtest was built and run the same day",
+        "b": "on the production engine v1.1 even an oracle knowing the next 7 days lost to 100% USDC on both windows",
+        "c": "threshold rotation was the worst variant of all (-26 to -30%)",
+        "d": "switching costs ($317 to 1890) outweighed the value of choosing the pool",
+        "e": "verdict: do not build automatic rotation between ETH/stable pools"
+      },
+      "spans": [
+        {
+          "file": "journal/TASKS-ROTATION.md",
+          "lines": [
+            3,
+            10
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d",
+            "e"
+          ],
+          "reason": "closed 26.08 evening, built and run the same day; oracle loses to USDC on both windows; threshold worst; costs; do not build"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            113,
+            117
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "c",
+            "e"
+          ],
+          "reason": "rotation categorically worst: oracle -23% / -8% vs USDC, threshold -26 to -30%, do not build"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2197,
+            2198
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "e"
+          ],
+          "reason": "verdict of the day: on v1.1 even the oracle loses to USDC on both windows, do not build"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2216,
+            2229
+          ],
+          "role": "supporting",
+          "reason": "engine built ~16:xx (date only in the heading above); smoke test on 90 days already showed the oracle losing"
+        },
+        {
+          "file": "journal/TASKS-ROTATION.md",
+          "lines": [
+            12,
+            18
+          ],
+          "role": "supporting",
+          "reason": "the owner's directive of 26.08 that started the test"
+        }
+      ],
+      "notes": "Medium. The live selector also proposed ROTATE moves, but never executed them; the question asks about the backtest."
+    },
+    {
+      "id": "ho-dated-02",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "Between 17 and 20 August, which pools proposed by the pool selector were rejected after tick-level validation, on which days, and what did they have in common?",
+      "reference": "Two: WETH-USDT 0.01% on Ethereum mainnet on 17.08 (365 days, 22 windows, every strategy below HODL on average) and USDC-WETH 0.01% on Ethereum mainnet on 19.08 (best strategy 55% of windows won against the 65% gate, worst window -18.0 against -3). Both were mainnet pools of the 0.01% fee tier whose top headline APY did not survive validation: the narrow tier keeps falling out of range and mainnet gas eats the rebalances.",
+      "facts": {
+        "a": "17.08: WETH-USDT 0.01% on Ethereum mainnet rejected (365 days, 22 windows, all strategies negative vs HODL)",
+        "b": "19.08: USDC-WETH 0.01% on Ethereum mainnet rejected (55% wins vs the 65% gate, worst -18.0 vs -3)",
+        "c": "common pattern: mainnet 0.01% tier, top headline APY that did not survive tick-level validation"
+      },
+      "spans": [
+        {
+          "file": "journal/SELECTOR-LOG.md",
+          "lines": [
+            10,
+            10
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "log row 2026-08-17: OPEN WETH-USDT 0.01% mainnet rejected by tick-level validation"
+        },
+        {
+          "file": "journal/SELECTOR-LOG.md",
+          "lines": [
+            14,
+            14
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "c"
+          ],
+          "reason": "log row 2026-08-19: USDC-WETH 0.01% rejected, figures, same pattern as 17.08, 2/2 mainnet 0.01%"
+        },
+        {
+          "file": "journal/SELECTOR-LOG.md",
+          "lines": [
+            31,
+            35
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "pattern after two validations, both named with dates; why the tier fails"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3399,
+            3404
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "entry of 17.08 ~20:00: first funnel verdict, WETH-USDT 0.01% mainnet rejected, all strategies negative"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2569,
+            2575
+          ],
+          "role": "supporting",
+          "reason": "the 19.08 verdict, but the date is only in the entry heading at line 2514"
+        },
+        {
+          "file": "journal/TASKS-LIFECYCLE.md",
+          "lines": [
+            41,
+            43
+          ],
+          "role": "supporting",
+          "reason": "mainnet 0.01% later named as a structural FAIL"
+        }
+      ],
+      "notes": "Medium. Not rejected in the window: WETH-USDC 0.3% Base (validated conditionally, 18.08) and the 20.08 proposal (not validated)."
+    },
+    {
+      "id": "ho-id-01",
+      "category": "identifier",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "What is MIN_ROTATE_USD in the pool selector, when and why was it added, and what did it change?",
+      "reference": "A $25 threshold: the selector does not propose rotating a position worth less than that and skips it with a log line. It was added on 18.08 in bot/selector.ts, together with computing the switching cost in USD, after the selector proposed rotating the $2.08 mainnet dust position #953427 with a 'payback 4.8d' that was computed in percent, without the position's USD value or gas (about $8 of mainnet gas, roughly 4x the position). From 19.08 the selector skipped #953427 ($2.07 < $25).",
+      "facts": {
+        "a": "a $25 threshold below which the selector does not propose a rotation (dust is skipped with a log line)",
+        "b": "added on 18.08 in bot/selector.ts",
+        "c": "cause: a ROTATE of dust #953427 ($2.08) with 'payback 4.8d' computed in percent, without USD value or gas (~$8 gas, about 4x the position)",
+        "d": "effect: from 19.08 #953427 was skipped ($2.07 < $25)"
+      },
+      "spans": [
+        {
+          "file": "journal/SELECTOR-LOG.md",
+          "lines": [
+            13,
+            13
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "log row 2026-08-18: payback bug, fix in bot/selector.ts 18.08, MIN_ROTATE_USD=$25"
+        },
+        {
+          "file": "journal/SELECTOR-LOG.md",
+          "lines": [
+            16,
+            16
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "d"
+          ],
+          "reason": "log row 2026-08-19: ROTATE #953427 skipped, $2.07 < $25"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3446,
+            3456
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "c"
+          ],
+          "reason": "the bug and the fix in full; the date is in the entry heading only"
+        },
+        {
+          "file": "journal/reports/morning-2026-08-19.md",
+          "lines": [
+            46,
+            46
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "selector log line 2026-08-19T06:41Z: rotation skipped, #953427 worth $2.07 < $25 (an event shown in full)"
+        },
+        {
+          "file": "journal/SELECTOR-LOG.md",
+          "lines": [
+            18,
+            18
+          ],
+          "role": "supporting",
+          "reason": "20.08: skipped again ($2.26)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2352,
+            2352
+          ],
+          "role": "supporting",
+          "reason": "20.08: dust correctly skipped ($2.26 < $25)"
+        }
+      ],
+      "notes": "Easy: the identifier appears verbatim in the sources."
+    },
+    {
+      "id": "ho-na-01",
+      "category": "no-answer",
+      "answerable": "partial",
+      "author": "CC-Mac",
+      "question": "What did the other AI models answer when they were consulted about LP range width and volatility measurement, and which of their recommendations were adopted?",
+      "reference": "The corpus records no answers: a self-contained brief with six questions (PYTANIE-SZEROKOSC-I-SIGMA.md) was prepared on 21.08 for the owner to paste to other models in the week of 25 to 31.08, its result meant to feed point 11 of the 26.08 review, and the queue item stays unticked. The 26.08 review decided from the project's own measurements to compute volatility on a 15-minute grid, with 1 hour kept as a diagnostic reference.",
+      "spans": [],
+      "related": [
+        {
+          "file": "journal/PYTANIE-SZEROKOSC-I-SIGMA.md",
+          "lines": [
+            1,
+            6
+          ],
+          "reason": "the brief: prepared 21.08 to consult other models, decisions at the 26.08 review"
+        },
+        {
+          "file": "journal/PYTANIE-SZEROKOSC-I-SIGMA.md",
+          "lines": [
+            107,
+            113
+          ],
+          "reason": "the consultation questions (first of six)"
+        },
+        {
+          "file": "journal/RESEARCH-QUEUE.md",
+          "lines": [
+            234,
+            242
+          ],
+          "reason": "queue item C0, unticked: consultation in the week 25-31.08, result to feed decision 11"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            13,
+            15
+          ],
+          "reason": "decision 26.08: sigma on a 15-minute grid, 1h as diagnostic reference"
+        }
+      ],
+      "notes": "Expected: say that no answers are recorded; the brief and the 26.08 decision only as context. Inventing model answers, or presenting the brief's own questions as answers, is an error."
+    }
+  ]
+}
