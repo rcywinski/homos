@@ -1257,3 +1257,15 @@ ho-why-01 on the same finding (withdrawn). ho-na-02's judged verdict is reported
 retrieval comes from the 27.08 morning chunks shared with dev items. Held-out v0.2, 7 items. The review file now
 shows the spread by source file and journal month; batch 2 left the set clustered in August and in CONTEXT.md, so the
 next batches draw on September and on the infrastructure documents. 0 USD.
+
+## 2026-11-26, step 6.2 (c) held-out batch 3 (owner)
+
+**Decision.** The owner approved batch 3 (`ai/eval/review/heldout-batch-3.md`): eight items by CC-Mac drawn mostly
+from September and the operations documents, and two of his own (wallet connection; what happens after confirming a
+new position). After the analysis session's review, the owner's "how" questions are labelled why (no new category,
+so counts stay comparable with the dev set), and ho-why-06 names the two paths the corpus records (cockpit window and
+manual form) instead of attributing the manual form's eth_call simulation to the cockpit; its after-signing part is
+in the reference but not scored, because its source shares a chunk with dev dated-01. Two first drafts were replaced
+by the chunk check (floorBalanceStr; the after-signing span as required). Held-out v0.3, 17 items: why 6, dated 4,
+identifier 3, partial 3, no 1. Batch 4 adds at least three dated items whose required evidence is September morning
+report lines, including one "latest" question, so step 6.8 can be measured on the held-out set. 0 USD.

@@ -1,12 +1,13 @@
 {
-  "version": "0.2",
-  "answersHash": "bb03835e486318f4",
+  "version": "0.3",
+  "answersHash": "12b5f6b7bc7586c8",
   "rules": [
     "Every rule of ai/eval/golden-meta.json applies here too.",
     "Held-out test set of step 6.2 (c): questions and references drafted from the corpus read directly, never from retrieval output; nothing is run on them (no retrieval, no model) before the file is frozen; the first run is step 6.12 (owner, 26 Nov 2026).",
     "No question reworks a development question or rests on the same sources: ai/eval/heldout.ts refuses a range that overlaps a development range and a required span that shares a chunk with required development evidence, and lists ranges in the same section as a development range for a reading by hand; each question names its closest development question.",
     "One or two questions per batch are written by the owner in his own words; CC-Mac adds the facts and spans.",
-    "Version 0.x while batches are added; 1.0 is the frozen file, with its sha256 recorded in ai/DECISIONS.md."
+    "Version 0.x while batches are added; 1.0 is the frozen file, with its sha256 recorded in ai/DECISIONS.md.",
+    "Explanatory 'how' questions are labelled 'why' (no new category), so the counts stay comparable with the development set; their notes say so."
   ],
   "changes": [
     {
@@ -20,6 +21,12 @@
       "date": "2026-11-26",
       "answersHash": "bb03835e486318f4",
       "summary": "Batch 2, the owner's three questions in his own words (ho-why-02, ho-why-03, ho-na-02; Polish originals in the notes), facts and spans by CC-Mac, reviewed by the analysis session and approved by the owner (ai/eval/review/heldout-batch-2.md). Withdrawn: ho-why-01 (same finding as the owner's ho-why-03). The time-to-closure part of his question 1 dropped (dev dated-08 and na-05 test those dates). 7 items."
+    },
+    {
+      "version": "0.3",
+      "date": "2026-11-26",
+      "answersHash": "12b5f6b7bc7586c8",
+      "summary": "Batch 3: eight by CC-Mac (ho-why-04 Aerodrome, ho-why-05 default reaction to DOWN, ho-dated-03 Monte Carlo, ho-dated-04 Uniswap v4, ho-id-02 usdValueViaPool, ho-id-03 UNMAPPED, ho-na-03 hardware wallet, ho-na-04 Android) and two by the owner (ho-why-07 wallet connection, ho-why-06 what happens after confirming a new position), reviewed by the analysis session and approved by the owner (ai/eval/review/heldout-batch-3.md). 17 items."
     }
   ]
 }
