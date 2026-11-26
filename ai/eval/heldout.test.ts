@@ -5,7 +5,8 @@
 import { readdirSync, readFileSync, statSync } from 'fs';
 import path from 'path';
 import type { GoldenQuestion } from './golden';
-import { devOverlaps } from './heldout';
+import { chunkClashes, devOverlaps } from './heldout';
+import type { Chunk } from '../corpus/types';
 
 let passed = 0;
 let failed = 0;
@@ -41,6 +42,17 @@ check('overlapping span refused', devOverlaps(batch([110, 120]), dev).length ===
 check('adjacent span allowed', devOverlaps(batch([111, 120]), dev).length === 0);
 check('same lines, other file allowed', devOverlaps(batch([100, 110], 'journal/HANDOFF.md'), dev).length === 0);
 check('dev related ranges count too', devOverlaps(batch([6, 9], 'docs/PLAN.md'), dev).length === 1);
+
+// Chunk level: a required span in a chunk with required dev evidence is refused; the same section only warns.
+const chunk = (id: string, a: number, b: number) => ({ id, file: 'journal/CONTEXT.md', lineStart: a, lineEnd: b, title: 'entry', kind: 'journal-entry', text: '' }) as Chunk;
+const chunks = [chunk('journal/CONTEXT.md:100', 100, 130), chunk('journal/CONTEXT.md:100#p2', 131, 160)];
+const devReq = [{ id: 'why-01', evidence: [{ file: 'journal/CONTEXT.md', lines: [101, 102] }] }] as unknown as GoldenQuestion[];
+const sameChunk = chunkClashes(batch([120, 125]), devReq, chunks);
+check('required span sharing a chunk with required dev evidence is an error', sameChunk.errors.length === 1, sameChunk.errors.join('; '));
+const sameUnit = chunkClashes(batch([140, 145]), devReq, chunks);
+check('other part of the same entry only warns', sameUnit.errors.length === 0 && sameUnit.warnings.get('ho-why-01')?.length === 1);
+const devSup = [{ id: 'why-01', evidence: [{ file: 'journal/CONTEXT.md', lines: [101, 102], role: 'supporting' }] }] as unknown as GoldenQuestion[];
+check('a supporting dev span does not block the chunk', chunkClashes(batch([120, 125]), devSup, chunks).errors.length === 0);
 
 console.log(`heldout: ${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
