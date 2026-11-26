@@ -13,7 +13,7 @@ from it alone.
 
 **Reference.** On the evening of 26.08 the abandonment threshold set that day was formally met: the hedged and flat-only families showed no edge over their benchmarks, rotation was the worst of all, and the production v1.1 ended below its starting $5k on mainnet and Arbitrum, its active management costing more than it gave. The premise is not quite right: a wide passive LP of ±50% ('HODL with yield') beat HODL over the full period on 4 of 4 pools, as an allocation product rather than an algorithm. The project went on because the owner, after a discussion of the literature (about half of LPs lose to HODL, so the results match the market; full range does best, as the ±50% did), chose one final round instead of freezing at once, under a fixed rule: product or freeze after it, no further experiments.
 
-**Notes.** Owner's wording, part 1 of his question 1 (split proposed, he decides). Polish original: 'kiedy bylo wiadomo ze na pewno zadna strategia nie przebila zwyklego HODL, i dlaczego projekt byl dalej kontynuowany jesli okazalo sie ze strategie nie przynosza efektu'. Expected: the 26.08 verdict and the final-round decision; an answer that only says 'none beat HODL' misses fact b. The 27.08 outcome (hybrid FlatWide, capital in) is left out of the reference: it is dev dated-01's fact and its chunks hold dated-01, id-03 and why-08 evidence (tool check).
+**Notes.** Owner's wording, part 1 of his question 1 (split proposed, he decides). Polish original: 'kiedy bylo wiadomo ze na pewno zadna strategia nie przebila zwyklego HODL, i dlaczego projekt byl dalej kontynuowany jesli okazalo sie ze strategie nie przynosza efektu'. Expected: the 26.08 verdict and the final-round decision; an answer that only says 'none beat HODL' misses fact b. The 27.08 outcome (hybrid FlatWide, capital in) is left out of the reference: it is dev dated-01's fact and its chunks hold dated-01, id-03 and why-08 evidence (tool check). The owner dropped the other parts of his question 1 (time from the last test to the closure): dev dated-08 and na-05 already test those dates.
 
 **Closest dev question:** why-09 (why the 720-day tests showed no strategy passing the gate): same conclusion area; this item asks when it was known and why the project went on, and shares no chunk with why-09's required evidence (checked by the tool). Also near why-02 (small capital) and dated-01 (capital on 27.08), see warnings.
 
@@ -63,3 +63,37 @@ Related (should surface, does not answer):
 | TASKS-RECAL.md:3-6 | > ## STATUS 26.08 wieczór: W WIĘKSZOŚCI WYKONANY JEDNEGO DNIA / RESZTA WSTRZYMANA. | > w gicie, werdykt w DECYZJE "WIECZORNY WERDYKT"). §2 (histereza | 26.08: on the corrected sigma (grid15) the recal series passed zero gates |
 | CONTEXT.md:2991-2991 | - **`backtest/engine.ts`**: symulator swap-po-swapie — fee share = L/(L_pool+L), EWMA zmienności (HL 12h), tra | (one line) | engine design: simulator on float for comparing strategies, position geometry exact, approximations listed in  |
 | DECYZJE-2026-08-26.md:130-132 | **Wnioski danych spoza werdyktu:** cache cand-base-weth-cbbtc-030-720d | bezużyteczny) — hardening load.ts/fetch do zrobienia niezależnie. | corrupted first price point in a 720-day cache |
+
+## ho-why-03 (why, answerable: yes, by owner)
+
+**Question.** How was the problem with displaying the correct currency values in the wallet fixed?
+
+**Reference.** The old application computed Uniswap v3 math on floating-point numbers instead of integers, with wrong formulas, so its amounts disagreed with the Uniswap interface; on 10.08 it was decided to rewrite the core rather than repair it. The same day the math was ported to bigint (src/utils/v3math.ts) and checked bit for bit against @uniswap/v3-sdk in 2925 of 2925 cases; liquidity code moved to the SDK and the 20-25% slippage hack was removed; the positions view computes token amounts exactly from sqrtPriceX96 and reads unclaimed fees with a static collect() call, dropping the old 'calibrated scaling' and hard-coded positions. Checked on 10.08 against app.uniswap.org on the owner's two mainnet positions: token amounts, ranges and fees identical, USD totals within 0.05 to 0.3% only because Uniswap prices ETH from its own feed and HOMOS from the pool.
+
+**Notes.** Owner's question 2, his wording. Polish original: 'w jaki sposob zostal naprawiony problem z wyswietlaniem prawidlowych wartosci walut na portfelu?'. The owner chose the position-values reading (not the token-balance rounding in the open-position window) and asked that the reference cover the cause and the fix; it replaces CC-Mac's ho-why-01 on the same finding (withdrawn in this batch).
+
+**Closest dev question:** none on topic; id-05 (fetchFreshPool) is the nearest by area, v2 code, and shares no source or fact
+
+- **a**: cause: the old application computed Uniswap v3 math on floating-point numbers instead of integers, with wrong formulas (2 spans)
+- **b**: 10.08: decided to rewrite the core instead of repairing the legacy code (1 span)
+- **c**: 10.08: the math ported to bigint (src/utils/v3math.ts), 2925 of 2925 cases bit for bit equal to @uniswap/v3-sdk (1 span)
+- **d**: the app rewritten on it: liquidity through the SDK, 20-25% slippage hack removed; positions computed exactly from sqrtPriceX96, fees by a static collect() call, 'calibrated scaling' and hard-coded positions removed (1 span)
+- **e**: verified 10.08 against app.uniswap.org on the two mainnet positions: amounts, ranges and fees identical; USD totals 0.05-0.3% apart only because of Uniswap's own ETH price feed (2 spans)
+
+| span | role | facts | first line | last line | reason |
+|---|---|---|---|---|---|
+| PLAN.md:27-27 | required | a | Analysis of the code in `src/utils/` showed that the discrepancy against the Uniswap interface **was not a mat | (one line) | the discrepancy against the Uniswap interface came from float instead of integer v3 math |
+| CONTEXT.md:3154-3154 | required | a | - Przeanalizowano legacy (`src/utils/liquidityManagement.ts`, `uniswap.ts`, README, docs) — zdiagnozowano przy | (one line) | entry of 10.08: causes of the discrepancy with Uniswap diagnosed (float instead of bigint, wrong formulas, har |
+| CONTEXT.md:83-83 | required | b | \| 2026-08-10 \| Rewrite core zamiast naprawy legacy \| Błędna matematyka we wszystkich warstwach; taniej napi | (one line) | decision row 2026-08-10: rewrite core instead of repairing legacy |
+| CONTEXT.md:2931-2933 | required | c | ### 2026-08-10 — Sesja 2: Faza 0 — naprawa obliczeń | - **Testy referencyjne `test/v3math.test.ts`**: **2925/2925 zgodnych bit-w-bit z @uniswap/v3-sdk** (2018 tickó | entry of 10.08: v3math.ts on bigint, 2925/2925 bit for bit with the SDK |
+| CONTEXT.md:2934-2936 | required | d | - **Przepisany `liquidityManagement.ts`**: createPosition → SDK `Position.fromAmounts`; calculateOptimalAmount | - **`MyPositions.tsx`**: usunięte "calibrated scaling" (L/2.11e11), hardkody pozycji #953465/#953427, symulowa | liquidityManagement.ts on the SDK, slippage hack removed; MyPositions exact amounts and static collect() |
+| CONTEXT.md:2943-2954 | required | e | ### 2026-08-10 — Sesja 2b: WERYFIKACJA NA ŻYWYCH DANYCH MAINNET ✅ | Różnica $87.89 vs $88.02 (0.15%) na total USD #953465 wynika wyłącznie z tego, że Uniswap wycenia WETH własnym | entry of 10.08 (2b): our values vs Uniswap UI per position, identical; USD gap from Uniswap's price feed |
+| CONTEXT.md:2959-2966 | required | e | ### 2026-08-10 — Sesja 2c: FAZA 0 ZAMKNIĘTA ✅ (porównanie ekran-w-ekran) | Różnice końcowe wyłącznie w wycenie USD (±0.05–0.3%) — źródło: Uniswap używa własnego feeda ceny ETH, my ceny  | entry of 10.08 (2c): screen-to-screen comparison, amounts identical, USD within 0.05-0.3% |
+| PLAN.md:35-35 | supporting | - | `sqrtPriceX96` is a number of up to 160 bits. A JavaScript `Number` safely holds only 53 bits (`Number.MAX_SAF | (one line) | detail of the cause: sqrtPriceX96 precision and decimals |
+| PLAN.md:45-51 | supporting | - | Four bugs in one line: | Effect: `mintAmounts` inconsistent with what the contract would compute → transactions reverted → and hence… | detail of the cause: liquidity formula without the current price, reverts |
+| PLAN.md:55-55 | supporting | - | `prepareAddLiquidityTransaction` contains a special path for USDC/WETH with a **minimum slippage of 20%** ("US | (one line) | the 20% slippage as a symptom |
+| PLAN.md:66-70 | supporting | - | ### 2.6. Conclusions for v2 | 3. **Unit tests with reference values**: for known on-chain positions (tokenId → amounts) the result of our co | the plan for v2 (bigint, SDK, tests to 1 wei), before it was done |
+
+## Withdrawn from earlier batches
+
+- **ho-why-01**: the owner's ho-why-03 asks about the same finding (old application's amounts against Uniswap); two held-out items on one finding would weigh it double. Owner's decision, 26 Nov 2026.

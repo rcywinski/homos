@@ -89,7 +89,7 @@
         }
       ],
       "closestDev": "why-09 (why the 720-day tests showed no strategy passing the gate): same conclusion area; this item asks when it was known and why the project went on, and shares no chunk with why-09's required evidence (checked by the tool). Also near why-02 (small capital) and dated-01 (capital on 27.08), see warnings.",
-      "notes": "Owner's wording, part 1 of his question 1 (split proposed, he decides). Polish original: 'kiedy bylo wiadomo ze na pewno zadna strategia nie przebila zwyklego HODL, i dlaczego projekt byl dalej kontynuowany jesli okazalo sie ze strategie nie przynosza efektu'. Expected: the 26.08 verdict and the final-round decision; an answer that only says 'none beat HODL' misses fact b. The 27.08 outcome (hybrid FlatWide, capital in) is left out of the reference: it is dev dated-01's fact and its chunks hold dated-01, id-03 and why-08 evidence (tool check)."
+      "notes": "Owner's wording, part 1 of his question 1 (split proposed, he decides). Polish original: 'kiedy bylo wiadomo ze na pewno zadna strategia nie przebila zwyklego HODL, i dlaczego projekt byl dalej kontynuowany jesli okazalo sie ze strategie nie przynosza efektu'. Expected: the 26.08 verdict and the final-round decision; an answer that only says 'none beat HODL' misses fact b. The 27.08 outcome (hybrid FlatWide, capital in) is left out of the reference: it is dev dated-01's fact and its chunks hold dated-01, id-03 and why-08 evidence (tool check). The owner dropped the other parts of his question 1 (time from the last test to the closure): dev dated-08 and na-05 already test those dates."
     },
     {
       "id": "ho-na-02",
@@ -151,6 +151,151 @@
       ],
       "closestDev": "why-09 (365 vs 720 days): both are about trusting the backtest verdict; why-09 asks why the windows disagreed, this one whether the engine itself could be wrong",
       "notes": "Owner's question 3. Polish original: 'czy symulacja algorytmow mogla sie pomylic w obliczeniach i faktycznie ktoras strategia mogla przebijac HODL?'. Partial: the corpus has checks and found errors, not a proof. Expected: no claim that the simulator was proven correct and no claim that a hidden winner exists; name the checks. Not used: ai/APP-PLAN.md (not corpus)."
+    },
+    {
+      "id": "ho-why-03",
+      "category": "why",
+      "answerable": "yes",
+      "author": "owner",
+      "question": "How was the problem with displaying the correct currency values in the wallet fixed?",
+      "reference": "The old application computed Uniswap v3 math on floating-point numbers instead of integers, with wrong formulas, so its amounts disagreed with the Uniswap interface; on 10.08 it was decided to rewrite the core rather than repair it. The same day the math was ported to bigint (src/utils/v3math.ts) and checked bit for bit against @uniswap/v3-sdk in 2925 of 2925 cases; liquidity code moved to the SDK and the 20-25% slippage hack was removed; the positions view computes token amounts exactly from sqrtPriceX96 and reads unclaimed fees with a static collect() call, dropping the old 'calibrated scaling' and hard-coded positions. Checked on 10.08 against app.uniswap.org on the owner's two mainnet positions: token amounts, ranges and fees identical, USD totals within 0.05 to 0.3% only because Uniswap prices ETH from its own feed and HOMOS from the pool.",
+      "facts": {
+        "a": "cause: the old application computed Uniswap v3 math on floating-point numbers instead of integers, with wrong formulas",
+        "b": "10.08: decided to rewrite the core instead of repairing the legacy code",
+        "c": "10.08: the math ported to bigint (src/utils/v3math.ts), 2925 of 2925 cases bit for bit equal to @uniswap/v3-sdk",
+        "d": "the app rewritten on it: liquidity through the SDK, 20-25% slippage hack removed; positions computed exactly from sqrtPriceX96, fees by a static collect() call, 'calibrated scaling' and hard-coded positions removed",
+        "e": "verified 10.08 against app.uniswap.org on the two mainnet positions: amounts, ranges and fees identical; USD totals 0.05-0.3% apart only because of Uniswap's own ETH price feed"
+      },
+      "spans": [
+        {
+          "file": "docs/PLAN.md",
+          "lines": [
+            27,
+            27
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "the discrepancy against the Uniswap interface came from float instead of integer v3 math"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3154,
+            3154
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "entry of 10.08: causes of the discrepancy with Uniswap diagnosed (float instead of bigint, wrong formulas, hard-coded values, no tests)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            83,
+            83
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "decision row 2026-08-10: rewrite core instead of repairing legacy"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2931,
+            2933
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "entry of 10.08: v3math.ts on bigint, 2925/2925 bit for bit with the SDK"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2934,
+            2936
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "liquidityManagement.ts on the SDK, slippage hack removed; MyPositions exact amounts and static collect()"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2943,
+            2954
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "entry of 10.08 (2b): our values vs Uniswap UI per position, identical; USD gap from Uniswap's price feed"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2959,
+            2966
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "entry of 10.08 (2c): screen-to-screen comparison, amounts identical, USD within 0.05-0.3%"
+        },
+        {
+          "file": "docs/PLAN.md",
+          "lines": [
+            35,
+            35
+          ],
+          "role": "supporting",
+          "reason": "detail of the cause: sqrtPriceX96 precision and decimals"
+        },
+        {
+          "file": "docs/PLAN.md",
+          "lines": [
+            45,
+            51
+          ],
+          "role": "supporting",
+          "reason": "detail of the cause: liquidity formula without the current price, reverts"
+        },
+        {
+          "file": "docs/PLAN.md",
+          "lines": [
+            55,
+            55
+          ],
+          "role": "supporting",
+          "reason": "the 20% slippage as a symptom"
+        },
+        {
+          "file": "docs/PLAN.md",
+          "lines": [
+            66,
+            70
+          ],
+          "role": "supporting",
+          "reason": "the plan for v2 (bigint, SDK, tests to 1 wei), before it was done"
+        }
+      ],
+      "closestDev": "none on topic; id-05 (fetchFreshPool) is the nearest by area, v2 code, and shares no source or fact",
+      "notes": "Owner's question 2, his wording. Polish original: 'w jaki sposob zostal naprawiony problem z wyswietlaniem prawidlowych wartosci walut na portfelu?'. The owner chose the position-values reading (not the token-balance rounding in the open-position window) and asked that the reference cover the cause and the fix; it replaces CC-Mac's ho-why-01 on the same finding (withdrawn in this batch)."
+    }
+  ],
+  "withdraw": [
+    {
+      "id": "ho-why-01",
+      "reason": "the owner's ho-why-03 asks about the same finding (old application's amounts against Uniswap); two held-out items on one finding would weigh it double. Owner's decision, 26 Nov 2026."
     }
   ]
 }

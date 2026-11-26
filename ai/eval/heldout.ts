@@ -46,6 +46,8 @@ interface Batch {
   batch: number;
   date: string;
   questions: BatchQuestion[];
+  /** Items of earlier batches taken out of the held-out file by the owner's decision, with the reason. */
+  withdraw?: { id: string; reason: string }[];
 }
 
 const parse = (text: string) =>
@@ -158,13 +160,15 @@ function review(path: string, out: string) {
     }
     md.push('');
   }
+  if (batch.withdraw?.length) md.push('## Withdrawn from earlier batches', '', ...batch.withdraw.map((w) => `- **${w.id}**: ${w.reason}`), '');
   writeFileSync(out, md.join('\n'));
   console.log(`wrote ${out}: ${batch.questions.length} questions`);
 }
 
 function apply(path: string, target = HELDOUT) {
   const batch = load(path);
-  const items = existsSync(target) ? parse(readFileSync(target, 'utf8')) : [];
+  const withdrawn = new Set((batch.withdraw ?? []).map((w) => w.id));
+  const items = (existsSync(target) ? parse(readFileSync(target, 'utf8')) : []).filter((q) => !withdrawn.has(q.id));
   for (const q of batch.questions) {
     const item: GoldenQuestion = {
       id: q.id,
