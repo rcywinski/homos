@@ -388,6 +388,8 @@ Common rules for every step:
   evidence span is marked `required` (a correct verdict needs its fact) or `supporting`. This separates "the answer
   really needs these spans" from "the reference lists more than the question asks", so a larger k is not rewarded for
   covering spans nobody needs.
+  Batch 1 done 26 Nov, golden v1.6: the nine class C questions, with facts per required span (coverage counts facts),
+  gaps filled, and the dated-09 correction (`ai/eval/review/roles-v1-6.md`).
   (c) Held-out questions: about 30, in the same five categories. CC-Mac drafts them and their references from the
   corpus itself (journal and docs read directly), never from retrieval output, in batches of five to eight; each
   batch is read with the owner in a session, with the reasoning behind each reference, before the next. Then the file

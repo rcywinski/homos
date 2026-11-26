@@ -1,10 +1,11 @@
 {
-  "version": "1.5",
+  "version": "1.6",
   "rules": [
     "A chunk or range is added to evidence only if a human reading it agrees it answers the question; appearing in a retriever's top-k is never the reason.",
     "Every evaluation result records the golden version it used.",
     "An evidence span is 'required' only if a reader could state a fact the reference needs from that span alone; anything that only corroborates it is 'supporting'. Unmarked spans count as required until step 6.2 (b) marks them.",
-    "An item changes because it is defective as a test, never because the system fails it."
+    "An item changes because it is defective as a test, never because the system fails it.",
+    "Each required span names the facts of the reference it states (question-level 'facts', span-level 'facts'); required coverage counts facts with at least one of their spans in the top k. A fact no span states stays listed and is reported apart. Roles and facts are set through ai/eval/roles.ts from a reviewed roles file, whose generated review shows each span's first and last line beside its facts."
   ],
   "changes": [
     {
@@ -36,6 +37,11 @@
       "version": "1.5",
       "date": "2026-11-25",
       "summary": "Step 6.2 (a), owner review of the five items flagged by the step 6.1 diagnosis (ai/eval/results/2026-11-25-golden-review-cards.md, reviewed by the analysis session): dated-04 and dated-05 unchanged (fair questions; their failures are retrieval failures); dated-09 reference unchanged, spans marked required or supporting; id-03 three report rows added as supporting; dated-01 HANDOFF.md:1166-1170 added as required and HANDOFF.md:1156-1160 as supporting. New optional evidence field 'role'. No question or reference text changed, so judged verdicts are unaffected; retrieval numbers change for id-03 and dated-01 only, see ai/eval/results/2026-11-25-rescore-k10-lists-golden-v1-5.md."
+    },
+    {
+      "version": "1.6",
+      "date": "2026-11-26",
+      "summary": "Step 6.2 (b) batch 1, the nine class C questions (why-01, why-03, why-08, why-09, why-10, dated-06, dated-07, dated-09, dated-10): every span marked required or supporting with its facts (ai/eval/review/roles-v1-6.json and .md, reviewed by the analysis session, approved by the owner). Evidence added: dated-06 CONTEXT.md:4085, CONTEXT.md:4479-4484, morning-2026-09-20.md:40; dated-07 CONTEXT.md:1023, CONTEXT.md:863-864, HANDOFF.md:131-134; dated-10 morning-2026-08-27.md:222-226. Widened: why-08 CONTEXT.md:281-283 to 281-284. Correction of v1.5: dated-09 CONTEXT.md:1135-1136 required, 1309-1310 supporting (the 6.2 (a) card had mapped them to the wrong facts). One fact with no span (why-10, an absence). No question or reference text changed."
     }
   ]
 }

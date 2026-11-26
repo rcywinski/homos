@@ -1181,3 +1181,19 @@ as a second column, so adding a supporting span cannot raise them. Served varian
 (id-03 is found only through supporting spans). Not a retrieval change. v1.4 and v1.5 numbers are not compared
 otherwise. `ai/eval/diagnose.ts` now reads golden v1.4 from git, so the step 6.1 table still reproduces.
 0 USD.
+
+## 2026-11-26, step 6.2 (b) batch 1: golden v1.6 (owner)
+
+**Decision.** The owner approved golden v1.6: the nine class C questions have every span marked required or
+supporting, and every required span names the facts of the reference it states (`ai/eval/review/roles-v1-6.json`, the
+review file `roles-v1-6.md` generated from it, applied by `ai/eval/roles.ts`). Required coverage now counts facts
+covered, not spans, so a fact stated in three places counts once. At the analysis session's request the gaps were
+filled instead of left out of the denominator (dated-06 three spans, dated-07 three, dated-10 one); one fact with no
+span (why-10, an absence) is reported apart. Corrected from v1.5: dated-09 `CONTEXT.md:1135-1136` required and
+`1309-1310` supporting; the 6.2 (a) card had mapped three spans to the wrong facts from memory. The generated review
+file, which prints each span's first and last line beside its facts, caught one more error before approval (why-03).
+
+**Re-score** (`ai/eval/results/2026-11-26-rescore-k10-lists-golden-v1-6.md`, stored lists of 11 Nov). Served variant:
+facts covered 50/169 (30%) plus 1 fact with no span, against 48/183 required spans; recall@10 on required spans 20/26
+and MRR@10 0.490, unchanged from v1.5. From here the fact-based figure is the coverage headline. The 17 other
+answerable questions are unmarked and count each required span as one fact until the next batch. 0 USD.
