@@ -40,7 +40,7 @@ interface Score {
   all: string;
   req: string;
   facts: string;
-  perQ: Map<string, { rank: number | null; all: string; req: string; facts: string }>;
+  perQ: Map<string, { rank: number | null; span: string; all: string; req: string; facts: string }>;
 }
 
 function coverage(given: Chunk[], spans: Evidence[]): [number, number] {
@@ -51,7 +51,7 @@ function score(golden: GoldenQuestion[], lists: Record<string, string[]>, byId: 
   const ranks: Array<number | null> = [];
   const anyRanks: Array<number | null> = [];
   let [aHit, aN, rHit, rN, fHit, fN, fNone] = [0, 0, 0, 0, 0, 0, 0];
-  const perQ = new Map<string, { rank: number | null; all: string; req: string; facts: string }>();
+  const perQ = new Map<string, { rank: number | null; span: string; all: string; req: string; facts: string }>();
   for (const q of golden) {
     if (q.answerable !== 'yes') continue;
     const given = lists[q.id].map((id) => byId.get(id)!);
@@ -70,7 +70,9 @@ function score(golden: GoldenQuestion[], lists: Record<string, string[]>, byId: 
     fNone += fs.none;
     const qf = factSpans(q);
     const qfHit = qf.spans.filter((spans) => spans.some((e) => given.some((c) => overlaps(c, e)))).length;
-    perQ.set(q.id, { rank, all: `${ah}/${an}`, req: `${rh}/${rn}`, facts: `${qfHit}/${qf.spans.length}${qf.none ? `+${qf.none}` : ''}` });
+    const hit = rank === null ? undefined : requiredOnly(q.evidence).find((e) => overlaps(given[rank - 1], e));
+    const span = hit ? `${hit.file.replace(/^journal\/(reports\/)?|^docs\//, '')}:${hit.lines[0]}-${hit.lines[1]}` : '-';
+    perQ.set(q.id, { rank, span, all: `${ah}/${an}`, req: `${rh}/${rn}`, facts: `${qfHit}/${qf.spans.length}${qf.none ? `+${qf.none}` : ''}` });
   }
   return {
     r5: fmtRatio(recallAt(ranks, 5)),
@@ -123,7 +125,7 @@ function main() {
       const y = a.perQ.get(id);
       if (!y || y.rank !== x.rank || y.all !== x.all || y.req !== x.req || y.facts !== x.facts)
         changed.push(
-          `| ${name} | ${id} | ${y?.rank ?? '-'} | ${x.rank ?? '-'} | ${y?.facts ?? '-'} | ${x.facts} | ${y?.req ?? '-'} | ${x.req} | ${y?.all ?? '-'} | ${x.all} |`,
+          `| ${name} | ${id} | ${y?.rank ?? '-'} ${y?.span ?? ''} | ${x.rank ?? '-'} ${x.span} | ${y?.facts ?? '-'} | ${x.facts} | ${y?.req ?? '-'} | ${x.req} | ${y?.all ?? '-'} | ${x.all} |`,
         );
     }
   }
@@ -133,7 +135,8 @@ function main() {
     '',
     '## Questions whose numbers changed',
     '',
-    'Facts "x/y+z": x of y facts covered, z facts with no span.',
+    'Facts "x/y+z": x of y facts covered, z facts with no span. A first required hit shows its rank and the required',
+    'span it overlaps, so a change in MRR can be traced to the span that became supporting or was added.',
     '',
     `| variant | id | first required hit v${oldVersion} | first required hit v${newVersion} | facts v${oldVersion} | facts v${newVersion} | required spans v${oldVersion} | required spans v${newVersion} | all spans v${oldVersion} | all spans v${newVersion} |`,
     '|---|---|---|---|---|---|---|---|---|---|',

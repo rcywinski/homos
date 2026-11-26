@@ -91,7 +91,7 @@ a span is required only if a reader could state those facts from it alone.
 
 ## dated-02
 
-- **a**: on 31.08 at about 13:00 Polish time the first FLAT_NARROW was executed on the cbBTC/WETH leg (4 spans)
+- **a**: on 31.08 at about 13:00 Polish time the first FLAT_NARROW was executed on the cbBTC/WETH leg (3 spans)
 - **b**: after a failed first attempt and a UI hotfix (1 span)
 - **c**: #5887690 (±40%) was closed and narrow #5908083 (±4.9%) minted (1 span)
 - **d**: the second rebalance was the widening on 11.09 into #5978579 (±40%) (1 span)
@@ -100,7 +100,7 @@ a span is required only if a reader could state those facts from it alone.
 |---|---|---|---|---|---|---|
 | CONTEXT.md:1136-1137 |  | supporting | - | od 30.08 22:22Z (pierwsza noc BEZ resetu po trzech „tańcach na progu") | → pierwsza w historii propozycja FLAT_NARROW ~10:22Z. OPEN selektora | the first FLAT_NARROW proposal ~10:22Z: a proposal, not the execution |
 | CONTEXT.md:1228-1235 |  | required | a, b, c | ~13:0x — **EPIZOD WYSTARTOWAŁ: pierwsza bojowa transakcja produktu | in-range). Stara pozycja #5887690 zamknięta. | ~13:0x first combat transaction after the hotfix, mint #5908083 ±4.9% |
-| morning-2026-09-01.md:205-205 |  | required | a | \| #5908083 \| base-cbbtc-weth-005 \| WĄSKI \| $2303 \| $-0.25 \| +$20.26 (od 2026-08-31) \| $0.70 \| $0.90 \| | (one line) | #5908083 WĄSKI, PnL from 2026-08-31 |
+| morning-2026-09-01.md:205-205 |  | supporting | - | \| #5908083 \| base-cbbtc-weth-005 \| WĄSKI \| $2303 \| $-0.25 \| +$20.26 (od 2026-08-31) \| $0.70 \| $0.90 \| | (one line) | #5908083 WĄSKI, PnL from 2026-08-31: a state, not 'first', 'executed' or the hour (report-row rule) |
 | CONTEXT.md:294-296 |  | required | d | przeszło. WYNIK: stara #5908083 (wąska ±5%, 31.08→11.09, **11 dni w | 0.05% Base, SZEROKA ±40%, $2 341.81, in-range pośrodku**; koszt planowany | new #5978579 SZEROKA ±40% |
 | CASE-STUDY.md:81-84 |  | required | a | - **The narrowing experiment (31 Aug → 11 Sep).** The flat detector fired on the cbBTC leg. I signed | −$32 versus HODL. The backtests were right; the live system worked exactly as designed, | the narrowing experiment, 31 Aug |
 | DECISION-LOG.md:26-26 |  | required | a | \| 31 Aug \| **Sign the first narrowing proposal (cbBTC leg) as an operational experiment**, n = 1, explicitly | (one line) | 31 Aug: sign the first narrowing proposal (cbBTC leg) |
@@ -246,7 +246,7 @@ a span is required only if a reader could state those facts from it alone.
 - **c**: task 2: clean up three leftover 'k×σ' labels (1 span)
 - **d**: it was to be deployed only after the narrowing episode closed (2 spans)
 - **e**: it was still pending on 16.09 (2 spans)
-- **f**: it was never deployed (1 span)
+- **f**: it was never deployed (an inference: the 18.09 entry says D0 became irrelevant; no span states it) (**no span**)
 
 | span | change | role | facts | first line | last line | reason |
 |---|---|---|---|---|---|---|
@@ -254,7 +254,7 @@ a span is required only if a reader could state those facts from it alone.
 | CONTEXT.md:262-263 |  | required | e | (eksperyment „tylko cbBTC, tylko ten epizod", detektor→pomiar = paczka | D0 jeszcze niewdrożona — stąd karty); (c) noga ETH/USDC = większa | entry of 16.09: D0 not yet deployed, hence the cards |
 | CONTEXT.md:273-274 |  | required | e | KONSEKWENCJE: D0 (detektor→pomiar) i fix łańcucha kotwic nadal | do zrobienia, ale bez presji daty 24.09 — przed przeglądem 24.09 mile | entry of 16.09: D0 still to do |
 | CONTEXT.md:1245-1245 |  | required | d | PO EPIZODZIE do zrobienia: paczka „detektor→pomiar", Partia 20 UI | (one line) | after the episode: the detektor→pomiar package |
-| CONTEXT.md:239-240 |  | required | f | historii; (4) D0 detektor→pomiar — teraz bez znaczenia (brak pozycji), | ale karty FLAT_NARROW przestaną przychodzić same (brak tokenId); | entry of 18.09: D0 now irrelevant (no positions) |
+| CONTEXT.md:239-240 |  | supporting | - | historii; (4) D0 detektor→pomiar — teraz bez znaczenia (brak pozycji), | ale karty FLAT_NARROW przestaną przychodzić same (brak tokenId); | entry of 18.09: D0 now irrelevant (no positions); states the cause, 'never deployed' is inferred |
 
 ## id-05
 

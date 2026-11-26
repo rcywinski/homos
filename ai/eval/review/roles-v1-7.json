@@ -496,11 +496,8 @@
             205,
             205
           ],
-          "role": "required",
-          "facts": [
-            "a"
-          ],
-          "reason": "#5908083 WĄSKI, PnL from 2026-08-31"
+          "role": "supporting",
+          "reason": "#5908083 WĄSKI, PnL from 2026-08-31: a state, not 'first', 'executed' or the hour (report-row rule)"
         },
         {
           "file": "journal/CONTEXT.md",
@@ -1352,7 +1349,7 @@
         "c": "task 2: clean up three leftover 'k×σ' labels",
         "d": "it was to be deployed only after the narrowing episode closed",
         "e": "it was still pending on 16.09",
-        "f": "it was never deployed"
+        "f": "it was never deployed (an inference: the 18.09 entry says D0 became irrelevant; no span states it)"
       },
       "spans": [
         {
@@ -1412,11 +1409,8 @@
             239,
             240
           ],
-          "role": "required",
-          "facts": [
-            "f"
-          ],
-          "reason": "entry of 18.09: D0 now irrelevant (no positions)"
+          "role": "supporting",
+          "reason": "entry of 18.09: D0 now irrelevant (no positions); states the cause, 'never deployed' is inferred"
         }
       ]
     },
