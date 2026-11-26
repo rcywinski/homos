@@ -1,0 +1,354 @@
+{
+  "batch": 4,
+  "date": "2026-11-26",
+  "questions": [
+    {
+      "id": "ho-dated-05",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "According to the morning report of 5 September, what was tranche 1 worth in total and how far was it from the amount paid in?",
+      "reference": "On 05.09 tranche 1 was worth $5,967.33 in total ($5,740.04 in the LP positions and $227.29 in the wallet as buffer and gas) against $6,092.00 paid in on 27.08, a difference of -$124.67 (-2.05%): -$118.01 from the market move on the LP and -$6.66 for the rest (entry costs -$7.90, buffer beta +$1.24).",
+      "facts": {
+        "a": "05.09: total $5,967.33 ($5,740.04 in LP, $227.29 in the wallet)",
+        "b": "difference vs $6,092.00 paid in: -$124.67 (-2.05%)",
+        "c": "split: market move on the LP -$118.01; rest -$6.66 (entry costs -$7.90, buffer beta +$1.24)"
+      },
+      "spans": [
+        {
+          "file": "journal/reports/morning-2026-09-05.md",
+          "lines": [
+            201,
+            205
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "report 05.09, tranche balance rows: paid in, in LP, in wallet, total, difference (a state on a date, shown in full)"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-05.md",
+          "lines": [
+            206,
+            209
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "the split of the difference: market move, rest, entry costs, buffer beta"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-05.md",
+          "lines": [
+            219,
+            225
+          ],
+          "role": "supporting",
+          "reason": "the two positions that day; not asked"
+        }
+      ],
+      "closestDev": "dated-03 (positions open on 15.09 and their P/L that day): same kind of question on another report and another section",
+      "notes": "Report-based dated item (analysis session's request for step 6.8): 37 near-identical reports, only the date picks the right one. Medium."
+    },
+    {
+      "id": "ho-dated-06",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "How did the top of the wide-position ranking change between the morning reports of 3 and 4 September?",
+      "reference": "On 03.09 first place was WBTC-CBBTC 0.01% on Uniswap v4 (Ethereum, $4.2M TVL) with a score of 0.85% a year, ahead of USDC-USDT 0.01% (0.26). On 04.09 USDC-USDT 0.01% on Ethereum took first place (0.47) and that WBTC-CBBTC v4 pool fell to third (-0.14), behind GHO-USDC 0.05% v4.",
+      "facts": {
+        "a": "03.09: first WBTC-CBBTC 0.01% v4 on Ethereum (score 0.85), second USDC-USDT 0.01% (0.26)",
+        "b": "04.09: first USDC-USDT 0.01% on Ethereum (0.47); the WBTC-CBBTC v4 pool fell to third (-0.14)"
+      },
+      "spans": [
+        {
+          "file": "journal/reports/morning-2026-09-03.md",
+          "lines": [
+            136,
+            141
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "report 03.09, RANKING WIDE: day line and rows 1-2 (a state on a date, shown in full)"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-04.md",
+          "lines": [
+            136,
+            142
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "report 04.09, RANKING WIDE: day line and rows 1-3"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            728,
+            728
+          ],
+          "role": "supporting",
+          "reason": "entry heading of 04.09 names a change at the top of the wide ranking, not which"
+        }
+      ],
+      "closestDev": "none; dev questions use the POZYCJE REALNE and pipeline sections of the reports, not the wide ranking",
+      "notes": "Report-based change between two named days (step 6.8). Medium to hard: the rankings of neighbouring days look alike."
+    },
+    {
+      "id": "ho-dated-07",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "In the last morning report, how did the paper-trading portfolio stand, and did it beat HODL?",
+      "reference": "The last report is from 23.09. Paper trading (started 18.08 with $10,000 per pool) still had all six pools open, together $68,632 of equity (+$8,632) but -$5,785 against HODL; only base-weth-cbbtc-030 was ahead of HODL (+$426).",
+      "facts": {
+        "a": "the last report is from 23.09",
+        "b": "paper trading: six pools still open, total equity $68,632 (+$8,632)",
+        "c": "against HODL -$5,785 in total; only base-weth-cbbtc-030 ahead (+$426)"
+      },
+      "spans": [
+        {
+          "file": "journal/reports/morning-2026-09-23.md",
+          "lines": [
+            219,
+            229
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "report 23.09 (date in the chunk header), PAPER TRADING table: six pools open, total, vs HODL"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            46,
+            47
+          ],
+          "role": "supporting",
+          "reason": "the morning Telegram moved from paper trading to real positions when the capital came in; paper stopped mattering"
+        }
+      ],
+      "closestDev": "dated-04 ('when did the last backtest finish') is the nearest by form, a 'last' question over the reports; it uses the pipeline section of 23.09, this item the paper-trading section",
+      "notes": "Report-based 'latest' item (step 6.8): every report has the same paper-trading table; only the date of the last report makes the answer. Expected failure mode: an earlier report's figures."
+    },
+    {
+      "id": "ho-why-08",
+      "category": "why",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "Why was the transaction ledger built from on-chain events instead of from what the application itself sent?",
+      "reference": "On 25.08 closing position #953427 through the application made it vanish without a trace: no history, no result, no fees, no CSV. The ledger had to be ready before tranche 1's capital came in (the 10.08 decision: a record from the first transaction, for Polish taxes and auditability). Its source of truth is the chain: the NonfungiblePositionManager events (IncreaseLiquidity, DecreaseLiquidity, Collect, plus Transfer for mint and burn) for the watched address's positions, so that it matches Etherscan to the unit, including transactions made outside the application, such as fee collections done in Rabby or the Uniswap interface that same day.",
+      "facts": {
+        "a": "trigger 25.08: closing #953427 through the app made the position vanish without a trace (no history, no summary)",
+        "b": "the ledger had to be ready before the capital of tranche 1 (record from the first transaction: taxes and auditability)",
+        "c": "source of truth is the chain: NonfungiblePositionManager events for the watched address's positions",
+        "d": "so it matches Etherscan to the unit, including transactions made outside the app (Rabby or Uniswap UI)"
+      },
+      "spans": [
+        {
+          "file": "journal/TASKS-LEDGER.md",
+          "lines": [
+            3,
+            8
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "spec 25.08: the 10.08 decision; #953427 vanished without a trace; ledger ready before tranche 1"
+        },
+        {
+          "file": "journal/TASKS-LEDGER.md",
+          "lines": [
+            10,
+            16
+          ],
+          "role": "required",
+          "facts": [
+            "c",
+            "d"
+          ],
+          "reason": "source of truth is the chain, not the UI; NFT manager events; must match Etherscan incl. transactions outside the app"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            490,
+            494
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "11b, 25.08 evening: closing #953427 exposed the gap; the 10.08 decision became due before capital"
+        }
+      ],
+      "closestDev": "na-01 (tax and whether the app calculated it) uses the ledger as context (TASKS-LEDGER.md:34); this item asks why the ledger reads the chain and shares no chunk with na-01's ranges",
+      "notes": "Medium."
+    },
+    {
+      "id": "ho-id-05",
+      "category": "identifier",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "What is the wide-score used in the RANKING WIDE section?",
+      "reference": "A score for ranking the whole pool universe for the product's wide position: score = c_class * apy_min - 0.6 * (sigma^2/8) * g(w), the fee income of a wide position minus a volatility drag, with the fee taken as the minimum of the APY windows (a penalty for episodic fees). It was implemented on 01.09 as scripts/wide-score.ts (funnel v2, floor 1) and from 02.09 ran as a pipeline step that writes .bot/wide-ranking.json, shown in the morning report as RANKING WIDE (top 10) next to the old ranking, for observation.",
+      "facts": {
+        "a": "score = c_class * apy_min - 0.6 * (sigma^2/8) * g(w): fees of a wide position minus a volatility drag",
+        "b": "fee = the minimum of the APY windows (penalty for episodic fees)",
+        "c": "implemented 01.09 as scripts/wide-score.ts (funnel v2, floor 1)"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1025,
+            1032
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "entry of 01.09: wide-score implemented, model formula, fee = MIN of apy windows"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            852,
+            861
+          ],
+          "role": "supporting",
+          "reason": "entry of 02.09: RANKING WIDE for observation; wide-score.ts writes wide-ranking.json, pipeline step, report section; in the reference but not scored (shares chunk CONTEXT.md:798#p2 with dev dated-07's required evidence)"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-10.md",
+          "lines": [
+            148,
+            148
+          ],
+          "role": "supporting",
+          "reason": "a report's ranking header with the formula; not dated to the change"
+        }
+      ],
+      "closestDev": "none; id-06 (E8.2 stage) and id-07 (database) are other identifiers in research and storage",
+      "notes": "Medium. The formula is the identifier's meaning; report headers repeat it daily. The 02.09 part (pipeline step, report section) is in the reference but not scored: its source shares a chunk with dev dated-07."
+    },
+    {
+      "id": "ho-id-06",
+      "category": "identifier",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "What does COLLECT_THRESHOLD_MULT control, and why was it changed?",
+      "reference": "The profitability threshold of the cockpit's [Collect fees] button, as a multiple of gas. Taken literally from the design note ('50x gas'), it meant about $400 on mainnet and $4 on Base, which a hobby-sized position almost never reached, so the button looked permanently broken. On 10.08 the owner chose to lower it: COLLECT_THRESHOLD_MULT went from 50 to 8 (about $64 on mainnet, $0.64 on Base), still protecting against paying more in gas than the fees are worth.",
+      "facts": {
+        "a": "the profitability threshold of the [Collect fees] button, as a multiple of gas",
+        "b": "at 50x gas (~$400 mainnet, ~$4 Base) the button looked permanently broken for hobby-sized positions",
+        "c": "10.08: lowered from 50 to 8 (~$64 mainnet, ~$0.64 Base), still guarding against gas above the fees"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2768,
+            2775
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "entry of 10.08: 'Collect fees' threshold 50x gas, button looked broken, owner chose lowering, COLLECT_THRESHOLD_MULT 50 -> 8"
+        },
+        {
+          "file": "journal/TASKS-UI.md",
+          "lines": [
+            88,
+            93
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "c"
+          ],
+          "reason": "Partia 3 fix: '50x gas' ~$400/$4 unreachable, lowered to 8x (COLLECT_THRESHOLD_MULT, ~$64/$0.64)"
+        }
+      ],
+      "closestDev": "none; id-05 (fetchFreshPool) is the nearest by kind",
+      "notes": "Easy."
+    },
+    {
+      "id": "ho-na-05",
+      "category": "no-answer",
+      "answerable": "partial",
+      "author": "CC-Mac",
+      "question": "How much was put into tranche 2, and what did it earn?",
+      "reference": "Nothing: tranche 2 never entered. It was planned as scaling to $12-15k in total around 31.08, on conditions (selector accuracy, at least 14 days of paper trading at or above HODL, clean pipelines). It never came: tranche 1 was closed in full on 21.09, and for the closing review of 24.09 tranche 2 was 'by default no, without a new thesis that beats HODL over 720 days'.",
+      "spans": [],
+      "related": [
+        {
+          "file": "journal/KAPITAL-REKOMENDACJA.md",
+          "lines": [
+            50,
+            60
+          ],
+          "reason": "tranche 2 plan: ~31.08, scaling to $12-15k, entry conditions"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            182,
+            188
+          ],
+          "reason": "closing review 24.09: whether and when tranche 2, by default no without a new thesis beating HODL on 720 days"
+        },
+        {
+          "file": "journal/RESEARCH-QUEUE.md",
+          "lines": [
+            1069,
+            1069
+          ],
+          "reason": "decision on tranche 2 only after at least one full cycle"
+        }
+      ],
+      "closestDev": "why-02 (why the capital commitment stayed small) is the nearest; it uses KAPITAL-REKOMENDACJA 17-19 and DECYZJE 155-157, not these ranges",
+      "notes": "Expected: correct the premise (tranche 2 never entered), give the plan and the closing-review default as context; inventing an amount or a result is an error."
+    },
+    {
+      "id": "ho-na-06",
+      "category": "no-answer",
+      "answerable": "no",
+      "author": "CC-Mac",
+      "question": "What was the Sharpe ratio of the FlatWide product over its live period?",
+      "reference": "The corpus does not say: no Sharpe ratio (or any other risk-adjusted return measure) is computed anywhere. The live results are given only as amounts: the LP part of tranche 1 earned +$38 (+0.6%) in 22 days, and the whole tranche ended about +5.5% in 25 days, most of it from the spot bet after the LP exit.",
+      "spans": [],
+      "related": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            23,
+            26
+          ],
+          "reason": "18.09: LP of tranche 1 closed, +$38, +0.6%, 22 days"
+        }
+      ],
+      "closestDev": "dated-08 (when the capital was withdrawn) and na-05 (October results) touch the live results; this item asks for a measure the corpus never computes",
+      "notes": "Confirmed 'no' by a search of journal/ and docs/ for 'sharpe' and 'sortino' (no hit). Expected: notEnoughContext; amounts only as context, no computed ratio."
+    }
+  ]
+}
