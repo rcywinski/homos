@@ -913,6 +913,12 @@ rollback line in `deploy/live/README.md` is the quick way to switch it off. The 
 page stays as an optional later item (it belongs to the AI side). After 5.6 is measured, phase 5 closes and merges on
 his word; no further DeFi work is planned. The struck items are listed in section 12, "Not pursued".
 
+**Live repair list (fix before a job interview, not continuously; owner's rule of 25 Nov).**
+- The pool card's "started …" line shows the pool's `startedAt` (when the simulation began watching it), not the
+  position's `openedAt`. For a pool that waited as pending the two differ: base-weth-cbbtc-030 on the box shows
+  "started 26.11.2026, 09:52:10" while its position opened at 10:37:29 (the events list has it right). Fix: print
+  `openedAt` when present (the `showStartDate` branch in PaperTradingPanel, Live only).
+
 **Owner's decision of 18 Nov 2026 (relayed by the analysis session): order of work and the hosted paper copy.**
 
 - *Order.* Finish everything started first, including the tunnel: 4.6b to 4.6e, 4.9, 4.10c, the merge to `main`.
