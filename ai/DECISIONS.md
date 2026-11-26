@@ -1197,3 +1197,21 @@ file, which prints each span's first and last line beside its facts, caught one 
 facts covered 50/169 (30%) plus 1 fact with no span, against 48/183 required spans; recall@10 on required spans 20/26
 and MRR@10 0.490, unchanged from v1.5. From here the fact-based figure is the coverage headline. The 17 other
 answerable questions are unmarked and count each required span as one fact until the next batch. 0 USD.
+
+## 2026-11-26, step 6.2 (b) batch 2: golden v1.7 and the phase 6 baseline (owner)
+
+**Decision.** The owner approved golden v1.7: the other 17 answerable questions have every span marked required or
+supporting with its facts (`ai/eval/review/roles-v1-7.json` and the generated `roles-v1-7.md`), so all 26 answerable
+questions now carry roles and facts. Widened: why-04 `HANDOFF.md:19-22` to `19-24`. At the analysis session's review a
+rule was added to the golden meta: a morning report row is required only when the fact is a state on a date and the
+row shows that state in full; under it dated-02 `morning-2026-09-01.md:205` is supporting (it shows the narrow
+position, not that the first rebalance was executed, nor its hour). A one-word conclusion ("no", "in none") is not a
+fact. Five facts are inferences or absences no span states and are counted apart: why-02 f, dated-04 e, id-01 e2,
+id-04 f (the D0 package "never deployed": the 18.09 entry only says it lost relevance) and why-10 c.
+
+**Baseline for phase 6** (`ai/eval/results/2026-11-26-rescore-k10-lists-golden-v1-7.md`, stored lists of 11 Nov,
+served variant "local", golden v1.7): facts covered **49/130 (38%)** plus 5 facts with no span; recall@10 on required
+spans **20/26**, recall@5 17/26; MRR@10 on required spans **0.471**. Every phase 6 candidate is compared with these
+numbers on v1.7, never with the v1.6 figures (50/169, 0.490), which count unmarked spans as facts. The MRR change from
+v1.6 comes entirely from dated-08: its rank 1 hit `EMERGENCY.md:90-91` is supporting in v1.7, so the first required hit
+is `CONTEXT.md:216-217` at rank 2. Recall is unchanged. No question or reference text changed. 0 USD.

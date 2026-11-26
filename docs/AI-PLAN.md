@@ -390,6 +390,8 @@ Common rules for every step:
   covering spans nobody needs.
   Batch 1 done 26 Nov, golden v1.6: the nine class C questions, with facts per required span (coverage counts facts),
   gaps filled, and the dated-09 correction (`ai/eval/review/roles-v1-6.md`).
+  Batch 2 done 26 Nov, golden v1.7: the other 17 answerable questions, with the report-row rule
+  (`ai/eval/review/roles-v1-7.md`). (b) is done; the phase 6 baseline is in `ai/DECISIONS.md` (26 Nov, batch 2).
   (c) Held-out questions: about 30, in the same five categories. CC-Mac drafts them and their references from the
   corpus itself (journal and docs read directly), never from retrieval output, in batches of five to eight; each
   batch is read with the owner in a session, with the reasoning behind each reference, before the next. Then the file
