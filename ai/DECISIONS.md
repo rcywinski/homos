@@ -1246,3 +1246,14 @@ fails if any other code names the held-out file.
 **Heading-date rule** (added to `golden-meta.json`, no development item changes): a date that stands only in a journal
 entry's heading counts for every span of that entry, because every chunk of the entry carries the date in its
 metadata, shown to both the reranker and the generator. 0 USD.
+
+## 2026-11-26, step 6.2 (c) held-out batch 2: the owner's questions (owner)
+
+**Decision.** The owner approved batch 2 (`ai/eval/review/heldout-batch-2.md`): his three questions kept in his own
+words (Polish originals in the notes). His question 1 was split; the time-to-closure part was dropped because dev
+dated-08 and na-05 test those dates, and the 27.08 outcome left out of ho-why-02's reference because it is dev
+dated-01's fact and shares its chunks. His question 2 was read as the position-values fix and replaces CC-Mac's
+ho-why-01 on the same finding (withdrawn). ho-na-02's judged verdict is reported separately at step 6.12 when its
+retrieval comes from the 27.08 morning chunks shared with dev items. Held-out v0.2, 7 items. The review file now
+shows the spread by source file and journal month; batch 2 left the set clustered in August and in CONTEXT.md, so the
+next batches draw on September and on the infrastructure documents. 0 USD.

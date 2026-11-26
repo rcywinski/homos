@@ -1,6 +1,6 @@
 {
-  "version": "0.1",
-  "answersHash": "c5756873922c13d8",
+  "version": "0.2",
+  "answersHash": "bb03835e486318f4",
   "rules": [
     "Every rule of ai/eval/golden-meta.json applies here too.",
     "Held-out test set of step 6.2 (c): questions and references drafted from the corpus read directly, never from retrieval output; nothing is run on them (no retrieval, no model) before the file is frozen; the first run is step 6.12 (owner, 26 Nov 2026).",
@@ -14,6 +14,12 @@
       "date": "2026-11-26",
       "answersHash": "c5756873922c13d8",
       "summary": "Batch 1, five questions by CC-Mac (ho-why-01, ho-dated-01, ho-dated-02, ho-id-01, ho-na-01), reviewed by the analysis session and approved by the owner (ai/eval/review/heldout-batch-1.md). The owner's own questions for batch 1 follow in the next version."
+    },
+    {
+      "version": "0.2",
+      "date": "2026-11-26",
+      "answersHash": "bb03835e486318f4",
+      "summary": "Batch 2, the owner's three questions in his own words (ho-why-02, ho-why-03, ho-na-02; Polish originals in the notes), facts and spans by CC-Mac, reviewed by the analysis session and approved by the owner (ai/eval/review/heldout-batch-2.md). Withdrawn: ho-why-01 (same finding as the owner's ho-why-03). The time-to-closure part of his question 1 dropped (dev dated-08 and na-05 test those dates). 7 items."
     }
   ]
 }
