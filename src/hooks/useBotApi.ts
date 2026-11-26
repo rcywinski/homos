@@ -107,6 +107,10 @@ export interface BotPoolLive {
   // then does the bot actually propose FLAT_NARROW.
   flatSince?: string | null;
   flatConfirmed?: boolean;
+  /** Live demo only (bot/observer.ts in BOT_MODE=live): when the statistics were last computed, and how the last 24 h
+   *  read went. Absent from the original bot. */
+  statsAt?: string;
+  statsWindow?: { at: string; chunks: number; failed: number; ok: boolean };
   /** Price gap vs EMA (%, signed value) — used for the CYCLE line
    *  on cards ("waiting for stabilization: |gap| X.X%" / "return to wide
    *  at |gap|>exitGap%, now X.X%"). Same number as emaGapPct in /api/history

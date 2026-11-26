@@ -198,6 +198,7 @@ async function main() {
       })(),
       verifyLimiter: new RateLimiter(cfg.limits),
     },
+    ...(cfg.liveBotUrl ? { live: { botUrl: cfg.liveBotUrl, limiter: new RateLimiter(cfg.liveLimits), trustProxy: cfg.trustProxy } } : {}),
     staticDir: existsSync(path.join('showcase', 'public', 'app.js')) ? path.join('showcase', 'public') : undefined,
   });
   if (!existsSync(path.join('showcase', 'public', 'app.js'))) console.log('[serve] showcase not built (npm run showcase:build): API only');

@@ -68,12 +68,14 @@ const GAS_USD: Record<number, number> = { 1: 8, 8453: 0.08, 42161: 0.1 };
 // would require ~350 calls per cycle; public Arbitrum RPCs tolerate 10k.
 const LOG_CHUNK: Record<number, bigint> = { 42161: 10_000n };
 
-/** Fetches Swap events from the last `hours` hours (chunked getLogs). */
+/** Fetches Swap events from the last `hours` hours (chunked getLogs). `report` (optional, used by the Live demo)
+ *  receives how many chunks were read and how many failed; without it the function behaves as before. */
 export async function fetchRecentSwaps(
   client: PublicClient,
   poolAddress: Address,
   chainId: number,
-  hours = 24
+  hours = 24,
+  report?: { chunks: number; failed: number }
 ): Promise<RecentSwap[]> {
   const latest = await client.getBlockNumber();
   const blocksBack = BigInt(Math.floor((hours * 3600) / (BLOCK_TIME[chainId] || 12)));
@@ -82,6 +84,7 @@ export async function fetchRecentSwaps(
   const out: RecentSwap[] = [];
   for (let from = start; from <= latest; from += CHUNK) {
     const to = from + CHUNK - 1n > latest ? latest : from + CHUNK - 1n;
+    if (report) report.chunks++;
     try {
       const logs = await client.getLogs({ address: poolAddress, event: SWAP_EVENT, fromBlock: from, toBlock: to });
       for (const l of logs) {
@@ -95,6 +98,7 @@ export async function fetchRecentSwaps(
         });
       }
     } catch (e) {
+      if (report) report.failed++;
       console.warn('advisor getLogs chunk failed:', (e as { shortMessage?: string }).shortMessage ?? String(e));
     }
   }

@@ -3,7 +3,7 @@
 // Content Security Policy in showcase/public/index.html can forbid eval.
 const path = require('path');
 const webpack = require('webpack');
-const { NoWalletPlugin } = require('./showcase/guard.js');
+const { NoWalletPlugin, LIVE_OWN_SOURCES } = require('./showcase/guard.js');
 require('dotenv').config();
 
 const address = process.env.SHOWCASE_WALLET_ADDRESS || '';
@@ -43,6 +43,7 @@ const publicPage = (_env, argv) => ({
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(argv.mode === 'production' ? 'production' : 'development'),
       __SHOWCASE_WALLET_ADDRESS__: JSON.stringify(address),
+      __LIVE_PREVIEW__: JSON.stringify(process.env.SHOWCASE_LIVE_PREVIEW === '1'),
     }),
   ],
   devServer: {
@@ -61,4 +62,24 @@ const adminPage = (env, argv) => {
   return { ...base, name: 'admin', entry: './showcase/admin/admin.tsx', output: { filename: 'admin.js', path: path.resolve(__dirname, 'showcase/admin-dist') }, devServer: undefined };
 };
 
-module.exports = (env, argv) => [publicPage(env, argv), adminPage(env, argv)];
+// The "Live" page (phase 5, step 5.3): the original paper-trading panel from src/, read only. Same guard and allow-list;
+// src/utils/formatters.ts imports viem, so the build swaps it for showcase/live/formatters.ts (the one helper the
+// panel uses). Every other src/ module it pulls in imports only React or types.
+const livePage = (env, argv) => {
+  const base = publicPage(env, argv);
+  return {
+    ...base,
+    name: 'live',
+    entry: './showcase/live/index.tsx',
+    output: { filename: 'live.js', path: path.resolve(__dirname, 'showcase/public/live') },
+    plugins: [
+      new webpack.NormalModuleReplacementPlugin(/[\\/]utils[\\/]formatters$/, path.resolve(__dirname, 'showcase/live/formatters.ts')),
+      // The package allow-list plus a fixed list of our own modules (see LIVE_OWN_SOURCES).
+      ...base.plugins.filter((p) => !(p instanceof NoWalletPlugin)),
+      new NoWalletPlugin({ ownSources: LIVE_OWN_SOURCES, root: __dirname }),
+    ],
+    devServer: undefined,
+  };
+};
+
+module.exports = (env, argv) => [publicPage(env, argv), adminPage(env, argv), livePage(env, argv)];

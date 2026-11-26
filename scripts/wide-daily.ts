@@ -37,10 +37,12 @@ import * as path from 'path';
 import { STATE_DIR } from '../bot/config';
 
 const ROOT = path.join(__dirname, '..');
-const BOT = path.join(ROOT, STATE_DIR);
-const HIST = path.join(ROOT, 'data', 'llama', 'history');
-const PRICES = path.join(ROOT, 'data', 'llama', 'prices');
-const UNIVERSE = path.join(ROOT, 'data', 'llama', 'universe.json');
+const BOT = path.resolve(ROOT, STATE_DIR); // resolve: STATE_DIR may be absolute (Live demo)
+// BOT_LLAMA_DIR: the Live demo's DefiLlama folder outside the clone (phase 5); default unchanged.
+const LLAMA = process.env.BOT_LLAMA_DIR ? path.resolve(process.env.BOT_LLAMA_DIR) : path.join(ROOT, 'data', 'llama');
+const HIST = path.join(LLAMA, 'history');
+const PRICES = path.join(LLAMA, 'prices');
+const UNIVERSE = path.join(LLAMA, 'universe.json');
 const OUT_PATH = path.join(BOT, 'wide-daily.json');
 fs.mkdirSync(PRICES, { recursive: true });
 

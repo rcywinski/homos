@@ -22,7 +22,7 @@ import { STATE_DIR } from './config';
 import { readVerdicts } from './candidates';
 import { readLedger } from './ledger';
 
-const DIR = path.join(__dirname, '..', STATE_DIR);
+const DIR = path.resolve(__dirname, '..', STATE_DIR);
 const STATE_PATH = path.join(DIR, 'state.json');
 const PROPOSALS_PATH = path.join(DIR, 'proposals.json');
 

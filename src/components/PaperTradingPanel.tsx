@@ -91,13 +91,17 @@ function latestFor(history: PaperHistoryPoint[], poolId: string): PaperHistoryPo
   return pts.reduce((a, b) => (Date.parse(b.ts) > Date.parse(a.ts) ? b : a));
 }
 
-const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHistoryPoint[]; events: PaperEvent[]; capitalPerPoolUsd: number }> = ({
-  poolId,
-  position,
-  history,
-  events,
-  capitalPerPoolUsd,
-}) => {
+const PoolCard: FC<{
+  poolId: string;
+  position: PaperPosition;
+  history: PaperHistoryPoint[];
+  events: PaperEvent[];
+  capitalPerPoolUsd: number;
+  label: string;
+  showStartDate?: boolean;
+  showValueRange?: boolean;
+  note?: string | null;
+}> = ({ poolId, position, history, events, capitalPerPoolUsd, label, showStartDate, showValueRange, note }) => {
   const last = latestFor(history, poolId);
   const equity = last?.equityUsd ?? position.capitalUsd ?? capitalPerPoolUsd;
   const hodl = last?.hodlUsd ?? capitalPerPoolUsd;
@@ -111,7 +115,7 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
     <div className="paper-pool-card">
       <div className="paper-pool-header">
         <span>
-          <span title={statusTitle(position.status, last?.inRange)}>{statusIcon(position.status, last?.inRange)}</span> {poolLabel(poolId)}
+          <span title={statusTitle(position.status, last?.inRange)}>{statusIcon(position.status, last?.inRange)}</span> {label}
           {trendDown && (
             <span className="paper-badge-trend-down" title="Trend safety-switch signal (price below EMA)">
               {' '}
@@ -121,6 +125,12 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
         </span>
         <span className="paper-pool-equity">{fmtUsd(equity)}</span>
       </div>
+      {showStartDate && (
+        <div className="muted paper-pool-start">
+          {position.status === 'pending' || !position.startedAt ? 'not started yet' : `started ${new Date(position.startedAt).toLocaleString('pl-PL')}`}
+        </div>
+      )}
+      {note && <div className="muted paper-pool-note">{note}</div>}
 
       {/* Out-of-range timer. Shown ONLY when the
           position is open and out of range. `outOfRangeSince` resets
@@ -174,9 +184,11 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
         </div>
       )}
 
-      {poolHistory.length >= 2 ? (
+      {position.status === 'pending' ? (
+        <div className="morning-note muted">waiting for market data from the network; no position opened yet.</div>
+      ) : poolHistory.length >= 2 ? (
         <>
-          <Sparkline points={poolHistory} events={poolEvents} />
+          <Sparkline points={poolHistory} events={poolEvents} showRange={showValueRange} />
           <PriceRangeChart poolId={poolId} points={poolHistory} events={poolEvents} />
         </>
       ) : (
@@ -188,9 +200,18 @@ const PoolCard: FC<{ poolId: string; position: PaperPosition; history: PaperHist
 
 interface Props {
   bot: UseBotApi;
+  /** Optional (the Live page): the label of a pool, given the default "USDC/WETH · 0.30%", for example with the network. */
+  poolLabel?: (poolId: string, defaultLabel: string) => string;
+  /** Optional (the Live page): the start date on every card. */
+  showStartDate?: boolean;
+  /** Optional (the Live page): the value range under the equity chart. */
+  showValueRange?: boolean;
+  /** Optional (the Live page): a short line on a pool's card, for example about the age of its market statistics. */
+  poolNote?: (poolId: string) => string | null;
 }
 
-const PaperTradingPanel: FC<Props> = ({ bot }) => {
+const PaperTradingPanel: FC<Props> = ({ bot, poolLabel: labelFor, showStartDate, showValueRange, poolNote }) => {
+  const label = (poolId: string) => (labelFor ? labelFor(poolId, poolLabel(poolId)) : poolLabel(poolId));
   const { paper, paperStatus } = bot;
 
   if (paperStatus === 'not-started') {
@@ -249,7 +270,7 @@ const PaperTradingPanel: FC<Props> = ({ bot }) => {
         </div>
       </div>
       <div className="muted paper-subtitle">
-        simulation ${state.capitalPerPoolUsd.toLocaleString()}/pool, started {new Date(state.startedAt).toLocaleDateString('pl-PL')}
+        simulation ${state.capitalPerPoolUsd.toLocaleString('en-US')}/pool, started {new Date(state.startedAt).toLocaleDateString('pl-PL')}
       </div>
       <div className="muted status-legend">
         🟢 in range · ⚠️ out of range (not earning) · 💤 in cash · ⏳ before start · ⛔ trend signal
@@ -267,6 +288,10 @@ const PaperTradingPanel: FC<Props> = ({ bot }) => {
               history={history}
               events={events ?? []}
               capitalPerPoolUsd={state.capitalPerPoolUsd}
+              label={label(poolId)}
+              showStartDate={showStartDate}
+              showValueRange={showValueRange}
+              note={poolNote ? poolNote(poolId) : null}
             />
           ))}
         </div>
@@ -281,7 +306,7 @@ const PaperTradingPanel: FC<Props> = ({ bot }) => {
             <div key={`${e.ts}-${e.poolId}-${i}`} className="paper-event-row">
               <span className="paper-event-icon">{EVENT_ICON[e.kind] ?? '•'}</span>
               <span className="muted paper-event-date">{new Date(e.ts).toLocaleString('pl-PL')}</span>
-              <span className="paper-event-pool">{poolLabel(e.poolId)}</span>
+              <span className="paper-event-pool">{label(e.poolId)}</span>
               <span className="paper-event-kind muted">{e.kind}</span>
             </div>
           ))}

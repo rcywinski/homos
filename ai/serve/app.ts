@@ -31,6 +31,7 @@ import type { RequestLog } from './log';
 import { LoadFailed, LoadRefused, Models, type ModelBackend, type ModelsView } from './models-state';
 import { GpuQueue, JobCancelled, JobTimeout, QueueRefused } from './queue';
 import { clientIp, RateLimiter } from './ratelimit';
+import { liveRouter, type LiveOptions } from './live-proxy';
 import { securityHeaders } from './headers';
 import { cleanQuestion, isPlainQuestion } from './scope';
 import { BAD_QUESTION } from './texts';
@@ -67,6 +68,8 @@ export interface AppOptions {
   guest?: GuestOptions;
   /** The admin page (step 4.10c); omitted: /admin and /api/admin answer 404. */
   admin?: AdminOptions;
+  /** The "Live" page's reads (phase 5, step 5.2); omitted: /live/api answers 404. */
+  live?: LiveOptions;
 }
 
 export interface AdminOptions {
@@ -236,7 +239,7 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
     const q = opts.queue.state();
     const up = await opts.probe.up().catch(() => false);
     const status = opts.paused() ? 'paused' : !up ? 'model-offline' : q.running && q.waiting >= q.maxWaiting ? 'busy' : 'up';
-    res.set('cache-control', 'no-store').json({ status, queue: { waiting: q.waiting, max: q.maxWaiting }, engine: deps.engine, models: models.view() });
+    res.set('cache-control', 'no-store').json({ status, queue: { waiting: q.waiting, max: q.maxWaiting }, engine: deps.engine, models: models.view(), live: Boolean(opts.live) });
   });
 
   app.get('/api/models', (_req, res) => {
@@ -538,6 +541,12 @@ export function createApp(deps: AskDeps, opts: AppOptions) {
   app.use('/api', (_req, res) => {
     res.status(404).json({ error: 'not-found' });
   });
+
+  // Phase 5 "Live" page: reads forwarded to the read-only bot API on 127.0.0.1 (allow-list, cache, size cap, limits).
+  // Without it, /live, the page and its API are the plain 404 below, and the archive page shows no Live link (it reads
+  // `live` from /api/health), so an archive deploy before the Live demo looks exactly as it did.
+  if (opts.live) app.use('/live/api', liveRouter(opts.live));
+  else app.use('/live', (_req, res) => res.status(404).type('text/plain').send('Not found'));
 
   // The wallet data lives outside the built page. A missing file is a plain 404, and the page then hides the tab.
   app.get('/data/wallet.json', (_req, res) => {

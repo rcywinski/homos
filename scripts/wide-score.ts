@@ -35,7 +35,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { BOT_POOLS, STATE_DIR } from '../bot/config';
 
-const OUT_DIR = path.join(__dirname, '..', 'data', 'wide-score');
+// BOT_DATA_DIR: the Live demo keeps its dated score files outside the clone (phase 5); default unchanged.
+const OUT_DIR = path.join(process.env.BOT_DATA_DIR ? path.resolve(process.env.BOT_DATA_DIR) : path.join(__dirname, '..', 'data'), 'wide-score');
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
 // ── configuration ───────────────────────────────────────────────────────────
@@ -274,7 +275,7 @@ function ratioStats(pa: { t: number; p: number }[], pb: { t: number; p: number }
   // Ranking next to the old one, not instead of it.
   try {
     const TOP_N = 10;
-    const stateDir = path.join(__dirname, '..', STATE_DIR);
+    const stateDir = path.resolve(__dirname, '..', STATE_DIR); // resolve: STATE_DIR may be absolute (Live demo)
     fs.mkdirSync(stateDir, { recursive: true });
     const streakPath = path.join(stateDir, 'wide-ranking-streaks.json');
     const st: { lastDay?: string; streaks: Record<string, number> } = fs.existsSync(streakPath)

@@ -73,7 +73,7 @@ const STABLE_SYMBOLS = new Set(['USDC', 'USDT', 'DAI', 'USDBC', 'USDE', 'FRAX', 
  *  a bare "$" when poolId is unknown or the pair has a stablecoin leg. */
 export function fmtQuoteForPool(poolId: string, value: number): string {
   const meta = BOT_POOL_META.find((m) => m.id === poolId);
-  const usd = `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  const usd = `$${value.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
   if (!meta) return usd;
   const otherSide = meta.sym0.includes('ETH') ? meta.sym1 : meta.sym0;
   if (STABLE_SYMBOLS.has(otherSide.toUpperCase())) return usd;
@@ -167,7 +167,9 @@ const EventMarkers: FC<{ events: ChartEvent[]; x: (t: number) => number; tMin: n
   </>
 );
 
-export const Sparkline: FC<{ points: EquityChartPoint[]; events: ChartEvent[] }> = ({ points, events }) => {
+/** `showRange` (optional, used by the Live page): a caption with the lowest and highest value drawn, so a small move
+ *  that fills the chart height is not read as a large one. Without it the chart renders as before. */
+export const Sparkline: FC<{ points: EquityChartPoint[]; events: ChartEvent[]; showRange?: boolean }> = ({ points, events, showRange }) => {
   const pts = toTsPoints(points);
   if (pts.length < 2) return null;
 
@@ -195,6 +197,11 @@ export const Sparkline: FC<{ points: EquityChartPoint[]; events: ChartEvent[] }>
         <polyline className="paper-spark-equity" points={equityLine} fill="none" />
         <EventMarkers events={events} x={x} tMin={pts[0].tsMs} tMax={pts[pts.length - 1].tsMs} height={SPARK_H} />
       </svg>
+      {showRange && (
+        <div className="muted paper-range-caption">
+          value shown: {statFmtUsd(yMin)} to {statFmtUsd(yMax)}
+        </div>
+      )}
       {bands.length > 0 && <div className="muted paper-range-legend">yellow background = out of range{pts.some((p) => p.status === 'cash') ? ' · grey background = cash (safety switch)' : ''}</div>}
     </>
   );

@@ -36,7 +36,7 @@ const server = (name: string, port: number, extra: Record<string, string>) => ({
   },
 });
 
-export const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807, switching: 8808, fakeAccess: 8809, admin: 8810 };
+export const PORTS = { main: 8801, tight: 8802, staticOnly: 8803, off: 8804, loadDesktop: 8805, loadPhone: 8806, loadFail: 8807, switching: 8808, fakeAccess: 8809, admin: 8810, liveBot: 8811, live: 8812, liveDown: 8813 };
 /** Step 4.10c: the admin server's two switch files, written by the admin test. */
 export const ADMIN_MASTER = path.join(os.tmpdir(), 'homos-e2e-admin-SWITCH');
 export const ADMIN_STATE = path.join(os.tmpdir(), 'homos-e2e-admin-state', 'admin-switch');
@@ -95,6 +95,17 @@ export default defineConfig({
           SERVE_ADMIN_EMAIL: 'owner@example.com',
           SERVE_ACCESS_CERTS_URL: `http://127.0.0.1:${PORTS.fakeAccess}/certs`,
         }),
+        // Phase 5, step 5.3: a stand-in bot behind the real read-only bot API, and a server forwarding /live/api to it.
+        {
+          // Builds the test-only harness first (showcase/e2e/harness), then serves it and the stand-in bot's API.
+          command: `npx webpack --config ${path.join('showcase', 'e2e', 'harness.webpack.js')} && node --import tsx ${path.join('showcase', 'e2e', 'live-fixture-bot.ts')} ${PORTS.liveBot}`,
+          url: `http://127.0.0.1:${PORTS.liveBot}/health`,
+          reuseExistingServer: false,
+          timeout: 60_000,
+        },
+        // The Live forward configured, but nothing listens at the bot address (8814): the page says "unavailable".
+        server('live-down', PORTS.liveDown, { SERVE_LIVE_BOT_URL: 'http://127.0.0.1:8814' }),
+        server('live', PORTS.live, { SERVE_LIVE_BOT_URL: `http://127.0.0.1:${PORTS.liveBot}`, SERVE_LIMIT_HOUR: '1000', SERVE_LIMIT_DAY: '1000', SERVE_LIMIT_GLOBAL_DAY: '100000' }),
         {
           command: `node --import tsx ${path.join('showcase', 'e2e', 'static-only.ts')} ${PORTS.staticOnly}`,
           url: `http://127.0.0.1:${PORTS.staticOnly}/`,

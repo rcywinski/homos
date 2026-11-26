@@ -175,7 +175,8 @@ const RankingRowView: FC<{
   verdict: CandidateVerdict | undefined;
   wideDailyPool: WideDailyPool | undefined;
   backtestEntry: WideBacktestEntry | undefined;
-}> = ({ row, verdict, wideDailyPool, backtestEntry }) => {
+  hideFullRun?: boolean;
+}> = ({ row, verdict, wideDailyPool, backtestEntry, hideFullRun }) => {
   const status = candidateStatus(row, verdict);
   const title = verdict ? verdictTooltip(verdict) : undefined;
   return (
@@ -190,7 +191,7 @@ const RankingRowView: FC<{
       <ModelDziennyCell w={wideDailyPool?.windows.w365} error={wideDailyPool?.error} />
       <ModelDziennyCell w={wideDailyPool?.windows.w720} error={wideDailyPool?.error} />
       <FlatCell pool={wideDailyPool} />
-      <PelnyPrzebiegCell entry={backtestEntry} />
+      {!hideFullRun && <PelnyPrzebiegCell entry={backtestEntry} />}
       <StatusCell status={status} title={title} />
     </tr>
   );
@@ -204,7 +205,8 @@ const WideRankingRowView: FC<{
   verdict: CandidateVerdict | undefined;
   wideDailyPool: WideDailyPool | undefined;
   backtestEntry: WideBacktestEntry | undefined;
-}> = ({ row, verdict, wideDailyPool, backtestEntry }) => {
+  hideFullRun?: boolean;
+}> = ({ row, verdict, wideDailyPool, backtestEntry, hideFullRun }) => {
   const status = candidateStatus(row, verdict);
   const title = verdict ? verdictTooltip(verdict) : undefined;
   const scoreClass = row.apy7d > 0 ? 'wideranking-score-pos' : 'wideranking-score-neg';
@@ -232,7 +234,7 @@ const WideRankingRowView: FC<{
       <ModelDziennyCell w={wideDailyPool?.windows.w365} error={wideDailyPool?.error} />
       <ModelDziennyCell w={wideDailyPool?.windows.w720} error={wideDailyPool?.error} />
       <FlatCell pool={wideDailyPool} />
-      <PelnyPrzebiegCell entry={backtestEntry} />
+      {!hideFullRun && <PelnyPrzebiegCell entry={backtestEntry} />}
       <StatusCell status={status} title={title} />
     </tr>
   );
@@ -241,6 +243,10 @@ const WideRankingRowView: FC<{
 interface Props {
   bot: UseBotApi;
   variant?: 'apy' | 'wide';
+  /** Optional (the Live page): leave out the "full run" column while its results file is not available. */
+  hideFullRun?: boolean;
+  /** Optional (the Live page): a note shown under the section's own footnotes when it is open. */
+  footer?: React.ReactNode;
 }
 
 /**
@@ -252,7 +258,7 @@ interface Props {
  * INSIDE the section body,
  * and the header is always visible, as in Bot telemetry.
  */
-const TopRankingPanel: FC<Props> = ({ bot, variant = 'apy' }) => {
+const TopRankingPanel: FC<Props> = ({ bot, variant = 'apy', hideFullRun, footer }) => {
   const [expanded, setExpanded] = useState(false);
   const isWide = variant === 'wide';
   const { ranking, rankingStatus, wideRanking, wideRankingStatus, candidates, wideDaily, wideBacktests } = bot;
@@ -336,9 +342,11 @@ const TopRankingPanel: FC<Props> = ({ bot, variant = 'apy' }) => {
                             </th>
                             <th title="daily model of the wide band vs HODL 50/50 — window ending today">720d</th>
                             <th>flat</th>
-                            <th title="full run = backtest engine on transaction history (the judge), pp/30d window">
-                              full run
-                            </th>
+                            {!hideFullRun && (
+                              <th title="full run = backtest engine on transaction history (the judge), pp/30d window">
+                                full run
+                              </th>
+                            )}
                             <th>status</th>
                           </tr>
                         ) : (
@@ -353,9 +361,11 @@ const TopRankingPanel: FC<Props> = ({ bot, variant = 'apy' }) => {
                             </th>
                             <th title="daily model of the wide band vs HODL 50/50 — window ending today">720d</th>
                             <th>flat</th>
-                            <th title="full run = backtest engine on transaction history (the judge), pp/30d window">
-                              full run
-                            </th>
+                            {!hideFullRun && (
+                              <th title="full run = backtest engine on transaction history (the judge), pp/30d window">
+                                full run
+                              </th>
+                            )}
                             <th>status</th>
                           </tr>
                         )}
@@ -371,6 +381,7 @@ const TopRankingPanel: FC<Props> = ({ bot, variant = 'apy' }) => {
                               verdict={row.llamaUuid ? verdictByPool.get(row.llamaUuid) : undefined}
                               wideDailyPool={wideDailyPool}
                               backtestEntry={backtestEntry}
+                              hideFullRun={hideFullRun}
                             />
                           ) : (
                             <RankingRowView
@@ -379,6 +390,7 @@ const TopRankingPanel: FC<Props> = ({ bot, variant = 'apy' }) => {
                               verdict={row.llamaUuid ? verdictByPool.get(row.llamaUuid) : undefined}
                               wideDailyPool={wideDailyPool}
                               backtestEntry={backtestEntry}
+                              hideFullRun={hideFullRun}
                             />
                           );
                         })}
@@ -400,6 +412,7 @@ const TopRankingPanel: FC<Props> = ({ bot, variant = 'apy' }) => {
               </div>
             </>
           )}
+          {footer}
         </div>
       )}
     </div>
