@@ -821,7 +821,7 @@
             "d6"
           ],
           "add": true,
-          "reason": "gap filled: the fix pulled on the box on 03.09"
+          "reason": "gap filled: the fix pulled on the box on 03.09 (a pull only, no restart; the fact says deployment, not restart)"
         }
       ]
     },

@@ -149,7 +149,7 @@ a span is required only if a reader could state those facts from it alone.
 | CONTEXT.md:344-346 |  | required | f | nie — ta sama klasa co „dryf kosztów wejścia" z 01.09, fix z 01.09 nie | (bilans końcowy transzy musi mieć czyste rozbicie), nie dziś. vs HODL | ledger bug to fix before 24.09, not today |
 | CONTEXT.md:1023-1023 | added | required | d4 | Paczka u CC-Mac; CC-Win: pull + restart homos-bot. | (one line) | gap filled: entry of 01.09, observer fix, CC-Win pull and restart homos-bot |
 | CONTEXT.md:863-864 | added | required | d5 | starym, etykieta „score %/r"). Deploy: CC-Mac push → CC-Win build + | restart homos-server + ręczny `npm run wide:score` na start. | gap filled: entry of 02.09, CC-Win build and restart homos-server |
-| HANDOFF.md:131-134 | added | required | d6 | (PULL FIXU + STAN NOCNEGO PRZEBIEGU ODEBRANE przez Fable 03.09 ~rano — | skasowany. NA DZIŚ BRAK ZLECEŃ.) | gap filled: the fix pulled on the box on 03.09 |
+| HANDOFF.md:131-134 | added | required | d6 | (PULL FIXU + STAN NOCNEGO PRZEBIEGU ODEBRANE przez Fable 03.09 ~rano — | skasowany. NA DZIŚ BRAK ZLECEŃ.) | gap filled: the fix pulled on the box on 03.09 (a pull only, no restart; the fact says deployment, not restart |
 
 ## dated-09
 
