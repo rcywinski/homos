@@ -1,0 +1,303 @@
+{
+  "batch": 5,
+  "date": "2026-11-26",
+  "questions": [
+    {
+      "id": "ho-why-10",
+      "category": "why",
+      "answerable": "yes",
+      "author": "owner",
+      "question": "What led the owner to go in with real capital, and was that backed by tests in any way?",
+      "reference": "Partly. A staged entry was first recommended on 19.08 from 365-day walk-forwards over 22 windows, in which two Base pools passed the gate (cbBTC/WETH 0.05% at 82% winning windows and worst -1.8, WETH/USDC 0.05% at 68% and -2.6); paper trading was then only two days old and left out of the weights. On 26.08 the 720-day window failed every configuration and the money waited in USDC. On 27.08, before entering, the owner had two more tests run: a 90-day replay with $2.5k per pool, where a fresh window (29.05 to 27.08, ETH +24.7%) reversed the stale window's verdict while the ranking stayed the same in both (passive wide >= HODL >= flat-only >= active), and his own FlatWide hybrid, implemented and computed before entry on 365 days for both pools, which came out at least as good as pure passive wide on both. He chose the hybrid on both pools and entered the same day through the cockpit; the journal records the entry as an operational experiment on a small stake, with a FOMO note.",
+      "facts": {
+        "a": "19.08 recommendation of a staged entry rested on 365-day walk-forwards (22 windows): two Base pools passed the gate (cbBTC/WETH 82% / -1.8, WETH/USDC 0.05% 68% / -2.6)",
+        "b": "paper trading was then only two days old and left out of the weights",
+        "c": "the owner's FlatWide hybrid was tested before entry on 365 days for both pools: at least as good as pure passive wide on both"
+      },
+      "spans": [
+        {
+          "file": "journal/KAPITAL-REKOMENDACJA.md",
+          "lines": [
+            10,
+            13
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "19.08 recommendation: sources were 365d walk-forwards over 22 windows; paper trading only 2 days old, left out of the weights"
+        },
+        {
+          "file": "journal/KAPITAL-REKOMENDACJA.md",
+          "lines": [
+            24,
+            28
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "validation table: cbBTC/WETH 82%/-1.8 and WETH/USDC 0.05% 68%/-2.6 pass the gate"
+        },
+        {
+          "file": "docs/DECISION-LOG.md",
+          "lines": [
+            25,
+            25
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "27 Aug row: product = FlatWide on both pools, tested before entry on 365 d x 2 pools, hybrid >= pure passive on both (the row also holds the cbBTC near-pass and the FOMO note, dev facts not scored here)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2050,
+            2058
+          ],
+          "role": "supporting",
+          "reason": "27.08 morning: the owner asks for a 90d test at $2.5k per pool; stale window result; fresh run ordered before the capital decision. Shares a chunk with dev why-08 evidence, so not scored"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2060,
+            2064
+          ],
+          "role": "supporting",
+          "reason": "27.08 noon: the fresh window (ETH +24.7%) reverses the verdict; ranking identical in both windows. Same chunk as why-08 evidence, not scored"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            64,
+            66
+          ],
+          "role": "supporting",
+          "reason": "the owner's hybrid tested before entry (WF_SET=hybrid, 365d x 2 pools); same chunk as why-02 evidence, not scored"
+        },
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            69,
+            71
+          ],
+          "role": "supporting",
+          "reason": "the owner ran the hybrid the data supported instead of the frozen narrow strategy"
+        }
+      ],
+      "related": [],
+      "closestDev": "why-02 (why the commitment stayed small) scores 'operational experiment', '720d 0/21' and the FOMO note, and dated-01 scores when the money entered; this item scores only the tests behind the decision (19.08 365d walk-forwards, the hybrid tested before entry), and states the why-02 facts and the 27.08 90-day replay unscored. why-08 scores the cbBTC near-pass of 27.08, so CONTEXT 2069-2077 is not used",
+      "notes": "Owner's question in his own words (Polish original: \"co sklonilo wlasciciela do wejscia realnym kapitalem, czy zostalo to jakos poparte testami?\"). Medium to hard: the answer is 'partly', with the decisive 720d result against and the late tests for. The 90-day replay of 27.08 stays in the reference but is not scored: its only source is the 27.08 journal entry, whose chunk holds dev why-08 evidence. The parts that are dev facts (720d 0/21, the 26.08 wait, operational experiment, FOMO note, cbBTC closest to the gate) stay in the reference but are not scored. The 26.08 facts sit in CONTEXT 100 and 104, which are dev why-02 spans and are therefore not listed here."
+    },
+    {
+      "id": "ho-why-11",
+      "category": "why",
+      "answerable": "yes",
+      "author": "owner",
+      "question": "How was a position rebalanced, that is, how were the ranges moved: was it the same position or did a new one have to be opened, and did it happen automatically or did a new transaction have to be made?",
+      "reference": "A range cannot be moved on an existing Uniswap v3 position, so a rebalance closed the old position and opened a new one, and nothing happened automatically: approving a rebalance proposal meant two or three signatures in Rabby, in order. Step 1 is one multicall on the NFT position manager, decreaseLiquidity of 100% plus collect, so fees come out with the liquidity; step 2 is a swap that evens out the token proportions for the new range (exactInputSingle on SwapRouter02 in the same pool), skipped when the deviation is under 2% of the value; step 3 is the mint of the new range, rebuilt just before sending from the actual balances (the plan only holds an estimate), with an extra approval if the real amount exceeds the approved one. Progress is saved in the browser (localStorage), so a failure in the middle leaves the funds safe in the wallet and the window offers to finish the remaining step (for example 'finish step 2/3').",
+      "facts": {
+        "a": "a rebalance closes the old position and mints a new one; it is not automatic: two or three signatures in Rabby, in order",
+        "b": "step 1: one multicall on the NFT position manager, decreaseLiquidity 100% + collect",
+        "c": "step 2: a swap evening out the token proportions in the same pool, skipped when the deviation is under 2% of value",
+        "d": "step 3: mint of the new range, rebuilt from the actual balances just before sending (extra approve if needed)",
+        "e": "progress saved in localStorage: a failure mid-way leaves the funds in the wallet and the UI offers 'finish step 2/3'"
+      },
+      "spans": [
+        {
+          "file": "docs/UI-DESIGN.md",
+          "lines": [
+            125,
+            132
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "e"
+          ],
+          "reason": "section 6, rebalance sequence: two or three Rabby signatures, multicall decrease+collect, proportion swap skipped when close, mint, safe state and 'finish step 2/3'"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3226,
+            3235
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "c",
+            "d",
+            "e"
+          ],
+          "reason": "10.08 rebalanceBuilder: multicall decrease(100%)+collect(MAX), swap on SwapRouter02 in the same pool skipped under 2%, mint from actual balances, saveProgress/loadProgress"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2677,
+            2689
+          ],
+          "role": "required",
+          "facts": [
+            "d",
+            "e"
+          ],
+          "reason": "10.08 [Approve] for REBALANCE: approvals, steps 1-3, mint rebuilt just before sending, extra approve, resume after refresh"
+        }
+      ],
+      "related": [],
+      "closestDev": "id-03 (was #5886957's range ever changed) has as its fact d that a range change means closing and minting a new position, and why-06 has as its fact a that the owner signed every transaction; this item restates both in fact a but scores the mechanism (the three steps, the swap threshold, the mint from actual balances, resume after a failure), which no dev question asks for; dated-02 dates the first rebalance and is not used",
+      "notes": "Owner's questions 3 and 4 merged into one item in his words (Polish originals: \"czy rebalancing robil sie automatycznie czy trzeba bylo zawierac nowa transakcje?\" and \"w jaki sposob robil sie rebalancing pozycji, przestawienie zakresow? czy byly to te same pozycje czy trzeba bylo otwierac nowe?\"). Explanatory 'how' question labelled why. Medium. The live example (the cbBTC leg through #5887690, #5908083 and #5978579, CONTEXT 419-420) is dev id-02 and id-03 evidence and is not listed."
+    },
+    {
+      "id": "ho-why-09",
+      "category": "why",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "Why did HOMOS stick to major tokens instead of the exotic pools that advertised much higher yields?",
+      "reference": "Because the advertised yields did not survive a test with real swaps. The pool-selection meta-backtest of 10.08 showed exotic pools at 74.8% fee-APR against 50.7% for majors, but without impermanent loss. A tick-level backtest of WTAO/WETH 1% on mainnet (90 days, 10 750 swaps) then showed a real fee yield of about 5-20% a year for a passive position, the pool's result dominated by the token's own price, and narrow ranges on a trending exotic realising losses (±5%: $1 316 of fees but -33.8 points vs HODL). On 10.08 the exotic sleeve was set to 0% and the majors-only filter counted as confirmed by a third independent test; exposure to an exotic was a bet on the token, not an LP strategy. On 11.08 that table turned out to be in the wrong units (WTAO treated as a $1 stable, so the 'uptrend' was a fall, HODL -70.5% a year); the reasoning was corrected (the token's beta of -70% a year crushes an LP alpha of about +7 points) and majors-only stayed.",
+      "facts": {
+        "a": "10.08 meta-backtest: exotics 74.8% vs majors 50.7% fee-APR, but without impermanent loss",
+        "b": "tick-level WTAO/WETH 1% (90 days, 10 750 swaps): real passive fee yield ~5-20%/yr, result dominated by the token's beta; narrow ranges realise losses",
+        "c": "10.08: exotic sleeve 0%, majors-only confirmed by a third independent test; an exotic is a bet on the token, not an LP strategy",
+        "d": "11.08 correction: the table was in WTAO units (a fall, not a rise); token beta -70%/yr crushes LP alpha ~+7 pp; majors-only stays"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3070,
+            3070
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "key caveat: exotics 74.8% vs majors-only 50.7% fee-APR, without IL"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3265,
+            3274
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "c"
+          ],
+          "reason": "10.08 B5 closed: advertised 60-80% does not survive tick-level; narrow ranges realise IL; sleeve 0%; majors-only confirmed a third time"
+        },
+        {
+          "file": "journal/RESEARCH-QUEUE.md",
+          "lines": [
+            80,
+            87
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "11.08: table invalidated (WTAO units), corrected numbers, revised reasoning, majors-only stays"
+        },
+        {
+          "file": "docs/ALGORITHM.md",
+          "lines": [
+            20,
+            25
+          ],
+          "role": "required",
+          "facts": [
+            "c",
+            "d"
+          ],
+          "reason": "selector filter: majors-only confirmed 3x, exotic beta -70%/yr vs LP alpha +7 pp; exotic sleeve 0% (10 Aug, confirmed after the units fix)"
+        }
+      ],
+      "related": [],
+      "closestDev": "why-08 (why cbBTC/WETH was riskier) uses CONTEXT 3817-3828, the units fix that also covers WTAO, and asks about crypto beta of a major pair; this item asks about exotic tokens and uses RESEARCH-QUEUE 80-87 for the correction, not the dev range",
+      "notes": "Medium. A trap: the 10.08 table says the regime was rising (+74.9%); the 11.08 correction reverses it."
+    },
+    {
+      "id": "ho-na-07",
+      "category": "no-answer",
+      "answerable": "partial",
+      "author": "CC-Mac",
+      "question": "How were the rebalance swaps protected against MEV sandwich attacks?",
+      "reference": "The corpus has the requirement but no implementation. The 10.08 plan says a rebalance includes a swap, so a bot sending transactions through the public mempool would be sandwiched regularly, and it requires a private RPC or protected transactions, slippage limits computed from the current pool depth and deadlines, adding that the problem is smaller on an L2 than on mainnet but not zero. Nothing records a private RPC or protected transactions being set up. The only protection recorded is the slippage limit: the proportion swap of a rebalance carries a minimum output (in the 10.08 builder test, spot minus the 0.3% pool fee minus 0.5% slippage), and the live capital was on Base, an L2.",
+      "spans": [],
+      "related": [
+        {
+          "file": "docs/PLAN.md",
+          "lines": [
+            95,
+            97
+          ],
+          "reason": "section 3.5 MEV and execution: sandwiching through the public mempool, private RPC / protected transactions, slippage from depth, deadlines, smaller on L2"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3236,
+            3238
+          ],
+          "reason": "10.08 builder test: swap with min out = spot minus 0.3% fee minus 0.5% slippage"
+        }
+      ],
+      "closestDev": "none asks about MEV or execution protection; why-06 (no automatic execution) and dated-02 (first rebalance) do not cover the swap's protection; ho-why-11 in this batch describes the swap step but not its protection",
+      "notes": "Expected: correct the premise (a requirement in the plan, no private RPC recorded), name the slippage limit; describing a working MEV protection is an error. Medium: the plan reads like a description of what was built."
+    },
+    {
+      "id": "ho-na-08",
+      "category": "no-answer",
+      "answerable": "partial",
+      "author": "CC-Mac",
+      "question": "Which machine-learning model did the bot use to predict where the price would go?",
+      "reference": "None: the corpus mentions no machine-learning model, and the project's question was whether a rules-based strategy with no discretion and no forecasting could beat holding the same two tokens. The bot's choices came from fixed rules calibrated in backtests (pool ranking by 7-day fee yield, range width w = k x sigma x sqrt(7d) from measured volatility). The only 'forecast' in the application was a profit-forecast panel showing backtest APRs of the hard-coded v1.2 strategies from a file of 17.08; it was removed on 29.08 because it showed an algorithm that was no longer played.",
+      "spans": [],
+      "related": [
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            9,
+            11
+          ],
+          "reason": "the question of the project: a rules-based strategy, no discretion, no forecasting"
+        },
+        {
+          "file": "docs/ALGORITHM.md",
+          "lines": [
+            18,
+            19
+          ],
+          "reason": "ranking by 7d average apyBase"
+        },
+        {
+          "file": "docs/ALGORITHM.md",
+          "lines": [
+            29,
+            30
+          ],
+          "reason": "width w = k x sigma_daily x sqrt(7d)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1436,
+            1444
+          ],
+          "reason": "29.08: profit forecast removed; forecast.ts had the v1.2 strategies hard-coded, forecast.json from 17.08"
+        }
+      ],
+      "closestDev": "none asks about prediction or the forecast panel; why-10 uses CASE-STUDY 8 as supporting only, and ALGORITHM 87-89 (why-08) is a different section",
+      "notes": "Expected: correct the premise (no ML model; rules calibrated in backtests), and not mistake the removed profit-forecast panel for a model. Easy to medium."
+    }
+  ]
+}
