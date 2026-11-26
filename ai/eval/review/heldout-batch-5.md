@@ -13,7 +13,7 @@ from it alone.
 
 **Reference.** Partly. A staged entry was first recommended on 19.08 from 365-day walk-forwards over 22 windows, in which two Base pools passed the gate (cbBTC/WETH 0.05% at 82% winning windows and worst -1.8, WETH/USDC 0.05% at 68% and -2.6); paper trading was then only two days old and left out of the weights. On 26.08 the 720-day window failed every configuration and the money waited in USDC. On 27.08, before entering, the owner had two more tests run: a 90-day replay with $2.5k per pool, where a fresh window (29.05 to 27.08, ETH +24.7%) reversed the stale window's verdict while the ranking stayed the same in both (passive wide >= HODL >= flat-only >= active), and his own FlatWide hybrid, implemented and computed before entry on 365 days for both pools, which came out at least as good as pure passive wide on both. He chose the hybrid on both pools and entered the same day through the cockpit; the journal records the entry as an operational experiment on a small stake, with a FOMO note.
 
-**Notes.** Owner's question in his own words (Polish original: "co sklonilo wlasciciela do wejscia realnym kapitalem, czy zostalo to jakos poparte testami?"). Medium to hard: the answer is 'partly', with the decisive 720d result against and the late tests for. The 90-day replay of 27.08 stays in the reference but is not scored: its only source is the 27.08 journal entry, whose chunk holds dev why-08 evidence. The parts that are dev facts (720d 0/21, the 26.08 wait, operational experiment, FOMO note, cbBTC closest to the gate) stay in the reference but are not scored. The 26.08 facts sit in CONTEXT 100 and 104, which are dev why-02 spans and are therefore not listed here.
+**Notes.** Owner's question in his own words (Polish original: "co sklonilo wlasciciela do wejscia realnym kapitalem, czy zostalo to jakos poparte testami?"). Medium to hard: the answer is 'partly', with the decisive 720d result against and the late tests for. The 90-day replay of 27.08 stays in the reference but is not scored: its only source is the 27.08 journal entry, whose chunk holds dev why-08 evidence. The parts that are dev facts (720d 0/21, the 26.08 wait, operational experiment, FOMO note, cbBTC closest to the gate) stay in the reference but are not scored. The 26.08 facts sit in CONTEXT 100 and 104, which are dev why-02 spans and are therefore not listed here. The table at KAPITAL-REKOMENDACJA 24-28 also has a third pool with a conditional pass (WETH/USDC 0.30%, 73% / -2.9, only with the hedge); an answer that mentions it is not wrong.
 
 **Closest dev question:** why-02 (why the commitment stayed small) scores 'operational experiment', '720d 0/21' and the FOMO note, and dated-01 scores when the money entered; this item scores only the tests behind the decision (19.08 365d walk-forwards, the hybrid tested before entry), and states the why-02 facts and the 27.08 90-day replay unscored. why-08 scores the cbBTC near-pass of 27.08, so CONTEXT 2069-2077 is not used
 
@@ -44,11 +44,11 @@ from it alone.
 
 **Reference.** A range cannot be moved on an existing Uniswap v3 position, so a rebalance closed the old position and opened a new one, and nothing happened automatically: approving a rebalance proposal meant two or three signatures in Rabby, in order. Step 1 is one multicall on the NFT position manager, decreaseLiquidity of 100% plus collect, so fees come out with the liquidity; step 2 is a swap that evens out the token proportions for the new range (exactInputSingle on SwapRouter02 in the same pool), skipped when the deviation is under 2% of the value; step 3 is the mint of the new range, rebuilt just before sending from the actual balances (the plan only holds an estimate), with an extra approval if the real amount exceeds the approved one. Progress is saved in the browser (localStorage), so a failure in the middle leaves the funds safe in the wallet and the window offers to finish the remaining step (for example 'finish step 2/3').
 
-**Notes.** Owner's questions 3 and 4 merged into one item in his words (Polish originals: "czy rebalancing robil sie automatycznie czy trzeba bylo zawierac nowa transakcje?" and "w jaki sposob robil sie rebalancing pozycji, przestawienie zakresow? czy byly to te same pozycje czy trzeba bylo otwierac nowe?"). Explanatory 'how' question labelled why. Medium. The live example (the cbBTC leg through #5887690, #5908083 and #5978579, CONTEXT 419-420) is dev id-02 and id-03 evidence and is not listed.
+**Notes.** Owner's questions 3 and 4 merged into one item in his words (Polish originals: "czy rebalancing robil sie automatycznie czy trzeba bylo zawierac nowa transakcje?" and "w jaki sposob robil sie rebalancing pozycji, przestawienie zakresow? czy byly to te same pozycje czy trzeba bylo otwierac nowe?"). Explanatory 'how' question labelled why. Medium. The live example (the cbBTC leg through #5887690, #5908083 and #5978579, CONTEXT 419-420) is dev id-02 and id-03 evidence and is not listed. That a rebalance closes the old position and mints a new one (dev id-03 fact d) and that the owner signed every transaction (dev why-06 fact a) stay in the reference, since they answer the question directly, but are not scored; scored fact a is only the two or three signatures in order.
 
 **Closest dev question:** id-03 (was #5886957's range ever changed) has as its fact d that a range change means closing and minting a new position, and why-06 has as its fact a that the owner signed every transaction; this item restates both in fact a but scores the mechanism (the three steps, the swap threshold, the mint from actual balances, resume after a failure), which no dev question asks for; dated-02 dates the first rebalance and is not used
 
-- **a**: a rebalance closes the old position and mints a new one; it is not automatic: two or three signatures in Rabby, in order (1 span)
+- **a**: not automatic: approving a rebalance proposal meant two or three signatures in Rabby, in order (1 span)
 - **b**: step 1: one multicall on the NFT position manager, decreaseLiquidity 100% + collect (2 spans)
 - **c**: step 2: a swap evening out the token proportions in the same pool, skipped when the deviation is under 2% of value (2 spans)
 - **d**: step 3: mint of the new range, rebuilt from the actual balances just before sending (extra approve if needed) (2 spans)
@@ -104,14 +104,15 @@ Related (should surface, does not answer):
 
 **Question.** Which machine-learning model did the bot use to predict where the price would go?
 
-**Reference.** None: the corpus mentions no machine-learning model, and the project's question was whether a rules-based strategy with no discretion and no forecasting could beat holding the same two tokens. The bot's choices came from fixed rules calibrated in backtests (pool ranking by 7-day fee yield, range width w = k x sigma x sqrt(7d) from measured volatility). The only 'forecast' in the application was a profit-forecast panel showing backtest APRs of the hard-coded v1.2 strategies from a file of 17.08; it was removed on 29.08 because it showed an algorithm that was no longer played.
+**Reference.** None was used or built. The only mention of machine learning in the corpus is a literature finding from the 26.08 review: ML and reinforcement learning give results on the scale of the project's own experiments, not a breakthrough. The project's question was whether a rules-based strategy with no discretion and no forecasting could beat holding the same two tokens, and the bot's choices came from fixed rules calibrated in backtests (pool ranking by 7-day fee yield, range width w = k x sigma x sqrt(7d) from measured volatility). The only 'forecast' in the application was a profit-forecast panel showing backtest APRs of the hard-coded v1.2 strategies from a file of 17.08; it was removed on 29.08 because it showed an algorithm that was no longer played.
 
-**Notes.** Expected: correct the premise (no ML model; rules calibrated in backtests), and not mistake the removed profit-forecast panel for a model. Easy to medium.
+**Notes.** Expected: correct the premise (no ML model was used or built; rules calibrated in backtests). An answer citing the 26.08 literature finding (ML/RL no breakthrough) is correct; one that names a model is an error, and so is mistaking the removed profit-forecast panel for a model. Easy to medium. Reworded after the analysis session's review: the first draft said the corpus never mentions ML.
 
 **Closest dev question:** none asks about prediction or the forecast panel; why-10 uses CASE-STUDY 8 as supporting only, and ALGORITHM 87-89 (why-08) is a different section
 
 **Same section as development ranges (read by hand):**
 
+- journal/CONTEXT.md:2201-2204 is in section journal/CONTEXT.md:2178 ("2026-08-26 ~08:1x–09:0x — PRZEGLĄD TYGODNIOWY (Fable + Rafał"), which also holds ranges of dated-06
 - docs/CASE-STUDY.md:9-11 is in section docs/CASE-STUDY.md:5 ("1. The question"), which also holds ranges of why-10
 - journal/CONTEXT.md:1436-1444 is in section journal/CONTEXT.md:1362 ("2026-08-29 ~rano — BRIEF DZIEŃ 2 + PACZKA „RAPORT/TELEGRAM" "), which also holds ranges of why-01, why-10, dated-07
 
@@ -120,6 +121,8 @@ Related (should surface, does not answer):
 
 | range | first line | last line | reason |
 |---|---|---|---|
+| DECYZJE-2026-08-26.md:134-138 | DECYZJA RAFAŁA ~19:3x–20:xx (po dyskusji i researchu literatury — | skali naszych eksperymentów, nie przełom): **JEDNA OSTATNIA RUNDA | 26.08 decision after the literature review: ML/RL in the literature gives effects on the scale of our experime |
+| CONTEXT.md:2201-2204 | PORZUCENIA formalnie osiągnięty. DYSKUSJA Rafał/Fable + research | literaturze; backtest z bullem i bessą to feature, nie bug — 365d bez | 26.08 discussion and literature research: ML/RL no breakthrough in the literature |
 | CASE-STUDY.md:9-11 | The question I wanted to answer with my own money was narrower than "can you make money as an | same two tokens 50/50, after fees, slippage, gas and impermanent loss, across market regimes?** | the question of the project: a rules-based strategy, no discretion, no forecasting |
 | ALGORITHM.md:18-19 | - Ranking: **7d average apyBase** (not yesterday's top — 74.8% vs 43.0% fee-APR | in the meta-backtest), **persistence ≥3d** in the 2N zone. | ranking by 7d average apyBase |
 | ALGORITHM.md:29-30 | - Width: **w = k · σ_daily · √7d**, where **k = 3** for ETH/stable pairs | (365d walk-forward: k3 h24 the only configuration with positive mean+median | width w = k x sigma_daily x sqrt(7d) |
@@ -132,7 +135,7 @@ By category: dated-fact/yes 7, identifier/yes 5, no-answer/partial 6, why/yes 10
 | source file | items | ids |
 |---|---|---|
 | CONTEXT.md | 21 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-why-04, ho-dated-03, ho-dated-04, ho-id-02, ho-id-03, ho-why-07, ho-why-06, ho-id-05, ho-id-06, ho-na-05, ho-na-06, ho-why-11, ho-why-09, ho-na-07, ho-na-08 |
-| DECYZJE-2026-08-26.md | 7 | ho-dated-01, ho-na-01, ho-why-02, ho-na-02, ho-id-03, ho-na-03, ho-why-08 |
+| DECYZJE-2026-08-26.md | 8 | ho-dated-01, ho-na-01, ho-why-02, ho-na-02, ho-id-03, ho-na-03, ho-why-08, ho-na-08 |
 | RESEARCH-QUEUE.md | 5 | ho-na-01, ho-why-04, ho-na-03, ho-na-05, ho-why-09 |
 | INFRA.md | 4 | ho-na-03, ho-na-04, ho-why-07, ho-na-05 |
 | ALGORITHM.md | 2 | ho-why-09, ho-na-08 |

@@ -91,7 +91,7 @@
       ],
       "related": [],
       "closestDev": "why-02 (why the commitment stayed small) scores 'operational experiment', '720d 0/21' and the FOMO note, and dated-01 scores when the money entered; this item scores only the tests behind the decision (19.08 365d walk-forwards, the hybrid tested before entry), and states the why-02 facts and the 27.08 90-day replay unscored. why-08 scores the cbBTC near-pass of 27.08, so CONTEXT 2069-2077 is not used",
-      "notes": "Owner's question in his own words (Polish original: \"co sklonilo wlasciciela do wejscia realnym kapitalem, czy zostalo to jakos poparte testami?\"). Medium to hard: the answer is 'partly', with the decisive 720d result against and the late tests for. The 90-day replay of 27.08 stays in the reference but is not scored: its only source is the 27.08 journal entry, whose chunk holds dev why-08 evidence. The parts that are dev facts (720d 0/21, the 26.08 wait, operational experiment, FOMO note, cbBTC closest to the gate) stay in the reference but are not scored. The 26.08 facts sit in CONTEXT 100 and 104, which are dev why-02 spans and are therefore not listed here."
+      "notes": "Owner's question in his own words (Polish original: \"co sklonilo wlasciciela do wejscia realnym kapitalem, czy zostalo to jakos poparte testami?\"). Medium to hard: the answer is 'partly', with the decisive 720d result against and the late tests for. The 90-day replay of 27.08 stays in the reference but is not scored: its only source is the 27.08 journal entry, whose chunk holds dev why-08 evidence. The parts that are dev facts (720d 0/21, the 26.08 wait, operational experiment, FOMO note, cbBTC closest to the gate) stay in the reference but are not scored. The 26.08 facts sit in CONTEXT 100 and 104, which are dev why-02 spans and are therefore not listed here. The table at KAPITAL-REKOMENDACJA 24-28 also has a third pool with a conditional pass (WETH/USDC 0.30%, 73% / -2.9, only with the hedge); an answer that mentions it is not wrong."
     },
     {
       "id": "ho-why-11",
@@ -101,7 +101,7 @@
       "question": "How was a position rebalanced, that is, how were the ranges moved: was it the same position or did a new one have to be opened, and did it happen automatically or did a new transaction have to be made?",
       "reference": "A range cannot be moved on an existing Uniswap v3 position, so a rebalance closed the old position and opened a new one, and nothing happened automatically: approving a rebalance proposal meant two or three signatures in Rabby, in order. Step 1 is one multicall on the NFT position manager, decreaseLiquidity of 100% plus collect, so fees come out with the liquidity; step 2 is a swap that evens out the token proportions for the new range (exactInputSingle on SwapRouter02 in the same pool), skipped when the deviation is under 2% of the value; step 3 is the mint of the new range, rebuilt just before sending from the actual balances (the plan only holds an estimate), with an extra approval if the real amount exceeds the approved one. Progress is saved in the browser (localStorage), so a failure in the middle leaves the funds safe in the wallet and the window offers to finish the remaining step (for example 'finish step 2/3').",
       "facts": {
-        "a": "a rebalance closes the old position and mints a new one; it is not automatic: two or three signatures in Rabby, in order",
+        "a": "not automatic: approving a rebalance proposal meant two or three signatures in Rabby, in order",
         "b": "step 1: one multicall on the NFT position manager, decreaseLiquidity 100% + collect",
         "c": "step 2: a swap evening out the token proportions in the same pool, skipped when the deviation is under 2% of value",
         "d": "step 3: mint of the new range, rebuilt from the actual balances just before sending (extra approve if needed)",
@@ -154,7 +154,7 @@
       ],
       "related": [],
       "closestDev": "id-03 (was #5886957's range ever changed) has as its fact d that a range change means closing and minting a new position, and why-06 has as its fact a that the owner signed every transaction; this item restates both in fact a but scores the mechanism (the three steps, the swap threshold, the mint from actual balances, resume after a failure), which no dev question asks for; dated-02 dates the first rebalance and is not used",
-      "notes": "Owner's questions 3 and 4 merged into one item in his words (Polish originals: \"czy rebalancing robil sie automatycznie czy trzeba bylo zawierac nowa transakcje?\" and \"w jaki sposob robil sie rebalancing pozycji, przestawienie zakresow? czy byly to te same pozycje czy trzeba bylo otwierac nowe?\"). Explanatory 'how' question labelled why. Medium. The live example (the cbBTC leg through #5887690, #5908083 and #5978579, CONTEXT 419-420) is dev id-02 and id-03 evidence and is not listed."
+      "notes": "Owner's questions 3 and 4 merged into one item in his words (Polish originals: \"czy rebalancing robil sie automatycznie czy trzeba bylo zawierac nowa transakcje?\" and \"w jaki sposob robil sie rebalancing pozycji, przestawienie zakresow? czy byly to te same pozycje czy trzeba bylo otwierac nowe?\"). Explanatory 'how' question labelled why. Medium. The live example (the cbBTC leg through #5887690, #5908083 and #5978579, CONTEXT 419-420) is dev id-02 and id-03 evidence and is not listed. That a rebalance closes the old position and mints a new one (dev id-03 fact d) and that the owner signed every transaction (dev why-06 fact a) stay in the reference, since they answer the question directly, but are not scored; scored fact a is only the two or three signatures in order."
     },
     {
       "id": "ho-why-09",
@@ -260,9 +260,25 @@
       "answerable": "partial",
       "author": "CC-Mac",
       "question": "Which machine-learning model did the bot use to predict where the price would go?",
-      "reference": "None: the corpus mentions no machine-learning model, and the project's question was whether a rules-based strategy with no discretion and no forecasting could beat holding the same two tokens. The bot's choices came from fixed rules calibrated in backtests (pool ranking by 7-day fee yield, range width w = k x sigma x sqrt(7d) from measured volatility). The only 'forecast' in the application was a profit-forecast panel showing backtest APRs of the hard-coded v1.2 strategies from a file of 17.08; it was removed on 29.08 because it showed an algorithm that was no longer played.",
+      "reference": "None was used or built. The only mention of machine learning in the corpus is a literature finding from the 26.08 review: ML and reinforcement learning give results on the scale of the project's own experiments, not a breakthrough. The project's question was whether a rules-based strategy with no discretion and no forecasting could beat holding the same two tokens, and the bot's choices came from fixed rules calibrated in backtests (pool ranking by 7-day fee yield, range width w = k x sigma x sqrt(7d) from measured volatility). The only 'forecast' in the application was a profit-forecast panel showing backtest APRs of the hard-coded v1.2 strategies from a file of 17.08; it was removed on 29.08 because it showed an algorithm that was no longer played.",
       "spans": [],
       "related": [
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            134,
+            138
+          ],
+          "reason": "26.08 decision after the literature review: ML/RL in the literature gives effects on the scale of our experiments, not a breakthrough"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2201,
+            2204
+          ],
+          "reason": "26.08 discussion and literature research: ML/RL no breakthrough in the literature"
+        },
         {
           "file": "docs/CASE-STUDY.md",
           "lines": [
@@ -297,7 +313,7 @@
         }
       ],
       "closestDev": "none asks about prediction or the forecast panel; why-10 uses CASE-STUDY 8 as supporting only, and ALGORITHM 87-89 (why-08) is a different section",
-      "notes": "Expected: correct the premise (no ML model; rules calibrated in backtests), and not mistake the removed profit-forecast panel for a model. Easy to medium."
+      "notes": "Expected: correct the premise (no ML model was used or built; rules calibrated in backtests). An answer citing the 26.08 literature finding (ML/RL no breakthrough) is correct; one that names a model is an error, and so is mistaking the removed profit-forecast panel for a model. Easy to medium. Reworded after the analysis session's review: the first draft said the corpus never mentions ML."
     }
   ]
 }
