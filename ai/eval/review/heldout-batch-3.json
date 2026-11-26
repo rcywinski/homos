@@ -488,8 +488,8 @@
       "notes": "Confirmed 'no' by a search of journal/ and docs/ for 'android' (no hit). Expected: notEnoughContext; the iPhone web UI only as context, not as an Android answer."
     },
     {
-      "id": "ho-id-04",
-      "category": "identifier",
+      "id": "ho-why-07",
+      "category": "why",
       "answerable": "yes",
       "author": "owner",
       "question": "What does the connection to the wallet look like, and which tools were used to connect to the wallet?",
@@ -571,7 +571,7 @@
         }
       ],
       "closestDev": "why-06 (the bot never acted on its own; the owner signed) is the nearest; this item asks for the connection tools, not the reason for manual signing",
-      "notes": "Owner's question 1 of batch 3, his wording. Polish original: 'jakie wyglada polaczenie z portfelem, jakie uzyte narzedzia do podlaczenia sie do portfela'. INFRA.md 45-48 and 69-70 are also related ranges of CC-Mac's ho-na-03 and ho-na-04 in this batch (held-out items sharing a source, different facts)."
+      "notes": "Owner's question 1 of batch 3, his wording. Polish original: 'jakie wyglada polaczenie z portfelem, jakie uzyte narzedzia do podlaczenia sie do portfela'. INFRA.md 45-48 and 69-70 are also related ranges of CC-Mac's ho-na-03 and ho-na-04 in this batch (held-out items sharing a source, different facts). Category why, not identifier: the question names no identifier (analysis session's review); used for an explanatory 'how' question like ho-why-03 and ho-why-06."
     },
     {
       "id": "ho-why-06",
@@ -579,11 +579,13 @@
       "answerable": "yes",
       "author": "owner",
       "question": "How was the option of confirming transactions done technically, that is, what happened after clicking to confirm the creation of a new LP position?",
-      "reference": "An OPEN proposal card in the cockpit has an [Open] button: it reads the pool on demand (slot0 and liquidity over RPC) and opens the position window for a new position (no NFT yet). The window computes the amounts with the Uniswap SDK, asks for token approvals on the exact amounts only when the allowance is short, simulates the mint with eth_call before sending, and sends the transaction to the connected wallet (Rabby), where the owner signs; slippage is limited to 0.1 to 1%. Before signing, each action switches the wallet to the right network and takes a fresh wallet client.",
+      "reference": "The corpus records two paths. The one used for real positions is the cockpit: an OPEN proposal card has an [Open] button that reads the pool on demand (slot0 and liquidity over RPC) and opens the position window for a new position (no NFT yet). That window reads the wallet's balances and allowances, asks for token approvals where needed and builds the mint with the same functions as the manual add-liquidity form (createPosition and prepareAddLiquidityTransaction, rewritten on the Uniswap SDK on 10.08); before signing, each action switches the wallet to the right network and takes a fresh wallet client, and the owner signs in the wallet (Rabby). For the manual form (AddLiquidity, rewritten 10.08) the journal also records approvals on the exact amounts, an eth_call simulation of the mint before sending and slippage limited to 0.1 to 1%. After signing (fixes of 27.08, from the first real entry) the window waits for the receipt, re-reads balances and allowances, and after a successful mint closes with a toast confirming the new position.",
       "facts": {
-        "a": "the OPEN card's button reads the pool on demand (slot0, liquidity) and opens the position window for a new position",
-        "b": "the window computes amounts with the SDK, approves exact amounts, simulates the mint with eth_call before sending, slippage 0.1-1%",
-        "c": "each action switches the wallet network first and takes a fresh wallet client (getWalletClient) before the owner signs in the wallet"
+        "a": "cockpit path: the OPEN card's [Open] reads the pool on demand (slot0, liquidity) and opens the position window for a new position",
+        "b": "the window builds the mint with the same functions as the manual form (createPosition, prepareAddLiquidityTransaction)",
+        "c": "the window reads balance and allowance and asks for token approvals where needed",
+        "d": "each action switches the wallet network first and takes a fresh wallet client (getWalletClient) before the owner signs",
+        "e": "manual form path (AddLiquidity, 10.08): SDK amounts, approvals on exact amounts, eth_call simulation before the mint, slippage 0.1-1%"
       },
       "spans": [
         {
@@ -599,16 +601,28 @@
           "reason": "OPEN card: [Open] calls resolveBotPool (2 RPC reads, slot0+liquidity) and opens RebalanceModal for a new position (tokenId '')"
         },
         {
-          "file": "journal/CONTEXT.md",
+          "file": "journal/TASKS-UI.md",
           "lines": [
-            3001,
-            3001
+            83,
+            86
           ],
           "role": "required",
           "facts": [
             "b"
           ],
-          "reason": "entry of 10.08: AddLiquidity rewritten: amounts via SDK, approvals on exact amounts, eth_call simulation before mint, slippage 0.1-1%"
+          "reason": "Partia 3: the modal opens a NEW position and reuses createPosition/prepareAddLiquidityTransaction like AddLiquidity.tsx"
+        },
+        {
+          "file": "journal/TASKS-UI.md",
+          "lines": [
+            155,
+            160
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "RebalanceTarget in RebalanceModal/openPositionAtRange/readBalanceAndAllowance/approveToken; new position from resolveBotPool"
         },
         {
           "file": "journal/CONTEXT.md",
@@ -618,9 +632,39 @@
           ],
           "role": "required",
           "facts": [
-            "c"
+            "d"
           ],
           "reason": "each action switches the wallet network and takes a fresh walletClient via getWalletClient"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3001,
+            3001
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "entry of 10.08: AddLiquidity rewritten: amounts via SDK, approvals on exact amounts, eth_call simulation before mint, slippage 0.1-1%"
+        },
+        {
+          "file": "journal/TASKS-UI.md",
+          "lines": [
+            1049,
+            1062
+          ],
+          "role": "supporting",
+          "reason": "after signing (Partia 13, 27.08): receipt wait, refresh, close with a global toast; in the reference but not scored (shares chunk TASKS-UI:1042 with dev dated-01's required evidence)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2934,
+            2934
+          ],
+          "role": "supporting",
+          "reason": "10.08: createPosition rewritten on SDK Position.fromAmounts (also evidence of held-out ho-why-03)"
         },
         {
           "file": "docs/INFRA.md",
@@ -633,7 +677,7 @@
         }
       ],
       "closestDev": "id-05 (fetchFreshPool re-reads the pool before the mint step of a rebalance) and why-06 (PROPOSE mode); this item covers opening a new position and does not use the rebalance builder or fetchFreshPool",
-      "notes": "Owner's question 2 of batch 3, his wording. Polish original: 'w jaki sposob technicznie byla zrealizowana opcja potwierdzania transakcji, czyli co dzialo sie po kliknieciu w potwierdzenie utworzenia nowej pozycji LP'. The reference is built from the journal and docs only, not from src/. What happens after signing (receipt wait, refresh, the window closing with a toast; Partia 13 of 27.08) is left out: its sources, TASKS-UI.md 1049-1062 and HANDOFF.md 1172-1205, share chunks with dev dated-01's required evidence (tool check)."
+      "notes": "Owner's question 2 of batch 3, his wording. Polish original: 'w jaki sposob technicznie byla zrealizowana opcja potwierdzania transakcji, czyli co dzialo sie po kliknieciu w potwierdzenie utworzenia nowej pozycji LP'. The reference is built from the journal and docs only, not from src/. The reference names the two paths the corpus records and does not attribute the eth_call simulation to the cockpit window, for which it is not recorded (analysis session's review). The after-signing part is in the reference but not scored: its sources share chunks with dev dated-01. Category why, used here for an explanatory 'how' question."
     }
   ]
 }

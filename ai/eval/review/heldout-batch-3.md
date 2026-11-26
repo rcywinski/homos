@@ -202,13 +202,13 @@ Related (should surface, does not answer):
 |---|---|---|---|
 | INFRA.md:67-71 | ## 4. iPhone and alerts | - Alerts go from the bot to Telegram: instant, free, and available without the VPN. | iPhone and alerts: responsive UI on the Home Screen, WalletConnect, Telegram |
 
-## ho-id-04 (identifier, answerable: yes, by owner)
+## ho-why-07 (why, answerable: yes, by owner)
 
 **Question.** What does the connection to the wallet look like, and which tools were used to connect to the wallet?
 
 **Reference.** The application never held a private key: it connects to the owner's own wallet and every transaction is signed there. The UI uses wagmi with ConnectKit (ConnectKit pinned to 1.8.2 on 10.08 because 1.9.2 pulled in a buggy dependency); wagmi was set up for mainnet and Base on 10.08. On the Mac the browser wallet is Rabby; on the iPhone Rabby connects through WalletConnect, which worked from 19.08 after a fix that let the build read WALLET_CONNECT_PROJECT_ID from .env.
 
-**Notes.** Owner's question 1 of batch 3, his wording. Polish original: 'jakie wyglada polaczenie z portfelem, jakie uzyte narzedzia do podlaczenia sie do portfela'. INFRA.md 45-48 and 69-70 are also related ranges of CC-Mac's ho-na-03 and ho-na-04 in this batch (held-out items sharing a source, different facts).
+**Notes.** Owner's question 1 of batch 3, his wording. Polish original: 'jakie wyglada polaczenie z portfelem, jakie uzyte narzedzia do podlaczenia sie do portfela'. INFRA.md 45-48 and 69-70 are also related ranges of CC-Mac's ho-na-03 and ho-na-04 in this batch (held-out items sharing a source, different facts). Category why, not identifier: the question names no identifier (analysis session's review); used for an explanatory 'how' question like ho-why-03 and ho-why-06.
 
 **Closest dev question:** why-06 (the bot never acted on its own; the owner signed) is the nearest; this item asks for the connection tools, not the reason for manual signing
 
@@ -234,32 +234,42 @@ Related (should surface, does not answer):
 
 **Question.** How was the option of confirming transactions done technically, that is, what happened after clicking to confirm the creation of a new LP position?
 
-**Reference.** An OPEN proposal card in the cockpit has an [Open] button: it reads the pool on demand (slot0 and liquidity over RPC) and opens the position window for a new position (no NFT yet). The window computes the amounts with the Uniswap SDK, asks for token approvals on the exact amounts only when the allowance is short, simulates the mint with eth_call before sending, and sends the transaction to the connected wallet (Rabby), where the owner signs; slippage is limited to 0.1 to 1%. Before signing, each action switches the wallet to the right network and takes a fresh wallet client.
+**Reference.** The corpus records two paths. The one used for real positions is the cockpit: an OPEN proposal card has an [Open] button that reads the pool on demand (slot0 and liquidity over RPC) and opens the position window for a new position (no NFT yet). That window reads the wallet's balances and allowances, asks for token approvals where needed and builds the mint with the same functions as the manual add-liquidity form (createPosition and prepareAddLiquidityTransaction, rewritten on the Uniswap SDK on 10.08); before signing, each action switches the wallet to the right network and takes a fresh wallet client, and the owner signs in the wallet (Rabby). For the manual form (AddLiquidity, rewritten 10.08) the journal also records approvals on the exact amounts, an eth_call simulation of the mint before sending and slippage limited to 0.1 to 1%. After signing (fixes of 27.08, from the first real entry) the window waits for the receipt, re-reads balances and allowances, and after a successful mint closes with a toast confirming the new position.
 
-**Notes.** Owner's question 2 of batch 3, his wording. Polish original: 'w jaki sposob technicznie byla zrealizowana opcja potwierdzania transakcji, czyli co dzialo sie po kliknieciu w potwierdzenie utworzenia nowej pozycji LP'. The reference is built from the journal and docs only, not from src/. What happens after signing (receipt wait, refresh, the window closing with a toast; Partia 13 of 27.08) is left out: its sources, TASKS-UI.md 1049-1062 and HANDOFF.md 1172-1205, share chunks with dev dated-01's required evidence (tool check).
+**Notes.** Owner's question 2 of batch 3, his wording. Polish original: 'w jaki sposob technicznie byla zrealizowana opcja potwierdzania transakcji, czyli co dzialo sie po kliknieciu w potwierdzenie utworzenia nowej pozycji LP'. The reference is built from the journal and docs only, not from src/. The reference names the two paths the corpus records and does not attribute the eth_call simulation to the cockpit window, for which it is not recorded (analysis session's review). The after-signing part is in the reference but not scored: its sources share chunks with dev dated-01. Category why, used here for an explanatory 'how' question.
 
 **Closest dev question:** id-05 (fetchFreshPool re-reads the pool before the mint step of a rebalance) and why-06 (PROPOSE mode); this item covers opening a new position and does not use the rebalance builder or fetchFreshPool
 
-- **a**: the OPEN card's button reads the pool on demand (slot0, liquidity) and opens the position window for a new position (1 span)
-- **b**: the window computes amounts with the SDK, approves exact amounts, simulates the mint with eth_call before sending, slippage 0.1-1% (1 span)
-- **c**: each action switches the wallet network first and takes a fresh wallet client (getWalletClient) before the owner signs in the wallet (1 span)
+**Same section as development ranges (read by hand):**
+
+- journal/TASKS-UI.md:1049-1062 is in section journal/TASKS-UI.md:1042 ("PARTIA 13 — PILNA: state control modala „Otwórz pozycję" ✅ w"), which also holds ranges of dated-01
+
+- **a**: cockpit path: the OPEN card's [Open] reads the pool on demand (slot0, liquidity) and opens the position window for a new position (1 span)
+- **b**: the window builds the mint with the same functions as the manual form (createPosition, prepareAddLiquidityTransaction) (1 span)
+- **c**: the window reads balance and allowance and asks for token approvals where needed (1 span)
+- **d**: each action switches the wallet network first and takes a fresh wallet client (getWalletClient) before the owner signs (1 span)
+- **e**: manual form path (AddLiquidity, 10.08): SDK amounts, approvals on exact amounts, eth_call simulation before the mint, slippage 0.1-1% (1 span)
 
 | span | role | facts | first line | last line | reason |
 |---|---|---|---|---|---|
 | TASKS-UI.md:142-147 | required | a | - OPEN — karta z opisem z `action` (apy7d/chain/streak już w tekście), `note` | `RebalanceTarget` (tokenId `''` — nowa pozycja, nie ma jeszcze NFT). | OPEN card: [Open] calls resolveBotPool (2 RPC reads, slot0+liquidity) and opens RebalanceModal for a new posit |
-| CONTEXT.md:3001-3001 | required | b | - **`AddLiquidity.tsx` PRZEPISANY** (legacy 69KB → backup `legacy-AddLiquidity.tsx.bak`): zakresy Doradca/±5/± | (one line) | entry of 10.08: AddLiquidity rewritten: amounts via SDK, approvals on exact amounts, eth_call simulation befor |
-| CONTEXT.md:2826-2830 | required | c | odzyskiwalne przez "Zbierz fees"). Cross-chain: każda akcja najpierw przełącza | kolejnym renderze — ryzyko podpisania w złej sieci tuż po switchu). | each action switches the wallet network and takes a fresh walletClient via getWalletClient |
+| TASKS-UI.md:83-86 | required | b | Rabby — bez tego "Zamknij" nie działałoby), [🔄 Rebalans ręczny] (modal | jak AddLiquidity.tsx; pełny builder zamknij+swap+mint w jednej sekwencji | Partia 3: the modal opens a NEW position and reuses createPosition/prepareAddLiquidityTransaction like AddLiqu |
+| TASKS-UI.md:155-160 | required | c | - Architektura: `RebalanceTarget` (nowy, węższy interfejs w | to `resolveBotPool()` dla pul bez istniejącej pozycji. | RebalanceTarget in RebalanceModal/openPositionAtRange/readBalanceAndAllowance/approveToken; new position from  |
+| CONTEXT.md:2826-2830 | required | d | odzyskiwalne przez "Zbierz fees"). Cross-chain: każda akcja najpierw przełącza | kolejnym renderze — ryzyko podpisania w złej sieci tuż po switchu). | each action switches the wallet network and takes a fresh walletClient via getWalletClient |
+| CONTEXT.md:3001-3001 | required | e | - **`AddLiquidity.tsx` PRZEPISANY** (legacy 69KB → backup `legacy-AddLiquidity.tsx.bak`): zakresy Doradca/±5/± | (one line) | entry of 10.08: AddLiquidity rewritten: amounts via SDK, approvals on exact amounts, eth_call simulation befor |
+| TASKS-UI.md:1049-1062 | supporting | - | 1. **approveToken: receipt-wait jako best-effort** (ta sama klasa i ten | Toast „Nowa pozycja otwarta ✓" ma przeżyć zamknięcie modala (globalny | after signing (Partia 13, 27.08): receipt wait, refresh, close with a global toast; in the reference but not s |
+| CONTEXT.md:2934-2934 | supporting | - | - **Przepisany `liquidityManagement.ts`**: createPosition → SDK `Position.fromAmounts`; calculateOptimalAmount | (one line) | 10.08: createPosition rewritten on SDK Position.fromAmounts (also evidence of held-out ho-why-03) |
 | INFRA.md:45-47 | supporting | - | - **Keys**: the stack never held a private key. The bot only proposes; every transaction is | on the iPhone). An AUTO mode with an operating wallet key on the server (stored encrypted | the bot only proposes; every transaction is built in the UI and signed in the browser wallet |
 
 ## Spread of the held-out set after this batch (17 items)
 
-By category: dated-fact/yes 4, identifier/yes 4, no-answer/partial 3, why/yes 5, no-answer/no 1.
+By category: dated-fact/yes 4, identifier/yes 3, no-answer/partial 3, why/yes 6, no-answer/no 1.
 
 | source file | items | ids |
 |---|---|---|
-| CONTEXT.md | 13 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-why-04, ho-dated-03, ho-dated-04, ho-id-02, ho-id-03, ho-id-04, ho-why-06 |
+| CONTEXT.md | 13 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-why-04, ho-dated-03, ho-dated-04, ho-id-02, ho-id-03, ho-why-07, ho-why-06 |
 | DECYZJE-2026-08-26.md | 6 | ho-dated-01, ho-na-01, ho-why-02, ho-na-02, ho-id-03, ho-na-03 |
-| INFRA.md | 3 | ho-na-03, ho-na-04, ho-id-04 |
+| INFRA.md | 3 | ho-na-03, ho-na-04, ho-why-07 |
 | RESEARCH-QUEUE.md | 3 | ho-na-01, ho-why-04, ho-na-03 |
 | SELECTOR-LOG.md | 2 | ho-dated-02, ho-id-01 |
 | EMERGENCY.md | 1 | ho-why-05 |
@@ -274,6 +284,6 @@ By category: dated-fact/yes 4, identifier/yes 4, no-answer/partial 3, why/yes 5,
 
 | month of the chunk | items | ids |
 |---|---|---|
-| no date (docs, notes, task files) | 15 | ho-dated-01, ho-dated-02, ho-id-01, ho-na-01, ho-why-02, ho-na-02, ho-why-03, ho-why-04, ho-why-05, ho-id-02, ho-id-03, ho-na-03, ho-na-04, ho-id-04, ho-why-06 |
-| 2026-08 | 9 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-id-03, ho-id-04, ho-why-06 |
+| no date (docs, notes, task files) | 15 | ho-dated-01, ho-dated-02, ho-id-01, ho-na-01, ho-why-02, ho-na-02, ho-why-03, ho-why-04, ho-why-05, ho-id-02, ho-id-03, ho-na-03, ho-na-04, ho-why-07, ho-why-06 |
+| 2026-08 | 9 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-id-03, ho-why-07, ho-why-06 |
 | 2026-09 | 4 | ho-why-04, ho-dated-03, ho-dated-04, ho-id-02 |
