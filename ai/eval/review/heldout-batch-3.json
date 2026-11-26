@@ -1,0 +1,491 @@
+{
+  "batch": 3,
+  "date": "2026-11-26",
+  "questions": [
+    {
+      "id": "ho-why-04",
+      "category": "why",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "Why wasn't the cbBTC/WETH position moved to Aerodrome, even though its interface showed a far higher APR than Uniswap?",
+      "reference": "Checked on 08.09: on Aerodrome a position staked in the gauge earns only AERO emissions (the fees go to voters), and the displayed emission APR is computed on liquidity staked in the active tick ±1 tick, a band of about 0.3%. A ±40% position holds about 0.5% of that liquidity, so it would earn roughly 4 to 6% a year in AERO, a token with about 10.9% yearly inflation, against roughly 5 to 11% a year in fees on Uniswap with no token to sell. The LP crowd on Aerodrome sits about 10x tighter, so a wide position gets crumbs; the advantage exists only for ultra-narrow, actively managed positions, the class the project had falsified in late August. Verdict: no, Uniswap stays the venue for the wide position.",
+      "facts": {
+        "a": "a staked Aerodrome position earns only AERO emissions; the fees go to voters",
+        "b": "the displayed emission APR is computed on liquidity in the active tick ±1 (about a 0.3% band); a ±40% position holds about 0.5% of it, about 4-6%/yr in AERO",
+        "c": "Uniswap at ±40% gives about 5-11%/yr in fees with no token to sell (AERO inflates about 10.9%/yr)",
+        "d": "the advantage exists only for ultra-narrow, actively managed positions, a class already falsified in late August",
+        "e": "verdict 08.09: no; Uniswap stays the venue for the wide position on this pair"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            647,
+            651
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "entry of 08.09: gauge position gets only AERO, fees to voters; emission APR per active tick ±1; our ±40% share 0.5%, 4-6%/yr"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            652,
+            654
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "Uniswap ±40% 5-11%/yr in fees, no token to sell, AERO inflation 10.9%/yr"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            655,
+            661
+          ],
+          "role": "required",
+          "facts": [
+            "d",
+            "e"
+          ],
+          "reason": "crowd 10x tighter; advantage only for ultra-narrow positions, falsified 26-31.08; verdict no, Uniswap stays"
+        },
+        {
+          "file": "journal/RESEARCH-QUEUE.md",
+          "lines": [
+            350,
+            350
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "c",
+            "e"
+          ],
+          "reason": "E8.4 closed 08.09: ±40% in the gauge 4-6%/yr in AERO vs Uniswap ±40% 5-11%/yr in fees; Uniswap stays"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            639,
+            646
+          ],
+          "role": "supporting",
+          "reason": "the measured pools: Aerodrome CL10/CL100 TVL, volume, fee and emission APR against the Uniswap pool"
+        }
+      ],
+      "closestDev": "why-08 (why cbBTC/WETH was riskier than crypto/stable) is about the same pair, not the venue; no shared source",
+      "notes": "Medium."
+    },
+    {
+      "id": "ho-why-05",
+      "category": "why",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "When the bot raised a downtrend alarm on the product pools, why was the default advice to sign nothing?",
+      "reference": "The FlatWide hybrid was chosen knowing it holds market beta, so a DOWN signal was treated as information, not an order. The data of 26 to 27.08 (more than 40 walk-forward and full-period runs) showed that exiting on the trend signal on average worsens the result against holding the wide LP, because the signal comes late, the exit costs money and the rebounds are missed; cash wins only in strong, long crashes of about -28 to -41%, which cannot be recognised in advance. A hedge (option A) or an exit to cash (option B, only on hard criteria) remained available.",
+      "facts": {
+        "a": "the hybrid deliberately holds beta, so a DOWN signal is information, not an order",
+        "b": "data of 26-27.08: exiting on the trend signal on average worsens the result against holding the wide LP (late signal, costs, missed rebounds)",
+        "c": "cash wins only in strong, long crashes (about -28 to -41%), which cannot be recognised in advance"
+      },
+      "spans": [
+        {
+          "file": "docs/EMERGENCY.md",
+          "lines": [
+            5,
+            9
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "owner's decision of 27.08: the DOWN signal is not a recommendation, the hybrid deliberately holds beta"
+        },
+        {
+          "file": "docs/EMERGENCY.md",
+          "lines": [
+            21,
+            31
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "default reaction: sign nothing; the data, late signal, crashes not recognisable in advance; information, not an order"
+        },
+        {
+          "file": "journal/HANDOFF.md",
+          "lines": [
+            1048,
+            1056
+          ],
+          "role": "supporting",
+          "reason": "journal: package 'emergency procedure' 28.08, EXIT_TREND proposed as 'usually do NOT sign'; does not say why"
+        },
+        {
+          "file": "docs/EMERGENCY.md",
+          "lines": [
+            51,
+            66
+          ],
+          "role": "supporting",
+          "reason": "option B and its hard criteria; not asked"
+        }
+      ],
+      "closestDev": "dated-05 (attempts to protect a position by converting it, the GMX short) and why-06 (the bot never acted on its own) are nearest; this item asks for the reason behind the default reaction and avoids the hedge section",
+      "notes": "Medium. The journal requirement for why items is met only by a supporting span: the reasons are stated in EMERGENCY.md, and the journal entry of 27.08 that discusses them shares chunks with dev dated-01, id-03 and why-08."
+    },
+    {
+      "id": "ho-dated-03",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "When was the product run through a Monte Carlo simulation, and how did it come out against HODL?",
+      "reference": "On 01.09: 5000 paths of 90 days, a block bootstrap from 500 days of daily ETH and BTC prices with the full v3 mechanics of both legs. From $5,765 the median ended at $5,950 (+3.2%), with a 57% chance of a gain; against HODL the median was -$125 and the chance of beating HODL 36%, consistent with the historical gates. The profile is asymmetric: in calm markets the strategy wins about $50 to 100 over HODL from fees, in a crash it loses about $500 to 1,100, 'selling insurance against boredom'.",
+      "facts": {
+        "a": "01.09: Monte Carlo, 5000 paths x 90 days, block bootstrap from 500 days of prices",
+        "b": "from $5,765 the median ended at $5,950 (+3.2%), P(gain) 57%",
+        "c": "against HODL: median -$125, P(beating HODL) 36%, consistent with the historical gates",
+        "d": "asymmetry: calm markets +$50-100 over HODL, a crash -$500 to 1,100 ('selling insurance against boredom')"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            969,
+            972
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "entry of 01.09: probability analysis and Monte Carlo, 500 days of daily prices"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            985,
+            991
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "5000 paths x 90 days, block bootstrap; median $5,950 (+3.2%), P(plus) 57%; vs HODL median -$125, P 36%"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            992,
+            995
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "asymmetry: calm +$50-100, crash -$500 to 1,100; selling insurance against boredom"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            999,
+            1003
+          ],
+          "role": "supporting",
+          "reason": "verdict of the day: no alpha, HODL + yield - drag; not asked"
+        }
+      ],
+      "closestDev": "none; why-09 and why-10 discuss backtest verdicts and fees in an uptrend, not this simulation",
+      "notes": "Medium. A different method (Monte Carlo) from the walk-forward gates of the dev set."
+    },
+    {
+      "id": "ho-dated-04",
+      "category": "dated-fact",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "When did the project check whether Uniswap v4 and its hooks could help a liquidity provider, and what did it find?",
+      "reference": "On 01.09 (E7 step 1, an inventory from DefiLlama): Uniswap v4 held about $1.03 bn TVL, and hooks were marginal, 31 pools with about $10M (about 1% of v4 TVL), the two dynamic-fee hook pools on the project's pairs dead. On the project's pairs v4 had no advantage over the v3 twins. The only lead was WBTC-CBBTC 0.01% on v4 mainnet, with 5 to 8 times the volume of its v3 twin, added to the funnel's list. Verdict negative: the next step was narrowed to Angstrom and tool building paused.",
+      "facts": {
+        "a": "01.09, E7 step 1: inventory of Uniswap v4 (about $1.03 bn TVL)",
+        "b": "hooks were marginal: 31 pools, about $10M, about 1% of v4 TVL; the hook pools on our pairs dead",
+        "c": "on the project's pairs v4 had no advantage over the v3 twins",
+        "d": "the only lead: WBTC-CBBTC 0.01% on v4 mainnet, 5-8x the volume of its v3 twin, added to the funnel",
+        "e": "verdict negative: next step narrowed to Angstrom, tool building paused"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1045,
+            1050
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "entry of 01.09: E7 step 1, v4 inventory, negative for the hooks thesis; v4 TVL about $1.03 bn"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1052,
+            1060
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "hooks are a margin: 31 pools / ~$10M (~1%); dynamic-fee pools on our pairs dead; Angstrom niche"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1061,
+            1067
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "v4 vs v3 twins on our pairs: no advantage"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1068,
+            1076
+          ],
+          "role": "required",
+          "facts": [
+            "d",
+            "e"
+          ],
+          "reason": "the one lead WBTC-CBBTC 0.01% v4; verdict: step 3 narrowed to Angstrom, step 4 paused"
+        },
+        {
+          "file": "docs/PLAN.md",
+          "lines": [
+            87,
+            89
+          ],
+          "role": "supporting",
+          "reason": "the plan of 10.08 named v4 as a question to check"
+        }
+      ],
+      "closestDev": "id-06 (what project stage E8.2 was) shares the research-queue naming (E7/E8) but not the topic or any source",
+      "notes": "Medium."
+    },
+    {
+      "id": "ho-id-02",
+      "category": "identifier",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "What does usdValueViaPool do, and why was it added?",
+      "reference": "A UI function added on 01.09 in usePortfolio.ts. The cockpit card of the cbBTC/WETH position showed accrued fees of $0.00 although about $0.70 had accrued, because usdValueOf cannot value a pair without a stable leg (it returns null) and the fee value defaulted to 0. usdValueViaPool converts the unknown leg at the pool price (sqrtPriceX96) into the ETH or stable leg and then into USD; it is used for both the position value and the fees, and the old '(bot valuation)' fallback disappeared.",
+      "facts": {
+        "a": "cause: the cbBTC/WETH card showed accrued fees of $0.00 (about $0.70 real) because usdValueOf returns null for a pair without a stable leg and the fee value defaulted to 0",
+        "b": "it converts the unknown leg at the pool price (sqrtPriceX96) into the ETH or stable leg, then into USD",
+        "c": "used for the position value and the fees; the '(bot valuation)' fallback disappeared",
+        "d": "added on 01.09 in usePortfolio.ts"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1095,
+            1103
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "fix: card showed fee $0.00; usdValueOf null, feesUsd ?? 0; usdValueViaPool via the pool price; value and fees; fallback gone"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1080,
+            1080
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "entry heading 01.09: fix fee $0.00 on the cbBTC card (valuation via the pool price)"
+        },
+        {
+          "file": "journal/HANDOFF.md",
+          "lines": [
+            776,
+            780
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "d"
+          ],
+          "reason": "commit of src/hooks/usePortfolio.ts: fee $0.00 for cbBTC/WETH, new usdValueViaPool, details CONTEXT 01.09"
+        }
+      ],
+      "closestDev": "none; id-05 (fetchFreshPool) is the nearest by kind, a function name",
+      "notes": "Easy: the identifier is verbatim in the sources."
+    },
+    {
+      "id": "ho-id-03",
+      "category": "identifier",
+      "answerable": "yes",
+      "author": "CC-Mac",
+      "question": "What does an UNMAPPED verdict mean in the candidate funnel?",
+      "reference": "The funnel validates pools from the DefiLlama ranking, and first maps each one to its on-chain address through a dictionary of known major tokens per network, factory.getPool and a sanity check of token0/token1. When a token is outside the dictionary or the sanity check disagrees, the verdict is UNMAPPED: the pool goes to manual review and the funnel never guesses an address or runs on silently wrong data. Exotic pairs without an ETH/BTC or stable leg are UNMAPPED by rule. Eligibility and OPEN proposals skip FAIL and UNMAPPED pools. In the first full backfill (25.08) all 5 candidates were mapped, zero UNMAPPED.",
+      "facts": {
+        "a": "the verdict when a ranked pool cannot be mapped to its on-chain address (token outside the dictionary of majors, or the token0/token1 sanity check disagrees); manual review, the funnel never guesses addresses",
+        "b": "exotic pairs without an ETH/BTC or stable leg are UNMAPPED by rule",
+        "c": "eligibility and OPEN proposals skip FAIL and UNMAPPED pools",
+        "d": "in the first full backfill (25.08) all 5 candidates were mapped, zero UNMAPPED"
+      },
+      "spans": [
+        {
+          "file": "journal/TASKS-FUNNEL.md",
+          "lines": [
+            20,
+            24
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "spec 24.08: mapping llama to on-chain through the majors dictionary and getPool; token outside it = UNMAPPED, manual review, no guessing"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4605,
+            4607
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "candidate-funnel.ts built: dictionary + getPool + SANITY token0/token1; mismatch = UNMAPPED, never silent wrong data"
+        },
+        {
+          "file": "journal/TASKS-FUNNEL.md",
+          "lines": [
+            71,
+            72
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "exclusions: pairs without an ETH/BTC leg or stable (exotic) -> UNMAPPED"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4784,
+            4787
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "eligible and OPEN proposals skip FAIL/UNMAPPED (the gate over headline APY)"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            503,
+            505
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "11c, 25.08 evening: backfill --all 5/5, zero UNMAPPED"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4735,
+            4736
+          ],
+          "role": "supporting",
+          "reason": "funnel --all: 5/5 mapped, zero UNMAPPED; the date is in the entry heading"
+        }
+      ],
+      "closestDev": "none on topic; dev why-03 (why the 720-day tests covered few pools) touches pool validation; held-out ho-dated-02 covers the two manual rejections",
+      "notes": "Easy to medium. Replaces a first ho-id-03 draft (floorBalanceStr): its only source, HANDOFF.md:1196-1200, shares chunk HANDOFF.md:641#p10 with dev dated-01's required evidence (tool check)."
+    },
+    {
+      "id": "ho-na-03",
+      "category": "no-answer",
+      "answerable": "partial",
+      "author": "CC-Mac",
+      "question": "Which hardware wallet was used to sign the LP transactions?",
+      "reference": "None: the premise is wrong. A hardware wallet (Ledger or Trezor through Rabby) was on the research queue from 17.08 and was proposed again before the withdrawal of EUR 5k, but on 25.08 the owner decided not to buy one in time; tranche 1 went to the existing Rabby hot-wallet address, with the hardware wallet deferred to before tranche 2, which never came. The stack itself never held a private key: every transaction was signed in the browser wallet.",
+      "spans": [],
+      "related": [
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            313,
+            324
+          ],
+          "reason": "25.08: hardware wallet before the EUR 5k withdrawal proposed; resolved: not bought, tranche 1 on the Rabby hot wallet, revisit before tranche 2"
+        },
+        {
+          "file": "journal/RESEARCH-QUEUE.md",
+          "lines": [
+            768,
+            775
+          ],
+          "reason": "queue item from 17.08, unticked: Ledger/Trezor through Rabby, target architecture"
+        },
+        {
+          "file": "docs/INFRA.md",
+          "lines": [
+            45,
+            48
+          ],
+          "reason": "keys: the stack never held a private key; signing in Rabby or a WalletConnect wallet"
+        }
+      ],
+      "closestDev": "why-06 (the bot never acted on its own) touches who signs; no shared source",
+      "notes": "Expected: correct the premise (no hardware wallet), name the hot wallet and the deferral; naming Ledger or Trezor as the device used is an error."
+    },
+    {
+      "id": "ho-na-04",
+      "category": "no-answer",
+      "answerable": "no",
+      "author": "CC-Mac",
+      "question": "Was there an Android version of the app, and how was it installed?",
+      "reference": "The corpus does not say: Android is never mentioned. The only mobile client described is the responsive web UI on the owner's iPhone, added to the Home Screen, with signatures through WalletConnect and alerts through Telegram.",
+      "spans": [],
+      "related": [
+        {
+          "file": "docs/INFRA.md",
+          "lines": [
+            67,
+            71
+          ],
+          "reason": "iPhone and alerts: responsive UI on the Home Screen, WalletConnect, Telegram"
+        }
+      ],
+      "closestDev": "why-05 and why-07 (where the bot ran) are about the server, not the mobile client; no shared source",
+      "notes": "Confirmed 'no' by a search of journal/ and docs/ for 'android' (no hit). Expected: notEnoughContext; the iPhone web UI only as context, not as an Android answer."
+    }
+  ]
+}
