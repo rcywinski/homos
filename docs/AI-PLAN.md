@@ -376,7 +376,7 @@ Common rules for every step:
   Of the 20 questions wrong in 3 or more of 6 runs: A not retrieved 4 (why-02, dated-01, dated-04, dated-05),
   B cut by the reranker 2 (why-06, id-07), C the answer needs several chunks 9 (mostly "partly"), D split across chunks
   0 (4 of 186 spans cross a boundary), E reference arguable 1, F not retrieval 4. 0 USD.
-- [ ] NEXT **6.2 Golden set v1.5 and a held-out test set.** v1.5 is a change to the test, so: every changed item gets a
+- [x] 2026-11-26 **6.2 Golden set v1.5 and a held-out test set.** v1.5 is a change to the test, so: every changed item gets a
   one-line reason in the file's change notes, the old wording stays in the git history, and v1.4 numbers are never
   compared with v1.5 numbers unless the stored answers are re-scored on v1.5 where that is possible.
   (a) The owner reviews five items the diagnosis flags, before any tuning: dated-04 and dated-05 (ambiguous questions),
@@ -393,12 +393,12 @@ Common rules for every step:
   Batch 2 done 26 Nov, golden v1.7: the other 17 answerable questions, with the report-row rule
   (`ai/eval/review/roles-v1-7.md`). (b) is done; the phase 6 baseline is in `ai/DECISIONS.md` (26 Nov, batch 2).
   (c) Held-out questions: about 30, in the same five categories. Batch 1 done 26 Nov (`ai/eval/heldout.jsonl` v0.1,
-  five questions; batch 2 done 26 Nov, the owner's three questions; batch 3 done 26 Nov, v0.3 with 17 items; batch 4 done 26 Nov, v0.4 with 25 items; batch 5 done 26 Nov, v0.5 with 30 items). CC-Mac drafts them and their references from the
+  five questions; batch 2 done 26 Nov, the owner's three questions; batch 3 done 26 Nov, v0.3 with 17 items; batch 4 done 26 Nov, v0.4 with 25 items; batch 5 done 26 Nov, v0.5 with 30 items; frozen 26 Nov as v1.0, sha256 in `ai/DECISIONS.md`). CC-Mac drafts them and their references from the
   corpus itself (journal and docs read directly), never from retrieval output, in batches of five to eight; each
   batch is read with the owner in a session, with the reasoning behind each reference, before the next. Then the file
   is frozen with its hash in `ai/DECISIONS.md`. v1.4's 34 questions become the development set, the new ones the
   test set. 0 USD.
-- [ ] **6.3 Retrieval measure and baseline, free.** `ai/eval/retrieval-diag.ts`: per question, the rank of every
+- [ ] NEXT **6.3 Retrieval measure and baseline, free.** `ai/eval/retrieval-diag.ts`: per question, the rank of every
   evidence chunk after the first stage (to depth 100) and after the reranker, span coverage at k = 5, 10, 15 and 20,
   reported twice: for the required spans of 6.2 and for all spans.
   Needs the query vectors (bge-m3) and the evaluation reranker `[CC-Win, owner's go]`: one short box window, the

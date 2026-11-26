@@ -1,5 +1,5 @@
 {
-  "version": "0.5",
+  "version": "1.0",
   "answersHash": "4f279f34a0606eeb",
   "rules": [
     "Every rule of ai/eval/golden-meta.json applies here too.",
@@ -39,6 +39,16 @@
       "date": "2026-11-26",
       "answersHash": "4f279f34a0606eeb",
       "summary": "Batch 5, the last: the owner's ho-why-10 (what led to real capital and whether tests backed it; only the 19.08 walk-forwards and the hybrid test scored) and ho-why-11 (his questions 3 and 4 merged: how a rebalance worked; close-and-mint and owner-signed stay unscored as dev facts), and three by CC-Mac (ho-why-09 majors-only vs exotic pools, ho-na-07 MEV protection required but not built, ho-na-08 no ML model, only the 26.08 literature finding). His question 2 dropped as dev why-06. Reviewed by the analysis session and approved by the owner (ai/eval/review/heldout-batch-5.md). 30 items."
+    },
+    {
+      "version": "1.0",
+      "date": "2026-11-26",
+      "answersHash": "4f279f34a0606eeb",
+      "summary": "Frozen by the owner, content identical to 0.5 (30 items). sha256 of heldout.jsonl 078c877839036c75799fdac06ddaa92d25d09de85d24b46db6d54dcfb3eb804c, recorded in ai/DECISIONS.md. No retrieval or model has been run on these questions; the first run is step 6.12. Any later change is a new version with its own reason and hash, and results on 1.0 are never compared with results on a later version."
     }
-  ]
+  ],
+  "frozen": {
+    "date": "2026-11-26",
+    "sha256": "078c877839036c75799fdac06ddaa92d25d09de85d24b46db6d54dcfb3eb804c"
+  }
 }

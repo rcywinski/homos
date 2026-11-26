@@ -1296,3 +1296,16 @@ almost word for word. CC-Mac added ho-why-09 (majors-only), ho-na-07 (MEV protec
 and ho-na-08 (no ML model; the only mention is the 26.08 literature finding, added after the analysis session's
 review). A Docker item was refused by the overlap check (its only source is dev why-07's related range). Held-out
 v0.5, 30 items: why 10, dated 7, partial 6, identifier 5, no 2. 0 USD.
+
+## 2026-11-26, step 6.2 (c) held-out set frozen (owner)
+
+**Decision.** The owner froze the held-out test set: `ai/eval/heldout.jsonl` v1.0, 30 items, content identical to
+v0.5, answersHash 4f279f34a0606eeb, sha256 of the file:
+
+`078c877839036c75799fdac06ddaa92d25d09de85d24b46db6d54dcfb3eb804c`
+
+From now on the 34 golden questions (v1.7) are the development set and these 30 the test set. Nothing has been run on
+the test set (no retrieval, no model); its first run is step 6.12, once, on the configuration chosen on the
+development set. Tuning reads development results only. If a held-out item must change later, that is a new version
+with a reason and a new hash, and numbers on v1.0 are not compared with numbers on it. `ai/eval/heldout.test.ts`
+keeps failing any code outside the held-out tool that names the file. Step 6.2 is done; 6.3 is next. 0 USD.
