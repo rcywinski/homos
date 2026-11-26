@@ -1,0 +1,1682 @@
+{
+  "version": "1.7",
+  "batch": "the other 17 answerable questions (step 6.2 b, batch 2)",
+  "questions": {
+    "why-02": {
+      "facts": {
+        "a": "tranche 1 ($6 092) was planned as a first stage, before a scale-up to $12-15k",
+        "b": "it was run as an operational experiment with a small stake",
+        "c": "on a calibration the team itself considered broken (720d: 0/21)",
+        "d": "the entry after an ETH pump (+25%/90d) was recorded with an explicit FOMO note",
+        "e": "on 02.09 the product failed to beat HODL in all five measurements",
+        "f": "the planned scale-up never happened (an absence: no span can state it)"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            97,
+            97
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "decision row 26.08: waits in USDC, entry on a calibration considered broken, 720d=0/21"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            104,
+            104
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "d"
+          ],
+          "reason": "revision 26.08: small $6k stake, value of an operational experiment, full record with a FOMO note"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            71,
+            73
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "FOMO note: entry after ETH +25%/90d"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            100,
+            100
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "decision row 02.09: the product beats HODL in none of 5 ways of counting"
+        },
+        {
+          "file": "journal/KAPITAL-REKOMENDACJA.md",
+          "lines": [
+            17,
+            19
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "staged entry: tranche 1 $6 000 now, tranche 2 scale to $12-15k"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            53,
+            55
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "honest note: exposure after rises, the pattern the FOMO check named"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            155,
+            157
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "the 19.08 recommendation: tranche 1 $6k, tranche 2 to $12-15k"
+        }
+      ]
+    },
+    "why-04": {
+      "facts": {
+        "a": "on 10.08 it was checked that the sessions could not reach each other (separate apps), so repo files became the bus, with HANDOFF.md inboxes",
+        "b": "history lives in git",
+        "c": "from 01.09 CC-Mac and CC-Win also messaged each other directly via Remote Control",
+        "d": "the files stayed the shared memory and task queue, and the fallback when that channel was down"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3277,
+            3282
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "checked with ListAgents: not reachable, repo files as the bus, HANDOFF.md inboxes"
+        },
+        {
+          "file": "journal/HANDOFF.md",
+          "lines": [
+            15,
+            16
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "d"
+          ],
+          "reason": "history in git; this file holds only live tasks and unreceived reports"
+        },
+        {
+          "file": "journal/HANDOFF.md",
+          "lines": [
+            19,
+            24
+          ],
+          "role": "required",
+          "facts": [
+            "c",
+            "d"
+          ],
+          "reason": "widened: the old range stopped before the fallback ('wróć do starego trybu: napisz w HANDOFF') on lines 23-24",
+          "replaces": [
+            19,
+            22
+          ]
+        },
+        {
+          "file": "docs/AI-WORKFLOW.md",
+          "lines": [
+            53,
+            55
+          ],
+          "role": "required",
+          "facts": [
+            "c",
+            "d"
+          ],
+          "reason": "direct pings later in the project; fallback to the inbox"
+        },
+        {
+          "file": "docs/AI-WORKFLOW.md",
+          "lines": [
+            85,
+            86
+          ],
+          "role": "supporting",
+          "reason": "a lesson (hand-offs through the owner were slow), not a fact of the reference"
+        }
+      ]
+    },
+    "why-05": {
+      "facts": {
+        "a": "the bot had to run 24/7",
+        "b": "the owner's always-on Windows desktop became the server, with the Mac and iPhone as clients over LAN and VPN",
+        "c": "a closed laptop would mean a dead autopilot"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3007,
+            3007
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "INFRA: server = the owner's Windows desktop (24/7), Mac/iPhone over LAN and VPN"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3081,
+            3082
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "10.08: Windows server 24/7 started on the owner's desktop"
+        },
+        {
+          "file": "journal/TASKS-WINDOWS.md",
+          "lines": [
+            4,
+            4
+          ],
+          "role": "supporting",
+          "reason": "a line fragment: '24/7 server for the bot', without the machine or the clients"
+        },
+        {
+          "file": "docs/INFRA.md",
+          "lines": [
+            3,
+            5
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "decided 10 Aug: Windows desktop 24/7, Mac and iPhone over LAN and VPN"
+        },
+        {
+          "file": "docs/UI-DESIGN.md",
+          "lines": [
+            45,
+            48
+          ],
+          "role": "required",
+          "facts": [
+            "c",
+            "b"
+          ],
+          "reason": "closed laptop = dead autopilot; a home Windows machine running 24/7 took that role"
+        }
+      ]
+    },
+    "why-06": {
+      "facts": {
+        "a": "the bot ran in PROPOSE mode: nothing executed on its own, the owner signed every transaction",
+        "b": "there was no wallet key on the server",
+        "c": "the only cost was signing delay (up to ~13 h at night, ~61 h over a weekend), measured from day one",
+        "d": "AUTO existed only as a later rung of the trust path OBSERVE-PROPOSE-AUTO, not enabled at the start"
+      },
+      "spans": [
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            531,
+            543
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "c",
+            "d"
+          ],
+          "reason": "PROPONUJ: nothing executes on its own; delay ~13h night, ~61h weekend; semi-automatic signing deliberately not at the start"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            99,
+            99
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "c"
+          ],
+          "reason": "decision row 26.08: PROPONUJ, delay the only risk, measured from day 1"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3086,
+            3088
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "PRIVATE_KEY empty, zero wallet keys on the server"
+        },
+        {
+          "file": "journal/TASKS-WINDOWS.md",
+          "lines": [
+            24,
+            24
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "PRIVATE_KEY empty (OBSERWUJ)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3006,
+            3006
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "UI-VISION: trust path OBSERWUJ -> PROPONUJ -> AUTO"
+        },
+        {
+          "file": "journal/RESEARCH-QUEUE.md",
+          "lines": [
+            765,
+            766
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "a human signs every transaction; the backend executes nothing"
+        },
+        {
+          "file": "docs/UI-DESIGN.md",
+          "lines": [
+            92,
+            93
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "Autopilot not implemented; modes OBSERVE / PROPOSE / AUTO"
+        }
+      ]
+    },
+    "dated-01": {
+      "facts": {
+        "a": "the tranche-1 USDC (6 092.50 on Base) reached the owner's wallet on 25.08",
+        "b": "it waited in USDC per the 26.08 decision",
+        "c": "it was put into the product on 27.08",
+        "d1": "#5886957 WETH/USDC ±50% (~$3 507) was minted in the afternoon",
+        "d2": "WETH/cbBTC ±40% (#5887690, ~$2 360) was minted later that day"
+      },
+      "spans": [
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            335,
+            348
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "point 8 closed 25.08: tranche-1 capital in self-custody on Base"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            97,
+            97
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "decision row 26.08: tranche 1 waits in USDC"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2092,
+            2097
+          ],
+          "role": "required",
+          "facts": [
+            "c",
+            "d1"
+          ],
+          "reason": "capital entry, leg A: mint #5886957 ±50%, ~$3,507"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2156,
+            2167
+          ],
+          "role": "required",
+          "facts": [
+            "c",
+            "d1",
+            "d2"
+          ],
+          "reason": "leg B opened, WETH/cbBTC ±40%, ~$2,360; the last line sums both legs (the leg B id is not in the span)"
+        },
+        {
+          "file": "journal/reports/morning-2026-08-29.md",
+          "lines": [
+            184,
+            186
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "both positions, PnL 'od 2026-08-27'"
+        },
+        {
+          "file": "journal/TASKS-UI.md",
+          "lines": [
+            1042,
+            1045
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "batch 13 done 27.08, reported at the entry with REAL capital"
+        },
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            145,
+            145
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "capital deployed 6 092 USDC on Base, 27 Aug 2026"
+        },
+        {
+          "file": "journal/HANDOFF.md",
+          "lines": [
+            1166,
+            1170
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "27.08 evening: product live, both legs open"
+        },
+        {
+          "file": "journal/HANDOFF.md",
+          "lines": [
+            1156,
+            1160
+          ],
+          "role": "supporting",
+          "reason": "deployment note naming #5886957, does not say capital entered"
+        }
+      ]
+    },
+    "dated-02": {
+      "facts": {
+        "a": "on 31.08 at about 13:00 Polish time the first FLAT_NARROW was executed on the cbBTC/WETH leg",
+        "b": "after a failed first attempt and a UI hotfix",
+        "c": "#5887690 (±40%) was closed and narrow #5908083 (±4.9%) minted",
+        "d": "the second rebalance was the widening on 11.09 into #5978579 (±40%)"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1136,
+            1137
+          ],
+          "role": "supporting",
+          "reason": "the first FLAT_NARROW proposal ~10:22Z: a proposal, not the execution"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1228,
+            1235
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "~13:0x first combat transaction after the hotfix, mint #5908083 ±4.9%"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-01.md",
+          "lines": [
+            205,
+            205
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "#5908083 WĄSKI, PnL from 2026-08-31"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            294,
+            296
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "new #5978579 SZEROKA ±40%"
+        },
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            81,
+            84
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "the narrowing experiment, 31 Aug"
+        },
+        {
+          "file": "docs/DECISION-LOG.md",
+          "lines": [
+            26,
+            26
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "31 Aug: sign the first narrowing proposal (cbBTC leg)"
+        }
+      ]
+    },
+    "dated-03": {
+      "facts": {
+        "a": "#5886957 WETH/USDC: $3 468, PnL -$39.98 since 27.08",
+        "b": "#5978579 cbBTC/WETH: $2 266, PnL -$92.39 since 11.09",
+        "c": "the tranche stood at $5 966.88, -$125.12 (-2.05%) against $6 092"
+      },
+      "spans": [
+        {
+          "file": "journal/reports/morning-2026-09-15.md",
+          "lines": [
+            199,
+            205
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "tranche balance table of 15.09"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-15.md",
+          "lines": [
+            221,
+            223
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "both position rows of 15.09"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            251,
+            251
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "balance 15.09 $5 966.88 (-2.05%)"
+        }
+      ]
+    },
+    "dated-04": {
+      "facts": {
+        "a": "the nightly backtest-run last finished on 23.09 at 05:03 UTC",
+        "b": "a pause of the nightly pipeline was ordered on 21.09 for 22.09",
+        "c": "the last research backtest was E8.3 (720 days, four pools), received on 08.09",
+        "d": "the last 720-day runs on the product were the shape round of 03.09 (and E8.3 of 08.09)",
+        "e": "there is no record that the pause was carried out (an absence: no span can state it)"
+      },
+      "spans": [
+        {
+          "file": "journal/reports/morning-2026-09-23.md",
+          "lines": [
+            42,
+            48
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "backtest-run exit 0 at 05:03:07Z on 23.09"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            177,
+            179
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "entry of 21.09: pause of the nightly pipeline"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            19,
+            20
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "order to CC-Win for 22.09: pause the nightly pipeline"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            621,
+            622
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "entry of 08.09: E8.3 received, 4 pools 720d"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            774,
+            778
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "entry of 03.09: shape round 2, 4/4 on 720d"
+        }
+      ]
+    },
+    "dated-05": {
+      "facts": {
+        "a": "hedge-excess (a perp short on the excess ETH) passed the gate and became v1.2 on 17.08",
+        "b": "a $150 1x ETH short was opened on GMX on 17.08",
+        "c": "it was closed on 18.08, round-trip cost ~$1.08 (~72 bps)",
+        "d": "it protected no real position (the capital came later)",
+        "e": "a $15 end-to-end test through the app followed on 20.08 (~$0.40)",
+        "f": "on 11.09 a $1 824 BTC short on GMX was rejected as an emergency option"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            91,
+            91
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "decision row 17.08: v1.2 hedge-excess"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3585,
+            3586
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "short ETH/USD 1x $149.91"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3533,
+            3534
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "round-trip costs ~$1.08 (~72 bps @ $150)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3542,
+            3543
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "a capital decision (LP entry) comes before the hedge has anything to protect"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2410,
+            2415
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "E2E GMX hedge test, real $15, cost ~$0.40"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            281,
+            282
+          ],
+          "role": "required",
+          "facts": [
+            "f"
+          ],
+          "reason": "option A (short BTC $1 824 on GMX) rejected"
+        }
+      ]
+    },
+    "dated-08": {
+      "facts": {
+        "a": "on 18.09 both LP positions were closed at $6 130.02 against $6 092 (+$38.02, +0.62%, 22 days)",
+        "b": "~1.22 ETH and 0.0141 cbBTC were kept as a spot bet",
+        "c": "the USDC was sent to Kraken",
+        "d": "on 21.09 around 19:00 Polish time the rest was sold",
+        "e": "the tranche ended at about 5 605 EUR (~$6 428, +$336, +5.5% over 25 days)"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            102,
+            102
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "decision row 18.09: both positions closed, +$38, +0.6%, 22 days; ETH/cbBTC kept; USDC to Kraken"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            216,
+            217
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "$6 130.02 vs $6 092, +$38.02 (+0.62%), 22 days"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            101,
+            101
+          ],
+          "role": "required",
+          "facts": [
+            "d",
+            "e"
+          ],
+          "reason": "decision row 21.09: full exit to EUR ~19:00 PL, ≈ 5 605 EUR ≈ $6 428, +5.5%, 25 days"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            10,
+            16
+          ],
+          "role": "required",
+          "facts": [
+            "d",
+            "e"
+          ],
+          "reason": "sold 21.09 ~19:00 PL; ≈ +$336 (+5.5%) in 25 days"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-19.md",
+          "lines": [
+            267,
+            268
+          ],
+          "role": "supporting",
+          "reason": "no live positions on 19.09: consistent, does not date the close"
+        },
+        {
+          "file": "docs/EMERGENCY.md",
+          "lines": [
+            90,
+            91
+          ],
+          "role": "supporting",
+          "reason": "'closed to EUR on 18-21 Sep': a date range in passing"
+        },
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            94,
+            98
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "d",
+            "e"
+          ],
+          "reason": "18 Sep keep the tokens as a spot bet; 21 Sep sell everything; +5.5% in 25 days"
+        },
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            145,
+            149
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "final 21 Sep +5.5% (+$336), 25 days"
+        }
+      ]
+    },
+    "id-01": {
+      "facts": {
+        "a": "FLAT_NARROW is a proposal type (kind) emitted by the bot's flat detector",
+        "b": "it fires when the flat regime is confirmed (|gap to the EMA| < 2% for at least 12 h)",
+        "c": "it proposes narrowing an existing wide position to a fixed ±5%",
+        "d": "FLAT_WIDEN is the opposite card, at |gap| > 5%",
+        "e1": "unsigned cards expire on a TTL",
+        "e2": "and come back (an inference from repeated cards across reports: no single span states it)"
+      },
+      "spans": [
+        {
+          "file": "journal/TASKS-UI.md",
+          "lines": [
+            1136,
+            1139
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "d"
+          ],
+          "reason": "flat detector, new proposal kinds FLAT_NARROW and FLAT_WIDEN"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1907,
+            1911
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "d"
+          ],
+          "reason": "confirm 12h, FLAT constant enter 2% / exit 5%"
+        },
+        {
+          "file": "journal/HANDOFF.md",
+          "lines": [
+            855,
+            857
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "±5% on both pools, the band edge matches the FLAT_WIDEN signal"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1192,
+            1194
+          ],
+          "role": "required",
+          "facts": [
+            "c",
+            "d"
+          ],
+          "reason": "±4.9% by the new narrow-width path, not ±16% k×σ; back at |gap|>5%"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-17.md",
+          "lines": [
+            120,
+            120
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "card note: flat confirmed (|gap|<2% ≥12h), narrowing to a fixed ±5%, back to wide at |gap|>5%"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            259,
+            259
+          ],
+          "role": "required",
+          "facts": [
+            "e1"
+          ],
+          "reason": "the cards expire on TTL"
+        },
+        {
+          "file": "docs/EMERGENCY.md",
+          "lines": [
+            83,
+            84
+          ],
+          "role": "supporting",
+          "reason": "FLAT_NARROW / FLAT_WIDEN are the normal FlatWide cycle, not emergency procedures"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-16.md",
+          "lines": [
+            104,
+            120
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "a full FLAT_NARROW card: kind and the note with the definition"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-17.md",
+          "lines": [
+            104,
+            120
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "a full FLAT_NARROW card: kind and the note with the definition"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-18.md",
+          "lines": [
+            104,
+            120
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "a full FLAT_NARROW card: kind and the note with the definition"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-19.md",
+          "lines": [
+            104,
+            120
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "a full FLAT_NARROW card: kind and the note with the definition"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-20.md",
+          "lines": [
+            104,
+            120
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "a full FLAT_NARROW card: kind and the note with the definition"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-21.md",
+          "lines": [
+            104,
+            120
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "a full FLAT_NARROW card: kind and the note with the definition"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-22.md",
+          "lines": [
+            104,
+            120
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "a full FLAT_NARROW card: kind and the note with the definition"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-23.md",
+          "lines": [
+            104,
+            120
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "a full FLAT_NARROW card: kind and the note with the definition"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-17.md",
+          "lines": [
+            123,
+            139
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "a full FLAT_NARROW card: kind and the note with the definition"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-18.md",
+          "lines": [
+            123,
+            139
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "a full FLAT_NARROW card: kind and the note with the definition"
+        }
+      ]
+    },
+    "id-02": {
+      "facts": {
+        "a": "#5978579 is wide (SZEROKI, ±40%)",
+        "b": "it was minted on 11.09 by the signed FLAT_WIDEN",
+        "c": "a FLAT_NARROW card for it (15.09) was deliberately not signed",
+        "d": "it was closed by hand in Uniswap on 18.09"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            277,
+            277
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "11.09: FLAT_WIDEN signed (new position #5978579)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            294,
+            296
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "new #5978579 SZEROKA ±40%"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            255,
+            258
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "FLAT_NARROW on #5978579 issued 15:04Z; decision: sign none"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-12.md",
+          "lines": [
+            281,
+            281
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "report row 12.09: SZEROKI"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-13.md",
+          "lines": [
+            281,
+            281
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "report row 13.09: SZEROKI"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-14.md",
+          "lines": [
+            281,
+            281
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "report row 14.09: SZEROKI"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-15.md",
+          "lines": [
+            222,
+            222
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "report row 15.09: SZEROKI"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-16.md",
+          "lines": [
+            242,
+            242
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "report row 16.09: SZEROKI"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-17.md",
+          "lines": [
+            261,
+            261
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "report row 17.09: SZEROKI"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-18.md",
+          "lines": [
+            275,
+            275
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "report row 18.09: SZEROKI"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            211,
+            213
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "executed by hand in Uniswap: decrease+collect 100%, #5978579"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            419,
+            420
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "leg B chain: 11.09 wide #5978579"
+        }
+      ]
+    },
+    "id-03": {
+      "facts": {
+        "a": "#5886957 is leg A, WETH/USDC 0.30% on Base, minted on 27.08 with a $1 665.75-3 744.30 range (±50%)",
+        "b": "it was closed on 18.09",
+        "c": "a narrowing card for it was not signed",
+        "d": "a range change would have meant closing it and minting a new position, as on the cbBTC leg"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2096,
+            2097
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "mint #5886957 WETH/USDC 0.30% Base, $1665.75-3744.30 (±50%)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            257,
+            258
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "the second card (ETH/USDC) expected; decision: sign none"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-17.md",
+          "lines": [
+            105,
+            105
+          ],
+          "role": "supporting",
+          "reason": "the id line of the card only"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            211,
+            212
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "closed by hand: decrease+collect 100% of #5886957"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            419,
+            420
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "leg B chain: wide, narrow #5908083, wide #5978579"
+        },
+        {
+          "file": "journal/reports/morning-2026-08-29.md",
+          "lines": [
+            185,
+            185
+          ],
+          "role": "supporting",
+          "reason": "report row: same pool, PnL anchor 27.08"
+        },
+        {
+          "file": "journal/reports/morning-2026-08-31.md",
+          "lines": [
+            223,
+            223
+          ],
+          "role": "supporting",
+          "reason": "report row: SZEROKI, PnL anchor 27.08"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-18.md",
+          "lines": [
+            274,
+            274
+          ],
+          "role": "supporting",
+          "reason": "report row: SZEROKI, PnL anchor 27.08"
+        }
+      ]
+    },
+    "id-04": {
+      "facts": {
+        "a": "D0 'detektor→pomiar' was decided at the 31.08 review",
+        "b": "task 1: the flat detector stops emitting FLAT_NARROW/FLAT_WIDEN cards, keeping episode measurement and logs",
+        "c": "task 2: clean up three leftover 'k×σ' labels",
+        "d": "it was to be deployed only after the narrowing episode closed",
+        "e": "it was still pending on 16.09",
+        "f": "it was never deployed"
+      },
+      "spans": [
+        {
+          "file": "journal/RESEARCH-QUEUE.md",
+          "lines": [
+            498,
+            507
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c",
+            "d"
+          ],
+          "reason": "the D0 section: both tasks, decision of the 31.08 review, deploy after the episode"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            262,
+            263
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "entry of 16.09: D0 not yet deployed, hence the cards"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            273,
+            274
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "entry of 16.09: D0 still to do"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1245,
+            1245
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "after the episode: the detektor→pomiar package"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            239,
+            240
+          ],
+          "role": "required",
+          "facts": [
+            "f"
+          ],
+          "reason": "entry of 18.09: D0 now irrelevant (no positions)"
+        }
+      ]
+    },
+    "id-05": {
+      "facts": {
+        "a": "it re-reads the pool state on-chain (factory.getPool, slot0, liquidity) right before the mint step of a rebalance or rotation",
+        "b": "so the new position is built from the current price, not the price when the modal opened",
+        "c": "it falls back to the old pool if the lookup fails",
+        "d": "it was added after the 11.09 widening failed once on 'Price slippage check'",
+        "e": "it was never exercised live: the 16.09 card was not signed"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            288,
+            291
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "d"
+          ],
+          "reason": "first attempt failed on 'Price slippage check': pool from the modal's state"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            350,
+            355
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "c"
+          ],
+          "reason": "fetchFreshPool: factory.getPool -> slot0 + liquidity, fail-open, before buildMintStep"
+        },
+        {
+          "file": "journal/HANDOFF.md",
+          "lines": [
+            256,
+            257
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "c"
+          ],
+          "reason": "review OK: factory.getPool -> slot0+liquidity, fail-open, both hooks"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            264,
+            265
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "the only argument for signing (a combat test of fetchFreshPool) not worth the risk"
+        }
+      ]
+    },
+    "id-06": {
+      "facts": {
+        "a": "E8.2 'dom kasyna' was a research experiment in the E8 queue (classes without LVR)",
+        "b": "it tested whether LPs of perp vaults (GM v2, JLP, GLP) earn a house edge over HODL of the same beta",
+        "c": "HLP had too little data",
+        "d": "it went through iterations and three data bugs",
+        "e": "it closed on 09.09 evening as conditionally yes",
+        "f": "worth watching, not for tranche-1 capital"
+      },
+      "spans": [
+        {
+          "file": "journal/RESEARCH-QUEUE.md",
+          "lines": [
+            294,
+            301
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "the E8 section: classes without LVR"
+        },
+        {
+          "file": "journal/RESEARCH-QUEUE.md",
+          "lines": [
+            324,
+            324
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "e"
+          ],
+          "reason": "E8.2 dom kasyna closed 09.09 evening: GM v2, JLP, GLP results"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            482,
+            485
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "verdict E8.2: a real edge over HODL of the same beta, GM v2 and JLP; GLP not"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            495,
+            496
+          ],
+          "role": "required",
+          "facts": [
+            "e",
+            "f"
+          ],
+          "reason": "E8 complete: E8.2 yes-conditionally; zero capital until 24.09"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            684,
+            694
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "receipt E8.0-E8.2: HLP n/a"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            461,
+            461
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "the third data bug (GLP)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            721,
+            723
+          ],
+          "role": "supporting",
+          "reason": "07.09: the E8 queue is created; does not name E8.2"
+        }
+      ]
+    },
+    "id-07": {
+      "facts": {
+        "a": "backtest results were JSON files in backtest/results/ (walkforward-*-720d-30d.json)",
+        "b": "plus an HTML report",
+        "c1": "a SQLite database was designed in DB-SCHEMA.md",
+        "c2": "its backtest_run table was meant only to index those files (metadata, not numbers)",
+        "d": "it was never implemented",
+        "e": "the bot ledger shipped as ndjson, with CSV export"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2994,
+            2994
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "backtest/run.ts: backtest/results/report.html"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            548,
+            548
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "full numbers: backtest/results/walkforward-*-720d-30d.json"
+        },
+        {
+          "file": "journal/RESEARCH-QUEUE.md",
+          "lines": [
+            122,
+            122
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "files: backtest/results/walkforward-...json"
+        },
+        {
+          "file": "docs/DB-SCHEMA.md",
+          "lines": [
+            3,
+            4
+          ],
+          "role": "required",
+          "facts": [
+            "c1",
+            "d",
+            "e"
+          ],
+          "reason": "design never implemented; the ledger shipped as ndjson/json"
+        },
+        {
+          "file": "docs/DB-SCHEMA.md",
+          "lines": [
+            139,
+            145
+          ],
+          "role": "required",
+          "facts": [
+            "c2"
+          ],
+          "reason": "backtest_run: index of results/ files, metadata not numbers"
+        },
+        {
+          "file": "docs/INFRA.md",
+          "lines": [
+            31,
+            32
+          ],
+          "role": "required",
+          "facts": [
+            "c1",
+            "d",
+            "e"
+          ],
+          "reason": "CSV export; SQLite designed but never implemented (no backtest_run here)"
+        },
+        {
+          "file": "journal/RESEARCH-QUEUE.md",
+          "lines": [
+            728,
+            733
+          ],
+          "role": "required",
+          "facts": [
+            "c1"
+          ],
+          "reason": "SQLite schema designed; lists backtest_run among the tables but not what it holds"
+        }
+      ]
+    }
+  }
+}
