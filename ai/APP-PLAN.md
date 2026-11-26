@@ -918,6 +918,17 @@ his word; no further DeFi work is planned. The struck items are listed in sectio
   position's `openedAt`. For a pool that waited as pending the two differ: base-weth-cbbtc-030 on the box shows
   "started 26.11.2026, 09:52:10" while its position opened at 10:37:29 (the events list has it right). Fix: print
   `openedAt` when present (the `showStartDate` branch in PaperTradingPanel, Live only).
+- One logs host per chain: publicnode for Ethereum and Base, arb1.arbitrum.io for Arbitrum (drpc is a price-only
+  fallback, its free plan takes at most 100 blocks per log call). If that host fails, the chain's statistics freeze:
+  the paper step keeps accruing on the last yield, and the page shows the age (statsAt, the card line). Fix: a second
+  host per chain that serves 24 h of logs. Details in `deploy/live/README.md`, "Known limit".
+- The Base logs host can return incomplete results without an error: "0 failed chunks" does not mean a complete
+  window (observed on 26 Nov for base-weth-cbbtc-030: 20 swaps at 04:08, 54 at 06:02, none in between). Fix: compare
+  the window with a second source, or with the previous cycle's count, before trusting it.
+- `Stop-ScheduledTask "HOMOS live observer"` once left the observer's supervisor and bot running on the box (26 Nov,
+  during a redeploy; the server and API tasks stopped cleanly); cause unknown, most likely the processes were started
+  outside the task. Until it is understood, the redeploy section of the runbook checks for leftover homos-web node
+  processes and ends them by pid on the owner's word.
 
 **Owner's decision of 18 Nov 2026 (relayed by the analysis session): order of work and the hosted paper copy.**
 
