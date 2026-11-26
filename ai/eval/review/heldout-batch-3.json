@@ -486,6 +486,154 @@
       ],
       "closestDev": "why-05 and why-07 (where the bot ran) are about the server, not the mobile client; no shared source",
       "notes": "Confirmed 'no' by a search of journal/ and docs/ for 'android' (no hit). Expected: notEnoughContext; the iPhone web UI only as context, not as an Android answer."
+    },
+    {
+      "id": "ho-id-04",
+      "category": "identifier",
+      "answerable": "yes",
+      "author": "owner",
+      "question": "What does the connection to the wallet look like, and which tools were used to connect to the wallet?",
+      "reference": "The application never held a private key: it connects to the owner's own wallet and every transaction is signed there. The UI uses wagmi with ConnectKit (ConnectKit pinned to 1.8.2 on 10.08 because 1.9.2 pulled in a buggy dependency); wagmi was set up for mainnet and Base on 10.08. On the Mac the browser wallet is Rabby; on the iPhone Rabby connects through WalletConnect, which worked from 19.08 after a fix that let the build read WALLET_CONNECT_PROJECT_ID from .env.",
+      "facts": {
+        "a": "the UI connects through wagmi with ConnectKit (ConnectKit pinned to 1.8.2 on 10.08)",
+        "b": "no private key in the stack: on the Mac transactions are signed in the browser wallet Rabby",
+        "c": "on the iPhone Rabby connects through WalletConnect (working from 19.08, after WALLET_CONNECT_PROJECT_ID was read from .env)",
+        "d": "wagmi configured for mainnet and Base (both 10.08)"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2938,
+            2938
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "d"
+          ],
+          "reason": "entry of 10.08: wagmi + mainnet, connectkit pinned to 1.8.2"
+        },
+        {
+          "file": "docs/INFRA.md",
+          "lines": [
+            45,
+            48
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "c"
+          ],
+          "reason": "keys: never a private key; signed in Rabby on the Mac, a WalletConnect wallet on the iPhone"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2601,
+            2604
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "entry of 19.08: iPhone with Rabby through WalletConnect; WALLET_CONNECT_PROJECT_ID empty until webpack read .env"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2983,
+            2983
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "reason": "entry of 10.08 (2e): Base added to the wagmi chains + NETWORKS.BASE"
+        },
+        {
+          "file": "docs/INFRA.md",
+          "lines": [
+            69,
+            70
+          ],
+          "role": "supporting",
+          "reason": "iPhone: Home Screen UI, signatures through WalletConnect"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2826,
+            2830
+          ],
+          "role": "supporting",
+          "reason": "every action switches the wallet network and takes a fresh walletClient through getWalletClient from wagmi/actions"
+        }
+      ],
+      "closestDev": "why-06 (the bot never acted on its own; the owner signed) is the nearest; this item asks for the connection tools, not the reason for manual signing",
+      "notes": "Owner's question 1 of batch 3, his wording. Polish original: 'jakie wyglada polaczenie z portfelem, jakie uzyte narzedzia do podlaczenia sie do portfela'. INFRA.md 45-48 and 69-70 are also related ranges of CC-Mac's ho-na-03 and ho-na-04 in this batch (held-out items sharing a source, different facts)."
+    },
+    {
+      "id": "ho-why-06",
+      "category": "why",
+      "answerable": "yes",
+      "author": "owner",
+      "question": "How was the option of confirming transactions done technically, that is, what happened after clicking to confirm the creation of a new LP position?",
+      "reference": "An OPEN proposal card in the cockpit has an [Open] button: it reads the pool on demand (slot0 and liquidity over RPC) and opens the position window for a new position (no NFT yet). The window computes the amounts with the Uniswap SDK, asks for token approvals on the exact amounts only when the allowance is short, simulates the mint with eth_call before sending, and sends the transaction to the connected wallet (Rabby), where the owner signs; slippage is limited to 0.1 to 1%. Before signing, each action switches the wallet to the right network and takes a fresh wallet client.",
+      "facts": {
+        "a": "the OPEN card's button reads the pool on demand (slot0, liquidity) and opens the position window for a new position",
+        "b": "the window computes amounts with the SDK, approves exact amounts, simulates the mint with eth_call before sending, slippage 0.1-1%",
+        "c": "each action switches the wallet network first and takes a fresh wallet client (getWalletClient) before the owner signs in the wallet"
+      },
+      "spans": [
+        {
+          "file": "journal/TASKS-UI.md",
+          "lines": [
+            142,
+            147
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "OPEN card: [Open] calls resolveBotPool (2 RPC reads, slot0+liquidity) and opens RebalanceModal for a new position (tokenId '')"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3001,
+            3001
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "entry of 10.08: AddLiquidity rewritten: amounts via SDK, approvals on exact amounts, eth_call simulation before mint, slippage 0.1-1%"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2826,
+            2830
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "each action switches the wallet network and takes a fresh walletClient via getWalletClient"
+        },
+        {
+          "file": "docs/INFRA.md",
+          "lines": [
+            45,
+            47
+          ],
+          "role": "supporting",
+          "reason": "the bot only proposes; every transaction is built in the UI and signed in the browser wallet"
+        }
+      ],
+      "closestDev": "id-05 (fetchFreshPool re-reads the pool before the mint step of a rebalance) and why-06 (PROPOSE mode); this item covers opening a new position and does not use the rebalance builder or fetchFreshPool",
+      "notes": "Owner's question 2 of batch 3, his wording. Polish original: 'w jaki sposob technicznie byla zrealizowana opcja potwierdzania transakcji, czyli co dzialo sie po kliknieciu w potwierdzenie utworzenia nowej pozycji LP'. The reference is built from the journal and docs only, not from src/. What happens after signing (receipt wait, refresh, the window closing with a toast; Partia 13 of 27.08) is left out: its sources, TASKS-UI.md 1049-1062 and HANDOFF.md 1172-1205, share chunks with dev dated-01's required evidence (tool check)."
     }
   ]
 }

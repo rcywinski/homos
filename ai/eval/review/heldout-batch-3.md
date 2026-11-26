@@ -202,16 +202,65 @@ Related (should surface, does not answer):
 |---|---|---|---|
 | INFRA.md:67-71 | ## 4. iPhone and alerts | - Alerts go from the bot to Telegram: instant, free, and available without the VPN. | iPhone and alerts: responsive UI on the Home Screen, WalletConnect, Telegram |
 
-## Spread of the held-out set after this batch (15 items)
+## ho-id-04 (identifier, answerable: yes, by owner)
 
-By category: dated-fact/yes 4, identifier/yes 3, no-answer/partial 3, why/yes 4, no-answer/no 1.
+**Question.** What does the connection to the wallet look like, and which tools were used to connect to the wallet?
+
+**Reference.** The application never held a private key: it connects to the owner's own wallet and every transaction is signed there. The UI uses wagmi with ConnectKit (ConnectKit pinned to 1.8.2 on 10.08 because 1.9.2 pulled in a buggy dependency); wagmi was set up for mainnet and Base on 10.08. On the Mac the browser wallet is Rabby; on the iPhone Rabby connects through WalletConnect, which worked from 19.08 after a fix that let the build read WALLET_CONNECT_PROJECT_ID from .env.
+
+**Notes.** Owner's question 1 of batch 3, his wording. Polish original: 'jakie wyglada polaczenie z portfelem, jakie uzyte narzedzia do podlaczenia sie do portfela'. INFRA.md 45-48 and 69-70 are also related ranges of CC-Mac's ho-na-03 and ho-na-04 in this batch (held-out items sharing a source, different facts).
+
+**Closest dev question:** why-06 (the bot never acted on its own; the owner signed) is the nearest; this item asks for the connection tools, not the reason for manual signing
+
+**Same section as development ranges (read by hand):**
+
+- journal/CONTEXT.md:2601-2604 is in section journal/CONTEXT.md:2514 ("2026-08-19 — Sesja analityczna (Fable) — odbiór nocy: root c"), which also holds ranges of dated-06
+
+- **a**: the UI connects through wagmi with ConnectKit (ConnectKit pinned to 1.8.2 on 10.08) (1 span)
+- **b**: no private key in the stack: on the Mac transactions are signed in the browser wallet Rabby (1 span)
+- **c**: on the iPhone Rabby connects through WalletConnect (working from 19.08, after WALLET_CONNECT_PROJECT_ID was read from .env) (2 spans)
+- **d**: wagmi configured for mainnet and Base (both 10.08) (2 spans)
+
+| span | role | facts | first line | last line | reason |
+|---|---|---|---|---|---|
+| CONTEXT.md:2938-2938 | required | a, d | - **Inne**: wagmi + mainnet (dla realnych pozycji), tsconfig target es2020 (bigint), connectkit przypięty do 1 | (one line) | entry of 10.08: wagmi + mainnet, connectkit pinned to 1.8.2 |
+| INFRA.md:45-48 | required | b, c | - **Keys**: the stack never held a private key. The bot only proposes; every transaction is | with Windows DPAPI, never in the repo or the UI) was planned but not implemented. | keys: never a private key; signed in Rabby on the Mac, a WalletConnect wallet on the iPhone |
+| CONTEXT.md:2601-2604 | required | c | ~15:5x — MOBILE DOMKNIĘTE: iPhone ma pełny dostęp (Rabby przez | pusty → brak WalletConnect na iOS (1a99ddf: require('dotenv') w | entry of 19.08: iPhone with Rabby through WalletConnect; WALLET_CONNECT_PROJECT_ID empty until webpack read .e |
+| CONTEXT.md:2983-2983 | required | d | - **Base dodane**: wagmi chains + NETWORKS.BASE (factory 0x33128a8f..., WETH/USDC/cbBTC) + WBTC mainnet. | (one line) | entry of 10.08 (2e): Base added to the wagmi chains + NETWORKS.BASE |
+| INFRA.md:69-70 | supporting | - | - The responsive UI, added to the Home Screen, shows the full morning view and lets the | owner approve proposals; signatures go through WalletConnect. | iPhone: Home Screen UI, signatures through WalletConnect |
+| CONTEXT.md:2826-2830 | supporting | - | odzyskiwalne przez "Zbierz fees"). Cross-chain: każda akcja najpierw przełącza | kolejnym renderze — ryzyko podpisania w złej sieci tuż po switchu). | every action switches the wallet network and takes a fresh walletClient through getWalletClient from wagmi/act |
+
+## ho-why-06 (why, answerable: yes, by owner)
+
+**Question.** How was the option of confirming transactions done technically, that is, what happened after clicking to confirm the creation of a new LP position?
+
+**Reference.** An OPEN proposal card in the cockpit has an [Open] button: it reads the pool on demand (slot0 and liquidity over RPC) and opens the position window for a new position (no NFT yet). The window computes the amounts with the Uniswap SDK, asks for token approvals on the exact amounts only when the allowance is short, simulates the mint with eth_call before sending, and sends the transaction to the connected wallet (Rabby), where the owner signs; slippage is limited to 0.1 to 1%. Before signing, each action switches the wallet to the right network and takes a fresh wallet client.
+
+**Notes.** Owner's question 2 of batch 3, his wording. Polish original: 'w jaki sposob technicznie byla zrealizowana opcja potwierdzania transakcji, czyli co dzialo sie po kliknieciu w potwierdzenie utworzenia nowej pozycji LP'. The reference is built from the journal and docs only, not from src/. What happens after signing (receipt wait, refresh, the window closing with a toast; Partia 13 of 27.08) is left out: its sources, TASKS-UI.md 1049-1062 and HANDOFF.md 1172-1205, share chunks with dev dated-01's required evidence (tool check).
+
+**Closest dev question:** id-05 (fetchFreshPool re-reads the pool before the mint step of a rebalance) and why-06 (PROPOSE mode); this item covers opening a new position and does not use the rebalance builder or fetchFreshPool
+
+- **a**: the OPEN card's button reads the pool on demand (slot0, liquidity) and opens the position window for a new position (1 span)
+- **b**: the window computes amounts with the SDK, approves exact amounts, simulates the mint with eth_call before sending, slippage 0.1-1% (1 span)
+- **c**: each action switches the wallet network first and takes a fresh wallet client (getWalletClient) before the owner signs in the wallet (1 span)
+
+| span | role | facts | first line | last line | reason |
+|---|---|---|---|---|---|
+| TASKS-UI.md:142-147 | required | a | - OPEN — karta z opisem z `action` (apy7d/chain/streak już w tekście), `note` | `RebalanceTarget` (tokenId `''` — nowa pozycja, nie ma jeszcze NFT). | OPEN card: [Open] calls resolveBotPool (2 RPC reads, slot0+liquidity) and opens RebalanceModal for a new posit |
+| CONTEXT.md:3001-3001 | required | b | - **`AddLiquidity.tsx` PRZEPISANY** (legacy 69KB → backup `legacy-AddLiquidity.tsx.bak`): zakresy Doradca/±5/± | (one line) | entry of 10.08: AddLiquidity rewritten: amounts via SDK, approvals on exact amounts, eth_call simulation befor |
+| CONTEXT.md:2826-2830 | required | c | odzyskiwalne przez "Zbierz fees"). Cross-chain: każda akcja najpierw przełącza | kolejnym renderze — ryzyko podpisania w złej sieci tuż po switchu). | each action switches the wallet network and takes a fresh walletClient via getWalletClient |
+| INFRA.md:45-47 | supporting | - | - **Keys**: the stack never held a private key. The bot only proposes; every transaction is | on the iPhone). An AUTO mode with an operating wallet key on the server (stored encrypted | the bot only proposes; every transaction is built in the UI and signed in the browser wallet |
+
+## Spread of the held-out set after this batch (17 items)
+
+By category: dated-fact/yes 4, identifier/yes 4, no-answer/partial 3, why/yes 5, no-answer/no 1.
 
 | source file | items | ids |
 |---|---|---|
-| CONTEXT.md | 11 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-why-04, ho-dated-03, ho-dated-04, ho-id-02, ho-id-03 |
+| CONTEXT.md | 13 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-why-04, ho-dated-03, ho-dated-04, ho-id-02, ho-id-03, ho-id-04, ho-why-06 |
 | DECYZJE-2026-08-26.md | 6 | ho-dated-01, ho-na-01, ho-why-02, ho-na-02, ho-id-03, ho-na-03 |
+| INFRA.md | 3 | ho-na-03, ho-na-04, ho-id-04 |
 | RESEARCH-QUEUE.md | 3 | ho-na-01, ho-why-04, ho-na-03 |
-| INFRA.md | 2 | ho-na-03, ho-na-04 |
 | SELECTOR-LOG.md | 2 | ho-dated-02, ho-id-01 |
 | EMERGENCY.md | 1 | ho-why-05 |
 | PLAN.md | 1 | ho-why-03 |
@@ -221,9 +270,10 @@ By category: dated-fact/yes 4, identifier/yes 3, no-answer/partial 3, why/yes 4,
 | TASKS-FUNNEL.md | 1 | ho-id-03 |
 | TASKS-RECAL.md | 1 | ho-na-02 |
 | TASKS-ROTATION.md | 1 | ho-dated-01 |
+| TASKS-UI.md | 1 | ho-why-06 |
 
 | month of the chunk | items | ids |
 |---|---|---|
-| no date (docs, notes, task files) | 13 | ho-dated-01, ho-dated-02, ho-id-01, ho-na-01, ho-why-02, ho-na-02, ho-why-03, ho-why-04, ho-why-05, ho-id-02, ho-id-03, ho-na-03, ho-na-04 |
-| 2026-08 | 7 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-id-03 |
+| no date (docs, notes, task files) | 15 | ho-dated-01, ho-dated-02, ho-id-01, ho-na-01, ho-why-02, ho-na-02, ho-why-03, ho-why-04, ho-why-05, ho-id-02, ho-id-03, ho-na-03, ho-na-04, ho-id-04, ho-why-06 |
+| 2026-08 | 9 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03, ho-id-03, ho-id-04, ho-why-06 |
 | 2026-09 | 4 | ho-why-04, ho-dated-03, ho-dated-04, ho-id-02 |
