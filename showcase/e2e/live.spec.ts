@@ -43,7 +43,14 @@ test('Live: networks, start dates, value ranges, telemetry, observation analysis
   await expect(page.locator('.paper-pool-card')).toHaveCount(6);
   const headers = page.locator('.paper-pool-header');
   await expect(headers.nth(0)).toContainText('USDC/WETH · 0.30% · Ethereum');
-  await expect(page.locator('.paper-pool-card', { hasText: 'Arbitrum' })).toContainText('waiting for market data from the network; no position opened yet.');
+  // Pending after a complete read with too few trades: the honest line, and the original network text is not shown.
+  const arb = page.locator('.paper-pool-card', { hasText: 'Arbitrum' });
+  await expect(arb.locator('.paper-pool-note')).toHaveText('too few trades in the last 24 hours to compute market statistics (fewer than 10); no position opened yet.');
+  expect(await arb.innerText()).not.toContain('waiting for market data from the network');
+  // Open, stale and quiet: the stale line says the last read found too few trades.
+  await expect(page.locator('.paper-pool-card', { hasText: 'WETH/USDC · 0.30% · Base' }).locator('.paper-pool-note')).toHaveText(
+    /^market statistics last read (\d+ min|\d+ h) ago; the last read found too few trades; fees are accrued on the last known yield\.$/,
+  );
   await expect(page.locator('.paper-pool-start')).toHaveCount(6);
   await expect(page.locator('.paper-pool-start', { hasText: /^started / })).toHaveCount(5);
   await expect(page.locator('.paper-pool-start', { hasText: 'not started yet' })).toHaveCount(1);
@@ -88,7 +95,7 @@ test('Live: networks, start dates, value ranges, telemetry, observation analysis
   await expect(page.locator('.telemetry-table th', { hasText: 'Statistics age' })).toHaveCount(1);
   // the fixture is written when its server starts, so the age grows during a long suite: match the form, not the minute
   await expect(page.locator('.telemetry-table td', { hasText: /^\d+ min ago \(last read 8 of 8 chunks failed\)$/ })).toHaveCount(1);
-  await expect(page.locator('.paper-pool-note')).toHaveCount(1);
+  await expect(page.locator('.paper-pool-note')).toHaveCount(3); // stale+incomplete, stale+quiet, pending+quiet
   await expect(page.locator('.paper-pool-card', { hasText: 'USDC/WETH · 0.05% · Ethereum' }).locator('.paper-pool-note')).toHaveText(
     /^market statistics last read \d+ min ago; the last 24 h read was incomplete \(8 of 8 chunks failed\); fees are accrued on the last known yield\.$/,
   );

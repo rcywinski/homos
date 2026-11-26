@@ -34,7 +34,7 @@ Nothing is written inside the clone: a redeploy (build and swap) replaces the cl
   are not in git, by the owner's choice of step 2.1).
 - Destination, on the box: `C:\HomosServe\live\results\`
 - How they travel: the earlier manual copies to the box are not recorded in the project notes, so the owner picks the
-  way (a USB stick or a share he already uses). The five files are small (11 to 14 KB each). Keep their dates.
+  way (a USB stick or a share he already uses). The five files are small (22 to 66 KB each). Keep their dates.
 - Last line, on the box, in PowerShell: `Get-FileHash C:\HomosServe\live\results\*.json -Algorithm SHA256`, and each
   hash must equal the table below.
 
@@ -104,6 +104,10 @@ does in that state (bot/observer.ts refreshStats, bot/paper.ts paperTick, read o
   last fee yield, and after 24 h out of range the rebalance decision uses the last statistics too. It does not pause.
 - **The page does not show it.** The telemetry's "Data age" is the age of the price (60 s loop), not of the
   statistics, so frozen statistics look fresh.
+- **"0 failed chunks" means no call failed, not that the window was complete.** A host can answer a log range with
+  fewer swaps than there were, without an error. Observed on run 2 (Mac, 26 Nov) for `base-weth-cbbtc-030`: the 24 h
+  count was 20 at 04:08 UTC and 54 at 06:02, while two hosts agree that no swap happened in between; one of those reads
+  was incomplete. Nothing in the code can tell such a read from a quiet market.
 
 Built 25 Nov (Live mode only, no change to what the paper step decides): the observer records per pool when the
 statistics were last computed and how the last 24 h read went (`statsAt`, `statsWindow`: chunks read and failed); the
@@ -157,9 +161,11 @@ Recommendation: (b), already wired as the Live list's first Arbitrum host (so ap
    "nightly wide-score: ok" and "nightly wide-daily: ok" (the WIDE ranking and the daily model). The paper positions open at the first statistics
    cycle. This is the fresh start of the demo (owner's decision of 25 Nov): no history is carried over.
 3. Start `HOMOS live api`. Check, in PowerShell (where plain `curl` is another command):
-   `curl.exe -s "http://127.0.0.1:8788/api/paper?hours=24"` answers JSON with six positions, each `"status":"open"`
-   (Arbitrum included, through arb1.arbitrum.io); `curl.exe -s http://127.0.0.1:8788/api/state` shows `statsAt` and a
-   `statsWindow` with `"failed":0` for every pool.
+   `curl.exe -s "http://127.0.0.1:8788/api/paper?hours=24"` answers JSON with six positions. A pool opens once its
+   24 h read holds at least 10 swaps (the advisor computes no statistics below that), so not all six need be open:
+   `base-weth-cbbtc-030` may stay pending for days (on 26 Nov it had about one trade a day); its card then says "too
+   few trades in the last 24 hours". `curl.exe -s http://127.0.0.1:8788/api/state` shows `statsWindow` with
+   `"failed":0` for every pool, and `statsAt` for every pool with enough trades.
 4. Only then add `SERVE_LIVE_BOT_URL=http://127.0.0.1:8788` to `C:\HomosServe\serve.env` and restart
    `HOMOS showcase server`. From this moment the archive page shows the Live link and `/live/` answers publicly.
 5. Measure for a full day and more (moved here from 5.1): calls per host and hour, failures, gaps per pool, nightly

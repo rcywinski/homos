@@ -23,6 +23,7 @@ export const AGREED: [string, RegExp, string][] = [];
 const normalize = (html: string) =>
   html
     .replace(/(just now|\d+ min ago|\d+ h ago)/g, 'AGE') // the data-age column depends on the clock
+    .replace(/\b20\d\d-\d\d-\d\d\b/g, 'DATE') // the fixture's ranking day is the day the suite runs
     .replace(/ style="[^"]*"/g, ''); // inline styles carry nothing the snapshot is about
 
 test('original telemetry, observation analysis and both rankings render as before without the Live props', async ({ page }, info) => {

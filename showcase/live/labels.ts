@@ -47,14 +47,29 @@ export function statsAgeCell(p: StatsInfo, now = Date.now()): string {
   return `${ago(minutesAgo(p.statsAt, now))}${w && w.failed > 0 ? ` (last read ${w.failed} of ${w.chunks} chunks failed)` : ''}`;
 }
 
-/** The line on a pool's card when its statistics are stale or the last read was incomplete; null otherwise. */
+/** The pending card's text when the 24 h read completed but held fewer than 10 swaps (computeStats needs 10). */
+export const QUIET_PENDING = 'too few trades in the last 24 hours to compute market statistics (fewer than 10); no position opened yet.';
+
+/** The read completed (no chunk failed) and still gave no statistics: a quiet market, not a network problem. */
+const quietRead = (w: StatsInfo['statsWindow']) => !!w && !w.ok && w.failed === 0;
+
+/**
+ * The line on a pool's card, or null:
+ * - pending, and the last read completed with too few trades: QUIET_PENDING (the page hides the original "waiting for
+ *   market data from the network" text on that card, which would be false); with a failed chunk or no read yet the
+ *   original network text stays, so no line;
+ * - open, with statistics older than two cycles or an incomplete last read: the stale line, which says so when the
+ *   last read found too few trades.
+ */
 export function statsNote(p: StatsInfo | undefined, positionStatus: string, now = Date.now()): string | null {
-  if (!p?.statsAt || positionStatus === 'pending') return null;
+  if (positionStatus === 'pending') return quietRead(p?.statsWindow) ? QUIET_PENDING : null;
+  if (!p?.statsAt) return null;
   const age = minutesAgo(p.statsAt, now);
   const w = p.statsWindow;
   const incomplete = !!w && w.failed > 0;
   if (age * 60_000 <= STATS_STALE_MS && !incomplete) return null;
   const parts = [`market statistics last read ${ago(age)}`];
   if (incomplete) parts.push(`the last 24 h read was incomplete (${w!.failed} of ${w!.chunks} chunks failed)`);
+  else if (quietRead(w)) parts.push('the last read found too few trades');
   return `${parts.join('; ')}; fees are accrued on the last known yield.`;
 }

@@ -13,3 +13,7 @@
    name (the cockpit's .app centres text). */
 .paper-pool-start { text-align: left; font-size: 12px; margin: -2px 0 6px; }
 .paper-pool-note { margin-top: -2px; }
+/* A pending pool whose last read found too few trades: the Live line replaces the original "waiting for market data
+   from the network" text, which would be false there (the pending card is the one with the "Before the first open"
+   status icon). */
+.paper-pool-card:has([title='Before the first open']) .paper-pool-note ~ .morning-note { display: none; }

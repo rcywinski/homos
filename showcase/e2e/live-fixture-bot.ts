@@ -90,6 +90,9 @@ const statePools = [
   ...p, tick: 1, sqrtPriceX96: '1', updatedAt: iso(0), trendGapPct: -1.2,
   // Statistics age (Live only): mainnet 0.05% is stale with an incomplete last read; the others are fresh.
   ...(p.stats ? { statsAt: iso(p.id === 'mainnet-usdc-weth-005' ? 0.8 * H : 0.1 * H), statsWindow: { at: iso(0.05 * H), chunks: 8, failed: p.id === 'mainnet-usdc-weth-005' ? 8 : 0, ok: p.id !== 'mainnet-usdc-weth-005' } } : {}),
+  // the three card states: arbitrum pending after a complete but quiet read; base-weth-usdc-030 open, stale and quiet
+  ...(p.id === 'arbitrum-weth-usdc-005' ? { statsWindow: { at: iso(0.05 * H), chunks: 35, failed: 0, ok: false } } : {}),
+  ...(p.id === 'base-weth-usdc-030' ? { statsAt: iso(1.5 * H), statsWindow: { at: iso(0.05 * H), chunks: 44, failed: 0, ok: false } } : {}),
 }));
 writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ updatedAt: iso(0), mode: 'OBSERVE', watch: OWNER_BAIT, rpc: RPC_BAIT, flatParams: { enterGap: 2, exitGap: 5, confirmH: 12 }, pools: statePools }));
 
