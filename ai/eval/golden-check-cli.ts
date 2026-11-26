@@ -7,7 +7,7 @@
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
 import { corpusFiles, loadCorpus } from '../corpus/load';
-import { CATEGORIES, checkGolden, TARGET, type Evidence } from './golden';
+import { answersHash, CATEGORIES, checkGolden, TARGET, type Evidence, type GoldenMeta } from './golden';
 
 const file = process.argv[2] ?? 'ai/eval/golden.jsonl';
 if (!existsSync(file)) {
@@ -23,8 +23,15 @@ const fileLines = new Map(
 const { questions, issues, hits, relatedHits, overlap } = checkGolden(readFileSync(file, 'utf8'), chunks, fileLines);
 
 const metaFile = path.join(path.dirname(file), 'golden-meta.json');
-const version = existsSync(metaFile) ? (JSON.parse(readFileSync(metaFile, 'utf8')) as { version: string }).version : 'unknown';
-console.log(`\n${file} (golden v${version}): ${questions.length} questions\n`);
+const meta = existsSync(metaFile) ? (JSON.parse(readFileSync(metaFile, 'utf8')) as GoldenMeta) : undefined;
+const version = meta?.version ?? 'unknown';
+// Stored answers and verdicts are tied to the question and reference text through this hash (see golden-meta rules).
+const hash = answersHash(questions);
+if (meta && meta.answersHash !== hash)
+  issues.push({ level: 'error', line: 0, id: 'meta', message: `golden-meta answersHash ${meta.answersHash ?? '(none)'}, the file hashes to ${hash}: a question or reference changed; record a new version with its hash` });
+if (meta && meta.changes.find((c) => c.version === meta.version)?.answersHash !== meta.answersHash)
+  issues.push({ level: 'error', line: 0, id: 'meta', message: `the change entry of v${meta.version} does not carry the current answersHash` });
+console.log(`\n${file} (golden v${version}, answers ${hash}): ${questions.length} questions\n`);
 questions.forEach((q, k) => {
   const fmt = (list: Evidence[], ids: string[][] | undefined, tag: string) =>
     list.map((e, i) => `${tag} ${e.file}:${e.lines?.[0]}-${e.lines?.[1]} -> ${(ids?.[i] ?? []).join(', ') || 'NO CHUNK'}`);

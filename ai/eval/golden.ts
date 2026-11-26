@@ -9,6 +9,7 @@
  *  - `answerable` is yes | partial | no. "partial" means the topic is in the corpus but the premise is wrong or only
  *    part is answerable: no evidence hits, but `related` ranges that should surface and be classified, not used.
  */
+import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
 import type { Chunk } from '../corpus/types';
 
@@ -210,4 +211,34 @@ export function checkGolden(content: string, chunks: Chunk[], fileLines: Map<str
 
 export function readGolden(file: string): string {
   return readFileSync(file, 'utf8');
+}
+
+/** golden-meta.json: the current version, its answers hash, the rules and the change log. */
+export interface GoldenMeta {
+  version: string;
+  /** answersHash() of the current golden.jsonl; the golden check fails when it is stale. */
+  answersHash?: string;
+  rules: string[];
+  changes: { version: string; date: string; answersHash?: string; summary: string }[];
+}
+
+/**
+ * Hash over what stored answers and verdicts depend on: id, question, reference and answerable of every item, in id
+ * order. Evidence, roles, facts and notes are left out, so marking spans does not invalidate a judged run, while an
+ * edited question or reference does.
+ */
+export function answersHash(questions: Pick<GoldenQuestion, 'id' | 'question' | 'reference' | 'answerable'>[]): string {
+  const rows = [...questions].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).map((q) => [q.id, q.question, q.reference, q.answerable]);
+  return createHash('sha256').update(JSON.stringify(rows)).digest('hex').slice(0, 16);
+}
+
+/**
+ * Throws unless results made on golden `version` were judged on the same question and reference text as `current`
+ * (the answersHash of the working golden). The version's hash comes from the meta change log.
+ */
+export function assertSameAnswers(meta: GoldenMeta, version: string, current: string, what: string): void {
+  const entry = meta.changes.find((c) => c.version === version);
+  if (!entry?.answersHash) throw new Error(`${what}: golden ${version} has no answersHash in golden-meta.json`);
+  if (entry.answersHash !== current)
+    throw new Error(`${what}: judged on golden ${version} (answers ${entry.answersHash}), the current golden text is ${current}; a question or reference changed since`);
 }

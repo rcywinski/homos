@@ -4,6 +4,7 @@
  */
 import { COMPARISON } from './comparison';
 import { buildComparison, buildReports } from './export';
+import { answersHash, assertSameAnswers, type GoldenMeta } from '../eval/golden';
 import { hasPrivateAddress } from './mask';
 
 let passed = 0;
@@ -82,6 +83,25 @@ check('reports output has no private address', !hasPrivateAddress(JSON.stringify
 // Provenance: every manifest file is listed with a hash.
 const listed = new Set(data.sources.map((s) => s.file));
 for (const c of COMPARISON) for (const r of c.runs) check(`source listed: ${r.answersFile}`, listed.has(r.answersFile) && listed.has(r.judgedFile));
+
+// Golden text guard (26 Nov 2026): runs judged on v1.4 stay valid while only evidence roles change; the version
+// shown is the one they were judged on; an edited question or reference stops the export.
+check('shown golden version is the judged one (1.4)', data.goldenVersion === '1.4', data.goldenVersion);
+const meta: GoldenMeta = { version: '1.8', answersHash: 'b', rules: [], changes: [{ version: '1.4', date: '', answersHash: 'a', summary: '' }] };
+const throws = (f: () => void) => {
+  try {
+    f();
+    return false;
+  } catch {
+    return true;
+  }
+};
+check('same text hash passes', !throws(() => assertSameAnswers(meta, '1.4', 'a', 'x')));
+check('changed text hash throws', throws(() => assertSameAnswers(meta, '1.4', 'b', 'x')));
+check('version without a hash throws', throws(() => assertSameAnswers(meta, '1.3', 'a', 'x')));
+const q = { id: 'q', question: 'Q?', reference: 'R.', answerable: 'yes' as const };
+check('hash ignores evidence', answersHash([q]) === answersHash([{ ...q, evidence: [{ file: 'f', lines: [1, 2] }] } as typeof q]));
+check('hash sees the reference', answersHash([q]) !== answersHash([{ ...q, reference: 'R2.' }]));
 
 console.log(`export: ${passed} passed, ${failed} failed (${verified} verified quotes, ${notVerified} not verified)`);
 if (failed > 0) process.exit(1);

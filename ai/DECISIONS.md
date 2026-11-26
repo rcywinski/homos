@@ -1215,3 +1215,19 @@ spans **20/26**, recall@5 17/26; MRR@10 on required spans **0.471**. Every phase
 numbers on v1.7, never with the v1.6 figures (50/169, 0.490), which count unmarked spans as facts. The MRR change from
 v1.6 comes entirely from dated-08: its rank 1 hit `EMERGENCY.md:90-91` is supporting in v1.7, so the first required hit
 is `CONTEXT.md:216-217` at rank 2. Recall is unchanged. No question or reference text changed. 0 USD.
+
+## 2026-11-26, golden text hash replaces the version check in the showcase export (owner)
+
+**Problem.** `ai/serve/export.test.ts` failed on ai-layer from c6104b0 (golden v1.5) to e973f84: the export required
+the stored v1.4 answers and verdicts to carry the current golden-meta version. ai-layer has no CI, and only the eval
+tests were run before those commits, so it went unnoticed for four commits; from now on the whole `test:ai` runs
+before every commit on ai-layer.
+
+**Decision** (the analysis session's recommendation, approved by the owner, applied after phase 5 merged to main and
+main was merged into ai-layer). Answers and verdicts depend on the question and reference text, not on evidence
+roles. `golden-meta.json` records `answersHash` (sha256 over id, question, reference and answerable in id order,
+`ai/eval/golden.ts` `answersHash`) for the current file and for every version; the hash is the same for v1.0 to v1.7,
+computed from git. The export accepts a run judged on version v only if v's hash equals the current text's, and shows
+the version the runs were judged on (1.4). The golden check fails when the recorded hash is stale. Not done, on
+purpose: rewriting the version in committed result files, or accepting any version. Showcase comparison data built on
+ai-layer is byte-identical to main's, apart from the hashes of the two golden files in the source list. 0 USD.

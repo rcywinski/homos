@@ -9,7 +9,7 @@ import { createHash } from 'crypto';
 import { readFileSync, readdirSync } from 'fs';
 import path from 'path';
 import type { AnswerRecord } from '../answer/measures';
-import type { GoldenQuestion } from '../eval/golden';
+import { answersHash, assertSameAnswers, type GoldenMeta, type GoldenQuestion } from '../eval/golden';
 import type { JudgedItem } from '../judge/items';
 import type { Verdict } from '../judge/types';
 import { COMPARISON, type ConfigSource } from './comparison';
@@ -109,11 +109,14 @@ function answer(rec: AnswerRecord, judged: JudgedItem | undefined, corpus: Map<s
   };
 }
 
-function buildRun(read: Reader, src: ConfigSource['runs'][number], goldenVersion: string, ids: string[], corpus: Map<string, Chunk>): ShowcaseRun {
+function buildRun(read: Reader, src: ConfigSource['runs'][number], meta: GoldenMeta, current: string, ids: string[], corpus: Map<string, Chunk>): ShowcaseRun {
   const a = read.json<AnswersFile>(src.answersFile);
   const j = read.json<JudgedFile>(src.judgedFile);
-  if (a.goldenVersion !== goldenVersion) throw new Error(`${src.answersFile}: golden ${a.goldenVersion}, expected ${goldenVersion}`);
-  if (j.goldenVersion !== goldenVersion) throw new Error(`${src.judgedFile}: golden ${j.goldenVersion}, expected ${goldenVersion}`);
+  // Answers and verdicts depend on the question and reference text, not on evidence roles: a run made on an earlier
+  // golden version is shown only when that version's text is the current one (golden-meta answersHash).
+  assertSameAnswers(meta, a.goldenVersion, current, src.answersFile);
+  assertSameAnswers(meta, j.goldenVersion, current, src.judgedFile);
+  if (a.goldenVersion !== j.goldenVersion) throw new Error(`${src.judgedFile}: golden ${j.goldenVersion}, answers ${a.goldenVersion}`);
   const listed = j.runs.find((r) => r.run === src.run);
   if (!listed) throw new Error(`${src.judgedFile} has no run ${src.run}`);
   if (listed.file !== src.answersFile) throw new Error(`${src.judgedFile}: run ${src.run} is ${listed.file}, not ${src.answersFile}`);
@@ -148,12 +151,14 @@ function buildRun(read: Reader, src: ConfigSource['runs'][number], goldenVersion
 
 export function buildComparison(root = process.cwd(), configs: ConfigSource[] = COMPARISON): ComparisonData {
   const read = new Reader(root);
-  const goldenVersion = read.json<{ version: string }>(GOLDEN_META).version;
+  const meta = read.json<GoldenMeta>(GOLDEN_META);
   const golden = read
     .text(GOLDEN_FILE)
     .split('\n')
     .filter((l) => l.trim())
     .map((l) => JSON.parse(l) as GoldenQuestion);
+  const current = answersHash(golden);
+  if (meta.answersHash !== current) throw new Error(`${GOLDEN_META}: answersHash ${meta.answersHash}, the golden text hashes to ${current}`);
   const questions: ShowcaseQuestion[] = golden.map((q) => ({
     id: q.id,
     category: q.category,
@@ -171,9 +176,12 @@ export function buildComparison(root = process.cwd(), configs: ConfigSource[] = 
     served: c.served,
     engine: c.engine,
     single: c.runs.length === 1,
-    runs: c.runs.map((r) => buildRun(read, r, goldenVersion, ids, corpus)),
+    runs: c.runs.map((r) => buildRun(read, r, meta, current, ids, corpus)),
   }));
-  return { goldenVersion, questions, configs: out, sources: read.sources() };
+  // The version shown is the one the runs were judged on, not the current file's (evidence roles may have moved on).
+  const versions = [...new Set(configs.flatMap((c) => c.runs.map((r) => read.json<AnswersFile>(r.answersFile).goldenVersion)))];
+  if (versions.length > 1) throw new Error(`the comparison mixes golden versions ${versions.join(', ')}`);
+  return { goldenVersion: versions[0] ?? meta.version, questions, configs: out, sources: read.sources() };
 }
 
 export function buildReports(root = process.cwd()): ReportsData {
