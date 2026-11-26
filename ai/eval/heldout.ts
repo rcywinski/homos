@@ -121,8 +121,45 @@ function load(path: string): Batch & { warnings: Map<string, string[]> } {
   return { ...batch, warnings };
 }
 
+/**
+ * Spread of the held-out set after this batch (analysis session, batch 2 review): items per category, per source file
+ * and per journal month, counted over required spans and related ranges, so a cluster shows before the freeze.
+ */
+function spread(batch: Batch, chunks: Chunk[]): string[] {
+  const withdrawn = new Set((batch.withdraw ?? []).map((w) => w.id));
+  const earlier = (existsSync(HELDOUT) ? parse(readFileSync(HELDOUT, 'utf8')) : []).filter((q) => !withdrawn.has(q.id) && !batch.questions.some((b) => b.id === q.id));
+  const items = [
+    ...earlier.map((q) => ({ id: q.id, category: `${q.category}/${q.answerable}`, ranges: [...requiredOnly(q.evidence), ...(q.related ?? [])] as { file: string; lines: [number, number] }[] })),
+    ...batch.questions.map((q) => ({ id: q.id, category: `${q.category}/${q.answerable}`, ranges: [...q.spans.filter((s) => s.role === 'required'), ...(q.related ?? [])] })),
+  ];
+  const count = (key: (r: { file: string; lines: [number, number] }) => string[]) => {
+    const m = new Map<string, Set<string>>();
+    for (const it of items) for (const r of it.ranges) for (const k of key(r)) m.set(k, (m.get(k) ?? new Set()).add(it.id));
+    return [...m.entries()].sort((a, b) => b[1].size - a[1].size || a[0].localeCompare(b[0]));
+  };
+  const months = (r: { file: string; lines: [number, number] }) =>
+    [...new Set(chunks.filter((c) => overlaps(c, r as Evidence)).map((c) => c.date?.slice(0, 7) ?? 'no date (docs, notes, task files)'))];
+  const cats = new Map<string, number>();
+  for (const it of items) cats.set(it.category, (cats.get(it.category) ?? 0) + 1);
+  return [
+    `## Spread of the held-out set after this batch (${items.length} items)`,
+    '',
+    `By category: ${[...cats.entries()].map(([c, n]) => `${c} ${n}`).join(', ')}.`,
+    '',
+    '| source file | items | ids |',
+    '|---|---|---|',
+    ...count((r) => [r.file]).map(([f, ids]) => `| ${short(f)} | ${ids.size} | ${[...ids].join(', ')} |`),
+    '',
+    '| month of the chunk | items | ids |',
+    '|---|---|---|',
+    ...count(months).map(([m, ids]) => `| ${m} | ${ids.size} | ${[...ids].join(', ')} |`),
+    '',
+  ];
+}
+
 function review(path: string, out: string) {
   const batch = load(path);
+  const chunks = loadCorpus(process.cwd());
   const md: string[] = [
     `# Held-out batch ${batch.batch} (${batch.date}): questions, references and spans`,
     '',
@@ -160,6 +197,7 @@ function review(path: string, out: string) {
     }
     md.push('');
   }
+  md.push(...spread(batch, chunks));
   if (batch.withdraw?.length) md.push('## Withdrawn from earlier batches', '', ...batch.withdraw.map((w) => `- **${w.id}**: ${w.reason}`), '');
   writeFileSync(out, md.join('\n'));
   console.log(`wrote ${out}: ${batch.questions.length} questions`);

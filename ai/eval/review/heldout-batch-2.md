@@ -42,7 +42,7 @@ from it alone.
 
 **Reference.** The corpus does not prove the simulator right, but it records how its results were checked and which errors were found: the validation itself caught an engine bug (probe swaps through empty ticks faked trend signals and made exit variants show -100%; filtered on 17.08, baselines unaffected, verdict unchanged); the final round was recomputed independently on 8 of 8 walk-forward files and agreed with CC-Win's reports to the hundredth; a nightly report that called FlatOnly 'better than HODL' when it was only 'positive' was corrected against its own numbers; a corrupted first price point in a 720-day cache was flagged. After the volatility measure was corrected, the recalibration series still passed zero gates, and the overall result matches the literature (about half of LPs lose to HODL). One strategy did beat HODL over the full period, the wide passive ±50%, so the claim concerns the active strategies.
 
-**Notes.** Owner's question 3. Polish original: 'czy symulacja algorytmow mogla sie pomylic w obliczeniach i faktycznie ktoras strategia mogla przebijac HODL?'. Partial: the corpus has checks and found errors, not a proof. Expected: no claim that the simulator was proven correct and no claim that a hidden winner exists; name the checks. Not used: ai/APP-PLAN.md (not corpus).
+**Notes.** Owner's question 3. Polish original: 'czy symulacja algorytmow mogla sie pomylic w obliczeniach i faktycznie ktoras strategia mogla przebijac HODL?'. Partial: the corpus has checks and found errors, not a proof. Expected: no claim that the simulator was proven correct and no claim that a hidden winner exists; name the checks. Not used: ai/APP-PLAN.md (not corpus). Two related ranges (CONTEXT.md 2033-2037 and 2064-2068) sit in the 27.08 morning chunks that also hold dated-01, id-03 and why-08 evidence; related ranges are not scored, but the judged answer depends on them, so at step 6.12 this item's verdict is reported separately when its retrieved chunks include those.
 
 **Closest dev question:** why-09 (365 vs 720 days): both are about trusting the backtest verdict; why-09 asks why the windows disagreed, this one whether the engine itself could be wrong
 
@@ -93,6 +93,27 @@ Related (should surface, does not answer):
 | PLAN.md:45-51 | supporting | - | Four bugs in one line: | Effect: `mintAmounts` inconsistent with what the contract would compute → transactions reverted → and hence… | detail of the cause: liquidity formula without the current price, reverts |
 | PLAN.md:55-55 | supporting | - | `prepareAddLiquidityTransaction` contains a special path for USDC/WETH with a **minimum slippage of 20%** ("US | (one line) | the 20% slippage as a symptom |
 | PLAN.md:66-70 | supporting | - | ### 2.6. Conclusions for v2 | 3. **Unit tests with reference values**: for known on-chain positions (tokenId → amounts) the result of our co | the plan for v2 (bigint, SDK, tests to 1 wei), before it was done |
+
+## Spread of the held-out set after this batch (7 items)
+
+By category: dated-fact/yes 2, identifier/yes 1, no-answer/partial 2, why/yes 2.
+
+| source file | items | ids |
+|---|---|---|
+| CONTEXT.md | 6 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03 |
+| DECYZJE-2026-08-26.md | 4 | ho-dated-01, ho-na-01, ho-why-02, ho-na-02 |
+| SELECTOR-LOG.md | 2 | ho-dated-02, ho-id-01 |
+| PLAN.md | 1 | ho-why-03 |
+| PYTANIE-SZEROKOSC-I-SIGMA.md | 1 | ho-na-01 |
+| morning-2026-08-19.md | 1 | ho-id-01 |
+| RESEARCH-QUEUE.md | 1 | ho-na-01 |
+| TASKS-RECAL.md | 1 | ho-na-02 |
+| TASKS-ROTATION.md | 1 | ho-dated-01 |
+
+| month of the chunk | items | ids |
+|---|---|---|
+| no date (docs, notes, task files) | 7 | ho-dated-01, ho-dated-02, ho-id-01, ho-na-01, ho-why-02, ho-na-02, ho-why-03 |
+| 2026-08 | 6 | ho-dated-01, ho-dated-02, ho-id-01, ho-why-02, ho-na-02, ho-why-03 |
 
 ## Withdrawn from earlier batches
 

@@ -150,7 +150,7 @@
         }
       ],
       "closestDev": "why-09 (365 vs 720 days): both are about trusting the backtest verdict; why-09 asks why the windows disagreed, this one whether the engine itself could be wrong",
-      "notes": "Owner's question 3. Polish original: 'czy symulacja algorytmow mogla sie pomylic w obliczeniach i faktycznie ktoras strategia mogla przebijac HODL?'. Partial: the corpus has checks and found errors, not a proof. Expected: no claim that the simulator was proven correct and no claim that a hidden winner exists; name the checks. Not used: ai/APP-PLAN.md (not corpus)."
+      "notes": "Owner's question 3. Polish original: 'czy symulacja algorytmow mogla sie pomylic w obliczeniach i faktycznie ktoras strategia mogla przebijac HODL?'. Partial: the corpus has checks and found errors, not a proof. Expected: no claim that the simulator was proven correct and no claim that a hidden winner exists; name the checks. Not used: ai/APP-PLAN.md (not corpus). Two related ranges (CONTEXT.md 2033-2037 and 2064-2068) sit in the 27.08 morning chunks that also hold dated-01, id-03 and why-08 evidence; related ranges are not scored, but the judged answer depends on them, so at step 6.12 this item's verdict is reported separately when its retrieved chunks include those."
     },
     {
       "id": "ho-why-03",
