@@ -10,7 +10,8 @@ import { ClaudeQueryRewriter, expandedQuery, readQueries, type PolishQuery } fro
 import { loadCorpus } from '../corpus/load';
 import type { TokenUsage } from '../context/types';
 import type { Chunk } from '../corpus/types';
-import { indexPath, readIndex } from '../embed/index-file';
+import { indexPath, readIndex, type IndexFile } from '../embed/index-file';
+import type { Embedder } from '../embed/types';
 import { indexView } from '../embed/index-view';
 import { LocalEmbedder } from '../embed/local';
 import { LocalReranker, checkReranker } from '../rerank/local';
@@ -18,12 +19,64 @@ import { RerankRetriever } from '../rerank/retriever';
 import { Bm25Index } from '../store/bm25';
 import { HybridRetriever } from '../store/hybrid';
 import { MappedRetriever } from '../store/mapped';
+import type { Retriever } from '../store/types';
 import { VectorStore } from '../store/vector';
 
 export const CONTEXTS_FILE = 'ai/context/contexts-haiku.jsonl';
 export const QUERIES_FILE = 'ai/context/queries-pl-sonnet.jsonl';
 
 export type RetrievalVariant = 'chosen' | 'local';
+
+/** Candidates the served reranker scores, and the document format it sees (metadata header). */
+export const RERANK_CANDIDATES = 30;
+export const RERANK_FORMAT = 'meta' as const;
+
+/** The first stage of a variant, built once: also used by the retrieval diagnostic of step 6.3. */
+export interface FirstStage {
+  /** Source chunks (what the generator sees), by id. */
+  source: Map<string, Chunk>;
+  /** Chunks as the reranker sees them (with generated context for "chosen"). */
+  withContext: Map<string, Chunk>;
+  vector: VectorStore;
+  bm25: Retriever;
+  hybrid: HybridRetriever;
+  /** Index name, e.g. ollama-bge-m3.meta. */
+  indexName: string;
+  index: IndexFile;
+}
+
+/**
+ * Vectors plus BM25 fused by RRF, exactly as served. `queries` holds the Polish renderings BM25 gets for "chosen"
+ * (unused for "local"); a missing rendering is an error at search time.
+ */
+export function firstStage(root: string, variant: RetrievalVariant, embedder: Embedder, queries: Map<string, PolishQuery>): FirstStage {
+  const chunks = loadCorpus(root);
+  const local = variant === 'local';
+  const view = indexView(chunks, 'meta', local ? undefined : CONTEXTS_FILE);
+  const index = readIndex(indexPath(embedder.name + view.suffix, root), view.chunks);
+  const plainBm25 = new Bm25Index(view.chunks, { stem: 'prefix6' });
+  const bm25: Retriever = local
+    ? plainBm25
+    : new MappedRetriever(
+        plainBm25,
+        (q) => {
+          const pl = queries.get(q);
+          if (!pl) throw new Error(`no Polish rendering for: ${q}`);
+          return expandedQuery(pl);
+        },
+        'query-pl',
+      );
+  const vector = new VectorStore(index.ids, index.vectors, embedder);
+  return {
+    source: new Map(chunks.map((c) => [c.id, c])),
+    withContext: new Map((local ? chunks : applyContexts(chunks, CONTEXTS_FILE)).map((c) => [c.id, c])),
+    vector,
+    bm25,
+    hybrid: new HybridRetriever([vector, bm25]),
+    indexName: embedder.name + view.suffix,
+    index,
+  };
+}
 
 /** Model of the live query translation (step 1.7 measured Sonnet). */
 export const QUERY_MODEL = 'sonnet' as const;
@@ -50,29 +103,12 @@ export class AnswerRetrieval {
     const rerankUrl = process.env.RERANK_URL;
     if (!inferenceUrl || !rerankUrl) throw new Error('INFERENCE_URL and RERANK_URL must be set (see .env.example)');
     this.rerankUrl = rerankUrl;
-    const chunks = loadCorpus(root);
-    this.source = new Map(chunks.map((c) => [c.id, c]));
-    const local = variant === 'local';
-    const view = indexView(chunks, 'meta', local ? undefined : CONTEXTS_FILE);
+    this.queries = variant === 'local' ? new Map() : readQueries(QUERIES_FILE);
     const embedder = new LocalEmbedder({ baseUrl: inferenceUrl });
-    const index = readIndex(indexPath(embedder.name + view.suffix, root), view.chunks);
-    this.queries = local ? new Map() : readQueries(QUERIES_FILE);
-    const plainBm25 = new Bm25Index(view.chunks, { stem: 'prefix6' });
-    const bm25 = local
-      ? plainBm25
-      : new MappedRetriever(
-          plainBm25,
-          (q) => {
-            const pl = this.queries.get(q);
-            if (!pl) throw new Error(`no Polish rendering for: ${q}`);
-            return expandedQuery(pl);
-          },
-          'query-pl',
-        );
-    const withContext = new Map((local ? chunks : applyContexts(chunks, CONTEXTS_FILE)).map((c) => [c.id, c]));
-    const hybrid = new HybridRetriever([new VectorStore(index.ids, index.vectors, embedder), bm25]);
-    this.retriever = new RerankRetriever(hybrid, new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 120_000 }), withContext, 30, 'meta');
-    this.name = `${this.retriever.name} index=${embedder.name}${view.suffix}`;
+    const fs = firstStage(root, variant, embedder, this.queries);
+    this.source = fs.source;
+    this.retriever = new RerankRetriever(fs.hybrid, new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 120_000 }), fs.withContext, RERANK_CANDIDATES, RERANK_FORMAT);
+    this.name = `${this.retriever.name} index=${fs.indexName}`;
   }
 
   /** Polish rendering for questions outside the cached file: one Sonnet call each, as measured in 1.7. */
