@@ -1231,3 +1231,18 @@ computed from git. The export accepts a run judged on version v only if v's hash
 the version the runs were judged on (1.4). The golden check fails when the recorded hash is stale. Not done, on
 purpose: rewriting the version in committed result files, or accepting any version. Showcase comparison data built on
 ai-layer is byte-identical to main's, apart from the hashes of the two golden files in the source list. 0 USD.
+
+## 2026-11-26, step 6.2 (c) held-out batch 1 and the heading-date rule (owner)
+
+**Decision.** The owner approved held-out batch 1 (`ai/eval/review/heldout-batch-1.md`, five questions by CC-Mac) and
+the owner's conditions for the whole held-out set: nothing is run on it before the freeze (first run at step 6.12);
+questions come from the whole corpus and none reworks a development question or rests on its sources; one or two
+questions per batch are his own. Written to `ai/eval/heldout.jsonl`, `ai/eval/heldout-meta.json` v0.1 (answers hash
+`c5756873922c13d8`). The batch tool `ai/eval/heldout.ts` refuses ranges that overlap development ranges and required
+spans that share a chunk with required development evidence (added after the analysis session's review, which also
+withdrew a first why item: it restated dev why-09's finding from the same DECYZJE section); `ai/eval/heldout.test.ts`
+fails if any other code names the held-out file.
+
+**Heading-date rule** (added to `golden-meta.json`, no development item changes): a date that stands only in a journal
+entry's heading counts for every span of that entry, because every chunk of the entry carries the date in its
+metadata, shown to both the reranker and the generator. 0 USD.

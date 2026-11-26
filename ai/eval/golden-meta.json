@@ -8,7 +8,8 @@
     "An item changes because it is defective as a test, never because the system fails it.",
     "Each required span names the facts of the reference it states (question-level 'facts', span-level 'facts'); required coverage counts facts with at least one of their spans in the top k. A fact no span states stays listed and is reported apart. Roles and facts are set through ai/eval/roles.ts from a reviewed roles file, whose generated review shows each span's first and last line beside its facts.",
     "A row of a morning report is a required span only when the fact is a state on a date and the row shows that state in full; a row that shows a state from which an event, a first occurrence, an execution or an hour must be inferred is supporting. A one-word conclusion ('no', 'in none') is not a fact.",
-    "'answersHash' is a hash over id, question, reference and answerable of every item in id order (ai/eval/golden.ts answersHash). Each version records it; results judged on one version are valid on another only when the two hashes are equal. Computed from git for v1.0 to v1.7: the text has not changed since v1.0."
+    "'answersHash' is a hash over id, question, reference and answerable of every item in id order (ai/eval/golden.ts answersHash). Each version records it; results judged on one version are valid on another only when the two hashes are equal. Computed from git for v1.0 to v1.7: the text has not changed since v1.0.",
+    "A date that stands only in the heading of a journal entry counts as stated by every span of that entry, because every chunk of the entry carries the entry date in its metadata, which both the reranker document (docText meta: file | date | title) and the generator prompt (date=\"...\") show; a span whose chunk does not carry the date does not get it from a heading. Approved by the owner on 26 Nov 2026; no development item changes under it (dated-07 CONTEXT.md:1023 was already required)."
   ],
   "changes": [
     {

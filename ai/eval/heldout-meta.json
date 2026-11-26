@@ -1,0 +1,19 @@
+{
+  "version": "0.1",
+  "answersHash": "c5756873922c13d8",
+  "rules": [
+    "Every rule of ai/eval/golden-meta.json applies here too.",
+    "Held-out test set of step 6.2 (c): questions and references drafted from the corpus read directly, never from retrieval output; nothing is run on them (no retrieval, no model) before the file is frozen; the first run is step 6.12 (owner, 26 Nov 2026).",
+    "No question reworks a development question or rests on the same sources: ai/eval/heldout.ts refuses a range that overlaps a development range and a required span that shares a chunk with required development evidence, and lists ranges in the same section as a development range for a reading by hand; each question names its closest development question.",
+    "One or two questions per batch are written by the owner in his own words; CC-Mac adds the facts and spans.",
+    "Version 0.x while batches are added; 1.0 is the frozen file, with its sha256 recorded in ai/DECISIONS.md."
+  ],
+  "changes": [
+    {
+      "version": "0.1",
+      "date": "2026-11-26",
+      "answersHash": "c5756873922c13d8",
+      "summary": "Batch 1, five questions by CC-Mac (ho-why-01, ho-dated-01, ho-dated-02, ho-id-01, ho-na-01), reviewed by the analysis session and approved by the owner (ai/eval/review/heldout-batch-1.md). The owner's own questions for batch 1 follow in the next version."
+    }
+  ]
+}
