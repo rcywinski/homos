@@ -5,7 +5,7 @@
 import type { Chunk } from '../corpus/types';
 import { FakeEmbedder } from '../embed/fake';
 import { VectorStore } from '../store/vector';
-import { checkGolden, requiredOnly, type Evidence } from './golden';
+import { checkGolden, factSpans, requiredOnly, type Evidence, type GoldenQuestion } from './golden';
 import { firstHitRank, fmtRatio, journalOnly, mrrAt, recallAt } from './metrics';
 
 let passed = 0;
@@ -62,6 +62,26 @@ async function main() {
   check('role check passes', errors([rep, { ...rep, role: 'supporting' }]).length === 0, errors([rep]).join('; '));
   check('only supporting is an error', errors([{ ...rep, role: 'supporting' }]).some((m) => m.includes('required')));
   check('unknown role is an error', errors([{ ...rep, role: 'main' as never }]).some((m) => m.includes('role must be')));
+
+  // 2c. facts (golden v1.6): a fact is covered by any of its spans; a fact no span states is counted apart.
+  const fq = {
+    id: 'why-01', category: 'dated-fact', question: 'When did it happen?', answerable: 'yes', reference: 'r',
+    facts: { a: 'fact a', b: 'fact b', c: 'an absence' },
+    evidence: [
+      { ...rep, role: 'required', facts: ['a'] },
+      { file: 'journal/CONTEXT.md', lines: [96, 96], role: 'required', facts: ['a', 'b'] },
+      { file: 'journal/CONTEXT.md', lines: [97, 97], role: 'supporting' },
+    ],
+  } as GoldenQuestion;
+  const fs = factSpans(fq);
+  check('facts with spans', fs.spans.length === 2 && fs.spans[0].length === 2 && fs.spans[1].length === 1);
+  check('fact with no span counted apart', fs.none === 1);
+  check('unmarked question: one fact per required span', factSpans({ ...fq, facts: undefined, evidence: roles }).spans.length === 2);
+  const ferr = (q: object) => checkGolden(JSON.stringify(q), corpus, lines).issues.filter((i) => i.level === 'error').map((i) => i.message);
+  check('marked facts pass', ferr(fq).length === 0, ferr(fq).join('; '));
+  check('required span without facts is an error', ferr({ ...fq, evidence: [{ ...rep, role: 'required' }] }).some((m) => m.includes('needs its facts')));
+  check('unknown fact letter is an error', ferr({ ...fq, evidence: [{ ...rep, role: 'required', facts: ['z'] }] }).some((m) => m.includes('not in the question')));
+  check('facts on a supporting span is an error', ferr({ ...fq, evidence: [...fq.evidence, { ...rep, role: 'supporting', facts: ['a'] }] }).some((m) => m.includes('supporting span carries')));
 
   // 3. VectorStore with FakeEmbedder: the text sharing the query's words ranks first; scores descend.
   const e = new FakeEmbedder(64);

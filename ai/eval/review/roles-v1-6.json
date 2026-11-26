@@ -1,0 +1,1026 @@
+{
+  "version": "1.6",
+  "batch": "class C (step 6.2 b, batch 1)",
+  "questions": {
+    "why-01": {
+      "facts": {
+        "a": "on 720 days 0 of 21 configurations passed the gate",
+        "b": "the live narrowing 31.08 to 11.09 ended -$32 vs HODL",
+        "c": "on 16.09 narrowing was rejected again: about +$1 vs about -$30 per episode"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            96,
+            96
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "decision row 26.08: 0/21 on 720d"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            103,
+            103
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "decision row 16.09: narrowing still no, +$1 vs -$30"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            255,
+            264
+          ],
+          "role": "required",
+          "facts": [
+            "b",
+            "c"
+          ],
+          "reason": "16.09 brief: neither card signed, asymmetry, episode -$32"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            442,
+            449
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "ledger result of the episode, -$32.08 vs HODL"
+        },
+        {
+          "file": "docs/DECISION-LOG.md",
+          "lines": [
+            22,
+            22
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "English row of the 720d gate"
+        },
+        {
+          "file": "docs/DECISION-LOG.md",
+          "lines": [
+            28,
+            28
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "episode closed, -$32 vs HODL"
+        },
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            81,
+            84
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "the narrowing experiment, -$32 vs HODL"
+        },
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            56,
+            61
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "720 days, 0 of 21"
+        },
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            107,
+            112
+          ],
+          "role": "supporting",
+          "reason": "general conclusion, no fact of the reference"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1725,
+            1727
+          ],
+          "role": "supporting",
+          "reason": "gas is negligible: explains, not in the reference"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1752,
+            1762
+          ],
+          "role": "supporting",
+          "reason": "fee vs IL breakdown: explains why, not in the reference"
+        }
+      ]
+    },
+    "why-03": {
+      "facts": {
+        "a": "the first 720d run (25.08) reused the four 365d pools, cbBTC from the pool's start",
+        "b": "each walk-forward took 20 to 40 minutes per pool",
+        "c": "the finalists restriction appears only later, in the funnel design of 31.08"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4762,
+            4768
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b"
+          ],
+          "reason": "four *-720d pools as copies of the -365d addresses, ~20-40 min"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1171,
+            1176
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "the funnel: 720d gate for finalists"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3850,
+            3851
+          ],
+          "role": "supporting",
+          "reason": "a year fetched in 13 min: the fetch was not the bottleneck"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            662,
+            678
+          ],
+          "role": "required",
+          "reason": "25.08 evening: four *-720d pools built (base-030, mainnet-005, arb-005, cbBTC-005), younger pools from their start",
+          "facts": [
+            "a"
+          ]
+        }
+      ]
+    },
+    "why-08": {
+      "facts": {
+        "a": "best LP-vs-HODL alpha (365d, k2h24 +11.42)",
+        "b": "on 27.08 closest to passing the gate",
+        "c": "on 720d the only pool with 65% winning windows",
+        "d": "full crypto beta, no stable cushion (HODL -51.5% APR, max drawdown 61.5%)",
+        "e": "LP and HODL lose together (same USD beta)"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3817,
+            3828
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "d"
+          ],
+          "reason": "the 365d result: +11.42, largest alpha; HODL -51.5%, maxDD 61.5%"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            281,
+            284
+          ],
+          "replaces": [
+            281,
+            283
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "widened: the old range stopped before 'tę samą betę do USD' on line 284"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2074,
+            2077
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "cbBTC +0.48/65%, closest to the full gate in the project's history"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3766,
+            3769
+          ],
+          "role": "supporting",
+          "reason": "exit vs re>EMA: the notes' k/exit point, not the reference"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            549,
+            555
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "cbBTC/WETH the only one with 65%"
+        },
+        {
+          "file": "docs/PAIRS.md",
+          "lines": [
+            41,
+            52
+          ],
+          "role": "supporting",
+          "reason": "why correlated pairs have lower IL: background"
+        },
+        {
+          "file": "docs/ALGORITHM.md",
+          "lines": [
+            87,
+            89
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "d"
+          ],
+          "reason": "100% crypto beta, HODL -51%/yr, +11.4 pp best of all pools"
+        },
+        {
+          "file": "journal/KAPITAL-REKOMENDACJA.md",
+          "lines": [
+            37,
+            38
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "d"
+          ],
+          "reason": "best LP alpha +11.4, full crypto beta"
+        },
+        {
+          "file": "docs/DECISION-LOG.md",
+          "lines": [
+            28,
+            28
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "LP and HODL share the same USD beta"
+        }
+      ]
+    },
+    "why-09": {
+      "facts": {
+        "a": "the 365d year was sideways-to-down and flattered the strategy",
+        "b": "720 days included uptrend windows that lost badly; 0 of 21 passed",
+        "c": "the swap-based sigma measured pool microstructure, so k was calibrated in wrong units",
+        "d": "the gate became 720 days plus a recent ~90-day condition"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            96,
+            96
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "d"
+          ],
+          "reason": "the gate decision row"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            95,
+            95
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "sigma measures microstructure, k in broken units"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            549,
+            556
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "0/21; up windows a disaster"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            466,
+            482
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "the same ETH, sigma spread 4.5x"
+        },
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            52,
+            58
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "c"
+          ],
+          "reason": "both causes in English"
+        },
+        {
+          "file": "docs/DECISION-LOG.md",
+          "lines": [
+            22,
+            22
+          ],
+          "role": "required",
+          "facts": [
+            "a",
+            "b",
+            "d"
+          ],
+          "reason": "English gate row"
+        }
+      ]
+    },
+    "why-10": {
+      "facts": {
+        "a": "fees accrue only in range and yield scales about with 1/width: narrow earns much more in a flat market, wide several times less",
+        "b": "the backtest losses in up windows are attributed to IL and LVR, not to lower fees",
+        "c": "there is no live measurement of fees during an uptrend (an absence: no span can state it)"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1813,
+            1815
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "fee falls faster than IL as the range widens"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4263,
+            4265
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "yield ~1/width, ~2.6x less fee"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            59,
+            62
+          ],
+          "role": "supporting",
+          "reason": "names the FlatWide design, not the mechanism"
+        },
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            8,
+            8
+          ],
+          "role": "supporting",
+          "reason": "a half-sentence, too thin alone"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            546,
+            560
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "up windows a disaster, a property of the strategy class (IL/LVR)"
+        },
+        {
+          "file": "journal/DECYZJE-2026-08-26.md",
+          "lines": [
+            637,
+            639
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "fees lose to IL on the pump, LP = short gamma"
+        }
+      ]
+    },
+    "dated-06": {
+      "facts": {
+        "a": "first clean night 22.08",
+        "b1": "19.08 failed",
+        "b2": "cause of 19.08: no HyperSync binary for win32, pinned to 1.0.0",
+        "c1": "20.08 backtest-run failed",
+        "c2": "cause of 20.08: out of memory, heap raised to 8 GB",
+        "d1": "21.08 reported no failures while the swap fetch was dead",
+        "d2": "the 21.08 fix: frozen 'latest' in fetch-swaps-hypersync.ts",
+        "e": "24.08 the ranking froze (data-age heuristic), fixed",
+        "f1": "26.08 backtest-run failed",
+        "f2": "cause of 26.08: Math.min/max over millions of points, fixed in 0257a7a",
+        "g": "03.09 ran long, cache filter fixed",
+        "h1": "19.09 candidate-funnel failed",
+        "h2": "20.09 candidate-funnel failed"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4417,
+            4420
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "first full swap cache by the automation, backtest-run exit 0"
+        },
+        {
+          "file": "journal/reports/morning-2026-08-20.md",
+          "lines": [
+            48,
+            48
+          ],
+          "role": "required",
+          "facts": [
+            "c1"
+          ],
+          "reason": "porażki: backtest-run"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2353,
+            2357
+          ],
+          "role": "required",
+          "facts": [
+            "c2"
+          ],
+          "reason": "exit 134 OOM, heap 8 GB"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4093,
+            4096
+          ],
+          "role": "required",
+          "facts": [
+            "d1"
+          ],
+          "reason": "the green pipeline false from 21.08"
+        },
+        {
+          "file": "journal/reports/morning-2026-08-19.md",
+          "lines": [
+            26,
+            26
+          ],
+          "role": "required",
+          "facts": [
+            "b1"
+          ],
+          "reason": "the failure list of 19.08"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2540,
+            2544
+          ],
+          "role": "required",
+          "facts": [
+            "b2"
+          ],
+          "reason": "win32 binary only to 1.0.0, pin"
+        },
+        {
+          "file": "journal/reports/morning-2026-08-26.md",
+          "lines": [
+            48,
+            48
+          ],
+          "role": "required",
+          "facts": [
+            "f1"
+          ],
+          "reason": "porażki: backtest-run"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            2331,
+            2339
+          ],
+          "role": "required",
+          "facts": [
+            "f2"
+          ],
+          "reason": "0257a7a, Math.min/max"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            757,
+            761
+          ],
+          "role": "required",
+          "facts": [
+            "g"
+          ],
+          "reason": "backtest-run still running at 07:30, filter fix"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-19.md",
+          "lines": [
+            40,
+            40
+          ],
+          "role": "required",
+          "facts": [
+            "h1"
+          ],
+          "reason": "candidate-funnel exit 1"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4085,
+            4085
+          ],
+          "role": "required",
+          "facts": [
+            "d2"
+          ],
+          "add": true,
+          "reason": "gap filled: the 21.08 entry title names the fix"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4479,
+            4484
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "add": true,
+          "reason": "gap filled: 24.08 ranking identical to 23.08, mtime heuristic, fix deployed"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-20.md",
+          "lines": [
+            40,
+            40
+          ],
+          "role": "required",
+          "facts": [
+            "h2"
+          ],
+          "add": true,
+          "reason": "gap filled: candidate-funnel exit 1 on 20.09"
+        }
+      ]
+    },
+    "dated-07": {
+      "facts": {
+        "a": "17.08 .bot/pipeline overwrite incident",
+        "b": "18.08 auto-pull runner withdrawn",
+        "c": "21.08 NSSM to pm2 migration rolled back",
+        "d1": "28.08 deployment with restart",
+        "d2": "29.08 deployment with restart (sigma on the 15-minute grid)",
+        "d3": "31.08 deployment with restart",
+        "d4": "01.09 deployment with restart",
+        "d5": "02.09 deployment with restart",
+        "d6": "03.09 deployment",
+        "d7": "11.09 deployment with restart",
+        "e": "disk replacement on the night of 02/03.09 stopped the pipeline, report and observer",
+        "f": "known ledger bugs left unfixed"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            3618,
+            3620
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "the incident entry"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            90,
+            90
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "decision row 18.08"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4300,
+            4302
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "the rollback entry"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1927,
+            1929
+          ],
+          "role": "required",
+          "facts": [
+            "d1"
+          ],
+          "reason": "entry of 28.08: deploy #1 FLAT_ENTER, manual restart"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1558,
+            1559
+          ],
+          "role": "required",
+          "facts": [
+            "d2"
+          ],
+          "reason": "entry of 29.08: sigma grid15 deployed, restart"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1228,
+            1229
+          ],
+          "role": "required",
+          "facts": [
+            "d3"
+          ],
+          "reason": "entry of 31.08: hotfix, build and restart"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            883,
+            885
+          ],
+          "role": "required",
+          "facts": [
+            "e"
+          ],
+          "reason": "Windows off for the disk swap, no pipeline or report"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            757,
+            760
+          ],
+          "role": "supporting",
+          "reason": "the long backtest-run of 03.09: a pipeline problem, not in the reference"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            321,
+            323
+          ],
+          "role": "required",
+          "facts": [
+            "d7"
+          ],
+          "reason": "entry of 11.09: dedup fix, CC-Win pull and restart"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            344,
+            346
+          ],
+          "role": "required",
+          "facts": [
+            "f"
+          ],
+          "reason": "ledger bug to fix before 24.09, not today"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1023,
+            1023
+          ],
+          "role": "required",
+          "facts": [
+            "d4"
+          ],
+          "add": true,
+          "reason": "gap filled: entry of 01.09, observer fix, CC-Win pull and restart homos-bot"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            863,
+            864
+          ],
+          "role": "required",
+          "facts": [
+            "d5"
+          ],
+          "add": true,
+          "reason": "gap filled: entry of 02.09, CC-Win build and restart homos-server"
+        },
+        {
+          "file": "journal/HANDOFF.md",
+          "lines": [
+            131,
+            134
+          ],
+          "role": "required",
+          "facts": [
+            "d6"
+          ],
+          "add": true,
+          "reason": "gap filled: the fix pulled on the box on 03.09"
+        }
+      ]
+    },
+    "dated-09": {
+      "facts": {
+        "a": "flat held from 30.08 22:22Z",
+        "b": "the narrowing 31.08 to 11.09 lasted 11 days",
+        "c": "flat again on cbBTC from 15.09 03:03Z",
+        "d1": "flat confirmed on the ETH/USDC leg on 17.09",
+        "d2": "flat confirmed on the cbBTC leg on 17.09"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            294,
+            295
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "entry of 11.09: #5908083, 31.08 to 11.09, 11 days in flat"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            260,
+            260
+          ],
+          "role": "supporting",
+          "reason": "the -$32 vs HODL: not asked"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1135,
+            1136
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "correction: entry of 31.08, clock from 30.08 22:22Z, first night without a reset (v1.5 had supporting)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            1309,
+            1310
+          ],
+          "role": "supporting",
+          "reason": "correction: entry of 30.08, a reset of the clock, not a flat period (v1.5 had required)"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            255,
+            255
+          ],
+          "role": "required",
+          "facts": [
+            "c"
+          ],
+          "reason": "entry of 16.09: flat confirmed from 15.09 03:03Z"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-17.md",
+          "lines": [
+            120,
+            120
+          ],
+          "role": "required",
+          "facts": [
+            "d1"
+          ],
+          "reason": "flat confirmed, ±50% to ±5% (ETH/USDC leg)"
+        },
+        {
+          "file": "journal/reports/morning-2026-09-17.md",
+          "lines": [
+            139,
+            139
+          ],
+          "role": "required",
+          "facts": [
+            "d2"
+          ],
+          "reason": "flat confirmed, ±40% to ±5% (cbBTC leg)"
+        },
+        {
+          "file": "docs/CASE-STUDY.md",
+          "lines": [
+            81,
+            84
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "31 Aug to 11 Sep, 11 days"
+        },
+        {
+          "file": "docs/DECISION-LOG.md",
+          "lines": [
+            28,
+            28
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "11 days in flat"
+        }
+      ]
+    },
+    "dated-10": {
+      "facts": {
+        "a": "three rebalances on the morning of 21.08 (mainnet-030, mainnet-005, base-030)",
+        "b": "they netted +$69/+$93/+$87",
+        "c1": "arbitrum-005 had 0 rebalances in the 22.08 report",
+        "c2": "arbitrum-005 had 1 rebalance in the 23.08 report",
+        "d": "up to 27.08 nothing changed: cbBTC never rebalanced, four rebalances in all"
+      },
+      "spans": [
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4165,
+            4165
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "first 3 rebalances in paper trading"
+        },
+        {
+          "file": "journal/CONTEXT.md",
+          "lines": [
+            4221,
+            4222
+          ],
+          "role": "required",
+          "facts": [
+            "b"
+          ],
+          "reason": "+$69/+$93/+$87"
+        },
+        {
+          "file": "journal/reports/morning-2026-08-21.md",
+          "lines": [
+            191,
+            200
+          ],
+          "role": "required",
+          "facts": [
+            "a"
+          ],
+          "reason": "reb = 1 on the three pools (the count is cumulative: state of 21.08 only)"
+        },
+        {
+          "file": "journal/reports/morning-2026-08-22.md",
+          "lines": [
+            170,
+            176
+          ],
+          "role": "required",
+          "facts": [
+            "c1"
+          ],
+          "reason": "arbitrum 0"
+        },
+        {
+          "file": "journal/reports/morning-2026-08-23.md",
+          "lines": [
+            174,
+            179
+          ],
+          "role": "required",
+          "facts": [
+            "c2"
+          ],
+          "reason": "arbitrum 1"
+        },
+        {
+          "file": "journal/reports/morning-2026-08-27.md",
+          "lines": [
+            222,
+            226
+          ],
+          "role": "required",
+          "facts": [
+            "d"
+          ],
+          "add": true,
+          "reason": "last report before the capital: counts 1/1/1/0/1, cbBTC 0"
+        }
+      ]
+    }
+  }
+}

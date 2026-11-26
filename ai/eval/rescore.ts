@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import { loadCorpus } from '../corpus/load';
 import { corpusHash } from '../embed/index-file';
 import type { Chunk } from '../corpus/types';
-import { overlaps, requiredOnly, type Evidence, type GoldenQuestion } from './golden';
+import { factSpans, overlaps, requiredOnly, type Evidence, type GoldenQuestion } from './golden';
 import { firstHitRank, fmtRatio, mrrAt, recallAt } from './metrics';
 
 const R = 'ai/eval/results/';
@@ -39,7 +39,8 @@ interface Score {
   mrrAny: string;
   all: string;
   req: string;
-  perQ: Map<string, { rank: number | null; all: string; req: string }>;
+  facts: string;
+  perQ: Map<string, { rank: number | null; all: string; req: string; facts: string }>;
 }
 
 function coverage(given: Chunk[], spans: Evidence[]): [number, number] {
@@ -49,8 +50,8 @@ function coverage(given: Chunk[], spans: Evidence[]): [number, number] {
 function score(golden: GoldenQuestion[], lists: Record<string, string[]>, byId: Map<string, Chunk>): Score {
   const ranks: Array<number | null> = [];
   const anyRanks: Array<number | null> = [];
-  let [aHit, aN, rHit, rN] = [0, 0, 0, 0];
-  const perQ = new Map<string, { rank: number | null; all: string; req: string }>();
+  let [aHit, aN, rHit, rN, fHit, fN, fNone] = [0, 0, 0, 0, 0, 0, 0];
+  const perQ = new Map<string, { rank: number | null; all: string; req: string; facts: string }>();
   for (const q of golden) {
     if (q.answerable !== 'yes') continue;
     const given = lists[q.id].map((id) => byId.get(id)!);
@@ -63,7 +64,13 @@ function score(golden: GoldenQuestion[], lists: Record<string, string[]>, byId: 
     aN += an;
     rHit += rh;
     rN += rn;
-    perQ.set(q.id, { rank, all: `${ah}/${an}`, req: `${rh}/${rn}` });
+    const fs = factSpans(q);
+    fHit += fs.spans.filter((spans) => spans.some((e) => given.some((c) => overlaps(c, e)))).length;
+    fN += fs.spans.length;
+    fNone += fs.none;
+    const qf = factSpans(q);
+    const qfHit = qf.spans.filter((spans) => spans.some((e) => given.some((c) => overlaps(c, e)))).length;
+    perQ.set(q.id, { rank, all: `${ah}/${an}`, req: `${rh}/${rn}`, facts: `${qfHit}/${qf.spans.length}${qf.none ? `+${qf.none}` : ''}` });
   }
   return {
     r5: fmtRatio(recallAt(ranks, 5)),
@@ -73,6 +80,7 @@ function score(golden: GoldenQuestion[], lists: Record<string, string[]>, byId: 
     mrrAny: mrrAt(anyRanks, 10).toFixed(3),
     all: fmtRatio({ hits: aHit, n: aN }),
     req: fmtRatio({ hits: rHit, n: rN }),
+    facts: `${fmtRatio({ hits: fHit, n: fN })}${fNone ? `, ${fNone} with no span` : ''}`,
     perQ,
   };
 }
@@ -96,24 +104,26 @@ function main() {
     '',
     `Produced by \`npx tsx ai/eval/rescore.ts\`: no API call, no box. Lists: \`${LISTS.replace(R, '')}\` (made on golden`,
     `v${stored.goldenVersion}). Old golden from git \`${OLD_REV}\`, new from the working tree. Corpus \`${hash}\`, ${chunks.length} chunks.`,
-    'Answerable questions only. **Headline columns** (used for phase 6 decisions): recall, MRR and span coverage on',
-    'required spans only (unmarked = required), so a supporting span added to an item cannot raise them. Second columns:',
-    'the same on any span (required or supporting), the v1.4 definition, kept for comparison with earlier results.',
+    'Answerable questions only. **Headline columns** (used for phase 6 decisions): recall and MRR on required spans only',
+    '(unmarked = required), so a supporting span added to an item cannot raise them, and **facts covered**: the facts of',
+    'the reference with at least one of their spans in the top 10 (a question not yet marked counts each required span',
+    'as one fact; facts no span states are counted apart). Other columns: required spans covered (the v1.5 measure)',
+    'and the any-span versions (the v1.4 definition), kept for comparison with earlier results.',
     '',
-    '| variant | golden | **recall@5, required** | **recall@10, required** | **MRR@10, required** | **spans covered, required** | recall@10, any | MRR@10, any | spans covered, all |',
-    '|---|---|---|---|---|---|---|---|---|',
+    '| variant | golden | **recall@5, required** | **recall@10, required** | **MRR@10, required** | **facts covered** | spans covered, required | recall@10, any | MRR@10, any | spans covered, all |',
+    '|---|---|---|---|---|---|---|---|---|---|',
   ];
   const changed: string[] = [];
   for (const [name, v] of Object.entries(stored.variants)) {
     const a = score(oldGolden, v.lists, byId);
     const b = score(newGolden, v.lists, byId);
     for (const [ver, x] of [[oldVersion, a], [newVersion, b]] as const)
-      out.push(`| ${name} | v${ver} | ${x.r5} | ${x.r10} | ${x.mrr} | ${x.req} | ${x.r10Any} | ${x.mrrAny} | ${x.all} |`);
+      out.push(`| ${name} | v${ver} | ${x.r5} | ${x.r10} | ${x.mrr} | ${x.facts} | ${x.req} | ${x.r10Any} | ${x.mrrAny} | ${x.all} |`);
     for (const [id, x] of b.perQ) {
       const y = a.perQ.get(id);
-      if (!y || y.rank !== x.rank || y.all !== x.all || y.req !== x.req)
+      if (!y || y.rank !== x.rank || y.all !== x.all || y.req !== x.req || y.facts !== x.facts)
         changed.push(
-          `| ${name} | ${id} | ${y?.rank ?? '-'} | ${x.rank ?? '-'} | ${y?.all ?? '-'} | ${x.all} | ${y?.req ?? '-'} | ${x.req} |`,
+          `| ${name} | ${id} | ${y?.rank ?? '-'} | ${x.rank ?? '-'} | ${y?.facts ?? '-'} | ${x.facts} | ${y?.req ?? '-'} | ${x.req} | ${y?.all ?? '-'} | ${x.all} |`,
         );
     }
   }
@@ -123,8 +133,10 @@ function main() {
     '',
     '## Questions whose numbers changed',
     '',
-    `| variant | id | first required hit v${oldVersion} | first required hit v${newVersion} | all spans v${oldVersion} | all spans v${newVersion} | required v${oldVersion} | required v${newVersion} |`,
-    '|---|---|---|---|---|---|---|---|',
+    'Facts "x/y+z": x of y facts covered, z facts with no span.',
+    '',
+    `| variant | id | first required hit v${oldVersion} | first required hit v${newVersion} | facts v${oldVersion} | facts v${newVersion} | required spans v${oldVersion} | required spans v${newVersion} | all spans v${oldVersion} | all spans v${newVersion} |`,
+    '|---|---|---|---|---|---|---|---|---|---|',
     ...changed,
     '',
   );

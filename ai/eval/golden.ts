@@ -34,6 +34,19 @@ export interface Evidence {
    * recall and MRR; span coverage is reported for required spans and for all spans.
    */
   role?: Role;
+  /** Step 6.2 (golden v1.6): letters of the question's `facts` that this required span states alone. */
+  facts?: string[];
+}
+
+/**
+ * Facts for required coverage: the question's facts mapped to their spans, or, for a question not yet marked, each
+ * required span as its own fact. `none` counts facts that no span states.
+ */
+export function factSpans(q: GoldenQuestion): { spans: Evidence[][]; none: number } {
+  const req = requiredOnly(q.evidence);
+  if (!q.facts) return { spans: req.map((e) => [e]), none: 0 };
+  const spans = Object.keys(q.facts).map((f) => req.filter((e) => e.facts?.includes(f)));
+  return { spans: spans.filter((s) => s.length), none: spans.filter((s) => !s.length).length };
 }
 
 /** Required spans of a question: marked "required" or unmarked. */
@@ -50,6 +63,11 @@ export interface GoldenQuestion {
   evidence: Evidence[];
   /** Ranges that should surface for partial/no questions but do not count as hits. */
   related?: Evidence[];
+  /**
+   * Step 6.2 (golden v1.6): the facts of the reference, by letter. Required coverage counts facts with at least one
+   * of their spans in the top k. A fact no span states (an absence in the corpus) stays listed and is reported apart.
+   */
+  facts?: Record<string, string>;
   reference: string;
   notes?: string;
 }
@@ -134,6 +152,17 @@ export function checkGolden(content: string, chunks: Chunk[], fileLines: Map<str
     if (q.answerable === 'partial' && !related.length) err(id, 'answerable "partial" needs a non-empty related list');
     for (const e of q.evidence) if (e.role !== undefined && !ROLES.includes(e.role)) err(id, `evidence role must be one of ${ROLES.join(', ')}`);
     if (q.answerable === 'yes' && q.evidence.length && !requiredOnly(q.evidence).length) err(id, 'answerable "yes" needs at least one required evidence range');
+    if (q.facts !== undefined) {
+      for (const e of q.evidence) {
+        const label = `${e.file}:${e.lines?.[0]}-${e.lines?.[1]}`;
+        if (e.role === 'supporting' && e.facts?.length) err(id, `${label}: a supporting span carries no facts`);
+        if (e.role !== 'supporting' && !e.facts?.length) err(id, `${label}: a required span needs its facts`);
+        for (const f of e.facts ?? []) if (!(f in q.facts)) err(id, `${label}: fact "${f}" is not in the question's facts`);
+      }
+      const stated = new Set(q.evidence.flatMap((e) => e.facts ?? []));
+      const none = Object.keys(q.facts).filter((f) => !stated.has(f));
+      if (none.length) warn(id, `facts with no span: ${none.join(', ')}`);
+    } else if (q.evidence.some((e) => e.facts?.length)) err(id, 'evidence facts given without the question\'s facts');
     if (q.category === 'no-answer' && q.answerable === 'yes') warn(id, 'no-answer category marked answerable "yes"');
     if (q.category !== 'no-answer' && q.answerable !== 'yes') warn(id, `${q.category} question marked answerable "${q.answerable}"`);
     if (q.category === 'why' && q.answerable === 'yes' && !q.evidence.some((e) => e.file?.startsWith('journal/')))
