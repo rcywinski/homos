@@ -174,6 +174,23 @@ Recommendation: (b), already wired as the Live list's first Arbitrum host (so ap
 Rollback: remove the `SERVE_LIVE_BOT_URL` line and restart the server task: `/live` is a plain 404 again and the
 archive page looks as before. Then stop the two Live tasks; the state folder stays for later.
 
+## Redeploy (build and swap) with the Live tasks
+
+Stop the Live tasks with the others before the rename, then check that nothing of theirs is left, because a process
+left running holds files in the clone and the rename fails:
+
+```
+Stop-ScheduledTask "HOMOS live observer"; Stop-ScheduledTask "HOMOS live api"
+Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
+  Where-Object { (Invoke-CimMethod -InputObject $_ -MethodName GetOwner).User -eq 'homos-web' } |
+  Select-Object ProcessId, ParentProcessId, CreationDate, CommandLine
+```
+
+If any homos-web node process is listed, end it by its pid (`Stop-Process -Id <pid>`) only on the owner's word, then
+run the check again. Observed on 26 Nov: after `Stop-ScheduledTask "HOMOS live observer"` the task showed Ready but
+its supervisor and bot kept running and held the folder; the server and API tasks stopped cleanly; CC-Win ended the
+two processes by pid on the owner's word. Start the tasks again with `Start-ScheduledTask` after the swap.
+
 ## Load on the box (the owner's gaming machine)
 
 Measured on the Mac (Apple silicon), to be measured again on the box in the 5.6 report:
@@ -188,8 +205,12 @@ Measured on the Mac (Apple silicon), to be measured again on the box in the 5.6 
   capped at 2 x 5 MB. The task logs (`live-observer.log`, `live-api.log`) are not rotated and grow by about 2 MB a
   month.
 
-For the 5.6 report on the box: CPU share and memory of both processes over the first hour and during the nightly
-steps (with the hour they ran), and the state folder's size after a day with the monthly growth it implies.
+Measured on the box, 26 Nov, one hour on de97579: observer 0.53% of one core on average (worst minute 6.7%), private
+memory 77 MB on average and 250 MB at most; API 0.03% and 34 MB; cold start 726 s, 230 calls to yields.llama.fi, no
+HTTP 429 at the 3 s pacing; state folder 21.7 MB, of which 21.6 MB is the DefiLlama folder. Calls in 76 minutes:
+base-rpc.publicnode.com 880 (0 failed), arb1.arbitrum.io 257 (0), ethereum-rpc.publicnode.com 226 (4 HTTP 403),
+eth.drpc.org 4 (4 HTTP 400, the fallback's 100-block limit). Still to measure: the nightly steps' load, and the
+state folder after a full day.
 
 ## Checked on the Mac (dry run, 25 Nov 2026)
 
@@ -202,8 +223,9 @@ environment, the chat server with the forward on its own port: see the step 5.6 
 > the showcase build as for every deploy (build and swap, as before). Follow `deploy/live/README.md` of that commit in
 > order: step 0 (the owner types homos-web's password in his own administrator PowerShell window; you prepare the
 > commands and never see it), folders and rights with the SID form, the five files from the owner (check each SHA-256
-> against the table), `live.env` from the example, then the observer task, then the API task, each started by hand
-> once and checked in its log. Do not add `SERVE_LIVE_BOT_URL` to `serve.env` until the owner says so in your session.
+> against the table), `live.env` from the example, then the observer task, then the API task, each started once with
+> `Start-ScheduledTask` (never by running its command line in a console: processes started that way are outside the
+> task, and stopping the task does not end them) and checked in its log. Do not add `SERVE_LIVE_BOT_URL` to `serve.env` until the owner says so in your session.
 > Report: the pinned HEAD; the five hashes; the lines of `live-observer.log` from "cold start" to "nightly wide-daily";
 > the two curl.exe checks; after one hour, `net-stats.json` and `net-stats-*.json` from the state folder and
 > `nightly-state.json`; CPU and memory of the two node processes over that hour (and during the nightly steps when they
