@@ -1,6 +1,6 @@
 {
-  "version": "0.4",
-  "answersHash": "f2d77685295f25be",
+  "version": "0.5",
+  "answersHash": "4f279f34a0606eeb",
   "rules": [
     "Every rule of ai/eval/golden-meta.json applies here too.",
     "Held-out test set of step 6.2 (c): questions and references drafted from the corpus read directly, never from retrieval output; nothing is run on them (no retrieval, no model) before the file is frozen; the first run is step 6.12 (owner, 26 Nov 2026).",
@@ -33,6 +33,12 @@
       "date": "2026-11-26",
       "answersHash": "f2d77685295f25be",
       "summary": "Batch 4, eight by CC-Mac: three dated items whose required evidence is September morning report lines (ho-dated-05 tranche value on 5 September, ho-dated-06 RANKING WIDE 3 vs 4 September, ho-dated-07 paper trading in the last report), ho-why-08 ledger from on-chain events, ho-id-05 wide-score, ho-id-06 COLLECT_THRESHOLD_MULT, ho-na-05 Telegram deep link never built (partial), ho-na-06 Sharpe ratio (no). Reviewed by the analysis session (tranche 2 item replaced as dev why-02's finding; ho-dated-05 asked without naming the report) and approved by the owner (ai/eval/review/heldout-batch-4.md). 25 items."
+    },
+    {
+      "version": "0.5",
+      "date": "2026-11-26",
+      "answersHash": "4f279f34a0606eeb",
+      "summary": "Batch 5, the last: the owner's ho-why-10 (what led to real capital and whether tests backed it; only the 19.08 walk-forwards and the hybrid test scored) and ho-why-11 (his questions 3 and 4 merged: how a rebalance worked; close-and-mint and owner-signed stay unscored as dev facts), and three by CC-Mac (ho-why-09 majors-only vs exotic pools, ho-na-07 MEV protection required but not built, ho-na-08 no ML model, only the 26.08 literature finding). His question 2 dropped as dev why-06. Reviewed by the analysis session and approved by the owner (ai/eval/review/heldout-batch-5.md). 30 items."
     }
   ]
 }

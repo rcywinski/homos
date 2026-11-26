@@ -1282,3 +1282,17 @@ built, so the answer is partial. ho-dated-05 is asked as a visitor would, withou
 the 15 September trap (almost the same balance, told apart only by the $5,967.33 total). The owner's own questions
 for this batch did not arrive before approval and go to batch 5. Held-out v0.4, 25 items: why 7, dated 7, partial or
 no 6, identifier 5. Batch 5, the last before the freeze, adds about five items including the owner's. 0 USD.
+
+## 2026-11-26, step 6.2 (c) held-out batch 5 (owner)
+
+**Decision.** The owner approved batch 5 (`ai/eval/review/heldout-batch-5.md`), the last before the freeze. Of his
+four questions, question 1 (what led to real capital and whether tests backed it) became ho-why-10, with only the tests
+scored (the 19.08 walk-forward recommendation, the hybrid tested before entry); the 720-day result, the FOMO note and
+the 27.08 90-day replay stay in the reference unscored, because they are dev why-02 and why-08 facts or share their
+chunk. Questions 3 and 4 (whether a rebalance kept the position and needed a new transaction) were merged into
+ho-why-11, which scores the rebalance mechanism; closing and minting a new position (dev id-03) and the owner's
+signature (dev why-06) are stated but not scored. Question 2 (an automatic opening function) was dropped as dev why-06
+almost word for word. CC-Mac added ho-why-09 (majors-only), ho-na-07 (MEV protection required in the plan, not built)
+and ho-na-08 (no ML model; the only mention is the 26.08 literature finding, added after the analysis session's
+review). A Docker item was refused by the overlap check (its only source is dev why-07's related range). Held-out
+v0.5, 30 items: why 10, dated 7, partial 6, identifier 5, no 2. 0 USD.
