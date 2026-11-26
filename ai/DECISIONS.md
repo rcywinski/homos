@@ -1269,3 +1269,16 @@ in the reference but not scored, because its source shares a chunk with dev date
 by the chunk check (floorBalanceStr; the after-signing span as required). Held-out v0.3, 17 items: why 6, dated 4,
 identifier 3, partial 3, no 1. Batch 4 adds at least three dated items whose required evidence is September morning
 report lines, including one "latest" question, so step 6.8 can be measured on the held-out set. 0 USD.
+
+## 2026-11-26, step 6.2 (c) held-out batch 4
+
+**Decision.** The owner approved batch 4 (`ai/eval/review/heldout-batch-4.md`): eight items by CC-Mac, with three
+dated items whose required evidence is September morning report lines (tranche value on 5 September, RANKING WIDE on
+3 vs 4 September, paper trading in the last report), so step 6.8 can be measured on the held-out set. The analysis
+session's review replaced the tranche 2 item, which tested dev why-02's finding through sources in other chunks: the
+closest-dev line now compares the reference with the dev question's facts, not only its sources. Its replacement,
+ho-na-05, asks how a Telegram alert link opened the right proposal card; the link was planned on 17 August and never
+built, so the answer is partial. ho-dated-05 is asked as a visitor would, without naming the report; its note records
+the 15 September trap (almost the same balance, told apart only by the $5,967.33 total). The owner's own questions
+for this batch did not arrive before approval and go to batch 5. Held-out v0.4, 25 items: why 7, dated 7, partial or
+no 6, identifier 5. Batch 5, the last before the freeze, adds about five items including the owner's. 0 USD.

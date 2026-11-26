@@ -393,7 +393,7 @@ Common rules for every step:
   Batch 2 done 26 Nov, golden v1.7: the other 17 answerable questions, with the report-row rule
   (`ai/eval/review/roles-v1-7.md`). (b) is done; the phase 6 baseline is in `ai/DECISIONS.md` (26 Nov, batch 2).
   (c) Held-out questions: about 30, in the same five categories. Batch 1 done 26 Nov (`ai/eval/heldout.jsonl` v0.1,
-  five questions; batch 2 done 26 Nov, the owner's three questions; batch 3 done 26 Nov, v0.3 with 17 items). CC-Mac drafts them and their references from the
+  five questions; batch 2 done 26 Nov, the owner's three questions; batch 3 done 26 Nov, v0.3 with 17 items; batch 4 done 26 Nov, v0.4 with 25 items). CC-Mac drafts them and their references from the
   corpus itself (journal and docs read directly), never from retrieval output, in batches of five to eight; each
   batch is read with the owner in a session, with the reasoning behind each reference, before the next. Then the file
   is frozen with its hash in `ai/DECISIONS.md`. v1.4's 34 questions become the development set, the new ones the

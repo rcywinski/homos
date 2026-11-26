@@ -1,6 +1,6 @@
 {
-  "version": "0.3",
-  "answersHash": "12b5f6b7bc7586c8",
+  "version": "0.4",
+  "answersHash": "f2d77685295f25be",
   "rules": [
     "Every rule of ai/eval/golden-meta.json applies here too.",
     "Held-out test set of step 6.2 (c): questions and references drafted from the corpus read directly, never from retrieval output; nothing is run on them (no retrieval, no model) before the file is frozen; the first run is step 6.12 (owner, 26 Nov 2026).",
@@ -27,6 +27,12 @@
       "date": "2026-11-26",
       "answersHash": "12b5f6b7bc7586c8",
       "summary": "Batch 3: eight by CC-Mac (ho-why-04 Aerodrome, ho-why-05 default reaction to DOWN, ho-dated-03 Monte Carlo, ho-dated-04 Uniswap v4, ho-id-02 usdValueViaPool, ho-id-03 UNMAPPED, ho-na-03 hardware wallet, ho-na-04 Android) and two by the owner (ho-why-07 wallet connection, ho-why-06 what happens after confirming a new position), reviewed by the analysis session and approved by the owner (ai/eval/review/heldout-batch-3.md). 17 items."
+    },
+    {
+      "version": "0.4",
+      "date": "2026-11-26",
+      "answersHash": "f2d77685295f25be",
+      "summary": "Batch 4, eight by CC-Mac: three dated items whose required evidence is September morning report lines (ho-dated-05 tranche value on 5 September, ho-dated-06 RANKING WIDE 3 vs 4 September, ho-dated-07 paper trading in the last report), ho-why-08 ledger from on-chain events, ho-id-05 wide-score, ho-id-06 COLLECT_THRESHOLD_MULT, ho-na-05 Telegram deep link never built (partial), ho-na-06 Sharpe ratio (no). Reviewed by the analysis session (tranche 2 item replaced as dev why-02's finding; ho-dated-05 asked without naming the report) and approved by the owner (ai/eval/review/heldout-batch-4.md). 25 items."
     }
   ]
 }
