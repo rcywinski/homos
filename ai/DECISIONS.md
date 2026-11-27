@@ -1751,3 +1751,41 @@ little worse, na-07 better. For the public page this is the figure to watch, sin
 
 **Cost.** Judge 3.1929 USD (0.5397, 0.5377, 0.5308, 0.5301, 0.5331, 0.5215; concurrency 1, no failed call, no answer
 without a verdict). Phase 6: 4.2616 of 20 USD. On the key in total: 7.3648 USD. Step 6.11 is done; 6.12 is next.
+
+## 2026-11-27, step 6.12 rule, committed before the first run on the frozen test set (owner and analysis session)
+
+The owner approved step 6.12 with its box window (the window itself on his word in CC-Win's conversation) and chose
+guest option G5; its results and details are approved by the analysis session, as in 6.7 to 6.11; deployment in 6.13
+stays his separate decision. Nothing has been run on the frozen set before this commit. The frozen file is
+`ai/eval/heldout.jsonl` v1.0, 30 items, sha256 078c877839036c75799fdac06ddaa92d25d09de85d24b46db6d54dcfb3eb804c (as
+recorded when it was frozen, checked again now). The tools take it on the command line only (`--questions`,
+`--questions-meta`); no code names it, and the guard test stays as it is. The tools were tested on the development
+set only: `retrieval-diag.ts lists` gives exactly the committed 6.11 lists, the generalised judge gives exactly the
+6.11 items, and the guest generator sends exactly the server's `guestRequestBody` (commit 52c5276).
+
+**Configurations.** S served and N "6.10 without the reranker, with B2" (the 6.11 choice). Inside the window:
+`retrieval-diag.ts fetch` for the 30 questions (query vectors, first stage, reranker scores), into its own cache file
+under `ai/index/`; then `retrieval-diag.ts lists` writes the k = 10 lists of S and N and the retrieval report, and the
+lists file is committed with its SHA-256 in this file before the first generation run. Then four Qwen runs, S N S N,
+through `ai:answers --chunks-file` with the served preset checked field by field. Judge as in 6.11: Opus 5.5, effort
+medium, the step 3.2 prompt, `--no-retry`, concurrency 1, cap 2 USD per run; about 0.47 USD per run, about 1.9 USD.
+
+**Errors.** A run that stops on an error is discarded whole and reported, never used in part; a repeat inside the
+same window only if the stop was not a model load failure and the window's time is not exceeded. With fewer than two
+complete runs per configuration nothing is decided.
+
+**Decision.** N is confirmed for the 6.13 proposal if, on the means of two runs, its correct count is not lower than
+S's by more than 3, its incorrect count not higher by more than 2, and its unsupported count not higher by more than
+2: the guard of 6.11, with the same reading (it catches a clear regression only). If N fails any of the three, S
+stays and the 6.13 deployment proposal is withdrawn. There is no sanity range for S here: this is its first run on
+this set. Applied in code by `ai/eval/compare-612.ts`.
+
+**Reported, gating nothing.** The retrieval row of S, N and N without B2 on the frozen set (recall@5, recall@10,
+MRR@10, facts covered): the 6.8 generalisation check and the only held-out retrieval number of the project. The guest
+path (G5): S and N, one run each on the 30 questions, with the server's guest request on masked chunks
+(`--generator guest`), after the window on the Mac, judged; about 2.5 USD with the judge. Phase 6 after 6.12 at about
+8.7 of 20 USD.
+
+**No tuning follows from the frozen set**, whatever the result: no change of configuration, weight, pattern or k.
+This rule cannot be changed after the first run on the frozen set starts. Deployment remains the owner's decision in
+6.13.
