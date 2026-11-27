@@ -1636,3 +1636,31 @@ raises recall at the first stage (22 against 20 of 26 at k = 10, 95 against 89 f
 reaches the top 10 of the configurations 6.11 compares, and over 100 documents the plain question does better. So the
 rewrite cannot change the 6.11 choice, and it would add a Qwen call before retrieval for every question, which the
 guest "search" state does not allow. No build, no box item, 0 USD. Step 6.9 is closed; 6.10 is next.
+
+## 2026-11-27, step 6.10 the context index as a candidate, and the 6.11 path (analysis session, under the owner's delegation)
+
+**What serving it needs (6.13, not now).** The context index `ai/index/ollama-bge-m3.ctx-haiku.json` (12.3 MB, built
+on the Mac on 10 Nov, SHA-256 59f44e46ef440ba17815f6a012ab7d83b51942f3017057ccd3166f07a3535852) copied to the box as
+the meta index was in 4.8, SHA-256 compared after the copy, and the start-up check (`checkIndex`) extended to the
+context view. The contexts file `ai/context/contexts-haiku.jsonl` is in git. No rebuild on the box: bge-m3 there only
+embeds the live question. Code on `app-chat`: the context view for vectors and BM25; for "6.10 without the reranker,
+with B2" no reranker and the identifier scan; for "6.10 rerank top 100" the reranker over 100 documents with the
+contexts in its text; a preset tied to the 6.11 run.
+
+**Running cost of contexts.** One Haiku call per new or changed chunk: 957 chunks cost 0.4348 USD plus 0.0793 USD for
+85 retried (10 Nov), 0.5141 USD in all, about 0.0005 USD per chunk. The corpus is closed and changes only on purpose,
+so this is a rebuild cost; any corpus change also needs a new index and a copy to the box, as today.
+
+**The generator sees the chunk text only**; the contexts go to the index and the reranker.
+
+**The 6.11 path.** The candidates are not served, so all three configurations go through one path: the answer runner
+(`npm run ai:answers -- --generator local --chunks-file <file> --chunks <variant>`) from the Mac against Ollama on the
+box over the LAN (reachable as in 6.3 and 6.4, no listener or firewall change, CC-Win), with the generator built from
+the served preset and compared with it field by field (`compareWithPreset`: model, tokenizer, thinking, `num_ctx`,
+`num_predict`, keep-alive, network retries, system prompt by SHA-256 and name, user prompt builder, every sampling
+option), written into each run file and refused on any difference. The served row is rerun in this path. Lists:
+`ai/eval/results/2026-11-27-chunk-lists-k10-6-11-golden-v1-7.json`, SHA-256
+2fca459de5be666864e70e72c8402ad094c2a326709e590876b385eeba3b8ff2: served 49 facts (equal to the stored 11 Nov
+lists), ctx-first-b2 59, ctx-100 60, 34 questions, 10 chunks each. Reranker time is measured by
+`ai/eval/rerank-time-611.ts` from the Mac with the real documents (1, 30 without context, 100 with context). 0 USD.
+Step 6.10 is done; 6.11 is next.

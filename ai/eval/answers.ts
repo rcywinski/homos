@@ -10,8 +10,14 @@
  * mode, and `--chunks chosen|local` to take the saved k=10 chunk lists (ai:chunk-lists) instead of retrieving, so the
  * embedder is not on the GPU while the generator runs. Before a local run: bge-m3 is unloaded, the probe loads the
  * generator, and /api/ps must show it fully on the GPU; after the run the generator is unloaded.
+ *
+ * Step 6.10 (for the judged runs of 6.11): `--chunks-file <lists file> --chunks <variant>` takes the k=10 lists of a
+ * committed lists file (written by ai/eval/retrieval-diag.ts). The generator is then built from the served preset
+ * itself, not from the tuning options, and every setting that shapes an answer is compared with the preset and written
+ * into the run file (`servedPresetCheck`); the run refuses to start on any difference. Only with --generator local.
  */
 import 'dotenv/config';
+import { createHash } from 'crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import { answerWithChecks, formatCitation } from '../answer/answer';
@@ -26,6 +32,7 @@ import { CHUNK_LISTS } from './chunk-lists';
 import { LOCAL_QUOTE_SYSTEM, LOCAL_REF_SYSTEM } from '../answer/prompt-local';
 import { overlaps, type GoldenQuestion } from './golden';
 import { fmtRatio } from './metrics';
+import { DEFAULT_PRESET, PRESETS, type ServedPreset } from '../serve/config';
 
 const arg = (n: string) => (process.argv.includes(n) ? process.argv[process.argv.indexOf(n) + 1] : undefined);
 
@@ -53,11 +60,19 @@ async function main() {
   const variant = (arg('--variant') ?? 'base') as TuningVariant;
   if (!['base', 'S', 'P', 'L'].includes(variant)) throw new Error('--variant must be base, S, P or L');
   const chunksFrom = arg('--chunks');
+  const chunksFile = arg('--chunks-file');
+  if (chunksFile && (!local || !chunksFrom || think || arg('--model') || arg('--variant')))
+    throw new Error('--chunks-file needs --generator local and --chunks <variant>, and takes the served preset as it is (no --think, --model or --variant)');
   const ks = (arg('--k') ?? (chunksFrom ? '10' : '5,10')).split(',').map(Number).sort((a, b) => a - b);
   const golden = readFileSync('ai/eval/golden.jsonl', 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l) as GoldenQuestion);
   const goldenVersion = (JSON.parse(readFileSync('ai/eval/golden-meta.json', 'utf8')) as { version: string }).version;
   const baseUrl = process.env.INFERENCE_URL ?? '';
-  const gen: Generator = local ? new LocalGenerator(localOptions(baseUrl, think, model, variant)) : new ClaudeGenerator('sonnet');
+  const preset = PRESETS[DEFAULT_PRESET];
+  const genOptions: LocalGenOptions | null = !local ? null : chunksFile ? { ...preset.generator, baseUrl } : localOptions(baseUrl, think, model, variant);
+  const servedPresetCheck = chunksFile && genOptions ? { preset: preset.id, compared: compareWithPreset(genOptions, preset) } : null;
+  const unequal = servedPresetCheck?.compared.filter((c) => !c.equal) ?? [];
+  if (unequal.length) throw new Error(`generator differs from the served preset: ${unequal.map((c) => `${c.field} ${JSON.stringify(c.run)} vs ${JSON.stringify(c.served)}`).join('; ')}`);
+  const gen: Generator = genOptions ? new LocalGenerator(genOptions) : new ClaudeGenerator('sonnet');
   let vram: unknown = null;
   if (local) {
     // VRAM: the embedder leaves the GPU before the generator loads.
@@ -90,12 +105,15 @@ async function main() {
   let lists: Chunk[][];
   const t0 = Date.now();
   if (chunksFrom) {
-    const saved = JSON.parse(readFileSync(CHUNK_LISTS, 'utf8')) as { variants: Record<string, { retrieval: string; lists: Record<string, string[]> }> };
+    const listsFile = chunksFile ?? CHUNK_LISTS;
+    const raw = readFileSync(listsFile, 'utf8');
+    const saved = JSON.parse(raw) as { variants: Record<string, { retrieval: string; lists: Record<string, string[]> }> };
     const v = saved.variants[chunksFrom];
     if (!v) throw new Error(`--chunks must be one of ${Object.keys(saved.variants).join(', ')}`);
     const byId = new Map(loadCorpus().map((c) => [c.id, c]));
     lists = golden.map((q) => v.lists[q.id].map((id) => byId.get(id)!));
-    retrievalName = `${v.retrieval} (saved lists, ${CHUNK_LISTS})`;
+    if (golden.some((q) => !v.lists[q.id] || v.lists[q.id].some((id) => !byId.has(id)))) throw new Error(`${listsFile}: a list is missing or names an unknown chunk`);
+    retrievalName = `${v.retrieval} (saved lists, ${listsFile}${chunksFile ? `, sha256 ${createHash('sha256').update(raw).digest('hex')}` : ''})`;
   } else {
     const retrieval = new AnswerRetrieval();
     lists = await retrieval.retrieve(golden.map((q) => q.question), ks[ks.length - 1]);
@@ -143,6 +161,7 @@ async function main() {
       generator: gen.name,
       retrieval: retrievalName,
       ...(gen instanceof LocalGenerator ? { generatorSettings: gen.settings(), box: BOX, vram, templateOverhead: gen.templateOverhead, strippedTrailingTokens: gen.stripped } : {}),
+      ...(servedPresetCheck ? { servedPresetCheck } : {}),
       k,
       retrievalMsAllQuestions: retrievalMs,
       stoppedByCap: stopped,
@@ -167,6 +186,33 @@ async function main() {
     const left = await ollamaPs(baseUrl);
     console.log(`unloaded ${model}; still loaded: ${left.map((m) => m.name).join(', ') || 'nothing'}`);
   }
+}
+
+/**
+ * Step 6.10: every setting of a generator that shapes an answer, against the served preset: model, tokenizer,
+ * thinking, num_ctx, num_predict, keep-alive, network retries, the system prompt (by SHA-256 and name), the user prompt
+ * builder (quote: answerUserPrompt; ref: refUserPrompt) and each sampling option of either side.
+ */
+export function compareWithPreset(o: LocalGenOptions, preset: ServedPreset): { field: string; run: unknown; served: unknown; equal: boolean }[] {
+  const p = preset.generator;
+  const sha = (t: string | undefined) => (t === undefined ? null : createHash('sha256').update(t).digest('hex').slice(0, 16));
+  const builder = (m: LocalGenOptions['citeMode']) => ((m ?? 'quote') === 'quote' ? 'answerUserPrompt' : 'refUserPrompt');
+  const rows: [string, unknown, unknown][] = [
+    ['model', o.model, p.model],
+    ['tokenizerDir', o.tokenizerDir, p.tokenizerDir],
+    ['think', o.think, p.think],
+    ['numCtx', o.numCtx, p.numCtx],
+    ['numPredict', o.numPredict, p.numPredict],
+    ['keepAlive', o.keepAlive, p.keepAlive],
+    ['maxNetworkRetries', o.maxNetworkRetries ?? 0, p.maxNetworkRetries ?? 0],
+    ['systemSha256', sha(o.system), sha(p.system)],
+    ['systemName', o.systemName ?? null, p.systemName ?? null],
+    ['userPrompt', builder(o.citeMode), builder(p.citeMode)],
+  ];
+  const so = o.sampling as Record<string, number>;
+  const sp = p.sampling as Record<string, number>;
+  for (const key of [...new Set([...Object.keys(so), ...Object.keys(sp)])].sort()) rows.push([`sampling.${key}`, so[key] ?? null, sp[key] ?? null]);
+  return rows.map(([field, run, served]) => ({ field, run, served, equal: JSON.stringify(run) === JSON.stringify(served) }));
 }
 
 export const LOCAL_MODEL = 'qwen3.8:27b';

@@ -459,7 +459,7 @@ Common rules for every step:
   Closed 27 Nov without a build: the 6.3 bound with a stronger rewrite (Sonnet's Polish rendering) gives no facts over
   the context index with the plain question at k = 10 (56 and 56 at the first stage, 53 and 52 reranked over 30, 56
   and 60 reranked over 100), so it cannot change the 6.11 choice (`ai/DECISIONS.md`).
-- [ ] NEXT **6.10 Candidate, cheap: the committed contexts in the local index.** The Haiku contexts of step 1.7 are in
+- [x] 2026-11-27 **6.10 Candidate, cheap: the committed contexts in the local index.** The Haiku contexts of step 1.7 are in
   `ai/context/` already, so no API call: an index of chunk text plus context, used without query translation. In
   1.7 they gave recall@10 20 and 19 of 26 in two runs against 19 for the meta index, within the spread, so this goes
   to a judged run only if 6.3 shows a coverage gain. Live server: index rebuild on the box `[CC-Win]`, no latency.
@@ -469,7 +469,12 @@ Common rules for every step:
   facts and 18 of 26 against 49 and 20 for local; it does not win alone, a candidate to combine with 6.5 or 6.6.
   The generator sees the chunk text only (analysis session, 27 Nov): the contexts go to the index and the reranker,
   as since step 1.8 (`ai/answer/retrieval.ts`), and the 6.7 token counts assume this.
-- [ ] **6.11 Judged comparison on the development set.** The candidates that gained on retrieval, then their best
+  Done 27 Nov as a written decision (`ai/DECISIONS.md`): serving it needs the context index copied to the box with a
+  SHA-256 check and no rebuild there (6.13); contexts cost about 0.0005 USD per new chunk. For 6.11: the k = 10 lists
+  of the three configurations committed (`ai/eval/results/2026-11-27-chunk-lists-k10-6-11-golden-v1-7.json`), the
+  answer runner takes them with the served preset checked field by field (`--chunks-file`), and a timing tool sends
+  the real documents of both reranking settings (`ai/eval/rerank-time-611.ts`).
+- [ ] NEXT **6.11 Judged comparison on the development set.** The candidates that gained on retrieval, then their best
   combination, Qwen, two runs each. Up to four configurations, about 4.4 USD. Method (owner, 27 Nov): fact coverage
   chooses the candidates; judged runs guard against regressions and check dated-04, dated-05 and id-07 (incorrect in
   every run), and dated-06 (it loses facts in every deeper pool and on the context index, 6.5 and 6.6). Candidates

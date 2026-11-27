@@ -2,6 +2,8 @@
  * Step 6.3: the pure parts of the retrieval diagnostic (no box, no cache). Run: npx tsx ai/eval/retrieval-diag.test.ts
  */
 import type { Chunk } from '../corpus/types';
+import { compareWithPreset, localOptions } from './answers';
+import { DEFAULT_PRESET, PRESETS } from '../serve/config';
 import type { Evidence } from './golden';
 import { bm25QueryFor, contextsFor, capTitles, detectDates, detectIds, detectTemporal, factChange, fileNeighbours, fuseOrders, matchFront, putFirst, temporalReorder, withNext, keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
 
@@ -110,6 +112,18 @@ check('temporal: a named date goes first', temporalReorder(['a', 'c', 'd'], dOf,
 check('match front within n, base order', matchFront(['a', 'b', 'c', 'd'], (id) => id === 'c' || id === 'd', 3).join() === 'c,a,b,d');
 check('put first, capped, no duplicates', putFirst(['a', 'b', 'c'], ['c', 'x', 'y'], 2).join() === 'c,x,a,b');
 check('cap titles, fill in base order', capTitles(['a', 'b', 'c', 'd'], (id) => (id === 'd' ? 'T2' : 'T1'), 3, 2).join() === 'a,b,d,c');
+
+// 6.10: the answer runner's generator against the served preset, every setting that shapes an answer.
+const preset = PRESETS[DEFAULT_PRESET];
+const fromPreset = compareWithPreset({ ...preset.generator, baseUrl: 'http://x' }, preset);
+check('preset against itself: all equal', fromPreset.every((c) => c.equal), fromPreset.filter((c) => !c.equal).map((c) => c.field).join());
+check('compared fields include prompt, builder, context and sampling', ['systemSha256', 'userPrompt', 'numCtx', 'numPredict', 'think', 'model', 'sampling.temperature', 'sampling.frequency_penalty'].every((f) => fromPreset.some((c) => c.field === f)));
+const tuningP = compareWithPreset(localOptions('http://x', false, 'qwen3.8:27b', 'P'), preset);
+check('tuning variant P equals the served preset (the measured run it came from)', tuningP.every((c) => c.equal), tuningP.filter((c) => !c.equal).map((c) => `${c.field} ${c.run}/${c.served}`).join());
+const base = compareWithPreset(localOptions('http://x', false), preset).filter((c) => !c.equal).map((c) => c.field);
+check('tuning base differs from the preset and is named', base.includes('numCtx') && base.includes('systemSha256') && base.includes('sampling.presence_penalty'), base.join());
+const hot = compareWithPreset({ ...preset.generator, baseUrl: 'http://x', sampling: { ...preset.generator.sampling, temperature: 1 } }, preset);
+check('one sampling change is caught', hot.filter((c) => !c.equal).map((c) => c.field).join() === 'sampling.temperature');
 
 console.log(`retrieval-diag: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

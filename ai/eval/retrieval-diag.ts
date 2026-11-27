@@ -1231,6 +1231,35 @@ async function report(date: string) {
     cand68.push('## 6.8 candidates', '', 'Not fetched yet: the context-index bases need `fetch --variant ctx-plain`.', '');
   }
 
+  // Step 6.10: the k = 10 lists of the three 6.11 configurations, for the answer runner (--chunks-file). Written only
+  // with --lists-6-11, so a plain report run leaves the committed file alone.
+  if (ctxFetched && process.argv.includes('--lists-6-11')) {
+    const ids = golden.map((q) => q.id);
+    const det = new Map(golden.map((q) => [q.id, detectIds(q.question)]));
+    const fullText = (id: string) => `${byId.get(id)!.title}\n${byId.get(id)!.text}`;
+    const b2 = (qid: string, r: string[]) => {
+      const idents = det.get(qid)!;
+      if (!idents.length) return r;
+      const rank = new Map(views.get('ctx-plain')!.get(qid)!.bm25Full.map((id, i) => [id, i]));
+      const all = chunks.filter((c) => idents.some((x) => fullText(c.id).includes(x))).map((c, i) => ({ id: c.id, i, r: rank.get(c.id) ?? Infinity }));
+      return putFirst(r, all.sort((a, b) => a.r - b.r || a.i - b.i).map((x) => x.id));
+    };
+    const ctxFirst = lists('ctx-plain', (v) => v.fused);
+    const ctx100 = poolLists('ctx-plain', 100);
+    const ctxName = `${setups.get('ctx-plain')!.fs.hybrid.name} index=${setups.get('ctx-plain')!.fs.indexName}`;
+    const variants: Record<string, { retrieval: string; facts: number; lists: Record<string, string[]> }> = {};
+    const put = (name: string, retrieval: string, l: Record<string, string[]>) => {
+      const top = Object.fromEntries(ids.map((id) => [id, l[id].slice(0, 10)]));
+      variants[name] = { retrieval, facts: Object.values(factsOf(top)).reduce((a, b) => a + b, 0), lists: top };
+    };
+    put('served', `${stored.variants.local.retrieval} (served, rerank top 30)`, servedLists('local'));
+    put('ctx-first-b2', `${ctxName}, no reranker, exact identifier match over the corpus (6.8 B2, at most ${ID_CORPUS_MAX_68} first)`, Object.fromEntries(ids.map((id) => [id, b2(id, ctxFirst[id])])));
+    put('ctx-100', `${ctxName}>${RERANKER}(top100,doc=${RERANK_FORMAT}), reranker sees the contexts`, ctx100);
+    const out = `ai/eval/results/2026-11-27-chunk-lists-k10-6-11-golden-v${meta.version.replace('.', '-')}.json`;
+    writeFileSync(out, JSON.stringify({ date: '2026-11-27', goldenVersion: meta.version, corpusHash: corpusHash(chunks), k: 10, step: '6.10, lists for the judged runs of 6.11', variants }, null, 1) + '\n');
+    console.log(`wrote ${out}: ${Object.entries(variants).map(([n, v]) => `${n} ${v.facts} facts`).join(', ')}`);
+  }
+
   const base = `ai/eval/results/${date}-retrieval-diag-golden-v${meta.version.replace('.', '-')}`;
   const md = [
     `# Retrieval diagnostic, development set (golden v${meta.version})`,
