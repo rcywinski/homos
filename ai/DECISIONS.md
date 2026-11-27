@@ -1789,3 +1789,9 @@ path (G5): S and N, one run each on the 30 questions, with the server's guest re
 **No tuning follows from the frozen set**, whatever the result: no change of configuration, weight, pattern or k.
 This rule cannot be changed after the first run on the frozen set starts. Deployment remains the owner's decision in
 6.13.
+
+**Frozen lists, committed inside the window before the first generation run.** Fetch 18:32:29 to 18:34:05 UTC (30
+query vectors, first stage and reranker scores for both indexes, cache `ai/index/retrieval-612-cache.json`, not
+committed). Lists: `ai/eval/results/2026-11-27-chunk-lists-k10-6-12-heldout-v1-0.json`, SHA-256
+29854053b310dc9caa8a0fe2d63242205531aeb63a026f1023d7f7df335909f4, with the retrieval report next to it (.md). S 60
+facts, N 59, N without B2 59; reported only, the decision is the judged guard.
