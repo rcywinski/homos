@@ -428,15 +428,20 @@ Common rules for every step:
   w = 0 and w = 1 reproduce the no-reranker and reranked rows on all 34 questions. The fusion passes the owner's rule
   (a gain at two of three weights) on three settings but adds nothing over the rows without fusion (61 against 60 on
   the context index at pool 100, 53 to 54 against 56 without the reranker at pool 30), so it does not go to 6.11.
-- [ ] NEXT **6.7 Candidate: more context per answer** (class C, the largest). k = 15 and 20, and adding the neighbouring
+- [x] 2026-11-27 **6.7 Candidate: more context per answer** (class C, the largest). k = 15 and 20, and adding the neighbouring
   chunk of the same journal entry or report to each of the top hits. Measured as span coverage (required and all),
   free. Cost on the served system, given before and after in this step: prompt tokens per answer for Qwen and for the
   guest's Sonnet call (at k = 10 in 4.6e: median 13 117 input and 441 output tokens, 0.030 USD per guest answer on the
   visitor's own key, 5.3 s per question end to end), Qwen latency on the box (prompt processing grows with the
-  prompt; 20 chunks of median 1 050 characters fit well inside `num_ctx` 24576), and the cost per guest answer. A
+  prompt; the served preset `qwen-p-local` has `num_ctx` 17408 with `num_predict` 2048, not the 24576 assumed here
+  first), and the cost per guest answer. A
   longer context can also lower answer quality, so a k that gains on coverage still has to hold its judged counts
   under the two-run rule on the development set (6.11). No rebuild.
-- [ ] **6.8 Candidate: dates and ids in the question** (secondary tag of dated-01, dated-04, dated-07). Detect a date,
+  Done 27 Nov on the cache, 12 rows with counted Qwen prompt tokens: no row passes the rule fixed in advance. Every
+  k = 15, k = 20 and top 10 plus next row fails to fit `num_ctx` 17408 for some questions (3 to 29 of 34 fit), and the
+  top 5 plus next rows lose facts on all three bases. Nothing goes to 6.11; a larger k needs `num_ctx` raised on the
+  box, an open question for the owner, not a candidate.
+- [ ] NEXT **6.8 Candidate: dates and ids in the question** (secondary tag of dated-01, dated-04, dated-07). Detect a date,
   a range or "first", "last" in the question and boost chunks by their entry or report date, and boost exact matches
   of decision ids and position numbers in BM25. Supersedes "Temporal filters" under "Later". Free. Live server: no
   rebuild, no latency. Test case (owner, 27 Nov): dated-06, whose top 10 on the context index is filled with the same

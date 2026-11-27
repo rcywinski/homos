@@ -3,7 +3,7 @@
  */
 import type { Chunk } from '../corpus/types';
 import type { Evidence } from './golden';
-import { bm25QueryFor, contextsFor, factChange, fuseOrders, keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
+import { bm25QueryFor, contextsFor, factChange, fileNeighbours, fuseOrders, withNext, keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
 
 let passed = 0;
 let failed = 0;
@@ -80,6 +80,15 @@ try {
   threw = true;
 }
 check('fusion refuses an id missing from the reranked pool', threw);
+
+// Neighbours (6.7): same file only, line order; the list respects the cap, skips duplicates and fills when asked.
+const mk = (id: string, file: string, lineStart: number) => ({ id, file, lineStart, lineEnd: lineStart + 1, kind: 'entry', title: '', text: '' }) as unknown as Chunk;
+const nb = fileNeighbours([mk('f1b', 'f1', 10), mk('f1a', 'f1', 1), mk('f1c', 'f1', 20), mk('f2a', 'f2', 1)]);
+check('next in line order within the file', nb.next.get('f1a') === 'f1b' && nb.next.get('f1b') === 'f1c' && !nb.next.has('f1c'));
+check('previous in line order, none across files', nb.prev.get('f1b') === 'f1a' && !nb.prev.has('f1a') && !nb.prev.has('f2a') && !nb.next.has('f2a'));
+check('top 1 with next, filled to 3', withNext(['f1a', 'f2a', 'f1c'], nb.next, 1, 3, true).join() === 'f1a,f1b,f2a');
+check('next already listed is not repeated', withNext(['f1a', 'f1b', 'f2a'], nb.next, 2, 10, false).join() === 'f1a,f1b,f1c');
+check('cap respected without fill', withNext(['f1a', 'f1b', 'f2a'], nb.next, 3, 2, false).join() === 'f1a,f1b');
 
 console.log(`retrieval-diag: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

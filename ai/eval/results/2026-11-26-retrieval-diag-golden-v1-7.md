@@ -595,6 +595,216 @@ Facts: local 49, 6.10 top 100, fused w=0.9 61; 13 questions gain, 2 lose.
 | id-04 | 5 | 4 | 5 | +1 |
 | id-07 | 6 | 0 | 2 | +2 |
 
+## 6.7 candidates: more context per answer
+
+Named before this section was computed (ai/DECISIONS.md, 27 Nov): k = 15 and 20; (b) the top 5 hits each followed
+by the next chunk of the same file, 10 chunks (the remaining slots take the next hits); (c) the top 10 each followed
+by the next chunk, up to 20. Each on three bases, compared with the same base at k = 10.
+
+### Bound for the neighbour rows
+
+At k = 10, required spans and facts not covered, and how many of them sit in the chunk before or after a top 10 hit
+in the same file (line order).
+
+| base | missed spans | in previous | in next | either | missed facts | in previous | in next | either |
+|---|---|---|---|---|---|---|---|---|
+| local (served, top 30) | 127 | 5 | 2 | 6 | 81 | 4 | 3 | 5 |
+| 6.10, no reranker | 114 | 5 | 2 | 5 | 74 | 4 | 3 | 4 |
+| 6.10 top 100 | 113 | 7 | 7 | 13 | 70 | 4 | 5 | 7 |
+
+### Rows
+
+Prompt tokens are counted, not estimated: the served system prompt and `answerUserPrompt` through the Qwen
+tokenizer of the served preset (`qwen-p-local`), plus 64 tokens of template overhead. Fits: prompt plus
+`num_predict` 2048 within `num_ctx` 17408, as the server checks before each call. Added tokens: mean per
+question over the same base at k = 10. Guest Sonnet input is an estimate only: the 4.6e median (13 117 at the
+served k = 10) scaled by the ratio of Qwen median prompt tokens. Gain: facts over the same base at k = 10 (questions
+gaining / losing). Thresholds: k = 15 at least 6, k = 20 and (c) at least 10, (b) more than 2.
+
+| row | chunks (mean) | facts | gain | Qwen prompt tokens, median | max | added tokens | facts per 1000 added | fits | guest input, estimate | |
+|---|---|---|---|---|---|---|---|---|---|---|
+| local (served, top 30), k=10 | 10.0 | 49 | - | 9818.5 | 14580 | - | - | 34 of 34 | 13117 | base |
+| local (served, top 30), k=15 | 15.0 | 52 | +3 (3/0) | 13633.5 | 21480 | 3940 | 0.76 | 24 of 34 | 18214 | does not fit |
+| local (served, top 30), k=20 | 20.0 | 54 | +5 (4/0) | 16429 | 27149 | 7291 | 0.69 | 13 of 34 | 21948 | does not fit |
+| local (served, top 30), top 5 + next, 10 chunks | 10.0 | 47 | -2 (2/4) | 8399.5 | 12991 | -856 | - | 34 of 34 | 11221 | no (needs 3) |
+| local (served, top 30), top 10 + next, up to 20 | 18.6 | 52 | +3 (2/0) | 17313 | 24665 | 6632 | 0.45 | 14 of 34 | 23129 | does not fit |
+| 6.10, no reranker, k=10 | 10.0 | 56 | - | 6775 | 15063 | - | - | 34 of 34 | 9051 | base |
+| 6.10, no reranker, k=15 | 15.0 | 60 | +4 (3/0) | 10267 | 21040 | 3352 | 1.19 | 29 of 34 | 13716 | does not fit |
+| 6.10, no reranker, k=20 | 20.0 | 65 | +9 (7/0) | 13433 | 26123 | 6860 | 1.31 | 21 of 34 | 17946 | does not fit |
+| 6.10, no reranker, top 5 + next, 10 chunks | 10.0 | 50 | -6 (2/7) | 5444 | 14666 | -994 | - | 34 of 34 | 7273 | no (needs 3) |
+| 6.10, no reranker, top 10 + next, up to 20 | 18.6 | 59 | +3 (2/0) | 11373 | 28983 | 5114 | 0.59 | 25 of 34 | 15194 | does not fit |
+| 6.10 top 100, k=10 | 10.0 | 60 | - | 10796.5 | 14511 | - | - | 34 of 34 | 14424 | base |
+| 6.10 top 100, k=15 | 15.0 | 62 | +2 (2/0) | 16327 | 20848 | 5353 | 0.37 | 11 of 34 | 21812 | does not fit |
+| 6.10 top 100, k=20 | 20.0 | 63 | +3 (3/0) | 21346 | 27762 | 10337 | 0.29 | 3 of 34 | 28517 | does not fit |
+| 6.10 top 100, top 5 + next, 10 chunks | 10.0 | 55 | -5 (2/7) | 10134 | 13318 | -1223 | - | 34 of 34 | 13538 | no (needs 3) |
+| 6.10 top 100, top 10 + next, up to 20 | 18.4 | 65 | +5 (4/0) | 17580.5 | 22758 | 6518 | 0.77 | 11 of 34 | 23487 | does not fit |
+
+### Choice
+
+No 6.7 row passes: none goes to 6.11.
+
+### Watched questions: where new facts arrive
+
+Facts at k = 10, added at ranks 11 to 15 and 16 to 20, and the facts of the (b) and (c) lists.
+
+| base | id | facts with a span | k = 10 | ranks 11-15 | ranks 16-20 | (b) | (c) |
+|---|---|---|---|---|---|---|---|
+| local (served, top 30) | dated-04 | 4 | 0 | +0 | +0 | 0 | 0 |
+| local (served, top 30) | dated-05 | 6 | 0 | +0 | +0 | 0 | 0 |
+| local (served, top 30) | id-07 | 6 | 0 | +1 | +0 | 0 | 0 |
+| local (served, top 30) | dated-06 | 13 | 3 | +0 | +0 | 1 | 3 |
+| 6.10, no reranker | dated-04 | 4 | 1 | +0 | +0 | 0 | 1 |
+| 6.10, no reranker | dated-05 | 6 | 0 | +0 | +0 | 0 | 0 |
+| 6.10, no reranker | id-07 | 6 | 5 | +0 | +0 | 4 | 5 |
+| 6.10, no reranker | dated-06 | 13 | 1 | +1 | +0 | 1 | 1 |
+| 6.10 top 100 | dated-04 | 4 | 1 | +0 | +0 | 0 | 1 |
+| 6.10 top 100 | dated-05 | 6 | 1 | +0 | +0 | 0 | 1 |
+| 6.10 top 100 | id-07 | 6 | 2 | +0 | +0 | 1 | 2 |
+| 6.10 top 100 | dated-06 | 13 | 0 | +0 | +1 | 1 | 1 |
+
+dated-06 on the context index:
+
+- 6.10, no reranker: of ranks 11 to 20, 6 are pipeline log sections of morning reports of other dates, 1 is from its own reports or evidence (2 of 13 facts at k = 20).
+- 6.10 top 100: of ranks 11 to 20, 9 are pipeline log sections of morning reports of other dates, 1 is from its own reports or evidence (1 of 13 facts at k = 20).
+
+### local (served, top 30), k=15 against its k = 10
+
+Facts: k = 10 49, local (served, top 30), k=15 52; 3 questions gain, 0 lose.
+
+| id | facts with a span | k = 10 | local (served, top 30), k=15 | change |
+|---|---|---|---|---|
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| id-07 | 6 | 0 | 1 | +1 |
+
+### local (served, top 30), k=20 against its k = 10
+
+Facts: k = 10 49, local (served, top 30), k=20 54; 4 questions gain, 0 lose.
+
+| id | facts with a span | k = 10 | local (served, top 30), k=20 | change |
+|---|---|---|---|---|
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| dated-09 | 5 | 2 | 4 | +2 |
+| id-07 | 6 | 0 | 1 | +1 |
+
+### local (served, top 30), top 5 + next, 10 chunks against its k = 10
+
+Facts: k = 10 49, local (served, top 30), top 5 + next, 10 chunks 47; 2 questions gain, 4 lose.
+
+| id | facts with a span | k = 10 | local (served, top 30), top 5 + next, 10 chunks | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-06 | 13 | 3 | 1 | -2 |
+| dated-07 | 12 | 1 | 0 | -1 |
+| dated-10 | 5 | 1 | 2 | +1 |
+| id-05 | 5 | 3 | 5 | +2 |
+
+### local (served, top 30), top 10 + next, up to 20 against its k = 10
+
+Facts: k = 10 49, local (served, top 30), top 10 + next, up to 20 52; 2 questions gain, 0 lose.
+
+| id | facts with a span | k = 10 | local (served, top 30), top 10 + next, up to 20 | change |
+|---|---|---|---|---|
+| dated-10 | 5 | 1 | 2 | +1 |
+| id-05 | 5 | 3 | 5 | +2 |
+
+### 6.10, no reranker, k=15 against its k = 10
+
+Facts: k = 10 56, 6.10, no reranker, k=15 60; 3 questions gain, 0 lose.
+
+| id | facts with a span | k = 10 | 6.10, no reranker, k=15 | change |
+|---|---|---|---|---|
+| why-08 | 5 | 2 | 3 | +1 |
+| dated-06 | 13 | 1 | 2 | +1 |
+| dated-10 | 5 | 1 | 3 | +2 |
+
+### 6.10, no reranker, k=20 against its k = 10
+
+Facts: k = 10 56, 6.10, no reranker, k=20 65; 7 questions gain, 0 lose.
+
+| id | facts with a span | k = 10 | 6.10, no reranker, k=20 | change |
+|---|---|---|---|---|
+| why-02 | 5 | 0 | 1 | +1 |
+| why-08 | 5 | 2 | 3 | +1 |
+| dated-01 | 5 | 0 | 1 | +1 |
+| dated-06 | 13 | 1 | 2 | +1 |
+| dated-07 | 12 | 1 | 2 | +1 |
+| dated-09 | 5 | 3 | 5 | +2 |
+| dated-10 | 5 | 1 | 3 | +2 |
+
+### 6.10, no reranker, top 5 + next, 10 chunks against its k = 10
+
+Facts: k = 10 56, 6.10, no reranker, top 5 + next, 10 chunks 50; 2 questions gain, 7 lose.
+
+| id | facts with a span | k = 10 | 6.10, no reranker, top 5 + next, 10 chunks | change |
+|---|---|---|---|---|
+| dated-02 | 4 | 3 | 1 | -2 |
+| dated-03 | 3 | 3 | 2 | -1 |
+| dated-04 | 4 | 1 | 0 | -1 |
+| dated-08 | 5 | 4 | 3 | -1 |
+| dated-09 | 5 | 3 | 1 | -2 |
+| dated-10 | 5 | 1 | 2 | +1 |
+| id-05 | 5 | 3 | 5 | +2 |
+| id-06 | 6 | 6 | 5 | -1 |
+| id-07 | 6 | 5 | 4 | -1 |
+
+### 6.10, no reranker, top 10 + next, up to 20 against its k = 10
+
+Facts: k = 10 56, 6.10, no reranker, top 10 + next, up to 20 59; 2 questions gain, 0 lose.
+
+| id | facts with a span | k = 10 | 6.10, no reranker, top 10 + next, up to 20 | change |
+|---|---|---|---|---|
+| dated-10 | 5 | 1 | 2 | +1 |
+| id-05 | 5 | 3 | 5 | +2 |
+
+### 6.10 top 100, k=15 against its k = 10
+
+Facts: k = 10 60, 6.10 top 100, k=15 62; 2 questions gain, 0 lose.
+
+| id | facts with a span | k = 10 | 6.10 top 100, k=15 | change |
+|---|---|---|---|---|
+| why-05 | 3 | 2 | 3 | +1 |
+| id-02 | 4 | 2 | 3 | +1 |
+
+### 6.10 top 100, k=20 against its k = 10
+
+Facts: k = 10 60, 6.10 top 100, k=20 63; 3 questions gain, 0 lose.
+
+| id | facts with a span | k = 10 | 6.10 top 100, k=20 | change |
+|---|---|---|---|---|
+| why-05 | 3 | 2 | 3 | +1 |
+| dated-06 | 13 | 0 | 1 | +1 |
+| id-02 | 4 | 2 | 3 | +1 |
+
+### 6.10 top 100, top 5 + next, 10 chunks against its k = 10
+
+Facts: k = 10 60, 6.10 top 100, top 5 + next, 10 chunks 55; 2 questions gain, 7 lose.
+
+| id | facts with a span | k = 10 | 6.10 top 100, top 5 + next, 10 chunks | change |
+|---|---|---|---|---|
+| why-10 | 2 | 2 | 1 | -1 |
+| dated-04 | 4 | 1 | 0 | -1 |
+| dated-05 | 6 | 1 | 0 | -1 |
+| dated-06 | 13 | 0 | 1 | +1 |
+| dated-07 | 12 | 1 | 0 | -1 |
+| dated-09 | 5 | 3 | 1 | -2 |
+| dated-10 | 5 | 1 | 0 | -1 |
+| id-05 | 5 | 3 | 5 | +2 |
+| id-07 | 6 | 2 | 1 | -1 |
+
+### 6.10 top 100, top 10 + next, up to 20 against its k = 10
+
+Facts: k = 10 60, 6.10 top 100, top 10 + next, up to 20 65; 4 questions gain, 0 lose.
+
+| id | facts with a span | k = 10 | 6.10 top 100, top 10 + next, up to 20 | change |
+|---|---|---|---|---|
+| dated-06 | 13 | 0 | 1 | +1 |
+| dated-08 | 5 | 4 | 5 | +1 |
+| dated-10 | 5 | 1 | 2 | +1 |
+| id-05 | 5 | 3 | 5 | +2 |
+
 ## Where required spans are lost in the first stage
 
 Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with

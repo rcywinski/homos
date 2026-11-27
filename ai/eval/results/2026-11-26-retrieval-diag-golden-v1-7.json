@@ -715,6 +715,192 @@
     ],
     "passes": true
    }
+  },
+  "candidates-6.7": {
+   "rows": {
+    "local:k=10": {
+     "facts": 49,
+     "gain": 0,
+     "gaining": 0,
+     "losing": 0,
+     "tokMedian": 9818.5,
+     "tokMax": 14580,
+     "addedMean": 0,
+     "per1000": null,
+     "fits": 34,
+     "passes": false
+    },
+    "local:k=15": {
+     "facts": 52,
+     "gain": 3,
+     "gaining": 3,
+     "losing": 0,
+     "tokMedian": 13633.5,
+     "tokMax": 21480,
+     "addedMean": 3940,
+     "per1000": 0.761,
+     "fits": 24,
+     "passes": false
+    },
+    "local:k=20": {
+     "facts": 54,
+     "gain": 5,
+     "gaining": 4,
+     "losing": 0,
+     "tokMedian": 16429,
+     "tokMax": 27149,
+     "addedMean": 7291,
+     "per1000": 0.686,
+     "fits": 13,
+     "passes": false
+    },
+    "local:top 5 + next, 10 chunks": {
+     "facts": 47,
+     "gain": -2,
+     "gaining": 2,
+     "losing": 4,
+     "tokMedian": 8399.5,
+     "tokMax": 12991,
+     "addedMean": -856,
+     "per1000": null,
+     "fits": 34,
+     "passes": false
+    },
+    "local:top 10 + next, up to 20": {
+     "facts": 52,
+     "gain": 3,
+     "gaining": 2,
+     "losing": 0,
+     "tokMedian": 17313,
+     "tokMax": 24665,
+     "addedMean": 6632,
+     "per1000": 0.452,
+     "fits": 14,
+     "passes": false
+    },
+    "ctx-first:k=10": {
+     "facts": 56,
+     "gain": 0,
+     "gaining": 0,
+     "losing": 0,
+     "tokMedian": 6775,
+     "tokMax": 15063,
+     "addedMean": 0,
+     "per1000": null,
+     "fits": 34,
+     "passes": false
+    },
+    "ctx-first:k=15": {
+     "facts": 60,
+     "gain": 4,
+     "gaining": 3,
+     "losing": 0,
+     "tokMedian": 10267,
+     "tokMax": 21040,
+     "addedMean": 3352,
+     "per1000": 1.193,
+     "fits": 29,
+     "passes": false
+    },
+    "ctx-first:k=20": {
+     "facts": 65,
+     "gain": 9,
+     "gaining": 7,
+     "losing": 0,
+     "tokMedian": 13433,
+     "tokMax": 26123,
+     "addedMean": 6860,
+     "per1000": 1.312,
+     "fits": 21,
+     "passes": false
+    },
+    "ctx-first:top 5 + next, 10 chunks": {
+     "facts": 50,
+     "gain": -6,
+     "gaining": 2,
+     "losing": 7,
+     "tokMedian": 5444,
+     "tokMax": 14666,
+     "addedMean": -994,
+     "per1000": null,
+     "fits": 34,
+     "passes": false
+    },
+    "ctx-first:top 10 + next, up to 20": {
+     "facts": 59,
+     "gain": 3,
+     "gaining": 2,
+     "losing": 0,
+     "tokMedian": 11373,
+     "tokMax": 28983,
+     "addedMean": 5114,
+     "per1000": 0.587,
+     "fits": 25,
+     "passes": false
+    },
+    "ctx-100:k=10": {
+     "facts": 60,
+     "gain": 0,
+     "gaining": 0,
+     "losing": 0,
+     "tokMedian": 10796.5,
+     "tokMax": 14511,
+     "addedMean": 0,
+     "per1000": null,
+     "fits": 34,
+     "passes": false
+    },
+    "ctx-100:k=15": {
+     "facts": 62,
+     "gain": 2,
+     "gaining": 2,
+     "losing": 0,
+     "tokMedian": 16327,
+     "tokMax": 20848,
+     "addedMean": 5353,
+     "per1000": 0.374,
+     "fits": 11,
+     "passes": false
+    },
+    "ctx-100:k=20": {
+     "facts": 63,
+     "gain": 3,
+     "gaining": 3,
+     "losing": 0,
+     "tokMedian": 21346,
+     "tokMax": 27762,
+     "addedMean": 10337,
+     "per1000": 0.29,
+     "fits": 3,
+     "passes": false
+    },
+    "ctx-100:top 5 + next, 10 chunks": {
+     "facts": 55,
+     "gain": -5,
+     "gaining": 2,
+     "losing": 7,
+     "tokMedian": 10134,
+     "tokMax": 13318,
+     "addedMean": -1223,
+     "per1000": null,
+     "fits": 34,
+     "passes": false
+    },
+    "ctx-100:top 10 + next, up to 20": {
+     "facts": 65,
+     "gain": 5,
+     "gaining": 4,
+     "losing": 0,
+     "tokMedian": 17580.5,
+     "tokMax": 22758,
+     "addedMean": 6518,
+     "per1000": 0.767,
+     "fits": 11,
+     "passes": false
+    }
+   },
+   "passing": [],
+   "choice": "No 6.7 row passes: none goes to 6.11."
   }
  },
  "spans": [

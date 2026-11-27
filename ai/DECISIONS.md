@@ -1494,3 +1494,63 @@ top 10 is already nine copies of the "pipeline-task.log (tail)" section of morni
 The owner added dated-06 to the questions watched in 6.11 and made it the test case of 6.8 (dates in the question).
 0 USD. Step 6.6 is done; 6.7 is next.
 
+
+## 2026-11-27, step 6.7 rules, written before the tables were computed (analysis session, under the owner's delegation)
+
+From 6.7 to 6.11 the owner delegated plan and result approval to the analysis session (27 Nov), within the 4 USD per
+run and 20 USD phase limits; the box, spending above the limits, merge to main and deployment stay his own word, and
+the test set is first run in 6.12.
+
+**Candidates.** k = 15 and k = 20 on three bases (served local, "6.10 without the reranker", "6.10 rerank top 100");
+(b) the top 5 hits each followed by the next chunk of the same file, capped at 10 chunks; (c) the top 10 hits each
+followed by the next chunk of the same file, at most 20 chunks. Same three bases, 12 rows, every one reported. Before
+the neighbour rows: the bound, at k = 10 per base, of missed required spans and facts that sit in the chunk before or
+after a top 10 hit in the same file, previous and next counted separately.
+
+**Price of the gain (amendment 1).** For each k row and each (c) row: facts gained over its own k = 10 base, chunks
+added, Qwen prompt tokens added, and facts gained per 1000 added tokens. Tokens are counted, not estimated: the
+served prompt (`answerUserPrompt` with the served system prompt) through the Qwen tokenizer the server uses for its
+own fit check. The fit condition is the server's: system plus user prompt plus 64 tokens of template overhead plus
+`num_predict` 2048 within `num_ctx` 17408 (the served preset `qwen-p-local`; the 24576 in the plan text is not what is
+served). Such a row is a 6.11 candidate only if (i) it fits for every question and (ii) it gains at least 6 facts over
+its own k = 10 base at k = 15, at least 10 at k = 20, or for (c) at least 10. A row that does not fit is reported but
+cannot go forward, since changing `num_ctx` is a box change. A (b) row, same chunk count, is a candidate only if it
+gains more than 2 facts over its own base.
+
+**At most one 6.7 row enters 6.11 (amendment 2),** as the fourth configuration next to served, "6.10 without the
+reranker" and "6.10 rerank top 100". If several pass, the one with the most facts per 1000 added tokens goes (for a
+(b) row, which adds no tokens, the most facts gained). 6.11 stays at four configurations and about 4.4 USD.
+
+**Result (approved by the analysis session, 27 Nov).** Computed in the 6.3 report (section "6.7 candidates";
+earlier sections unchanged, reproduction check "same"). No row passes the rules above, none goes to 6.11, which stays
+at served, "6.10 without the reranker" and "6.10 rerank top 100".
+
+| base (facts at k = 10) | k = 15 | k = 20 | (b) top 5 + next | (c) top 10 + next |
+|---|---|---|---|---|
+| local, served (49) | +3, fits 24 of 34 | +5, fits 13 | -2 (2 gain, 4 lose) | +3, fits 14 |
+| 6.10 without the reranker (56) | +4, fits 29 | +9, fits 21 | -6 (2, 7) | +3, fits 25 |
+| 6.10 rerank top 100 (60) | +2, fits 11 | +3, fits 3 | -5 (2, 7) | +5, fits 11 |
+
+Facts per 1000 added tokens run from 0.29 to 1.31; the best, "6.10 without the reranker" at k = 20 (+9 for about
+6 860 added tokens per question), misses both the gain bar (10) and the fit. A larger k would need `num_ctx` raised on
+the box, the owner's own decision (VRAM), recorded as an open box question, not a candidate.
+
+**Correction.** The served `num_ctx` is 17408 with `num_predict` 2048 (preset `qwen-p-local`, `ai/serve/config.ts`),
+not the 24576 the 6.7 plan text assumed; the plan text is corrected. (24576 is the phase 3 agent setting and the
+value of a 16 Nov load test on the box, not what the chat serves.)
+
+**Bound.** At most 7 of the 70 to 81 facts missed at k = 10 sit in the chunk before or after a top 10 hit, so
+neighbour chunks cannot matter on this corpus, and (b) loses facts on all three bases.
+
+**Side finding for 6.11.** At k = 10 the median Qwen prompt is 6 775 tokens for "6.10 without the reranker", against
+9 818 for served and 10 797 for "6.10 rerank top 100" (guest Sonnet input estimate 9 051, 13 117 and 14 424): that
+candidate is about a third cheaper per answer and has no reranker time, with 56 facts against 60. Its prompts are
+shorter because it gives shorter chunks: median 1 494 characters per chunk in its top 10, against 2 094 served and
+2 373 for top 100, with the same share of morning report chunks (89, 85 and 87 of 340); both reranked lists favour
+longer chunks.
+
+**What the counts assume.** Tokens were counted on the Mac from the local Qwen tokenizer file
+(`ai/index/tokenizers/qwen3.8-27b`), no call to the box, and the generator prompt is the chunk text only, without the
+generated context: `answerUserPrompt` prints `chunk.text`, and the generated contexts go to the index and the reranker
+only (`ai/answer/retrieval.ts`, as since step 1.8). For the 6.10 candidates the same is assumed; it is to be written
+into step 6.10 before 6.11. 0 USD. Step 6.7 is done; 6.8 is next.

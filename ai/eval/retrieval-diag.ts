@@ -46,6 +46,9 @@ import type { Retriever } from '../store/types';
 import type { SearchHit } from '../store/types';
 import { factSpans, overlaps, requiredOnly, type Evidence, type GoldenQuestion } from './golden';
 import { score, type Score } from './span-score';
+import { loadTokenCounter } from '../answer/local';
+import { answerUserPrompt } from '../answer/prompt';
+import { DEFAULT_PRESET, PRESETS } from '../serve/config';
 
 /** Both paths can be pointed elsewhere for a dry run with a synthetic cache (never for a real result). */
 export const CACHE = process.env.RETRIEVAL_DIAG_CACHE ?? 'ai/index/retrieval-diag-cache.json';
@@ -94,6 +97,52 @@ export function fuseOrders(first: string[], reranked: string[], w: number, c = 6
     })
     .sort((a, b) => b.s - a.s || a.fr - b.fr)
     .map((x) => x.id);
+}
+
+/**
+ * Step 6.7 candidates and thresholds, fixed before the section was computed (analysis session under the owner's
+ * delegation, 27 Nov; ai/DECISIONS.md). Bases: served local, the context index without the reranker, and the context
+ * index reranked over the top 100.
+ */
+export const K_ROWS_67 = [15, 20];
+/** Facts a k row must gain over its own k = 10 base to go forward, per k; (c) uses the k = 20 threshold. */
+export const K_MIN_GAIN_67: Record<number, number> = { 15: 6, 20: 10 };
+/** A (b) row, same chunk count, must gain more than this. */
+export const NEXT5_MIN_GAIN_67 = 2;
+/** Chat-template overhead the server accepts at calibration (ai/answer/local.ts). */
+export const TEMPLATE_OVERHEAD = 64;
+
+/** The previous and next chunk of every chunk in the same file, by line order. */
+export function fileNeighbours(chunks: Chunk[]): { prev: Map<string, string>; next: Map<string, string> } {
+  const byFile = new Map<string, Chunk[]>();
+  for (const c of chunks) byFile.set(c.file, [...(byFile.get(c.file) ?? []), c]);
+  const prev = new Map<string, string>();
+  const next = new Map<string, string>();
+  for (const list of byFile.values()) {
+    const sorted = [...list].sort((a, b) => a.lineStart - b.lineStart);
+    for (let i = 0; i + 1 < sorted.length; i++) {
+      next.set(sorted[i].id, sorted[i + 1].id);
+      prev.set(sorted[i + 1].id, sorted[i].id);
+    }
+  }
+  return { prev, next };
+}
+
+/**
+ * The first `heads` hits, each followed by its next chunk when that is not already in the list, up to `cap`; with
+ * `fill`, the remaining slots up to `cap` take the following hits in rank order.
+ */
+export function withNext(ranked: string[], next: Map<string, string>, heads: number, cap: number, fill: boolean): string[] {
+  const out: string[] = [];
+  const add = (id: string | undefined) => {
+    if (id !== undefined && out.length < cap && !out.includes(id)) out.push(id);
+  };
+  for (const id of ranked.slice(0, heads)) {
+    add(id);
+    add(next.get(id));
+  }
+  if (fill) for (const id of ranked.slice(heads)) add(id);
+  return out;
 }
 
 export interface FactChange {
@@ -552,10 +601,10 @@ async function report(date: string) {
   const baseFacts = factsOf(served10);
   const sl = score(golden, served10, byId);
   const headRow = (label: string, sc: Score) => `| ${label} | ${sc.r5} | ${sc.r10} | ${sc.mrr} | ${sc.facts} |`;
-  const changeTable = (label: string, c: FactChange) => [
-    `Facts: local ${c.base}, ${label} ${c.cand}; ${c.gain} questions gain, ${c.loss} lose.`,
+  const changeTable = (label: string, c: FactChange, baseLabel = 'local') => [
+    `Facts: ${baseLabel} ${c.base}, ${label} ${c.cand}; ${c.gain} questions gain, ${c.loss} lose.`,
     '',
-    `| id | facts with a span | local | ${label} | change |`,
+    `| id | facts with a span | ${baseLabel} | ${label} | change |`,
     '|---|---|---|---|---|',
     ...c.rows.map((r) => `| ${r.id} | ${withSpans[r.id]} | ${r.base} | ${r.cand} | ${r.cand > r.base ? '+' : ''}${r.cand - r.base} |`),
     '',
@@ -737,6 +786,185 @@ async function report(date: string) {
     cand66.push('## 6.6 candidates', '', 'Not fetched yet: the context-index candidates need `fetch --variant ctx-plain`.', '');
   }
 
+  // Step 6.7: more context per answer. Candidates, thresholds and the choice among passing rows were fixed before this
+  // section was computed (ai/DECISIONS.md, 27 Nov). Prompt tokens are counted with the served tokenizer and prompt.
+  const cand67: string[] = [];
+  if (ctxFetched) {
+    const preset = PRESETS[DEFAULT_PRESET].generator;
+    if (!preset.system || !preset.tokenizerDir) throw new Error('served preset without a system prompt or tokenizer');
+    const count = loadTokenCounter(preset.tokenizerDir);
+    const sysTok = count(preset.system);
+    const tokCache = new Map<string, number>();
+    const promptTok = (q: GoldenQuestion, ids: string[]) => {
+      const key = `${q.id}|${ids.join()}`;
+      if (!tokCache.has(key)) tokCache.set(key, sysTok + count(answerUserPrompt(q.question, ids.map((id) => byId.get(id)!))) + TEMPLATE_OVERHEAD);
+      return tokCache.get(key)!;
+    };
+    const { prev, next } = fileNeighbours(chunks);
+    const median = (xs: number[]) => {
+      const a = [...xs].sort((x, y) => x - y);
+      return a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2;
+    };
+    const total = (f: Record<string, number>) => Object.values(f).reduce((a, b) => a + b, 0);
+    const bases67: { name: string; key: string; ranked: Record<string, string[]> }[] = [
+      { name: 'local (served, top 30)', key: 'local', ranked: servedLists('local') },
+      { name: '6.10, no reranker', key: 'ctx-first', ranked: lists('ctx-plain', (v) => v.fused) },
+      { name: '6.10 top 100', key: 'ctx-100', ranked: poolLists('ctx-plain', 100) },
+    ];
+
+    // Bound: missed required spans and facts at k = 10 in the chunk before or after a top 10 hit, same file.
+    const boundRows: string[] = [];
+    for (const b of bases67) {
+      let spans = 0, sPrev = 0, sNext = 0, sEither = 0, facts = 0, fPrev = 0, fNext = 0, fEither = 0;
+      for (const q of answerable) {
+        const top = b.ranked[q.id].slice(0, 10);
+        const hit = (e: Evidence, ids: string[]) => ids.some((id) => overlaps(byId.get(id)!, e));
+        const pIds = top.map((id) => prev.get(id)).filter((x): x is string => !!x);
+        const nIds = top.map((id) => next.get(id)).filter((x): x is string => !!x);
+        for (const e of requiredOnly(q.evidence)) {
+          if (hit(e, top)) continue;
+          spans++;
+          const p = hit(e, pIds), n = hit(e, nIds);
+          if (p) sPrev++;
+          if (n) sNext++;
+          if (p || n) sEither++;
+        }
+        for (const sp of factSpans(q).spans) {
+          if (sp.some((e) => hit(e, top))) continue;
+          facts++;
+          const p = sp.some((e) => hit(e, pIds)), n = sp.some((e) => hit(e, nIds));
+          if (p) fPrev++;
+          if (n) fNext++;
+          if (p || n) fEither++;
+        }
+      }
+      boundRows.push(`| ${b.name} | ${spans} | ${sPrev} | ${sNext} | ${sEither} | ${facts} | ${fPrev} | ${fNext} | ${fEither} |`);
+    }
+
+    // Rows per base: k = 10 (the base), k = 15, k = 20, (b) top 5 with next capped at 10, (c) top 10 with next up to 20.
+    type Kind = 'base' | 'k' | 'b' | 'c';
+    const heads: string[] = [];
+    const details: string[] = [];
+    const passing: { name: string; kind: Kind; gain: number; per1000: number }[] = [];
+    const j: Record<string, unknown> = {};
+    const servedTok = median(golden.map((q) => promptTok(q, servedLists('local')[q.id].slice(0, 10))));
+    const watchedIds = ['dated-04', 'dated-05', 'id-07', 'dated-06'];
+    const watched: string[] = [];
+    for (const b of bases67) {
+      const rows: { name: string; kind: Kind; k: number; l: Record<string, string[]> }[] = [
+        { name: `${b.name}, k=10`, kind: 'base', k: 10, l: at(b.ranked, 10) },
+        ...K_ROWS_67.map((k) => ({ name: `${b.name}, k=${k}`, kind: 'k' as Kind, k, l: at(b.ranked, k) })),
+        { name: `${b.name}, top 5 + next, 10 chunks`, kind: 'b', k: 10, l: Object.fromEntries(Object.entries(b.ranked).map(([id, r]) => [id, withNext(r, next, 5, 10, true)])) },
+        { name: `${b.name}, top 10 + next, up to 20`, kind: 'c', k: 20, l: Object.fromEntries(Object.entries(b.ranked).map(([id, r]) => [id, withNext(r, next, 10, 20, false)])) },
+      ];
+      const baseFacts67 = factsOf(rows[0].l);
+      const baseTok = golden.map((q) => promptTok(q, rows[0].l[q.id]));
+      for (const r of rows) {
+        const f = factsOf(r.l);
+        const c = factChange(answerable.map((q) => q.id), baseFacts67, f);
+        const tok = golden.map((q) => promptTok(q, r.l[q.id]));
+        const fits = tok.filter((t) => t + preset.numPredict <= preset.numCtx).length;
+        const added = tok.reduce((a, t, i) => a + t - baseTok[i], 0) / golden.length;
+        const chunksMean = golden.reduce((a, q) => a + r.l[q.id].length, 0) / golden.length;
+        const gain = c.cand - c.base;
+        const per1000 = added > 0 ? gain / (added / 1000) : NaN;
+        const threshold = r.kind === 'k' ? K_MIN_GAIN_67[r.k] : r.kind === 'c' ? K_MIN_GAIN_67[20] : NEXT5_MIN_GAIN_67 + 1;
+        const passes = r.kind !== 'base' && fits === golden.length && gain >= threshold;
+        if (passes) passing.push({ name: r.name, kind: r.kind, gain, per1000 });
+        const verdict = r.kind === 'base' ? 'base' : passes ? '**passes**' : fits < golden.length ? 'does not fit' : `no (needs ${threshold})`;
+        heads.push(
+          `| ${r.name} | ${chunksMean.toFixed(1)} | ${total(f)} | ${r.kind === 'base' ? '-' : `${gain > 0 ? '+' : ''}${gain} (${c.gain}/${c.loss})`} | ${median(tok)} | ${Math.max(...tok)} | ${r.kind === 'base' ? '-' : Math.round(added)} | ${Number.isNaN(per1000) ? '-' : per1000.toFixed(2)} | ${fits} of ${golden.length} | ${Math.round((13117 * median(tok)) / servedTok)} | ${verdict} |`,
+        );
+        if (r.kind !== 'base') details.push(`### ${r.name} against its k = 10`, '', ...changeTable(r.name, c, 'k = 10'));
+        j[`${b.key}:${r.name.slice(b.name.length + 2)}`] = { facts: total(f), gain, gaining: c.gain, losing: c.loss, tokMedian: median(tok), tokMax: Math.max(...tok), addedMean: Math.round(added), per1000: Number.isNaN(per1000) ? null : +per1000.toFixed(3), fits, passes };
+      }
+      // Watched questions: where the new facts arrive.
+      for (const id of watchedIds) {
+        const q = answerable.find((x) => x.id === id)!;
+        const f10 = factsIn(q, b.ranked[id].slice(0, 10));
+        const f15 = factsIn(q, b.ranked[id].slice(0, 15));
+        const f20 = factsIn(q, b.ranked[id].slice(0, 20));
+        const fb = factsIn(q, rows[3].l[id]);
+        const fc = factsIn(q, rows[4].l[id]);
+        watched.push(`| ${b.name} | ${id} | ${factSpans(q).spans.length} | ${f10} | +${f15 - f10} | +${f20 - f15} | ${fb} | ${fc} |`);
+      }
+    }
+    // dated-06 on the context index: what ranks 11 to 20 add.
+    const d06 = answerable.find((q) => q.id === 'dated-06')!;
+    const ownReports = new Set(d06.evidence.map((e) => e.file).filter((f) => f.includes('reports/')));
+    const d06Lines = bases67.slice(1).map((b) => {
+      const extra = b.ranked['dated-06'].slice(10, 20).map((id) => byId.get(id)!);
+      const otherLogs = extra.filter((c) => c.file.includes('reports/morning-') && !ownReports.has(c.file) && /pipeline/i.test(c.title)).length;
+      const own = extra.filter((c) => ownReports.has(c.file) || d06.evidence.some((e) => overlaps(c, e))).length;
+      return `- ${b.name}: of ranks 11 to 20, ${otherLogs} ${otherLogs === 1 ? 'is a pipeline log section' : 'are pipeline log sections'} of morning reports of other dates, ${own} ${own === 1 ? 'is' : 'are'} from its own reports or evidence (${factsIn(d06, b.ranked['dated-06'].slice(0, 20))} of ${factSpans(d06).spans.length} facts at k = 20).`;
+    });
+
+    // Choice among passing rows, as fixed in advance.
+    const tokenRows = passing.filter((p) => p.kind !== 'b');
+    const bRows = passing.filter((p) => p.kind === 'b');
+    let choice: string;
+    if (!passing.length) choice = 'No 6.7 row passes: none goes to 6.11.';
+    else if (passing.length === 1) choice = `One row passes and goes to 6.11 as the fourth configuration: **${passing[0].name}**.`;
+    else if (!bRows.length) {
+      const best = [...tokenRows].sort((a, b) => b.per1000 - a.per1000)[0];
+      choice = `${passing.length} rows pass; by facts per 1000 added tokens, **${best.name}** goes to 6.11 (${best.per1000.toFixed(2)}).`;
+    } else if (!tokenRows.length) {
+      const best = [...bRows].sort((a, b) => b.gain - a.gain)[0];
+      choice = `${passing.length} neighbour rows pass; by facts gained, **${best.name}** goes to 6.11 (+${best.gain}).`;
+    } else choice = `${passing.length} rows pass, of both kinds (${passing.map((p) => p.name).join('; ')}): the rule fixed in advance does not rank a row that adds tokens against one that does not, so the choice goes to the analysis session.`;
+    json['candidates-6.7'] = { rows: j, passing, choice };
+
+    cand67.push(
+      '## 6.7 candidates: more context per answer',
+      '',
+      'Named before this section was computed (ai/DECISIONS.md, 27 Nov): k = 15 and 20; (b) the top 5 hits each followed',
+      'by the next chunk of the same file, 10 chunks (the remaining slots take the next hits); (c) the top 10 each followed',
+      'by the next chunk, up to 20. Each on three bases, compared with the same base at k = 10.',
+      '',
+      '### Bound for the neighbour rows',
+      '',
+      'At k = 10, required spans and facts not covered, and how many of them sit in the chunk before or after a top 10 hit',
+      'in the same file (line order).',
+      '',
+      '| base | missed spans | in previous | in next | either | missed facts | in previous | in next | either |',
+      '|---|---|---|---|---|---|---|---|---|',
+      ...boundRows,
+      '',
+      '### Rows',
+      '',
+      `Prompt tokens are counted, not estimated: the served system prompt and \`answerUserPrompt\` through the Qwen`,
+      `tokenizer of the served preset (\`${DEFAULT_PRESET}\`), plus ${TEMPLATE_OVERHEAD} tokens of template overhead. Fits: prompt plus`,
+      `\`num_predict\` ${preset.numPredict} within \`num_ctx\` ${preset.numCtx}, as the server checks before each call. Added tokens: mean per`,
+      'question over the same base at k = 10. Guest Sonnet input is an estimate only: the 4.6e median (13 117 at the',
+      'served k = 10) scaled by the ratio of Qwen median prompt tokens. Gain: facts over the same base at k = 10 (questions',
+      'gaining / losing). Thresholds: k = 15 at least 6, k = 20 and (c) at least 10, (b) more than 2.',
+      '',
+      '| row | chunks (mean) | facts | gain | Qwen prompt tokens, median | max | added tokens | facts per 1000 added | fits | guest input, estimate | |',
+      '|---|---|---|---|---|---|---|---|---|---|---|',
+      ...heads,
+      '',
+      '### Choice',
+      '',
+      choice,
+      '',
+      '### Watched questions: where new facts arrive',
+      '',
+      'Facts at k = 10, added at ranks 11 to 15 and 16 to 20, and the facts of the (b) and (c) lists.',
+      '',
+      '| base | id | facts with a span | k = 10 | ranks 11-15 | ranks 16-20 | (b) | (c) |',
+      '|---|---|---|---|---|---|---|---|',
+      ...watched,
+      '',
+      'dated-06 on the context index:',
+      '',
+      ...d06Lines,
+      '',
+      ...details,
+    );
+  } else {
+    cand67.push('## 6.7 candidates', '', 'Not fetched yet: the context-index bases need `fetch --variant ctx-plain`.', '');
+  }
+
   const base = `ai/eval/results/${date}-retrieval-diag-golden-v${meta.version.replace('.', '-')}`;
   const md = [
     `# Retrieval diagnostic, development set (golden v${meta.version})`,
@@ -785,6 +1013,7 @@ async function report(date: string) {
     ...cmp,
     ...cand65,
     ...cand66,
+    ...cand67,
     '## Where required spans are lost in the first stage',
     '',
     'Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with',
