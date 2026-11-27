@@ -1707,3 +1707,47 @@ H; N has the shorter prompt (median 6 775 against 10 797 Qwen tokens) and no rer
 documents, measured in the window, is reported next to the choice. If only one passes, that one. If neither passes,
 S stays and phase 6 ends with the retrieval findings documented. 6.12 then runs the chosen configuration and S on the
 frozen set.
+
+**Result (approved by the analysis session, 27 Nov).** Report `ai/eval/results/2026-11-27-compare-6-11-golden-v1-7.md`,
+produced by `ai/eval/compare-611.ts`, which applies the rule above in code (its `decide` function was tested before
+any verdict existed).
+
+Window (CC-Win, owner's go in its conversation, public site kept up): box ready 17:07:41 UTC, closed 17:46:43, state
+as found (served clone HEAD b0cec0f before and after, switches and limits as found, nothing loaded, reranker task
+Ready), no guest request during the window, peak GPU memory 20 350 MiB with Qwen alone. Reranker timing 17:09:09 to
+17:10:03 from the Mac over the LAN (`ai/eval/results/2026-11-27-rerank-time-6-11.json`), medians per call: 1 document
+25 ms, the served 30 documents 365 ms (server side 354), the 100 documents with contexts of H 1093 ms (server side
+1069). A first attempt at 17:08:28 made no call at all (the tool's attempt count was 0); fixed, nothing reached the
+box. Six generation runs 17:10:28 to 17:46:22, order S N H S N H, each from a cold load: 34 answers, 0 errors, the
+preset check equal on all 17 fields, the injection probe not obeyed, Qwen fully on the GPU.
+
+| configuration | run 1 (C/P/I, unsupported) | run 2 | mean correct | mean incorrect | median per answer |
+|---|---|---|---|---|---|
+| S served | 16/13/5, 0 | 19/9/6, 0 | 17.5 | 5.5 | 9.8 s |
+| N 6.10 without the reranker, with B2 | 16/13/5, 1 | 17/13/4, 0 | 16.5 | 4.5 | 7.8 s |
+| H 6.10 rerank top 100 | 17/13/4, 0 | 16/14/4, 3 | 16.5 | 4 | 10.9 s |
+
+Sanity passes (S at 16 and 19, inside 15 to 19). Both candidates pass the guard. The rule chooses **N**.
+
+**What this does and does not show.** The judged runs do not show N better than S: 16.5 against 17.5 mean correct,
+inside the spread. Ten more facts covered (59 against 49) did not turn into more correct verdicts on 34 questions.
+The choice of N rests on the rule: no clear regression, a prompt about a third shorter (median 6 775 against 9 818
+Qwen tokens), no reranker call, 7.8 s against 9.8 s median per answer. H's 3 unsupported answers in one run are
+recorded; they are within the guard.
+
+**Changes that repeat in both runs, both directions.** Gains for N: dated-04 and dated-05 from incorrect to partly
+correct, na-07 from incorrect to partly correct, id-05 and id-06 correct in both runs (S: partly, then correct).
+Known costs of N:
+- dated-01 from correct in both S runs to incorrect in both N runs, and in both H runs, so it comes from the context
+  index: the served list carries HANDOFF.md 1166-1170 (fact c, the date the real capital went in) at rank 7, and
+  neither context-index list has any chunk with a dated-01 fact in its top 10.
+- dated-07 from partly correct to incorrect in N only (H stays partly correct): N's list covers the same fact as S's
+  (CONTEXT.md 4300-4302), so the drop is not explained by fact coverage.
+- na-02 from correct to partly correct in both N runs.
+
+**Unanswerable questions as a group** (na-01 to na-07; correct / partly / incorrect): S 5/1/1 and 6/0/1, N 4/2/1 and
+4/3/0. N refuses fully less often (4 against 5.5 mean) and is wrong less often (0.5 against 1): na-02 and na-03 a
+little worse, na-07 better. For the public page this is the figure to watch, since a correct refusal matters there.
+
+**Cost.** Judge 3.1929 USD (0.5397, 0.5377, 0.5308, 0.5301, 0.5331, 0.5215; concurrency 1, no failed call, no answer
+without a verdict). Phase 6: 4.2616 of 20 USD. On the key in total: 7.3648 USD. Step 6.11 is done; 6.12 is next.

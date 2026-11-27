@@ -474,7 +474,7 @@ Common rules for every step:
   of the three configurations committed (`ai/eval/results/2026-11-27-chunk-lists-k10-6-11-golden-v1-7.json`), the
   answer runner takes them with the served preset checked field by field (`--chunks-file`), and a timing tool sends
   the real documents of both reranking settings (`ai/eval/rerank-time-611.ts`).
-- [ ] NEXT **6.11 Judged comparison on the development set.** The candidates that gained on retrieval, then their best
+- [x] 2026-11-27 **6.11 Judged comparison on the development set.** The candidates that gained on retrieval, then their best
   combination, Qwen, two runs each. Up to four configurations, about 4.4 USD. Method (owner, 27 Nov): fact coverage
   chooses the candidates; judged runs guard against regressions and check dated-04, dated-05 and id-07 (incorrect in
   every run), and dated-06 (it loses facts in every deeper pool and on the context index, 6.5 and 6.6). Candidates
@@ -485,7 +485,10 @@ Common rules for every step:
   inside the 4 USD per-run limit.
   Decision rule committed 27 Nov before any run (`ai/DECISIONS.md`): three configurations (served, "6.10 without the
   reranker, with B2", "6.10 rerank top 100"), two runs each in one box window, interleaved.
-- [ ] **6.12 Held-out test and the guest path.** The final configuration and the served one on the frozen test set
+  Done 27 Nov: sanity passes (served 16 and 19 correct), both candidates pass the guard, the rule chooses "6.10
+  without the reranker, with B2" (16.5 mean correct against 17.5 served and 16.5 for top 100: not better, no clear
+  regression; prompt a third shorter, no reranker call, 7.8 s against 9.8 s per answer). 3.1929 USD.
+- [ ] NEXT **6.12 Held-out test and the guest path.** The final configuration and the served one on the frozen test set
   (free check added 27 Nov: fact coverage of the final configuration with and without the identifier match B2 of
   6.8, computed only here, after the configuration is fixed; it needs the test questions' bge-m3 query vectors, and
   reranker scores if the final configuration reranks, from the box, which the 6.12 runs touch anyway)

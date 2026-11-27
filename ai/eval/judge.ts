@@ -75,6 +75,13 @@ export const SETS = {
   // two runs on the 34 development questions (golden v1.7), each judged as its own set with its own cap.
   b64r1: { runs: [{ run: 'local-b64r1', file: `${RESULTS}/2026-11-27-answers-k10-local-b64r1-golden-v1-7.json` }], judgments: `${RESULTS}/2026-11-27-judgments-b64r1-golden-v1-7.jsonl`, judged: `${RESULTS}/2026-11-27-judged-b64r1-golden-v1-7.json`, date: '2026-11-27' },
   b64r2: { runs: [{ run: 'local-b64r2', file: `${RESULTS}/2026-11-27-answers-k10-local-b64r2-golden-v1-7.json` }], judgments: `${RESULTS}/2026-11-27-judgments-b64r2-golden-v1-7.jsonl`, judged: `${RESULTS}/2026-11-27-judged-b64r2-golden-v1-7.json`, date: '2026-11-27' },
+  // Step 6.11: S served, N 6.10 without the reranker with B2, H 6.10 rerank top 100 (runner path, saved lists).
+  s611r1: { runs: [{ run: 's611r1', file: `${RESULTS}/2026-11-27-answers-k10-s611r1-golden-v1-7.json` }], judgments: `${RESULTS}/2026-11-27-judgments-s611r1-golden-v1-7.jsonl`, judged: `${RESULTS}/2026-11-27-judged-s611r1-golden-v1-7.json`, date: '2026-11-27' },
+  n611r1: { runs: [{ run: 'n611r1', file: `${RESULTS}/2026-11-27-answers-k10-n611r1-golden-v1-7.json` }], judgments: `${RESULTS}/2026-11-27-judgments-n611r1-golden-v1-7.jsonl`, judged: `${RESULTS}/2026-11-27-judged-n611r1-golden-v1-7.json`, date: '2026-11-27' },
+  h611r1: { runs: [{ run: 'h611r1', file: `${RESULTS}/2026-11-27-answers-k10-h611r1-golden-v1-7.json` }], judgments: `${RESULTS}/2026-11-27-judgments-h611r1-golden-v1-7.jsonl`, judged: `${RESULTS}/2026-11-27-judged-h611r1-golden-v1-7.json`, date: '2026-11-27' },
+  s611r2: { runs: [{ run: 's611r2', file: `${RESULTS}/2026-11-27-answers-k10-s611r2-golden-v1-7.json` }], judgments: `${RESULTS}/2026-11-27-judgments-s611r2-golden-v1-7.jsonl`, judged: `${RESULTS}/2026-11-27-judged-s611r2-golden-v1-7.json`, date: '2026-11-27' },
+  n611r2: { runs: [{ run: 'n611r2', file: `${RESULTS}/2026-11-27-answers-k10-n611r2-golden-v1-7.json` }], judgments: `${RESULTS}/2026-11-27-judgments-n611r2-golden-v1-7.jsonl`, judged: `${RESULTS}/2026-11-27-judged-n611r2-golden-v1-7.json`, date: '2026-11-27' },
+  h611r2: { runs: [{ run: 'h611r2', file: `${RESULTS}/2026-11-27-answers-k10-h611r2-golden-v1-7.json` }], judgments: `${RESULTS}/2026-11-27-judgments-h611r2-golden-v1-7.jsonl`, judged: `${RESULTS}/2026-11-27-judged-h611r2-golden-v1-7.json`, date: '2026-11-27' },
   guest46e: { runs: [{ run: 'guest-guest46e', file: `${RESULTS}/2026-11-18-answers-k10-guest-guest46e-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-18-judgments-guest46e-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-18-judged-guest46e-golden-v1-4.json`, date: '2026-11-18' },
 };
 export type SetName = keyof typeof SETS;

@@ -39,13 +39,13 @@ async function main() {
   const ctxCtx = setup('ctx-plain', embedder, chunks).fs.withContext;
 
   await checkReranker(rerankUrl);
-  const reranker = new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 120_000, retries: 0 });
+  const reranker = new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 120_000, retries: 1 }); // retries counts attempts: one attempt, no retry
   const timed = async (q: string, docs: { id: string; text: string }[]) => {
     const t0 = performance.now();
     await reranker.rerank(q, docs);
     return Math.round(performance.now() - t0);
   };
-  const rows: { id: string; ms1: number; ms30: number; ms100: number; chars30: number; chars100: number }[] = [];
+  const rows: { id: string; ms1: number; ms30: number; ms100: number; srv30: number | null; srv100: number | null; chars30: number; chars100: number }[] = [];
   for (const q of golden.slice(0, n)) {
     const local = cache.entries[entryId('local', q.id)];
     const ctx = cache.entries[entryId('ctx-plain', q.id)];
@@ -54,8 +54,10 @@ async function main() {
     const d100 = ctx.top.slice(0, 100).map((id) => ({ id, text: docText(ctxCtx.get(id)!, RERANK_FORMAT) }));
     const ms1 = await timed(q.question, d30.slice(0, 1));
     const ms30 = await timed(q.question, d30);
+    const srv30 = reranker.serverMs.at(-1) ?? null;
     const ms100 = await timed(q.question, d100);
-    rows.push({ id: q.id, ms1, ms30, ms100, chars30: d30.reduce((a, d) => a + d.text.length, 0), chars100: d100.reduce((a, d) => a + d.text.length, 0) });
+    const srv100 = reranker.serverMs.at(-1) ?? null;
+    rows.push({ id: q.id, ms1, ms30, ms100, srv30, srv100, chars30: d30.reduce((a, d) => a + d.text.length, 0), chars100: d100.reduce((a, d) => a + d.text.length, 0) });
     process.stdout.write('.');
   }
   process.stdout.write('\n');
@@ -66,6 +68,8 @@ async function main() {
     median1Ms: median(rows.map((r) => r.ms1)),
     median30Ms: median(rows.map((r) => r.ms30)),
     median100Ms: median(rows.map((r) => r.ms100)),
+    medianServer30Ms: median(rows.flatMap((r) => (r.srv30 === null ? [] : [r.srv30]))),
+    medianServer100Ms: median(rows.flatMap((r) => (r.srv100 === null ? [] : [r.srv100]))),
     medianChars30: median(rows.map((r) => r.chars30)),
     medianChars100: median(rows.map((r) => r.chars100)),
   };

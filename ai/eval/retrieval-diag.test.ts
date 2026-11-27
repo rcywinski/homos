@@ -3,6 +3,7 @@
  */
 import type { Chunk } from '../corpus/types';
 import { compareWithPreset, localOptions } from './answers';
+import { decide, type Counts } from './compare-611';
 import { DEFAULT_PRESET, PRESETS } from '../serve/config';
 import type { Evidence } from './golden';
 import { bm25QueryFor, contextsFor, capTitles, detectDates, detectIds, detectTemporal, factChange, fileNeighbours, fuseOrders, matchFront, putFirst, temporalReorder, withNext, keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
@@ -124,6 +125,18 @@ const base = compareWithPreset(localOptions('http://x', false), preset).filter((
 check('tuning base differs from the preset and is named', base.includes('numCtx') && base.includes('systemSha256') && base.includes('sampling.presence_penalty'), base.join());
 const hot = compareWithPreset({ ...preset.generator, baseUrl: 'http://x', sampling: { ...preset.generator.sampling, temperature: 1 } }, preset);
 check('one sampling change is caught', hot.filter((c) => !c.equal).map((c) => c.field).join() === 'sampling.temperature');
+
+// 6.11 rule, as committed: sanity, guard margins, choice.
+const cc = (correct: number, incorrect = 5, unsupported = 1): Counts => ({ correct, partly: 34 - correct - incorrect, incorrect, unsupported, missing: 0 });
+const two = (a: Counts, b: Counts = a): [Counts, Counts] => [a, b];
+check('sanity fails when both S runs are 12 or below', !decide({ S: two(cc(12), cc(11)), N: two(cc(17)), H: two(cc(17)) }).sane);
+check('sanity holds with one S run outside', decide({ S: two(cc(12), cc(16)), N: two(cc(17)), H: two(cc(17)) }).sane);
+check('guard: a drop of exactly 3 passes, more fails', decide({ S: two(cc(17)), N: two(cc(14)), H: two(cc(13), cc(14)) }).guard.N.pass && !decide({ S: two(cc(17)), N: two(cc(14)), H: two(cc(13), cc(14)) }).guard.H.pass);
+check('guard: incorrect up by more than 2 fails', !decide({ S: two(cc(17, 5)), N: two(cc(17, 8)), H: two(cc(17)) }).guard.N.pass);
+check('guard: unsupported up by more than 2 fails', !decide({ S: two(cc(17, 5, 1)), N: two(cc(17, 5, 4)), H: two(cc(17)) }).guard.N.pass);
+check('choice: both pass, H by under 3, N', decide({ S: two(cc(17)), N: two(cc(17)), H: two(cc(19)) }).choice === 'N');
+check('choice: both pass, H by 3, H', decide({ S: two(cc(17)), N: two(cc(16)), H: two(cc(19)) }).choice === 'H');
+check('choice: neither passes, S stays', decide({ S: two(cc(19)), N: two(cc(15)), H: two(cc(15)) }).choice === 'S');
 
 console.log(`retrieval-diag: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
