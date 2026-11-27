@@ -436,6 +436,9 @@ Common rules for every step:
   `ai/context/` already, so no API call: an index of chunk text plus context, used without query translation. In
   1.7 they gave recall@10 20 and 19 of 26 in two runs against 19 for the meta index, within the spread, so this goes
   to a judged run only if 6.3 shows a coverage gain. Live server: index rebuild on the box `[CC-Win]`, no latency.
+  First stage measured 27 Nov, before 6.4 at the owner's request: facts covered at k = 10 56 against 49 for the
+  served local path (chosen 56), at k = 100 89 against 82 (chosen 95). The coverage condition is met; the reranker
+  on this pool and the judged run are still open (`ai/DECISIONS.md`).
 - [ ] **6.11 Judged comparison on the development set.** The candidates that gained on retrieval, then their best
   combination, Qwen, two runs each. Up to four configurations, about 4.4 USD.
 - [ ] **6.12 Held-out test and the guest path.** The final configuration against the 6.4 baseline on the frozen test

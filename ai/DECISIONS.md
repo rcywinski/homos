@@ -1348,3 +1348,32 @@ Observations, not decisions:
   top 10 changes in 2 (local) and 1 (chosen) of 34 questions.
 
 Step 6.3 is done; 6.4 is next. 0 USD.
+
+## 2026-11-27, step 6.10 first stage measured before 6.4 (owner)
+
+**Decision.** At the owner's request the first stage of candidate 6.10 was measured before 6.4, free: the index with
+the committed Haiku contexts (`ollama-bge-m3.ctx-haiku`, already built, the one "chosen" uses), BM25 over the same
+text, the plain English question to both, no translation, no reranker. It is a new section of the 6.3 report
+(`ai/eval/results/2026-11-26-retrieval-diag-golden-v1-7.md`, regenerated; the reproduction check still reads "same").
+
+Facts covered (of 130) by the first stage alone:
+
+| first stage | k = 10 | k = 20 | k = 50 | k = 100 |
+|---|---|---|---|---|
+| local (served, no context) | 49 | 57 | 68 | 82 |
+| local + Polish query for BM25 (6.9 upper bound) | 51 | 60 | 74 | 83 |
+| contexts in the index, plain question (6.10) | 56 | 65 | 73 | 89 |
+| chosen (contexts plus Polish query) | 56 | 67 | 78 | 95 |
+
+Required spans beyond fused rank 100: local 64, 6.9 64, 6.10 60, chosen 54. Recall@10 (questions): local 18, 6.10 20,
+chosen 22 of 26.
+
+Reading: in the top 10 to 20 the contexts alone match chosen (56 against 56 at k = 10); deeper, the Polish query adds
+on top of the contexts (89 to 95 at k = 100), while on its own it adds almost nothing (82 to 83). This corrects the
+6.3 entry's "mostly from the contexts": at k = 100 the contexts give 7 of chosen's 13 extra facts, the combination
+the rest. The picture per question is mixed: against the served local top 10, net +7 facts, but 9 questions gain
+and 6 lose (dated-06 3 to 1, why-03, why-10 and dated-01 1 to 0 at k = 10). So 6.10 is a candidate, not a result:
+with 34 questions a swing of this size needs the judged two-run comparison. It gains on first-stage coverage, which
+is the condition the plan set for taking it to a judged run;
+the reranker on this pool is not measured yet (needs a box window), and the decision on a judged run is in 6.11.
+Plan order unchanged: 6.4 is next. 0 USD.

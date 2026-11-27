@@ -18,7 +18,9 @@
  *
  * The report also has one first-stage-only row that is not a served setting: the local index with the cached Sonnet
  * Polish rendering given to BM25 (as "chosen" does), from the cached query vectors. It is the upper bound of what a
- * Polish query alone can add to the local path before any reranking (input for step 6.9).
+ * Polish query alone can add to the local path before any reranking (input for step 6.9). A second such row is the
+ * first stage of step 6.10: the index with the committed Haiku contexts (the one "chosen" uses) and BM25 over the
+ * same text, with the plain question and no translation.
  */
 import 'dotenv/config';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
@@ -33,6 +35,9 @@ import { checkReranker, LocalReranker } from '../rerank/local';
 import { docText } from '../rerank/retriever';
 import { rrf } from '../store/hybrid';
 import { MappedRetriever } from '../store/mapped';
+import { Bm25Index } from '../store/bm25';
+import { indexView } from '../embed/index-view';
+import type { Retriever } from '../store/types';
 import type { SearchHit } from '../store/types';
 import { factSpans, overlaps, requiredOnly, type Evidence, type GoldenQuestion } from './golden';
 import { score, type Score } from './span-score';
@@ -337,9 +342,11 @@ async function report(date: string) {
     );
   }
 
-  // Upper bound for 6.9: the local first stage with the Polish rendering given to BM25 (first stage only).
+  // First-stage-only rows that are not served settings: 6.9 (local index, Polish query for BM25) and 6.10 (contexts
+  // in the index, plain question). Same RRF of the two top 100 lists as served.
   const queriesPl = readQueries(QUERIES_FILE);
   const localFs = setup('local', embedder, chunks).fs;
+  const chosenFs = setup('chosen', embedder, chunks).fs;
   const bm25Pl = new MappedRetriever(
     localFs.bm25,
     (q) => {
@@ -349,23 +356,34 @@ async function report(date: string) {
     },
     'query-pl',
   );
-  const plFused: Record<string, string[]> = {};
-  const plBm25Full: Record<string, string[]> = {};
-  for (const q of golden) {
-    const [vec] = await localFs.vector.search([q.question], DEPTH);
-    const [bm] = await bm25Pl.search([q.question], DEPTH);
-    plFused[q.id] = rrf([vec, bm]).map((h: SearchHit) => h.id);
-    const [bf] = await bm25Pl.search([q.question], chunks.length);
-    plBm25Full[q.id] = bf.map((h) => h.id);
-  }
-  const plRows: string[] = [];
-  const plJson: Record<string, unknown> = {};
-  for (const k of K_FIRST) {
-    const s = score(golden, at(plFused, k), byId);
-    plRows.push(row(`first stage, k=${k}`, recallAtK(answerable, at(plFused, k), byId), s, false));
-    plJson[`first@${k}`] = { recall: recallAtK(answerable, at(plFused, k), byId), req: s.req, facts: s.facts, all: s.all };
-  }
-  json['local+query-pl'] = plJson;
+  const bm25Ctx = new Bm25Index(indexView(chunks, 'meta', CONTEXTS_FILE).chunks, { stem: 'prefix6' });
+  const firstOnly = async (vector: Retriever, bm25: Retriever) => {
+    const fused: Record<string, string[]> = {};
+    const bm25Full: Record<string, string[]> = {};
+    for (const q of golden) {
+      const [vec] = await vector.search([q.question], DEPTH);
+      const [bm] = await bm25.search([q.question], DEPTH);
+      fused[q.id] = rrf([vec, bm]).map((h: SearchHit) => h.id);
+      const [bf] = await bm25.search([q.question], chunks.length);
+      bm25Full[q.id] = bf.map((h) => h.id);
+    }
+    return { fused, bm25Full };
+  };
+  const firstRows = (name: string, fused: Record<string, string[]>) => {
+    const rows: string[] = [];
+    const j: Record<string, unknown> = {};
+    for (const k of K_FIRST) {
+      const s = score(golden, at(fused, k), byId);
+      rows.push(row(`first stage, k=${k}`, recallAtK(answerable, at(fused, k), byId), s, false));
+      j[`first@${k}`] = { recall: recallAtK(answerable, at(fused, k), byId), req: s.req, facts: s.facts, all: s.all };
+    }
+    json[name] = j;
+    return rows;
+  };
+  const pl = await firstOnly(localFs.vector, bm25Pl);
+  const plRows = firstRows('local+query-pl', pl.fused);
+  const ctx = await firstOnly(chosenFs.vector, bm25Ctx);
+  const ctxRows = firstRows('ctx-haiku+plain-question', ctx.fused);
 
   // Where required spans are lost: beyond fused rank 100, and of those how many have no BM25 rank at all.
   const lossRows: string[] = [];
@@ -394,9 +412,14 @@ async function report(date: string) {
       (id) => views.get(variant)!.get(id)!.bm25Full,
     );
   lossOf(
-    'local + Polish query for BM25',
-    (id) => plFused[id],
-    (id) => plBm25Full[id],
+    'local + Polish query for BM25 (6.9)',
+    (id) => pl.fused[id],
+    (id) => pl.bm25Full[id],
+  );
+  lossOf(
+    'contexts in the index, plain question (6.10)',
+    (id) => ctx.fused[id],
+    (id) => ctx.bm25Full[id],
   );
 
   // Per span ranks.
@@ -466,6 +489,19 @@ async function report(date: string) {
     '| stage | **recall, required** | MRR@10, required | required spans covered | **facts covered** | all spans covered |',
     '|---|---|---|---|---|---|',
     ...plRows,
+    '',
+    '## First stage of 6.10: contexts in the index, plain question',
+    '',
+    `Not a served setting. The index with the committed Haiku contexts (\`${chosenFs.indexName}\`, the one "chosen" uses),`,
+    'BM25 over the same text (chunk, metadata header and context), the plain English question to both, no translation.',
+    'No reranker row: the cached scores are for other pools. Compare with "local" (no context) and "chosen" (contexts',
+    'plus the Polish query).',
+    '',
+    '| stage | **recall, required** | MRR@10, required | required spans covered | **facts covered** | all spans covered |',
+    '|---|---|---|---|---|---|',
+    ...ctxRows,
+    '',
+    '## Where required spans are lost in the first stage',
     '',
     'Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with',
     'the chunk). The last column counts every required span with no BM25 rank.',

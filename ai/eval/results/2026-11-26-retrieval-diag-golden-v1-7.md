@@ -96,6 +96,25 @@ Compare with the first-stage rows of "local" (same index, plain question to BM25
 | first stage, k=50 | 92% (24/26) | - | 55% (95/173) | 57% (74/130), 5 with no span | 56% (110/198) |
 | first stage, k=100 | 96% (25/26) | - | 63% (109/173) | 64% (83/130), 5 with no span | 64% (126/198) |
 
+## First stage of 6.10: contexts in the index, plain question
+
+Not a served setting. The index with the committed Haiku contexts (`ollama-bge-m3.ctx-haiku`, the one "chosen" uses),
+BM25 over the same text (chunk, metadata header and context), the plain English question to both, no translation.
+No reranker row: the cached scores are for other pools. Compare with "local" (no context) and "chosen" (contexts
+plus the Polish query).
+
+| stage | **recall, required** | MRR@10, required | required spans covered | **facts covered** | all spans covered |
+|---|---|---|---|---|---|
+| first stage, k=5 | 73% (19/26) | - | 20% (35/173) | 34% (44/130), 5 with no span | 21% (42/198) |
+| first stage, k=10 | 77% (20/26) | - | 34% (59/173) | 43% (56/130), 5 with no span | 35% (69/198) |
+| first stage, k=15 | 77% (20/26) | - | 39% (67/173) | 46% (60/130), 5 with no span | 40% (79/198) |
+| first stage, k=20 | 85% (22/26) | - | 43% (75/173) | 50% (65/130), 5 with no span | 45% (89/198) |
+| first stage, k=30 | 85% (22/26) | - | 46% (79/173) | 51% (66/130), 5 with no span | 48% (96/198) |
+| first stage, k=50 | 88% (23/26) | - | 54% (93/173) | 56% (73/130), 5 with no span | 56% (110/198) |
+| first stage, k=100 | 100% (26/26) | - | 65% (113/173) | 68% (89/130), 5 with no span | 66% (130/198) |
+
+## Where required spans are lost in the first stage
+
 Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with
 the chunk). The last column counts every required span with no BM25 rank.
 
@@ -103,7 +122,8 @@ the chunk). The last column counts every required span with no BM25 rank.
 |---|---|---|---|---|
 | local | 173 | 64 | 35 | 39 |
 | chosen | 173 | 54 | 4 | 4 |
-| local + Polish query for BM25 | 173 | 64 | 5 | 5 |
+| local + Polish query for BM25 (6.9) | 173 | 64 | 5 | 5 |
+| contexts in the index, plain question (6.10) | 173 | 60 | 21 | 22 |
 
 ## Reranker score stability
 
