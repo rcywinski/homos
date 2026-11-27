@@ -1664,3 +1664,46 @@ option), written into each run file and refused on any difference. The served ro
 lists), ctx-first-b2 59, ctx-100 60, 34 questions, 10 chunks each. Reranker time is measured by
 `ai/eval/rerank-time-611.ts` from the Mac with the real documents (1, 30 without context, 100 with context). 0 USD.
 Step 6.10 is done; 6.11 is next.
+
+## 2026-11-27, step 6.11 decision rule, committed before the first run (analysis session, under the owner's delegation)
+
+This rule cannot be changed after the first 6.11 run starts. Tuning reads development results only; 6.12 on the
+frozen test set is the confirmation, and deployment is the owner's separate decision in 6.13.
+
+**Configurations.** S served (local index, rerank top 30), N "6.10 without the reranker, with B2" (identifier match
+of 6.8), H "6.10 rerank top 100". k = 10 lists from the committed file (SHA-256
+2fca459de5be666864e70e72c8402ad094c2a326709e590876b385eeba3b8ff2), Qwen with the served preset through
+`ai:answers --chunks-file` (the preset check written into each run file), two runs each, all six in one box window, in
+the interleaved order S, N, H, S, N, H, so that a drift during the window does not line up with one configuration.
+The start and end time of each run are recorded.
+
+**Judge.** Opus 5.5, effort medium, the step 3.2 prompt, `--no-retry`, concurrency 1, cap 2 USD per judge run. About
+0.53 USD per run, about 3.2 USD for six, inside the 4 USD per run limit; phase 6 at about 4.3 of 20 USD.
+
+**Errors.** A run that stops on an error is discarded whole and reported, never used in part. A repeat inside the
+same window is allowed only if the stop was not a model load failure and the window's hour is not exceeded;
+otherwise it is a new request to the owner. With fewer than two complete runs for a configuration, nothing is decided
+for it.
+
+**Sanity of the path.** S's two runs must land inside or next to the known range of the served configuration
+through the chat server, 15 to 19 correct of 34 (4.8j2, 4.8j3, 6.4). If both are at 12 or below, or both at 22 or
+above (more than 2 beyond the range, above the judge's own spread of 2 of 29), the runner path differs from the chat
+server: nothing is decided, and the difference is found first.
+
+**Guard, per candidate against S in the same path, means of two runs.** Correct not lower than S by more than 3;
+incorrect not higher by more than 2; unsupported not higher by more than 2. A candidate failing any of these is out.
+Where the margins come from: the four served runs gave correct 15, 16, 18, 19, incorrect 7, 5, 5, 4 and unsupported
+1, 2, 0, 1, so the difference of two means of two runs has a standard deviation of about 1.8 for correct and about 1.3
+for incorrect; a margin of 2 on correct would reject a candidate equal to S about one time in seven on that measure
+alone. Unsupported stays in the guard because a shorter context is where unsupported claims could grow. The guard
+catches a clear regression only; it cannot show a small one.
+
+**Watched questions.** dated-04, dated-05, dated-06 and id-07: the verdicts of all six runs are reported; informative,
+not gating.
+
+**Choice.** If N and H both pass the guard, H replaces S only if its mean correct exceeds N's by 3 or more; otherwise
+N. In the owner's method terms: facts are level (59 against 60), so cost decides unless the judged runs clearly favour
+H; N has the shorter prompt (median 6 775 against 10 797 Qwen tokens) and no reranker time. The reranker time at 100
+documents, measured in the window, is reported next to the choice. If only one passes, that one. If neither passes,
+S stays and phase 6 ends with the retrieval findings documented. 6.12 then runs the chosen configuration and S on the
+frozen set.

@@ -483,6 +483,8 @@ Common rules for every step:
   candidates are named in advance. The judge's own share of the spread is known from 4.8j2 (2 of 29 verdicts on
   identical answers, same judge and prompt), so no extra judge pass (owner, 27 Nov). Caps: the judge reserves the worst case per call, so concurrency 1 or a cap of 2 USD
   inside the 4 USD per-run limit.
+  Decision rule committed 27 Nov before any run (`ai/DECISIONS.md`): three configurations (served, "6.10 without the
+  reranker, with B2", "6.10 rerank top 100"), two runs each in one box window, interleaved.
 - [ ] **6.12 Held-out test and the guest path.** The final configuration and the served one on the frozen test set
   (free check added 27 Nov: fact coverage of the final configuration with and without the identifier match B2 of
   6.8, computed only here, after the configuration is fixed; it needs the test questions' bge-m3 query vectors, and
