@@ -451,12 +451,15 @@ Common rules for every step:
   identifier match over the corpus (B2) meets the bar exactly on "6.10 without the reranker" (59 facts against 56)
   and changes nothing on "6.10 rerank top 100". By a deviation decided before any judged run, B2 is folded into the
   "6.10 without the reranker" candidate instead of being a fourth configuration (`ai/DECISIONS.md`).
-- [ ] NEXT **6.9 Candidate, only if 6.5 to 6.8 leave class A: the local model rewrites the question.** A Polish rendering
+- [x] 2026-11-27 **6.9 Candidate, only if 6.5 to 6.8 leave class A: the local model rewrites the question.** A Polish rendering
   for BM25 by Qwen (the phase 1 variant did this with Sonnet), or a split into sub-questions. Targets why-02 and
   dated-05. Live server: Qwen must be loaded before retrieval, which the guest-key "search" state (bge-m3 and the
   reranker only) does not allow; several seconds more per question. Measured free, but a deployment decision for the
   owner.
-- [ ] **6.10 Candidate, cheap: the committed contexts in the local index.** The Haiku contexts of step 1.7 are in
+  Closed 27 Nov without a build: the 6.3 bound with a stronger rewrite (Sonnet's Polish rendering) gives no facts over
+  the context index with the plain question at k = 10 (56 and 56 at the first stage, 53 and 52 reranked over 30, 56
+  and 60 reranked over 100), so it cannot change the 6.11 choice (`ai/DECISIONS.md`).
+- [ ] NEXT **6.10 Candidate, cheap: the committed contexts in the local index.** The Haiku contexts of step 1.7 are in
   `ai/context/` already, so no API call: an index of chunk text plus context, used without query translation. In
   1.7 they gave recall@10 20 and 19 of 26 in two runs against 19 for the meta index, within the spread, so this goes
   to a judged run only if 6.3 shows a coverage gain. Live server: index rebuild on the box `[CC-Win]`, no latency.

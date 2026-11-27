@@ -1625,3 +1625,14 @@ only there, after the configuration is fixed. It needs the test questions' bge-m
 if the final configuration reranks) from the box, which the 6.12 runs touch anyway. The frozen set is not opened now.
 In the served path B changes retrieval only: a verbatim identifier scan over the corpus text on the server, then BM25
 order; no model, no box change apart from deployment. 0 USD. Step 6.8 is done; 6.9 is next.
+
+## 2026-11-27, step 6.9 closed without a build (analysis session, under the owner's delegation)
+
+6.9 (the local model rewrites the question) was to run only if 6.5 to 6.8 left class A open. The free bound already
+in the 6.3 report used a stronger rewrite than Qwen could give, Sonnet's Polish rendering for BM25 ("chosen": the
+context index plus the Polish query), against the same index with the plain question ("ctx-plain"), facts covered at
+k = 10: first stage 56 and 56; reranked over the top 30, 53 and 52; reranked over the top 100, 56 and 60. The rewrite
+raises recall at the first stage (22 against 20 of 26 at k = 10, 95 against 89 facts at k = 100), but none of it
+reaches the top 10 of the configurations 6.11 compares, and over 100 documents the plain question does better. So the
+rewrite cannot change the 6.11 choice, and it would add a Qwen call before retrieval for every question, which the
+guest "search" state does not allow. No build, no box item, 0 USD. Step 6.9 is closed; 6.10 is next.
