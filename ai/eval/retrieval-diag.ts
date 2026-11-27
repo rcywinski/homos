@@ -1,8 +1,8 @@
 /**
  * Step 6.3: retrieval diagnostic on the development set (golden.jsonl only), in two separate runs.
  *
- *   npx tsx ai/eval/retrieval-diag.ts fetch [--variant local|chosen]   (box window: INFERENCE_URL and RERANK_URL)
- *   npx tsx ai/eval/retrieval-diag.ts report [--date YYYY-MM-DD]        (Mac only, no box, no API)
+ *   npx tsx ai/eval/retrieval-diag.ts fetch [--variant local|chosen|ctx-plain]  (box window: INFERENCE_URL and RERANK_URL)
+ *   npx tsx ai/eval/retrieval-diag.ts report [--date YYYY-MM-DD]                (Mac only, no box, no API)
  *
  * fetch fills a cache in ai/index/ (gitignored) and nothing else: one query vector per question (bge-m3), then per
  * variant and question the reranker scores of the first stage's top 100 (one call) and of its top 30 (the served
@@ -21,6 +21,11 @@
  * Polish query alone can add to the local path before any reranking (input for step 6.9). A second such row is the
  * first stage of step 6.10: the index with the committed Haiku contexts (the one "chosen" uses) and BM25 over the
  * same text, with the plain question and no translation.
+ *
+ * Variant "ctx-plain" (step 6.10, not served): that first stage, with the reranker seeing the chunks with their
+ * contexts as "chosen" does. fetch caches its scores like the two served variants; report adds its coverage table and
+ * a per-question comparison with local in the served setting when its entries are in the cache. It has no stored
+ * lists, so its check is only that the first stage matches the cached one.
  */
 import 'dotenv/config';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
@@ -33,7 +38,7 @@ import { LocalEmbedder } from '../embed/local';
 import type { EmbedKind, Embedder } from '../embed/types';
 import { checkReranker, LocalReranker } from '../rerank/local';
 import { docText } from '../rerank/retriever';
-import { rrf } from '../store/hybrid';
+import { HybridRetriever, rrf } from '../store/hybrid';
 import { MappedRetriever } from '../store/mapped';
 import { Bm25Index } from '../store/bm25';
 import { indexView } from '../embed/index-view';
@@ -49,11 +54,24 @@ const EMBEDDER = 'ollama-bge-m3';
 const RERANKER = 'rerank:bge-reranker-v2-m3';
 const DEPTH = 100;
 const SERVED_N = 30;
+/** The two served variants, checked against the stored 11 Nov lists. */
 export const VARIANTS: RetrievalVariant[] = ['local', 'chosen'];
+/** Plus the 6.10 candidate: contexts in the index, plain question to BM25, reranker sees the contexts. */
+export type DiagVariant = RetrievalVariant | 'ctx-plain';
+export const ALL_VARIANTS: DiagVariant[] = [...VARIANTS, 'ctx-plain'];
+
+/** What BM25 is given: the Polish rendering only for "chosen", the plain question otherwise. */
+export function bm25QueryFor(variant: DiagVariant, question: string, pl: { question: string; polish: string; keywords: string[] } | undefined): string {
+  if (variant !== 'chosen') return question;
+  return pl ? `${pl.question} ${pl.polish} ${pl.keywords.join(' ')}` : '(missing)';
+}
+
+/** The contexts file a variant uses (index, BM25 text and reranker documents), none for "local". */
+export const contextsFor = (variant: DiagVariant): string | null => (variant === 'local' ? null : CONTEXTS_FILE);
 
 /** Everything a cached entry depends on; an entry whose key differs from the current one is refused. */
 export interface EntryKey {
-  variant: RetrievalVariant;
+  variant: DiagVariant;
   question: string;
   corpusHash: string;
   index: string;
@@ -147,9 +165,15 @@ interface Setup {
   key: (q: GoldenQuestion) => EntryKey;
 }
 
-export function setup(variant: RetrievalVariant, embedder: Embedder, chunks: Chunk[]): Setup {
-  const queries = variant === 'local' ? new Map() : readQueries(QUERIES_FILE);
-  const fs = firstStage(process.cwd(), variant, embedder, queries);
+export function setup(variant: DiagVariant, embedder: Embedder, chunks: Chunk[]): Setup {
+  const base: RetrievalVariant = variant === 'local' ? 'local' : 'chosen';
+  const queries = base === 'local' ? new Map() : readQueries(QUERIES_FILE);
+  let fs = firstStage(process.cwd(), base, embedder, queries);
+  if (variant === 'ctx-plain') {
+    // Same index and reranker documents as "chosen", BM25 over the same text but with the plain question.
+    const bm25 = new Bm25Index(indexView(chunks, 'meta', CONTEXTS_FILE).chunks, { stem: 'prefix6' });
+    fs = { ...fs, bm25, hybrid: new HybridRetriever([fs.vector, bm25]) };
+  }
   const hash = corpusHash(chunks);
   return {
     fs,
@@ -165,14 +189,14 @@ export function setup(variant: RetrievalVariant, embedder: Embedder, chunks: Chu
         embedder: embedder.name,
         reranker: RERANKER,
         rerankFormat: RERANK_FORMAT,
-        contexts: variant === 'local' ? null : CONTEXTS_FILE,
-        bm25Query: variant === 'local' ? q.question : pl ? `${pl.question} ${pl.polish} ${pl.keywords.join(' ')}` : '(missing)',
+        contexts: contextsFor(variant),
+        bm25Query: bm25QueryFor(variant, q.question, pl),
       };
     },
   };
 }
 
-async function fetchRun(only?: RetrievalVariant) {
+async function fetchRun(only?: DiagVariant) {
   const inferenceUrl = process.env.INFERENCE_URL;
   const rerankUrl = process.env.RERANK_URL;
   if (!inferenceUrl || !rerankUrl) throw new Error('INFERENCE_URL and RERANK_URL must be set (see .env.example)');
@@ -192,7 +216,7 @@ async function fetchRun(only?: RetrievalVariant) {
 
   await checkReranker(rerankUrl);
   const reranker = new LocalReranker({ baseUrl: rerankUrl, timeoutMs: 120_000, retries: 1 });
-  for (const variant of only ? [only] : VARIANTS) {
+  for (const variant of only ? [only] : ALL_VARIANTS) {
     const s = setup(variant, embedder, chunks);
     let done = 0;
     for (const q of golden) {
@@ -250,10 +274,15 @@ async function report(date: string) {
   const meta = JSON.parse(readFileSync('ai/eval/golden-meta.json', 'utf8')) as { version: string };
   const answerable = golden.filter((q) => q.answerable === 'yes');
 
+  // The 6.10 variant is reported only once fetched; a partial fetch is refused below like any missing entry.
+  const ctxFetched = golden.some((q) => cache.entries[entryId('ctx-plain', q.id)]);
+  const present: DiagVariant[] = ctxFetched ? ALL_VARIANTS : VARIANTS;
+  const setups = new Map<DiagVariant, Setup>();
   const problems: string[] = [];
-  const views = new Map<RetrievalVariant, Map<string, QView>>();
-  for (const variant of VARIANTS) {
+  const views = new Map<DiagVariant, Map<string, QView>>();
+  for (const variant of present) {
     const s = setup(variant, embedder, chunks);
+    setups.set(variant, s);
     const m = new Map<string, QView>();
     for (const q of golden) {
       const entry = cache.entries[entryId(variant, q.id)];
@@ -282,10 +311,10 @@ async function report(date: string) {
   }
 
   // Lists per variant and setting.
-  const lists = (variant: RetrievalVariant, f: (v: QView) => string[]) =>
+  const lists = (variant: DiagVariant, f: (v: QView) => string[]) =>
     Object.fromEntries([...views.get(variant)!].map(([id, v]) => [id, f(v)]));
-  const servedLists = (variant: RetrievalVariant) => lists(variant, (v) => rerankOrder(v.entry.top, v.entry.served, SERVED_N));
-  const poolLists = (variant: RetrievalVariant, n: number) => lists(variant, (v) => rerankOrder(v.entry.top, v.entry.scores, n));
+  const servedLists = (variant: DiagVariant) => lists(variant, (v) => rerankOrder(v.entry.top, v.entry.served, SERVED_N));
+  const poolLists = (variant: DiagVariant, n: number) => lists(variant, (v) => rerankOrder(v.entry.top, v.entry.scores, n));
 
   // Reproduction check against the stored 11 Nov lists.
   const check: string[] = [];
@@ -312,7 +341,7 @@ async function report(date: string) {
   const row = (label: string, recall: string, s: Score, mrr: boolean) => `| ${label} | ${recall} | ${mrr ? s.mrr : '-'} | ${s.req} | ${s.facts} | ${s.all} |`;
   const tables: string[] = [];
   const json: Record<string, unknown> = {};
-  for (const variant of VARIANTS) {
+  for (const variant of present) {
     const first = lists(variant, (v) => v.fused);
     const rows: string[] = [];
     const j: Record<string, unknown> = {};
@@ -333,7 +362,7 @@ async function report(date: string) {
     tables.push(
       `### ${variant}`,
       '',
-      `Retriever (as in its baseline run): \`${stored.variants[variant].retrieval}\`. Reranker device ${[...views.get(variant)!.values()][0].entry.device ?? '?'}, max length ${[...views.get(variant)!.values()][0].entry.maxLength ?? '?'}.`,
+      `${variant === 'ctx-plain' ? 'Retriever (step 6.10, not served)' : 'Retriever (as in its baseline run)'}: \`${variant === 'ctx-plain' ? `${setups.get(variant)!.fs.hybrid.name}>${RERANKER}(top${SERVED_N},doc=${RERANK_FORMAT}) index=${setups.get(variant)!.fs.indexName}, reranker sees the contexts` : stored.variants[variant].retrieval}\`. Reranker device ${[...views.get(variant)!.values()][0].entry.device ?? '?'}, max length ${[...views.get(variant)!.values()][0].entry.maxLength ?? '?'}.`,
       '',
       '| stage | **recall, required** | MRR@10, required | required spans covered | **facts covered** | all spans covered |',
       '|---|---|---|---|---|---|',
@@ -346,7 +375,7 @@ async function report(date: string) {
   // in the index, plain question). Same RRF of the two top 100 lists as served.
   const queriesPl = readQueries(QUERIES_FILE);
   const localFs = setup('local', embedder, chunks).fs;
-  const chosenFs = setup('chosen', embedder, chunks).fs;
+  const ctxFs = setup('ctx-plain', embedder, chunks).fs;
   const bm25Pl = new MappedRetriever(
     localFs.bm25,
     (q) => {
@@ -356,7 +385,6 @@ async function report(date: string) {
     },
     'query-pl',
   );
-  const bm25Ctx = new Bm25Index(indexView(chunks, 'meta', CONTEXTS_FILE).chunks, { stem: 'prefix6' });
   const firstOnly = async (vector: Retriever, bm25: Retriever) => {
     const fused: Record<string, string[]> = {};
     const bm25Full: Record<string, string[]> = {};
@@ -382,7 +410,7 @@ async function report(date: string) {
   };
   const pl = await firstOnly(localFs.vector, bm25Pl);
   const plRows = firstRows('local+query-pl', pl.fused);
-  const ctx = await firstOnly(chosenFs.vector, bm25Ctx);
+  const ctx = await firstOnly(ctxFs.vector, ctxFs.bm25);
   const ctxRows = firstRows('ctx-haiku+plain-question', ctx.fused);
 
   // Where required spans are lost: beyond fused rank 100, and of those how many have no BM25 rank at all.
@@ -425,7 +453,7 @@ async function report(date: string) {
   // Per span ranks.
   const spanRows: string[] = [];
   const spanJson: unknown[] = [];
-  for (const variant of VARIANTS) {
+  for (const variant of present) {
     const served = servedLists(variant);
     const p100 = poolLists(variant, 100);
     for (const q of answerable) {
@@ -446,7 +474,7 @@ async function report(date: string) {
 
   // Score stability: the served call against the 100-document call on the same 30 documents.
   const drift: string[] = [];
-  for (const variant of VARIANTS) {
+  for (const variant of present) {
     let max = 0;
     let orderChanged = 0;
     for (const v of views.get(variant)!.values()) {
@@ -454,6 +482,51 @@ async function report(date: string) {
       if (rerankOrder(v.entry.top, v.entry.served, SERVED_N).slice(0, 10).join() !== rerankOrder(v.entry.top, v.entry.scores, SERVED_N).slice(0, 10).join()) orderChanged++;
     }
     drift.push(`| ${variant} | ${max.toFixed(4)} | ${orderChanged} of ${golden.length} |`);
+  }
+
+  // 6.10 against local in the served setting (rerank top 30, k = 10), per question, in facts.
+  const cmp: string[] = [];
+  if (ctxFetched) {
+    const loc = at(servedLists('local'), 10);
+    const cand = at(servedLists('ctx-plain'), 10);
+    const factsIn = (q: GoldenQuestion, ids: string[]) => factSpans(q).spans.filter((sp) => ids.some((id) => sp.some((e) => overlaps(byId.get(id)!, e)))).length;
+    let gain = 0;
+    let loss = 0;
+    let a = 0;
+    let b = 0;
+    const rows: string[] = [];
+    for (const q of answerable) {
+      const x = factsIn(q, loc[q.id]);
+      const y = factsIn(q, cand[q.id]);
+      a += x;
+      b += y;
+      if (y > x) gain++;
+      if (y < x) loss++;
+      if (x !== y) rows.push(`| ${q.id} | ${factSpans(q).spans.length} | ${x} | ${y} | ${y > x ? '+' : ''}${y - x} |`);
+    }
+    const sl = score(golden, loc, byId);
+    const sc = score(golden, cand, byId);
+    cmp.push(
+      '## 6.10 against local, served setting (rerank top 30, k = 10)',
+      '',
+      'Both reranked by the cached served call (30 documents). Facts are per question; questions with the same count',
+      'are not listed. A candidate, not a result: the decision is a judged two-run comparison on the development set.',
+      '',
+      '| | recall@5 | recall@10 | MRR@10 | facts covered |',
+      '|---|---|---|---|---|',
+      `| local (served) | ${sl.r5} | ${sl.r10} | ${sl.mrr} | ${sl.facts} |`,
+      `| 6.10 (ctx-plain) | ${sc.r5} | ${sc.r10} | ${sc.mrr} | ${sc.facts} |`,
+      '',
+      `Facts: local ${a}, 6.10 ${b}; ${gain} questions gain, ${loss} lose.`,
+      '',
+      '| id | facts with a span | local | 6.10 | change |',
+      '|---|---|---|---|---|',
+      ...rows,
+      '',
+    );
+    json['ctx-plain-vs-local'] = { local: a, ctxPlain: b, gain, loss };
+  } else {
+    cmp.push('## 6.10 against local, served setting', '', 'Not fetched yet: run `fetch --variant ctx-plain` in a box window.', '');
   }
 
   const base = `ai/eval/results/${date}-retrieval-diag-golden-v${meta.version.replace('.', '-')}`;
@@ -492,7 +565,7 @@ async function report(date: string) {
     '',
     '## First stage of 6.10: contexts in the index, plain question',
     '',
-    `Not a served setting. The index with the committed Haiku contexts (\`${chosenFs.indexName}\`, the one "chosen" uses),`,
+    `Not a served setting. The index with the committed Haiku contexts (\`${ctxFs.indexName}\`, the one "chosen" uses),`,
     'BM25 over the same text (chunk, metadata header and context), the plain English question to both, no translation.',
     'No reranker row: the cached scores are for other pools. Compare with "local" (no context) and "chosen" (contexts',
     'plus the Polish query).',
@@ -501,6 +574,7 @@ async function report(date: string) {
     '|---|---|---|---|---|---|',
     ...ctxRows,
     '',
+    ...cmp,
     '## Where required spans are lost in the first stage',
     '',
     'Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with',
@@ -548,10 +622,10 @@ if (require.main === module) {
   };
   const run =
     cmd === 'fetch'
-      ? fetchRun(arg('--variant') as RetrievalVariant | undefined)
+      ? fetchRun(arg('--variant') as DiagVariant | undefined)
       : cmd === 'report'
         ? report(arg('--date') ?? new Date().toISOString().slice(0, 10))
-        : Promise.reject(new Error('usage: retrieval-diag.ts fetch [--variant local|chosen] | report [--date YYYY-MM-DD]'));
+        : Promise.reject(new Error('usage: retrieval-diag.ts fetch [--variant local|chosen|ctx-plain] | report [--date YYYY-MM-DD]'));
   run.catch((e) => {
     console.error(e instanceof Error ? e.message : e);
     process.exit(1);

@@ -3,7 +3,7 @@
  */
 import type { Chunk } from '../corpus/types';
 import type { Evidence } from './golden';
-import { keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
+import { bm25QueryFor, contextsFor, keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
 
 let passed = 0;
 let failed = 0;
@@ -50,6 +50,14 @@ const key: EntryKey = {
 check('same key', keyDiff(key, { ...key }).length === 0);
 const d = keyDiff(key, { ...key, corpusHash: 'other', question: 'q2' });
 check('changed corpus and question named', d.length === 2 && d.some((x) => x.startsWith('corpusHash')) && d.some((x) => x.startsWith('question')), d.join('; '));
+
+// Variants: only "chosen" gives BM25 the Polish rendering; only "local" has no contexts (6.10 keeps the plain question).
+const pl = { question: 'q', polish: 'pytanie', keywords: ['a', 'b'] };
+check('chosen BM25 gets the Polish rendering', bm25QueryFor('chosen', 'q', pl) === 'q pytanie a b');
+check('chosen without a rendering is marked', bm25QueryFor('chosen', 'q', undefined) === '(missing)');
+check('ctx-plain BM25 gets the plain question', bm25QueryFor('ctx-plain', 'q', pl) === 'q');
+check('local BM25 gets the plain question', bm25QueryFor('local', 'q', pl) === 'q');
+check('contexts: none for local, the Haiku file for chosen and ctx-plain', contextsFor('local') === null && contextsFor('chosen') === contextsFor('ctx-plain') && !!contextsFor('ctx-plain'));
 
 console.log(`retrieval-diag: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
