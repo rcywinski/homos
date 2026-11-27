@@ -14,7 +14,7 @@ import { MODELS } from '../context/pricing';
 import { ClaudeJudge } from '../judge/claude';
 import { byHash, judgeInput, type JudgedItem } from '../judge/items';
 import type { JudgeResult } from '../judge/types';
-import type { GoldenQuestion } from './golden';
+import { answersHash, assertSameAnswers, type GoldenMeta, type GoldenQuestion } from './golden';
 
 export const RESULTS = 'ai/eval/results';
 export const RUNS = [
@@ -71,6 +71,10 @@ export const SETS = {
   lan48bf: { runs: [{ run: 'local-lan48bf', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48bf-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48bf-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48bf-golden-v1-4.json`, date: '2026-11-17' },
   // Step 4.8j3 (CC-App, standing rule): a second box run of the lan48b setup, refusal explained.
   lan48c: { runs: [{ run: 'local-lan48c', file: `${RESULTS}/2026-11-17-answers-k10-local-lan48c-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-17-judgments-lan48c-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-17-judged-lan48c-golden-v1-4.json`, date: '2026-11-17' },
+  // Step 6.4 (owner 27 Nov 2026): the judged baseline, the served local configuration through the public chat server,
+  // two runs on the 34 development questions (golden v1.7), each judged as its own set with its own cap.
+  b64r1: { runs: [{ run: 'local-b64r1', file: `${RESULTS}/2026-11-27-answers-k10-local-b64r1-golden-v1-7.json` }], judgments: `${RESULTS}/2026-11-27-judgments-b64r1-golden-v1-7.jsonl`, judged: `${RESULTS}/2026-11-27-judged-b64r1-golden-v1-7.json`, date: '2026-11-27' },
+  b64r2: { runs: [{ run: 'local-b64r2', file: `${RESULTS}/2026-11-27-answers-k10-local-b64r2-golden-v1-7.json` }], judgments: `${RESULTS}/2026-11-27-judgments-b64r2-golden-v1-7.jsonl`, judged: `${RESULTS}/2026-11-27-judged-b64r2-golden-v1-7.json`, date: '2026-11-27' },
   guest46e: { runs: [{ run: 'guest-guest46e', file: `${RESULTS}/2026-11-18-answers-k10-guest-guest46e-golden-v1-4.json` }], judgments: `${RESULTS}/2026-11-18-judgments-guest46e-golden-v1-4.jsonl`, judged: `${RESULTS}/2026-11-18-judged-guest46e-golden-v1-4.json`, date: '2026-11-18' },
 };
 export type SetName = keyof typeof SETS;
@@ -84,7 +88,10 @@ export function loadGolden(): GoldenQuestion[] {
 /** Every answer of every run as a judge item, with any verdict already in the JSONL file attached. */
 export function loadItems(set: SetName = '1.9'): JudgedItem[] {
   const { runs, judgments } = SETS[set];
-  const golden = new Map(loadGolden().map((q) => [q.id, q]));
+  const goldenList = loadGolden();
+  const golden = new Map(goldenList.map((q) => [q.id, q]));
+  const meta = JSON.parse(readFileSync('ai/eval/golden-meta.json', 'utf8')) as GoldenMeta;
+  const current = answersHash(goldenList);
   const done = new Map<string, JudgeResult>();
   if (existsSync(judgments))
     for (const l of readFileSync(judgments, 'utf8').split('\n').filter((x) => x.trim())) {
@@ -94,7 +101,8 @@ export function loadItems(set: SetName = '1.9'): JudgedItem[] {
   const items: JudgedItem[] = [];
   for (const { run, file } of runs.filter((r) => existsSync(r.file) || set === '1.9')) {
     const r = JSON.parse(readFileSync(file, 'utf8')) as { goldenVersion: string; perQuestion: AnswerRecord[] };
-    if (r.goldenVersion !== '1.4') throw new Error(`${file}: golden v${r.goldenVersion}, expected 1.4`);
+    // Any golden version with the same question and reference text as the working one (answersHash), step 6.4.
+    assertSameAnswers(meta, r.goldenVersion, current, file);
     for (const rec of r.perQuestion) {
       const q = golden.get(rec.id)!;
       const result = done.get(`${run}|${rec.id}`);
@@ -154,7 +162,8 @@ async function main() {
   process.stdout.write('\n');
 
   const all = loadItems(set);
-  writeFileSync(judged, JSON.stringify({ date, goldenVersion: '1.4', judge: judge.name, runs: SETS[set].runs.filter((r) => existsSync(r.file)), items: all }, null, 2) + '\n');
+  const versions = [...new Set(SETS[set].runs.filter((r) => existsSync(r.file)).map((r) => (JSON.parse(readFileSync(r.file, 'utf8')) as { goldenVersion: string }).goldenVersion))];
+  writeFileSync(judged, JSON.stringify({ date, goldenVersion: versions.join(', '), judge: judge.name, runs: SETS[set].runs.filter((r) => existsSync(r.file)), items: all }, null, 2) + '\n');
   const missing = all.filter((x) => !x.result).length;
   console.log(`spent $${spent.toFixed(4)} this run (cap $${maxUsd})${stopped ? ', STOPPED BY CAP' : ''}; failed calls ${errors}; answers without a verdict ${missing}. Wrote ${judged}`);
 }

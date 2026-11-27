@@ -80,6 +80,36 @@ Retriever (as in its baseline run): `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=p
 | rerank top 100 (for 6.5), k=15 | 85% (22/26) | - | 41% (71/173) | 46% (60/130), 5 with no span | 40% (80/198) |
 | rerank top 100 (for 6.5), k=20 | 85% (22/26) | - | 44% (76/173) | 47% (61/130), 5 with no span | 43% (86/198) |
 
+### ctx-plain
+
+Retriever (step 6.10, not served): `hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.ctx-haiku, reranker sees the contexts`. Reranker device cuda, max length 2048.
+
+| stage | **recall, required** | MRR@10, required | required spans covered | **facts covered** | all spans covered |
+|---|---|---|---|---|---|
+| first stage, k=5 | 73% (19/26) | - | 20% (35/173) | 34% (44/130), 5 with no span | 21% (42/198) |
+| first stage, k=10 | 77% (20/26) | - | 34% (59/173) | 43% (56/130), 5 with no span | 35% (69/198) |
+| first stage, k=15 | 77% (20/26) | - | 39% (67/173) | 46% (60/130), 5 with no span | 40% (79/198) |
+| first stage, k=20 | 85% (22/26) | - | 43% (75/173) | 50% (65/130), 5 with no span | 45% (89/198) |
+| first stage, k=30 | 85% (22/26) | - | 46% (79/173) | 51% (66/130), 5 with no span | 48% (96/198) |
+| first stage, k=50 | 88% (23/26) | - | 54% (93/173) | 56% (73/130), 5 with no span | 56% (110/198) |
+| first stage, k=100 | 100% (26/26) | - | 65% (113/173) | 68% (89/130), 5 with no span | 66% (130/198) |
+| rerank top 30 (served), k=5 | 62% (16/26) | - | 23% (40/173) | 35% (46/130), 5 with no span | 24% (47/198) |
+| rerank top 30 (served), k=10 | 69% (18/26) | 0.479 | 33% (57/173) | 40% (52/130), 5 with no span | 34% (68/198) |
+| rerank top 30 (served), k=15 | 73% (19/26) | - | 37% (64/173) | 42% (54/130), 5 with no span | 38% (76/198) |
+| rerank top 30 (served), k=20 | 81% (21/26) | - | 42% (72/173) | 45% (58/130), 5 with no span | 43% (86/198) |
+| rerank top 50 (for 6.5), k=5 | 54% (14/26) | - | 22% (38/173) | 35% (45/130), 5 with no span | 23% (45/198) |
+| rerank top 50 (for 6.5), k=10 | 73% (19/26) | 0.479 | 34% (58/173) | 42% (55/130), 5 with no span | 35% (69/198) |
+| rerank top 50 (for 6.5), k=15 | 77% (20/26) | - | 39% (68/173) | 43% (56/130), 5 with no span | 40% (80/198) |
+| rerank top 50 (for 6.5), k=20 | 81% (21/26) | - | 43% (74/173) | 45% (59/130), 5 with no span | 44% (87/198) |
+| rerank top 60 (for 6.5), k=5 | 62% (16/26) | - | 24% (41/173) | 37% (48/130), 5 with no span | 24% (48/198) |
+| rerank top 60 (for 6.5), k=10 | 81% (21/26) | 0.558 | 34% (58/173) | 43% (56/130), 5 with no span | 33% (66/198) |
+| rerank top 60 (for 6.5), k=15 | 85% (22/26) | - | 41% (71/173) | 46% (60/130), 5 with no span | 42% (83/198) |
+| rerank top 60 (for 6.5), k=20 | 88% (23/26) | - | 45% (78/173) | 48% (63/130), 5 with no span | 46% (91/198) |
+| rerank top 100 (for 6.5), k=5 | 65% (17/26) | - | 24% (41/173) | 36% (47/130), 5 with no span | 23% (46/198) |
+| rerank top 100 (for 6.5), k=10 | 85% (22/26) | 0.575 | 35% (60/173) | 46% (60/130), 5 with no span | 34% (68/198) |
+| rerank top 100 (for 6.5), k=15 | 85% (22/26) | - | 42% (73/173) | 48% (62/130), 5 with no span | 41% (82/198) |
+| rerank top 100 (for 6.5), k=20 | 88% (23/26) | - | 45% (78/173) | 48% (63/130), 5 with no span | 44% (88/198) |
+
 ## Upper bound for 6.9: local index, Polish query for BM25, first stage only
 
 Not a served setting. The local index (`ollama-bge-m3.meta`, no generated context) with the cached Sonnet Polish
@@ -113,6 +143,32 @@ plus the Polish query).
 | first stage, k=50 | 88% (23/26) | - | 54% (93/173) | 56% (73/130), 5 with no span | 56% (110/198) |
 | first stage, k=100 | 100% (26/26) | - | 65% (113/173) | 68% (89/130), 5 with no span | 66% (130/198) |
 
+## 6.10 against local, served setting (rerank top 30, k = 10)
+
+Both reranked by the cached served call (30 documents). Facts are per question; questions with the same count
+are not listed. A candidate, not a result: the decision is a judged two-run comparison on the development set.
+
+| | recall@5 | recall@10 | MRR@10 | facts covered |
+|---|---|---|---|---|
+| local (served) | 65% (17/26) | 77% (20/26) | 0.471 | 38% (49/130), 5 with no span |
+| 6.10 (ctx-plain) | 62% (16/26) | 69% (18/26) | 0.479 | 40% (52/130), 5 with no span |
+
+Facts: local 49, 6.10 52; 7 questions gain, 4 lose.
+
+| id | facts with a span | local | 6.10 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| why-10 | 2 | 1 | 0 | -1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 3 | +2 |
+| dated-04 | 4 | 0 | 1 | +1 |
+| dated-06 | 13 | 3 | 0 | -3 |
+| dated-09 | 5 | 2 | 3 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-07 | 6 | 0 | 2 | +2 |
+
 ## Where required spans are lost in the first stage
 
 Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with
@@ -134,6 +190,7 @@ and questions whose top 10 of the served pool changes when ordered by the 100-do
 |---|---|---|
 | local | 0.0012 | 2 of 34 |
 | chosen | 0.0017 | 1 of 34 |
+| ctx-plain | 0.0016 | 1 of 34 |
 
 ## Rank of every required span
 
@@ -489,3 +546,176 @@ the top 30 (served) and the top 100. Facts: how many facts of the reference the 
 | chosen | id-07 | DB-SCHEMA.md:139-145 | 1 | 148 | 76 | 111 | - | - |
 | chosen | id-07 | INFRA.md:31-32 | 3 | 168 | 599 | 87 | - | - |
 | chosen | id-07 | RESEARCH-QUEUE.md:728-733 | 1 | - | 146 | - | - | - |
+| ctx-plain | why-01 | CONTEXT.md:96-96 | 1 | - | 588 | - | - | - |
+| ctx-plain | why-01 | CONTEXT.md:103-103 | 1 | - | 345 | 176 | - | - |
+| ctx-plain | why-01 | CONTEXT.md:255-264 | 2 | 55 | 123 | 22 | - | 26 |
+| ctx-plain | why-01 | CONTEXT.md:442-449 | 1 | - | 140 | 144 | - | - |
+| ctx-plain | why-01 | DECISION-LOG.md:22-22 | 1 | 129 | 368 | 74 | - | - |
+| ctx-plain | why-01 | DECISION-LOG.md:28-28 | 1 | 59 | 25 | 150 | - | 71 |
+| ctx-plain | why-01 | CASE-STUDY.md:81-84 | 1 | 6 | 4 | 20 | 6 | 6 |
+| ctx-plain | why-01 | CASE-STUDY.md:56-61 | 1 | 4 | 9 | 7 | 7 | 7 |
+| ctx-plain | why-02 | CONTEXT.md:97-97 | 1 | 101 | 102 | 54 | - | - |
+| ctx-plain | why-02 | CONTEXT.md:104-104 | 2 | 52 | 207 | 13 | - | 80 |
+| ctx-plain | why-02 | CONTEXT.md:71-73 | 1 | - | 122 | 297 | - | - |
+| ctx-plain | why-02 | CONTEXT.md:100-100 | 1 | - | 472 | - | - | - |
+| ctx-plain | why-02 | KAPITAL-REKOMENDACJA.md:17-19 | 1 | - | 203 | 178 | - | - |
+| ctx-plain | why-02 | DECYZJE-2026-08-26.md:53-55 | 1 | - | 436 | 333 | - | - |
+| ctx-plain | why-02 | DECYZJE-2026-08-26.md:155-157 | 1 | 19 | 18 | 89 | 26 | 67 |
+| ctx-plain | why-03 | CONTEXT.md:4762-4768 | 2 | 69 | 157 | 35 | - | 1 |
+| ctx-plain | why-03 | CONTEXT.md:1171-1176 | 1 | - | 360 | 614 | - | - |
+| ctx-plain | why-03 | DECYZJE-2026-08-26.md:662-678 | 1 | 52 | 19 | 385 | - | 44 |
+| ctx-plain | why-04 | CONTEXT.md:3277-3282 | 1 | 2 | 2 | 2 | 3 | 3 |
+| ctx-plain | why-04 | HANDOFF.md:15-16 | 2 | 6 | 3 | 19 | 5 | 5 |
+| ctx-plain | why-04 | HANDOFF.md:19-24 | 2 | 6 | 3 | 19 | 5 | 5 |
+| ctx-plain | why-04 | AI-WORKFLOW.md:53-55 | 2 | 1 | 1 | 1 | 1 | 1 |
+| ctx-plain | why-05 | CONTEXT.md:3007-3007 | 2 | 18 | 64 | 9 | 18 | 33 |
+| ctx-plain | why-05 | CONTEXT.md:3081-3082 | 2 | 9 | 11 | 15 | 1 | 1 |
+| ctx-plain | why-05 | INFRA.md:3-5 | 2 | 6 | 2 | 17 | 10 | 17 |
+| ctx-plain | why-05 | UI-DESIGN.md:45-48 | 2 | 5 | 9 | 5 | 6 | 12 |
+| ctx-plain | why-06 | DECYZJE-2026-08-26.md:531-543 | 3 | - | 628 | 578 | - | - |
+| ctx-plain | why-06 | CONTEXT.md:99-99 | 2 | - | 724 | - | - | - |
+| ctx-plain | why-06 | CONTEXT.md:3086-3088 | 1 | 67 | 31 | 210 | - | 39 |
+| ctx-plain | why-06 | TASKS-WINDOWS.md:24-24 | 1 | 125 | 75 | 231 | - | - |
+| ctx-plain | why-06 | CONTEXT.md:3006-3006 | 1 | - | 574 | 692 | - | - |
+| ctx-plain | why-06 | RESEARCH-QUEUE.md:765-766 | 1 | - | 598 | 192 | - | - |
+| ctx-plain | why-06 | UI-DESIGN.md:92-93 | 1 | 2 | 1 | 21 | 20 | 44 |
+| ctx-plain | why-08 | CONTEXT.md:3817-3828 | 2 | 8 | 4 | 36 | 1 | 1 |
+| ctx-plain | why-08 | CONTEXT.md:281-284 | 1 | 46 | 3 | 286 | - | 4 |
+| ctx-plain | why-08 | CONTEXT.md:2074-2077 | 1 | - | 206 | 540 | - | - |
+| ctx-plain | why-08 | DECYZJE-2026-08-26.md:549-555 | 1 | 147 | 168 | 97 | - | - |
+| ctx-plain | why-08 | ALGORITHM.md:87-89 | 2 | 1 | 2 | 2 | 7 | 13 |
+| ctx-plain | why-08 | KAPITAL-REKOMENDACJA.md:37-38 | 2 | 12 | 7 | 45 | 5 | 8 |
+| ctx-plain | why-08 | DECISION-LOG.md:28-28 | 1 | 14 | 55 | 5 | 29 | 77 |
+| ctx-plain | why-09 | CONTEXT.md:96-96 | 3 | 3 | 4 | 3 | 5 | 6 |
+| ctx-plain | why-09 | CONTEXT.md:95-95 | 1 | 66 | 219 | 35 | - | 50 |
+| ctx-plain | why-09 | DECYZJE-2026-08-26.md:549-556 | 1 | 67 | 36 | 265 | - | 11 |
+| ctx-plain | why-09 | DECYZJE-2026-08-26.md:466-482 | 1 | - | 555 | - | - | - |
+| ctx-plain | why-09 | CASE-STUDY.md:52-58 | 3 | 1 | 1 | 1 | 1 | 1 |
+| ctx-plain | why-09 | DECISION-LOG.md:22-22 | 3 | 2 | 2 | 2 | 3 | 3 |
+| ctx-plain | why-10 | CONTEXT.md:1813-1815 | 1 | 60 | 25 | 364 | - | 2 |
+| ctx-plain | why-10 | CONTEXT.md:4263-4265 | 1 | - | 140 | 418 | - | - |
+| ctx-plain | why-10 | DECYZJE-2026-08-26.md:546-560 | 1 | 52 | 89 | 100 | - | 7 |
+| ctx-plain | why-10 | DECYZJE-2026-08-26.md:637-639 | 1 | 42 | 9 | 113 | - | 27 |
+| ctx-plain | dated-01 | DECYZJE-2026-08-26.md:335-348 | 1 | 131 | 780 | 73 | - | - |
+| ctx-plain | dated-01 | CONTEXT.md:97-97 | 1 | - | 567 | 272 | - | - |
+| ctx-plain | dated-01 | CONTEXT.md:2092-2097 | 2 | - | 814 | 147 | - | - |
+| ctx-plain | dated-01 | CONTEXT.md:2156-2167 | 3 | 178 | 721 | 100 | - | - |
+| ctx-plain | dated-01 | morning-2026-08-29.md:184-186 | 1 | - | 862 | 445 | - | - |
+| ctx-plain | dated-01 | TASKS-UI.md:1042-1045 | 1 | 19 | 39 | 95 | 11 | 31 |
+| ctx-plain | dated-01 | CASE-STUDY.md:145-145 | 1 | - | 106 | 220 | - | - |
+| ctx-plain | dated-01 | HANDOFF.md:1166-1170 | 1 | - | 222 | 185 | - | - |
+| ctx-plain | dated-02 | CONTEXT.md:1228-1235 | 3 | 8 | 10 | 33 | 5 | 8 |
+| ctx-plain | dated-02 | CONTEXT.md:294-296 | 1 | 90 | 143 | 50 | - | 5 |
+| ctx-plain | dated-02 | CASE-STUDY.md:81-84 | 1 | 2 | 8 | 17 | 8 | 12 |
+| ctx-plain | dated-02 | DECISION-LOG.md:26-26 | 1 | 19 | 94 | 12 | 21 | 70 |
+| ctx-plain | dated-03 | morning-2026-09-15.md:199-205 | 1 | 16 | 82 | 26 | 10 | 13 |
+| ctx-plain | dated-03 | morning-2026-09-15.md:221-223 | 2 | 2 | 4 | 11 | 3 | 3 |
+| ctx-plain | dated-03 | CONTEXT.md:251-251 | 1 | 10 | 76 | 19 | 1 | 1 |
+| ctx-plain | dated-04 | morning-2026-09-23.md:42-48 | 1 | 6 | 24 | 11 | 7 | 7 |
+| ctx-plain | dated-04 | CONTEXT.md:177-179 | 1 | - | 586 | 313 | - | - |
+| ctx-plain | dated-04 | CONTEXT.md:19-20 | 1 | - | 442 | - | - | - |
+| ctx-plain | dated-04 | CONTEXT.md:621-622 | 1 | - | 131 | 361 | - | - |
+| ctx-plain | dated-04 | CONTEXT.md:774-778 | 1 | - | 197 | 207 | - | - |
+| ctx-plain | dated-05 | CONTEXT.md:91-91 | 1 | 53 | 27 | 240 | - | 83 |
+| ctx-plain | dated-05 | CONTEXT.md:3585-3586 | 1 | - | 857 | - | - | - |
+| ctx-plain | dated-05 | CONTEXT.md:3533-3534 | 1 | - | 793 | 333 | - | - |
+| ctx-plain | dated-05 | CONTEXT.md:3542-3543 | 1 | - | 793 | 333 | - | - |
+| ctx-plain | dated-05 | CONTEXT.md:2410-2415 | 1 | - | 527 | 309 | - | - |
+| ctx-plain | dated-05 | CONTEXT.md:281-282 | 1 | 60 | 31 | 358 | - | 7 |
+| ctx-plain | dated-06 | CONTEXT.md:4417-4420 | 1 | 33 | 2 | 141 | - | 17 |
+| ctx-plain | dated-06 | morning-2026-08-20.md:48-48 | 1 | 127 | 77 | 210 | - | - |
+| ctx-plain | dated-06 | CONTEXT.md:2353-2357 | 1 | 4 | 7 | 30 | 22 | 45 |
+| ctx-plain | dated-06 | CONTEXT.md:4093-4096 | 1 | - | 186 | - | - | - |
+| ctx-plain | dated-06 | morning-2026-08-19.md:26-26 | 1 | 48 | 87 | 82 | - | 25 |
+| ctx-plain | dated-06 | CONTEXT.md:2540-2544 | 1 | 42 | 9 | 131 | - | 41 |
+| ctx-plain | dated-06 | morning-2026-08-26.md:48-48 | 1 | 46 | 98 | 70 | - | 57 |
+| ctx-plain | dated-06 | CONTEXT.md:2331-2339 | 1 | 161 | 99 | 250 | - | - |
+| ctx-plain | dated-06 | CONTEXT.md:757-761 | 1 | - | 241 | 277 | - | - |
+| ctx-plain | dated-06 | morning-2026-09-19.md:40-40 | 1 | 51 | 14 | 231 | - | 40 |
+| ctx-plain | dated-06 | CONTEXT.md:4085-4085 | 1 | - | 186 | - | - | - |
+| ctx-plain | dated-06 | CONTEXT.md:4479-4484 | 1 | - | 301 | 364 | - | - |
+| ctx-plain | dated-06 | morning-2026-09-20.md:40-40 | 1 | 13 | 29 | 29 | 19 | 35 |
+| ctx-plain | dated-07 | CONTEXT.md:3618-3620 | 1 | - | 122 | - | - | - |
+| ctx-plain | dated-07 | CONTEXT.md:90-90 | 1 | - | 762 | - | - | - |
+| ctx-plain | dated-07 | CONTEXT.md:4300-4302 | 1 | 4 | 34 | 8 | 11 | 28 |
+| ctx-plain | dated-07 | CONTEXT.md:1927-1929 | 1 | - | 310 | 196 | - | - |
+| ctx-plain | dated-07 | CONTEXT.md:1558-1559 | 1 | 18 | 32 | 44 | 4 | 6 |
+| ctx-plain | dated-07 | CONTEXT.md:1228-1229 | 1 | - | 247 | - | - | - |
+| ctx-plain | dated-07 | CONTEXT.md:883-885 | 1 | 119 | 65 | - | - | - |
+| ctx-plain | dated-07 | CONTEXT.md:321-323 | 1 | - | 328 | - | - | - |
+| ctx-plain | dated-07 | CONTEXT.md:344-346 | 1 | - | 328 | - | - | - |
+| ctx-plain | dated-07 | CONTEXT.md:1023-1023 | 1 | 109 | 60 | 198 | - | - |
+| ctx-plain | dated-07 | CONTEXT.md:863-864 | 1 | - | 143 | - | - | - |
+| ctx-plain | dated-07 | HANDOFF.md:131-134 | 1 | - | 292 | - | - | - |
+| ctx-plain | dated-08 | CONTEXT.md:102-102 | 3 | - | 130 | - | - | - |
+| ctx-plain | dated-08 | CONTEXT.md:216-217 | 1 | 9 | 18 | 20 | 2 | 2 |
+| ctx-plain | dated-08 | CONTEXT.md:101-101 | 2 | 38 | 9 | - | - | 9 |
+| ctx-plain | dated-08 | CONTEXT.md:10-16 | 2 | 141 | 86 | - | - | - |
+| ctx-plain | dated-08 | CASE-STUDY.md:94-98 | 3 | 4 | 3 | 40 | 3 | 3 |
+| ctx-plain | dated-08 | CASE-STUDY.md:145-149 | 1 | 24 | 46 | 59 | 9 | 11 |
+| ctx-plain | dated-09 | CONTEXT.md:294-295 | 1 | 4 | 8 | 39 | 8 | 11 |
+| ctx-plain | dated-09 | CONTEXT.md:1135-1136 | 1 | 8 | 17 | 28 | 5 | 7 |
+| ctx-plain | dated-09 | CONTEXT.md:255-255 | 1 | 7 | 32 | 14 | 7 | 10 |
+| ctx-plain | dated-09 | morning-2026-09-17.md:120-120 | 1 | 18 | 36 | 35 | 19 | 36 |
+| ctx-plain | dated-09 | morning-2026-09-17.md:139-139 | 1 | 18 | 36 | 35 | 19 | 36 |
+| ctx-plain | dated-09 | CASE-STUDY.md:81-84 | 1 | 1 | 1 | 2 | 1 | 1 |
+| ctx-plain | dated-09 | DECISION-LOG.md:28-28 | 1 | 2 | 2 | 1 | 6 | 8 |
+| ctx-plain | dated-10 | CONTEXT.md:4165-4165 | 1 | 3 | 1 | 13 | 5 | 7 |
+| ctx-plain | dated-10 | CONTEXT.md:4221-4222 | 1 | - | 458 | 150 | - | - |
+| ctx-plain | dated-10 | morning-2026-08-21.md:191-200 | 1 | 6 | 7 | 18 | 14 | 37 |
+| ctx-plain | dated-10 | morning-2026-08-22.md:170-176 | 1 | 11 | 13 | 34 | 28 | 79 |
+| ctx-plain | dated-10 | morning-2026-08-23.md:174-179 | 1 | 14 | 14 | 40 | 27 | 78 |
+| ctx-plain | dated-10 | morning-2026-08-27.md:222-226 | 1 | 50 | 61 | 58 | - | 51 |
+| ctx-plain | id-01 | TASKS-UI.md:1136-1139 | 2 | 2 | 5 | 1 | 13 | 14 |
+| ctx-plain | id-01 | CONTEXT.md:1907-1911 | 2 | 40 | 82 | 30 | - | 25 |
+| ctx-plain | id-01 | HANDOFF.md:855-857 | 1 | 12 | 14 | 19 | 12 | 12 |
+| ctx-plain | id-01 | CONTEXT.md:1192-1194 | 2 | 48 | 94 | 47 | - | 24 |
+| ctx-plain | id-01 | morning-2026-09-17.md:120-120 | 3 | 3 | 4 | 3 | 3 | 3 |
+| ctx-plain | id-01 | CONTEXT.md:259-259 | 1 | 56 | 128 | 17 | - | 26 |
+| ctx-plain | id-01 | morning-2026-09-16.md:104-120 | 4 | 1 | 1 | 2 | 2 | 2 |
+| ctx-plain | id-01 | morning-2026-09-17.md:104-120 | 4 | 3 | 4 | 3 | 3 | 3 |
+| ctx-plain | id-01 | morning-2026-09-18.md:104-120 | 4 | 6 | 6 | 5 | 6 | 6 |
+| ctx-plain | id-01 | morning-2026-09-19.md:104-120 | 4 | 7 | 7 | 10 | 1 | 1 |
+| ctx-plain | id-01 | morning-2026-09-20.md:104-120 | 4 | 4 | 2 | 7 | 4 | 4 |
+| ctx-plain | id-01 | morning-2026-09-21.md:104-120 | 4 | 8 | 8 | 9 | 7 | 7 |
+| ctx-plain | id-01 | morning-2026-09-22.md:104-120 | 4 | 9 | 9 | 8 | 5 | 5 |
+| ctx-plain | id-01 | morning-2026-09-23.md:104-120 | 4 | 5 | 3 | 6 | 14 | 15 |
+| ctx-plain | id-01 | morning-2026-09-17.md:123-139 | 4 | 3 | 4 | 3 | 3 | 3 |
+| ctx-plain | id-01 | morning-2026-09-18.md:123-139 | 4 | 6 | 6 | 5 | 6 | 6 |
+| ctx-plain | id-02 | CONTEXT.md:277-277 | 1 | 35 | 98 | 18 | - | 12 |
+| ctx-plain | id-02 | CONTEXT.md:294-296 | 1 | 35 | 98 | 18 | - | 12 |
+| ctx-plain | id-02 | CONTEXT.md:255-258 | 1 | 56 | 485 | 11 | - | 14 |
+| ctx-plain | id-02 | morning-2026-09-12.md:281-281 | 1 | 26 | 26 | 32 | 18 | 20 |
+| ctx-plain | id-02 | morning-2026-09-13.md:281-281 | 1 | 22 | 33 | 15 | 14 | 16 |
+| ctx-plain | id-02 | morning-2026-09-14.md:281-281 | 1 | 15 | 8 | 31 | 17 | 19 |
+| ctx-plain | id-02 | morning-2026-09-15.md:222-222 | 1 | 7 | 20 | 6 | 20 | 22 |
+| ctx-plain | id-02 | morning-2026-09-16.md:242-242 | 1 | 3 | 7 | 1 | 1 | 1 |
+| ctx-plain | id-02 | morning-2026-09-17.md:261-261 | 1 | 11 | 16 | 13 | 10 | 10 |
+| ctx-plain | id-02 | morning-2026-09-18.md:275-275 | 1 | 9 | 14 | 14 | 2 | 2 |
+| ctx-plain | id-02 | CONTEXT.md:211-213 | 1 | 59 | 531 | 22 | - | 33 |
+| ctx-plain | id-02 | CONTEXT.md:419-420 | 2 | 28 | 94 | 5 | 3 | 3 |
+| ctx-plain | id-03 | CONTEXT.md:2096-2097 | 1 | 151 | 422 | 90 | - | - |
+| ctx-plain | id-03 | CONTEXT.md:257-258 | 1 | - | 314 | 323 | - | - |
+| ctx-plain | id-03 | CONTEXT.md:211-212 | 1 | 56 | 434 | 30 | - | 1 |
+| ctx-plain | id-03 | CONTEXT.md:419-420 | 1 | 103 | 359 | 62 | - | - |
+| ctx-plain | id-04 | RESEARCH-QUEUE.md:498-507 | 4 | 1 | 16 | 9 | 1 | 2 |
+| ctx-plain | id-04 | CONTEXT.md:262-263 | 1 | 68 | 605 | 31 | - | 1 |
+| ctx-plain | id-04 | CONTEXT.md:273-274 | 1 | 68 | 605 | 31 | - | 1 |
+| ctx-plain | id-04 | CONTEXT.md:1245-1245 | 1 | - | 323 | - | - | - |
+| ctx-plain | id-05 | CONTEXT.md:288-291 | 2 | - | 617 | - | - | - |
+| ctx-plain | id-05 | CONTEXT.md:350-355 | 2 | 9 | 538 | 5 | 1 | 1 |
+| ctx-plain | id-05 | HANDOFF.md:256-257 | 2 | 1 | 4 | 3 | 2 | 2 |
+| ctx-plain | id-05 | CONTEXT.md:264-265 | 1 | 5 | 664 | 2 | 3 | 3 |
+| ctx-plain | id-06 | RESEARCH-QUEUE.md:294-301 | 1 | 10 | 6 | 14 | 4 | 4 |
+| ctx-plain | id-06 | RESEARCH-QUEUE.md:324-324 | 3 | 10 | 6 | 14 | 4 | 4 |
+| ctx-plain | id-06 | CONTEXT.md:482-485 | 1 | 4 | 5 | 5 | 3 | 3 |
+| ctx-plain | id-06 | CONTEXT.md:495-496 | 2 | 4 | 5 | 5 | 3 | 3 |
+| ctx-plain | id-06 | CONTEXT.md:684-694 | 1 | 3 | 2 | 6 | 2 | 2 |
+| ctx-plain | id-06 | CONTEXT.md:461-461 | 1 | 4 | 5 | 5 | 3 | 3 |
+| ctx-plain | id-07 | CONTEXT.md:2994-2994 | 1 | 2 | 25 | 16 | 7 | 22 |
+| ctx-plain | id-07 | DECYZJE-2026-08-26.md:548-548 | 1 | 150 | 639 | 76 | - | - |
+| ctx-plain | id-07 | RESEARCH-QUEUE.md:122-122 | 1 | 40 | 277 | 14 | - | 8 |
+| ctx-plain | id-07 | DB-SCHEMA.md:3-4 | 3 | 4 | 80 | 2 | 28 | 95 |
+| ctx-plain | id-07 | DB-SCHEMA.md:139-145 | 1 | 10 | 76 | 17 | 2 | 2 |
+| ctx-plain | id-07 | INFRA.md:31-32 | 3 | 32 | 599 | 10 | - | 87 |
+| ctx-plain | id-07 | RESEARCH-QUEUE.md:728-733 | 1 | - | 146 | - | - | - |

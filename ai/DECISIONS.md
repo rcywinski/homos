@@ -1377,3 +1377,46 @@ with 34 questions a swing of this size needs the judged two-run comparison. It g
 is the condition the plan set for taking it to a judged run;
 the reranker on this pool is not measured yet (needs a box window), and the decision on a judged run is in 6.11.
 Plan order unchanged: 6.4 is next. 0 USD.
+
+## 2026-11-27, step 6.4 judged baseline and the method for choosing candidates (owner)
+
+**Decision.** The owner approved the judged baseline on the 34 development questions only (the test set gets its
+baseline in 6.12; nothing ran on it): `ai/eval/results/2026-11-27-baseline-6-4-golden-v1-7.md`. Two runs of the
+served local configuration through the public chat server on the box (pin b0cec0f, no checkout, per-visitor limits
+raised to 80 for the window and restored to the defaults, admin switch on for the window only, CC-Win with the
+owner's go), raw files in the gitignored `data/lan-run-6.4/` (SHA-256 3fac1588...9026f and a49c3c78...c0cd8,
+checked on the Mac), judged by Opus 5.5 with the 3.2 prompt, `--no-retry`, 0 failed calls.
+
+| run | correct | partly | incorrect | supported | partly supported | unsupported |
+|---|---|---|---|---|---|---|
+| b64r1 | 15 | 12 | 7 | 7 | 26 | 1 |
+| b64r2 | 19 | 10 | 5 | 5 | 27 | 2 |
+
+- Every answer of both runs was given exactly the stored local list of 6.3, in the same order. So the whole
+  difference between the runs (4 correct, 10 of 34 verdicts) comes from generation and the judge, not from
+  retrieval. The served sampling is temperature 0.7 with no seed (`ai/serve/config.ts`); four of the ten flips are
+  no-answer questions, and "not in the data" fell from 7 to 4 answers between the runs.
+- The question and reference text is unchanged since v1.0 (answersHash 311917237fe235c7), so the verdicts compare
+  with 4.8j2 and 4.8j3, which ran the same configuration (between their pins and b0cec0f the Qwen prompt, sampling,
+  k, `answer.ts` and `numbers.ts` did not change; the changes are guest mode, admin and options for other models).
+  Baseline from four runs: 15, 16, 18, 19 correct (mean 17), 4 to 7 incorrect. dated-04, dated-05 and id-07 are
+  incorrect in both 6.4 runs.
+- 6.10 after reranking, fetched in the same window (an observation): rerank top 30, k = 10, 52 facts and 18 of 26
+  questions against 49 and 20 for local; 7 questions gain, 4 lose (dated-06 3 to 0). Its first stage alone had 56
+  facts and 20 of 26: in 6.3 and here the reranker gives back first-stage gains at k = 10. "No reranker on the
+  context index" is a candidate under 6.6, not a result.
+
+**Method (owner).** The retrieval gains measured so far are 3 to 7 facts of 130, while the judged count moves by 4 of
+34 with retrieval unchanged, so two judged runs cannot confirm or refute gains of that size. Fact coverage
+(deterministic, free) chooses the retrieval candidates; judged runs guard against regressions and check the three
+questions incorrect in every run and the verdicts that stay partly correct in all four runs. The 6.11 decision rule
+is written here before the first candidate is judged, and the candidates taken to judged runs are few and named in
+advance: many settings have now been scored on the same 34 questions, and the frozen test set is what protects the
+final claim. Once, before 6.11, one 6.4 run is judged again (about 0.53 USD) to measure the judge's share of the
+spread.
+
+**Cost.** 1.0687 USD (b64r1 0.5316, b64r2 0.5371). The `--max-usd 1` cap stopped b64r1 at 24 of 34 after 0.3673 USD,
+because it reserves the worst case of each call (8000 output tokens) for all four concurrent calls; the other 10 were
+judged with `--max-usd 0.63 --concurrency 1`, so the run stayed within its cap. For 6.11: concurrency 1, or a cap of
+2 USD inside the 4 USD per-run limit. Phase 6: 1.0687 of 20 USD. On the key in total: 4.1719 USD (3.1032 before
+phase 6). Step 6.4 is done; 6.5 is next.

@@ -406,15 +406,21 @@ Common rules for every step:
   for the development set. 0 USD. Done 26 Nov: `ai/eval/results/2026-11-26-retrieval-diag-golden-v1-7.md`; the
   largest loss is before first-stage rank 100 (local 64 of 173 required spans), and the Polish query alone does not
   close it (upper bound row), the generated contexts do; details and the review corrections in `ai/DECISIONS.md`.
-- [ ] NEXT **6.4 Judged baseline on v1.5.** The served configuration, Qwen, development and test sets (64 questions), two
-  runs. Gives the spread every later step is compared against. About 2.1 USD (judge only).
-- [ ] **6.5 Candidate: deeper rerank pool** (class A). Rerank the top 50 or 60 instead of 30. Three of the four class
+- [x] 2026-11-27 **6.4 Judged baseline on v1.7.** The served configuration, Qwen, the 34 development questions only, two
+  runs. Gives the spread every later step is compared against. About 1.1 USD (judge only). Done 27 Nov: 15 and 19
+  correct (with 4.8j2 and 4.8j3, same configuration: 15, 16, 18, 19), every answer given exactly the 6.3 local list,
+  1.0687 USD; `ai/eval/results/2026-11-27-baseline-6-4-golden-v1-7.md`, method rule in `ai/DECISIONS.md`. The owner (27 Nov) kept
+  the freeze condition: the test set gets its baseline in 6.12, with the final configuration, so nothing runs on it
+  before then (the earlier wording "development and test sets, 64 questions, about 2.1 USD" conflicted with it).
+- [ ] NEXT **6.5 Candidate: deeper rerank pool** (class A). Rerank the top 50 or 60 instead of 30. Three of the four class
   A questions have their first evidence chunk at first-stage rank 36 to 52. Measured with 6.3, free. Cost on the
   served system, measured in this step: reranker time per question at 30, 50 and 60 chunks (0.585 s for 30 on the
   box in 4.10e, so about 1.0 to 1.2 s for 50 to 60, to be confirmed); no index rebuild, no VRAM change.
 - [ ] **6.6 Candidate: fuse the reranker score with the first-stage rank** (class B). A weighted RRF of the two orders
   instead of the reranker order alone; why-06 drops from first-stage 5 to 29 and id-07 from 2 to 14 today. The weight
-  is set on the development set only. Free. Live server: no rebuild, no latency.
+  is set on the development set only. Free. Live server: no rebuild, no latency. Also measured here (27 Nov, a
+  candidate, not a result): no reranker at all on the context index of 6.10 (first stage 56 facts, 20 of 26 at
+  k = 10, against 52 and 18 after the reranker); in 6.3 and 6.10 the reranker gave back first-stage gains at k = 10.
 - [ ] **6.7 Candidate: more context per answer** (class C, the largest). k = 15 and 20, and adding the neighbouring
   chunk of the same journal entry or report to each of the top hits. Measured as span coverage (required and all),
   free. Cost on the served system, given before and after in this step: prompt tokens per answer for Qwen and for the
@@ -438,11 +444,17 @@ Common rules for every step:
   to a judged run only if 6.3 shows a coverage gain. Live server: index rebuild on the box `[CC-Win]`, no latency.
   First stage measured 27 Nov, before 6.4 at the owner's request: facts covered at k = 10 56 against 49 for the
   served local path (chosen 56), at k = 100 89 against 82 (chosen 95). The coverage condition is met; the reranker
-  on this pool and the judged run are still open (`ai/DECISIONS.md`).
+  on this pool and the judged run are still open (`ai/DECISIONS.md`). Reranked 27 Nov (rerank top 30, k = 10): 52
+  facts and 18 of 26 against 49 and 20 for local; it does not win alone, a candidate to combine with 6.5 or 6.6.
 - [ ] **6.11 Judged comparison on the development set.** The candidates that gained on retrieval, then their best
-  combination, Qwen, two runs each. Up to four configurations, about 4.4 USD.
-- [ ] **6.12 Held-out test and the guest path.** The final configuration against the 6.4 baseline on the frozen test
-  set (Qwen, two runs, about 1 USD), and Sonnet on the guest path, baseline and final, two runs each on all 64
+  combination, Qwen, two runs each. Up to four configurations, about 4.4 USD. Method (owner, 27 Nov): fact coverage
+  chooses the candidates; judged runs guard against regressions and check dated-04, dated-05 and id-07 (incorrect in
+  every run). The decision rule is written in `ai/DECISIONS.md` before the first candidate is judged, and the few
+  candidates are named in advance. Before 6.11, once: one 6.4 run judged again (about 0.53 USD) to measure the
+  judge's share of the spread. Caps: the judge reserves the worst case per call, so concurrency 1 or a cap of 2 USD
+  inside the 4 USD per-run limit.
+- [ ] **6.12 Held-out test and the guest path.** The final configuration and the served one on the frozen test set
+  (Qwen, two runs each; the test set gets its baseline here, not in 6.4, about 2 USD), and Sonnet on the guest path, baseline and final, two runs each on all 64
   questions (about 11.7 USD with the judge). The guest request body was measured at k = 10 (4.6e); a new k or pool
   changes it, so this is where the guest path is measured again: tokens, cost per guest answer and time. The owner
   decides from these numbers whether the live server changes.

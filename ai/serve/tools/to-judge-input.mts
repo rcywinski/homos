@@ -4,7 +4,9 @@
  * same prompt. Offline. Prints the SHA-256 of the output.
  *
  *   node --import tsx ai/serve/tools/to-judge-input.mts --in <lan-run-golden.json> --out <answers file> [--label lan48]
- *     [--refusal explained|fixed] [--engine local|guest]
+ *     [--refusal explained|fixed] [--engine local|guest] [--step 6.4]
+ * The golden version written to the output is the current one from ai/eval/golden-meta.json (step 6.4; it was fixed
+ * at 1.4 before). --step names the step in the output's note (default 4.8j).
  * --engine guest converts a guest-key run (ai/serve/tools/guest-batch.mts, step 4.6e): the generator is the measured
  * cloud generator of step 1.8, and each row's token usage and cost are kept.
  * --refusal fixed judges "not in the data" on the fixed heading alone (as in 4.8j), so a run with explanations can
@@ -32,6 +34,8 @@ const outFile = opt('--out');
 const label = opt('--label', 'lan48')!;
 const refusal = opt('--refusal', 'explained');
 const engine = opt('--engine', 'local');
+const step = opt('--step', '4.8j')!;
+const goldenVersion = (JSON.parse(readFileSync('ai/eval/golden-meta.json', 'utf8')) as { version: string }).version;
 if (engine !== 'local' && engine !== 'guest') {
   console.error('--engine must be local or guest');
   process.exit(2);
@@ -117,14 +121,14 @@ const generator = engine === 'guest' ? 'answer:claude-sonnet-5-5(effort=medium)'
 const out = {
   label: `answers-k10-${engine === 'guest' ? 'guest' : 'local'}-${label}`,
   date: run.summary.when.slice(0, 10),
-  goldenVersion: '1.4',
+  goldenVersion,
   generator,
   retrieval: 'hybrid-rrf(vector:ollama-bge-m3+bm25(stem=prefix6),depth=100,c=60)>rerank:bge-reranker-v2-m3(top30,doc=meta) index=ollama-bge-m3.meta (live, through the chat server on the box)',
   k: preset.k,
   note:
     engine === 'guest'
       ? 'Step 4.6e: guest-key mode through the public chat server (ai/serve): local retrieval on the box, Claude Sonnet 5.5 called with the owner key outside the browser, verification on the server; converted by ai/serve/tools/to-judge-input.mts. Usage and cost are the real API figures of each call.'
-      : 'Step 4.8j: the served preset through the public chat server on the box (ai/serve), converted by ai/serve/tools/to-judge-input.mts. Live retrieval, not saved chunk lists. For "not in the data" the answer is the fixed text the visitor sees. No token usage or cost (local model).',
+      : `Step ${step}: the served preset through the public chat server on the box (ai/serve), converted by ai/serve/tools/to-judge-input.mts. Live retrieval, not saved chunk lists. For "not in the data" the answer is the fixed text the visitor sees. No token usage or cost (local model).`,
   source: { file: inFile.split(/[\\/]/).pop(), sha256: createHash('sha256').update(raw).digest('hex') },
   perQuestion,
 };
