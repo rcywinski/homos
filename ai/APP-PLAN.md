@@ -926,9 +926,11 @@ his word; no further DeFi work is planned. The struck items are listed in sectio
   window (observed on 26 Nov for base-weth-cbbtc-030: 20 swaps at 04:08, 54 at 06:02, none in between). Fix: compare
   the window with a second source, or with the previous cycle's count, before trusting it.
 - `Stop-ScheduledTask "HOMOS live observer"` once left the observer's supervisor and bot running on the box (26 Nov,
-  during a redeploy; the server and API tasks stopped cleanly); cause unknown, most likely the processes were started
-  outside the task. Until it is understood, the redeploy section of the runbook checks for leftover homos-web node
-  processes and ends them by pid on the owner's word.
+  during a redeploy; the server and API tasks stopped cleanly). Cause unknown: the hypothesis that the processes were
+  started outside the task was checked and not confirmed (CC-Win started the observer once, with Start-ScheduledTask).
+  The Task Scheduler Operational log was enabled on the box on 26 Nov, so the next occurrence can be traced. Until it is
+  understood, the redeploy section of the runbook checks for leftover homos-web node processes and ends them by pid
+  only on the owner's word.
 
 **Owner's decision of 18 Nov 2026 (relayed by the analysis session): order of work and the hosted paper copy.**
 
