@@ -419,12 +419,16 @@ Common rules for every step:
   Done 27 Nov on the cache, six candidates named by the owner before computing (top 50, 60, 100 on the local and on
   the context index): local top 100 55 facts and 20 of 26, the context index at top 100 60 facts and 22 of 26 (12
   questions gain, 2 lose) against 49 and 20 served; reranker time per pool measured in the window before 6.11.
-- [ ] NEXT **6.6 Candidate: fuse the reranker score with the first-stage rank** (class B). A weighted RRF of the two orders
+- [x] 2026-11-27 **6.6 Candidate: fuse the reranker score with the first-stage rank** (class B). A weighted RRF of the two orders
   instead of the reranker order alone; why-06 drops from first-stage 5 to 29 and id-07 from 2 to 14 today. The weight
   is set on the development set only. Free. Live server: no rebuild, no latency. Also measured here (27 Nov, a
   candidate, not a result): no reranker at all on the context index of 6.10 (first stage 56 facts, 20 of 26 at
   k = 10, against 52 and 18 after the reranker); in 6.3 and 6.10 the reranker gave back first-stage gains at k = 10.
-- [ ] **6.7 Candidate: more context per answer** (class C, the largest). k = 15 and 20, and adding the neighbouring
+  Done 27 Nov on the cache, 14 rows named before computing, w = 0.5, 0.7, 0.9 on pools 30 and 100, both indexes.
+  w = 0 and w = 1 reproduce the no-reranker and reranked rows on all 34 questions. The fusion passes the owner's rule
+  (a gain at two of three weights) on three settings but adds nothing over the rows without fusion (61 against 60 on
+  the context index at pool 100, 53 to 54 against 56 without the reranker at pool 30), so it does not go to 6.11.
+- [ ] NEXT **6.7 Candidate: more context per answer** (class C, the largest). k = 15 and 20, and adding the neighbouring
   chunk of the same journal entry or report to each of the top hits. Measured as span coverage (required and all),
   free. Cost on the served system, given before and after in this step: prompt tokens per answer for Qwen and for the
   guest's Sonnet call (at k = 10 in 4.6e: median 13 117 input and 441 output tokens, 0.030 USD per guest answer on the
@@ -435,7 +439,9 @@ Common rules for every step:
 - [ ] **6.8 Candidate: dates and ids in the question** (secondary tag of dated-01, dated-04, dated-07). Detect a date,
   a range or "first", "last" in the question and boost chunks by their entry or report date, and boost exact matches
   of decision ids and position numbers in BM25. Supersedes "Temporal filters" under "Later". Free. Live server: no
-  rebuild, no latency.
+  rebuild, no latency. Test case (owner, 27 Nov): dated-06, whose top 10 on the context index is filled with the same
+  log section of morning reports of other dates (6.6); the check is whether a date boost brings back the reports and entries of its
+  own dates.
 - [ ] **6.9 Candidate, only if 6.5 to 6.8 leave class A: the local model rewrites the question.** A Polish rendering
   for BM25 by Qwen (the phase 1 variant did this with Sonnet), or a split into sub-questions. Targets why-02 and
   dated-05. Live server: Qwen must be loaded before retrieval, which the guest-key "search" state (bge-m3 and the
@@ -452,7 +458,9 @@ Common rules for every step:
 - [ ] **6.11 Judged comparison on the development set.** The candidates that gained on retrieval, then their best
   combination, Qwen, two runs each. Up to four configurations, about 4.4 USD. Method (owner, 27 Nov): fact coverage
   chooses the candidates; judged runs guard against regressions and check dated-04, dated-05 and id-07 (incorrect in
-  every run). The decision rule is written in `ai/DECISIONS.md` before the first candidate is judged, and the few
+  every run), and dated-06 (it loses facts in every deeper pool and on the context index, 6.5 and 6.6). Candidates
+  (owner, 27 Nov, after 6.6): "6.10 without the reranker" and "6.10 rerank top 100". The decision rule is committed on
+  its own, before the first judged run. The decision rule is written in `ai/DECISIONS.md` before the first candidate is judged, and the few
   candidates are named in advance. The judge's own share of the spread is known from 4.8j2 (2 of 29 verdicts on
   identical answers, same judge and prompt), so no extra judge pass (owner, 27 Nov). Caps: the judge reserves the worst case per call, so concurrency 1 or a cap of 2 USD
   inside the 4 USD per-run limit.

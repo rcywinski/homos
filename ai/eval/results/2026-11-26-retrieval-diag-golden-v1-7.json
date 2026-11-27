@@ -572,6 +572,149 @@
     "gain": 12,
     "loss": 2
    }
+  },
+  "candidates-6.6": {
+   "local@first": {
+    "rerankDocs": 0,
+    "r10": "69% (18/26)",
+    "mrr": "0.355",
+    "facts": 49,
+    "gain": 5,
+    "loss": 4
+   },
+   "ctx-plain@first": {
+    "rerankDocs": 0,
+    "r10": "77% (20/26)",
+    "mrr": "0.437",
+    "facts": 56,
+    "gain": 7,
+    "loss": 4
+   },
+   "local@30w0.5": {
+    "rerankDocs": 30,
+    "r10": "77% (20/26)",
+    "mrr": "0.387",
+    "facts": 49,
+    "gain": 3,
+    "loss": 2
+   },
+   "local@30w0.7": {
+    "rerankDocs": 30,
+    "r10": "77% (20/26)",
+    "mrr": "0.422",
+    "facts": 51,
+    "gain": 3,
+    "loss": 1
+   },
+   "local@30w0.9": {
+    "rerankDocs": 30,
+    "r10": "77% (20/26)",
+    "mrr": "0.471",
+    "facts": 49,
+    "gain": 0,
+    "loss": 0
+   },
+   "local@30-rule": {
+    "gainingWeights": [
+     0.7
+    ],
+    "passes": false
+   },
+   "local@100w0.5": {
+    "rerankDocs": 100,
+    "r10": "77% (20/26)",
+    "mrr": "0.402",
+    "facts": 49,
+    "gain": 3,
+    "loss": 2
+   },
+   "local@100w0.7": {
+    "rerankDocs": 100,
+    "r10": "85% (22/26)",
+    "mrr": "0.504",
+    "facts": 53,
+    "gain": 6,
+    "loss": 1
+   },
+   "local@100w0.9": {
+    "rerankDocs": 100,
+    "r10": "77% (20/26)",
+    "mrr": "0.529",
+    "facts": 55,
+    "gain": 8,
+    "loss": 3
+   },
+   "local@100-rule": {
+    "gainingWeights": [
+     0.7,
+     0.9
+    ],
+    "passes": true
+   },
+   "ctx-plain@30w0.5": {
+    "rerankDocs": 30,
+    "r10": "77% (20/26)",
+    "mrr": "0.476",
+    "facts": 54,
+    "gain": 8,
+    "loss": 4
+   },
+   "ctx-plain@30w0.7": {
+    "rerankDocs": 30,
+    "r10": "69% (18/26)",
+    "mrr": "0.444",
+    "facts": 53,
+    "gain": 8,
+    "loss": 4
+   },
+   "ctx-plain@30w0.9": {
+    "rerankDocs": 30,
+    "r10": "69% (18/26)",
+    "mrr": "0.479",
+    "facts": 53,
+    "gain": 8,
+    "loss": 4
+   },
+   "ctx-plain@30-rule": {
+    "gainingWeights": [
+     0.5,
+     0.7,
+     0.9
+    ],
+    "passes": true
+   },
+   "ctx-plain@100w0.5": {
+    "rerankDocs": 100,
+    "r10": "69% (18/26)",
+    "mrr": "0.458",
+    "facts": 54,
+    "gain": 8,
+    "loss": 4
+   },
+   "ctx-plain@100w0.7": {
+    "rerankDocs": 100,
+    "r10": "81% (21/26)",
+    "mrr": "0.478",
+    "facts": 60,
+    "gain": 12,
+    "loss": 2
+   },
+   "ctx-plain@100w0.9": {
+    "rerankDocs": 100,
+    "r10": "85% (22/26)",
+    "mrr": "0.523",
+    "facts": 61,
+    "gain": 13,
+    "loss": 2
+   },
+   "ctx-plain@100-rule": {
+    "gainingWeights": [
+     0.5,
+     0.7,
+     0.9
+    ],
+    "passes": true
+   }
   }
  },
  "spans": [

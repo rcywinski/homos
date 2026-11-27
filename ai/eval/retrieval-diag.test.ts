@@ -3,7 +3,7 @@
  */
 import type { Chunk } from '../corpus/types';
 import type { Evidence } from './golden';
-import { bm25QueryFor, contextsFor, factChange, keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
+import { bm25QueryFor, contextsFor, factChange, fuseOrders, keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
 
 let passed = 0;
 let failed = 0;
@@ -63,6 +63,23 @@ check('contexts: none for local, the Haiku file for chosen and ctx-plain', conte
 const fc = factChange(['a', 'b', 'c'], { a: 1, b: 2, c: 0 }, { a: 3, b: 1, c: 0 });
 check('fact change totals', fc.base === 3 && fc.cand === 4 && fc.gain === 1 && fc.loss === 1);
 check('fact change lists only differing questions', fc.rows.map((r) => r.id).join() === 'a,b');
+
+// Fusion of the reranker order with the first-stage order (6.6): the two ends reproduce the two orders, ties go to
+// the first-stage rank, and a mid weight mixes them.
+const fsOrder = ['a', 'b', 'c', 'd'];
+const rrOrder = ['c', 'd', 'b', 'a'];
+check('fusion w = 0 is the first-stage order', fuseOrders(fsOrder, rrOrder, 0).join() === fsOrder.join());
+check('fusion w = 1 is the reranker order', fuseOrders(fsOrder, rrOrder, 1).join() === rrOrder.join());
+// a: 1/63 + 1/61 ties c: 1/61 + 1/63 at w = 0.5, a has the better first-stage rank; b: 2/62 is just below.
+check('fusion tie goes to the first-stage rank', fuseOrders(['a', 'b', 'c'], ['c', 'b', 'a'], 0.5).join() === 'a,c,b');
+check('fusion at w = 0.9 follows the reranker mostly', fuseOrders(['a', 'b', 'c'], ['c', 'b', 'a'], 0.9).join() === 'c,b,a');
+let threw = false;
+try {
+  fuseOrders(['a', 'x'], ['a'], 0.5);
+} catch {
+  threw = true;
+}
+check('fusion refuses an id missing from the reranked pool', threw);
 
 console.log(`retrieval-diag: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

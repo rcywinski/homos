@@ -1450,3 +1450,47 @@ box in the window before 6.11 (owner).
 of the spread is already measured in 4.8j2, 2 of 29 verdicts on identical answers (sets lan48b and lan48bf), with the
 same judge (`claude-opus-5-5`, effort medium) and the judge prompt unchanged since step 1.9. Against 10 of 34 verdicts
 differing between the two 6.4 runs, generation is the larger part of the spread. 0 USD. Step 6.5 is done; 6.6 is next.
+
+## 2026-11-27, step 6.6 rule for fusion rows, written before the tables were computed (owner)
+
+**Rule.** The 6.6 candidates are fixed before any table is computed: no reranker (first stage only) on the local
+index and on the context index of 6.10, and a weighted RRF of the reranker order and the first-stage order,
+`w/(60 + reranker rank) + (1 - w)/(60 + first-stage rank)`, ties broken by first-stage rank, on rerank pools 30 and
+100, on both indexes, at w = 0.5, 0.7 and 0.9 (14 rows, every one reported, all at k = 10 against the served local
+row). A fusion row goes forward to the judged runs of 6.11 only if its gain over the served row (more facts covered
+than its 49, the measure that chooses candidates since 6.4) holds at two or more of the three weights on the same
+pool and the same index. A single peak does not go forward. Check before the
+tables: on the real data, w = 0 must give exactly the no-reranker row and w = 1 exactly the 6.5 row (or the served
+row at pool 30) for the same pool and index.
+
+**Result (owner approved 27 Nov).** The rule above was written before the tables were computed and committed
+together with the result, so the commit history does not prove the order; the owner judged a separate commit useless
+once the tables existed. Computed in the 6.3 report (`ai/eval/results/2026-11-26-retrieval-diag-golden-v1-7.md`,
+section "6.6 candidates", earlier sections unchanged, reproduction check "same"). The check at the two ends held on
+the real data: w = 0 gave the no-reranker top 10 and w = 1 the reranked top 10 on all 34 questions, for both indexes
+and both pools. Against the served row (49 facts, 20 of 26 at recall@10):
+
+| setting | reranker documents | recall@10 | facts, w = 0.5 / 0.7 / 0.9 |
+|---|---|---|---|
+| local, no reranker | 0 | 18 | 49 |
+| 6.10, no reranker | 0 | 20 | 56 |
+| local pool 30, fused | 30 | 20 / 20 / 20 | 49 / 51 / 49 |
+| local pool 100, fused | 100 | 20 / 22 / 20 | 49 / 53 / 55 |
+| 6.10 pool 30, fused | 30 | 20 / 18 / 18 | 54 / 53 / 53 |
+| 6.10 pool 100, fused | 100 | 18 / 21 / 22 | 54 / 60 / 61 |
+
+The rule passes local pool 100 (0.7, 0.9), 6.10 pool 30 and 6.10 pool 100 (all three weights); local pool 30 has a
+single peak and fails. The rule was a necessary condition, not a sufficient one: the fusion does not go to 6.11
+because it adds nothing over the rows without it, 61 against 60 for 6.10 at pool 100 (6.5) and 53 to 54 against 56
+for 6.10 without the reranker at pool 30.
+
+**Candidates for 6.11 (owner).** "6.10 without the reranker" (56 facts, no reranker time) and "6.10 rerank top 100"
+(60 facts, reranker time for 100 documents measured in the window before 6.11). The 6.11 decision rule is committed
+on its own, before the first judged run.
+
+**dated-06 (read by hand).** Served local carries its 3 facts at reranked ranks 1, 8 and 9. At pool 100 on the local
+index five HANDOFF.md inbox sections from first-stage ranks 41 to 100 push two of them out; on the context index the
+top 10 is already nine copies of the "pipeline-task.log (tail)" section of morning reports of other dates at pool 30.
+The owner added dated-06 to the questions watched in 6.11 and made it the test case of 6.8 (dates in the question).
+0 USD. Step 6.6 is done; 6.7 is next.
+

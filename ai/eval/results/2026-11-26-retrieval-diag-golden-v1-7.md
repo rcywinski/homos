@@ -292,6 +292,309 @@ Facts: local 49, 6.10 top 100 60; 12 questions gain, 2 lose.
 | id-04 | 5 | 4 | 5 | +1 |
 | id-07 | 6 | 0 | 2 | +2 |
 
+## 6.6 candidates: no reranker, and the reranker fused with the first stage (k = 10)
+
+Named before this section was computed (owner, 27 Nov; rule in ai/DECISIONS.md): the first stage alone on the
+local index and on the context index of 6.10, and a weighted RRF of the reranker order and the first-stage order,
+`w/(60 + reranker rank) + (1 - w)/(60 + first-stage rank)`, ties broken by first-stage rank, on rerank pools 30
+(served call scores) and 100 (100-document call), on both indexes, at w = 0.5, 0.7 and 0.9. Every grid point is
+reported. Facts per question against the served local row; questions with the same count are not listed.
+
+### Check: the fusion at its two ends
+
+On the real data, before any table: w = 0 must give the no-reranker top 10 and w = 1 the reranked top 10 of the
+same pool (the served rows at pool 30, the 6.5 rows at pool 100), question by question. The run writes nothing
+otherwise.
+
+| index | pool | w = 0 against no reranker | w = 1 against the reranked pool |
+|---|---|---|---|
+| local | 30 | 34 of 34 same | 34 of 34 same |
+| local | 100 | 34 of 34 same | 34 of 34 same |
+| 6.10 | 30 | 34 of 34 same | 34 of 34 same |
+| 6.10 | 100 | 34 of 34 same | 34 of 34 same |
+
+### Summary
+
+| | reranker documents per question | recall@5 | recall@10 | MRR@10 | facts covered | facts against served | questions gaining | losing |
+|---|---|---|---|---|---|---|---|---|
+| local (served, top 30) | 30 | 65% (17/26) | 77% (20/26) | 0.471 | 38% (49/130), 5 with no span | - | - | - |
+| local, no reranker | 0 | 54% (14/26) | 69% (18/26) | 0.355 | 38% (49/130), 5 with no span | 0 | 5 | 4 |
+| 6.10, no reranker | 0 | 73% (19/26) | 77% (20/26) | 0.437 | 43% (56/130), 5 with no span | +7 | 7 | 4 |
+| local top 30, fused w=0.5 | 30 | 62% (16/26) | 77% (20/26) | 0.387 | 38% (49/130), 5 with no span | 0 | 3 | 2 |
+| local top 30, fused w=0.7 | 30 | 62% (16/26) | 77% (20/26) | 0.422 | 39% (51/130), 5 with no span | +2 | 3 | 1 |
+| local top 30, fused w=0.9 | 30 | 65% (17/26) | 77% (20/26) | 0.471 | 38% (49/130), 5 with no span | 0 | 0 | 0 |
+| local top 100, fused w=0.5 | 100 | 65% (17/26) | 77% (20/26) | 0.402 | 38% (49/130), 5 with no span | 0 | 3 | 2 |
+| local top 100, fused w=0.7 | 100 | 73% (19/26) | 85% (22/26) | 0.504 | 41% (53/130), 5 with no span | +4 | 6 | 1 |
+| local top 100, fused w=0.9 | 100 | 73% (19/26) | 77% (20/26) | 0.529 | 42% (55/130), 5 with no span | +6 | 8 | 3 |
+| 6.10 top 30, fused w=0.5 | 30 | 69% (18/26) | 77% (20/26) | 0.476 | 42% (54/130), 5 with no span | +5 | 8 | 4 |
+| 6.10 top 30, fused w=0.7 | 30 | 62% (16/26) | 69% (18/26) | 0.444 | 41% (53/130), 5 with no span | +4 | 8 | 4 |
+| 6.10 top 30, fused w=0.9 | 30 | 62% (16/26) | 69% (18/26) | 0.479 | 41% (53/130), 5 with no span | +4 | 8 | 4 |
+| 6.10 top 100, fused w=0.5 | 100 | 65% (17/26) | 69% (18/26) | 0.458 | 42% (54/130), 5 with no span | +5 | 8 | 4 |
+| 6.10 top 100, fused w=0.7 | 100 | 62% (16/26) | 81% (21/26) | 0.478 | 46% (60/130), 5 with no span | +11 | 12 | 2 |
+| 6.10 top 100, fused w=0.9 | 100 | 62% (16/26) | 85% (22/26) | 0.523 | 47% (61/130), 5 with no span | +12 | 13 | 2 |
+
+### Rule for the fusion rows
+
+A fusion setting goes forward to 6.11 only if it covers more facts than the served row (49) at 2 or more of
+the three weights on the same pool and index; a single peak does not.
+
+| index | pool | weights with a gain | |
+|---|---|---|---|
+| local | 30 | 0.7 | does not |
+| local | 100 | 0.7, 0.9 | **goes forward** |
+| 6.10 | 30 | 0.5, 0.7, 0.9 | **goes forward** |
+| 6.10 | 100 | 0.5, 0.7, 0.9 | **goes forward** |
+
+### Reranker time per question
+
+Only the 30-document time is known (0.585 s per call, step 4.10e); the others are measured on the box in the
+window before 6.11. The fusion itself is arithmetic on two lists: no extra call, no measurable time.
+
+| setting | reranker calls | documents scored | reranker time |
+|---|---|---|---|
+| local (served, top 30) | 1 | 30 | 0.585 s |
+| 6.10, no reranker | 0 | 0 | 0 s |
+| 6.10 top 100 (6.5) | 1 | 100 | to be measured |
+
+### dated-06, read by hand
+
+Served local carries its 3 facts at reranked ranks 1, 8 and 9 (CONTEXT.md 4411-4441, 2514-2547, 2347-2389; first
+stage 15, 26 and 14). With the local pool at 100 the first stays at 1, the other two fall to 21 and 23: the
+reranker lifts five HANDOFF.md inbox sections from first-stage ranks 41 to 100 and the next part of the first
+entry (CONTEXT.md 4442-4470, first stage 36) into the top 10. On the context index the top 10 is already lost at
+pool 30: nine of the ten are the same "pipeline-task.log (tail)" section of morning reports of other dates (lines
+51-65), and at pool 100 their "pipeline.log (last run)" sections (lines 31-49) from first-stage ranks 47 to 94
+join them, while the required report lines (20 Aug line 48 and others) are not among them. So near-identical
+morning reports explain the context index; on the local index it is the coordination inboxes, both from deep in
+the first stage.
+
+### local, no reranker
+
+Facts: local 49, local, no reranker 49; 5 questions gain, 4 lose.
+
+| id | facts with a span | local | local, no reranker | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| why-06 | 4 | 0 | 1 | +1 |
+| why-08 | 5 | 2 | 3 | +1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-06 | 13 | 3 | 0 | -3 |
+| dated-09 | 5 | 2 | 4 | +2 |
+| id-04 | 5 | 4 | 0 | -4 |
+| id-07 | 6 | 0 | 4 | +4 |
+
+### 6.10, no reranker
+
+Facts: local 49, 6.10, no reranker 56; 7 questions gain, 4 lose.
+
+| id | facts with a span | local | 6.10, no reranker | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| why-06 | 4 | 0 | 1 | +1 |
+| why-10 | 2 | 1 | 0 | -1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 3 | +2 |
+| dated-04 | 4 | 0 | 1 | +1 |
+| dated-06 | 13 | 3 | 1 | -2 |
+| dated-09 | 5 | 2 | 3 | +1 |
+| id-07 | 6 | 0 | 5 | +5 |
+
+### local top 30, fused w=0.5
+
+Facts: local 49, local top 30, fused w=0.5 49; 3 questions gain, 2 lose.
+
+| id | facts with a span | local | local top 30, fused w=0.5 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| dated-06 | 13 | 3 | 1 | -2 |
+| id-07 | 6 | 0 | 1 | +1 |
+
+### local top 30, fused w=0.7
+
+Facts: local 49, local top 30, fused w=0.7 51; 3 questions gain, 1 lose.
+
+| id | facts with a span | local | local top 30, fused w=0.7 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| id-07 | 6 | 0 | 1 | +1 |
+
+### local top 30, fused w=0.9
+
+Facts: local 49, local top 30, fused w=0.9 49; 0 questions gain, 0 lose.
+
+| id | facts with a span | local | local top 30, fused w=0.9 | change |
+|---|---|---|---|---|
+
+### local top 100, fused w=0.5
+
+Facts: local 49, local top 100, fused w=0.5 49; 3 questions gain, 2 lose.
+
+| id | facts with a span | local | local top 100, fused w=0.5 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| dated-06 | 13 | 3 | 1 | -2 |
+| id-07 | 6 | 0 | 1 | +1 |
+
+### local top 100, fused w=0.7
+
+Facts: local 49, local top 100, fused w=0.7 53; 6 questions gain, 1 lose.
+
+| id | facts with a span | local | local top 100, fused w=0.7 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 2 | +1 |
+| dated-06 | 13 | 3 | 1 | -2 |
+| dated-08 | 5 | 4 | 5 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-03 | 4 | 0 | 1 | +1 |
+| id-04 | 5 | 4 | 5 | +1 |
+| id-07 | 6 | 0 | 1 | +1 |
+
+### local top 100, fused w=0.9
+
+Facts: local 49, local top 100, fused w=0.9 55; 8 questions gain, 3 lose.
+
+| id | facts with a span | local | local top 100, fused w=0.9 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 2 | +1 |
+| why-08 | 5 | 2 | 3 | +1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 2 | +1 |
+| dated-06 | 13 | 3 | 1 | -2 |
+| dated-07 | 12 | 1 | 0 | -1 |
+| dated-08 | 5 | 4 | 5 | +1 |
+| id-02 | 4 | 1 | 3 | +2 |
+| id-03 | 4 | 0 | 2 | +2 |
+| id-04 | 5 | 4 | 5 | +1 |
+| id-07 | 6 | 0 | 1 | +1 |
+
+### 6.10 top 30, fused w=0.5
+
+Facts: local 49, 6.10 top 30, fused w=0.5 54; 8 questions gain, 4 lose.
+
+| id | facts with a span | local | 6.10 top 30, fused w=0.5 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| why-06 | 4 | 0 | 1 | +1 |
+| why-10 | 2 | 1 | 0 | -1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 3 | +2 |
+| dated-04 | 4 | 0 | 1 | +1 |
+| dated-06 | 13 | 3 | 1 | -2 |
+| dated-07 | 12 | 1 | 2 | +1 |
+| dated-09 | 5 | 2 | 3 | +1 |
+| id-07 | 6 | 0 | 2 | +2 |
+
+### 6.10 top 30, fused w=0.7
+
+Facts: local 49, 6.10 top 30, fused w=0.7 53; 8 questions gain, 4 lose.
+
+| id | facts with a span | local | 6.10 top 30, fused w=0.7 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| why-10 | 2 | 1 | 0 | -1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 3 | +2 |
+| dated-04 | 4 | 0 | 1 | +1 |
+| dated-06 | 13 | 3 | 0 | -3 |
+| dated-07 | 12 | 1 | 2 | +1 |
+| dated-09 | 5 | 2 | 3 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-07 | 6 | 0 | 2 | +2 |
+
+### 6.10 top 30, fused w=0.9
+
+Facts: local 49, 6.10 top 30, fused w=0.9 53; 8 questions gain, 4 lose.
+
+| id | facts with a span | local | 6.10 top 30, fused w=0.9 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| why-10 | 2 | 1 | 0 | -1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 3 | +2 |
+| dated-04 | 4 | 0 | 1 | +1 |
+| dated-06 | 13 | 3 | 0 | -3 |
+| dated-07 | 12 | 1 | 2 | +1 |
+| dated-09 | 5 | 2 | 3 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-07 | 6 | 0 | 2 | +2 |
+
+### 6.10 top 100, fused w=0.5
+
+Facts: local 49, 6.10 top 100, fused w=0.5 54; 8 questions gain, 4 lose.
+
+| id | facts with a span | local | 6.10 top 100, fused w=0.5 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| why-10 | 2 | 1 | 0 | -1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 3 | +2 |
+| dated-04 | 4 | 0 | 1 | +1 |
+| dated-06 | 13 | 3 | 0 | -3 |
+| dated-07 | 12 | 1 | 2 | +1 |
+| dated-09 | 5 | 2 | 3 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-07 | 6 | 0 | 3 | +3 |
+
+### 6.10 top 100, fused w=0.7
+
+Facts: local 49, 6.10 top 100, fused w=0.7 60; 12 questions gain, 2 lose.
+
+| id | facts with a span | local | 6.10 top 100, fused w=0.7 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 2 | +1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| why-08 | 5 | 2 | 3 | +1 |
+| why-10 | 2 | 1 | 2 | +1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 3 | +2 |
+| dated-04 | 4 | 0 | 1 | +1 |
+| dated-06 | 13 | 3 | 0 | -3 |
+| dated-09 | 5 | 2 | 3 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-03 | 4 | 0 | 1 | +1 |
+| id-04 | 5 | 4 | 5 | +1 |
+| id-07 | 6 | 0 | 3 | +3 |
+
+### 6.10 top 100, fused w=0.9
+
+Facts: local 49, 6.10 top 100, fused w=0.9 61; 13 questions gain, 2 lose.
+
+| id | facts with a span | local | 6.10 top 100, fused w=0.9 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 2 | +1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| why-08 | 5 | 2 | 3 | +1 |
+| why-10 | 2 | 1 | 2 | +1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 4 | +3 |
+| dated-04 | 4 | 0 | 1 | +1 |
+| dated-05 | 6 | 0 | 1 | +1 |
+| dated-06 | 13 | 3 | 0 | -3 |
+| dated-09 | 5 | 2 | 3 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-03 | 4 | 0 | 1 | +1 |
+| id-04 | 5 | 4 | 5 | +1 |
+| id-07 | 6 | 0 | 2 | +2 |
+
 ## Where required spans are lost in the first stage
 
 Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with

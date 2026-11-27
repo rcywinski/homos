@@ -70,6 +70,32 @@ export const CANDIDATES_65: [DiagVariant, number][] = [
   ['ctx-plain', 100],
 ];
 
+/**
+ * Step 6.6 candidates, named before the section was computed (owner, 27 Nov): first stage only (no reranker) on both
+ * indexes, and the weighted fusion of the reranker order with the first-stage order on pools 30 and 100.
+ */
+export const NO_RERANK_66: DiagVariant[] = ['local', 'ctx-plain'];
+export const FUSION_POOLS_66 = [30, 100];
+export const FUSION_WEIGHTS_66 = [0.5, 0.7, 0.9];
+/** A fusion setting goes forward to 6.11 only if it gains facts at this many of the three weights (owner, 27 Nov). */
+export const FUSION_MIN_WEIGHTS_66 = 2;
+
+/**
+ * Weighted RRF of two orders of the same pool: w / (c + reranker rank) + (1 - w) / (c + first-stage rank), ranks
+ * 1-based, ties broken by first-stage rank. w = 1 gives the reranker order, w = 0 the first-stage order.
+ */
+export function fuseOrders(first: string[], reranked: string[], w: number, c = 60): string[] {
+  const rr = new Map(reranked.map((id, i) => [id, i + 1]));
+  return first
+    .map((id, i) => {
+      const r = rr.get(id);
+      if (r === undefined) throw new Error(`fuseOrders: ${id} is not in the reranked pool`);
+      return { id, fr: i + 1, s: w / (c + r) + (1 - w) / (c + i + 1) };
+    })
+    .sort((a, b) => b.s - a.s || a.fr - b.fr)
+    .map((x) => x.id);
+}
+
 export interface FactChange {
   base: number;
   cand: number;
@@ -593,6 +619,124 @@ async function report(date: string) {
     cand65.push('## 6.5 candidates against served local', '', 'Not fetched yet: the context-index candidates need `fetch --variant ctx-plain`.', '');
   }
 
+  // Step 6.6: no reranker, and the reranker order fused with the first-stage order. Candidates, weights and the rule
+  // were fixed before this section was computed (ai/DECISIONS.md, 27 Nov). The pool's first-stage order is the
+  // cached top N; pool 30 is reranked with the served call's scores, pool 100 with the 100-document call's.
+  const cand66: string[] = [];
+  if (ctxFetched) {
+    const ids = answerable.map((q) => q.id);
+    const label = (v: DiagVariant) => (v === 'local' ? 'local' : '6.10');
+    const firstLists = (v: DiagVariant) => lists(v, (x) => x.fused);
+    const rerankedPool = (v: DiagVariant, n: number) => (n === SERVED_N ? servedLists(v) : poolLists(v, n));
+    const fused = (v: DiagVariant, n: number, w: number) =>
+      Object.fromEntries(Object.entries(rerankedPool(v, n)).map(([id, r]) => [id, fuseOrders(views.get(v)!.get(id)!.fused.slice(0, n), r, w)]));
+    const same = (a: Record<string, string[]>, b: Record<string, string[]>) => golden.filter((q) => a[q.id].slice(0, 10).join() !== b[q.id].slice(0, 10).join()).map((q) => q.id);
+
+    // Identity check on the real data: w = 0 is the no-reranker row, w = 1 the reranked row of the same pool.
+    const identity: string[] = [];
+    const identityBad: string[] = [];
+    for (const v of NO_RERANK_66)
+      for (const n of FUSION_POOLS_66) {
+        const d0 = same(fused(v, n, 0), firstLists(v));
+        const d1 = same(fused(v, n, 1), rerankedPool(v, n));
+        identity.push(`| ${label(v)} | ${n} | ${d0.length ? `**${d0.length} differ**` : `${golden.length} of ${golden.length} same`} | ${d1.length ? `**${d1.length} differ**` : `${golden.length} of ${golden.length} same`} |`);
+        if (d0.length || d1.length) identityBad.push(`${v} pool ${n}: w=0 ${d0.join(',') || 'ok'}, w=1 ${d1.join(',') || 'ok'}`);
+      }
+    if (identityBad.length) {
+      console.error(`fusion identity check failed, nothing written:\n  ${identityBad.join('\n  ')}`);
+      process.exit(1);
+    }
+
+    const heads: string[] = [];
+    const details: string[] = [];
+    const rule: string[] = [];
+    const j: Record<string, unknown> = {};
+    const add = (name: string, key: string, l: Record<string, string[]>, docs: number) => {
+      const top = at(l, 10);
+      const sc = score(golden, top, byId);
+      const c = factChange(ids, baseFacts, factsOf(top));
+      heads.push(`| ${name} | ${docs} | ${sc.r5} | ${sc.r10} | ${sc.mrr} | ${sc.facts} | ${c.cand - c.base > 0 ? '+' : ''}${c.cand - c.base} | ${c.gain} | ${c.loss} |`);
+      details.push(`### ${name}`, '', ...changeTable(name, c));
+      j[key] = { rerankDocs: docs, r10: sc.r10, mrr: sc.mrr, facts: c.cand, gain: c.gain, loss: c.loss };
+      return c;
+    };
+    for (const v of NO_RERANK_66) add(`${label(v)}, no reranker`, `${v}@first`, firstLists(v), 0);
+    for (const v of NO_RERANK_66)
+      for (const n of FUSION_POOLS_66) {
+        const gaining = FUSION_WEIGHTS_66.filter((w) => {
+          const c = add(`${label(v)} top ${n}, fused w=${w}`, `${v}@${n}w${w}`, fused(v, n, w), n);
+          return c.cand > c.base;
+        });
+        const passes = gaining.length >= FUSION_MIN_WEIGHTS_66;
+        rule.push(`| ${label(v)} | ${n} | ${gaining.length ? gaining.join(', ') : 'none'} | ${passes ? '**goes forward**' : 'does not'} |`);
+        j[`${v}@${n}-rule`] = { gainingWeights: gaining, passes };
+      }
+    json['candidates-6.6'] = j;
+
+    cand66.push(
+      '## 6.6 candidates: no reranker, and the reranker fused with the first stage (k = 10)',
+      '',
+      'Named before this section was computed (owner, 27 Nov; rule in ai/DECISIONS.md): the first stage alone on the',
+      'local index and on the context index of 6.10, and a weighted RRF of the reranker order and the first-stage order,',
+      '`w/(60 + reranker rank) + (1 - w)/(60 + first-stage rank)`, ties broken by first-stage rank, on rerank pools 30',
+      '(served call scores) and 100 (100-document call), on both indexes, at w = 0.5, 0.7 and 0.9. Every grid point is',
+      'reported. Facts per question against the served local row; questions with the same count are not listed.',
+      '',
+      '### Check: the fusion at its two ends',
+      '',
+      'On the real data, before any table: w = 0 must give the no-reranker top 10 and w = 1 the reranked top 10 of the',
+      'same pool (the served rows at pool 30, the 6.5 rows at pool 100), question by question. The run writes nothing',
+      'otherwise.',
+      '',
+      '| index | pool | w = 0 against no reranker | w = 1 against the reranked pool |',
+      '|---|---|---|---|',
+      ...identity,
+      '',
+      '### Summary',
+      '',
+      '| | reranker documents per question | recall@5 | recall@10 | MRR@10 | facts covered | facts against served | questions gaining | losing |',
+      '|---|---|---|---|---|---|---|---|---|',
+      `| local (served, top 30) | ${SERVED_N} | ${sl.r5} | ${sl.r10} | ${sl.mrr} | ${sl.facts} | - | - | - |`,
+      ...heads,
+      '',
+      '### Rule for the fusion rows',
+      '',
+      `A fusion setting goes forward to 6.11 only if it covers more facts than the served row (${Object.values(baseFacts).reduce((a, b) => a + b, 0)}) at ${FUSION_MIN_WEIGHTS_66} or more of`,
+      'the three weights on the same pool and index; a single peak does not.',
+      '',
+      '| index | pool | weights with a gain | |',
+      '|---|---|---|---|',
+      ...rule,
+      '',
+      '### Reranker time per question',
+      '',
+      'Only the 30-document time is known (0.585 s per call, step 4.10e); the others are measured on the box in the',
+      'window before 6.11. The fusion itself is arithmetic on two lists: no extra call, no measurable time.',
+      '',
+      '| setting | reranker calls | documents scored | reranker time |',
+      '|---|---|---|---|',
+      `| local (served, top 30) | 1 | ${SERVED_N} | 0.585 s |`,
+      '| 6.10, no reranker | 0 | 0 | 0 s |',
+      '| 6.10 top 100 (6.5) | 1 | 100 | to be measured |',
+      '',
+      '### dated-06, read by hand',
+      '',
+      'Served local carries its 3 facts at reranked ranks 1, 8 and 9 (CONTEXT.md 4411-4441, 2514-2547, 2347-2389; first',
+      'stage 15, 26 and 14). With the local pool at 100 the first stays at 1, the other two fall to 21 and 23: the',
+      'reranker lifts five HANDOFF.md inbox sections from first-stage ranks 41 to 100 and the next part of the first',
+      'entry (CONTEXT.md 4442-4470, first stage 36) into the top 10. On the context index the top 10 is already lost at',
+      'pool 30: nine of the ten are the same "pipeline-task.log (tail)" section of morning reports of other dates (lines',
+      '51-65), and at pool 100 their "pipeline.log (last run)" sections (lines 31-49) from first-stage ranks 47 to 94',
+      'join them, while the required report lines (20 Aug line 48 and others) are not among them. So near-identical',
+      'morning reports explain the context index; on the local index it is the coordination inboxes, both from deep in',
+      'the first stage.',
+      '',
+      ...details,
+    );
+  } else {
+    cand66.push('## 6.6 candidates', '', 'Not fetched yet: the context-index candidates need `fetch --variant ctx-plain`.', '');
+  }
+
   const base = `ai/eval/results/${date}-retrieval-diag-golden-v${meta.version.replace('.', '-')}`;
   const md = [
     `# Retrieval diagnostic, development set (golden v${meta.version})`,
@@ -640,6 +784,7 @@ async function report(date: string) {
     '',
     ...cmp,
     ...cand65,
+    ...cand66,
     '## Where required spans are lost in the first stage',
     '',
     'Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with',
