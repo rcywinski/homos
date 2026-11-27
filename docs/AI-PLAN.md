@@ -441,13 +441,17 @@ Common rules for every step:
   k = 15, k = 20 and top 10 plus next row fails to fit `num_ctx` 17408 for some questions (3 to 29 of 34 fit), and the
   top 5 plus next rows lose facts on all three bases. Nothing goes to 6.11; a larger k needs `num_ctx` raised on the
   box, an open question for the owner, not a candidate.
-- [ ] NEXT **6.8 Candidate: dates and ids in the question** (secondary tag of dated-01, dated-04, dated-07). Detect a date,
+- [x] 2026-11-27 **6.8 Candidate: dates and ids in the question** (secondary tag of dated-01, dated-04, dated-07). Detect a date,
   a range or "first", "last" in the question and boost chunks by their entry or report date, and boost exact matches
   of decision ids and position numbers in BM25. Supersedes "Temporal filters" under "Later". Free. Live server: no
   rebuild, no latency. Test case (owner, 27 Nov): dated-06, whose top 10 on the context index is filled with the same
   log section of morning reports of other dates (6.6); the check is whether a date boost brings back the reports and entries of its
   own dates.
-- [ ] **6.9 Candidate, only if 6.5 to 6.8 leave class A: the local model rewrites the question.** A Polish rendering
+  Done 27 Nov on the cache: the temporal order (A) and the cap on repeated section titles (C) fail; the exact
+  identifier match over the corpus (B2) meets the bar exactly on "6.10 without the reranker" (59 facts against 56)
+  and changes nothing on "6.10 rerank top 100". By a deviation decided before any judged run, B2 is folded into the
+  "6.10 without the reranker" candidate instead of being a fourth configuration (`ai/DECISIONS.md`).
+- [ ] NEXT **6.9 Candidate, only if 6.5 to 6.8 leave class A: the local model rewrites the question.** A Polish rendering
   for BM25 by Qwen (the phase 1 variant did this with Sonnet), or a split into sub-questions. Targets why-02 and
   dated-05. Live server: Qwen must be loaded before retrieval, which the guest-key "search" state (bge-m3 and the
   reranker only) does not allow; several seconds more per question. Measured free, but a deployment decision for the
@@ -460,6 +464,8 @@ Common rules for every step:
   served local path (chosen 56), at k = 100 89 against 82 (chosen 95). The coverage condition is met; the reranker
   on this pool and the judged run are still open (`ai/DECISIONS.md`). Reranked 27 Nov (rerank top 30, k = 10): 52
   facts and 18 of 26 against 49 and 20 for local; it does not win alone, a candidate to combine with 6.5 or 6.6.
+  The generator sees the chunk text only (analysis session, 27 Nov): the contexts go to the index and the reranker,
+  as since step 1.8 (`ai/answer/retrieval.ts`), and the 6.7 token counts assume this.
 - [ ] **6.11 Judged comparison on the development set.** The candidates that gained on retrieval, then their best
   combination, Qwen, two runs each. Up to four configurations, about 4.4 USD. Method (owner, 27 Nov): fact coverage
   chooses the candidates; judged runs guard against regressions and check dated-04, dated-05 and id-07 (incorrect in
@@ -470,6 +476,9 @@ Common rules for every step:
   identical answers, same judge and prompt), so no extra judge pass (owner, 27 Nov). Caps: the judge reserves the worst case per call, so concurrency 1 or a cap of 2 USD
   inside the 4 USD per-run limit.
 - [ ] **6.12 Held-out test and the guest path.** The final configuration and the served one on the frozen test set
+  (free check added 27 Nov: fact coverage of the final configuration with and without the identifier match B2 of
+  6.8, computed only here, after the configuration is fixed; it needs the test questions' bge-m3 query vectors, and
+  reranker scores if the final configuration reranks, from the box, which the 6.12 runs touch anyway)
   (Qwen, two runs each; the test set gets its baseline here, not in 6.4, about 2 USD), and Sonnet on the guest path, baseline and final, two runs each on all 64
   questions (about 11.7 USD with the judge). The guest request body was measured at k = 10 (4.6e); a new k or pool
   changes it, so this is where the guest path is measured again: tokens, cost per guest answer and time. The owner

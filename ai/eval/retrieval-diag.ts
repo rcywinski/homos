@@ -49,6 +49,7 @@ import { score, type Score } from './span-score';
 import { loadTokenCounter } from '../answer/local';
 import { answerUserPrompt } from '../answer/prompt';
 import { DEFAULT_PRESET, PRESETS } from '../serve/config';
+import { fold, normaliseDates } from '../store/tokenize';
 
 /** Both paths can be pointed elsewhere for a dry run with a synthetic cache (never for a real result). */
 export const CACHE = process.env.RETRIEVAL_DIAG_CACHE ?? 'ai/index/retrieval-diag-cache.json';
@@ -143,6 +144,85 @@ export function withNext(ranked: string[], next: Map<string, string>, heads: num
   }
   if (fill) for (const id of ranked.slice(heads)) add(id);
   return out;
+}
+
+/**
+ * Step 6.8 detectors and reorderings, fixed before the section was computed (ai/DECISIONS.md, 27 Nov). General
+ * patterns, written while knowing the development questions; the frozen test set (6.12) checks whether they generalise.
+ */
+export const TEMPORAL_POOL_68 = 30;
+export const DATE_WEIGHTS_68 = [0.3, 0.5];
+export const ID_CORPUS_MAX_68 = 5;
+export const TITLE_MAX_68 = 2;
+export const MIN_GAIN_68 = 3;
+
+/** Date order asked by a temporal word: the first whole word found decides. */
+export function detectTemporal(question: string): 'asc' | 'desc' | null {
+  const m = /\b(first|earliest|last|latest|final)\b/i.exec(question);
+  if (!m) return null;
+  return /^(first|earliest)$/i.test(m[1]) ? 'asc' : 'desc';
+}
+
+/** ISO dates named in the question, by the BM25 tokenizer's own date normalisation (year 2026 when missing). */
+export function detectDates(question: string): string[] {
+  const out = (normaliseDates(fold(question)).match(/\bd20\d{6}\b/g) ?? []).map((t) => `${t.slice(1, 5)}-${t.slice(5, 7)}-${t.slice(7, 9)}`);
+  return [...new Set(out)];
+}
+
+/** Identifiers in the question, as matched in chunk text: a `#` number by its digits. */
+export function detectIds(question: string): string[] {
+  const re = /#(\d+)|\b([A-Z][A-Z0-9]*_[A-Z0-9_]+)\b|\b([a-z]+[A-Z][A-Za-z0-9]*)\b|\b([A-Z]\d+(?:\.\d+)?)\b/g;
+  const out: string[] = [];
+  for (const m of question.matchAll(re)) out.push(m[1] ?? m[2] ?? m[3] ?? m[4]);
+  return [...new Set(out)];
+}
+
+/**
+ * A: within the first `pool` ids, chunks of a named date go first (base order); then the dated chunks are reordered
+ * among the slots they hold by the fusion of their base order with the date order (ties by base rank). Chunks without
+ * a date keep their slots. Ids after the pool are unchanged.
+ */
+export function temporalReorder(ranked: string[], dateOf: (id: string) => string | undefined, dir: 'asc' | 'desc' | null, dates: string[], w: number, pool = TEMPORAL_POOL_68): string[] {
+  let head = ranked.slice(0, pool);
+  if (dates.length) head = [...head.filter((id) => dates.includes(dateOf(id) ?? '')), ...head.filter((id) => !dates.includes(dateOf(id) ?? ''))];
+  if (dir) {
+    const slots = head.map((id, i) => (dateOf(id) ? i : -1)).filter((i) => i >= 0);
+    const dated = slots.map((i) => head[i]);
+    const byDate = dated
+      .map((id, i) => ({ id, i, d: dateOf(id)! }))
+      .sort((a, b) => (dir === 'asc' ? a.d.localeCompare(b.d) : b.d.localeCompare(a.d)) || a.i - b.i)
+      .map((x) => x.id);
+    const fused = fuseOrders(dated, byDate, w);
+    head = [...head];
+    slots.forEach((slot, j) => (head[slot] = fused[j]));
+  }
+  return [...head, ...ranked.slice(pool)];
+}
+
+/** B1: ids among the first `n` that match go to the front, in base order. */
+export function matchFront(ranked: string[], matches: (id: string) => boolean, n = 100): string[] {
+  const head = ranked.slice(0, n);
+  return [...head.filter(matches), ...head.filter((id) => !matches(id)), ...ranked.slice(n)];
+}
+
+/** B2: up to `max` given ids first (already ordered), then the base order without them. */
+export function putFirst(ranked: string[], first: string[], max = ID_CORPUS_MAX_68): string[] {
+  const f = first.slice(0, max);
+  return [...f, ...ranked.filter((id) => !f.includes(id))];
+}
+
+/** C: at most `max` ids with the same title among the first `k`, the rest filled in base order. */
+export function capTitles(ranked: string[], titleOf: (id: string) => string, k = 10, max = TITLE_MAX_68): string[] {
+  const seen = new Map<string, number>();
+  const picked: string[] = [];
+  for (const id of ranked) {
+    if (picked.length === k) break;
+    const t = titleOf(id);
+    if ((seen.get(t) ?? 0) >= max) continue;
+    seen.set(t, (seen.get(t) ?? 0) + 1);
+    picked.push(id);
+  }
+  return [...picked, ...ranked.filter((id) => !picked.includes(id))];
 }
 
 export interface FactChange {
@@ -965,6 +1045,192 @@ async function report(date: string) {
     cand67.push('## 6.7 candidates', '', 'Not fetched yet: the context-index bases need `fetch --variant ctx-plain`.', '');
   }
 
+  // Step 6.8: dates and identifiers in the question, and repeated section titles. Detectors, candidates and the rule
+  // were fixed before this section was computed (ai/DECISIONS.md, 27 Nov).
+  const cand68: string[] = [];
+  if (ctxFetched) {
+    const dateOf = (id: string) => byId.get(id)!.date;
+    const titleOf = (id: string) => byId.get(id)!.title;
+    const fullText = (id: string) => `${byId.get(id)!.title}\n${byId.get(id)!.text}`;
+    const qById = new Map(golden.map((q) => [q.id, q]));
+    const det = new Map(golden.map((q) => [q.id, { dir: detectTemporal(q.question), dates: detectDates(q.question), ids: detectIds(q.question) }]));
+    const hasId = (qid: string, cid: string) => det.get(qid)!.ids.some((x) => fullText(cid).includes(x));
+    const bm25Order = (qid: string) => views.get('ctx-plain')!.get(qid)!.bm25Full;
+    const corpusMatches = (qid: string) => {
+      const ids = det.get(qid)!.ids;
+      if (!ids.length) return [];
+      const all = chunks.filter((c) => hasId(qid, c.id)).map((c) => c.id);
+      const rank = new Map(bm25Order(qid).map((id, i) => [id, i]));
+      return all.map((id, i) => ({ id, i, r: rank.get(id) ?? Infinity })).sort((a, b) => a.r - b.r || a.i - b.i).map((x) => x.id);
+    };
+    const bases68: { name: string; key: string; ranked: Record<string, string[]> }[] = [
+      { name: '6.10, no reranker', key: 'ctx-first', ranked: lists('ctx-plain', (v) => v.fused) },
+      { name: '6.10 top 100', key: 'ctx-100', ranked: poolLists('ctx-plain', 100) },
+    ];
+    const targetOf = { A: 'dated-', B: 'id-', C: '' } as const;
+    type Fam = keyof typeof targetOf;
+    const watchedIds = ['dated-04', 'dated-05', 'dated-06', 'id-07'];
+
+    // Detections per question.
+    const detRows = golden
+      .filter((q) => { const d = det.get(q.id)!; return d.dir || d.dates.length || d.ids.length; })
+      .map((q) => { const d = det.get(q.id)!; return `| ${q.id} | ${d.dir ?? '-'} | ${d.dates.join(', ') || '-'} | ${d.ids.join(', ') || '-'} |`; });
+
+    // Bounds.
+    const missed = (q: GoldenQuestion, top: string[]) => factSpans(q).spans.filter((sp) => !sp.some((e) => top.some((id) => overlaps(byId.get(id)!, e))));
+    const inAny = (sp: Evidence[], ids: string[]) => sp.some((e) => ids.some((id) => overlaps(byId.get(id)!, e)));
+    const boundRows: string[] = [];
+    const bound: Record<string, Record<Fam | 'B2', number>> = {};
+    for (const b of bases68) {
+      let aMiss = 0, aIn = 0, bMiss = 0, b1 = 0, b2 = 0;
+      for (const q of answerable) {
+        const d = det.get(q.id)!;
+        const r = b.ranked[q.id];
+        const m = missed(q, r.slice(0, 10));
+        if (d.dir || d.dates.length) {
+          aMiss += m.length;
+          const lift = r.slice(10, TEMPORAL_POOL_68).filter((id) => dateOf(id));
+          aIn += m.filter((sp) => inAny(sp, lift)).length;
+        }
+        if (d.ids.length) {
+          bMiss += m.length;
+          b1 += m.filter((sp) => inAny(sp, r.slice(0, 100).filter((id) => hasId(q.id, id)))).length;
+          b2 += m.filter((sp) => inAny(sp, corpusMatches(q.id))).length;
+        }
+      }
+      bound[b.key] = { A: aIn, B: b1, B2: b2, C: Infinity };
+      boundRows.push(`| ${b.name} | ${aMiss} | ${aIn} | ${bMiss} | ${b1} | ${b2} |`);
+    }
+
+    // Rows.
+    interface Row68 { fam: Fam; name: string; key: string; tf: (qid: string, r: string[]) => string[] }
+    const rowsDef: Row68[] = [
+      ...DATE_WEIGHTS_68.map((w) => ({ fam: 'A' as Fam, name: `A temporal, w_date=${w}`, key: `A${w}`, tf: (qid: string, r: string[]) => temporalReorder(r, dateOf, det.get(qid)!.dir, det.get(qid)!.dates, w) })),
+      { fam: 'B', name: 'B1 identifier in top 100', key: 'B1', tf: (qid, r) => (det.get(qid)!.ids.length ? matchFront(r, (id) => hasId(qid, id)) : r) },
+      { fam: 'B', name: 'B2 identifier in corpus, 5 first', key: 'B2', tf: (qid, r) => (det.get(qid)!.ids.length ? putFirst(r, corpusMatches(qid)) : r) },
+      { fam: 'C', name: `C at most ${TITLE_MAX_68} per section title`, key: 'C', tf: (_qid, r) => capTitles(r, titleOf) },
+    ];
+    const heads: string[] = [];
+    const details: string[] = [];
+    const watched: string[] = [];
+    const j: Record<string, unknown> = {};
+    const result = new Map<string, { gain: number; ok: boolean }>();
+    const apply = (b: (typeof bases68)[number], tf: Row68['tf']) => Object.fromEntries(Object.entries(b.ranked).map(([qid, r]) => [qid, tf(qid, r)]));
+    const evalRow = (b: (typeof bases68)[number], fam: Fam | 'combined', name: string, l: Record<string, string[]>) => {
+      const top = at(l, 10);
+      const baseF = factsOf(at(b.ranked, 10));
+      const f = factsOf(top);
+      const c = factChange(answerable.map((q) => q.id), baseF, f);
+      const touched = golden.filter((q) => top[q.id].join() !== b.ranked[q.id].slice(0, 10).join()).length;
+      const losers = c.rows.filter((r) => r.cand < r.base);
+      const outside = fam === 'A' || fam === 'B' ? losers.filter((r) => !r.id.startsWith(targetOf[fam])) : [];
+      const condLoss = fam === 'C' || fam === 'combined' ? losers.length <= 1 && losers.every((r) => r.base - r.cand <= 1) : outside.length === 0;
+      const gain = c.cand - c.base;
+      return { c, gain, touched, losers, outside, condLoss, ok: gain >= MIN_GAIN_68 && condLoss, f };
+    };
+    for (const b of bases68) {
+      for (const r of rowsDef) {
+        const e = evalRow(b, r.fam, r.name, apply(b, r.tf));
+        result.set(`${b.key}|${r.key}`, { gain: e.gain, ok: e.ok });
+        heads.push(`| ${b.name} | ${r.name} | ${e.touched} | ${e.c.cand} | ${e.gain > 0 ? '+' : ''}${e.gain} (${e.c.gain}/${e.c.loss}) | ${e.outside.map((x) => x.id).join(', ') || (r.fam === 'C' ? `${e.losers.length} losing` : '-')} | ${e.ok ? 'gain met' : e.gain < MIN_GAIN_68 ? 'gain below 3' : 'loss condition'} |`);
+        details.push(`### ${b.name}, ${r.name}`, '', ...changeTable(r.name, e.c, 'base'));
+        watched.push(`| ${b.name} | ${r.name} | ${watchedIds.map((id) => `${e.f[id]}`).join(' | ')} |`);
+        j[`${b.key}|${r.key}`] = { facts: e.c.cand, gain: e.gain, gaining: e.c.gain, losing: e.c.loss, touched: e.touched, outsideLosers: e.outside.map((x) => x.id), ok: e.ok };
+      }
+    }
+    // A must hold at both weights; a family passes on a base if its rule holds.
+    const passing: { fam: Fam; base: string; key: string; name: string; gain: number }[] = [];
+    for (const b of bases68) {
+      const aOk = DATE_WEIGHTS_68.every((w) => result.get(`${b.key}|A${w}`)!.ok);
+      for (const r of rowsDef) {
+        const ok = r.fam === 'A' ? aOk : result.get(`${b.key}|${r.key}`)!.ok;
+        if (ok) passing.push({ fam: r.fam, base: b.key, key: r.key, name: `${b.name}, ${r.name}`, gain: result.get(`${b.key}|${r.key}`)!.gain });
+      }
+    }
+    const famsPassing = [...new Set(passing.map((p) => p.fam))];
+    const pathLine: Record<Fam, string> = {
+      A: 'A changes retrieval only: after ranking, the top 30 is reordered by chunk metadata dates when the question has a temporal word or a date; no model, no box change apart from deployment.',
+      B: 'B changes retrieval only: a verbatim identifier match in the top 100 (B1) or a scan of the corpus text on the server (B2); no model, no box change apart from deployment.',
+      C: 'C changes retrieval only: a cap on repeated section titles in the top 10; no model, no box change apart from deployment.',
+    };
+    const choice: string[] = [];
+    if (!passing.length) choice.push('No 6.8 row passes: none goes to 6.11.');
+    else {
+      for (const fam of famsPassing) {
+        const best = passing.filter((p) => p.fam === fam).sort((a, b) => b.gain - a.gain)[0];
+        choice.push(`Family ${fam} passes; best row **${best.name}** (+${best.gain}). ${pathLine[fam]}`);
+      }
+      if (famsPassing.length >= 2) {
+        // Combination of the best row of each passing family, on each base, as one extra row.
+        for (const b of bases68) {
+          const tfs = famsPassing.map((fam) => {
+            const best = passing.filter((p) => p.fam === fam).sort((x, y) => y.gain - x.gain)[0];
+            return rowsDef.find((r) => r.key === best.key)!.tf;
+          });
+          const e = evalRow(b, 'combined', 'combined', apply(b, (qid, r) => tfs.reduce((acc, tf) => tf(qid, acc), r)));
+          choice.push(`Combination of ${famsPassing.join(' + ')} on ${b.name}: ${e.c.cand} facts, ${e.gain > 0 ? '+' : ''}${e.gain} (${e.c.gain}/${e.c.loss}).`);
+          j[`${b.key}|combined`] = { facts: e.c.cand, gain: e.gain, gaining: e.c.gain, losing: e.c.loss };
+        }
+      } else if (passing.length) {
+        const best = [...passing].sort((a, b) => b.gain - a.gain)[0];
+        choice.push(`Fourth configuration for 6.11 by the rule: **${best.name}**.`);
+      }
+    }
+    json['candidates-6.8'] = { rows: j, bounds: bound, passing };
+
+    cand68.push(
+      '## 6.8 candidates: dates and identifiers in the question, repeated sections (k = 10)',
+      '',
+      'Named before this section was computed (ai/DECISIONS.md, 27 Nov). Bases: the two 6.11 candidates; served local',
+      'is the reference (49 facts). Detectors are general patterns written while knowing the development questions; the',
+      'frozen test set (6.12) checks whether they generalise.',
+      '',
+      '### Detections',
+      '',
+      'Questions with a temporal word (asc: first, earliest; desc: last, latest, final), a date, or an identifier. Every',
+      'other question is unchanged by A and B by construction (dated-05 and id-07 among them).',
+      '',
+      '| id | temporal | dates | identifiers |',
+      '|---|---|---|---|',
+      ...detRows,
+      '',
+      '### Bounds',
+      '',
+      `Facts missed at k = 10 on the questions each family acts on, and how many it can reach: for A, in a dated chunk at`,
+      `ranks 11 to ${TEMPORAL_POOL_68}; for B, in a chunk containing the identifier (top 100 for B1, the corpus for B2). A family below`,
+      `${MIN_GAIN_68} cannot pass.`,
+      '',
+      '| base | A: missed facts | A: reachable | B: missed facts | B1: reachable | B2: reachable |',
+      '|---|---|---|---|---|---|',
+      ...boundRows,
+      '',
+      '### Rows',
+      '',
+      'Touched: questions whose top 10 changes. Gain: facts over the base (questions gaining / losing). Losing outside',
+      'the target: for A, questions not dated-*; for B, not id-*; for C the number of losing questions (at most one, by',
+      'one fact). A must meet its gain at both weights.',
+      '',
+      '| base | row | touched | facts | gain | losing outside the target | |',
+      '|---|---|---|---|---|---|---|',
+      ...heads,
+      '',
+      '### Choice',
+      '',
+      ...choice,
+      '',
+      '### Watched questions (facts at k = 10)',
+      '',
+      `| base | row | ${watchedIds.join(' | ')} |`,
+      `|---|---|${watchedIds.map(() => '---').join('|')}|`,
+      ...bases68.map((b) => `| ${b.name} | base | ${watchedIds.map((id) => factsIn(qById.get(id)!, b.ranked[id].slice(0, 10))).join(' | ')} |`),
+      ...watched,
+      '',
+      ...details,
+    );
+  } else {
+    cand68.push('## 6.8 candidates', '', 'Not fetched yet: the context-index bases need `fetch --variant ctx-plain`.', '');
+  }
+
   const base = `ai/eval/results/${date}-retrieval-diag-golden-v${meta.version.replace('.', '-')}`;
   const md = [
     `# Retrieval diagnostic, development set (golden v${meta.version})`,
@@ -1014,6 +1280,7 @@ async function report(date: string) {
     ...cand65,
     ...cand66,
     ...cand67,
+    ...cand68,
     '## Where required spans are lost in the first stage',
     '',
     'Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with',

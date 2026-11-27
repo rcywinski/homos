@@ -901,6 +901,123 @@
    },
    "passing": [],
    "choice": "No 6.7 row passes: none goes to 6.11."
+  },
+  "candidates-6.8": {
+   "rows": {
+    "ctx-first|A0.3": {
+     "facts": 56,
+     "gain": 0,
+     "gaining": 0,
+     "losing": 0,
+     "touched": 7,
+     "outsideLosers": [],
+     "ok": false
+    },
+    "ctx-first|A0.5": {
+     "facts": 56,
+     "gain": 0,
+     "gaining": 1,
+     "losing": 1,
+     "touched": 7,
+     "outsideLosers": [],
+     "ok": false
+    },
+    "ctx-first|B1": {
+     "facts": 58,
+     "gain": 2,
+     "gaining": 2,
+     "losing": 0,
+     "touched": 5,
+     "outsideLosers": [],
+     "ok": false
+    },
+    "ctx-first|B2": {
+     "facts": 59,
+     "gain": 3,
+     "gaining": 3,
+     "losing": 0,
+     "touched": 7,
+     "outsideLosers": [],
+     "ok": true
+    },
+    "ctx-first|C": {
+     "facts": 57,
+     "gain": 1,
+     "gaining": 2,
+     "losing": 1,
+     "touched": 13,
+     "outsideLosers": [],
+     "ok": false
+    },
+    "ctx-100|A0.3": {
+     "facts": 57,
+     "gain": -3,
+     "gaining": 0,
+     "losing": 1,
+     "touched": 7,
+     "outsideLosers": [],
+     "ok": false
+    },
+    "ctx-100|A0.5": {
+     "facts": 58,
+     "gain": -2,
+     "gaining": 1,
+     "losing": 1,
+     "touched": 7,
+     "outsideLosers": [],
+     "ok": false
+    },
+    "ctx-100|B1": {
+     "facts": 60,
+     "gain": 0,
+     "gaining": 0,
+     "losing": 0,
+     "touched": 1,
+     "outsideLosers": [],
+     "ok": false
+    },
+    "ctx-100|B2": {
+     "facts": 60,
+     "gain": 0,
+     "gaining": 0,
+     "losing": 0,
+     "touched": 7,
+     "outsideLosers": [],
+     "ok": false
+    },
+    "ctx-100|C": {
+     "facts": 61,
+     "gain": 1,
+     "gaining": 1,
+     "losing": 2,
+     "touched": 16,
+     "outsideLosers": [],
+     "ok": false
+    }
+   },
+   "bounds": {
+    "ctx-first": {
+     "A": 3,
+     "B": 7,
+     "B2": 11,
+     "C": null
+    },
+    "ctx-100": {
+     "A": 2,
+     "B": 3,
+     "B2": 7,
+     "C": null
+    }
+   },
+   "passing": [
+    {
+     "fam": "B",
+     "base": "ctx-first",
+     "key": "B2",
+     "name": "6.10, no reranker, B2 identifier in corpus, 5 first",
+     "gain": 3
+    }
+   ]
   }
  },
  "spans": [

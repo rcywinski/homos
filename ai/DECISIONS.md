@@ -1554,3 +1554,74 @@ longer chunks.
 generated context: `answerUserPrompt` prints `chunk.text`, and the generated contexts go to the index and the reranker
 only (`ai/answer/retrieval.ts`, as since step 1.8). For the 6.10 candidates the same is assumed; it is to be written
 into step 6.10 before 6.11. 0 USD. Step 6.7 is done; 6.8 is next.
+
+## 2026-11-27, step 6.8 rules, written before the tables were computed (analysis session, under the owner's delegation)
+
+**Detectors.** General patterns, written while knowing the development questions; 6.12 on the frozen test set is the
+check of whether they generalise, and the test set is not opened for this. Temporal word: `first` or `earliest` (date
+order ascending), `last`, `latest` or `final` (descending), whole words, the first one found decides. Date: the BM25
+tokenizer's own date normalisation (`normaliseDates`, step 1.5: ISO, dd.mm, dd.mm.yyyy, day and month name in either
+order). Identifier: `#` followed by digits, UPPER_SNAKE (`[A-Z][A-Z0-9]*_[A-Z0-9_]+`), camelCase
+(`[a-z]+[A-Z][A-Za-z0-9]*`), and a capital letter followed by digits with an optional `.digits` (`D0`, `E8.2`). A
+`#` number is matched by its digits. The false positives stay and are reported (why-09 contains "first"); the
+patterns are not adjusted to the questions. dated-05 has no temporal word and no date, and id-07 no identifier: both
+are unchanged by construction in A and B, and shown so.
+
+**Candidates.** Bases: the two 6.11 candidates, "6.10 without the reranker" and "6.10 rerank top 100", at k = 10;
+served local is a reference row only.
+- A, temporal order: the pool is the base's top 30. A chunk's date is its metadata `date` (the journal entry header
+  or the report's file name, as loaded), never parsed from free text. Chunks without a date keep their base rank and
+  take no part; the dated chunks of the pool are reordered among the slots they hold by the 6.6 fusion of their base
+  order with the date order (ties by base rank), at w_date 0.3 and 0.5. A date named in the question puts the pool's
+  chunks of that date first, in base order. Questions with neither are unchanged. 4 rows.
+- B, exact identifier: B1 moves the chunks of the base's top 100 that contain a detected identifier verbatim to the
+  front, in base order; B2 puts first at most 5 chunks of the whole corpus that contain it, ordered by the base
+  index's BM25 rank for the question, then the base order. Questions without an identifier are unchanged. 4 rows.
+- C, repeated sections: in any question, at most 2 chunks with an identical section title in the top 10, the rest
+  filled in base order. 2 rows; the report gives how many of the 34 questions it touches and every one that changes.
+
+**Bounds first.** For A, per base, the facts missed at k = 10 on questions with a temporal word or a date, and how
+many sit in a dated chunk at ranks 11 to 30 (all A can lift). For B, the facts missed on questions with an
+identifier, and how many sit in chunks containing the identifier: in the top 100 (B1), in the corpus (B2). A family
+whose bound is below 3 facts cannot pass; its rows are reported in short form.
+
+**Rule.** A row passes on a base if it gains at least 3 facts over that base at k = 10, and: for A, at both weights;
+for A and B, no question outside its target category (dated questions for A, id questions for B) loses a fact, so a
+false detection such as why-09 must not cost; for C, which acts on every question, at most one question loses, by
+at most one fact. At most one 6.8 configuration enters 6.11, as the fourth (the slot 6.7 left free), on the base
+where it gains most; if several rows pass in one family, the one with the most facts gained. If two families pass,
+their combination is computed on the cache as one extra row and reported before 6.11, still one fourth configuration
+(about 4.4 USD in total). A passing row also states what it changes in the served path. Watched questions dated-04,
+dated-05, dated-06 and id-07 are listed per row.
+
+**Result (approved by the analysis session, 27 Nov).** Computed in the 6.3 report (section "6.8 candidates"; earlier
+sections unchanged, reproduction check "same"). Detections: a temporal word in why-09 (a false positive, kept),
+dated-01, 02, 04, 06 and 09; a date in dated-03; an identifier in id-01 to id-06 and in why-08 ("cbBTC", camelCase).
+Reachable facts (bounds): A 3 of 23 and 2 of 23; B1 7 of 14 and 3 of 10; B2 11 of 14 and 7 of 10, on "6.10 without
+the reranker" and "6.10 rerank top 100".
+
+| base (facts at k = 10) | A, w_date 0.3 | A, 0.5 | B1 | B2 | C |
+|---|---|---|---|---|---|
+| 6.10 without the reranker (56) | 0 | 0 | +2 | **+3** | +1 (one loses) |
+| 6.10 rerank top 100 (60) | -3 | -2 | 0 | 0 | +1 (two lose) |
+
+- A fails. Date order hurts dated-02 ("first rebalance on real capital"): the earliest dated chunks are the paper
+  trading entries, which come before the real capital, so "first" in a question is not "earliest chunk".
+- C fails: it lifts dated-06 (+3 at top 100) but costs dated-04 and dated-05, two watched questions.
+- B2 on "6.10 without the reranker" meets the bar exactly (why-08 +1, id-02 +1, id-04 +1). One of the three facts
+  comes from why-08 through "cbBTC", outside the id category; gains outside the target are allowed by the rule.
+- B1 and B2 give 0 on "6.10 rerank top 100": the reranker over 100 documents already brings the identifier chunks.
+
+**Deviation from the rule written in advance (analysis session, decided before any judged run).** B2 does not become
+a separate fourth configuration; it is folded into the "6.10 without the reranker" candidate. 6.11 has three
+configurations: served, "6.10 without the reranker, with B2" (59 facts) and "6.10 rerank top 100" (60 facts, where
+B2 changes nothing). Reasons: the row differs from its base on 7 questions only, which two judged runs cannot resolve
+against a spread of 10 of 34 verdicts between the two 6.4 runs; three configurations cost about 3.3 USD instead of
+4.4 and shorten the box window; the phase budget is tight (1.0687 of 20 USD spent, 6.12 needs about 13.7).
+
+**Generalisation check.** B2 passes at the bar with patterns written knowing the development questions, so step 6.12
+gets a free check: fact coverage on the frozen test set of the final configuration with and without B2, computed
+only there, after the configuration is fixed. It needs the test questions' bge-m3 query vectors (and reranker scores
+if the final configuration reranks) from the box, which the 6.12 runs touch anyway. The frozen set is not opened now.
+In the served path B changes retrieval only: a verbatim identifier scan over the corpus text on the server, then BM25
+order; no model, no box change apart from deployment. 0 USD. Step 6.8 is done; 6.9 is next.

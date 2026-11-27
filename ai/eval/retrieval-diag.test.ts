@@ -3,7 +3,7 @@
  */
 import type { Chunk } from '../corpus/types';
 import type { Evidence } from './golden';
-import { bm25QueryFor, contextsFor, factChange, fileNeighbours, fuseOrders, withNext, keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
+import { bm25QueryFor, contextsFor, capTitles, detectDates, detectIds, detectTemporal, factChange, fileNeighbours, fuseOrders, matchFront, putFirst, temporalReorder, withNext, keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
 
 let passed = 0;
 let failed = 0;
@@ -89,6 +89,27 @@ check('previous in line order, none across files', nb.prev.get('f1b') === 'f1a' 
 check('top 1 with next, filled to 3', withNext(['f1a', 'f2a', 'f1c'], nb.next, 1, 3, true).join() === 'f1a,f1b,f2a');
 check('next already listed is not repeated', withNext(['f1a', 'f1b', 'f2a'], nb.next, 2, 10, false).join() === 'f1a,f1b,f1c');
 check('cap respected without fill', withNext(['f1a', 'f1b', 'f2a'], nb.next, 3, 2, false).join() === 'f1a,f1b');
+
+// 6.8 detectors on real development question texts, false positives included (why-09 says "first").
+check('temporal: first is ascending', detectTemporal('When did the nightly run first complete without errors?') === 'asc');
+check('temporal: last is descending', detectTemporal('When did the last backtest finish?') === 'desc');
+check('temporal: whole words only', detectTemporal('How long did it last?') === 'desc' && detectTemporal('Was it firstly planned?') === null);
+check('temporal: why-09 is a false positive, kept', detectTemporal('Why did the first 365-day backtests suggest some strategies were profitable?') === 'asc');
+check('dates: day and month name', detectDates('Which positions were open on 15 September?').join() === '2026-09-15');
+check('dates: none in a plain question', detectDates('When was the capital withdrawn?').length === 0);
+check('ids: # number by its digits', detectIds('Is position #5978579 a wide or a narrow position?').join() === '5978579');
+check('ids: UPPER_SNAKE, camelCase, letter and digits', detectIds('Is FLAT_NARROW in fetchFreshPool, stage E8.2 or package D0?').join() === 'FLAT_NARROW,fetchFreshPool,E8.2,D0');
+check('ids: none in a plain question', detectIds('In which database were the backtest results stored?').length === 0);
+
+// 6.8 reorderings.
+const dates: Record<string, string> = { a: '2026-09-01', b: '2026-08-01', d: '2026-08-15' };
+const dOf = (id: string) => dates[id];
+check('temporal w = 0 keeps the order', temporalReorder(['a', 'c', 'b', 'd', 'e'], dOf, 'asc', [], 0, 4).join() === 'a,c,b,d,e');
+check('temporal w = 1, ascending, undated keep their slot, after the pool unchanged', temporalReorder(['a', 'c', 'b', 'd', 'e'], dOf, 'asc', [], 1, 4).join() === 'b,c,d,a,e');
+check('temporal: a named date goes first', temporalReorder(['a', 'c', 'd'], dOf, null, ['2026-08-15'], 0.5).join() === 'd,a,c');
+check('match front within n, base order', matchFront(['a', 'b', 'c', 'd'], (id) => id === 'c' || id === 'd', 3).join() === 'c,a,b,d');
+check('put first, capped, no duplicates', putFirst(['a', 'b', 'c'], ['c', 'x', 'y'], 2).join() === 'c,x,a,b');
+check('cap titles, fill in base order', capTitles(['a', 'b', 'c', 'd'], (id) => (id === 'd' ? 'T2' : 'T1'), 3, 2).join() === 'a,b,d,c');
 
 console.log(`retrieval-diag: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

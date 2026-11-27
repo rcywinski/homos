@@ -805,6 +805,172 @@ Facts: k = 10 60, 6.10 top 100, top 10 + next, up to 20 65; 4 questions gain, 0 
 | dated-10 | 5 | 1 | 2 | +1 |
 | id-05 | 5 | 3 | 5 | +2 |
 
+## 6.8 candidates: dates and identifiers in the question, repeated sections (k = 10)
+
+Named before this section was computed (ai/DECISIONS.md, 27 Nov). Bases: the two 6.11 candidates; served local
+is the reference (49 facts). Detectors are general patterns written while knowing the development questions; the
+frozen test set (6.12) checks whether they generalise.
+
+### Detections
+
+Questions with a temporal word (asc: first, earliest; desc: last, latest, final), a date, or an identifier. Every
+other question is unchanged by A and B by construction (dated-05 and id-07 among them).
+
+| id | temporal | dates | identifiers |
+|---|---|---|---|
+| why-08 | - | - | cbBTC |
+| why-09 | asc | - | - |
+| dated-01 | asc | - | - |
+| dated-02 | asc | - | - |
+| dated-03 | - | 2026-09-15 | - |
+| dated-04 | desc | - | - |
+| dated-06 | asc | - | - |
+| dated-09 | desc | - | - |
+| id-01 | - | - | FLAT_NARROW |
+| id-02 | - | - | 5978579 |
+| id-03 | - | - | 5886957 |
+| id-04 | - | - | D0 |
+| id-05 | - | - | fetchFreshPool |
+| id-06 | - | - | E8.2 |
+
+### Bounds
+
+Facts missed at k = 10 on the questions each family acts on, and how many it can reach: for A, in a dated chunk at
+ranks 11 to 30; for B, in a chunk containing the identifier (top 100 for B1, the corpus for B2). A family below
+3 cannot pass.
+
+| base | A: missed facts | A: reachable | B: missed facts | B1: reachable | B2: reachable |
+|---|---|---|---|---|---|
+| 6.10, no reranker | 23 | 3 | 14 | 7 | 11 |
+| 6.10 top 100 | 23 | 2 | 10 | 3 | 7 |
+
+### Rows
+
+Touched: questions whose top 10 changes. Gain: facts over the base (questions gaining / losing). Losing outside
+the target: for A, questions not dated-*; for B, not id-*; for C the number of losing questions (at most one, by
+one fact). A must meet its gain at both weights.
+
+| base | row | touched | facts | gain | losing outside the target | |
+|---|---|---|---|---|---|---|
+| 6.10, no reranker | A temporal, w_date=0.3 | 7 | 56 | 0 (0/0) | - | gain below 3 |
+| 6.10, no reranker | A temporal, w_date=0.5 | 7 | 56 | 0 (1/1) | - | gain below 3 |
+| 6.10, no reranker | B1 identifier in top 100 | 5 | 58 | +2 (2/0) | - | gain below 3 |
+| 6.10, no reranker | B2 identifier in corpus, 5 first | 7 | 59 | +3 (3/0) | - | gain met |
+| 6.10, no reranker | C at most 2 per section title | 13 | 57 | +1 (2/1) | 1 losing | gain below 3 |
+| 6.10 top 100 | A temporal, w_date=0.3 | 7 | 57 | -3 (0/1) | - | gain below 3 |
+| 6.10 top 100 | A temporal, w_date=0.5 | 7 | 58 | -2 (1/1) | - | gain below 3 |
+| 6.10 top 100 | B1 identifier in top 100 | 1 | 60 | 0 (0/0) | - | gain below 3 |
+| 6.10 top 100 | B2 identifier in corpus, 5 first | 7 | 60 | 0 (0/0) | - | gain below 3 |
+| 6.10 top 100 | C at most 2 per section title | 16 | 61 | +1 (1/2) | 2 losing | gain below 3 |
+
+### Choice
+
+Family B passes; best row **6.10, no reranker, B2 identifier in corpus, 5 first** (+3). B changes retrieval only: a verbatim identifier match in the top 100 (B1) or a scan of the corpus text on the server (B2); no model, no box change apart from deployment.
+Fourth configuration for 6.11 by the rule: **6.10, no reranker, B2 identifier in corpus, 5 first**.
+
+### Watched questions (facts at k = 10)
+
+| base | row | dated-04 | dated-05 | dated-06 | id-07 |
+|---|---|---|---|---|---|
+| 6.10, no reranker | base | 1 | 0 | 1 | 5 |
+| 6.10 top 100 | base | 1 | 1 | 0 | 2 |
+| 6.10, no reranker | A temporal, w_date=0.3 | 1 | 0 | 1 | 5 |
+| 6.10, no reranker | A temporal, w_date=0.5 | 1 | 0 | 1 | 5 |
+| 6.10, no reranker | B1 identifier in top 100 | 1 | 0 | 1 | 5 |
+| 6.10, no reranker | B2 identifier in corpus, 5 first | 1 | 0 | 1 | 5 |
+| 6.10, no reranker | C at most 2 per section title | 0 | 0 | 2 | 5 |
+| 6.10 top 100 | A temporal, w_date=0.3 | 1 | 1 | 0 | 2 |
+| 6.10 top 100 | A temporal, w_date=0.5 | 1 | 1 | 2 | 2 |
+| 6.10 top 100 | B1 identifier in top 100 | 1 | 1 | 0 | 2 |
+| 6.10 top 100 | B2 identifier in corpus, 5 first | 1 | 1 | 0 | 2 |
+| 6.10 top 100 | C at most 2 per section title | 0 | 0 | 3 | 2 |
+
+### 6.10, no reranker, A temporal, w_date=0.3
+
+Facts: base 56, A temporal, w_date=0.3 56; 0 questions gain, 0 lose.
+
+| id | facts with a span | base | A temporal, w_date=0.3 | change |
+|---|---|---|---|---|
+
+### 6.10, no reranker, A temporal, w_date=0.5
+
+Facts: base 56, A temporal, w_date=0.5 56; 1 questions gain, 1 lose.
+
+| id | facts with a span | base | A temporal, w_date=0.5 | change |
+|---|---|---|---|---|
+| dated-02 | 4 | 3 | 1 | -2 |
+| dated-09 | 5 | 3 | 5 | +2 |
+
+### 6.10, no reranker, B1 identifier in top 100
+
+Facts: base 56, B1 identifier in top 100 58; 2 questions gain, 0 lose.
+
+| id | facts with a span | base | B1 identifier in top 100 | change |
+|---|---|---|---|---|
+| why-08 | 5 | 2 | 3 | +1 |
+| id-04 | 5 | 4 | 5 | +1 |
+
+### 6.10, no reranker, B2 identifier in corpus, 5 first
+
+Facts: base 56, B2 identifier in corpus, 5 first 59; 3 questions gain, 0 lose.
+
+| id | facts with a span | base | B2 identifier in corpus, 5 first | change |
+|---|---|---|---|---|
+| why-08 | 5 | 2 | 3 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-04 | 5 | 4 | 5 | +1 |
+
+### 6.10, no reranker, C at most 2 per section title
+
+Facts: base 56, C at most 2 per section title 57; 2 questions gain, 1 lose.
+
+| id | facts with a span | base | C at most 2 per section title | change |
+|---|---|---|---|---|
+| why-08 | 5 | 2 | 3 | +1 |
+| dated-04 | 4 | 1 | 0 | -1 |
+| dated-06 | 13 | 1 | 2 | +1 |
+
+### 6.10 top 100, A temporal, w_date=0.3
+
+Facts: base 60, A temporal, w_date=0.3 57; 0 questions gain, 1 lose.
+
+| id | facts with a span | base | A temporal, w_date=0.3 | change |
+|---|---|---|---|---|
+| dated-02 | 4 | 4 | 1 | -3 |
+
+### 6.10 top 100, A temporal, w_date=0.5
+
+Facts: base 60, A temporal, w_date=0.5 58; 1 questions gain, 1 lose.
+
+| id | facts with a span | base | A temporal, w_date=0.5 | change |
+|---|---|---|---|---|
+| dated-02 | 4 | 4 | 0 | -4 |
+| dated-06 | 13 | 0 | 2 | +2 |
+
+### 6.10 top 100, B1 identifier in top 100
+
+Facts: base 60, B1 identifier in top 100 60; 0 questions gain, 0 lose.
+
+| id | facts with a span | base | B1 identifier in top 100 | change |
+|---|---|---|---|---|
+
+### 6.10 top 100, B2 identifier in corpus, 5 first
+
+Facts: base 60, B2 identifier in corpus, 5 first 60; 0 questions gain, 0 lose.
+
+| id | facts with a span | base | B2 identifier in corpus, 5 first | change |
+|---|---|---|---|---|
+
+### 6.10 top 100, C at most 2 per section title
+
+Facts: base 60, C at most 2 per section title 61; 1 questions gain, 2 lose.
+
+| id | facts with a span | base | C at most 2 per section title | change |
+|---|---|---|---|---|
+| dated-04 | 4 | 1 | 0 | -1 |
+| dated-05 | 6 | 1 | 0 | -1 |
+| dated-06 | 13 | 0 | 3 | +3 |
+
 ## Where required spans are lost in the first stage
 
 Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with
