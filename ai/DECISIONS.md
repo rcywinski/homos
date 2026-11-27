@@ -1420,3 +1420,33 @@ because it reserves the worst case of each call (8000 output tokens) for all fou
 judged with `--max-usd 0.63 --concurrency 1`, so the run stayed within its cap. For 6.11: concurrency 1, or a cap of
 2 USD inside the 4 USD per-run limit. Phase 6: 1.0687 of 20 USD. On the key in total: 4.1719 USD (3.1032 before
 phase 6). Step 6.4 is done; 6.5 is next.
+
+## 2026-11-27, step 6.5 deeper rerank pool, and no extra judge pass (owner)
+
+**Decision.** The owner approved the 6.5 measurement, free from the cached reranker scores: a new section of the
+6.3 report (`ai/eval/results/2026-11-26-retrieval-diag-golden-v1-7.md`, regenerated; reproduction check "same", the
+6.10 rows unchanged). The six candidates were named by the owner before the section was computed (rerank top 50 and
+60 as planned, top 100 added by him), on the local index and on the context index of 6.10 (plain question). Against
+the served local row (rerank top 30, k = 10: 49 facts, 20 of 26 questions):
+
+| candidate | recall@10 | MRR@10 | facts | questions gaining / losing |
+|---|---|---|---|---|
+| local top 50 | 18 | 0.476 | 47 | 2 / 3 |
+| local top 60 | 19 | 0.528 | 50 | 5 / 3 |
+| local top 100 | 20 | 0.558 | 55 | 8 / 3 |
+| 6.10 top 50 | 19 | 0.479 | 55 | 8 / 3 |
+| 6.10 top 60 | 21 | 0.558 | 56 | 10 / 3 |
+| 6.10 top 100 | 22 | 0.575 | 60 | 12 / 2 |
+
+Observations, not decisions: on the local index a deeper pool alone adds little (only top 100, +6 facts, no recall
+gain); the context index with a deep pool gives the most (+11 facts at top 100) and is the first setting that moves
+all three questions incorrect in every judged run (dated-04 +1, dated-05 +1, id-07 +2). dated-06 loses in every
+deeper pool (3 facts to 0 or 1), to be read in 6.11. The deeper pools use the 100-document call's scores (at most
+0.0017 from the served call). Under the method of 6.4, fact coverage puts "6.10 top 100" and possibly "6.10 top 60"
+forward for the judged runs of 6.11; reranker time per question at 30, 50, 60 and 100 documents is measured on the
+box in the window before 6.11 (owner).
+
+**No extra judge pass.** The owner dropped the planned re-judge of one 6.4 run (about 0.53 USD): the judge's own share
+of the spread is already measured in 4.8j2, 2 of 29 verdicts on identical answers (sets lan48b and lan48bf), with the
+same judge (`claude-opus-5-5`, effort medium) and the judge prompt unchanged since step 1.9. Against 10 of 34 verdicts
+differing between the two 6.4 runs, generation is the larger part of the spread. 0 USD. Step 6.5 is done; 6.6 is next.

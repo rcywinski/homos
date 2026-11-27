@@ -169,6 +169,129 @@ Facts: local 49, 6.10 52; 7 questions gain, 4 lose.
 | id-02 | 4 | 1 | 2 | +1 |
 | id-07 | 6 | 0 | 2 | +2 |
 
+## 6.5 candidates against served local (rerank top N, k = 10)
+
+The list was named by the owner before this section was computed: rerank top 50, 60 and 100 on the local index
+and on the context index of 6.10 (plain question). The deeper pools use the scores of one 100-document call (at
+most 0.0017 from the served call on the same documents, see score stability). Facts per question against the
+served local row; questions with the same count are not listed. Candidates, not results: fact coverage chooses
+what goes to the judged runs of 6.11, which decide. Reranker time per question at these pools is measured on the
+box in the window before 6.11.
+
+| | recall@5 | recall@10 | MRR@10 | facts covered | questions gaining | losing |
+|---|---|---|---|---|---|---|
+| local (served, top 30) | 65% (17/26) | 77% (20/26) | 0.471 | 38% (49/130), 5 with no span | - | - |
+| local top 50 | 65% (17/26) | 69% (18/26) | 0.476 | 36% (47/130), 5 with no span | 2 | 3 |
+| local top 60 | 69% (18/26) | 73% (19/26) | 0.528 | 38% (50/130), 5 with no span | 5 | 3 |
+| local top 100 | 73% (19/26) | 77% (20/26) | 0.558 | 42% (55/130), 5 with no span | 8 | 3 |
+| 6.10 top 50 | 54% (14/26) | 73% (19/26) | 0.479 | 42% (55/130), 5 with no span | 8 | 3 |
+| 6.10 top 60 | 62% (16/26) | 81% (21/26) | 0.558 | 43% (56/130), 5 with no span | 10 | 3 |
+| 6.10 top 100 | 65% (17/26) | 85% (22/26) | 0.575 | 46% (60/130), 5 with no span | 12 | 2 |
+
+### local top 50
+
+Facts: local 49, local top 50 47; 2 questions gain, 3 lose.
+
+| id | facts with a span | local | local top 50 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-06 | 13 | 3 | 1 | -2 |
+| dated-08 | 5 | 4 | 5 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+
+### local top 60
+
+Facts: local 49, local top 60 50; 5 questions gain, 3 lose.
+
+| id | facts with a span | local | local top 60 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-08 | 5 | 2 | 3 | +1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-06 | 13 | 3 | 1 | -2 |
+| dated-08 | 5 | 4 | 5 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-03 | 4 | 0 | 1 | +1 |
+| id-04 | 5 | 4 | 5 | +1 |
+
+### local top 100
+
+Facts: local 49, local top 100 55; 8 questions gain, 3 lose.
+
+| id | facts with a span | local | local top 100 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 2 | +1 |
+| why-08 | 5 | 2 | 3 | +1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 2 | +1 |
+| dated-06 | 13 | 3 | 1 | -2 |
+| dated-07 | 12 | 1 | 0 | -1 |
+| dated-08 | 5 | 4 | 5 | +1 |
+| id-02 | 4 | 1 | 3 | +2 |
+| id-03 | 4 | 0 | 2 | +2 |
+| id-04 | 5 | 4 | 5 | +1 |
+| id-07 | 6 | 0 | 1 | +1 |
+
+### 6.10 top 50
+
+Facts: local 49, 6.10 top 50 55; 8 questions gain, 3 lose.
+
+| id | facts with a span | local | 6.10 top 50 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-05 | 3 | 2 | 3 | +1 |
+| why-08 | 5 | 2 | 3 | +1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 3 | +2 |
+| dated-04 | 4 | 0 | 1 | +1 |
+| dated-06 | 13 | 3 | 0 | -3 |
+| dated-09 | 5 | 2 | 3 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-07 | 6 | 0 | 3 | +3 |
+
+### 6.10 top 60
+
+Facts: local 49, 6.10 top 60 56; 10 questions gain, 3 lose.
+
+| id | facts with a span | local | 6.10 top 60 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 0 | -1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-08 | 5 | 2 | 3 | +1 |
+| why-10 | 2 | 1 | 2 | +1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 3 | +2 |
+| dated-04 | 4 | 0 | 1 | +1 |
+| dated-05 | 6 | 0 | 1 | +1 |
+| dated-06 | 13 | 3 | 0 | -3 |
+| dated-09 | 5 | 2 | 3 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-03 | 4 | 0 | 1 | +1 |
+| id-07 | 6 | 0 | 2 | +2 |
+
+### 6.10 top 100
+
+Facts: local 49, 6.10 top 100 60; 12 questions gain, 2 lose.
+
+| id | facts with a span | local | 6.10 top 100 | change |
+|---|---|---|---|---|
+| why-03 | 3 | 1 | 2 | +1 |
+| why-04 | 4 | 3 | 4 | +1 |
+| why-08 | 5 | 2 | 3 | +1 |
+| why-10 | 2 | 1 | 2 | +1 |
+| dated-01 | 5 | 1 | 0 | -1 |
+| dated-02 | 4 | 1 | 4 | +3 |
+| dated-04 | 4 | 0 | 1 | +1 |
+| dated-05 | 6 | 0 | 1 | +1 |
+| dated-06 | 13 | 3 | 0 | -3 |
+| dated-09 | 5 | 2 | 3 | +1 |
+| id-02 | 4 | 1 | 2 | +1 |
+| id-03 | 4 | 0 | 1 | +1 |
+| id-04 | 5 | 4 | 5 | +1 |
+| id-07 | 6 | 0 | 2 | +2 |
+
 ## Where required spans are lost in the first stage
 
 Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with

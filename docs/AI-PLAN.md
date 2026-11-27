@@ -412,11 +412,14 @@ Common rules for every step:
   1.0687 USD; `ai/eval/results/2026-11-27-baseline-6-4-golden-v1-7.md`, method rule in `ai/DECISIONS.md`. The owner (27 Nov) kept
   the freeze condition: the test set gets its baseline in 6.12, with the final configuration, so nothing runs on it
   before then (the earlier wording "development and test sets, 64 questions, about 2.1 USD" conflicted with it).
-- [ ] NEXT **6.5 Candidate: deeper rerank pool** (class A). Rerank the top 50 or 60 instead of 30. Three of the four class
+- [x] 2026-11-27 **6.5 Candidate: deeper rerank pool** (class A). Rerank the top 50 or 60 instead of 30. Three of the four class
   A questions have their first evidence chunk at first-stage rank 36 to 52. Measured with 6.3, free. Cost on the
   served system, measured in this step: reranker time per question at 30, 50 and 60 chunks (0.585 s for 30 on the
   box in 4.10e, so about 1.0 to 1.2 s for 50 to 60, to be confirmed); no index rebuild, no VRAM change.
-- [ ] **6.6 Candidate: fuse the reranker score with the first-stage rank** (class B). A weighted RRF of the two orders
+  Done 27 Nov on the cache, six candidates named by the owner before computing (top 50, 60, 100 on the local and on
+  the context index): local top 100 55 facts and 20 of 26, the context index at top 100 60 facts and 22 of 26 (12
+  questions gain, 2 lose) against 49 and 20 served; reranker time per pool measured in the window before 6.11.
+- [ ] NEXT **6.6 Candidate: fuse the reranker score with the first-stage rank** (class B). A weighted RRF of the two orders
   instead of the reranker order alone; why-06 drops from first-stage 5 to 29 and id-07 from 2 to 14 today. The weight
   is set on the development set only. Free. Live server: no rebuild, no latency. Also measured here (27 Nov, a
   candidate, not a result): no reranker at all on the context index of 6.10 (first stage 56 facts, 20 of 26 at
@@ -450,8 +453,8 @@ Common rules for every step:
   combination, Qwen, two runs each. Up to four configurations, about 4.4 USD. Method (owner, 27 Nov): fact coverage
   chooses the candidates; judged runs guard against regressions and check dated-04, dated-05 and id-07 (incorrect in
   every run). The decision rule is written in `ai/DECISIONS.md` before the first candidate is judged, and the few
-  candidates are named in advance. Before 6.11, once: one 6.4 run judged again (about 0.53 USD) to measure the
-  judge's share of the spread. Caps: the judge reserves the worst case per call, so concurrency 1 or a cap of 2 USD
+  candidates are named in advance. The judge's own share of the spread is known from 4.8j2 (2 of 29 verdicts on
+  identical answers, same judge and prompt), so no extra judge pass (owner, 27 Nov). Caps: the judge reserves the worst case per call, so concurrency 1 or a cap of 2 USD
   inside the 4 USD per-run limit.
 - [ ] **6.12 Held-out test and the guest path.** The final configuration and the served one on the frozen test set
   (Qwen, two runs each; the test set gets its baseline here, not in 6.4, about 2 USD), and Sonnet on the guest path, baseline and final, two runs each on all 64

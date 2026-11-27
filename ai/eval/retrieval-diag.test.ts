@@ -3,7 +3,7 @@
  */
 import type { Chunk } from '../corpus/types';
 import type { Evidence } from './golden';
-import { bm25QueryFor, contextsFor, keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
+import { bm25QueryFor, contextsFor, factChange, keyDiff, listDiff, rerankOrder, spanRank, type EntryKey } from './retrieval-diag';
 
 let passed = 0;
 let failed = 0;
@@ -58,6 +58,11 @@ check('chosen without a rendering is marked', bm25QueryFor('chosen', 'q', undefi
 check('ctx-plain BM25 gets the plain question', bm25QueryFor('ctx-plain', 'q', pl) === 'q');
 check('local BM25 gets the plain question', bm25QueryFor('local', 'q', pl) === 'q');
 check('contexts: none for local, the Haiku file for chosen and ctx-plain', contextsFor('local') === null && contextsFor('chosen') === contextsFor('ctx-plain') && !!contextsFor('ctx-plain'));
+
+// Per-question fact change: totals, gaining and losing questions, only differing ones listed.
+const fc = factChange(['a', 'b', 'c'], { a: 1, b: 2, c: 0 }, { a: 3, b: 1, c: 0 });
+check('fact change totals', fc.base === 3 && fc.cand === 4 && fc.gain === 1 && fc.loss === 1);
+check('fact change lists only differing questions', fc.rows.map((r) => r.id).join() === 'a,b');
 
 console.log(`retrieval-diag: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

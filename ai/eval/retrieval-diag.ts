@@ -60,6 +60,40 @@ export const VARIANTS: RetrievalVariant[] = ['local', 'chosen'];
 export type DiagVariant = RetrievalVariant | 'ctx-plain';
 export const ALL_VARIANTS: DiagVariant[] = [...VARIANTS, 'ctx-plain'];
 
+/** Step 6.5 candidates, named by the owner before they were computed: index and rerank pool, k = 10. */
+export const CANDIDATES_65: [DiagVariant, number][] = [
+  ['local', 50],
+  ['local', 60],
+  ['local', 100],
+  ['ctx-plain', 50],
+  ['ctx-plain', 60],
+  ['ctx-plain', 100],
+];
+
+export interface FactChange {
+  base: number;
+  cand: number;
+  gain: number;
+  loss: number;
+  /** Questions whose count differs, in the given order. */
+  rows: { id: string; base: number; cand: number }[];
+}
+
+/** Facts per question of a candidate against a base: totals, questions gaining and losing, the ones that differ. */
+export function factChange(ids: string[], base: Record<string, number>, cand: Record<string, number>): FactChange {
+  const c: FactChange = { base: 0, cand: 0, gain: 0, loss: 0, rows: [] };
+  for (const id of ids) {
+    const x = base[id];
+    const y = cand[id];
+    c.base += x;
+    c.cand += y;
+    if (y > x) c.gain++;
+    if (y < x) c.loss++;
+    if (x !== y) c.rows.push({ id, base: x, cand: y });
+  }
+  return c;
+}
+
 /** What BM25 is given: the Polish rendering only for "chosen", the plain question otherwise. */
 export function bm25QueryFor(variant: DiagVariant, question: string, pl: { question: string; polish: string; keywords: string[] } | undefined): string {
   if (variant !== 'chosen') return question;
@@ -484,28 +518,26 @@ async function report(date: string) {
     drift.push(`| ${variant} | ${max.toFixed(4)} | ${orderChanged} of ${golden.length} |`);
   }
 
-  // 6.10 against local in the served setting (rerank top 30, k = 10), per question, in facts.
+  // Candidates against local in the served setting (rerank top 30, k = 10), per question, in facts.
+  const factsIn = (q: GoldenQuestion, ids: string[]) => factSpans(q).spans.filter((sp) => ids.some((id) => sp.some((e) => overlaps(byId.get(id)!, e)))).length;
+  const served10 = at(servedLists('local'), 10);
+  const factsOf = (l: Record<string, string[]>) => Object.fromEntries(answerable.map((q) => [q.id, factsIn(q, l[q.id])]));
+  const withSpans = Object.fromEntries(answerable.map((q) => [q.id, factSpans(q).spans.length]));
+  const baseFacts = factsOf(served10);
+  const sl = score(golden, served10, byId);
+  const headRow = (label: string, sc: Score) => `| ${label} | ${sc.r5} | ${sc.r10} | ${sc.mrr} | ${sc.facts} |`;
+  const changeTable = (label: string, c: FactChange) => [
+    `Facts: local ${c.base}, ${label} ${c.cand}; ${c.gain} questions gain, ${c.loss} lose.`,
+    '',
+    `| id | facts with a span | local | ${label} | change |`,
+    '|---|---|---|---|---|',
+    ...c.rows.map((r) => `| ${r.id} | ${withSpans[r.id]} | ${r.base} | ${r.cand} | ${r.cand > r.base ? '+' : ''}${r.cand - r.base} |`),
+    '',
+  ];
   const cmp: string[] = [];
   if (ctxFetched) {
-    const loc = at(servedLists('local'), 10);
     const cand = at(servedLists('ctx-plain'), 10);
-    const factsIn = (q: GoldenQuestion, ids: string[]) => factSpans(q).spans.filter((sp) => ids.some((id) => sp.some((e) => overlaps(byId.get(id)!, e)))).length;
-    let gain = 0;
-    let loss = 0;
-    let a = 0;
-    let b = 0;
-    const rows: string[] = [];
-    for (const q of answerable) {
-      const x = factsIn(q, loc[q.id]);
-      const y = factsIn(q, cand[q.id]);
-      a += x;
-      b += y;
-      if (y > x) gain++;
-      if (y < x) loss++;
-      if (x !== y) rows.push(`| ${q.id} | ${factSpans(q).spans.length} | ${x} | ${y} | ${y > x ? '+' : ''}${y - x} |`);
-    }
-    const sl = score(golden, loc, byId);
-    const sc = score(golden, cand, byId);
+    const c = factChange(answerable.map((q) => q.id), baseFacts, factsOf(cand));
     cmp.push(
       '## 6.10 against local, served setting (rerank top 30, k = 10)',
       '',
@@ -514,19 +546,51 @@ async function report(date: string) {
       '',
       '| | recall@5 | recall@10 | MRR@10 | facts covered |',
       '|---|---|---|---|---|',
-      `| local (served) | ${sl.r5} | ${sl.r10} | ${sl.mrr} | ${sl.facts} |`,
-      `| 6.10 (ctx-plain) | ${sc.r5} | ${sc.r10} | ${sc.mrr} | ${sc.facts} |`,
+      headRow('local (served)', sl),
+      headRow('6.10 (ctx-plain)', score(golden, cand, byId)),
       '',
-      `Facts: local ${a}, 6.10 ${b}; ${gain} questions gain, ${loss} lose.`,
-      '',
-      '| id | facts with a span | local | 6.10 | change |',
-      '|---|---|---|---|---|',
-      ...rows,
-      '',
+      ...changeTable('6.10', c),
     );
-    json['ctx-plain-vs-local'] = { local: a, ctxPlain: b, gain, loss };
+    json['ctx-plain-vs-local'] = { local: c.base, ctxPlain: c.cand, gain: c.gain, loss: c.loss };
   } else {
     cmp.push('## 6.10 against local, served setting', '', 'Not fetched yet: run `fetch --variant ctx-plain` in a box window.', '');
+  }
+
+  // Step 6.5: the named candidates (owner, 27 Nov, fixed before this section was computed), deeper rerank pools.
+  const cand65: string[] = [];
+  if (ctxFetched) {
+    const named: { label: string; variant: DiagVariant; pool: number }[] = CANDIDATES_65.map(([variant, pool]) => ({ label: `${variant === 'local' ? 'local' : '6.10'} top ${pool}`, variant, pool }));
+    const heads: string[] = [];
+    const details: string[] = [];
+    const j: Record<string, unknown> = {};
+    for (const n of named) {
+      const l = at(poolLists(n.variant, n.pool), 10);
+      const sc = score(golden, l, byId);
+      const c = factChange(answerable.map((q) => q.id), baseFacts, factsOf(l));
+      heads.push(`| ${n.label} | ${sc.r5} | ${sc.r10} | ${sc.mrr} | ${sc.facts} | ${c.gain} | ${c.loss} |`);
+      details.push(`### ${n.label}`, '', ...changeTable(n.label, c));
+      j[`${n.variant}@${n.pool}`] = { r10: sc.r10, mrr: sc.mrr, facts: c.cand, gain: c.gain, loss: c.loss };
+    }
+    json['candidates-6.5'] = j;
+    cand65.push(
+      '## 6.5 candidates against served local (rerank top N, k = 10)',
+      '',
+      'The list was named by the owner before this section was computed: rerank top 50, 60 and 100 on the local index',
+      'and on the context index of 6.10 (plain question). The deeper pools use the scores of one 100-document call (at',
+      'most 0.0017 from the served call on the same documents, see score stability). Facts per question against the',
+      'served local row; questions with the same count are not listed. Candidates, not results: fact coverage chooses',
+      'what goes to the judged runs of 6.11, which decide. Reranker time per question at these pools is measured on the',
+      'box in the window before 6.11.',
+      '',
+      '| | recall@5 | recall@10 | MRR@10 | facts covered | questions gaining | losing |',
+      '|---|---|---|---|---|---|---|',
+      `| local (served, top 30) | ${sl.r5} | ${sl.r10} | ${sl.mrr} | ${sl.facts} | - | - |`,
+      ...heads,
+      '',
+      ...details,
+    );
+  } else {
+    cand65.push('## 6.5 candidates against served local', '', 'Not fetched yet: the context-index candidates need `fetch --variant ctx-plain`.', '');
   }
 
   const base = `ai/eval/results/${date}-retrieval-diag-golden-v${meta.version.replace('.', '-')}`;
@@ -575,6 +639,7 @@ async function report(date: string) {
     ...ctxRows,
     '',
     ...cmp,
+    ...cand65,
     '## Where required spans are lost in the first stage',
     '',
     'Required spans not in the fused top 100, and how many of those have no BM25 rank at all (BM25 shares no term with',
