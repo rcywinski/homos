@@ -14,7 +14,12 @@
  * Step 6.10 (for the judged runs of 6.11): `--chunks-file <lists file> --chunks <variant>` takes the k=10 lists of a
  * committed lists file (written by ai/eval/retrieval-diag.ts). The generator is then built from the served preset
  * itself, not from the tuning options, and every setting that shapes an answer is compared with the preset and written
- * into the run file (`servedPresetCheck`); the run refuses to start on any difference. Only with --generator local.
+ * into the run file (`servedPresetCheck`); the run refuses to start on any difference.
+ *
+ * Step 6.12: `--generator guest` sends exactly the guest path's request (ai/answer/guest-generator.ts) on masked
+ * chunks and verifies against them, as the public server does; with --chunks-file only. `--questions <jsonl>
+ * --questions-meta <json> --set-name <name>` take another question file than the development set (named on the
+ * command line, never in code); the output file is <date>-answers-k10-<tag>-<set-name>-v<version>.
  */
 import 'dotenv/config';
 import { createHash } from 'crypto';
@@ -33,6 +38,8 @@ import { LOCAL_QUOTE_SYSTEM, LOCAL_REF_SYSTEM } from '../answer/prompt-local';
 import { overlaps, type GoldenQuestion } from './golden';
 import { fmtRatio } from './metrics';
 import { DEFAULT_PRESET, PRESETS, type ServedPreset } from '../serve/config';
+import { GuestGenerator } from '../answer/guest-generator';
+import { maskChunk } from '../serve/guest';
 
 const arg = (n: string) => (process.argv.includes(n) ? process.argv[process.argv.indexOf(n) + 1] : undefined);
 
@@ -55,24 +62,31 @@ async function main() {
   if (tag && !/^[a-z0-9][a-z0-9-]*$/.test(tag)) throw new Error('--tag must be lowercase letters, digits and hyphens');
   const suffix = tag ? `-${tag}` : '';
   const local = arg('--generator') === 'local';
+  const guest = arg('--generator') === 'guest';
   const think = process.argv.includes('--think');
   const model = arg('--model') ?? LOCAL_MODEL;
   const variant = (arg('--variant') ?? 'base') as TuningVariant;
   if (!['base', 'S', 'P', 'L'].includes(variant)) throw new Error('--variant must be base, S, P or L');
   const chunksFrom = arg('--chunks');
   const chunksFile = arg('--chunks-file');
-  if (chunksFile && (!local || !chunksFrom || think || arg('--model') || arg('--variant')))
-    throw new Error('--chunks-file needs --generator local and --chunks <variant>, and takes the served preset as it is (no --think, --model or --variant)');
+  if (chunksFile && (!(local || guest) || !chunksFrom || think || arg('--model') || arg('--variant')))
+    throw new Error('--chunks-file needs --generator local or guest and --chunks <variant>, and takes the served settings as they are (no --think, --model or --variant)');
+  if (guest && !chunksFile) throw new Error('--generator guest runs on saved lists only (--chunks-file)');
+  const questionsFile = arg('--questions') ?? 'ai/eval/golden.jsonl';
+  const questionsMeta = arg('--questions-meta') ?? 'ai/eval/golden-meta.json';
+  const setName = arg('--set-name') ?? 'golden';
+  if (!/^[a-z0-9-]+$/.test(setName)) throw new Error('--set-name must be lowercase letters, digits and hyphens');
+  if ((arg('--questions') === undefined) !== (arg('--questions-meta') === undefined)) throw new Error('--questions and --questions-meta go together');
   const ks = (arg('--k') ?? (chunksFrom ? '10' : '5,10')).split(',').map(Number).sort((a, b) => a - b);
-  const golden = readFileSync('ai/eval/golden.jsonl', 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l) as GoldenQuestion);
-  const goldenVersion = (JSON.parse(readFileSync('ai/eval/golden-meta.json', 'utf8')) as { version: string }).version;
+  const golden = readFileSync(questionsFile, 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l) as GoldenQuestion);
+  const goldenVersion = (JSON.parse(readFileSync(questionsMeta, 'utf8')) as { version: string }).version;
   const baseUrl = process.env.INFERENCE_URL ?? '';
   const preset = PRESETS[DEFAULT_PRESET];
   const genOptions: LocalGenOptions | null = !local ? null : chunksFile ? { ...preset.generator, baseUrl } : localOptions(baseUrl, think, model, variant);
   const servedPresetCheck = chunksFile && genOptions ? { preset: preset.id, compared: compareWithPreset(genOptions, preset) } : null;
   const unequal = servedPresetCheck?.compared.filter((c) => !c.equal) ?? [];
   if (unequal.length) throw new Error(`generator differs from the served preset: ${unequal.map((c) => `${c.field} ${JSON.stringify(c.run)} vs ${JSON.stringify(c.served)}`).join('; ')}`);
-  const gen: Generator = genOptions ? new LocalGenerator(genOptions) : new ClaudeGenerator('sonnet');
+  const gen: Generator = genOptions ? new LocalGenerator(genOptions) : guest ? new GuestGenerator() : new ClaudeGenerator('sonnet');
   let vram: unknown = null;
   if (local) {
     // VRAM: the embedder leaves the GPU before the generator loads.
@@ -130,7 +144,8 @@ async function main() {
         break;
       }
       const q = golden[i];
-      const chunks = lists[i].slice(0, k);
+      // The guest path masks private network addresses before the model sees the chunks, and verifies against them.
+      const chunks = guest ? lists[i].slice(0, k).map(maskChunk) : lists[i].slice(0, k);
       const r = await answerWithChecks(gen, q.question, chunks);
       spent += r.costUsd;
       const onEvidence = (c: Chunk) => q.evidence.some((e) => overlaps(c, e));
@@ -158,6 +173,7 @@ async function main() {
       label: `answers-k${k}${suffix}`,
       date: new Date().toISOString().slice(0, 10),
       goldenVersion,
+      ...(setName !== 'golden' ? { questionSet: setName } : {}),
       generator: gen.name,
       retrieval: retrievalName,
       ...(gen instanceof LocalGenerator ? { generatorSettings: gen.settings(), box: BOX, vram, templateOverhead: gen.templateOverhead, strippedTrailingTokens: gen.stripped } : {}),
@@ -171,7 +187,7 @@ async function main() {
     };
     const dir = 'ai/eval/results';
     mkdirSync(dir, { recursive: true });
-    const base = path.join(dir, `${result.date}-answers-k${k}${suffix}-golden-v${goldenVersion.replace('.', '-')}`);
+    const base = path.join(dir, `${result.date}-answers-k${k}${suffix}-${setName}-v${goldenVersion.replace('.', '-')}`);
     writeFileSync(`${base}.json`, JSON.stringify(result, null, 2) + '\n');
     writeFileSync(`${base}.md`, renderMarkdown(result, golden));
     const m = result.measures;

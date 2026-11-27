@@ -1,5 +1,9 @@
 /**
  * npm run ai:judge -- --max-usd <cap> [--concurrency 4] [--set 1.9|local] [--no-retry]
+ * npm run ai:judge -- --max-usd <cap> --answers <answers file> --questions <jsonl> --questions-meta <json> [...]
+ *   (step 6.12: one answers file judged against another question file than the development set, both named on the
+ *   command line; the judgments and judged files are written next to it, "answers-" replaced by "judgments-" and
+ *   "judged-")
  * --no-retry (step 4.8j, owner): no SDK retries and no second call when a verdict is missing; a failed call stays failed.
  * Step 1.9: the Opus 5.5 judge grades every answer of the three generation runs (k5-run1, k5-run2, k10) on golden
  * v1.4. Each answer is one blind call (see ai/judge/items.ts). Verdicts are appended to a JSONL file as they arrive,
@@ -88,16 +92,40 @@ export type SetName = keyof typeof SETS;
 
 const arg = (n: string) => (process.argv.includes(n) ? process.argv[process.argv.indexOf(n) + 1] : undefined);
 
-export function loadGolden(): GoldenQuestion[] {
-  return readFileSync('ai/eval/golden.jsonl', 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l) as GoldenQuestion);
+export function loadGolden(file = 'ai/eval/golden.jsonl'): GoldenQuestion[] {
+  return readFileSync(file, 'utf8').split('\n').filter((l) => l.trim()).map((l) => JSON.parse(l) as GoldenQuestion);
 }
 
 /** Every answer of every run as a judge item, with any verdict already in the JSONL file attached. */
 export function loadItems(set: SetName = '1.9'): JudgedItem[] {
-  const { runs, judgments } = SETS[set];
-  const goldenList = loadGolden();
+  return loadItemsFrom(SETS[set], set === '1.9');
+}
+
+export interface JudgeSet {
+  runs: { run: string; file: string }[];
+  judgments: string;
+  judged: string;
+  date: string;
+}
+
+/** A judge set for one answers file named on the command line (step 6.12). */
+export function adHocSet(answersFile: string): JudgeSet {
+  if (!/answers-k\d+-/.test(answersFile) || !answersFile.endsWith('.json')) throw new Error(`${answersFile}: expected an answers file (…answers-k<k>-….json)`);
+  const r = JSON.parse(readFileSync(answersFile, 'utf8')) as { label: string; date: string };
+  return {
+    // The run name is the tag of the answers label (answers-k10-<tag>), as in the sets above.
+    runs: [{ run: r.label.replace(/^answers-k\d+-/, ''), file: answersFile }],
+    judgments: answersFile.replace(/answers-k\d+-/, 'judgments-').replace(/\.json$/, '.jsonl'),
+    judged: answersFile.replace(/answers-k\d+-/, 'judged-'),
+    date: r.date,
+  };
+}
+
+export function loadItemsFrom(s: JudgeSet, allowMissingRuns = false, questionsFile?: string, metaFile = 'ai/eval/golden-meta.json'): JudgedItem[] {
+  const { runs, judgments } = s;
+  const goldenList = loadGolden(questionsFile);
   const golden = new Map(goldenList.map((q) => [q.id, q]));
-  const meta = JSON.parse(readFileSync('ai/eval/golden-meta.json', 'utf8')) as GoldenMeta;
+  const meta = JSON.parse(readFileSync(metaFile, 'utf8')) as GoldenMeta;
   const current = answersHash(goldenList);
   const done = new Map<string, JudgeResult>();
   if (existsSync(judgments))
@@ -106,12 +134,13 @@ export function loadItems(set: SetName = '1.9'): JudgedItem[] {
       if (j.result.verdict) done.set(`${j.run}|${j.id}`, j.result);
     }
   const items: JudgedItem[] = [];
-  for (const { run, file } of runs.filter((r) => existsSync(r.file) || set === '1.9')) {
+  for (const { run, file } of runs.filter((r) => existsSync(r.file) || allowMissingRuns)) {
     const r = JSON.parse(readFileSync(file, 'utf8')) as { goldenVersion: string; perQuestion: AnswerRecord[] };
     // Any golden version with the same question and reference text as the working one (answersHash), step 6.4.
     assertSameAnswers(meta, r.goldenVersion, current, file);
     for (const rec of r.perQuestion) {
-      const q = golden.get(rec.id)!;
+      const q = golden.get(rec.id);
+      if (!q) throw new Error(`${file}: ${rec.id} is not in the question file`);
       const result = done.get(`${run}|${rec.id}`);
       items.push({ run, id: rec.id, answerable: q.answerable, input: judgeInput(rec, q), ...(result ? { result } : {}) });
     }
@@ -127,9 +156,15 @@ async function main() {
   const maxUsd = set0 === 'phase3' ? Math.min(askedUsd, PHASE3_CAP_USD - phase3Spent()) : askedUsd;
   const concurrency = Number(arg('--concurrency') ?? 4);
   const set = (arg('--set') ?? '1.9') as SetName;
-  if (!SETS[set]) throw new Error(`--set must be one of ${Object.keys(SETS).join(', ')}`);
-  const { judgments, judged, date } = SETS[set];
-  const items = byHash(loadItems(set));
+  const answersFile = arg('--answers');
+  const questionsFile = arg('--questions');
+  const metaFile = arg('--questions-meta');
+  if (answersFile && (arg('--set') || !questionsFile || !metaFile)) throw new Error('--answers needs --questions and --questions-meta, and no --set');
+  if (!answersFile && !SETS[set]) throw new Error(`--set must be one of ${Object.keys(SETS).join(', ')}`);
+  const theSet: JudgeSet = answersFile ? adHocSet(answersFile) : SETS[set];
+  const load = () => (answersFile ? loadItemsFrom(theSet, false, questionsFile, metaFile) : loadItems(set));
+  const { judgments, judged, date } = theSet;
+  const items = byHash(load());
   const todo = items.filter((x) => !x.result);
   const noRetry = process.argv.includes('--no-retry');
   const judge = new ClaudeJudge(noRetry ? new Anthropic({ maxRetries: 0 }) : undefined);
@@ -168,9 +203,9 @@ async function main() {
   await Promise.all(Array.from({ length: concurrency }, worker));
   process.stdout.write('\n');
 
-  const all = loadItems(set);
-  const versions = [...new Set(SETS[set].runs.filter((r) => existsSync(r.file)).map((r) => (JSON.parse(readFileSync(r.file, 'utf8')) as { goldenVersion: string }).goldenVersion))];
-  writeFileSync(judged, JSON.stringify({ date, goldenVersion: versions.join(', '), judge: judge.name, runs: SETS[set].runs.filter((r) => existsSync(r.file)), items: all }, null, 2) + '\n');
+  const all = load();
+  const versions = [...new Set(theSet.runs.filter((r) => existsSync(r.file)).map((r) => (JSON.parse(readFileSync(r.file, 'utf8')) as { goldenVersion: string }).goldenVersion))];
+  writeFileSync(judged, JSON.stringify({ date, goldenVersion: versions.join(', '), judge: judge.name, runs: theSet.runs.filter((r) => existsSync(r.file)), items: all }, null, 2) + '\n');
   const missing = all.filter((x) => !x.result).length;
   console.log(`spent $${spent.toFixed(4)} this run (cap $${maxUsd})${stopped ? ', STOPPED BY CAP' : ''}; failed calls ${errors}; answers without a verdict ${missing}. Wrote ${judged}`);
 }

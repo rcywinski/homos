@@ -225,6 +225,18 @@ export function capTitles(ranked: string[], titleOf: (id: string) => string, k =
   return [...picked, ...ranked.filter((id) => !picked.includes(id))];
 }
 
+/** 6.8 B2: the corpus chunks containing an identifier of the question verbatim, in the given BM25 order (then corpus order). */
+export function identifierMatches(question: string, chunks: Chunk[], bm25Full: string[]): string[] {
+  const idents = detectIds(question);
+  if (!idents.length) return [];
+  const rank = new Map(bm25Full.map((id, i) => [id, i]));
+  return chunks
+    .filter((c) => idents.some((x) => `${c.title}\n${c.text}`.includes(x)))
+    .map((c, i) => ({ id: c.id, i, r: rank.get(c.id) ?? Infinity }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map((x) => x.id);
+}
+
 export interface FactChange {
   base: number;
   cand: number;
@@ -337,13 +349,14 @@ export class FixedEmbedder implements Embedder {
   }
 }
 
-function readCache(): Cache {
-  return existsSync(CACHE) ? (JSON.parse(readFileSync(CACHE, 'utf8')) as Cache) : { vectors: {}, entries: {} };
+function readCache(file = CACHE): Cache {
+  return existsSync(file) ? (JSON.parse(readFileSync(file, 'utf8')) as Cache) : { vectors: {}, entries: {} };
 }
-const writeCache = (c: Cache) => writeFileSync(CACHE, JSON.stringify(c));
+const writeCache = (c: Cache, file = CACHE) => writeFileSync(file, JSON.stringify(c));
 
-function readGolden(): GoldenQuestion[] {
-  return readFileSync('ai/eval/golden.jsonl', 'utf8')
+/** The development set by default; step 6.12 passes another question file on the command line (--questions). */
+function readGolden(file = 'ai/eval/golden.jsonl'): GoldenQuestion[] {
+  return readFileSync(file, 'utf8')
     .split('\n')
     .filter((l) => l.trim())
     .map((l) => JSON.parse(l) as GoldenQuestion);
@@ -385,20 +398,20 @@ export function setup(variant: DiagVariant, embedder: Embedder, chunks: Chunk[])
   };
 }
 
-async function fetchRun(only?: DiagVariant) {
+async function fetchRun(only?: DiagVariant, questionsFile?: string, cacheFile = CACHE) {
   const inferenceUrl = process.env.INFERENCE_URL;
   const rerankUrl = process.env.RERANK_URL;
   if (!inferenceUrl || !rerankUrl) throw new Error('INFERENCE_URL and RERANK_URL must be set (see .env.example)');
-  const golden = readGolden();
+  const golden = readGolden(questionsFile);
   const chunks = loadCorpus();
-  const cache = readCache();
+  const cache = readCache(cacheFile);
 
   const missing = golden.map((q) => q.question).filter((t) => cache.vectors[t]?.embedder !== EMBEDDER);
   if (missing.length) {
     const live = new LocalEmbedder({ baseUrl: inferenceUrl, retries: 1 });
     const vecs = await live.embed(missing, 'query');
     missing.forEach((t, i) => (cache.vectors[t] = { embedder: live.name, vector: vecs[i] }));
-    writeCache(cache);
+    writeCache(cache, cacheFile);
   }
   console.log(`query vectors: ${missing.length} embedded, ${golden.length - missing.length} cached`);
   const embedder = new FixedEmbedder(new Map(Object.entries(cache.vectors).map(([t, v]) => [t, v.vector])));
@@ -427,12 +440,88 @@ async function fetchRun(only?: DiagVariant) {
         device: reranker.lastDevice,
         maxLength: reranker.lastMaxLength,
       };
-      writeCache(cache);
+      writeCache(cache, cacheFile);
       done++;
     }
     console.log(`${variant}: ${done} questions reranked, ${golden.length - done} already cached`);
   }
-  console.log(`cache: ${CACHE}`);
+  console.log(`cache: ${cacheFile}`);
+}
+
+/**
+ * Step 6.12: the k = 10 lists of S (served: local index, rerank top 30 with the served call's scores) and N (context
+ * index, no reranker, with the 6.8 identifier match B2), from a cache filled by `fetch`, for any question file. Checks
+ * every cache key and that the first stage rebuilt offline equals the cached one, as `report` does; refuses otherwise.
+ * Also N without B2 and the retrieval row of each (recall@5, recall@10, MRR@10, facts covered). Run on the development
+ * set it must give exactly the 6.11 lists (the test of this code before any other question file is used).
+ */
+export async function listsRun(o: { questionsFile?: string; cacheFile: string; metaFile: string; out: string; date: string; step: string }) {
+  if (!o.out) throw new Error('lists needs --out <path without extension>');
+  const questions = readGolden(o.questionsFile);
+  const chunks = loadCorpus();
+  const byId = new Map(chunks.map((c) => [c.id, c]));
+  const cache = readCache(o.cacheFile);
+  const meta = JSON.parse(readFileSync(o.metaFile, 'utf8')) as { version: string };
+  const embedder = new FixedEmbedder(new Map(Object.entries(cache.vectors).filter(([, v]) => v.embedder === EMBEDDER).map(([t, v]) => [t, v.vector])));
+  const problems: string[] = [];
+  const S: Record<string, string[]> = {};
+  const N: Record<string, string[]> = {};
+  const N0: Record<string, string[]> = {};
+  for (const variant of ['local', 'ctx-plain'] as const) {
+    const s = setup(variant, embedder, chunks);
+    for (const q of questions) {
+      const entry = cache.entries[entryId(variant, q.id)];
+      if (!entry) {
+        problems.push(`${variant} ${q.id}: not in the cache (run fetch)`);
+        continue;
+      }
+      const diff = keyDiff(entry.key, s.key(q));
+      if (diff.length) {
+        problems.push(`${variant} ${q.id}: cache key differs (${diff.join('; ')})`);
+        continue;
+      }
+      const [vec] = await s.fs.vector.search([q.question], DEPTH);
+      const [bm] = await s.fs.bm25.search([q.question], DEPTH);
+      if (rrf([vec, bm]).map((h: SearchHit) => h.id).slice(0, DEPTH).join() !== entry.top.join()) problems.push(`${variant} ${q.id}: first stage differs from the cached one`);
+      if (variant === 'local') S[q.id] = rerankOrder(entry.top, entry.served, SERVED_N).slice(0, 10);
+      else {
+        const [bf] = await s.fs.bm25.search([q.question], chunks.length);
+        const ids = identifierMatches(q.question, chunks, bf.map((h) => h.id));
+        N0[q.id] = entry.top.slice(0, 10);
+        N[q.id] = (ids.length ? putFirst(entry.top, ids) : entry.top).slice(0, 10);
+      }
+    }
+  }
+  if (problems.length) {
+    console.error(`refused, nothing written:\n  ${problems.join('\n  ')}`);
+    process.exit(1);
+  }
+  const facts = (l: Record<string, string[]>) =>
+    questions.filter((q) => q.answerable === 'yes').reduce((a, q) => a + factSpans(q).spans.filter((sp) => sp.some((e) => l[q.id].some((id) => overlaps(byId.get(id)!, e)))).length, 0);
+  const local = setup('local', embedder, chunks).fs;
+  const ctx = setup('ctx-plain', embedder, chunks).fs;
+  const rows = [
+    { key: 'served', name: 'S served (local index, rerank top 30)', retrieval: `${local.hybrid.name}>${RERANKER}(top${SERVED_N},doc=${RERANK_FORMAT}) index=${local.indexName} (served, rerank top 30)`, l: S },
+    { key: 'ctx-first-b2', name: 'N context index, no reranker, with B2', retrieval: `${ctx.hybrid.name} index=${ctx.indexName}, no reranker, exact identifier match over the corpus (6.8 B2, at most ${ID_CORPUS_MAX_68} first)`, l: N },
+    { key: 'ctx-first', name: 'N without B2 (check of 6.8, not run)', retrieval: `${ctx.hybrid.name} index=${ctx.indexName}, no reranker`, l: N0 },
+  ];
+  const scored = rows.map((r) => ({ ...r, sc: score(questions, r.l, byId), facts: facts(r.l) }));
+  const variants = Object.fromEntries(scored.filter((r) => r.key !== 'ctx-first').map((r) => [r.key, { retrieval: r.retrieval, facts: r.facts, lists: r.l }]));
+  writeFileSync(`${o.out}.json`, JSON.stringify({ date: o.date, questionsVersion: meta.version, corpusHash: corpusHash(chunks), k: 10, step: o.step, variants }, null, 1) + '\n');
+  const md = [
+    `# Retrieval at k = 10, step ${o.step} (question set v${meta.version})`,
+    '',
+    `Produced by \`npx tsx ai/eval/retrieval-diag.ts lists\` from the cache filled by \`fetch\`. Corpus \`${corpusHash(chunks)}\`, ${questions.length} questions (${questions.filter((q) => q.answerable === 'yes').length} answerable). The lists file \`${o.out}.json\` holds S and N; "N without B2" is the check of 6.8, reported only.`,
+    '',
+    '| configuration | recall@5 | recall@10 | MRR@10 | facts covered | required spans covered | all spans covered |',
+    '|---|---|---|---|---|---|---|',
+    ...scored.map((r) => `| ${r.name} | ${r.sc.r5} | ${r.sc.r10} | ${r.sc.mrr} | ${r.sc.facts} | ${r.sc.req} | ${r.sc.all} |`),
+    '',
+    `B2 changes the top 10 of ${questions.filter((q) => N[q.id].join() !== N0[q.id].join()).length} questions: ${questions.filter((q) => N[q.id].join() !== N0[q.id].join()).map((q) => q.id).join(', ') || 'none'}.`,
+    '',
+  ].join('\n');
+  writeFileSync(`${o.out}.md`, md);
+  console.log(`wrote ${o.out}.json and .md: ${scored.map((r) => `${r.key} ${r.facts} facts`).join(', ')}`);
 }
 
 /** Per question and variant, rebuilt offline from the cache. */
@@ -1236,14 +1325,8 @@ async function report(date: string) {
   if (ctxFetched && process.argv.includes('--lists-6-11')) {
     const ids = golden.map((q) => q.id);
     const det = new Map(golden.map((q) => [q.id, detectIds(q.question)]));
-    const fullText = (id: string) => `${byId.get(id)!.title}\n${byId.get(id)!.text}`;
-    const b2 = (qid: string, r: string[]) => {
-      const idents = det.get(qid)!;
-      if (!idents.length) return r;
-      const rank = new Map(views.get('ctx-plain')!.get(qid)!.bm25Full.map((id, i) => [id, i]));
-      const all = chunks.filter((c) => idents.some((x) => fullText(c.id).includes(x))).map((c, i) => ({ id: c.id, i, r: rank.get(c.id) ?? Infinity }));
-      return putFirst(r, all.sort((a, b) => a.r - b.r || a.i - b.i).map((x) => x.id));
-    };
+    const qById611 = new Map(golden.map((q) => [q.id, q]));
+    const b2 = (qid: string, r: string[]) => (det.get(qid)!.length ? putFirst(r, identifierMatches(qById611.get(qid)!.question, chunks, views.get('ctx-plain')!.get(qid)!.bm25Full)) : r);
     const ctxFirst = lists('ctx-plain', (v) => v.fused);
     const ctx100 = poolLists('ctx-plain', 100);
     const ctxName = `${setups.get('ctx-plain')!.fs.hybrid.name} index=${setups.get('ctx-plain')!.fs.indexName}`;
@@ -1355,12 +1438,15 @@ if (require.main === module) {
     const i = process.argv.indexOf(n);
     return i >= 0 ? process.argv[i + 1] : undefined;
   };
+  const cacheFile = arg('--cache') ?? CACHE;
   const run =
     cmd === 'fetch'
-      ? fetchRun(arg('--variant') as DiagVariant | undefined)
+      ? fetchRun(arg('--variant') as DiagVariant | undefined, arg('--questions'), cacheFile)
+      : cmd === 'lists'
+        ? listsRun({ questionsFile: arg('--questions'), cacheFile, metaFile: arg('--questions-meta') ?? 'ai/eval/golden-meta.json', out: arg('--out') ?? '', date: arg('--date') ?? new Date().toISOString().slice(0, 10), step: arg('--step') ?? '6.12' })
       : cmd === 'report'
         ? report(arg('--date') ?? new Date().toISOString().slice(0, 10))
-        : Promise.reject(new Error('usage: retrieval-diag.ts fetch [--variant local|chosen|ctx-plain] | report [--date YYYY-MM-DD]'));
+        : Promise.reject(new Error('usage: retrieval-diag.ts fetch [--variant local|chosen|ctx-plain] [--questions <jsonl>] [--cache <json>] | report [--date YYYY-MM-DD] | lists --out <path without extension> [--questions <jsonl> --questions-meta <json>] [--cache <json>] [--date] [--step]'));
   run.catch((e) => {
     console.error(e instanceof Error ? e.message : e);
     process.exit(1);

@@ -11,6 +11,9 @@ import { citesEvidence, confusion, type AnswerRecord } from './measures';
 import { ANSWER_SYSTEM, answerUserPrompt } from './prompt';
 import { locateInFile, verifyCitation } from './verify';
 import { wrapText } from './wrap';
+import { GuestGenerator } from './guest-generator';
+import { guestRequestBody, maskChunk } from '../serve/guest';
+import type Anthropic from '@anthropic-ai/sdk';
 
 let passed = 0;
 let failed = 0;
@@ -105,6 +108,25 @@ async function main() {
     check('confusion rows split by evidence given', m['yes / evidence given'].full === 1 && m['yes / evidence not given'].partial === 1 && m['no / no evidence in key'].none === 1 && m['partial / evidence given'].partial === 1, JSON.stringify(m));
     const e = citesEvidence(rs);
     check('cites evidence over answerable only, split', e.all.n === 2 && e.all.hits === 1 && e.evidenceGiven.hits === 1 && e.evidenceNotGiven.n === 1);
+  }
+
+  // Step 6.12: the guest generator sends exactly the server's guest request and parses with the server's parser.
+  {
+    const c = maskChunk(loadCorpus()[0]);
+    let sent: unknown = null;
+    const reply = (text: string, stop = 'end_turn') => ({ content: [{ type: 'text', text }], stop_reason: stop, usage: { input_tokens: 1000, output_tokens: 100, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 } });
+    let next = reply(JSON.stringify({ answer: 'a', coverage: 'full', citations: [{ chunkId: c.id, quote: 'x' }] }));
+    const client = { messages: { create: async (body: unknown) => ((sent = body), next) } } as unknown as Anthropic;
+    const g = new GuestGenerator(client);
+    const r = await g.generate('q', [c]);
+    check('guest request equals guestRequestBody', JSON.stringify(sent) === JSON.stringify(guestRequestBody('q', [c])));
+    check('guest answer parsed, cost at Sonnet prices', r.output?.coverage === 'full' && r.output.citations.length === 1 && Math.abs(r.costUsd - (1000 * 2 + 100 * 10) / 1e6) < 1e-9);
+    next = reply(JSON.stringify({ answer: 'a', coverage: 'full', citations: [], extra: 1 }));
+    check('extra key is invalid output, as on the server', (await g.generate('q', [c])).error === 'invalid guest answer');
+    next = reply('not json');
+    check('unparsable text is invalid output', (await g.generate('q', [c])).error === 'invalid guest answer');
+    next = reply('{}', 'max_tokens');
+    check('max_tokens recorded', (await g.generate('q', [c])).error === 'max_tokens');
   }
 
   console.log(`${passed} passed, ${failed} failed`);
